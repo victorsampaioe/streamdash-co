@@ -13,9 +13,12 @@ import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as StatusSlugRouteImport } from './routes/status.$slug'
 import { Route as AuthenticatedAppRouteImport } from './routes/_authenticated/app'
 import { Route as AuthenticatedAppIndexRouteImport } from './routes/_authenticated/app.index'
 import { Route as AuthenticatedAppServersRouteImport } from './routes/_authenticated/app.servers'
+import { Route as AuthenticatedAppAlertsRouteImport } from './routes/_authenticated/app.alerts'
+import { Route as AuthenticatedAppAdminRouteImport } from './routes/_authenticated/app.admin'
 import { Route as ApiPublicCronCheckRouteImport } from './routes/api/public/cron/check'
 import { Route as AuthenticatedAppServersNewRouteImport } from './routes/_authenticated/app.servers.new'
 import { Route as AuthenticatedAppServersIdRouteImport } from './routes/_authenticated/app.servers.$id'
@@ -39,6 +42,11 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const StatusSlugRoute = StatusSlugRouteImport.update({
+  id: '/status/$slug',
+  path: '/status/$slug',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AuthenticatedAppRoute = AuthenticatedAppRouteImport.update({
   id: '/app',
   path: '/app',
@@ -52,6 +60,16 @@ const AuthenticatedAppIndexRoute = AuthenticatedAppIndexRouteImport.update({
 const AuthenticatedAppServersRoute = AuthenticatedAppServersRouteImport.update({
   id: '/servers',
   path: '/servers',
+  getParentRoute: () => AuthenticatedAppRoute,
+} as any)
+const AuthenticatedAppAlertsRoute = AuthenticatedAppAlertsRouteImport.update({
+  id: '/alerts',
+  path: '/alerts',
+  getParentRoute: () => AuthenticatedAppRoute,
+} as any)
+const AuthenticatedAppAdminRoute = AuthenticatedAppAdminRouteImport.update({
+  id: '/admin',
+  path: '/admin',
   getParentRoute: () => AuthenticatedAppRoute,
 } as any)
 const ApiPublicCronCheckRoute = ApiPublicCronCheckRouteImport.update({
@@ -77,6 +95,9 @@ export interface FileRoutesByFullPath {
   '/auth': typeof AuthRoute
   '/reset-password': typeof ResetPasswordRoute
   '/app': typeof AuthenticatedAppRouteWithChildren
+  '/status/$slug': typeof StatusSlugRoute
+  '/app/admin': typeof AuthenticatedAppAdminRoute
+  '/app/alerts': typeof AuthenticatedAppAlertsRoute
   '/app/servers': typeof AuthenticatedAppServersRouteWithChildren
   '/app/': typeof AuthenticatedAppIndexRoute
   '/app/servers/$id': typeof AuthenticatedAppServersIdRoute
@@ -87,6 +108,9 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
   '/reset-password': typeof ResetPasswordRoute
+  '/status/$slug': typeof StatusSlugRoute
+  '/app/admin': typeof AuthenticatedAppAdminRoute
+  '/app/alerts': typeof AuthenticatedAppAlertsRoute
   '/app/servers': typeof AuthenticatedAppServersRouteWithChildren
   '/app': typeof AuthenticatedAppIndexRoute
   '/app/servers/$id': typeof AuthenticatedAppServersIdRoute
@@ -100,6 +124,9 @@ export interface FileRoutesById {
   '/auth': typeof AuthRoute
   '/reset-password': typeof ResetPasswordRoute
   '/_authenticated/app': typeof AuthenticatedAppRouteWithChildren
+  '/status/$slug': typeof StatusSlugRoute
+  '/_authenticated/app/admin': typeof AuthenticatedAppAdminRoute
+  '/_authenticated/app/alerts': typeof AuthenticatedAppAlertsRoute
   '/_authenticated/app/servers': typeof AuthenticatedAppServersRouteWithChildren
   '/_authenticated/app/': typeof AuthenticatedAppIndexRoute
   '/_authenticated/app/servers/$id': typeof AuthenticatedAppServersIdRoute
@@ -113,6 +140,9 @@ export interface FileRouteTypes {
     | '/auth'
     | '/reset-password'
     | '/app'
+    | '/status/$slug'
+    | '/app/admin'
+    | '/app/alerts'
     | '/app/servers'
     | '/app/'
     | '/app/servers/$id'
@@ -123,6 +153,9 @@ export interface FileRouteTypes {
     | '/'
     | '/auth'
     | '/reset-password'
+    | '/status/$slug'
+    | '/app/admin'
+    | '/app/alerts'
     | '/app/servers'
     | '/app'
     | '/app/servers/$id'
@@ -135,6 +168,9 @@ export interface FileRouteTypes {
     | '/auth'
     | '/reset-password'
     | '/_authenticated/app'
+    | '/status/$slug'
+    | '/_authenticated/app/admin'
+    | '/_authenticated/app/alerts'
     | '/_authenticated/app/servers'
     | '/_authenticated/app/'
     | '/_authenticated/app/servers/$id'
@@ -147,6 +183,7 @@ export interface RootRouteChildren {
   AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
   AuthRoute: typeof AuthRoute
   ResetPasswordRoute: typeof ResetPasswordRoute
+  StatusSlugRoute: typeof StatusSlugRoute
   ApiPublicCronCheckRoute: typeof ApiPublicCronCheckRoute
 }
 
@@ -180,6 +217,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/status/$slug': {
+      id: '/status/$slug'
+      path: '/status/$slug'
+      fullPath: '/status/$slug'
+      preLoaderRoute: typeof StatusSlugRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/_authenticated/app': {
       id: '/_authenticated/app'
       path: '/app'
@@ -199,6 +243,20 @@ declare module '@tanstack/react-router' {
       path: '/servers'
       fullPath: '/app/servers'
       preLoaderRoute: typeof AuthenticatedAppServersRouteImport
+      parentRoute: typeof AuthenticatedAppRoute
+    }
+    '/_authenticated/app/alerts': {
+      id: '/_authenticated/app/alerts'
+      path: '/alerts'
+      fullPath: '/app/alerts'
+      preLoaderRoute: typeof AuthenticatedAppAlertsRouteImport
+      parentRoute: typeof AuthenticatedAppRoute
+    }
+    '/_authenticated/app/admin': {
+      id: '/_authenticated/app/admin'
+      path: '/admin'
+      fullPath: '/app/admin'
+      preLoaderRoute: typeof AuthenticatedAppAdminRouteImport
       parentRoute: typeof AuthenticatedAppRoute
     }
     '/api/public/cron/check': {
@@ -242,11 +300,15 @@ const AuthenticatedAppServersRouteWithChildren =
   )
 
 interface AuthenticatedAppRouteChildren {
+  AuthenticatedAppAdminRoute: typeof AuthenticatedAppAdminRoute
+  AuthenticatedAppAlertsRoute: typeof AuthenticatedAppAlertsRoute
   AuthenticatedAppServersRoute: typeof AuthenticatedAppServersRouteWithChildren
   AuthenticatedAppIndexRoute: typeof AuthenticatedAppIndexRoute
 }
 
 const AuthenticatedAppRouteChildren: AuthenticatedAppRouteChildren = {
+  AuthenticatedAppAdminRoute: AuthenticatedAppAdminRoute,
+  AuthenticatedAppAlertsRoute: AuthenticatedAppAlertsRoute,
   AuthenticatedAppServersRoute: AuthenticatedAppServersRouteWithChildren,
   AuthenticatedAppIndexRoute: AuthenticatedAppIndexRoute,
 }
@@ -270,6 +332,7 @@ const rootRouteChildren: RootRouteChildren = {
   AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
   AuthRoute: AuthRoute,
   ResetPasswordRoute: ResetPasswordRoute,
+  StatusSlugRoute: StatusSlugRoute,
   ApiPublicCronCheckRoute: ApiPublicCronCheckRoute,
 }
 export const routeTree = rootRouteImport
