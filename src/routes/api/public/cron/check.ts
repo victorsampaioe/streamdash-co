@@ -1,27 +1,30 @@
 import { createFileRoute } from "@tanstack/react-router";
 
+function isAuthorized(request: Request): boolean {
+  const cron = request.headers.get("x-cron-secret");
+  if (cron && process.env.CRON_SECRET && cron === process.env.CRON_SECRET) return true;
+  const apikey = request.headers.get("apikey") ?? request.headers.get("authorization")?.replace(/^Bearer\s+/i, "");
+  if (apikey && process.env.SUPABASE_PUBLISHABLE_KEY && apikey === process.env.SUPABASE_PUBLISHABLE_KEY) return true;
+  return false;
+}
+
+async function run() {
+  const { runDueChecks } = await import("@/lib/monitoring.server");
+  return await runDueChecks();
+}
+
 export const Route = createFileRoute("/api/public/cron/check")({
   server: {
     handlers: {
       POST: async ({ request }) => {
-        const apikey = request.headers.get("x-cron-secret") ?? "";
-        if (apikey !== process.env.CRON_SECRET) {
-          return new Response("Forbidden", { status: 403 });
-        }
-        const { runDueChecks } = await import("@/lib/monitoring.server");
-        try {
-          const result = await runDueChecks();
-          return Response.json(result);
-        } catch (e: any) {
-          return new Response(`Error: ${e?.message ?? "unknown"}`, { status: 500 });
-        }
+        if (!isAuthorized(request)) return new Response("Forbidden", { status: 403 });
+        try { return Response.json(await run()); }
+        catch (e: any) { return new Response(`Error: ${e?.message ?? "unknown"}`, { status: 500 }); }
       },
       GET: async ({ request }) => {
-        const apikey = new URL(request.url).searchParams.get("secret") ?? "";
-        if (apikey !== process.env.CRON_SECRET) return new Response("Forbidden", { status: 403 });
-        const { runDueChecks } = await import("@/lib/monitoring.server");
-        const result = await runDueChecks();
-        return Response.json(result);
+        if (!isAuthorized(request)) return new Response("Forbidden", { status: 403 });
+        try { return Response.json(await run()); }
+        catch (e: any) { return new Response(`Error: ${e?.message ?? "unknown"}`, { status: 500 }); }
       },
     },
   },
