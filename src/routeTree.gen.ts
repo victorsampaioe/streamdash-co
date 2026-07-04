@@ -16,6 +16,7 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthenticatedAppRouteImport } from './routes/_authenticated/app'
 import { Route as AuthenticatedAppIndexRouteImport } from './routes/_authenticated/app.index'
 import { Route as AuthenticatedAppServersRouteImport } from './routes/_authenticated/app.servers'
+import { Route as ApiPublicCronCheckRouteImport } from './routes/api/public/cron/check'
 import { Route as AuthenticatedAppServersNewRouteImport } from './routes/_authenticated/app.servers.new'
 import { Route as AuthenticatedAppServersIdRouteImport } from './routes/_authenticated/app.servers.$id'
 
@@ -53,6 +54,11 @@ const AuthenticatedAppServersRoute = AuthenticatedAppServersRouteImport.update({
   path: '/servers',
   getParentRoute: () => AuthenticatedAppRoute,
 } as any)
+const ApiPublicCronCheckRoute = ApiPublicCronCheckRouteImport.update({
+  id: '/api/public/cron/check',
+  path: '/api/public/cron/check',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AuthenticatedAppServersNewRoute =
   AuthenticatedAppServersNewRouteImport.update({
     id: '/new',
@@ -75,6 +81,7 @@ export interface FileRoutesByFullPath {
   '/app/': typeof AuthenticatedAppIndexRoute
   '/app/servers/$id': typeof AuthenticatedAppServersIdRoute
   '/app/servers/new': typeof AuthenticatedAppServersNewRoute
+  '/api/public/cron/check': typeof ApiPublicCronCheckRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -84,6 +91,7 @@ export interface FileRoutesByTo {
   '/app': typeof AuthenticatedAppIndexRoute
   '/app/servers/$id': typeof AuthenticatedAppServersIdRoute
   '/app/servers/new': typeof AuthenticatedAppServersNewRoute
+  '/api/public/cron/check': typeof ApiPublicCronCheckRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -96,6 +104,7 @@ export interface FileRoutesById {
   '/_authenticated/app/': typeof AuthenticatedAppIndexRoute
   '/_authenticated/app/servers/$id': typeof AuthenticatedAppServersIdRoute
   '/_authenticated/app/servers/new': typeof AuthenticatedAppServersNewRoute
+  '/api/public/cron/check': typeof ApiPublicCronCheckRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -108,6 +117,7 @@ export interface FileRouteTypes {
     | '/app/'
     | '/app/servers/$id'
     | '/app/servers/new'
+    | '/api/public/cron/check'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -117,6 +127,7 @@ export interface FileRouteTypes {
     | '/app'
     | '/app/servers/$id'
     | '/app/servers/new'
+    | '/api/public/cron/check'
   id:
     | '__root__'
     | '/'
@@ -128,6 +139,7 @@ export interface FileRouteTypes {
     | '/_authenticated/app/'
     | '/_authenticated/app/servers/$id'
     | '/_authenticated/app/servers/new'
+    | '/api/public/cron/check'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -135,6 +147,7 @@ export interface RootRouteChildren {
   AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
   AuthRoute: typeof AuthRoute
   ResetPasswordRoute: typeof ResetPasswordRoute
+  ApiPublicCronCheckRoute: typeof ApiPublicCronCheckRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -187,6 +200,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/app/servers'
       preLoaderRoute: typeof AuthenticatedAppServersRouteImport
       parentRoute: typeof AuthenticatedAppRoute
+    }
+    '/api/public/cron/check': {
+      id: '/api/public/cron/check'
+      path: '/api/public/cron/check'
+      fullPath: '/api/public/cron/check'
+      preLoaderRoute: typeof ApiPublicCronCheckRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/_authenticated/app/servers/new': {
       id: '/_authenticated/app/servers/new'
@@ -250,6 +270,7 @@ const rootRouteChildren: RootRouteChildren = {
   AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
   AuthRoute: AuthRoute,
   ResetPasswordRoute: ResetPasswordRoute,
+  ApiPublicCronCheckRoute: ApiPublicCronCheckRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
