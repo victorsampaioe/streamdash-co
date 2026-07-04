@@ -9,38 +9,227 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
+import { Route as ResetPasswordRouteImport } from './routes/reset-password'
+import { Route as AuthRouteImport } from './routes/auth'
+import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as StatusSlugRouteImport } from './routes/status.$slug'
+import { Route as AuthenticatedAppRouteImport } from './routes/_authenticated/app'
+import { Route as AuthenticatedAppIndexRouteImport } from './routes/_authenticated/app.index'
+import { Route as AuthenticatedAppServersRouteImport } from './routes/_authenticated/app.servers'
+import { Route as AuthenticatedAppAlertsRouteImport } from './routes/_authenticated/app.alerts'
+import { Route as AuthenticatedAppAdminRouteImport } from './routes/_authenticated/app.admin'
+import { Route as ApiPublicCronCheckRouteImport } from './routes/api/public/cron/check'
+import { Route as AuthenticatedAppServersNewRouteImport } from './routes/_authenticated/app.servers.new'
+import { Route as AuthenticatedAppServersIdRouteImport } from './routes/_authenticated/app.servers.$id'
 
+const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
+  id: '/sitemap.xml',
+  path: '/sitemap.xml',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ResetPasswordRoute = ResetPasswordRouteImport.update({
+  id: '/reset-password',
+  path: '/reset-password',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AuthRoute = AuthRouteImport.update({
+  id: '/auth',
+  path: '/auth',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AuthenticatedRouteRoute = AuthenticatedRouteRouteImport.update({
+  id: '/_authenticated',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const StatusSlugRoute = StatusSlugRouteImport.update({
+  id: '/status/$slug',
+  path: '/status/$slug',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AuthenticatedAppRoute = AuthenticatedAppRouteImport.update({
+  id: '/app',
+  path: '/app',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedAppIndexRoute = AuthenticatedAppIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => AuthenticatedAppRoute,
+} as any)
+const AuthenticatedAppServersRoute = AuthenticatedAppServersRouteImport.update({
+  id: '/servers',
+  path: '/servers',
+  getParentRoute: () => AuthenticatedAppRoute,
+} as any)
+const AuthenticatedAppAlertsRoute = AuthenticatedAppAlertsRouteImport.update({
+  id: '/alerts',
+  path: '/alerts',
+  getParentRoute: () => AuthenticatedAppRoute,
+} as any)
+const AuthenticatedAppAdminRoute = AuthenticatedAppAdminRouteImport.update({
+  id: '/admin',
+  path: '/admin',
+  getParentRoute: () => AuthenticatedAppRoute,
+} as any)
+const ApiPublicCronCheckRoute = ApiPublicCronCheckRouteImport.update({
+  id: '/api/public/cron/check',
+  path: '/api/public/cron/check',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AuthenticatedAppServersNewRoute =
+  AuthenticatedAppServersNewRouteImport.update({
+    id: '/new',
+    path: '/new',
+    getParentRoute: () => AuthenticatedAppServersRoute,
+  } as any)
+const AuthenticatedAppServersIdRoute =
+  AuthenticatedAppServersIdRouteImport.update({
+    id: '/$id',
+    path: '/$id',
+    getParentRoute: () => AuthenticatedAppServersRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/auth': typeof AuthRoute
+  '/reset-password': typeof ResetPasswordRoute
+  '/sitemap.xml': typeof SitemapDotxmlRoute
+  '/app': typeof AuthenticatedAppRouteWithChildren
+  '/status/$slug': typeof StatusSlugRoute
+  '/app/admin': typeof AuthenticatedAppAdminRoute
+  '/app/alerts': typeof AuthenticatedAppAlertsRoute
+  '/app/servers': typeof AuthenticatedAppServersRouteWithChildren
+  '/app/': typeof AuthenticatedAppIndexRoute
+  '/app/servers/$id': typeof AuthenticatedAppServersIdRoute
+  '/app/servers/new': typeof AuthenticatedAppServersNewRoute
+  '/api/public/cron/check': typeof ApiPublicCronCheckRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/auth': typeof AuthRoute
+  '/reset-password': typeof ResetPasswordRoute
+  '/sitemap.xml': typeof SitemapDotxmlRoute
+  '/status/$slug': typeof StatusSlugRoute
+  '/app/admin': typeof AuthenticatedAppAdminRoute
+  '/app/alerts': typeof AuthenticatedAppAlertsRoute
+  '/app/servers': typeof AuthenticatedAppServersRouteWithChildren
+  '/app': typeof AuthenticatedAppIndexRoute
+  '/app/servers/$id': typeof AuthenticatedAppServersIdRoute
+  '/app/servers/new': typeof AuthenticatedAppServersNewRoute
+  '/api/public/cron/check': typeof ApiPublicCronCheckRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
+  '/auth': typeof AuthRoute
+  '/reset-password': typeof ResetPasswordRoute
+  '/sitemap.xml': typeof SitemapDotxmlRoute
+  '/_authenticated/app': typeof AuthenticatedAppRouteWithChildren
+  '/status/$slug': typeof StatusSlugRoute
+  '/_authenticated/app/admin': typeof AuthenticatedAppAdminRoute
+  '/_authenticated/app/alerts': typeof AuthenticatedAppAlertsRoute
+  '/_authenticated/app/servers': typeof AuthenticatedAppServersRouteWithChildren
+  '/_authenticated/app/': typeof AuthenticatedAppIndexRoute
+  '/_authenticated/app/servers/$id': typeof AuthenticatedAppServersIdRoute
+  '/_authenticated/app/servers/new': typeof AuthenticatedAppServersNewRoute
+  '/api/public/cron/check': typeof ApiPublicCronCheckRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/'
+  fullPaths:
+    | '/'
+    | '/auth'
+    | '/reset-password'
+    | '/sitemap.xml'
+    | '/app'
+    | '/status/$slug'
+    | '/app/admin'
+    | '/app/alerts'
+    | '/app/servers'
+    | '/app/'
+    | '/app/servers/$id'
+    | '/app/servers/new'
+    | '/api/public/cron/check'
   fileRoutesByTo: FileRoutesByTo
-  to: '/'
-  id: '__root__' | '/'
+  to:
+    | '/'
+    | '/auth'
+    | '/reset-password'
+    | '/sitemap.xml'
+    | '/status/$slug'
+    | '/app/admin'
+    | '/app/alerts'
+    | '/app/servers'
+    | '/app'
+    | '/app/servers/$id'
+    | '/app/servers/new'
+    | '/api/public/cron/check'
+  id:
+    | '__root__'
+    | '/'
+    | '/_authenticated'
+    | '/auth'
+    | '/reset-password'
+    | '/sitemap.xml'
+    | '/_authenticated/app'
+    | '/status/$slug'
+    | '/_authenticated/app/admin'
+    | '/_authenticated/app/alerts'
+    | '/_authenticated/app/servers'
+    | '/_authenticated/app/'
+    | '/_authenticated/app/servers/$id'
+    | '/_authenticated/app/servers/new'
+    | '/api/public/cron/check'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
+  AuthRoute: typeof AuthRoute
+  ResetPasswordRoute: typeof ResetPasswordRoute
+  SitemapDotxmlRoute: typeof SitemapDotxmlRoute
+  StatusSlugRoute: typeof StatusSlugRoute
+  ApiPublicCronCheckRoute: typeof ApiPublicCronCheckRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/sitemap.xml': {
+      id: '/sitemap.xml'
+      path: '/sitemap.xml'
+      fullPath: '/sitemap.xml'
+      preLoaderRoute: typeof SitemapDotxmlRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/reset-password': {
+      id: '/reset-password'
+      path: '/reset-password'
+      fullPath: '/reset-password'
+      preLoaderRoute: typeof ResetPasswordRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/auth': {
+      id: '/auth'
+      path: '/auth'
+      fullPath: '/auth'
+      preLoaderRoute: typeof AuthRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/_authenticated': {
+      id: '/_authenticated'
+      path: ''
+      fullPath: '/'
+      preLoaderRoute: typeof AuthenticatedRouteRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/': {
       id: '/'
       path: '/'
@@ -48,22 +237,125 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/status/$slug': {
+      id: '/status/$slug'
+      path: '/status/$slug'
+      fullPath: '/status/$slug'
+      preLoaderRoute: typeof StatusSlugRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/_authenticated/app': {
+      id: '/_authenticated/app'
+      path: '/app'
+      fullPath: '/app'
+      preLoaderRoute: typeof AuthenticatedAppRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/app/': {
+      id: '/_authenticated/app/'
+      path: '/'
+      fullPath: '/app/'
+      preLoaderRoute: typeof AuthenticatedAppIndexRouteImport
+      parentRoute: typeof AuthenticatedAppRoute
+    }
+    '/_authenticated/app/servers': {
+      id: '/_authenticated/app/servers'
+      path: '/servers'
+      fullPath: '/app/servers'
+      preLoaderRoute: typeof AuthenticatedAppServersRouteImport
+      parentRoute: typeof AuthenticatedAppRoute
+    }
+    '/_authenticated/app/alerts': {
+      id: '/_authenticated/app/alerts'
+      path: '/alerts'
+      fullPath: '/app/alerts'
+      preLoaderRoute: typeof AuthenticatedAppAlertsRouteImport
+      parentRoute: typeof AuthenticatedAppRoute
+    }
+    '/_authenticated/app/admin': {
+      id: '/_authenticated/app/admin'
+      path: '/admin'
+      fullPath: '/app/admin'
+      preLoaderRoute: typeof AuthenticatedAppAdminRouteImport
+      parentRoute: typeof AuthenticatedAppRoute
+    }
+    '/api/public/cron/check': {
+      id: '/api/public/cron/check'
+      path: '/api/public/cron/check'
+      fullPath: '/api/public/cron/check'
+      preLoaderRoute: typeof ApiPublicCronCheckRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/_authenticated/app/servers/new': {
+      id: '/_authenticated/app/servers/new'
+      path: '/new'
+      fullPath: '/app/servers/new'
+      preLoaderRoute: typeof AuthenticatedAppServersNewRouteImport
+      parentRoute: typeof AuthenticatedAppServersRoute
+    }
+    '/_authenticated/app/servers/$id': {
+      id: '/_authenticated/app/servers/$id'
+      path: '/$id'
+      fullPath: '/app/servers/$id'
+      preLoaderRoute: typeof AuthenticatedAppServersIdRouteImport
+      parentRoute: typeof AuthenticatedAppServersRoute
+    }
   }
 }
 
+interface AuthenticatedAppServersRouteChildren {
+  AuthenticatedAppServersIdRoute: typeof AuthenticatedAppServersIdRoute
+  AuthenticatedAppServersNewRoute: typeof AuthenticatedAppServersNewRoute
+}
+
+const AuthenticatedAppServersRouteChildren: AuthenticatedAppServersRouteChildren =
+  {
+    AuthenticatedAppServersIdRoute: AuthenticatedAppServersIdRoute,
+    AuthenticatedAppServersNewRoute: AuthenticatedAppServersNewRoute,
+  }
+
+const AuthenticatedAppServersRouteWithChildren =
+  AuthenticatedAppServersRoute._addFileChildren(
+    AuthenticatedAppServersRouteChildren,
+  )
+
+interface AuthenticatedAppRouteChildren {
+  AuthenticatedAppAdminRoute: typeof AuthenticatedAppAdminRoute
+  AuthenticatedAppAlertsRoute: typeof AuthenticatedAppAlertsRoute
+  AuthenticatedAppServersRoute: typeof AuthenticatedAppServersRouteWithChildren
+  AuthenticatedAppIndexRoute: typeof AuthenticatedAppIndexRoute
+}
+
+const AuthenticatedAppRouteChildren: AuthenticatedAppRouteChildren = {
+  AuthenticatedAppAdminRoute: AuthenticatedAppAdminRoute,
+  AuthenticatedAppAlertsRoute: AuthenticatedAppAlertsRoute,
+  AuthenticatedAppServersRoute: AuthenticatedAppServersRouteWithChildren,
+  AuthenticatedAppIndexRoute: AuthenticatedAppIndexRoute,
+}
+
+const AuthenticatedAppRouteWithChildren =
+  AuthenticatedAppRoute._addFileChildren(AuthenticatedAppRouteChildren)
+
+interface AuthenticatedRouteRouteChildren {
+  AuthenticatedAppRoute: typeof AuthenticatedAppRouteWithChildren
+}
+
+const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
+  AuthenticatedAppRoute: AuthenticatedAppRouteWithChildren,
+}
+
+const AuthenticatedRouteRouteWithChildren =
+  AuthenticatedRouteRoute._addFileChildren(AuthenticatedRouteRouteChildren)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
+  AuthRoute: AuthRoute,
+  ResetPasswordRoute: ResetPasswordRoute,
+  SitemapDotxmlRoute: SitemapDotxmlRoute,
+  StatusSlugRoute: StatusSlugRoute,
+  ApiPublicCronCheckRoute: ApiPublicCronCheckRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}
