@@ -15,6 +15,9 @@ import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthenticatedAppRouteImport } from './routes/_authenticated/app'
 import { Route as AuthenticatedAppIndexRouteImport } from './routes/_authenticated/app.index'
+import { Route as AuthenticatedAppServersRouteImport } from './routes/_authenticated/app.servers'
+import { Route as AuthenticatedAppServersNewRouteImport } from './routes/_authenticated/app.servers.new'
+import { Route as AuthenticatedAppServersIdRouteImport } from './routes/_authenticated/app.servers.$id'
 
 const ResetPasswordRoute = ResetPasswordRouteImport.update({
   id: '/reset-password',
@@ -45,19 +48,42 @@ const AuthenticatedAppIndexRoute = AuthenticatedAppIndexRouteImport.update({
   path: '/',
   getParentRoute: () => AuthenticatedAppRoute,
 } as any)
+const AuthenticatedAppServersRoute = AuthenticatedAppServersRouteImport.update({
+  id: '/servers',
+  path: '/servers',
+  getParentRoute: () => AuthenticatedAppRoute,
+} as any)
+const AuthenticatedAppServersNewRoute =
+  AuthenticatedAppServersNewRouteImport.update({
+    id: '/new',
+    path: '/new',
+    getParentRoute: () => AuthenticatedAppServersRoute,
+  } as any)
+const AuthenticatedAppServersIdRoute =
+  AuthenticatedAppServersIdRouteImport.update({
+    id: '/$id',
+    path: '/$id',
+    getParentRoute: () => AuthenticatedAppServersRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
   '/reset-password': typeof ResetPasswordRoute
   '/app': typeof AuthenticatedAppRouteWithChildren
+  '/app/servers': typeof AuthenticatedAppServersRouteWithChildren
   '/app/': typeof AuthenticatedAppIndexRoute
+  '/app/servers/$id': typeof AuthenticatedAppServersIdRoute
+  '/app/servers/new': typeof AuthenticatedAppServersNewRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
   '/reset-password': typeof ResetPasswordRoute
+  '/app/servers': typeof AuthenticatedAppServersRouteWithChildren
   '/app': typeof AuthenticatedAppIndexRoute
+  '/app/servers/$id': typeof AuthenticatedAppServersIdRoute
+  '/app/servers/new': typeof AuthenticatedAppServersNewRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -66,13 +92,31 @@ export interface FileRoutesById {
   '/auth': typeof AuthRoute
   '/reset-password': typeof ResetPasswordRoute
   '/_authenticated/app': typeof AuthenticatedAppRouteWithChildren
+  '/_authenticated/app/servers': typeof AuthenticatedAppServersRouteWithChildren
   '/_authenticated/app/': typeof AuthenticatedAppIndexRoute
+  '/_authenticated/app/servers/$id': typeof AuthenticatedAppServersIdRoute
+  '/_authenticated/app/servers/new': typeof AuthenticatedAppServersNewRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/auth' | '/reset-password' | '/app' | '/app/'
+  fullPaths:
+    | '/'
+    | '/auth'
+    | '/reset-password'
+    | '/app'
+    | '/app/servers'
+    | '/app/'
+    | '/app/servers/$id'
+    | '/app/servers/new'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/auth' | '/reset-password' | '/app'
+  to:
+    | '/'
+    | '/auth'
+    | '/reset-password'
+    | '/app/servers'
+    | '/app'
+    | '/app/servers/$id'
+    | '/app/servers/new'
   id:
     | '__root__'
     | '/'
@@ -80,7 +124,10 @@ export interface FileRouteTypes {
     | '/auth'
     | '/reset-password'
     | '/_authenticated/app'
+    | '/_authenticated/app/servers'
     | '/_authenticated/app/'
+    | '/_authenticated/app/servers/$id'
+    | '/_authenticated/app/servers/new'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -134,14 +181,53 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAppIndexRouteImport
       parentRoute: typeof AuthenticatedAppRoute
     }
+    '/_authenticated/app/servers': {
+      id: '/_authenticated/app/servers'
+      path: '/servers'
+      fullPath: '/app/servers'
+      preLoaderRoute: typeof AuthenticatedAppServersRouteImport
+      parentRoute: typeof AuthenticatedAppRoute
+    }
+    '/_authenticated/app/servers/new': {
+      id: '/_authenticated/app/servers/new'
+      path: '/new'
+      fullPath: '/app/servers/new'
+      preLoaderRoute: typeof AuthenticatedAppServersNewRouteImport
+      parentRoute: typeof AuthenticatedAppServersRoute
+    }
+    '/_authenticated/app/servers/$id': {
+      id: '/_authenticated/app/servers/$id'
+      path: '/$id'
+      fullPath: '/app/servers/$id'
+      preLoaderRoute: typeof AuthenticatedAppServersIdRouteImport
+      parentRoute: typeof AuthenticatedAppServersRoute
+    }
   }
 }
 
+interface AuthenticatedAppServersRouteChildren {
+  AuthenticatedAppServersIdRoute: typeof AuthenticatedAppServersIdRoute
+  AuthenticatedAppServersNewRoute: typeof AuthenticatedAppServersNewRoute
+}
+
+const AuthenticatedAppServersRouteChildren: AuthenticatedAppServersRouteChildren =
+  {
+    AuthenticatedAppServersIdRoute: AuthenticatedAppServersIdRoute,
+    AuthenticatedAppServersNewRoute: AuthenticatedAppServersNewRoute,
+  }
+
+const AuthenticatedAppServersRouteWithChildren =
+  AuthenticatedAppServersRoute._addFileChildren(
+    AuthenticatedAppServersRouteChildren,
+  )
+
 interface AuthenticatedAppRouteChildren {
+  AuthenticatedAppServersRoute: typeof AuthenticatedAppServersRouteWithChildren
   AuthenticatedAppIndexRoute: typeof AuthenticatedAppIndexRoute
 }
 
 const AuthenticatedAppRouteChildren: AuthenticatedAppRouteChildren = {
+  AuthenticatedAppServersRoute: AuthenticatedAppServersRouteWithChildren,
   AuthenticatedAppIndexRoute: AuthenticatedAppIndexRoute,
 }
 
