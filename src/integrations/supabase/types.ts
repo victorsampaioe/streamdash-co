@@ -14,16 +14,292 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      alert_channels: {
+        Row: {
+          created_at: string
+          enabled: boolean
+          id: string
+          kind: Database["public"]["Enums"]["alert_kind"]
+          name: string
+          owner_id: string
+          target: string
+        }
+        Insert: {
+          created_at?: string
+          enabled?: boolean
+          id?: string
+          kind: Database["public"]["Enums"]["alert_kind"]
+          name: string
+          owner_id: string
+          target: string
+        }
+        Update: {
+          created_at?: string
+          enabled?: boolean
+          id?: string
+          kind?: Database["public"]["Enums"]["alert_kind"]
+          name?: string
+          owner_id?: string
+          target?: string
+        }
+        Relationships: []
+      }
+      checks: {
+        Row: {
+          checked_at: string
+          dns_resolved_ip: string | null
+          error: string | null
+          http_status: number | null
+          id: number
+          latency_ms: number | null
+          server_id: string
+          ssl_days_remaining: number | null
+          status: Database["public"]["Enums"]["server_status"]
+        }
+        Insert: {
+          checked_at?: string
+          dns_resolved_ip?: string | null
+          error?: string | null
+          http_status?: number | null
+          id?: number
+          latency_ms?: number | null
+          server_id: string
+          ssl_days_remaining?: number | null
+          status: Database["public"]["Enums"]["server_status"]
+        }
+        Update: {
+          checked_at?: string
+          dns_resolved_ip?: string | null
+          error?: string | null
+          http_status?: number | null
+          id?: number
+          latency_ms?: number | null
+          server_id?: string
+          ssl_days_remaining?: number | null
+          status?: Database["public"]["Enums"]["server_status"]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "checks_server_id_fkey"
+            columns: ["server_id"]
+            isOneToOne: false
+            referencedRelation: "servers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      incidents: {
+        Row: {
+          ended_at: string | null
+          id: string
+          notified: boolean
+          reason: string | null
+          server_id: string
+          started_at: string
+        }
+        Insert: {
+          ended_at?: string | null
+          id?: string
+          notified?: boolean
+          reason?: string | null
+          server_id: string
+          started_at?: string
+        }
+        Update: {
+          ended_at?: string | null
+          id?: string
+          notified?: boolean
+          reason?: string | null
+          server_id?: string
+          started_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "incidents_server_id_fkey"
+            columns: ["server_id"]
+            isOneToOne: false
+            referencedRelation: "servers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      notifications_log: {
+        Row: {
+          channel_id: string | null
+          event: string
+          id: number
+          incident_id: string | null
+          ok: boolean
+          response: string | null
+          sent_at: string
+          server_id: string | null
+        }
+        Insert: {
+          channel_id?: string | null
+          event: string
+          id?: number
+          incident_id?: string | null
+          ok: boolean
+          response?: string | null
+          sent_at?: string
+          server_id?: string | null
+        }
+        Update: {
+          channel_id?: string | null
+          event?: string
+          id?: number
+          incident_id?: string | null
+          ok?: boolean
+          response?: string | null
+          sent_at?: string
+          server_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "notifications_log_channel_id_fkey"
+            columns: ["channel_id"]
+            isOneToOne: false
+            referencedRelation: "alert_channels"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "notifications_log_incident_id_fkey"
+            columns: ["incident_id"]
+            isOneToOne: false
+            referencedRelation: "incidents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "notifications_log_server_id_fkey"
+            columns: ["server_id"]
+            isOneToOne: false
+            referencedRelation: "servers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      profiles: {
+        Row: {
+          avatar_url: string | null
+          created_at: string
+          email: string | null
+          full_name: string | null
+          id: string
+        }
+        Insert: {
+          avatar_url?: string | null
+          created_at?: string
+          email?: string | null
+          full_name?: string | null
+          id: string
+        }
+        Update: {
+          avatar_url?: string | null
+          created_at?: string
+          email?: string | null
+          full_name?: string | null
+          id?: string
+        }
+        Relationships: []
+      }
+      servers: {
+        Row: {
+          category: string | null
+          consecutive_failures: number
+          created_at: string
+          current_status: Database["public"]["Enums"]["server_status"]
+          description: string | null
+          failure_threshold: number
+          host: string
+          id: string
+          interval_seconds: number
+          is_public: boolean
+          last_checked_at: string | null
+          last_latency_ms: number | null
+          name: string
+          owner_id: string
+          public_slug: string | null
+          ssl_days_remaining: number | null
+          updated_at: string
+        }
+        Insert: {
+          category?: string | null
+          consecutive_failures?: number
+          created_at?: string
+          current_status?: Database["public"]["Enums"]["server_status"]
+          description?: string | null
+          failure_threshold?: number
+          host: string
+          id?: string
+          interval_seconds?: number
+          is_public?: boolean
+          last_checked_at?: string | null
+          last_latency_ms?: number | null
+          name: string
+          owner_id: string
+          public_slug?: string | null
+          ssl_days_remaining?: number | null
+          updated_at?: string
+        }
+        Update: {
+          category?: string | null
+          consecutive_failures?: number
+          created_at?: string
+          current_status?: Database["public"]["Enums"]["server_status"]
+          description?: string | null
+          failure_threshold?: number
+          host?: string
+          id?: string
+          interval_seconds?: number
+          is_public?: boolean
+          last_checked_at?: string | null
+          last_latency_ms?: number | null
+          name?: string
+          owner_id?: string
+          public_slug?: string | null
+          ssl_days_remaining?: number | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      user_roles: {
+        Row: {
+          created_at: string
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
     }
     Enums: {
-      [_ in never]: never
+      alert_kind: "email" | "discord" | "telegram" | "webhook"
+      app_role: "admin" | "user"
+      server_status: "up" | "degraded" | "down" | "unknown"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +426,10 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      alert_kind: ["email", "discord", "telegram", "webhook"],
+      app_role: ["admin", "user"],
+      server_status: ["up", "degraded", "down", "unknown"],
+    },
   },
 } as const
