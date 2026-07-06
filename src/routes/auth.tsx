@@ -109,6 +109,7 @@ function AuthPage() {
             <TabsContent value="signup">
               <form onSubmit={handleSignUp} className="space-y-4">
                 <Field label="Nome"><Input required value={name} onChange={(e) => setName(e.target.value)} placeholder="Seu nome" /></Field>
+                <Field label="Telefone"><Input type="tel" required value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="(11) 99999-9999" /></Field>
                 <Field label="E-mail"><Input type="email" required value={email} onChange={(e) => setEmail(e.target.value)} /></Field>
                 <Field label="Senha"><Input type="password" required minLength={6} value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Mín. 6 caracteres" /></Field>
                 <Button type="submit" disabled={loading} className="w-full">
