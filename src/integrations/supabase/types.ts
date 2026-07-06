@@ -178,6 +178,77 @@ export type Database = {
           },
         ]
       }
+      payments: {
+        Row: {
+          amount_cents: number
+          created_at: string
+          currency: string
+          expires_at: string | null
+          id: string
+          method: Database["public"]["Enums"]["payment_method"]
+          paid_at: string | null
+          pix_copy_paste: string | null
+          pix_qr_code: string | null
+          pix_qr_code_base64: string | null
+          plan: Database["public"]["Enums"]["plan_type"]
+          provider: string
+          provider_payment_id: string | null
+          raw_payload: Json | null
+          status: Database["public"]["Enums"]["payment_status"]
+          subscription_id: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          amount_cents: number
+          created_at?: string
+          currency?: string
+          expires_at?: string | null
+          id?: string
+          method?: Database["public"]["Enums"]["payment_method"]
+          paid_at?: string | null
+          pix_copy_paste?: string | null
+          pix_qr_code?: string | null
+          pix_qr_code_base64?: string | null
+          plan: Database["public"]["Enums"]["plan_type"]
+          provider?: string
+          provider_payment_id?: string | null
+          raw_payload?: Json | null
+          status?: Database["public"]["Enums"]["payment_status"]
+          subscription_id?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          amount_cents?: number
+          created_at?: string
+          currency?: string
+          expires_at?: string | null
+          id?: string
+          method?: Database["public"]["Enums"]["payment_method"]
+          paid_at?: string | null
+          pix_copy_paste?: string | null
+          pix_qr_code?: string | null
+          pix_qr_code_base64?: string | null
+          plan?: Database["public"]["Enums"]["plan_type"]
+          provider?: string
+          provider_payment_id?: string | null
+          raw_payload?: Json | null
+          status?: Database["public"]["Enums"]["payment_status"]
+          subscription_id?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payments_subscription_id_fkey"
+            columns: ["subscription_id"]
+            isOneToOne: false
+            referencedRelation: "subscriptions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           avatar_url: string | null
@@ -185,6 +256,7 @@ export type Database = {
           email: string | null
           full_name: string | null
           id: string
+          phone: string | null
         }
         Insert: {
           avatar_url?: string | null
@@ -192,6 +264,7 @@ export type Database = {
           email?: string | null
           full_name?: string | null
           id: string
+          phone?: string | null
         }
         Update: {
           avatar_url?: string | null
@@ -199,6 +272,7 @@ export type Database = {
           email?: string | null
           full_name?: string | null
           id?: string
+          phone?: string | null
         }
         Relationships: []
       }
@@ -262,6 +336,42 @@ export type Database = {
         }
         Relationships: []
       }
+      subscriptions: {
+        Row: {
+          cancelled_at: string | null
+          created_at: string
+          expires_at: string
+          id: string
+          plan: Database["public"]["Enums"]["plan_type"]
+          started_at: string
+          status: Database["public"]["Enums"]["subscription_status"]
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          cancelled_at?: string | null
+          created_at?: string
+          expires_at: string
+          id?: string
+          plan?: Database["public"]["Enums"]["plan_type"]
+          started_at?: string
+          status?: Database["public"]["Enums"]["subscription_status"]
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          cancelled_at?: string | null
+          created_at?: string
+          expires_at?: string
+          id?: string
+          plan?: Database["public"]["Enums"]["plan_type"]
+          started_at?: string
+          status?: Database["public"]["Enums"]["subscription_status"]
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           created_at: string
@@ -295,11 +405,21 @@ export type Database = {
         }
         Returns: boolean
       }
+      subscription_is_active: { Args: { _user_id: string }; Returns: boolean }
     }
     Enums: {
       alert_kind: "email" | "discord" | "telegram" | "webhook"
       app_role: "admin" | "user"
+      payment_method: "pix" | "credit_card" | "boleto"
+      payment_status:
+        | "pending"
+        | "approved"
+        | "rejected"
+        | "cancelled"
+        | "refunded"
+      plan_type: "trial" | "monthly" | "yearly"
       server_status: "up" | "degraded" | "down" | "unknown"
+      subscription_status: "trial" | "active" | "expired" | "cancelled"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -429,7 +549,17 @@ export const Constants = {
     Enums: {
       alert_kind: ["email", "discord", "telegram", "webhook"],
       app_role: ["admin", "user"],
+      payment_method: ["pix", "credit_card", "boleto"],
+      payment_status: [
+        "pending",
+        "approved",
+        "rejected",
+        "cancelled",
+        "refunded",
+      ],
+      plan_type: ["trial", "monthly", "yearly"],
       server_status: ["up", "degraded", "down", "unknown"],
+      subscription_status: ["trial", "active", "expired", "cancelled"],
     },
   },
 } as const
