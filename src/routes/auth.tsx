@@ -31,6 +31,7 @@ function AuthPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [name, setName] = useState("");
+  const [phone, setPhone] = useState("");
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => {
@@ -51,17 +52,24 @@ function AuthPage() {
   async function handleSignUp(e: React.FormEvent) {
     e.preventDefault();
     setLoading(true);
-    const { error } = await supabase.auth.signUp({
+    const { data, error } = await supabase.auth.signUp({
       email,
       password,
       options: {
         emailRedirectTo: `${window.location.origin}/app`,
-        data: { full_name: name },
+        data: { full_name: name, phone },
       },
     });
     setLoading(false);
     if (error) return toast.error(error.message);
-    toast.success("Conta criada! Verifique seu e-mail se a confirmação estiver ativa.");
+    // If email confirmation is required, session is null → send to verify screen.
+    if (!data.session) {
+      toast.success("Conta criada! Verifique seu e-mail para continuar.");
+      navigate({ to: "/verify-email", search: { email } });
+    } else {
+      toast.success("Conta criada!");
+      navigate({ to: "/app", replace: true });
+    }
   }
 
   async function handleReset() {
