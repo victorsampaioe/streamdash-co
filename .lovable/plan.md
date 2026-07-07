@@ -1,95 +1,72 @@
+## Roadmap em fases — Mapa de Falhas + Utilidades
 
-# StreamMonitor.site — Plano de Construção
+Vamos entregar em 4 fases. Cada fase é um deploy funcional; você aprova e passo para a próxima.
 
-App de monitoramento de infraestrutura, estilo Datadog/Uptime Kuma, com dashboard em tempo real, alertas multicanal e página pública de status.
+---
 
-## Escopo confirmado
-- Nome do produto: **StreamMonitor** (streammonitor.site)
-- Cadastro simplificado: **apenas nome, domínio/DNS e descrição opcional**
-- Porta fixa em **80** para todos os monitoramentos (não exibida na UI)
-- Todas as verificações HTTP usam automaticamente porta 80
+### Fase 1 — Mapa de Falhas em Tempo Real (o diferencial)
 
-## Stack e arquitetura
-- Frontend: React 19 + TypeScript + TanStack Start (já configurado) + Tailwind v4 + shadcn/ui
-- Backend: **Lovable Cloud** (Postgres gerenciado + Auth + Server Functions + Storage) — cobre o requisito de PostgreSQL, API REST equivalente via server functions, e histórico
-- Cron de verificação: `pg_cron` chamando endpoint público `/api/public/cron/check` a cada 30s
-- Notificações: Resend (email), Discord webhook, Telegram bot, webhooks genéricos
-- Nota: itens como "Docker/Deploy AWS" ficam fora — Lovable Cloud já cuida do runtime gerenciado; posso documentar como exportar depois.
+**Backend**
+- Nova tabela `check_regions` (código, nome, cidade, país, lat/lng, ativo).
+- Nova tabela `region_checks` (server_id, region_code, status, latency_ms, http_status, error, checked_at) com índice em (server_id, checked_at desc).
+- Seed inicial das regiões: `sa-east-1` São Paulo 🇧🇷, `us-east-1` Virgínia 🇺🇸, `eu-central-1` Frankfurt 🇩🇪, `ap-northeast-1` Tóquio 🇯🇵. Fácil adicionar Fortaleza/Lisboa/Miami depois.
+- Server route pública `/api/public/regions/report` — endpoint que os workers regionais chamam com HMAC (`REGION_WORKER_SECRET`) para gravar resultados. Assim você pluga workers reais em AWS quando quiser, um por região.
+- Fallback interno: o cron atual (`runDueChecks`) faz a checagem "origem" (região do servidor Lovable) e grava com `region_code = 'origin'`. Enquanto você não subir os workers AWS, marco as demais regiões como *aguardando worker* (sem simular dado falso — respeita a proposta séria de monitoramento).
+- RLS: leitura pública para servidores marcados `is_public`; leitura autenticada só do dono; escrita só via endpoint HMAC.
 
-## Autenticação e permissões
-- Email + senha, recuperação de senha via `/reset-password`
-- Tabela `profiles` (nome, avatar) + `user_roles` com enum `admin | user`
-- Função `has_role()` SECURITY DEFINER + RLS em todas as tabelas
-- Painel `/admin` gated por `has_role(admin)` para gerenciar usuários e roles
+**Frontend**
+- Página `/app/servers/$id` ganha aba **Mapa Global** com:
+  - Mapa mundi SVG (D3 world-atlas leve, sem chave de API) com pontos coloridos por região.
+  - Lista lateral: bandeira, cidade, status, latência, "há X segundos".
+  - Auto-refresh a cada 10s via react-query.
+- Página pública `/status/$slug` também exibe o mapa.
+- Componente reutilizável `<GlobalCheckMap />`.
 
-## Schema do banco
-```
-profiles(id, full_name, avatar_url, created_at)
-user_roles(id, user_id, role)          -- enum app_role
-servers(id, owner_id, name, host, description, category, is_public, created_at)
-check_config(server_id PK, interval_seconds default 30, failure_threshold default 3)
-checks(id, server_id, checked_at, status, http_status, latency_ms,
-       dns_resolved_ip, ssl_days_remaining, error)
-incidents(id, server_id, started_at, ended_at, reason)
-alert_channels(id, owner_id, kind [email|discord|telegram|webhook], target, enabled)
-notifications_log(id, incident_id, channel_id, sent_at, ok, response)
-```
-Todas com RLS: dono vê o seu; admin vê tudo; `servers.is_public=true` fica legível por anon para a página de status.
+**Docs para você**
+- README curto `docs/regional-workers.md` explicando como subir um worker Node em cada EC2 (SP/Virgínia/Frankfurt/Tóquio) que faz `fetch` no host e envia POST assinado. ~30 linhas de código por worker.
 
-## Monitoramento
-- Server function `runCheck(serverId)`:
-  1. Resolve DNS (via `dns.promises`)
-  2. `fetch http://host:80/` com timeout, mede latência
-  3. Se HTTPS disponível, checa cert SSL e dias restantes
-  4. Grava linha em `checks`
-  5. Se N falhas consecutivas ≥ `failure_threshold`, cria incident e dispara alertas
-- Endpoint `/api/public/cron/check` (assinado por segredo) itera servidores devidos e roda em paralelo
-- `pg_cron` job a cada 30s bate no endpoint
+---
 
-## Dashboard
-- Rotas:
-  - `/` landing pública com CTA
-  - `/auth` login/registro + esqueci senha
-  - `/reset-password`
-  - `/app` dashboard (gated `_authenticated`)
-  - `/app/servers/$id` histórico detalhado, gráficos (Recharts), últimos incidentes
-  - `/app/servers/new` cadastro (apenas nome, host, descrição)
-  - `/app/alerts` canais de alerta
-  - `/app/admin` (gated admin) usuários + roles
-  - `/status/$slug` página pública por servidor
-- Cards Online/Offline com semáforo verde/amarelo/vermelho
-- Gráfico de uptime 24h/7d/30d, latência ao longo do tempo
-- Busca instantânea, filtros por categoria/status
-- Realtime via Supabase Realtime subscription em `checks`
-- Modo escuro/claro com toggle (persistido)
-- Exportação CSV do histórico do servidor
+### Fase 2 — Hub de Utilidades client-side (rápido, sem backend)
 
-## Alertas
-- Canais configuráveis pelo usuário: email (Resend), Discord (webhook URL), Telegram (chat_id via bot compartilhado), webhook genérico
-- Disparo após `failure_threshold` falhas seguidas; segundo disparo quando resolvido
-- Segredos: `RESEND_API_KEY`, `TELEGRAM_BOT_TOKEN`, `CRON_SECRET`
+Rota `/tools` com sidebar categorizada. Todas rodam 100% no browser:
 
-## Design system
-- Tema escuro-first, paleta observability: fundo `#0B0F17`, superfícies `#111827`, acento ciano `#22D3EE`, sucesso `#22C55E`, aviso `#F59E0B`, erro `#EF4444`
-- Tipografia: JetBrains Mono para métricas, Inter para UI
-- Tokens semânticos em `src/styles.css` (oklch), sem cores hardcoded nos componentes
-- Componentes shadcn customizados: `StatusBadge`, `MetricCard`, `UptimeBar`, `LatencyChart`
+- **Geradores:** QR Code (`qrcode`), senha forte, UUID v4/v7, timestamp ↔ data (todos os fusos).
+- **Encoding/Hash:** Base64 encode/decode, MD5, SHA-1, SHA-256, SHA-512 (Web Crypto API).
+- **JSON:** formatador, minificador, validador com apontamento de erro.
 
-## Entrega em fases (nesta ordem, tudo neste projeto)
-1. Habilitar Lovable Cloud + migrations do schema + RLS + roles + seed admin trigger
-2. Design system + shell (sidebar, header, dark/light toggle)
-3. Auth (login, signup, reset) + rota `_authenticated`
-4. CRUD de servidores (form minimalista: nome, host, descrição)
-5. Motor de check + rota cron pública + pg_cron
-6. Dashboard com cards, gráficos, realtime, filtros, CSV
-7. Página de detalhe + página pública `/status/$slug`
-8. Canais de alerta + envio (email/discord/telegram/webhook)
-9. Painel admin (usuários + roles)
-10. SEO (title/desc/OG), sitemap, robots
+Cada ferramenta é um componente isolado em `src/routes/_authenticated/app.tools.*.tsx`, compartilhando um `<ToolShell>` reutilizável (título, descrição, input, output, botão copiar).
 
-## Perguntas antes de começar
-1. **Registro público liberado** ou apenas admin cria contas?
-2. **Email** para notificações: uso o remetente de teste do Resend (`onboarding@resend.dev`) ou você tem domínio verificado? (posso trocar depois)
-3. **Telegram**: prefere que cada usuário informe o próprio bot token, ou usamos um bot único compartilhado da plataforma?
+---
 
-Se quiser, respondo essas 3 rapidamente e já começo pela fase 1.
+### Fase 3 — Ferramentas de Sites/Domínios/Segurança (backend leve)
+
+Server functions autenticadas (com `PremiumGate` opcional):
+
+- **Sites:** tempo de resposta, screenshot (via API externa tipo `s.wordpress.com/mshots` — grátis), histórico de uptime (já temos), histórico DNS (armazenar snapshots diários).
+- **Domínios:** WHOIS + data de expiração + disponibilidade (via `whois` npm ou API RDAP oficial IANA — sem chave).
+- **Segurança:** validador SSL (já temos parte), scan de headers (`fetch` + análise de `strict-transport-security`, `content-security-policy`, etc.), detector Cloudflare/CDN (via headers `server`, `cf-ray`, `x-served-by`), blacklist DNSBL (query DNS a Spamhaus/Barracuda), SPF/DKIM/DMARC (query TXT).
+
+---
+
+### Fase 4 — Ferramentas de Rede pesadas
+
+Precisam do runtime Node no server (nem tudo roda no Worker Cloudflare). Vou avaliar caso a caso; algumas exigem worker AWS dedicado:
+
+- DNS lookup, Reverse DNS, ASN, IP info, Geolocalização IP (via `ipapi.co` ou dataset MaxMind), detectar IPv4/IPv6 → viáveis no server atual.
+- Ping, Traceroute, port scan, MTU, BGP → exigem raw sockets → rodam nos workers AWS regionais criados na Fase 1 (mesma infra).
+
+---
+
+### Detalhes técnicos importantes
+
+- **Sem simular dados falsos** no Mapa: enquanto workers AWS não existem, as regiões extra ficam com status `pending` e badge "Aguardando worker". Isso mantém credibilidade do produto.
+- **Escala:** as tabelas `region_checks` recebem alto volume — configurar retenção (deletar checks > 30 dias) via cron.
+- **Mapa:** SVG estático + `topojson` (~100kb gz) — não precisa Google Maps/Mapbox nem chave.
+- **Reutilização:** `<StatusDot>`, `<UptimeSparkline>`, `<PremiumGate>` já existem — reaproveitar em tudo.
+
+---
+
+### O que faço agora se aprovar
+
+**Fase 1 completa** (mapa + tabelas + endpoint HMAC + doc para os workers AWS). Ao concluir, te aviso e você decide se seguimos para Fase 2 (utilidades) ou se quer primeiro subir os workers AWS.
