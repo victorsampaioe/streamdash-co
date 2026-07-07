@@ -17,12 +17,8 @@ const radarQuery = queryOptions<RadarSnapshot>({
 export const Route = createFileRoute("/_authenticated/app/radar")({
   head: () => ({
     meta: [
-      { title: "Radar Brasil — Status da internet em tempo real | StreamMonitor" },
-      { name: "description", content: "Painel em tempo real com incidentes de serviços globais (Cloudflare, GitHub, Discord, WhatsApp), latência por região, uptime e serviços com mais instabilidade nas últimas 24h." },
-      { property: "og:title", content: "Radar Brasil — Status da internet em tempo real" },
-      { property: "og:description", content: "Veja incidentes de grandes serviços, latência por região e serviços mais instáveis das últimas 24h." },
-      { property: "og:type", content: "website" },
-      { name: "twitter:card", content: "summary_large_image" },
+      { title: "Radar Brasil — StreamMonitor" },
+      { name: "robots", content: "noindex" },
     ],
   }),
   loader: ({ context }) => context.queryClient.ensureQueryData(radarQuery),
