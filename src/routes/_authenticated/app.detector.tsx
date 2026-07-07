@@ -193,23 +193,3 @@ function Row({ label, value, mono, tone }: { label: string; value: string; mono?
   );
 }
 
-function Shell({ children }: { children: React.ReactNode }) {
-  return (
-    <div className="min-h-screen bg-background text-foreground">
-      <header className="border-b border-border/60 backdrop-blur bg-background/70 sticky top-0 z-40">
-        <div className="max-w-5xl mx-auto flex items-center justify-between px-6 py-4">
-          <Link to="/" className="flex items-center gap-2">
-            <Activity className="h-5 w-5 text-primary" />
-            <span className="font-bold tracking-tight">stream<span className="text-primary">monitor</span></span>
-          </Link>
-          <div className="flex items-center gap-3 text-sm">
-            <Link to="/radar" className="text-muted-foreground hover:text-foreground">Radar</Link>
-            <Link to="/detector" className="text-foreground font-medium">Detector</Link>
-            <Link to="/auth" className="text-muted-foreground hover:text-foreground">Entrar</Link>
-          </div>
-        </div>
-      </header>
-      <main className="max-w-5xl mx-auto px-6 py-10 space-y-6">{children}</main>
-    </div>
-  );
-}
