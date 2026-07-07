@@ -113,6 +113,12 @@ function AuthPage() {
                 <Field label="Telefone"><Input type="tel" required value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="(11) 99999-9999" /></Field>
                 <Field label="E-mail"><Input type="email" required value={email} onChange={(e) => setEmail(e.target.value)} /></Field>
                 <Field label="Senha"><Input type="password" required minLength={6} value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Mín. 6 caracteres" /></Field>
+                <Field label="Código de indicação (opcional)">
+                  <Input value={referralCode} onChange={(e) => setReferralCode(e.target.value.toUpperCase())} placeholder="Ex.: ABC12345" maxLength={12} />
+                </Field>
+                {referralCode && (
+                  <p className="text-xs text-primary">🎁 Você ganhará 10 dias extras de teste ao usar um código.</p>
+                )}
                 <Button type="submit" disabled={loading} className="w-full">
                   {loading ? "Criando..." : "Criar conta"}
                 </Button>
