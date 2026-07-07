@@ -23,6 +23,7 @@ function Landing() {
           </div>
           <div className="flex items-center gap-2">
             <Link to="/radar"><Button variant="ghost" size="sm">📡 Radar Brasil</Button></Link>
+            <Link to="/detector"><Button variant="ghost" size="sm">🚨 Detector</Button></Link>
             <Link to="/auth"><Button variant="ghost" size="sm">Entrar</Button></Link>
             <Link to="/auth"><Button size="sm">Começar</Button></Link>
           </div>
