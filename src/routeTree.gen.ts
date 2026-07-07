@@ -18,6 +18,7 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as StatusSlugRouteImport } from './routes/status.$slug'
 import { Route as AuthenticatedAppRouteImport } from './routes/_authenticated/app'
 import { Route as AuthenticatedAppIndexRouteImport } from './routes/_authenticated/app.index'
+import { Route as ApiPublicRadarRouteImport } from './routes/api/public/radar'
 import { Route as AuthenticatedAppSubscriptionRouteImport } from './routes/_authenticated/app.subscription'
 import { Route as AuthenticatedAppServersRouteImport } from './routes/_authenticated/app.servers'
 import { Route as AuthenticatedAppAlertsRouteImport } from './routes/_authenticated/app.alerts'
@@ -70,6 +71,11 @@ const AuthenticatedAppIndexRoute = AuthenticatedAppIndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => AuthenticatedAppRoute,
+} as any)
+const ApiPublicRadarRoute = ApiPublicRadarRouteImport.update({
+  id: '/api/public/radar',
+  path: '/api/public/radar',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const AuthenticatedAppSubscriptionRoute =
   AuthenticatedAppSubscriptionRouteImport.update({
@@ -127,6 +133,7 @@ export interface FileRoutesByFullPath {
   '/app/alerts': typeof AuthenticatedAppAlertsRoute
   '/app/servers': typeof AuthenticatedAppServersRouteWithChildren
   '/app/subscription': typeof AuthenticatedAppSubscriptionRoute
+  '/api/public/radar': typeof ApiPublicRadarRoute
   '/app/': typeof AuthenticatedAppIndexRoute
   '/app/servers/$id': typeof AuthenticatedAppServersIdRoute
   '/app/servers/new': typeof AuthenticatedAppServersNewRoute
@@ -144,6 +151,7 @@ export interface FileRoutesByTo {
   '/app/alerts': typeof AuthenticatedAppAlertsRoute
   '/app/servers': typeof AuthenticatedAppServersRouteWithChildren
   '/app/subscription': typeof AuthenticatedAppSubscriptionRoute
+  '/api/public/radar': typeof ApiPublicRadarRoute
   '/app': typeof AuthenticatedAppIndexRoute
   '/app/servers/$id': typeof AuthenticatedAppServersIdRoute
   '/app/servers/new': typeof AuthenticatedAppServersNewRoute
@@ -164,6 +172,7 @@ export interface FileRoutesById {
   '/_authenticated/app/alerts': typeof AuthenticatedAppAlertsRoute
   '/_authenticated/app/servers': typeof AuthenticatedAppServersRouteWithChildren
   '/_authenticated/app/subscription': typeof AuthenticatedAppSubscriptionRoute
+  '/api/public/radar': typeof ApiPublicRadarRoute
   '/_authenticated/app/': typeof AuthenticatedAppIndexRoute
   '/_authenticated/app/servers/$id': typeof AuthenticatedAppServersIdRoute
   '/_authenticated/app/servers/new': typeof AuthenticatedAppServersNewRoute
@@ -184,6 +193,7 @@ export interface FileRouteTypes {
     | '/app/alerts'
     | '/app/servers'
     | '/app/subscription'
+    | '/api/public/radar'
     | '/app/'
     | '/app/servers/$id'
     | '/app/servers/new'
@@ -201,6 +211,7 @@ export interface FileRouteTypes {
     | '/app/alerts'
     | '/app/servers'
     | '/app/subscription'
+    | '/api/public/radar'
     | '/app'
     | '/app/servers/$id'
     | '/app/servers/new'
@@ -220,6 +231,7 @@ export interface FileRouteTypes {
     | '/_authenticated/app/alerts'
     | '/_authenticated/app/servers'
     | '/_authenticated/app/subscription'
+    | '/api/public/radar'
     | '/_authenticated/app/'
     | '/_authenticated/app/servers/$id'
     | '/_authenticated/app/servers/new'
@@ -235,6 +247,7 @@ export interface RootRouteChildren {
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
   VerifyEmailRoute: typeof VerifyEmailRoute
   StatusSlugRoute: typeof StatusSlugRoute
+  ApiPublicRadarRoute: typeof ApiPublicRadarRoute
   ApiPublicCronCheckRoute: typeof ApiPublicCronCheckRoute
   ApiPublicRegionsReportRoute: typeof ApiPublicRegionsReportRoute
 }
@@ -303,6 +316,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/app/'
       preLoaderRoute: typeof AuthenticatedAppIndexRouteImport
       parentRoute: typeof AuthenticatedAppRoute
+    }
+    '/api/public/radar': {
+      id: '/api/public/radar'
+      path: '/api/public/radar'
+      fullPath: '/api/public/radar'
+      preLoaderRoute: typeof ApiPublicRadarRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/_authenticated/app/subscription': {
       id: '/_authenticated/app/subscription'
@@ -417,6 +437,7 @@ const rootRouteChildren: RootRouteChildren = {
   SitemapDotxmlRoute: SitemapDotxmlRoute,
   VerifyEmailRoute: VerifyEmailRoute,
   StatusSlugRoute: StatusSlugRoute,
+  ApiPublicRadarRoute: ApiPublicRadarRoute,
   ApiPublicCronCheckRoute: ApiPublicCronCheckRoute,
   ApiPublicRegionsReportRoute: ApiPublicRegionsReportRoute,
 }
