@@ -21,6 +21,7 @@ import { Route as AuthenticatedAppIndexRouteImport } from './routes/_authenticat
 import { Route as ApiPublicRadarRouteImport } from './routes/api/public/radar'
 import { Route as AuthenticatedAppSubscriptionRouteImport } from './routes/_authenticated/app.subscription'
 import { Route as AuthenticatedAppReferralsRouteImport } from './routes/_authenticated/app.referrals'
+import { Route as AuthenticatedAppRankingRouteImport } from './routes/_authenticated/app.ranking'
 import { Route as AuthenticatedAppRadarRouteImport } from './routes/_authenticated/app.radar'
 import { Route as AuthenticatedAppDetectorRouteImport } from './routes/_authenticated/app.detector'
 import { Route as AuthenticatedAppAlertsRouteImport } from './routes/_authenticated/app.alerts'
@@ -92,6 +93,11 @@ const AuthenticatedAppReferralsRoute =
     path: '/referrals',
     getParentRoute: () => AuthenticatedAppRoute,
   } as any)
+const AuthenticatedAppRankingRoute = AuthenticatedAppRankingRouteImport.update({
+  id: '/ranking',
+  path: '/ranking',
+  getParentRoute: () => AuthenticatedAppRoute,
+} as any)
 const AuthenticatedAppRadarRoute = AuthenticatedAppRadarRouteImport.update({
   id: '/radar',
   path: '/radar',
@@ -154,6 +160,7 @@ export interface FileRoutesByFullPath {
   '/app/alerts': typeof AuthenticatedAppAlertsRoute
   '/app/detector': typeof AuthenticatedAppDetectorRoute
   '/app/radar': typeof AuthenticatedAppRadarRoute
+  '/app/ranking': typeof AuthenticatedAppRankingRoute
   '/app/referrals': typeof AuthenticatedAppReferralsRoute
   '/app/subscription': typeof AuthenticatedAppSubscriptionRoute
   '/api/public/radar': typeof ApiPublicRadarRoute
@@ -175,6 +182,7 @@ export interface FileRoutesByTo {
   '/app/alerts': typeof AuthenticatedAppAlertsRoute
   '/app/detector': typeof AuthenticatedAppDetectorRoute
   '/app/radar': typeof AuthenticatedAppRadarRoute
+  '/app/ranking': typeof AuthenticatedAppRankingRoute
   '/app/referrals': typeof AuthenticatedAppReferralsRoute
   '/app/subscription': typeof AuthenticatedAppSubscriptionRoute
   '/api/public/radar': typeof ApiPublicRadarRoute
@@ -199,6 +207,7 @@ export interface FileRoutesById {
   '/_authenticated/app/alerts': typeof AuthenticatedAppAlertsRoute
   '/_authenticated/app/detector': typeof AuthenticatedAppDetectorRoute
   '/_authenticated/app/radar': typeof AuthenticatedAppRadarRoute
+  '/_authenticated/app/ranking': typeof AuthenticatedAppRankingRoute
   '/_authenticated/app/referrals': typeof AuthenticatedAppReferralsRoute
   '/_authenticated/app/subscription': typeof AuthenticatedAppSubscriptionRoute
   '/api/public/radar': typeof ApiPublicRadarRoute
@@ -223,6 +232,7 @@ export interface FileRouteTypes {
     | '/app/alerts'
     | '/app/detector'
     | '/app/radar'
+    | '/app/ranking'
     | '/app/referrals'
     | '/app/subscription'
     | '/api/public/radar'
@@ -244,6 +254,7 @@ export interface FileRouteTypes {
     | '/app/alerts'
     | '/app/detector'
     | '/app/radar'
+    | '/app/ranking'
     | '/app/referrals'
     | '/app/subscription'
     | '/api/public/radar'
@@ -267,6 +278,7 @@ export interface FileRouteTypes {
     | '/_authenticated/app/alerts'
     | '/_authenticated/app/detector'
     | '/_authenticated/app/radar'
+    | '/_authenticated/app/ranking'
     | '/_authenticated/app/referrals'
     | '/_authenticated/app/subscription'
     | '/api/public/radar'
@@ -377,6 +389,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAppReferralsRouteImport
       parentRoute: typeof AuthenticatedAppRoute
     }
+    '/_authenticated/app/ranking': {
+      id: '/_authenticated/app/ranking'
+      path: '/ranking'
+      fullPath: '/app/ranking'
+      preLoaderRoute: typeof AuthenticatedAppRankingRouteImport
+      parentRoute: typeof AuthenticatedAppRoute
+    }
     '/_authenticated/app/radar': {
       id: '/_authenticated/app/radar'
       path: '/radar'
@@ -448,6 +467,7 @@ interface AuthenticatedAppRouteChildren {
   AuthenticatedAppAlertsRoute: typeof AuthenticatedAppAlertsRoute
   AuthenticatedAppDetectorRoute: typeof AuthenticatedAppDetectorRoute
   AuthenticatedAppRadarRoute: typeof AuthenticatedAppRadarRoute
+  AuthenticatedAppRankingRoute: typeof AuthenticatedAppRankingRoute
   AuthenticatedAppReferralsRoute: typeof AuthenticatedAppReferralsRoute
   AuthenticatedAppSubscriptionRoute: typeof AuthenticatedAppSubscriptionRoute
   AuthenticatedAppIndexRoute: typeof AuthenticatedAppIndexRoute
@@ -461,6 +481,7 @@ const AuthenticatedAppRouteChildren: AuthenticatedAppRouteChildren = {
   AuthenticatedAppAlertsRoute: AuthenticatedAppAlertsRoute,
   AuthenticatedAppDetectorRoute: AuthenticatedAppDetectorRoute,
   AuthenticatedAppRadarRoute: AuthenticatedAppRadarRoute,
+  AuthenticatedAppRankingRoute: AuthenticatedAppRankingRoute,
   AuthenticatedAppReferralsRoute: AuthenticatedAppReferralsRoute,
   AuthenticatedAppSubscriptionRoute: AuthenticatedAppSubscriptionRoute,
   AuthenticatedAppIndexRoute: AuthenticatedAppIndexRoute,
