@@ -1,7 +1,7 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute } from "@tanstack/react-router";
 import { useMutation } from "@tanstack/react-query";
 import { useState } from "react";
-import { Activity, AlertTriangle, CheckCircle2, Globe, Loader2, Search, ShieldAlert, ShieldOff, Wifi } from "lucide-react";
+import { AlertTriangle, CheckCircle2, Globe, Loader2, Search, ShieldAlert, ShieldOff, Wifi } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -10,21 +10,17 @@ import { runBlockDetector } from "@/lib/detector.functions";
 import type { DetectorReport, Verdict } from "@/lib/detector.server";
 import { cn } from "@/lib/utils";
 
-export const Route = createFileRoute("/detector")({
+export const Route = createFileRoute("/_authenticated/app/detector")({
   head: () => ({
     meta: [
-      { title: "Detector de Bloqueios — DNS, firewall e geo | StreamMonitor" },
-      { name: "description", content: "Descubra se um domínio está bloqueado por DNS, firewall ou geolocalização. Testa 4 resolvers públicos (Cloudflare, Google, Quad9, OpenDNS) e o acesso HTTPS." },
-      { property: "og:title", content: "Detector de Bloqueios de Domínio" },
-      { property: "og:description", content: "Teste em segundos se um site está bloqueado por DNS, firewall ou geo." },
-      { property: "og:type", content: "website" },
-      { name: "twitter:card", content: "summary_large_image" },
+      { title: "Detector de Bloqueios — StreamMonitor" },
+      { name: "robots", content: "noindex" },
     ],
   }),
   errorComponent: ({ error }) => (
-    <Shell><Card className="p-6 text-center text-sm text-muted-foreground">{error.message}</Card></Shell>
+    <Card className="p-6 text-center text-sm text-muted-foreground">{error.message}</Card>
   ),
-  notFoundComponent: () => <Shell><div className="p-6">Não encontrado</div></Shell>,
+  notFoundComponent: () => <div className="p-6">Não encontrado</div>,
   component: DetectorPage,
 });
 
@@ -51,8 +47,9 @@ function DetectorPage() {
   };
 
   return (
-    <Shell>
+    <div className="space-y-6">
       <header className="space-y-1">
+
         <h1 className="text-3xl font-bold tracking-tight">🚨 Detector de Bloqueios</h1>
         <p className="text-sm text-muted-foreground">
           Descubra se um domínio está sendo bloqueado por DNS, firewall ou geolocalização.
@@ -96,7 +93,7 @@ function DetectorPage() {
           </ul>
         </Card>
       )}
-    </Shell>
+    </div>
   );
 }
 
@@ -196,23 +193,3 @@ function Row({ label, value, mono, tone }: { label: string; value: string; mono?
   );
 }
 
-function Shell({ children }: { children: React.ReactNode }) {
-  return (
-    <div className="min-h-screen bg-background text-foreground">
-      <header className="border-b border-border/60 backdrop-blur bg-background/70 sticky top-0 z-40">
-        <div className="max-w-5xl mx-auto flex items-center justify-between px-6 py-4">
-          <Link to="/" className="flex items-center gap-2">
-            <Activity className="h-5 w-5 text-primary" />
-            <span className="font-bold tracking-tight">stream<span className="text-primary">monitor</span></span>
-          </Link>
-          <div className="flex items-center gap-3 text-sm">
-            <Link to="/radar" className="text-muted-foreground hover:text-foreground">Radar</Link>
-            <Link to="/detector" className="text-foreground font-medium">Detector</Link>
-            <Link to="/auth" className="text-muted-foreground hover:text-foreground">Entrar</Link>
-          </div>
-        </div>
-      </header>
-      <main className="max-w-5xl mx-auto px-6 py-10 space-y-6">{children}</main>
-    </div>
-  );
-}

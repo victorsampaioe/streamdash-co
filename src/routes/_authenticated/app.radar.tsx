@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { queryOptions, useSuspenseQuery } from "@tanstack/react-query";
-import { Activity, AlertTriangle, CheckCircle2, Clock, Flame, Globe, Wifi } from "lucide-react";
+import { AlertTriangle, CheckCircle2, Clock, Flame, Globe, Wifi } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { getRadarSnapshot } from "@/lib/radar.functions";
@@ -14,15 +14,11 @@ const radarQuery = queryOptions<RadarSnapshot>({
   staleTime: 30_000,
 });
 
-export const Route = createFileRoute("/radar")({
+export const Route = createFileRoute("/_authenticated/app/radar")({
   head: () => ({
     meta: [
-      { title: "Radar Brasil — Status da internet em tempo real | StreamMonitor" },
-      { name: "description", content: "Painel em tempo real com incidentes de serviços globais (Cloudflare, GitHub, Discord, WhatsApp), latência por região, uptime e serviços com mais instabilidade nas últimas 24h." },
-      { property: "og:title", content: "Radar Brasil — Status da internet em tempo real" },
-      { property: "og:description", content: "Veja incidentes de grandes serviços, latência por região e serviços mais instáveis das últimas 24h." },
-      { property: "og:type", content: "website" },
-      { name: "twitter:card", content: "summary_large_image" },
+      { title: "Radar Brasil — StreamMonitor" },
+      { name: "robots", content: "noindex" },
     ],
   }),
   loader: ({ context }) => context.queryClient.ensureQueryData(radarQuery),
@@ -33,20 +29,18 @@ export const Route = createFileRoute("/radar")({
 
 function RadarError({ error }: { error: Error }) {
   return (
-    <Shell>
-      <Card className="p-8 text-center">
-        <AlertTriangle className="h-8 w-8 text-warning mx-auto mb-3" />
-        <p className="font-medium">Não foi possível carregar o Radar</p>
-        <p className="text-sm text-muted-foreground mt-1">{error.message}</p>
-      </Card>
-    </Shell>
+    <Card className="p-8 text-center">
+      <AlertTriangle className="h-8 w-8 text-warning mx-auto mb-3" />
+      <p className="font-medium">Não foi possível carregar o Radar</p>
+      <p className="text-sm text-muted-foreground mt-1">{error.message}</p>
+    </Card>
   );
 }
 
 function RadarPage() {
   const { data } = useSuspenseQuery(radarQuery);
   return (
-    <Shell>
+    <div className="space-y-6">
       <Header generatedAt={data.generated_at} />
       <StatsRow stats={data.stats} />
 
@@ -69,34 +63,6 @@ function RadarPage() {
         title="Mapa de calor Brasil (por estado)"
         body="Ativado quando houver dados suficientes por UF (via workers regionais e relatos colaborativos)."
       />
-
-      <footer className="text-center text-xs text-muted-foreground pt-6 pb-2">
-        Endpoint público JSON:{" "}
-        <a href="/api/public/radar" className="text-primary hover:underline font-mono">/api/public/radar</a>
-        {" · "}
-        <Link to="/" className="text-primary hover:underline">streammonitor.site</Link>
-      </footer>
-    </Shell>
-  );
-}
-
-function Shell({ children }: { children: React.ReactNode }) {
-  return (
-    <div className="min-h-screen bg-background text-foreground">
-      <header className="border-b border-border/60 backdrop-blur bg-background/70 sticky top-0 z-40">
-        <div className="max-w-6xl mx-auto flex items-center justify-between px-6 py-4">
-          <Link to="/" className="flex items-center gap-2">
-            <Activity className="h-5 w-5 text-primary" />
-            <span className="font-bold tracking-tight">stream<span className="text-primary">monitor</span></span>
-          </Link>
-          <div className="flex items-center gap-3 text-sm">
-            <Link to="/radar" className="text-foreground font-medium">Radar</Link>
-            <Link to="/detector" className="text-muted-foreground hover:text-foreground">Detector</Link>
-            <Link to="/auth" className="text-muted-foreground hover:text-foreground">Entrar</Link>
-          </div>
-        </div>
-      </header>
-      <main className="max-w-6xl mx-auto px-6 py-10 space-y-6">{children}</main>
     </div>
   );
 }

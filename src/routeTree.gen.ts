@@ -12,8 +12,6 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as VerifyEmailRouteImport } from './routes/verify-email'
 import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
 import { Route as ResetPasswordRouteImport } from './routes/reset-password'
-import { Route as RadarRouteImport } from './routes/radar'
-import { Route as DetectorRouteImport } from './routes/detector'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as IndexRouteImport } from './routes/index'
@@ -24,6 +22,8 @@ import { Route as ApiPublicRadarRouteImport } from './routes/api/public/radar'
 import { Route as AuthenticatedAppSubscriptionRouteImport } from './routes/_authenticated/app.subscription'
 import { Route as AuthenticatedAppServersRouteImport } from './routes/_authenticated/app.servers'
 import { Route as AuthenticatedAppReferralsRouteImport } from './routes/_authenticated/app.referrals'
+import { Route as AuthenticatedAppRadarRouteImport } from './routes/_authenticated/app.radar'
+import { Route as AuthenticatedAppDetectorRouteImport } from './routes/_authenticated/app.detector'
 import { Route as AuthenticatedAppAlertsRouteImport } from './routes/_authenticated/app.alerts'
 import { Route as AuthenticatedAppAdminRouteImport } from './routes/_authenticated/app.admin'
 import { Route as ApiPublicRegionsReportRouteImport } from './routes/api/public/regions/report'
@@ -44,16 +44,6 @@ const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
 const ResetPasswordRoute = ResetPasswordRouteImport.update({
   id: '/reset-password',
   path: '/reset-password',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const RadarRoute = RadarRouteImport.update({
-  id: '/radar',
-  path: '/radar',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const DetectorRoute = DetectorRouteImport.update({
-  id: '/detector',
-  path: '/detector',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AuthRoute = AuthRouteImport.update({
@@ -107,6 +97,17 @@ const AuthenticatedAppReferralsRoute =
     path: '/referrals',
     getParentRoute: () => AuthenticatedAppRoute,
   } as any)
+const AuthenticatedAppRadarRoute = AuthenticatedAppRadarRouteImport.update({
+  id: '/radar',
+  path: '/radar',
+  getParentRoute: () => AuthenticatedAppRoute,
+} as any)
+const AuthenticatedAppDetectorRoute =
+  AuthenticatedAppDetectorRouteImport.update({
+    id: '/detector',
+    path: '/detector',
+    getParentRoute: () => AuthenticatedAppRoute,
+  } as any)
 const AuthenticatedAppAlertsRoute = AuthenticatedAppAlertsRouteImport.update({
   id: '/alerts',
   path: '/alerts',
@@ -143,8 +144,6 @@ const AuthenticatedAppServersIdRoute =
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
-  '/detector': typeof DetectorRoute
-  '/radar': typeof RadarRoute
   '/reset-password': typeof ResetPasswordRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/verify-email': typeof VerifyEmailRoute
@@ -152,6 +151,8 @@ export interface FileRoutesByFullPath {
   '/status/$slug': typeof StatusSlugRoute
   '/app/admin': typeof AuthenticatedAppAdminRoute
   '/app/alerts': typeof AuthenticatedAppAlertsRoute
+  '/app/detector': typeof AuthenticatedAppDetectorRoute
+  '/app/radar': typeof AuthenticatedAppRadarRoute
   '/app/referrals': typeof AuthenticatedAppReferralsRoute
   '/app/servers': typeof AuthenticatedAppServersRouteWithChildren
   '/app/subscription': typeof AuthenticatedAppSubscriptionRoute
@@ -165,14 +166,14 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
-  '/detector': typeof DetectorRoute
-  '/radar': typeof RadarRoute
   '/reset-password': typeof ResetPasswordRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/verify-email': typeof VerifyEmailRoute
   '/status/$slug': typeof StatusSlugRoute
   '/app/admin': typeof AuthenticatedAppAdminRoute
   '/app/alerts': typeof AuthenticatedAppAlertsRoute
+  '/app/detector': typeof AuthenticatedAppDetectorRoute
+  '/app/radar': typeof AuthenticatedAppRadarRoute
   '/app/referrals': typeof AuthenticatedAppReferralsRoute
   '/app/servers': typeof AuthenticatedAppServersRouteWithChildren
   '/app/subscription': typeof AuthenticatedAppSubscriptionRoute
@@ -188,8 +189,6 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
   '/auth': typeof AuthRoute
-  '/detector': typeof DetectorRoute
-  '/radar': typeof RadarRoute
   '/reset-password': typeof ResetPasswordRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/verify-email': typeof VerifyEmailRoute
@@ -197,6 +196,8 @@ export interface FileRoutesById {
   '/status/$slug': typeof StatusSlugRoute
   '/_authenticated/app/admin': typeof AuthenticatedAppAdminRoute
   '/_authenticated/app/alerts': typeof AuthenticatedAppAlertsRoute
+  '/_authenticated/app/detector': typeof AuthenticatedAppDetectorRoute
+  '/_authenticated/app/radar': typeof AuthenticatedAppRadarRoute
   '/_authenticated/app/referrals': typeof AuthenticatedAppReferralsRoute
   '/_authenticated/app/servers': typeof AuthenticatedAppServersRouteWithChildren
   '/_authenticated/app/subscription': typeof AuthenticatedAppSubscriptionRoute
@@ -212,8 +213,6 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/auth'
-    | '/detector'
-    | '/radar'
     | '/reset-password'
     | '/sitemap.xml'
     | '/verify-email'
@@ -221,6 +220,8 @@ export interface FileRouteTypes {
     | '/status/$slug'
     | '/app/admin'
     | '/app/alerts'
+    | '/app/detector'
+    | '/app/radar'
     | '/app/referrals'
     | '/app/servers'
     | '/app/subscription'
@@ -234,14 +235,14 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/auth'
-    | '/detector'
-    | '/radar'
     | '/reset-password'
     | '/sitemap.xml'
     | '/verify-email'
     | '/status/$slug'
     | '/app/admin'
     | '/app/alerts'
+    | '/app/detector'
+    | '/app/radar'
     | '/app/referrals'
     | '/app/servers'
     | '/app/subscription'
@@ -256,8 +257,6 @@ export interface FileRouteTypes {
     | '/'
     | '/_authenticated'
     | '/auth'
-    | '/detector'
-    | '/radar'
     | '/reset-password'
     | '/sitemap.xml'
     | '/verify-email'
@@ -265,6 +264,8 @@ export interface FileRouteTypes {
     | '/status/$slug'
     | '/_authenticated/app/admin'
     | '/_authenticated/app/alerts'
+    | '/_authenticated/app/detector'
+    | '/_authenticated/app/radar'
     | '/_authenticated/app/referrals'
     | '/_authenticated/app/servers'
     | '/_authenticated/app/subscription'
@@ -280,8 +281,6 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
   AuthRoute: typeof AuthRoute
-  DetectorRoute: typeof DetectorRoute
-  RadarRoute: typeof RadarRoute
   ResetPasswordRoute: typeof ResetPasswordRoute
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
   VerifyEmailRoute: typeof VerifyEmailRoute
@@ -312,20 +311,6 @@ declare module '@tanstack/react-router' {
       path: '/reset-password'
       fullPath: '/reset-password'
       preLoaderRoute: typeof ResetPasswordRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/radar': {
-      id: '/radar'
-      path: '/radar'
-      fullPath: '/radar'
-      preLoaderRoute: typeof RadarRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/detector': {
-      id: '/detector'
-      path: '/detector'
-      fullPath: '/detector'
-      preLoaderRoute: typeof DetectorRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/auth': {
@@ -398,6 +383,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAppReferralsRouteImport
       parentRoute: typeof AuthenticatedAppRoute
     }
+    '/_authenticated/app/radar': {
+      id: '/_authenticated/app/radar'
+      path: '/radar'
+      fullPath: '/app/radar'
+      preLoaderRoute: typeof AuthenticatedAppRadarRouteImport
+      parentRoute: typeof AuthenticatedAppRoute
+    }
+    '/_authenticated/app/detector': {
+      id: '/_authenticated/app/detector'
+      path: '/detector'
+      fullPath: '/app/detector'
+      preLoaderRoute: typeof AuthenticatedAppDetectorRouteImport
+      parentRoute: typeof AuthenticatedAppRoute
+    }
     '/_authenticated/app/alerts': {
       id: '/_authenticated/app/alerts'
       path: '/alerts'
@@ -462,6 +461,8 @@ const AuthenticatedAppServersRouteWithChildren =
 interface AuthenticatedAppRouteChildren {
   AuthenticatedAppAdminRoute: typeof AuthenticatedAppAdminRoute
   AuthenticatedAppAlertsRoute: typeof AuthenticatedAppAlertsRoute
+  AuthenticatedAppDetectorRoute: typeof AuthenticatedAppDetectorRoute
+  AuthenticatedAppRadarRoute: typeof AuthenticatedAppRadarRoute
   AuthenticatedAppReferralsRoute: typeof AuthenticatedAppReferralsRoute
   AuthenticatedAppServersRoute: typeof AuthenticatedAppServersRouteWithChildren
   AuthenticatedAppSubscriptionRoute: typeof AuthenticatedAppSubscriptionRoute
@@ -471,6 +472,8 @@ interface AuthenticatedAppRouteChildren {
 const AuthenticatedAppRouteChildren: AuthenticatedAppRouteChildren = {
   AuthenticatedAppAdminRoute: AuthenticatedAppAdminRoute,
   AuthenticatedAppAlertsRoute: AuthenticatedAppAlertsRoute,
+  AuthenticatedAppDetectorRoute: AuthenticatedAppDetectorRoute,
+  AuthenticatedAppRadarRoute: AuthenticatedAppRadarRoute,
   AuthenticatedAppReferralsRoute: AuthenticatedAppReferralsRoute,
   AuthenticatedAppServersRoute: AuthenticatedAppServersRouteWithChildren,
   AuthenticatedAppSubscriptionRoute: AuthenticatedAppSubscriptionRoute,
@@ -495,8 +498,6 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
   AuthRoute: AuthRoute,
-  DetectorRoute: DetectorRoute,
-  RadarRoute: RadarRoute,
   ResetPasswordRoute: ResetPasswordRoute,
   SitemapDotxmlRoute: SitemapDotxmlRoute,
   VerifyEmailRoute: VerifyEmailRoute,
