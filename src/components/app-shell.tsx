@@ -1,5 +1,5 @@
 import { Link, Outlet, useNavigate, useRouterState } from "@tanstack/react-router";
-import { Activity, LayoutDashboard, ServerIcon, Bell, Users, LogOut, Sun, Moon, Search, Plus, CreditCard, Gift, Radio, ShieldAlert } from "lucide-react";
+import { Activity, LayoutDashboard, ServerIcon, Bell, Users, LogOut, Sun, Moon, Search, Plus, CreditCard, Gift, Radio, ShieldAlert, Trophy } from "lucide-react";
 import { SubscriptionBanner } from "@/components/subscription/subscription-banner";
 import { useEffect, useState, type ReactNode } from "react";
 import { supabase } from "@/integrations/supabase/client";
@@ -43,6 +43,7 @@ function Sidebar() {
     { to: "/app/alerts", label: "Alertas", icon: Bell },
     { to: "/app/radar", label: "Radar Brasil", icon: Radio },
     { to: "/app/detector", label: "Detector", icon: ShieldAlert },
+    { to: "/app/ranking", label: "Ranking", icon: Trophy },
     { to: "/app/subscription", label: "Assinatura", icon: CreditCard },
     { to: "/app/referrals", label: "Indicações", icon: Gift },
   ];
