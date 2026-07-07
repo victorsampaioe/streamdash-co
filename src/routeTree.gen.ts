@@ -22,6 +22,7 @@ import { Route as AuthenticatedAppSubscriptionRouteImport } from './routes/_auth
 import { Route as AuthenticatedAppServersRouteImport } from './routes/_authenticated/app.servers'
 import { Route as AuthenticatedAppAlertsRouteImport } from './routes/_authenticated/app.alerts'
 import { Route as AuthenticatedAppAdminRouteImport } from './routes/_authenticated/app.admin'
+import { Route as ApiPublicRegionsReportRouteImport } from './routes/api/public/regions/report'
 import { Route as ApiPublicCronCheckRouteImport } from './routes/api/public/cron/check'
 import { Route as AuthenticatedAppServersNewRouteImport } from './routes/_authenticated/app.servers.new'
 import { Route as AuthenticatedAppServersIdRouteImport } from './routes/_authenticated/app.servers.$id'
@@ -91,6 +92,11 @@ const AuthenticatedAppAdminRoute = AuthenticatedAppAdminRouteImport.update({
   path: '/admin',
   getParentRoute: () => AuthenticatedAppRoute,
 } as any)
+const ApiPublicRegionsReportRoute = ApiPublicRegionsReportRouteImport.update({
+  id: '/api/public/regions/report',
+  path: '/api/public/regions/report',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiPublicCronCheckRoute = ApiPublicCronCheckRouteImport.update({
   id: '/api/public/cron/check',
   path: '/api/public/cron/check',
@@ -125,6 +131,7 @@ export interface FileRoutesByFullPath {
   '/app/servers/$id': typeof AuthenticatedAppServersIdRoute
   '/app/servers/new': typeof AuthenticatedAppServersNewRoute
   '/api/public/cron/check': typeof ApiPublicCronCheckRoute
+  '/api/public/regions/report': typeof ApiPublicRegionsReportRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -141,6 +148,7 @@ export interface FileRoutesByTo {
   '/app/servers/$id': typeof AuthenticatedAppServersIdRoute
   '/app/servers/new': typeof AuthenticatedAppServersNewRoute
   '/api/public/cron/check': typeof ApiPublicCronCheckRoute
+  '/api/public/regions/report': typeof ApiPublicRegionsReportRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -160,6 +168,7 @@ export interface FileRoutesById {
   '/_authenticated/app/servers/$id': typeof AuthenticatedAppServersIdRoute
   '/_authenticated/app/servers/new': typeof AuthenticatedAppServersNewRoute
   '/api/public/cron/check': typeof ApiPublicCronCheckRoute
+  '/api/public/regions/report': typeof ApiPublicRegionsReportRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -179,6 +188,7 @@ export interface FileRouteTypes {
     | '/app/servers/$id'
     | '/app/servers/new'
     | '/api/public/cron/check'
+    | '/api/public/regions/report'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -195,6 +205,7 @@ export interface FileRouteTypes {
     | '/app/servers/$id'
     | '/app/servers/new'
     | '/api/public/cron/check'
+    | '/api/public/regions/report'
   id:
     | '__root__'
     | '/'
@@ -213,6 +224,7 @@ export interface FileRouteTypes {
     | '/_authenticated/app/servers/$id'
     | '/_authenticated/app/servers/new'
     | '/api/public/cron/check'
+    | '/api/public/regions/report'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -224,6 +236,7 @@ export interface RootRouteChildren {
   VerifyEmailRoute: typeof VerifyEmailRoute
   StatusSlugRoute: typeof StatusSlugRoute
   ApiPublicCronCheckRoute: typeof ApiPublicCronCheckRoute
+  ApiPublicRegionsReportRoute: typeof ApiPublicRegionsReportRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -319,6 +332,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAppAdminRouteImport
       parentRoute: typeof AuthenticatedAppRoute
     }
+    '/api/public/regions/report': {
+      id: '/api/public/regions/report'
+      path: '/api/public/regions/report'
+      fullPath: '/api/public/regions/report'
+      preLoaderRoute: typeof ApiPublicRegionsReportRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/cron/check': {
       id: '/api/public/cron/check'
       path: '/api/public/cron/check'
@@ -398,17 +418,8 @@ const rootRouteChildren: RootRouteChildren = {
   VerifyEmailRoute: VerifyEmailRoute,
   StatusSlugRoute: StatusSlugRoute,
   ApiPublicCronCheckRoute: ApiPublicCronCheckRoute,
+  ApiPublicRegionsReportRoute: ApiPublicRegionsReportRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}

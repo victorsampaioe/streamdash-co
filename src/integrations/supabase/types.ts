@@ -44,6 +44,42 @@ export type Database = {
         }
         Relationships: []
       }
+      check_regions: {
+        Row: {
+          city: string
+          code: string
+          country: string
+          created_at: string
+          enabled: boolean
+          flag: string
+          latitude: number
+          longitude: number
+          name: string
+        }
+        Insert: {
+          city: string
+          code: string
+          country: string
+          created_at?: string
+          enabled?: boolean
+          flag: string
+          latitude: number
+          longitude: number
+          name: string
+        }
+        Update: {
+          city?: string
+          code?: string
+          country?: string
+          created_at?: string
+          enabled?: boolean
+          flag?: string
+          latitude?: number
+          longitude?: number
+          name?: string
+        }
+        Relationships: []
+      }
       checks: {
         Row: {
           checked_at: string
@@ -275,6 +311,54 @@ export type Database = {
           phone?: string | null
         }
         Relationships: []
+      }
+      region_checks: {
+        Row: {
+          checked_at: string
+          error: string | null
+          http_status: number | null
+          id: string
+          latency_ms: number | null
+          region_code: string
+          server_id: string
+          status: string
+        }
+        Insert: {
+          checked_at?: string
+          error?: string | null
+          http_status?: number | null
+          id?: string
+          latency_ms?: number | null
+          region_code: string
+          server_id: string
+          status: string
+        }
+        Update: {
+          checked_at?: string
+          error?: string | null
+          http_status?: number | null
+          id?: string
+          latency_ms?: number | null
+          region_code?: string
+          server_id?: string
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "region_checks_region_code_fkey"
+            columns: ["region_code"]
+            isOneToOne: false
+            referencedRelation: "check_regions"
+            referencedColumns: ["code"]
+          },
+          {
+            foreignKeyName: "region_checks_server_id_fkey"
+            columns: ["server_id"]
+            isOneToOne: false
+            referencedRelation: "servers"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       servers: {
         Row: {

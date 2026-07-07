@@ -97,6 +97,17 @@ async function performCheck(server: ServerRow) {
     error: errorMsg,
   });
 
+  // Also record as an "origin" region datapoint for the Global Map
+  await supabaseAdmin.from("region_checks").insert({
+    server_id: server.id,
+    region_code: "origin",
+    status,
+    http_status: httpStatus,
+    latency_ms: latency,
+    error: errorMsg,
+  });
+
+
   // Update server aggregates
   const isFailure = status === "down";
   const newConsecutive = isFailure ? server.consecutive_failures + 1 : 0;
