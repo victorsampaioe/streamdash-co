@@ -13,7 +13,7 @@ import { SearchInput } from "@/components/app-shell";
 import { Plus, ServerIcon, Trash2, ExternalLink } from "lucide-react";
 import { toast } from "sonner";
 
-export const Route = createFileRoute("/_authenticated/app/servers")({
+export const Route = createFileRoute("/_authenticated/app/servers/")({
   component: ServersList,
 });
 
