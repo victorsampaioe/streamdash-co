@@ -10,7 +10,7 @@ import { runBlockDetector } from "@/lib/detector.functions";
 import type { DetectorReport, Verdict } from "@/lib/detector.server";
 import { cn } from "@/lib/utils";
 
-export const Route = createFileRoute("/detector")({
+export const Route = createFileRoute("/_authenticated/app/detector")({
   head: () => ({
     meta: [
       { title: "Detector de Bloqueios — DNS, firewall e geo | StreamMonitor" },

@@ -14,7 +14,7 @@ const radarQuery = queryOptions<RadarSnapshot>({
   staleTime: 30_000,
 });
 
-export const Route = createFileRoute("/radar")({
+export const Route = createFileRoute("/_authenticated/app/radar")({
   head: () => ({
     meta: [
       { title: "Radar Brasil — Status da internet em tempo real | StreamMonitor" },
