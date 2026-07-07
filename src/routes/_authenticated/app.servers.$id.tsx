@@ -15,6 +15,8 @@ import { ArrowLeft, Download, Play, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { runCheckNow } from "@/lib/monitoring.functions";
 import { useServerFn } from "@tanstack/react-start";
+import { GlobalCheckMap } from "@/components/global-check-map";
+
 
 export const Route = createFileRoute("/_authenticated/app/servers/$id")({
   component: ServerDetail,
