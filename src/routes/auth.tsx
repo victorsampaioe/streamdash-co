@@ -58,7 +58,7 @@ function AuthPage() {
       password,
       options: {
         emailRedirectTo: `${window.location.origin}/app`,
-        data: { full_name: name, phone },
+        data: { full_name: name, phone, referral_code: referralCode.trim().toUpperCase() || undefined },
       },
     });
     setLoading(false);
