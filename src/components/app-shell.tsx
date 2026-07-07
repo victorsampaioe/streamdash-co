@@ -41,6 +41,8 @@ function Sidebar() {
     { to: "/app", label: "Dashboard", icon: LayoutDashboard, exact: true },
     { to: "/app/servers", label: "Servidores", icon: ServerIcon },
     { to: "/app/alerts", label: "Alertas", icon: Bell },
+    { to: "/app/radar", label: "Radar Brasil", icon: Radio },
+    { to: "/app/detector", label: "Detector", icon: ShieldAlert },
     { to: "/app/subscription", label: "Assinatura", icon: CreditCard },
     { to: "/app/referrals", label: "Indicações", icon: Gift },
   ];
