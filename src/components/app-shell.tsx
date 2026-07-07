@@ -1,5 +1,5 @@
 import { Link, Outlet, useNavigate, useRouterState } from "@tanstack/react-router";
-import { Activity, LayoutDashboard, ServerIcon, Bell, Users, LogOut, Sun, Moon, Search, Plus, CreditCard } from "lucide-react";
+import { Activity, LayoutDashboard, ServerIcon, Bell, Users, LogOut, Sun, Moon, Search, Plus, CreditCard, Gift } from "lucide-react";
 import { SubscriptionBanner } from "@/components/subscription/subscription-banner";
 import { useEffect, useState, type ReactNode } from "react";
 import { supabase } from "@/integrations/supabase/client";
@@ -42,6 +42,7 @@ function Sidebar() {
     { to: "/app/servers", label: "Servidores", icon: ServerIcon },
     { to: "/app/alerts", label: "Alertas", icon: Bell },
     { to: "/app/subscription", label: "Assinatura", icon: CreditCard },
+    { to: "/app/referrals", label: "Indicações", icon: Gift },
   ];
 
   return (

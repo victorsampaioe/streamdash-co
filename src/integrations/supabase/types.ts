@@ -293,6 +293,8 @@ export type Database = {
           full_name: string | null
           id: string
           phone: string | null
+          referral_code: string | null
+          referred_by: string | null
         }
         Insert: {
           avatar_url?: string | null
@@ -301,6 +303,8 @@ export type Database = {
           full_name?: string | null
           id: string
           phone?: string | null
+          referral_code?: string | null
+          referred_by?: string | null
         }
         Update: {
           avatar_url?: string | null
@@ -309,6 +313,38 @@ export type Database = {
           full_name?: string | null
           id?: string
           phone?: string | null
+          referral_code?: string | null
+          referred_by?: string | null
+        }
+        Relationships: []
+      }
+      referrals: {
+        Row: {
+          code_used: string
+          converted_at: string | null
+          created_at: string
+          id: string
+          referred_id: string
+          referrer_id: string
+          reward_granted_at: string | null
+        }
+        Insert: {
+          code_used: string
+          converted_at?: string | null
+          created_at?: string
+          id?: string
+          referred_id: string
+          referrer_id: string
+          reward_granted_at?: string | null
+        }
+        Update: {
+          code_used?: string
+          converted_at?: string | null
+          created_at?: string
+          id?: string
+          referred_id?: string
+          referrer_id?: string
+          reward_granted_at?: string | null
         }
         Relationships: []
       }
@@ -482,6 +518,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      generate_referral_code: { Args: never; Returns: string }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]

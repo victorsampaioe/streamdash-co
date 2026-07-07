@@ -10,7 +10,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Activity } from "lucide-react";
 import { toast } from "sonner";
 
-const searchSchema = z.object({ redirect: z.string().optional() }).partial();
+const searchSchema = z.object({ redirect: z.string().optional(), ref: z.string().optional() }).partial();
 
 export const Route = createFileRoute("/auth")({
   validateSearch: searchSchema,
@@ -26,12 +26,13 @@ export const Route = createFileRoute("/auth")({
 
 function AuthPage() {
   const navigate = useNavigate();
-  const { redirect } = useSearch({ from: "/auth" });
+  const { redirect, ref } = useSearch({ from: "/auth" });
   const [loading, setLoading] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
+  const [referralCode, setReferralCode] = useState(ref ?? "");
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => {
@@ -57,7 +58,7 @@ function AuthPage() {
       password,
       options: {
         emailRedirectTo: `${window.location.origin}/app`,
-        data: { full_name: name, phone },
+        data: { full_name: name, phone, referral_code: referralCode.trim().toUpperCase() || undefined },
       },
     });
     setLoading(false);
@@ -112,6 +113,12 @@ function AuthPage() {
                 <Field label="Telefone"><Input type="tel" required value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="(11) 99999-9999" /></Field>
                 <Field label="E-mail"><Input type="email" required value={email} onChange={(e) => setEmail(e.target.value)} /></Field>
                 <Field label="Senha"><Input type="password" required minLength={6} value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Mín. 6 caracteres" /></Field>
+                <Field label="Código de indicação (opcional)">
+                  <Input value={referralCode} onChange={(e) => setReferralCode(e.target.value.toUpperCase())} placeholder="Ex.: ABC12345" maxLength={12} />
+                </Field>
+                {referralCode && (
+                  <p className="text-xs text-primary">🎁 Você ganhará 10 dias extras de teste ao usar um código.</p>
+                )}
                 <Button type="submit" disabled={loading} className="w-full">
                   {loading ? "Criando..." : "Criar conta"}
                 </Button>
