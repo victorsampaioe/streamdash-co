@@ -91,6 +91,7 @@ function Shell({ children }: { children: React.ReactNode }) {
           </Link>
           <div className="flex items-center gap-3 text-sm">
             <Link to="/radar" className="text-foreground font-medium">Radar</Link>
+            <Link to="/detector" className="text-muted-foreground hover:text-foreground">Detector</Link>
             <Link to="/auth" className="text-muted-foreground hover:text-foreground">Entrar</Link>
           </div>
         </div>
