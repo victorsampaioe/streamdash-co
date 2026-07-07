@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { queryOptions, useSuspenseQuery } from "@tanstack/react-query";
-import { Activity, AlertTriangle, CheckCircle2, Clock, Flame, Globe, Wifi } from "lucide-react";
+import { AlertTriangle, CheckCircle2, Clock, Flame, Globe, Wifi } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { getRadarSnapshot } from "@/lib/radar.functions";
