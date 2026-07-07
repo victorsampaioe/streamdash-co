@@ -26,12 +26,13 @@ export const Route = createFileRoute("/auth")({
 
 function AuthPage() {
   const navigate = useNavigate();
-  const { redirect } = useSearch({ from: "/auth" });
+  const { redirect, ref } = useSearch({ from: "/auth" });
   const [loading, setLoading] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
+  const [referralCode, setReferralCode] = useState(ref ?? "");
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => {
