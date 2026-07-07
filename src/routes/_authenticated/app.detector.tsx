@@ -49,6 +49,7 @@ function DetectorPage() {
   return (
     <div className="space-y-6">
       <header className="space-y-1">
+
         <h1 className="text-3xl font-bold tracking-tight">🚨 Detector de Bloqueios</h1>
         <p className="text-sm text-muted-foreground">
           Descubra se um domínio está sendo bloqueado por DNS, firewall ou geolocalização.
