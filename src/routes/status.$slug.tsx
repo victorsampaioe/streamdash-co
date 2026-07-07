@@ -5,6 +5,8 @@ import { Activity } from "lucide-react";
 import { StatusDot, StatusLabel } from "@/components/status-dot";
 import { UptimeSparkline } from "@/components/uptime-sparkline";
 import { Card } from "@/components/ui/card";
+import { GlobalCheckMap } from "@/components/global-check-map";
+
 
 export const Route = createFileRoute("/status/$slug")({
   head: ({ params }) => ({
