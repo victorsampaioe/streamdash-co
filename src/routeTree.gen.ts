@@ -12,12 +12,14 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as VerifyEmailRouteImport } from './routes/verify-email'
 import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
 import { Route as ResetPasswordRouteImport } from './routes/reset-password'
+import { Route as RadarRouteImport } from './routes/radar'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as StatusSlugRouteImport } from './routes/status.$slug'
 import { Route as AuthenticatedAppRouteImport } from './routes/_authenticated/app'
 import { Route as AuthenticatedAppIndexRouteImport } from './routes/_authenticated/app.index'
+import { Route as ApiPublicRadarRouteImport } from './routes/api/public/radar'
 import { Route as AuthenticatedAppSubscriptionRouteImport } from './routes/_authenticated/app.subscription'
 import { Route as AuthenticatedAppServersRouteImport } from './routes/_authenticated/app.servers'
 import { Route as AuthenticatedAppAlertsRouteImport } from './routes/_authenticated/app.alerts'
@@ -40,6 +42,11 @@ const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
 const ResetPasswordRoute = ResetPasswordRouteImport.update({
   id: '/reset-password',
   path: '/reset-password',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const RadarRoute = RadarRouteImport.update({
+  id: '/radar',
+  path: '/radar',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AuthRoute = AuthRouteImport.update({
@@ -70,6 +77,11 @@ const AuthenticatedAppIndexRoute = AuthenticatedAppIndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => AuthenticatedAppRoute,
+} as any)
+const ApiPublicRadarRoute = ApiPublicRadarRouteImport.update({
+  id: '/api/public/radar',
+  path: '/api/public/radar',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const AuthenticatedAppSubscriptionRoute =
   AuthenticatedAppSubscriptionRouteImport.update({
@@ -118,6 +130,7 @@ const AuthenticatedAppServersIdRoute =
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
+  '/radar': typeof RadarRoute
   '/reset-password': typeof ResetPasswordRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/verify-email': typeof VerifyEmailRoute
@@ -127,6 +140,7 @@ export interface FileRoutesByFullPath {
   '/app/alerts': typeof AuthenticatedAppAlertsRoute
   '/app/servers': typeof AuthenticatedAppServersRouteWithChildren
   '/app/subscription': typeof AuthenticatedAppSubscriptionRoute
+  '/api/public/radar': typeof ApiPublicRadarRoute
   '/app/': typeof AuthenticatedAppIndexRoute
   '/app/servers/$id': typeof AuthenticatedAppServersIdRoute
   '/app/servers/new': typeof AuthenticatedAppServersNewRoute
@@ -136,6 +150,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
+  '/radar': typeof RadarRoute
   '/reset-password': typeof ResetPasswordRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/verify-email': typeof VerifyEmailRoute
@@ -144,6 +159,7 @@ export interface FileRoutesByTo {
   '/app/alerts': typeof AuthenticatedAppAlertsRoute
   '/app/servers': typeof AuthenticatedAppServersRouteWithChildren
   '/app/subscription': typeof AuthenticatedAppSubscriptionRoute
+  '/api/public/radar': typeof ApiPublicRadarRoute
   '/app': typeof AuthenticatedAppIndexRoute
   '/app/servers/$id': typeof AuthenticatedAppServersIdRoute
   '/app/servers/new': typeof AuthenticatedAppServersNewRoute
@@ -155,6 +171,7 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
   '/auth': typeof AuthRoute
+  '/radar': typeof RadarRoute
   '/reset-password': typeof ResetPasswordRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/verify-email': typeof VerifyEmailRoute
@@ -164,6 +181,7 @@ export interface FileRoutesById {
   '/_authenticated/app/alerts': typeof AuthenticatedAppAlertsRoute
   '/_authenticated/app/servers': typeof AuthenticatedAppServersRouteWithChildren
   '/_authenticated/app/subscription': typeof AuthenticatedAppSubscriptionRoute
+  '/api/public/radar': typeof ApiPublicRadarRoute
   '/_authenticated/app/': typeof AuthenticatedAppIndexRoute
   '/_authenticated/app/servers/$id': typeof AuthenticatedAppServersIdRoute
   '/_authenticated/app/servers/new': typeof AuthenticatedAppServersNewRoute
@@ -175,6 +193,7 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/auth'
+    | '/radar'
     | '/reset-password'
     | '/sitemap.xml'
     | '/verify-email'
@@ -184,6 +203,7 @@ export interface FileRouteTypes {
     | '/app/alerts'
     | '/app/servers'
     | '/app/subscription'
+    | '/api/public/radar'
     | '/app/'
     | '/app/servers/$id'
     | '/app/servers/new'
@@ -193,6 +213,7 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/auth'
+    | '/radar'
     | '/reset-password'
     | '/sitemap.xml'
     | '/verify-email'
@@ -201,6 +222,7 @@ export interface FileRouteTypes {
     | '/app/alerts'
     | '/app/servers'
     | '/app/subscription'
+    | '/api/public/radar'
     | '/app'
     | '/app/servers/$id'
     | '/app/servers/new'
@@ -211,6 +233,7 @@ export interface FileRouteTypes {
     | '/'
     | '/_authenticated'
     | '/auth'
+    | '/radar'
     | '/reset-password'
     | '/sitemap.xml'
     | '/verify-email'
@@ -220,6 +243,7 @@ export interface FileRouteTypes {
     | '/_authenticated/app/alerts'
     | '/_authenticated/app/servers'
     | '/_authenticated/app/subscription'
+    | '/api/public/radar'
     | '/_authenticated/app/'
     | '/_authenticated/app/servers/$id'
     | '/_authenticated/app/servers/new'
@@ -231,10 +255,12 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
   AuthRoute: typeof AuthRoute
+  RadarRoute: typeof RadarRoute
   ResetPasswordRoute: typeof ResetPasswordRoute
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
   VerifyEmailRoute: typeof VerifyEmailRoute
   StatusSlugRoute: typeof StatusSlugRoute
+  ApiPublicRadarRoute: typeof ApiPublicRadarRoute
   ApiPublicCronCheckRoute: typeof ApiPublicCronCheckRoute
   ApiPublicRegionsReportRoute: typeof ApiPublicRegionsReportRoute
 }
@@ -260,6 +286,13 @@ declare module '@tanstack/react-router' {
       path: '/reset-password'
       fullPath: '/reset-password'
       preLoaderRoute: typeof ResetPasswordRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/radar': {
+      id: '/radar'
+      path: '/radar'
+      fullPath: '/radar'
+      preLoaderRoute: typeof RadarRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/auth': {
@@ -303,6 +336,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/app/'
       preLoaderRoute: typeof AuthenticatedAppIndexRouteImport
       parentRoute: typeof AuthenticatedAppRoute
+    }
+    '/api/public/radar': {
+      id: '/api/public/radar'
+      path: '/api/public/radar'
+      fullPath: '/api/public/radar'
+      preLoaderRoute: typeof ApiPublicRadarRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/_authenticated/app/subscription': {
       id: '/_authenticated/app/subscription'
@@ -413,10 +453,12 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
   AuthRoute: AuthRoute,
+  RadarRoute: RadarRoute,
   ResetPasswordRoute: ResetPasswordRoute,
   SitemapDotxmlRoute: SitemapDotxmlRoute,
   VerifyEmailRoute: VerifyEmailRoute,
   StatusSlugRoute: StatusSlugRoute,
+  ApiPublicRadarRoute: ApiPublicRadarRoute,
   ApiPublicCronCheckRoute: ApiPublicCronCheckRoute,
   ApiPublicRegionsReportRoute: ApiPublicRegionsReportRoute,
 }

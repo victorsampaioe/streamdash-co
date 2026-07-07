@@ -1,72 +1,119 @@
-## Roadmap em fases — Mapa de Falhas + Utilidades
+## Roadmap ampliado — Radar Brasil + Detector + Colaborativo + Clima
 
-Vamos entregar em 4 fases. Cada fase é um deploy funcional; você aprova e passo para a próxima.
+Atualizando o plano geral. Novas fases entre a 1 (já entregue) e as antigas 2-4:
 
 ---
 
-### Fase 1 — Mapa de Falhas em Tempo Real (o diferencial)
+### Fase 1.5 — 📡 Radar Brasil (dashboard público)
+
+**Rota pública** `/radar` (SSR, com metadata SEO, sem login).
+
+**Cards do painel**
+- 🚨 **Serviços com incidentes**: agregador de status oficiais em tempo real:
+  - AWS Health RSS (`status.aws.amazon.com/rss/all.rss`)
+  - Cloudflare Status API (`www.cloudflarestatus.com/api/v2/summary.json`)
+  - GitHub Status (`www.githubstatus.com/api/v2/summary.json`)
+  - Discord (`discordstatus.com/api/v2/summary.json`)
+  - Microsoft 365 (RSS público)
+  - Google Workspace (RSS)
+  - WhatsApp/Meta (`metastatus.com/api/v2/summary.json`)
+  - Pix/Banco Central (página de status pública quando houver JSON)
+  Todos consumidos via server function com cache de 60s. Sem chave.
+- 🔥 **Domínios monitorados com mais instabilidade (24h)**: agrega `checks` da base — top 10 servidores com maior taxa de `down/degraded`. Anonimizado (só quem marcou `is_public=true` aparece com nome; demais entram como "servidor privado").
+- 📡 **Latência média por região**: agrega `region_checks` das últimas 24h agrupado por `region_code`.
+- 📊 **Estatísticas 24h**: total de checks, uptime médio global, incidentes abertos vs resolvidos.
+- 🌎 **Mapa de calor Brasil**: SVG estático do BR (topojson leve) colorido por estado com base na % de sucesso dos checks originados/reportados de cada UF. Sem UF suficiente ainda? Mostra badge "aguardando dados".
+- 🌐 **Provedores com mais reclamações**: começa vazio; alimentado pela Fase 1.7 (relatos). Enquanto não há dados, mostra card explicativo "Ainda coletando".
 
 **Backend**
-- Nova tabela `check_regions` (código, nome, cidade, país, lat/lng, ativo).
-- Nova tabela `region_checks` (server_id, region_code, status, latency_ms, http_status, error, checked_at) com índice em (server_id, checked_at desc).
-- Seed inicial das regiões: `sa-east-1` São Paulo 🇧🇷, `us-east-1` Virgínia 🇺🇸, `eu-central-1` Frankfurt 🇩🇪, `ap-northeast-1` Tóquio 🇯🇵. Fácil adicionar Fortaleza/Lisboa/Miami depois.
-- Server route pública `/api/public/regions/report` — endpoint que os workers regionais chamam com HMAC (`REGION_WORKER_SECRET`) para gravar resultados. Assim você pluga workers reais em AWS quando quiser, um por região.
-- Fallback interno: o cron atual (`runDueChecks`) faz a checagem "origem" (região do servidor Lovable) e grava com `region_code = 'origin'`. Enquanto você não subir os workers AWS, marco as demais regiões como *aguardando worker* (sem simular dado falso — respeita a proposta séria de monitoramento).
-- RLS: leitura pública para servidores marcados `is_public`; leitura autenticada só do dono; escrita só via endpoint HMAC.
+- Server function `getRadarSnapshot()` que consolida tudo (cache 60s por chave).
+- Endpoint público `/api/public/radar` retornando JSON (para embutir em outros sites — bônus).
 
-**Frontend**
-- Página `/app/servers/$id` ganha aba **Mapa Global** com:
-  - Mapa mundi SVG (D3 world-atlas leve, sem chave de API) com pontos coloridos por região.
-  - Lista lateral: bandeira, cidade, status, latência, "há X segundos".
-  - Auto-refresh a cada 10s via react-query.
-- Página pública `/status/$slug` também exibe o mapa.
-- Componente reutilizável `<GlobalCheckMap />`.
-
-**Docs para você**
-- README curto `docs/regional-workers.md` explicando como subir um worker Node em cada EC2 (SP/Virgínia/Frankfurt/Tóquio) que faz `fetch` no host e envia POST assinado. ~30 linhas de código por worker.
+**Retenção/performance**
+- Materialized view opcional só se dados crescerem muito. MVP: agregações on-the-fly com `count/avg` limitados a 24h.
 
 ---
 
-### Fase 2 — Hub de Utilidades client-side (rápido, sem backend)
+### Fase 1.6 — 🚨 Detector de Bloqueios
 
-Rota `/tools` com sidebar categorizada. Todas rodam 100% no browser:
+**Rota pública** `/detector` (login opcional; sem login, limita a 5 checks/dia por IP).
 
-- **Geradores:** QR Code (`qrcode`), senha forte, UUID v4/v7, timestamp ↔ data (todos os fusos).
-- **Encoding/Hash:** Base64 encode/decode, MD5, SHA-1, SHA-256, SHA-512 (Web Crypto API).
-- **JSON:** formatador, minificador, validador com apontamento de erro.
+**Como funciona**
+- Usuário digita um domínio.
+- Server function `checkBlockade({ host })` dispara em paralelo:
+  1. **DNS público**: resolve `host` via Google DNS (8.8.8.8), Cloudflare (1.1.1.1), OpenDNS, Quad9. Se resolvedores retornam IPs diferentes ou NXDOMAIN em alguns → *bloqueio DNS provável*.
+  2. **HTTP direto**: tenta conectar. Se DNS resolve mas TCP falha → *bloqueio de firewall*.
+  3. **Geo**: pede aos workers regionais AWS (mesma infra da Fase 1) para tentarem o host — se falha só em uma região, é *bloqueio geográfico*.
+- Resultado em tabela: DNS resolver × status; região × status; verdict (`OK`, `DNS bloqueado`, `Firewall`, `Geo-bloqueio`, `Inacessível global`).
 
-Cada ferramenta é um componente isolado em `src/routes/_authenticated/app.tools.*.tsx`, compartilhando um `<ToolShell>` reutilizável (título, descrição, input, output, botão copiar).
-
----
-
-### Fase 3 — Ferramentas de Sites/Domínios/Segurança (backend leve)
-
-Server functions autenticadas (com `PremiumGate` opcional):
-
-- **Sites:** tempo de resposta, screenshot (via API externa tipo `s.wordpress.com/mshots` — grátis), histórico de uptime (já temos), histórico DNS (armazenar snapshots diários).
-- **Domínios:** WHOIS + data de expiração + disponibilidade (via `whois` npm ou API RDAP oficial IANA — sem chave).
-- **Segurança:** validador SSL (já temos parte), scan de headers (`fetch` + análise de `strict-transport-security`, `content-security-policy`, etc.), detector Cloudflare/CDN (via headers `server`, `cf-ray`, `x-served-by`), blacklist DNSBL (query DNS a Spamhaus/Barracuda), SPF/DKIM/DMARC (query TXT).
+**Cache**: 5min por (host, sessão) para evitar abuso.
 
 ---
 
-### Fase 4 — Ferramentas de Rede pesadas
+### Fase 1.7 — 🤝 Diagnóstico Colaborativo
 
-Precisam do runtime Node no server (nem tudo roda no Worker Cloudflare). Vou avaliar caso a caso; algumas exigem worker AWS dedicado:
+**Ideia**: qualquer visitante pode reportar problema com um serviço/provedor a partir da localização detectada.
 
-- DNS lookup, Reverse DNS, ASN, IP info, Geolocalização IP (via `ipapi.co` ou dataset MaxMind), detectar IPv4/IPv6 → viáveis no server atual.
-- Ping, Traceroute, port scan, MTU, BGP → exigem raw sockets → rodam nos workers AWS regionais criados na Fase 1 (mesma infra).
+**Backend**
+- Tabela `user_reports` (id, host_or_service, provider_hint, city, state, country, ip_hash, user_agent_hash, created_at). `ip_hash` = SHA-256 de IP + salt diário para agrupar sem armazenar IP.
+- Server route `POST /api/public/reports` — rate-limit 3 relatos/hora por ip_hash. Geolocalização via header do Cloudflare (`cf-ipcountry`, `cf-ipcity`) quando disponível, senão IP→geo via `ipapi.co` (grátis, sem chave até certo limite) com fallback opcional.
+- Server function `getIncidentClusters()` que detecta padrões: `>= 20 relatos do mesmo (provider, city) em 10min` → gera "incidente colaborativo" e aparece no Radar.
+
+**UI**
+- Botão "Relatar problema" flutuante em `/radar` e páginas de status.
+- Modal: "Que serviço está com problema? Sua cidade?" (autopreenche via geo).
+- Painel "Relatos ao vivo (últimos 10 min)" no Radar.
+
+**Privacidade**
+- Documentado que só armazenamos hash de IP com salt rotacionado diariamente. Sem cookies rastreadores.
 
 ---
 
-### Detalhes técnicos importantes
+### Fase 1.8 — 📶 Clima da Internet
 
-- **Sem simular dados falsos** no Mapa: enquanto workers AWS não existem, as regiões extra ficam com status `pending` e badge "Aguardando worker". Isso mantém credibilidade do produto.
-- **Escala:** as tabelas `region_checks` recebem alto volume — configurar retenção (deletar checks > 30 dias) via cron.
-- **Mapa:** SVG estático + `topojson` (~100kb gz) — não precisa Google Maps/Mapbox nem chave.
-- **Reutilização:** `<StatusDot>`, `<UptimeSparkline>`, `<PremiumGate>` já existem — reaproveitar em tudo.
+**Rota** `/clima` (também dentro de `/radar` como widget).
+
+**Como funciona**
+- Detecta cidade do visitante (geo do Cloudflare / ipapi).
+- Agrega dados dos últimos 60min para aquela cidade + provider (quando detectado via ASN):
+  - `checks` regionais + `user_reports` da região.
+  - Uptime, latência média, número de relatos.
+- Classifica em 5 estados: ☀️ Excelente · 🌤️ Bom · ⛅ Regular · 🌧️ Instável · ⛈️ Crítico.
+- Mostra card:
+  ```
+  Fortaleza — Brisanet
+  ⛈️ Instabilidade
+  Latência média: 340ms (↑)
+  Uptime 1h: 82%
+  Relatos: 47 nos últimos 30min
+  ```
+
+**Reutiliza** o cluster detector da Fase 1.7.
 
 ---
 
-### O que faço agora se aprovar
+### Ordem de entrega e dependências
 
-**Fase 1 completa** (mapa + tabelas + endpoint HMAC + doc para os workers AWS). Ao concluir, te aviso e você decide se seguimos para Fase 2 (utilidades) ou se quer primeiro subir os workers AWS.
+```text
+Fase 1.5 (Radar) ─── independente, entrega solo, gera SEO
+        │
+Fase 1.6 (Detector) ── depende da infra HMAC dos workers regionais (já pronta)
+        │
+Fase 1.7 (Colaborativo) ── independente; alimenta Radar depois
+        │
+Fase 1.8 (Clima) ── consome 1.5 + 1.7 (precisa das duas para valer a pena)
+```
+
+Depois seguem as fases originais: 2 (utilidades /tools), 3 (sites/domínio/segurança), 4 (rede pesada).
+
+---
+
+### O que faço agora
+
+Implemento **Fase 1.5 completa** (Radar Brasil):
+- Tabela agregadora leve se precisar; caso contrário só server functions.
+- Rota `/radar` + endpoint público JSON.
+- Todos os cards, com fallbacks honestos quando ainda não há dados.
+- Nada simulado.
+
+Ao terminar, te aviso e sigo para 1.6.
