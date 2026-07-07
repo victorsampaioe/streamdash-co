@@ -150,7 +150,10 @@ function ServerDetail() {
         <UptimeSparkline checks={[...checks].slice(0, 40).reverse()} />
       </Card>
 
+      <GlobalCheckMap serverId={id} />
+
       <Card className="p-5">
+
         <h3 className="font-medium text-sm mb-4">Latência (últimas 200 verificações)</h3>
         <div className="h-64">
           <ResponsiveContainer width="100%" height="100%">
