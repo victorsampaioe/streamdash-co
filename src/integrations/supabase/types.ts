@@ -295,6 +295,7 @@ export type Database = {
           phone: string | null
           referral_code: string | null
           referred_by: string | null
+          signup_bonus_days: number
         }
         Insert: {
           avatar_url?: string | null
@@ -305,6 +306,7 @@ export type Database = {
           phone?: string | null
           referral_code?: string | null
           referred_by?: string | null
+          signup_bonus_days?: number
         }
         Update: {
           avatar_url?: string | null
@@ -315,6 +317,7 @@ export type Database = {
           phone?: string | null
           referral_code?: string | null
           referred_by?: string | null
+          signup_bonus_days?: number
         }
         Relationships: []
       }
