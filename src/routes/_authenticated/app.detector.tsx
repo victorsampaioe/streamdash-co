@@ -93,7 +93,7 @@ function DetectorPage() {
           </ul>
         </Card>
       )}
-    </Shell>
+    </div>
   );
 }
 
