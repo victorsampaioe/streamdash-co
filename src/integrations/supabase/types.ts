@@ -522,6 +522,17 @@ export type Database = {
     }
     Functions: {
       generate_referral_code: { Args: never; Returns: string }
+      get_stability_ranking: {
+        Args: { _limit?: number }
+        Returns: {
+          avg_latency_ms: number
+          down_count: number
+          instability_score: number
+          max_latency_ms: number
+          name: string
+          total_checks: number
+        }[]
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
