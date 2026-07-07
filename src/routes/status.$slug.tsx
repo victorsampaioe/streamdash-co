@@ -87,6 +87,11 @@ function PublicStatus() {
                 Última verificação: {server.last_checked_at ? new Date(server.last_checked_at).toLocaleString() : "—"}
               </p>
             </Card>
+
+            <div className="mt-6">
+              <GlobalCheckMap serverId={server.id} />
+            </div>
+
           </>
         )}
       </main>
