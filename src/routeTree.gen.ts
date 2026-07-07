@@ -20,12 +20,12 @@ import { Route as AuthenticatedAppRouteImport } from './routes/_authenticated/ap
 import { Route as AuthenticatedAppIndexRouteImport } from './routes/_authenticated/app.index'
 import { Route as ApiPublicRadarRouteImport } from './routes/api/public/radar'
 import { Route as AuthenticatedAppSubscriptionRouteImport } from './routes/_authenticated/app.subscription'
-import { Route as AuthenticatedAppServersRouteImport } from './routes/_authenticated/app.servers'
 import { Route as AuthenticatedAppReferralsRouteImport } from './routes/_authenticated/app.referrals'
 import { Route as AuthenticatedAppRadarRouteImport } from './routes/_authenticated/app.radar'
 import { Route as AuthenticatedAppDetectorRouteImport } from './routes/_authenticated/app.detector'
 import { Route as AuthenticatedAppAlertsRouteImport } from './routes/_authenticated/app.alerts'
 import { Route as AuthenticatedAppAdminRouteImport } from './routes/_authenticated/app.admin'
+import { Route as AuthenticatedAppServersIndexRouteImport } from './routes/_authenticated/app.servers.index'
 import { Route as ApiPublicRegionsReportRouteImport } from './routes/api/public/regions/report'
 import { Route as ApiPublicCronCheckRouteImport } from './routes/api/public/cron/check'
 import { Route as AuthenticatedAppServersNewRouteImport } from './routes/_authenticated/app.servers.new'
@@ -86,11 +86,6 @@ const AuthenticatedAppSubscriptionRoute =
     path: '/subscription',
     getParentRoute: () => AuthenticatedAppRoute,
   } as any)
-const AuthenticatedAppServersRoute = AuthenticatedAppServersRouteImport.update({
-  id: '/servers',
-  path: '/servers',
-  getParentRoute: () => AuthenticatedAppRoute,
-} as any)
 const AuthenticatedAppReferralsRoute =
   AuthenticatedAppReferralsRouteImport.update({
     id: '/referrals',
@@ -118,6 +113,12 @@ const AuthenticatedAppAdminRoute = AuthenticatedAppAdminRouteImport.update({
   path: '/admin',
   getParentRoute: () => AuthenticatedAppRoute,
 } as any)
+const AuthenticatedAppServersIndexRoute =
+  AuthenticatedAppServersIndexRouteImport.update({
+    id: '/servers/',
+    path: '/servers/',
+    getParentRoute: () => AuthenticatedAppRoute,
+  } as any)
 const ApiPublicRegionsReportRoute = ApiPublicRegionsReportRouteImport.update({
   id: '/api/public/regions/report',
   path: '/api/public/regions/report',
@@ -130,15 +131,15 @@ const ApiPublicCronCheckRoute = ApiPublicCronCheckRouteImport.update({
 } as any)
 const AuthenticatedAppServersNewRoute =
   AuthenticatedAppServersNewRouteImport.update({
-    id: '/new',
-    path: '/new',
-    getParentRoute: () => AuthenticatedAppServersRoute,
+    id: '/servers/new',
+    path: '/servers/new',
+    getParentRoute: () => AuthenticatedAppRoute,
   } as any)
 const AuthenticatedAppServersIdRoute =
   AuthenticatedAppServersIdRouteImport.update({
-    id: '/$id',
-    path: '/$id',
-    getParentRoute: () => AuthenticatedAppServersRoute,
+    id: '/servers/$id',
+    path: '/servers/$id',
+    getParentRoute: () => AuthenticatedAppRoute,
   } as any)
 
 export interface FileRoutesByFullPath {
@@ -154,7 +155,6 @@ export interface FileRoutesByFullPath {
   '/app/detector': typeof AuthenticatedAppDetectorRoute
   '/app/radar': typeof AuthenticatedAppRadarRoute
   '/app/referrals': typeof AuthenticatedAppReferralsRoute
-  '/app/servers': typeof AuthenticatedAppServersRouteWithChildren
   '/app/subscription': typeof AuthenticatedAppSubscriptionRoute
   '/api/public/radar': typeof ApiPublicRadarRoute
   '/app/': typeof AuthenticatedAppIndexRoute
@@ -162,6 +162,7 @@ export interface FileRoutesByFullPath {
   '/app/servers/new': typeof AuthenticatedAppServersNewRoute
   '/api/public/cron/check': typeof ApiPublicCronCheckRoute
   '/api/public/regions/report': typeof ApiPublicRegionsReportRoute
+  '/app/servers/': typeof AuthenticatedAppServersIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -175,7 +176,6 @@ export interface FileRoutesByTo {
   '/app/detector': typeof AuthenticatedAppDetectorRoute
   '/app/radar': typeof AuthenticatedAppRadarRoute
   '/app/referrals': typeof AuthenticatedAppReferralsRoute
-  '/app/servers': typeof AuthenticatedAppServersRouteWithChildren
   '/app/subscription': typeof AuthenticatedAppSubscriptionRoute
   '/api/public/radar': typeof ApiPublicRadarRoute
   '/app': typeof AuthenticatedAppIndexRoute
@@ -183,6 +183,7 @@ export interface FileRoutesByTo {
   '/app/servers/new': typeof AuthenticatedAppServersNewRoute
   '/api/public/cron/check': typeof ApiPublicCronCheckRoute
   '/api/public/regions/report': typeof ApiPublicRegionsReportRoute
+  '/app/servers': typeof AuthenticatedAppServersIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -199,7 +200,6 @@ export interface FileRoutesById {
   '/_authenticated/app/detector': typeof AuthenticatedAppDetectorRoute
   '/_authenticated/app/radar': typeof AuthenticatedAppRadarRoute
   '/_authenticated/app/referrals': typeof AuthenticatedAppReferralsRoute
-  '/_authenticated/app/servers': typeof AuthenticatedAppServersRouteWithChildren
   '/_authenticated/app/subscription': typeof AuthenticatedAppSubscriptionRoute
   '/api/public/radar': typeof ApiPublicRadarRoute
   '/_authenticated/app/': typeof AuthenticatedAppIndexRoute
@@ -207,6 +207,7 @@ export interface FileRoutesById {
   '/_authenticated/app/servers/new': typeof AuthenticatedAppServersNewRoute
   '/api/public/cron/check': typeof ApiPublicCronCheckRoute
   '/api/public/regions/report': typeof ApiPublicRegionsReportRoute
+  '/_authenticated/app/servers/': typeof AuthenticatedAppServersIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -223,7 +224,6 @@ export interface FileRouteTypes {
     | '/app/detector'
     | '/app/radar'
     | '/app/referrals'
-    | '/app/servers'
     | '/app/subscription'
     | '/api/public/radar'
     | '/app/'
@@ -231,6 +231,7 @@ export interface FileRouteTypes {
     | '/app/servers/new'
     | '/api/public/cron/check'
     | '/api/public/regions/report'
+    | '/app/servers/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -244,7 +245,6 @@ export interface FileRouteTypes {
     | '/app/detector'
     | '/app/radar'
     | '/app/referrals'
-    | '/app/servers'
     | '/app/subscription'
     | '/api/public/radar'
     | '/app'
@@ -252,6 +252,7 @@ export interface FileRouteTypes {
     | '/app/servers/new'
     | '/api/public/cron/check'
     | '/api/public/regions/report'
+    | '/app/servers'
   id:
     | '__root__'
     | '/'
@@ -267,7 +268,6 @@ export interface FileRouteTypes {
     | '/_authenticated/app/detector'
     | '/_authenticated/app/radar'
     | '/_authenticated/app/referrals'
-    | '/_authenticated/app/servers'
     | '/_authenticated/app/subscription'
     | '/api/public/radar'
     | '/_authenticated/app/'
@@ -275,6 +275,7 @@ export interface FileRouteTypes {
     | '/_authenticated/app/servers/new'
     | '/api/public/cron/check'
     | '/api/public/regions/report'
+    | '/_authenticated/app/servers/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -369,13 +370,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAppSubscriptionRouteImport
       parentRoute: typeof AuthenticatedAppRoute
     }
-    '/_authenticated/app/servers': {
-      id: '/_authenticated/app/servers'
-      path: '/servers'
-      fullPath: '/app/servers'
-      preLoaderRoute: typeof AuthenticatedAppServersRouteImport
-      parentRoute: typeof AuthenticatedAppRoute
-    }
     '/_authenticated/app/referrals': {
       id: '/_authenticated/app/referrals'
       path: '/referrals'
@@ -411,6 +405,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAppAdminRouteImport
       parentRoute: typeof AuthenticatedAppRoute
     }
+    '/_authenticated/app/servers/': {
+      id: '/_authenticated/app/servers/'
+      path: '/servers'
+      fullPath: '/app/servers/'
+      preLoaderRoute: typeof AuthenticatedAppServersIndexRouteImport
+      parentRoute: typeof AuthenticatedAppRoute
+    }
     '/api/public/regions/report': {
       id: '/api/public/regions/report'
       path: '/api/public/regions/report'
@@ -427,36 +428,20 @@ declare module '@tanstack/react-router' {
     }
     '/_authenticated/app/servers/new': {
       id: '/_authenticated/app/servers/new'
-      path: '/new'
+      path: '/servers/new'
       fullPath: '/app/servers/new'
       preLoaderRoute: typeof AuthenticatedAppServersNewRouteImport
-      parentRoute: typeof AuthenticatedAppServersRoute
+      parentRoute: typeof AuthenticatedAppRoute
     }
     '/_authenticated/app/servers/$id': {
       id: '/_authenticated/app/servers/$id'
-      path: '/$id'
+      path: '/servers/$id'
       fullPath: '/app/servers/$id'
       preLoaderRoute: typeof AuthenticatedAppServersIdRouteImport
-      parentRoute: typeof AuthenticatedAppServersRoute
+      parentRoute: typeof AuthenticatedAppRoute
     }
   }
 }
-
-interface AuthenticatedAppServersRouteChildren {
-  AuthenticatedAppServersIdRoute: typeof AuthenticatedAppServersIdRoute
-  AuthenticatedAppServersNewRoute: typeof AuthenticatedAppServersNewRoute
-}
-
-const AuthenticatedAppServersRouteChildren: AuthenticatedAppServersRouteChildren =
-  {
-    AuthenticatedAppServersIdRoute: AuthenticatedAppServersIdRoute,
-    AuthenticatedAppServersNewRoute: AuthenticatedAppServersNewRoute,
-  }
-
-const AuthenticatedAppServersRouteWithChildren =
-  AuthenticatedAppServersRoute._addFileChildren(
-    AuthenticatedAppServersRouteChildren,
-  )
 
 interface AuthenticatedAppRouteChildren {
   AuthenticatedAppAdminRoute: typeof AuthenticatedAppAdminRoute
@@ -464,9 +449,11 @@ interface AuthenticatedAppRouteChildren {
   AuthenticatedAppDetectorRoute: typeof AuthenticatedAppDetectorRoute
   AuthenticatedAppRadarRoute: typeof AuthenticatedAppRadarRoute
   AuthenticatedAppReferralsRoute: typeof AuthenticatedAppReferralsRoute
-  AuthenticatedAppServersRoute: typeof AuthenticatedAppServersRouteWithChildren
   AuthenticatedAppSubscriptionRoute: typeof AuthenticatedAppSubscriptionRoute
   AuthenticatedAppIndexRoute: typeof AuthenticatedAppIndexRoute
+  AuthenticatedAppServersIdRoute: typeof AuthenticatedAppServersIdRoute
+  AuthenticatedAppServersNewRoute: typeof AuthenticatedAppServersNewRoute
+  AuthenticatedAppServersIndexRoute: typeof AuthenticatedAppServersIndexRoute
 }
 
 const AuthenticatedAppRouteChildren: AuthenticatedAppRouteChildren = {
@@ -475,9 +462,11 @@ const AuthenticatedAppRouteChildren: AuthenticatedAppRouteChildren = {
   AuthenticatedAppDetectorRoute: AuthenticatedAppDetectorRoute,
   AuthenticatedAppRadarRoute: AuthenticatedAppRadarRoute,
   AuthenticatedAppReferralsRoute: AuthenticatedAppReferralsRoute,
-  AuthenticatedAppServersRoute: AuthenticatedAppServersRouteWithChildren,
   AuthenticatedAppSubscriptionRoute: AuthenticatedAppSubscriptionRoute,
   AuthenticatedAppIndexRoute: AuthenticatedAppIndexRoute,
+  AuthenticatedAppServersIdRoute: AuthenticatedAppServersIdRoute,
+  AuthenticatedAppServersNewRoute: AuthenticatedAppServersNewRoute,
+  AuthenticatedAppServersIndexRoute: AuthenticatedAppServersIndexRoute,
 }
 
 const AuthenticatedAppRouteWithChildren =
