@@ -42,6 +42,7 @@ function Sidebar() {
     { to: "/app/servers", label: "Servidores", icon: ServerIcon },
     { to: "/app/alerts", label: "Alertas", icon: Bell },
     { to: "/app/subscription", label: "Assinatura", icon: CreditCard },
+    { to: "/app/referrals", label: "Indicações", icon: Gift },
   ];
 
   return (
