@@ -1,7 +1,7 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute } from "@tanstack/react-router";
 import { useMutation } from "@tanstack/react-query";
 import { useState } from "react";
-import { Activity, AlertTriangle, CheckCircle2, Globe, Loader2, Search, ShieldAlert, ShieldOff, Wifi } from "lucide-react";
+import { AlertTriangle, CheckCircle2, Globe, Loader2, Search, ShieldAlert, ShieldOff, Wifi } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -13,18 +13,14 @@ import { cn } from "@/lib/utils";
 export const Route = createFileRoute("/_authenticated/app/detector")({
   head: () => ({
     meta: [
-      { title: "Detector de Bloqueios — DNS, firewall e geo | StreamMonitor" },
-      { name: "description", content: "Descubra se um domínio está bloqueado por DNS, firewall ou geolocalização. Testa 4 resolvers públicos (Cloudflare, Google, Quad9, OpenDNS) e o acesso HTTPS." },
-      { property: "og:title", content: "Detector de Bloqueios de Domínio" },
-      { property: "og:description", content: "Teste em segundos se um site está bloqueado por DNS, firewall ou geo." },
-      { property: "og:type", content: "website" },
-      { name: "twitter:card", content: "summary_large_image" },
+      { title: "Detector de Bloqueios — StreamMonitor" },
+      { name: "robots", content: "noindex" },
     ],
   }),
   errorComponent: ({ error }) => (
-    <Shell><Card className="p-6 text-center text-sm text-muted-foreground">{error.message}</Card></Shell>
+    <Card className="p-6 text-center text-sm text-muted-foreground">{error.message}</Card>
   ),
-  notFoundComponent: () => <Shell><div className="p-6">Não encontrado</div></Shell>,
+  notFoundComponent: () => <div className="p-6">Não encontrado</div>,
   component: DetectorPage,
 });
 
