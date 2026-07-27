@@ -522,6 +522,24 @@ export type Database = {
     }
     Functions: {
       generate_referral_code: { Args: never; Returns: string }
+      get_admin_stats: { Args: never; Returns: Json }
+      get_admin_users: {
+        Args: never
+        Returns: {
+          created_at: string
+          days_remaining: number
+          email: string
+          expires_at: string
+          full_name: string
+          id: string
+          is_admin: boolean
+          last_payment_at: string
+          phone: string
+          plan: Database["public"]["Enums"]["plan_type"]
+          status: Database["public"]["Enums"]["subscription_status"]
+          total_paid_cents: number
+        }[]
+      }
       get_stability_ranking: {
         Args: { _limit?: number }
         Returns: {
