@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { CalendarDays, CheckCircle2, Clock, CreditCard, QrCode, Zap } from "lucide-react";
-import { useState } from "react";
+import { CalendarDays, CheckCircle2, Clock, Copy, CreditCard, Loader2, QrCode, ShieldCheck, Sparkles, Timer, Zap } from "lucide-react";
+import { useEffect, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { useSubscription, planLabel, statusLabel } from "@/hooks/use-subscription";
 import { PLANS, formatBRL, type PlanId } from "@/lib/payments";
-import { createPixPayment } from "@/lib/mercadopago.functions";
+import { createPixPayment, getPaymentStatus } from "@/lib/mercadopago.functions";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
@@ -111,30 +111,166 @@ function SubscriptionPage() {
         </div>
       </div>
 
-      <Dialog open={!!openPlan} onOpenChange={(o) => !o && setOpenPlan(null)}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2"><QrCode className="h-5 w-5" /> Pagamento via PIX</DialogTitle>
-            <DialogDescription>
-              {loading ? "Gerando cobrança..." : pix?.integrationReady
-                ? "Escaneie o QR Code abaixo com o app do seu banco."
-                : "Estrutura pronta. Configure o Mercado Pago para gerar QR Codes reais."}
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4">
-            {loading && <div className="h-40 rounded bg-muted animate-pulse" />}
-            {pix && pix.qrCodeBase64 && (
-              <img src={`data:image/png;base64,${pix.qrCodeBase64}`} alt="QR Code PIX" className="mx-auto h-48 w-48" />
-            )}
-            {pix && !pix.integrationReady && (
-              <div className="rounded-md border border-dashed p-4 text-xs text-muted-foreground space-y-2">
-                <p><strong>Próximo passo:</strong> adicionar o secret <code>MERCADOPAGO_ACCESS_TOKEN</code> e ativar a chamada real em <code>src/lib/mercadopago.functions.ts</code>. Um registro de pagamento pendente já foi criado na sua conta.</p>
-              </div>
-            )}
-          </div>
-        </DialogContent>
-      </Dialog>
+      <PixDialog
+        openPlan={openPlan}
+        onClose={() => { setOpenPlan(null); setPix(null); }}
+        pix={pix}
+        loading={loading}
+        onPaid={() => { refetch(); toast.success("Pagamento confirmado! Assinatura ativada."); setOpenPlan(null); setPix(null); }}
+      />
     </div>
+  );
+}
+
+function PixDialog({ openPlan, onClose, pix, loading, onPaid }: {
+  openPlan: PlanId | null;
+  onClose: () => void;
+  pix: Awaited<ReturnType<typeof createPixPayment>> | null;
+  loading: boolean;
+  onPaid: () => void;
+}) {
+  const getStatus = useServerFn(getPaymentStatus);
+  const [remaining, setRemaining] = useState<number>(0);
+  const [checking, setChecking] = useState(false);
+
+  // Countdown
+  useEffect(() => {
+    if (!pix?.expiresAt) return;
+    const tick = () => {
+      const ms = new Date(pix.expiresAt).getTime() - Date.now();
+      setRemaining(Math.max(0, Math.floor(ms / 1000)));
+    };
+    tick();
+    const id = setInterval(tick, 1000);
+    return () => clearInterval(id);
+  }, [pix?.expiresAt]);
+
+  // Poll payment status every 5s while dialog is open
+  useEffect(() => {
+    if (!pix?.paymentId || !pix.integrationReady) return;
+    let stop = false;
+    const poll = async () => {
+      try {
+        const row = await getStatus({ data: { paymentId: pix.paymentId } });
+        if (row?.status === "approved" && !stop) onPaid();
+      } catch {}
+    };
+    const id = setInterval(poll, 5000);
+    return () => { stop = true; clearInterval(id); };
+  }, [pix?.paymentId, pix?.integrationReady, getStatus, onPaid]);
+
+  const mm = String(Math.floor(remaining / 60)).padStart(2, "0");
+  const ss = String(remaining % 60).padStart(2, "0");
+
+  async function checkNow() {
+    if (!pix?.paymentId) return;
+    setChecking(true);
+    try {
+      const row = await getStatus({ data: { paymentId: pix.paymentId } });
+      if (row?.status === "approved") onPaid();
+      else toast.info("Ainda não identificamos o pagamento. Aguarde alguns segundos após pagar.");
+    } finally {
+      setChecking(false);
+    }
+  }
+
+  function copyCode() {
+    if (!pix?.copyPaste) return;
+    navigator.clipboard.writeText(pix.copyPaste);
+    toast.success("Código PIX copiado!");
+  }
+
+  return (
+    <Dialog open={!!openPlan} onOpenChange={(o) => !o && onClose()}>
+      <DialogContent className="max-w-md p-0 overflow-hidden">
+        {/* Header gradient */}
+        <div className="relative bg-gradient-to-br from-primary/20 via-primary/5 to-transparent border-b p-6">
+          <DialogHeader className="space-y-2">
+            <div className="flex items-center gap-2">
+              <div className="h-9 w-9 rounded-lg bg-primary/15 border border-primary/30 flex items-center justify-center">
+                <QrCode className="h-5 w-5 text-primary" />
+              </div>
+              <div>
+                <DialogTitle className="text-base">Pagamento via PIX</DialogTitle>
+                <DialogDescription className="text-xs">
+                  Aprovação automática · Ativa na hora
+                </DialogDescription>
+              </div>
+            </div>
+          </DialogHeader>
+          {pix && (
+            <div className="mt-4 flex items-baseline justify-between">
+              <div>
+                <div className="text-3xl font-bold tracking-tight">{formatBRL(pix.amountCents)}</div>
+                {pix.discountApplied && (
+                  <div className="flex items-center gap-1 text-xs text-success mt-1">
+                    <Sparkles className="h-3 w-3" /> Desconto de indicação aplicado
+                  </div>
+                )}
+              </div>
+              <div className="text-right">
+                <div className="text-[10px] uppercase tracking-wider text-muted-foreground">Expira em</div>
+                <div className={cn("font-mono font-semibold tabular-nums", remaining < 60 && "text-destructive")}>
+                  <Timer className="inline h-3.5 w-3.5 mr-1 -mt-0.5" />
+                  {mm}:{ss}
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+
+        <div className="p-6 space-y-4">
+          {loading && (
+            <div className="space-y-3">
+              <div className="mx-auto h-56 w-56 rounded-xl bg-muted animate-pulse" />
+              <p className="text-center text-sm text-muted-foreground">Gerando cobrança PIX...</p>
+            </div>
+          )}
+
+          {!loading && pix?.integrationReady && pix.qrCodeBase64 && (
+            <>
+              <div className="mx-auto w-fit rounded-xl border-2 border-primary/20 bg-white p-3 shadow-lg">
+                <img src={`data:image/png;base64,${pix.qrCodeBase64}`} alt="QR Code PIX" className="h-56 w-56 block" />
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-xs font-medium text-muted-foreground">PIX Copia e Cola</label>
+                <div className="flex gap-2">
+                  <div className="flex-1 rounded-md border bg-muted/40 px-3 py-2 font-mono text-[11px] truncate">
+                    {pix.copyPaste}
+                  </div>
+                  <Button size="sm" variant="secondary" onClick={copyCode}>
+                    <Copy className="h-3.5 w-3.5 mr-1" /> Copiar
+                  </Button>
+                </div>
+              </div>
+
+              <div className="rounded-lg border bg-muted/30 p-3 text-xs space-y-1.5">
+                <div className="font-semibold flex items-center gap-1.5"><ShieldCheck className="h-3.5 w-3.5 text-primary" /> Como pagar</div>
+                <ol className="list-decimal list-inside space-y-0.5 text-muted-foreground">
+                  <li>Abra o app do seu banco</li>
+                  <li>Escolha pagar via PIX QR Code ou Copia e Cola</li>
+                  <li>Confirme o valor de <strong>{formatBRL(pix.amountCents)}</strong></li>
+                  <li>Sua assinatura é ativada automaticamente</li>
+                </ol>
+              </div>
+
+              <Button variant="outline" className="w-full" onClick={checkNow} disabled={checking}>
+                {checking ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <CheckCircle2 className="h-4 w-4 mr-2" />}
+                Já paguei, verificar agora
+              </Button>
+            </>
+          )}
+
+          {!loading && pix && !pix.integrationReady && (
+            <div className="rounded-lg border border-dashed border-warning/50 bg-warning/5 p-4 text-xs text-muted-foreground space-y-2">
+              <p className="font-semibold text-warning">Mercado Pago não configurado</p>
+              <p>Adicione o segredo <code className="rounded bg-muted px-1">MERCADOPAGO_ACCESS_TOKEN</code> para gerar QR Codes reais.</p>
+            </div>
+          )}
+        </div>
+      </DialogContent>
+    </Dialog>
   );
 }
 
