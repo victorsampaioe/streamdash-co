@@ -102,6 +102,8 @@ export const createPixPayment = createServerFn({ method: "POST" })
         copyPaste: td?.qr_code ?? null,
         expiresAt,
         integrationReady: true,
+        amountCents,
+        discountApplied,
       };
     } catch (e) {
       console.error("[mercadopago] createPixPayment failed:", e);
