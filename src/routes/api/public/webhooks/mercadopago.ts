@@ -31,7 +31,7 @@ async function processPayment(mpPaymentId: string) {
       status,
       provider_payment_id: String(mp.id),
       paid_at: status === "approved" ? new Date().toISOString() : row.paid_at,
-      raw_payload: mp as unknown as Record<string, unknown>,
+      raw_payload: mp as any,
     })
     .eq("id", row.id);
 

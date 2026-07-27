@@ -67,7 +67,7 @@ export const createPixPayment = createServerFn({ method: "POST" })
           pix_qr_code: td?.qr_code ?? null,
           pix_qr_code_base64: td?.qr_code_base64 ?? null,
           pix_copy_paste: td?.qr_code ?? null,
-          raw_payload: charge as unknown as Record<string, unknown>,
+          raw_payload: charge as any,
         })
         .eq("id", payment.id);
 
