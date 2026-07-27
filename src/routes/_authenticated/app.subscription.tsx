@@ -157,16 +157,14 @@ function PixDialog({ openPlan, onClose, pix, loading, onPaid }: {
   useEffect(() => {
     let cancelled = false;
     setQrImage(null);
-    if (pix?.qrCodeBase64) {
-      setQrImage(pix.qrCodeBase64.startsWith("data:") ? pix.qrCodeBase64 : `data:image/png;base64,${pix.qrCodeBase64}`);
-      return;
-    }
     if (!pix?.copyPaste) return;
+    // Generate from the official PIX payload in the browser. Some provider
+    // base64 images are oversized or malformed even though the payload is valid.
     QRCode.toDataURL(pix.copyPaste, { width: 360, margin: 1, errorCorrectionLevel: "M" })
       .then((url) => { if (!cancelled) setQrImage(url); })
       .catch(() => { if (!cancelled) setQrImage(null); });
     return () => { cancelled = true; };
-  }, [pix?.copyPaste, pix?.qrCodeBase64]);
+  }, [pix?.copyPaste]);
 
   // Confirm directly with Mercado Pago every 3s. This also covers delayed webhooks.
   useEffect(() => {
