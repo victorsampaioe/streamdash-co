@@ -1,10 +1,11 @@
 import { Link, Outlet, useNavigate, useRouterState } from "@tanstack/react-router";
-import { Activity, LayoutDashboard, ServerIcon, Bell, Users, LogOut, Sun, Moon, Search, Plus, CreditCard, Gift, Radio, ShieldAlert, Trophy, Lock } from "lucide-react";
+import { Activity, LayoutDashboard, ServerIcon, Bell, Users, LogOut, Sun, Moon, Search, Plus, CreditCard, Gift, Radio, ShieldAlert, Trophy, Lock, Menu } from "lucide-react";
 import { SubscriptionBanner } from "@/components/subscription/subscription-banner";
 import { useEffect, useState, type ReactNode } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { Sheet, SheetContent, SheetTrigger, SheetTitle, SheetHeader } from "@/components/ui/sheet";
 import { useTheme } from "@/components/theme-provider";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useSubscription } from "@/hooks/use-subscription";
@@ -24,7 +25,7 @@ export function AppShell({ children }: { children: ReactNode }) {
       <div className="flex-1 flex flex-col min-w-0">
         <Topbar />
         <SubscriptionBanner />
-        <main className="flex-1 p-6 md:p-8 max-w-[1600px] w-full mx-auto">{children}</main>
+        <main className="flex-1 p-4 sm:p-6 md:p-8 max-w-[1600px] w-full mx-auto">{children}</main>
       </div>
     </div>
   );
@@ -59,8 +60,7 @@ export function AppOutletShell() {
 }
 
 
-function Sidebar() {
-  const pathname = useRouterState({ select: (r) => r.location.pathname });
+function useNavItems() {
   const { data: isAdmin } = useQuery({
     queryKey: ["is-admin"],
     queryFn: async () => {
@@ -70,7 +70,6 @@ function Sidebar() {
       return !!data;
     },
   });
-
   const items = [
     { to: "/app", label: "Dashboard", icon: LayoutDashboard, exact: true },
     { to: "/app/servers", label: "Servidores", icon: ServerIcon },
@@ -81,36 +80,44 @@ function Sidebar() {
     { to: "/app/subscription", label: "Assinatura", icon: CreditCard },
     { to: "/app/referrals", label: "Indicações", icon: Gift },
   ];
+  if (isAdmin) items.push({ to: "/app/admin", label: "Admin", icon: Users });
+  return items;
+}
 
+function NavList({ onNavigate }: { onNavigate?: () => void }) {
+  const pathname = useRouterState({ select: (r) => r.location.pathname });
+  const items = useNavItems();
+  return (
+    <nav className="p-3 space-y-1 flex-1">
+      {items.map((it) => {
+        const active = (it as any).exact ? pathname === it.to : pathname.startsWith(it.to);
+        return (
+          <Link
+            key={it.to}
+            to={it.to}
+            onClick={onNavigate}
+            className={cn(
+              "flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors",
+              active ? "bg-sidebar-accent text-sidebar-accent-foreground" : "hover:bg-sidebar-accent/50"
+            )}
+          >
+            <it.icon className="h-4 w-4" />
+            {it.label}
+          </Link>
+        );
+      })}
+    </nav>
+  );
+}
+
+function Sidebar() {
   return (
     <aside className="hidden md:flex w-60 flex-col border-r border-border/60 bg-sidebar text-sidebar-foreground">
       <div className="p-5 flex items-center gap-2 border-b border-sidebar-border">
         <Activity className="h-5 w-5 text-primary" />
         <span className="font-bold tracking-tight">stream<span className="text-primary">monitor</span></span>
       </div>
-      <nav className="p-3 space-y-1 flex-1">
-        {items.map((it) => {
-          const active = it.exact ? pathname === it.to : pathname.startsWith(it.to);
-          return (
-            <Link key={it.to} to={it.to} className={cn(
-              "flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors",
-              active ? "bg-sidebar-accent text-sidebar-accent-foreground" : "hover:bg-sidebar-accent/50"
-            )}>
-              <it.icon className="h-4 w-4" />
-              {it.label}
-            </Link>
-          );
-        })}
-        {isAdmin && (
-          <Link to="/app/admin" className={cn(
-            "flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors",
-            pathname.startsWith("/app/admin") ? "bg-sidebar-accent text-sidebar-accent-foreground" : "hover:bg-sidebar-accent/50"
-          )}>
-            <Users className="h-4 w-4" />
-            Admin
-          </Link>
-        )}
-      </nav>
+      <NavList />
       <div className="p-3 border-t border-sidebar-border">
         <SignOutButton />
       </div>
@@ -118,17 +125,48 @@ function Sidebar() {
   );
 }
 
+function MobileNav() {
+  const [open, setOpen] = useState(false);
+  return (
+    <Sheet open={open} onOpenChange={setOpen}>
+      <SheetTrigger asChild>
+        <Button variant="ghost" size="icon" className="md:hidden" aria-label="Abrir menu">
+          <Menu className="h-5 w-5" />
+        </Button>
+      </SheetTrigger>
+      <SheetContent side="left" className="w-72 p-0 bg-sidebar text-sidebar-foreground flex flex-col">
+        <SheetHeader className="p-5 border-b border-sidebar-border">
+          <SheetTitle className="flex items-center gap-2 text-left">
+            <Activity className="h-5 w-5 text-primary" />
+            <span className="font-bold tracking-tight">stream<span className="text-primary">monitor</span></span>
+          </SheetTitle>
+        </SheetHeader>
+        <NavList onNavigate={() => setOpen(false)} />
+        <div className="p-3 border-t border-sidebar-border">
+          <SignOutButton />
+        </div>
+      </SheetContent>
+    </Sheet>
+  );
+}
+
 function Topbar() {
   const { theme, toggle } = useTheme();
   return (
-    <header className="h-14 border-b border-border/60 flex items-center justify-between px-6 bg-background/70 backdrop-blur sticky top-0 z-30">
-      <div className="flex items-center gap-2 md:hidden">
-        <Activity className="h-5 w-5 text-primary" />
-        <span className="font-bold">streammonitor</span>
+    <header className="h-14 border-b border-border/60 flex items-center gap-2 px-3 md:px-6 bg-background/70 backdrop-blur sticky top-0 z-30">
+      <MobileNav />
+      <div className="flex items-center gap-2 md:hidden min-w-0">
+        <Activity className="h-5 w-5 text-primary shrink-0" />
+        <span className="font-bold truncate">streammonitor</span>
       </div>
       <div className="flex-1" />
-      <div className="flex items-center gap-2">
-        <Link to="/app/servers/new"><Button size="sm"><Plus className="h-4 w-4 mr-1" /> Novo servidor</Button></Link>
+      <div className="flex items-center gap-1 sm:gap-2">
+        <Link to="/app/servers/new">
+          <Button size="sm" className="px-2 sm:px-3">
+            <Plus className="h-4 w-4 sm:mr-1" />
+            <span className="hidden sm:inline">Novo servidor</span>
+          </Button>
+        </Link>
         <Button variant="ghost" size="icon" onClick={toggle} aria-label="Alternar tema">
           {theme === "dark" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
         </Button>
