@@ -64,6 +64,8 @@ export const createPixPayment = createServerFn({ method: "POST" })
         copyPaste: null as string | null,
         expiresAt,
         integrationReady: false,
+        amountCents,
+        discountApplied,
       };
     }
 
