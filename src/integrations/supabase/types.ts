@@ -521,6 +521,20 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      finalize_approved_payment: {
+        Args: {
+          _paid_at?: string
+          _payment_id: string
+          _provider_payment_id: string
+          _raw_payload: Json
+        }
+        Returns: {
+          applied: boolean
+          expires_at: string
+          plan: Database["public"]["Enums"]["plan_type"]
+          user_id: string
+        }[]
+      }
       generate_referral_code: { Args: never; Returns: string }
       get_admin_stats: { Args: never; Returns: Json }
       get_admin_users: {
