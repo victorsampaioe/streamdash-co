@@ -1,12 +1,21 @@
 import { Link, Outlet, useNavigate, useRouterState } from "@tanstack/react-router";
-import { Activity, LayoutDashboard, ServerIcon, Bell, Users, LogOut, Sun, Moon, Search, Plus, CreditCard, Gift, Radio, ShieldAlert, Trophy } from "lucide-react";
+import { Activity, LayoutDashboard, ServerIcon, Bell, Users, LogOut, Sun, Moon, Search, Plus, CreditCard, Gift, Radio, ShieldAlert, Trophy, Lock } from "lucide-react";
 import { SubscriptionBanner } from "@/components/subscription/subscription-banner";
 import { useEffect, useState, type ReactNode } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
 import { useTheme } from "@/components/theme-provider";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useSubscription } from "@/hooks/use-subscription";
 import { cn } from "@/lib/utils";
+
+// Routes that keep working even after the subscription expires,
+// so the user can always renew and see their status.
+const ALWAYS_OPEN_PATHS = [
+  "/app/subscription",
+  "/app/referrals",
+];
 
 export function AppShell({ children }: { children: ReactNode }) {
   return (
@@ -21,9 +30,34 @@ export function AppShell({ children }: { children: ReactNode }) {
   );
 }
 
-export function AppOutletShell() {
-  return <AppShell><Outlet /></AppShell>;
+function GatedOutlet() {
+  const pathname = useRouterState({ select: (r) => r.location.pathname });
+  const { data, isLoading } = useSubscription();
+  const allowed = ALWAYS_OPEN_PATHS.some((p) => pathname === p || pathname.startsWith(p + "/"));
+  if (isLoading || data?.isActive || allowed) return <Outlet />;
+  return (
+    <Card className="p-10 border-dashed text-center space-y-4 max-w-xl mx-auto mt-8">
+      <div className="mx-auto h-14 w-14 rounded-full bg-muted flex items-center justify-center">
+        <Lock className="h-6 w-6 text-muted-foreground" />
+      </div>
+      <div>
+        <h3 className="text-xl font-semibold">Assinatura expirada</h3>
+        <p className="text-sm text-muted-foreground mt-2">
+          Seu período gratuito ou plano acabou. As funções ficam bloqueadas até a renovação
+          via PIX. O monitoramento dos seus servidores também está pausado.
+        </p>
+      </div>
+      <Link to="/app/subscription">
+        <Button size="lg"><CreditCard className="h-4 w-4 mr-2" />Renovar por PIX</Button>
+      </Link>
+    </Card>
+  );
 }
+
+export function AppOutletShell() {
+  return <AppShell><GatedOutlet /></AppShell>;
+}
+
 
 function Sidebar() {
   const pathname = useRouterState({ select: (r) => r.location.pathname });

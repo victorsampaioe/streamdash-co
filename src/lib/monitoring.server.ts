@@ -31,7 +31,26 @@ export async function runDueChecks() {
   const now = Date.now();
   const { data: servers, error } = await supabaseAdmin.from("servers").select("*");
   if (error) throw error;
+
+  // Only monitor servers of users with an active subscription.
+  // When trial/subscription expires, monitoring pauses until they renew via PIX.
+  const ownerIds = Array.from(new Set((servers ?? []).map((s: any) => s.owner_id)));
+  const activeOwners = new Set<string>();
+  if (ownerIds.length) {
+    const { data: subs } = await supabaseAdmin
+      .from("subscriptions")
+      .select("user_id, status, expires_at")
+      .in("user_id", ownerIds);
+    const nowIso = new Date().toISOString();
+    for (const s of subs ?? []) {
+      if ((s.status === "active" || s.status === "trial") && s.expires_at > nowIso) {
+        activeOwners.add(s.user_id);
+      }
+    }
+  }
+
   const due = (servers ?? []).filter((s: any) => {
+    if (!activeOwners.has(s.owner_id)) return false;
     if (!s.last_checked_at) return true;
     return now - new Date(s.last_checked_at).getTime() >= s.interval_seconds * 1000;
   });

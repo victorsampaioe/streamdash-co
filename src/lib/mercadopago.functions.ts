@@ -1,7 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
-import { PLANS, type PlanId } from "./payments";
+import { PLANS, REFERRAL_FIRST_PURCHASE_DISCOUNT, type PlanId } from "./payments";
 
 export const createPixPayment = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
@@ -13,6 +13,29 @@ export const createPixPayment = createServerFn({ method: "POST" })
     const { supabase, userId, claims } = context;
     const expiresAt = new Date(Date.now() + 30 * 60 * 1000).toISOString(); // PIX 30min
 
+    // Referral discount: applies only on the user's first-ever approved payment,
+    // and only if they signed up using someone's referral code.
+    let amountCents = plan.priceCents;
+    let discountApplied = false;
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("referred_by")
+      .eq("id", userId)
+      .maybeSingle();
+    if (profile?.referred_by) {
+      const { data: priorApproved } = await supabase
+        .from("payments")
+        .select("id")
+        .eq("user_id", userId)
+        .eq("status", "approved")
+        .limit(1);
+      if (!priorApproved || priorApproved.length === 0) {
+        amountCents = Math.round(plan.priceCents * (1 - REFERRAL_FIRST_PURCHASE_DISCOUNT));
+        discountApplied = true;
+      }
+    }
+
+
     // 1) Create pending payment row
     const { data: payment, error } = await supabase
       .from("payments")
@@ -21,7 +44,7 @@ export const createPixPayment = createServerFn({ method: "POST" })
         provider: "mercadopago",
         method: "pix",
         status: "pending",
-        amount_cents: plan.priceCents,
+        amount_cents: amountCents,
         currency: "BRL",
         plan: plan.id,
         expires_at: expiresAt,
@@ -41,6 +64,8 @@ export const createPixPayment = createServerFn({ method: "POST" })
         copyPaste: null as string | null,
         expiresAt,
         integrationReady: false,
+        amountCents,
+        discountApplied,
       };
     }
 
@@ -50,8 +75,8 @@ export const createPixPayment = createServerFn({ method: "POST" })
 
     try {
       const charge = await createMpPixCharge({
-        amountCents: plan.priceCents,
-        description: `StreamMonitor — Plano ${plan.name}`,
+        amountCents,
+        description: `StreamMonitor — Plano ${plan.name}${discountApplied ? " (desconto indicação)" : ""}`,
         payerEmail,
         externalReference: payment.id,
         expiresAt,
@@ -79,6 +104,8 @@ export const createPixPayment = createServerFn({ method: "POST" })
         copyPaste: td?.qr_code ?? null,
         expiresAt,
         integrationReady: true,
+        amountCents,
+        discountApplied,
       };
     } catch (e) {
       console.error("[mercadopago] createPixPayment failed:", e);
