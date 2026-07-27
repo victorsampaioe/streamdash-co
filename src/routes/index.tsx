@@ -22,6 +22,11 @@ function Landing() {
             <span className="font-bold tracking-tight">stream<span className="text-primary">monitor</span></span>
           </div>
           <div className="flex items-center gap-2">
+            <a href="https://t.me/+RId642Ac4AFkOWFh" target="_blank" rel="noopener noreferrer">
+              <Button variant="ghost" size="sm" className="hidden sm:inline-flex gap-2">
+                <Send className="h-4 w-4" />Novidades
+              </Button>
+            </a>
             <Link to="/auth"><Button variant="ghost" size="sm">Entrar</Button></Link>
             <Link to="/auth"><Button size="sm">Começar</Button></Link>
           </div>
