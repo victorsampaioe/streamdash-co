@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { Activity, Bell, Globe, Zap, ShieldCheck, LineChart } from "lucide-react";
+import { Activity, Bell, Globe, Zap, ShieldCheck, LineChart, Send } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 export const Route = createFileRoute("/")({
@@ -22,6 +22,11 @@ function Landing() {
             <span className="font-bold tracking-tight">stream<span className="text-primary">monitor</span></span>
           </div>
           <div className="flex items-center gap-2">
+            <a href="https://t.me/+RId642Ac4AFkOWFh" target="_blank" rel="noopener noreferrer">
+              <Button variant="ghost" size="sm" className="hidden sm:inline-flex gap-2">
+                <Send className="h-4 w-4" />Novidades
+              </Button>
+            </a>
             <Link to="/auth"><Button variant="ghost" size="sm">Entrar</Button></Link>
             <Link to="/auth"><Button size="sm">Começar</Button></Link>
           </div>
@@ -64,10 +69,29 @@ function Landing() {
         </div>
       </section>
 
+      <section className="border-y border-border/60 bg-card/40">
+        <div className="max-w-6xl mx-auto px-6 py-12 text-center">
+          <h2 className="text-2xl font-bold tracking-tight mb-3">Acompanhe as novidades</h2>
+          <p className="text-muted-foreground mb-6 max-w-xl mx-auto">
+            Entre no nosso canal do Telegram para receber alertas de status, novidades e dicas de monitoramento.
+          </p>
+          <a href="https://t.me/+RId642Ac4AFkOWFh" target="_blank" rel="noopener noreferrer">
+            <Button size="lg" variant="outline" className="gap-2">
+              <Send className="h-4 w-4" />Entrar no Telegram
+            </Button>
+          </a>
+        </div>
+      </section>
+
       <footer className="border-t border-border/60">
-        <div className="max-w-6xl mx-auto px-6 py-8 text-sm text-muted-foreground flex items-center justify-between">
+        <div className="max-w-6xl mx-auto px-6 py-8 text-sm text-muted-foreground flex flex-col sm:flex-row items-center justify-between gap-3">
           <span>© {new Date().getFullYear()} streammonitor.site</span>
-          <Link to="/auth" className="hover:text-primary">Entrar</Link>
+          <div className="flex items-center gap-4">
+            <a href="https://t.me/+RId642Ac4AFkOWFh" target="_blank" rel="noopener noreferrer" className="hover:text-primary inline-flex items-center gap-1.5">
+              <Send className="h-4 w-4" />Novidades no Telegram
+            </a>
+            <Link to="/auth" className="hover:text-primary">Entrar</Link>
+          </div>
         </div>
       </footer>
     </div>

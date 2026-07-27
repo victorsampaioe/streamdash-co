@@ -1,5 +1,5 @@
 import { Link, Outlet, useNavigate, useRouterState } from "@tanstack/react-router";
-import { Activity, LayoutDashboard, ServerIcon, Bell, Users, LogOut, Sun, Moon, Search, Plus, CreditCard, Gift, Radio, ShieldAlert, Trophy, Lock, Menu } from "lucide-react";
+import { Activity, LayoutDashboard, ServerIcon, Bell, Users, LogOut, Sun, Moon, Search, Plus, CreditCard, Gift, Radio, ShieldAlert, Trophy, Lock, Menu, Send } from "lucide-react";
 import { SubscriptionBanner } from "@/components/subscription/subscription-banner";
 import { useEffect, useState, type ReactNode } from "react";
 import { supabase } from "@/integrations/supabase/client";
@@ -118,10 +118,24 @@ function Sidebar() {
         <span className="font-bold tracking-tight">stream<span className="text-primary">monitor</span></span>
       </div>
       <NavList />
-      <div className="p-3 border-t border-sidebar-border">
+      <div className="p-3 border-t border-sidebar-border space-y-1">
+        <TelegramLink />
         <SignOutButton />
       </div>
     </aside>
+  );
+}
+
+function TelegramLink() {
+  return (
+    <a
+      href="https://t.me/+RId642Ac4AFkOWFh"
+      target="_blank"
+      rel="noopener noreferrer"
+      className="flex items-center gap-2 rounded-md px-3 py-2 text-sm hover:bg-sidebar-accent/50 transition-colors"
+    >
+      <Send className="h-4 w-4" /> Novidades no Telegram
+    </a>
   );
 }
 
@@ -142,7 +156,8 @@ function MobileNav() {
           </SheetTitle>
         </SheetHeader>
         <NavList onNavigate={() => setOpen(false)} />
-        <div className="p-3 border-t border-sidebar-border">
+        <div className="p-3 border-t border-sidebar-border space-y-1">
+          <TelegramLink />
           <SignOutButton />
         </div>
       </SheetContent>
