@@ -1,10 +1,11 @@
 import { Link, Outlet, useNavigate, useRouterState } from "@tanstack/react-router";
-import { Activity, LayoutDashboard, ServerIcon, Bell, Users, LogOut, Sun, Moon, Search, Plus, CreditCard, Gift, Radio, ShieldAlert, Trophy, Lock } from "lucide-react";
+import { Activity, LayoutDashboard, ServerIcon, Bell, Users, LogOut, Sun, Moon, Search, Plus, CreditCard, Gift, Radio, ShieldAlert, Trophy, Lock, Menu } from "lucide-react";
 import { SubscriptionBanner } from "@/components/subscription/subscription-banner";
 import { useEffect, useState, type ReactNode } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { Sheet, SheetContent, SheetTrigger, SheetTitle, SheetHeader } from "@/components/ui/sheet";
 import { useTheme } from "@/components/theme-provider";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useSubscription } from "@/hooks/use-subscription";
