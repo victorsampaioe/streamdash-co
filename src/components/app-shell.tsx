@@ -126,6 +126,19 @@ function Sidebar() {
   );
 }
 
+function TelegramLink() {
+  return (
+    <a
+      href="https://t.me/+RId642Ac4AFkOWFh"
+      target="_blank"
+      rel="noopener noreferrer"
+      className="flex items-center gap-2 rounded-md px-3 py-2 text-sm hover:bg-sidebar-accent/50 transition-colors"
+    >
+      <Send className="h-4 w-4" /> Novidades no Telegram
+    </a>
+  );
+}
+
 function MobileNav() {
   const [open, setOpen] = useState(false);
   return (
@@ -143,7 +156,8 @@ function MobileNav() {
           </SheetTitle>
         </SheetHeader>
         <NavList onNavigate={() => setOpen(false)} />
-        <div className="p-3 border-t border-sidebar-border">
+        <div className="p-3 border-t border-sidebar-border space-y-1">
+          <TelegramLink />
           <SignOutButton />
         </div>
       </SheetContent>
