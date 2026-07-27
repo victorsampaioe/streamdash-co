@@ -73,8 +73,8 @@ export const createPixPayment = createServerFn({ method: "POST" })
 
     try {
       const charge = await createMpPixCharge({
-        amountCents: plan.priceCents,
-        description: `StreamMonitor — Plano ${plan.name}`,
+        amountCents,
+        description: `StreamMonitor — Plano ${plan.name}${discountApplied ? " (desconto indicação)" : ""}`,
         payerEmail,
         externalReference: payment.id,
         expiresAt,
