@@ -69,6 +69,7 @@ export function useSubscription() {
         isExpiringSoon: isActive && daysRemaining <= 7,
       };
     },
-    staleTime: 60_000,
+    staleTime: 5_000,
+    refetchOnWindowFocus: true,
   });
 }
