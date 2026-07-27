@@ -16,7 +16,7 @@ export const PLANS: PlanDefinition[] = [
   {
     id: "monthly",
     name: "Mensal",
-    priceCents: 2990,
+    priceCents: 3500,
     durationDays: 30,
     perks: ["Monitoramento ilimitado", "Alertas em tempo real", "Suporte por e-mail"],
   },
@@ -26,9 +26,14 @@ export const PLANS: PlanDefinition[] = [
     priceCents: 29900,
     durationDays: 365,
     highlight: true,
-    perks: ["Tudo do Mensal", "2 meses grátis", "Suporte prioritário"],
+    perks: ["Tudo do Mensal", "Economia de ~29%", "Suporte prioritário"],
   },
 ];
+
+// Referral: novo usuário que se cadastrou com código de indicação ganha
+// 10% de desconto na PRIMEIRA compra (mensal ou anual).
+export const REFERRAL_FIRST_PURCHASE_DISCOUNT = 0.10;
+
 
 export function formatBRL(cents: number) {
   return (cents / 100).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
