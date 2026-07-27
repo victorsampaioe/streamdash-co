@@ -27,6 +27,7 @@ import { Route as AuthenticatedAppDetectorRouteImport } from './routes/_authenti
 import { Route as AuthenticatedAppAlertsRouteImport } from './routes/_authenticated/app.alerts'
 import { Route as AuthenticatedAppAdminRouteImport } from './routes/_authenticated/app.admin'
 import { Route as AuthenticatedAppServersIndexRouteImport } from './routes/_authenticated/app.servers.index'
+import { Route as ApiPublicWebhooksMercadopagoRouteImport } from './routes/api/public/webhooks/mercadopago'
 import { Route as ApiPublicRegionsReportRouteImport } from './routes/api/public/regions/report'
 import { Route as ApiPublicCronCheckRouteImport } from './routes/api/public/cron/check'
 import { Route as AuthenticatedAppServersNewRouteImport } from './routes/_authenticated/app.servers.new'
@@ -125,6 +126,12 @@ const AuthenticatedAppServersIndexRoute =
     path: '/servers/',
     getParentRoute: () => AuthenticatedAppRoute,
   } as any)
+const ApiPublicWebhooksMercadopagoRoute =
+  ApiPublicWebhooksMercadopagoRouteImport.update({
+    id: '/api/public/webhooks/mercadopago',
+    path: '/api/public/webhooks/mercadopago',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiPublicRegionsReportRoute = ApiPublicRegionsReportRouteImport.update({
   id: '/api/public/regions/report',
   path: '/api/public/regions/report',
@@ -169,6 +176,7 @@ export interface FileRoutesByFullPath {
   '/app/servers/new': typeof AuthenticatedAppServersNewRoute
   '/api/public/cron/check': typeof ApiPublicCronCheckRoute
   '/api/public/regions/report': typeof ApiPublicRegionsReportRoute
+  '/api/public/webhooks/mercadopago': typeof ApiPublicWebhooksMercadopagoRoute
   '/app/servers/': typeof AuthenticatedAppServersIndexRoute
 }
 export interface FileRoutesByTo {
@@ -191,6 +199,7 @@ export interface FileRoutesByTo {
   '/app/servers/new': typeof AuthenticatedAppServersNewRoute
   '/api/public/cron/check': typeof ApiPublicCronCheckRoute
   '/api/public/regions/report': typeof ApiPublicRegionsReportRoute
+  '/api/public/webhooks/mercadopago': typeof ApiPublicWebhooksMercadopagoRoute
   '/app/servers': typeof AuthenticatedAppServersIndexRoute
 }
 export interface FileRoutesById {
@@ -216,6 +225,7 @@ export interface FileRoutesById {
   '/_authenticated/app/servers/new': typeof AuthenticatedAppServersNewRoute
   '/api/public/cron/check': typeof ApiPublicCronCheckRoute
   '/api/public/regions/report': typeof ApiPublicRegionsReportRoute
+  '/api/public/webhooks/mercadopago': typeof ApiPublicWebhooksMercadopagoRoute
   '/_authenticated/app/servers/': typeof AuthenticatedAppServersIndexRoute
 }
 export interface FileRouteTypes {
@@ -241,6 +251,7 @@ export interface FileRouteTypes {
     | '/app/servers/new'
     | '/api/public/cron/check'
     | '/api/public/regions/report'
+    | '/api/public/webhooks/mercadopago'
     | '/app/servers/'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -263,6 +274,7 @@ export interface FileRouteTypes {
     | '/app/servers/new'
     | '/api/public/cron/check'
     | '/api/public/regions/report'
+    | '/api/public/webhooks/mercadopago'
     | '/app/servers'
   id:
     | '__root__'
@@ -287,6 +299,7 @@ export interface FileRouteTypes {
     | '/_authenticated/app/servers/new'
     | '/api/public/cron/check'
     | '/api/public/regions/report'
+    | '/api/public/webhooks/mercadopago'
     | '/_authenticated/app/servers/'
   fileRoutesById: FileRoutesById
 }
@@ -301,6 +314,7 @@ export interface RootRouteChildren {
   ApiPublicRadarRoute: typeof ApiPublicRadarRoute
   ApiPublicCronCheckRoute: typeof ApiPublicCronCheckRoute
   ApiPublicRegionsReportRoute: typeof ApiPublicRegionsReportRoute
+  ApiPublicWebhooksMercadopagoRoute: typeof ApiPublicWebhooksMercadopagoRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -431,6 +445,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAppServersIndexRouteImport
       parentRoute: typeof AuthenticatedAppRoute
     }
+    '/api/public/webhooks/mercadopago': {
+      id: '/api/public/webhooks/mercadopago'
+      path: '/api/public/webhooks/mercadopago'
+      fullPath: '/api/public/webhooks/mercadopago'
+      preLoaderRoute: typeof ApiPublicWebhooksMercadopagoRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/regions/report': {
       id: '/api/public/regions/report'
       path: '/api/public/regions/report'
@@ -515,17 +536,8 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPublicRadarRoute: ApiPublicRadarRoute,
   ApiPublicCronCheckRoute: ApiPublicCronCheckRoute,
   ApiPublicRegionsReportRoute: ApiPublicRegionsReportRoute,
+  ApiPublicWebhooksMercadopagoRoute: ApiPublicWebhooksMercadopagoRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}
