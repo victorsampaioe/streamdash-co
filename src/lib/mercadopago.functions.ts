@@ -35,6 +35,35 @@ export const createPixPayment = createServerFn({ method: "POST" })
       }
     }
 
+    // Reuse a still-valid charge. This makes retries instant and avoids
+    // creating multiple pending PIX payments for the same plan.
+    const { data: existing } = await supabase
+      .from("payments")
+      .select("id, amount_cents, expires_at, pix_qr_code, pix_qr_code_base64")
+      .eq("user_id", userId)
+      .eq("plan", plan.id)
+      .eq("status", "pending")
+      .eq("amount_cents", amountCents)
+      .gt("expires_at", new Date().toISOString())
+      .not("pix_qr_code", "is", null)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (existing?.pix_qr_code) {
+      return {
+        paymentId: existing.id,
+        status: "pending" as const,
+        qrCode: existing.pix_qr_code,
+        qrCodeBase64: existing.pix_qr_code_base64,
+        copyPaste: existing.pix_qr_code,
+        expiresAt: existing.expires_at ?? expiresAt,
+        integrationReady: true,
+        amountCents: existing.amount_cents,
+        discountApplied,
+      };
+    }
+
 
     // 1) Create pending payment row
     const { data: payment, error } = await supabase
@@ -120,8 +149,17 @@ export const getPaymentStatus = createServerFn({ method: "GET" })
   .handler(async ({ data, context }) => {
     const { data: row } = await context.supabase
       .from("payments")
-      .select("id, status, paid_at, plan")
+      .select("id, status, paid_at, plan, provider_payment_id")
       .eq("id", data.paymentId)
       .maybeSingle();
-    return row;
+    if (!row || row.status === "approved" || !row.provider_payment_id) return row;
+
+    try {
+      const { syncMpPayment } = await import("./mercadopago.server");
+      const synced = await syncMpPayment(row.provider_payment_id);
+      return { ...row, status: synced.status, paid_at: synced.paidAt };
+    } catch (error) {
+      console.error("[mercadopago] payment status sync failed:", error);
+      return row;
+    }
   });

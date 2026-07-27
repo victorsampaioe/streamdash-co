@@ -1,7 +1,8 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { CalendarDays, CheckCircle2, Clock, Copy, CreditCard, Loader2, QrCode, ShieldCheck, Sparkles, Timer, Zap } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
+import QRCode from "qrcode";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -30,6 +31,13 @@ function SubscriptionPage() {
   const createPix = useServerFn(createPixPayment);
 
   const sub = data?.subscription;
+
+  const handlePaid = useCallback(async () => {
+    await refetch();
+    toast.success("Pagamento confirmado! Assinatura ativada e recursos liberados.");
+    setOpenPlan(null);
+    setPix(null);
+  }, [refetch]);
 
   async function handleRenew(plan: PlanId) {
     setOpenPlan(plan);
@@ -116,7 +124,7 @@ function SubscriptionPage() {
         onClose={() => { setOpenPlan(null); setPix(null); }}
         pix={pix}
         loading={loading}
-        onPaid={() => { refetch(); toast.success("Pagamento confirmado! Assinatura ativada."); setOpenPlan(null); setPix(null); }}
+        onPaid={handlePaid}
       />
     </div>
   );
@@ -127,11 +135,12 @@ function PixDialog({ openPlan, onClose, pix, loading, onPaid }: {
   onClose: () => void;
   pix: Awaited<ReturnType<typeof createPixPayment>> | null;
   loading: boolean;
-  onPaid: () => void;
+  onPaid: () => Promise<void>;
 }) {
   const getStatus = useServerFn(getPaymentStatus);
   const [remaining, setRemaining] = useState<number>(0);
   const [checking, setChecking] = useState(false);
+  const [qrImage, setQrImage] = useState<string | null>(null);
 
   // Countdown
   useEffect(() => {
@@ -145,17 +154,42 @@ function PixDialog({ openPlan, onClose, pix, loading, onPaid }: {
     return () => clearInterval(id);
   }, [pix?.expiresAt]);
 
-  // Poll payment status every 5s while dialog is open
+  useEffect(() => {
+    let cancelled = false;
+    setQrImage(null);
+    if (!pix?.copyPaste) return;
+    // Generate from the official PIX payload in the browser. Some provider
+    // base64 images are oversized or malformed even though the payload is valid.
+    QRCode.toDataURL(pix.copyPaste, { width: 360, margin: 1, errorCorrectionLevel: "M" })
+      .then((url) => { if (!cancelled) setQrImage(url); })
+      .catch(() => { if (!cancelled) setQrImage(null); });
+    return () => { cancelled = true; };
+  }, [pix?.copyPaste]);
+
+  // Confirm directly with Mercado Pago every 3s. This also covers delayed webhooks.
   useEffect(() => {
     if (!pix?.paymentId || !pix.integrationReady) return;
     let stop = false;
+    let polling = false;
+    let id: ReturnType<typeof setInterval>;
     const poll = async () => {
+      if (stop || polling) return;
+      polling = true;
       try {
         const row = await getStatus({ data: { paymentId: pix.paymentId } });
-        if (row?.status === "approved" && !stop) onPaid();
-      } catch {}
+        if (row?.status === "approved" && !stop) {
+          stop = true;
+          clearInterval(id);
+          await onPaid();
+        }
+      } catch {
+        // A temporary provider error is retried on the next poll.
+      } finally {
+        polling = false;
+      }
     };
-    const id = setInterval(poll, 5000);
+    void poll();
+    id = setInterval(poll, 3000);
     return () => { stop = true; clearInterval(id); };
   }, [pix?.paymentId, pix?.integrationReady, getStatus, onPaid]);
 
@@ -167,7 +201,7 @@ function PixDialog({ openPlan, onClose, pix, loading, onPaid }: {
     setChecking(true);
     try {
       const row = await getStatus({ data: { paymentId: pix.paymentId } });
-      if (row?.status === "approved") onPaid();
+      if (row?.status === "approved") await onPaid();
       else toast.info("Ainda não identificamos o pagamento. Aguarde alguns segundos após pagar.");
     } finally {
       setChecking(false);
@@ -227,10 +261,23 @@ function PixDialog({ openPlan, onClose, pix, loading, onPaid }: {
             </div>
           )}
 
-          {!loading && pix?.integrationReady && pix.qrCodeBase64 && (
+          {!loading && pix?.integrationReady && pix.copyPaste && (
             <>
               <div className="mx-auto w-fit rounded-xl border-2 border-primary/20 bg-white p-3 shadow-lg">
-                <img src={`data:image/png;base64,${pix.qrCodeBase64}`} alt="QR Code PIX" className="h-56 w-56 block" />
+                {qrImage ? (
+                  <img
+                    src={qrImage}
+                    alt="QR Code PIX para pagamento da assinatura"
+                    className="h-56 w-56 block"
+                    onError={() => {
+                      QRCode.toDataURL(pix.copyPaste ?? "", { width: 360, margin: 1, errorCorrectionLevel: "M" })
+                        .then(setQrImage)
+                        .catch(() => setQrImage(null));
+                    }}
+                  />
+                ) : (
+                  <div className="h-56 w-56 flex items-center justify-center"><Loader2 className="h-6 w-6 animate-spin text-primary" /></div>
+                )}
               </div>
 
               <div className="space-y-2">
@@ -260,6 +307,12 @@ function PixDialog({ openPlan, onClose, pix, loading, onPaid }: {
                 Já paguei, verificar agora
               </Button>
             </>
+          )}
+
+          {!loading && pix?.integrationReady && !pix.copyPaste && (
+            <div className="rounded-lg border border-destructive/40 bg-destructive/5 p-4 text-sm text-destructive">
+              Não foi possível montar o QR Code. Feche esta janela e tente gerar o PIX novamente.
+            </div>
           )}
 
           {!loading && pix && !pix.integrationReady && (
