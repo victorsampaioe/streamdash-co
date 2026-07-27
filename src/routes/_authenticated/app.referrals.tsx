@@ -57,9 +57,9 @@ function ReferralsPage() {
   });
 
   const code = me?.referral_code ?? "";
-  const shareUrl = typeof window !== "undefined" && code
-    ? `${window.location.origin}/auth?ref=${code}`
-    : "";
+  // Always use the public site domain, never the lovable preview/staging URL.
+  const PUBLIC_SITE = "https://streammonitor.site";
+  const shareUrl = code ? `${PUBLIC_SITE}/auth?ref=${code}` : "";
 
   const total = referrals?.length ?? 0;
   const converted = referrals?.filter((r) => r.reward_granted_at).length ?? 0;
