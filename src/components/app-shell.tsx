@@ -118,7 +118,8 @@ function Sidebar() {
         <span className="font-bold tracking-tight">stream<span className="text-primary">monitor</span></span>
       </div>
       <NavList />
-      <div className="p-3 border-t border-sidebar-border">
+      <div className="p-3 border-t border-sidebar-border space-y-1">
+        <TelegramLink />
         <SignOutButton />
       </div>
     </aside>
