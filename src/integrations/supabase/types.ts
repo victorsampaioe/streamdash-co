@@ -554,6 +554,26 @@ export type Database = {
           total_paid_cents: number
         }[]
       }
+      get_public_checks: {
+        Args: { _limit?: number; _slug: string }
+        Returns: {
+          checked_at: string
+          latency_ms: number
+          status: Database["public"]["Enums"]["server_status"]
+        }[]
+      }
+      get_public_status: {
+        Args: { _slug: string }
+        Returns: {
+          current_status: Database["public"]["Enums"]["server_status"]
+          description: string
+          id: string
+          last_checked_at: string
+          last_latency_ms: number
+          name: string
+          ssl_days_remaining: number
+        }[]
+      }
       get_stability_ranking: {
         Args: { _limit?: number }
         Returns: {
