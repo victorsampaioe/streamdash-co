@@ -24,7 +24,42 @@ async function processPayment(mpPaymentId: string) {
       await notifyAdmin(
         `💰 <b>Assinatura confirmada</b>\nPlano: ${pay?.plan ?? "-"}\nValor: ${brl}\nUsuário: ${prof?.full_name ?? "-"} — ${prof?.email ?? "-"}\nValidade: ${res.subscriptionExpiresAt ? new Date(res.subscriptionExpiresAt).toLocaleString("pt-BR") : "-"}`
       );
-    } catch (e) { console.error("[mp-webhook] notify admin:", e); }
+
+      // Notify indicator (referrer) via their Telegram channel if a referral just converted
+      if (pay?.user_id) {
+        const { data: ref } = await supabaseAdmin
+          .from("referrals")
+          .select("referrer_id, reward_cents")
+          .eq("referred_id", pay.user_id)
+          .eq("status", "subscribed")
+          .maybeSingle();
+        if (ref?.referrer_id) {
+          const token = process.env.TELEGRAM_BOT_TOKEN;
+          if (token) {
+            const { data: channels } = await supabaseAdmin
+              .from("alert_channels")
+              .select("target")
+              .eq("owner_id", ref.referrer_id)
+              .eq("kind", "telegram")
+              .eq("enabled", true);
+            const reward = ((ref.reward_cents ?? 1000) / 100).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+            const text = `🎉 <b>Parabéns!</b>\nSeu indicado assinou um plano.\nVocê ganhou <b>${reward}</b> — solicite via PIX no painel:\n👉 https://streammonitor.site/app/referrals`;
+            for (const ch of channels ?? []) {
+              const raw = String(ch.target ?? "").trim();
+              const chatId = raw.includes(":") ? raw.split(":").slice(-1)[0] : raw;
+              if (!chatId) continue;
+              try {
+                await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({ chat_id: chatId, text, parse_mode: "HTML", disable_web_page_preview: true }),
+                });
+              } catch { /* ignore */ }
+            }
+          }
+        }
+      }
+    } catch (e) { console.error("[mp-webhook] notify:", e); }
   }
 }
 

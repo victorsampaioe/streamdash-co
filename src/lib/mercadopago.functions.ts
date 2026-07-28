@@ -1,7 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
-import { PLANS, REFERRAL_FIRST_PURCHASE_DISCOUNT, type PlanId } from "./payments";
+import { PLANS, type PlanId } from "./payments";
 
 export const createPixPayment = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
@@ -13,27 +13,10 @@ export const createPixPayment = createServerFn({ method: "POST" })
     const { supabase, userId, claims } = context;
     const expiresAt = new Date(Date.now() + 30 * 60 * 1000).toISOString(); // PIX 30min
 
-    // Referral discount: applies only on the user's first-ever approved payment,
-    // and only if they signed up using someone's referral code.
-    let amountCents = plan.priceCents;
-    let discountApplied = false;
-    const { data: profile } = await supabase
-      .from("profiles")
-      .select("referred_by")
-      .eq("id", userId)
-      .maybeSingle();
-    if (profile?.referred_by) {
-      const { data: priorApproved } = await supabase
-        .from("payments")
-        .select("id")
-        .eq("user_id", userId)
-        .eq("status", "approved")
-        .limit(1);
-      if (!priorApproved || priorApproved.length === 0) {
-        amountCents = Math.round(plan.priceCents * (1 - REFERRAL_FIRST_PURCHASE_DISCOUNT));
-        discountApplied = true;
-      }
-    }
+    // Referral rewards agora são pagas em PIX (R$10) para o indicador,
+    // não há mais desconto na compra do indicado.
+    const amountCents = plan.priceCents;
+    const discountApplied = false;
 
     // Reuse a still-valid charge. This makes retries instant and avoids
     // creating multiple pending PIX payments for the same plan.
