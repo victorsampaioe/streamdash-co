@@ -60,7 +60,7 @@ function PublicStatus() {
               </div>
               <StatusLabel status={server.current_status} />
               {server.description && <p className="mt-3 text-sm text-muted-foreground max-w-xl mx-auto">{server.description}</p>}
-              <p className="mt-2 text-xs font-mono text-muted-foreground">{server.host}</p>
+              
             </div>
 
             <Card className="p-6 mb-6">
