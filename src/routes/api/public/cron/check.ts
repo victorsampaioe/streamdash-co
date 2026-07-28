@@ -10,7 +10,9 @@ function isAuthorized(request: Request): boolean {
 
 async function run() {
   const { runDueChecks } = await import("@/lib/monitoring.server");
-  return await runDueChecks();
+  const { notifyNewlyExpiredSubscriptions } = await import("@/lib/admin-telegram.server");
+  const [checks, expired] = await Promise.all([runDueChecks(), notifyNewlyExpiredSubscriptions().catch(() => ({ notified: 0 }))]);
+  return { ...checks, expiredNotified: expired.notified };
 }
 
 export const Route = createFileRoute("/api/public/cron/check")({

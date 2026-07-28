@@ -2,6 +2,7 @@ import { createFileRoute, Link, useNavigate, useSearch } from "@tanstack/react-r
 import { useEffect, useState } from "react";
 import { z } from "zod";
 import { supabase } from "@/integrations/supabase/client";
+import { notifyAdminSignup } from "@/lib/admin-telegram.functions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -63,6 +64,8 @@ function AuthPage() {
     });
     setLoading(false);
     if (error) return toast.error(error.message);
+    // Fire-and-forget admin notification
+    notifyAdminSignup({ data: { email, name, phone, referralCode: referralCode.trim().toUpperCase() || undefined } }).catch(() => {});
     // If email confirmation is required, session is null → send to verify screen.
     if (!data.session) {
       toast.success("Conta criada! Verifique seu e-mail para continuar.");

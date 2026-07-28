@@ -7,7 +7,25 @@ import { createFileRoute } from "@tanstack/react-router";
 
 async function processPayment(mpPaymentId: string) {
   const { syncMpPayment } = await import("@/lib/mercadopago.server");
-  await syncMpPayment(mpPaymentId);
+  const res = await syncMpPayment(mpPaymentId);
+  if (res.status === "approved") {
+    try {
+      const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+      const { notifyAdmin } = await import("@/lib/admin-telegram.server");
+      const { data: pay } = await supabaseAdmin
+        .from("payments")
+        .select("user_id, plan, amount_cents")
+        .eq("id", res.paymentId)
+        .maybeSingle();
+      const { data: prof } = pay
+        ? await supabaseAdmin.from("profiles").select("email, full_name").eq("id", pay.user_id).maybeSingle()
+        : { data: null as any };
+      const brl = pay ? (pay.amount_cents / 100).toLocaleString("pt-BR", { style: "currency", currency: "BRL" }) : "-";
+      await notifyAdmin(
+        `💰 <b>Assinatura confirmada</b>\nPlano: ${pay?.plan ?? "-"}\nValor: ${brl}\nUsuário: ${prof?.full_name ?? "-"} — ${prof?.email ?? "-"}\nValidade: ${res.subscriptionExpiresAt ? new Date(res.subscriptionExpiresAt).toLocaleString("pt-BR") : "-"}`
+      );
+    } catch (e) { console.error("[mp-webhook] notify admin:", e); }
+  }
 }
 
 async function handle(request: Request) {
