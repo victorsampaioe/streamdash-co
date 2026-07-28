@@ -1,6 +1,6 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -8,14 +8,17 @@ import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { StatusDot, StatusLabel } from "@/components/status-dot";
 import { UptimeSparkline } from "@/components/uptime-sparkline";
 import { LineChart, Line, ResponsiveContainer, XAxis, YAxis, Tooltip, CartesianGrid } from "recharts";
-import { ArrowLeft, Download, Play, Trash2 } from "lucide-react";
+import { ArrowLeft, Download, Play, Trash2, RefreshCw, ShieldCheck, Cloud, Globe, Server as ServerIcon, Zap } from "lucide-react";
 import { toast } from "sonner";
 import { runCheckNow } from "@/lib/monitoring.functions";
+import { analyzeServer } from "@/lib/analysis.functions";
 import { useServerFn } from "@tanstack/react-start";
 import { GlobalCheckMap } from "@/components/global-check-map";
+import { MonitorBadge } from "@/components/monitor-badge";
 
 
 export const Route = createFileRoute("/_authenticated/app/servers/$id")({
@@ -27,6 +30,7 @@ function ServerDetail() {
   const navigate = useNavigate();
   const qc = useQueryClient();
   const runNow = useServerFn(runCheckNow);
+  const runAnalyze = useServerFn(analyzeServer);
 
   const { data: server, refetch } = useQuery({
     queryKey: ["server", id],
@@ -44,6 +48,11 @@ function ServerDetail() {
     queryKey: ["incidents", id],
     queryFn: async () =>
       (await supabase.from("incidents").select("*").eq("server_id", id).order("started_at", { ascending: false }).limit(30)).data ?? [],
+  });
+
+  const { data: analysis, refetch: refetchAnalysis } = useQuery({
+    queryKey: ["analysis", id],
+    queryFn: async () => (await supabase.from("server_analysis").select("*").eq("server_id", id).maybeSingle()).data,
   });
 
   useEffect(() => {
@@ -93,6 +102,12 @@ function ServerDetail() {
     onSuccess: () => { toast.success("Removido"); navigate({ to: "/app/servers" }); },
   });
 
+  const analyze = useMutation({
+    mutationFn: () => runAnalyze({ data: { serverId: id } }),
+    onSuccess: () => { toast.success("Análise atualizada"); refetchAnalysis(); },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
   async function handleRun() {
     try {
       await runNow({ data: { serverId: id } });
@@ -126,7 +141,6 @@ function ServerDetail() {
             <h1 className="text-2xl font-semibold tracking-tight">{server.name}</h1>
             <StatusLabel status={server.current_status} />
           </div>
-          
           {server.description && <p className="text-sm text-muted-foreground mt-1">{server.description}</p>}
         </div>
         <div className="flex gap-2">
@@ -136,82 +150,186 @@ function ServerDetail() {
         </div>
       </div>
 
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <Metric label="Latência atual" value={server.last_latency_ms != null ? `${server.last_latency_ms}ms` : "—"} />
-        <Metric label="Uptime 24h" value={uptime24h ? `${uptime24h}%` : "—"} />
-        <Metric label="SSL restante" value={server.ssl_days_remaining != null ? `${server.ssl_days_remaining}d` : "—"} />
-        <Metric label="Falhas seguidas" value={String(server.consecutive_failures)} />
-      </div>
+      <Tabs defaultValue="overview">
+        <TabsList>
+          <TabsTrigger value="overview">Visão geral</TabsTrigger>
+          <TabsTrigger value="analysis">Análise</TabsTrigger>
+          <TabsTrigger value="badge">Selo</TabsTrigger>
+        </TabsList>
 
-      <Card className="p-5">
-        <div className="mb-3">
-          <h3 className="font-medium text-sm">Últimos 40 checks</h3>
-        </div>
-        <UptimeSparkline checks={[...checks].slice(0, 40).reverse()} />
-      </Card>
-
-      <GlobalCheckMap serverId={id} />
-
-      <Card className="p-5">
-
-        <h3 className="font-medium text-sm mb-4">Latência (últimas 200 verificações)</h3>
-        <div className="h-64">
-          <ResponsiveContainer width="100%" height="100%">
-            <LineChart data={chartData}>
-              <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border)" opacity={0.4} />
-              <XAxis dataKey="t" tick={{ fontSize: 11 }} stroke="var(--color-muted-foreground)" />
-              <YAxis tick={{ fontSize: 11 }} stroke="var(--color-muted-foreground)" unit="ms" />
-              <Tooltip contentStyle={{ background: "var(--color-card)", border: "1px solid var(--color-border)", borderRadius: 8, fontSize: 12 }} />
-              <Line type="monotone" dataKey="latency" stroke="var(--color-primary)" strokeWidth={2} dot={false} />
-            </LineChart>
-          </ResponsiveContainer>
-        </div>
-      </Card>
-
-      <div className="grid md:grid-cols-2 gap-4">
-        <Card className="p-5">
-          <h3 className="font-medium text-sm mb-4">Incidentes</h3>
-          {incidents.length === 0 ? <p className="text-sm text-muted-foreground">Nenhum incidente registrado.</p> : (
-            <ul className="space-y-2">
-              {incidents.map((i) => (
-                <li key={i.id} className="text-sm flex items-center justify-between">
-                  <div>
-                    <div className="font-mono text-xs">{new Date(i.started_at).toLocaleString()}</div>
-                    <div className="text-xs text-muted-foreground">{i.reason ?? "—"}</div>
-                  </div>
-                  {i.ended_at ? <Badge variant="outline" className="text-success">Resolvido</Badge> : <Badge variant="destructive">Em curso</Badge>}
-                </li>
-              ))}
-            </ul>
-          )}
-        </Card>
-        <Card className="p-5 space-y-4">
-          <h3 className="font-medium text-sm">Configuração</h3>
-          <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-1.5">
-              <Label className="text-xs">Intervalo (s)</Label>
-              <Input type="number" min={15} max={3600} defaultValue={server.interval_seconds}
-                onBlur={(e) => { const v = Number(e.target.value); if (v !== server.interval_seconds) updateConfig.mutate({ interval_seconds: v }); }} />
-            </div>
-            <div className="space-y-1.5">
-              <Label className="text-xs">Falhas p/ alerta</Label>
-              <Input type="number" min={1} max={20} defaultValue={server.failure_threshold}
-                onBlur={(e) => { const v = Number(e.target.value); if (v !== server.failure_threshold) updateConfig.mutate({ failure_threshold: v }); }} />
-            </div>
+        <TabsContent value="overview" className="space-y-6 mt-6">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <Metric label="Latência atual" value={server.last_latency_ms != null ? `${server.last_latency_ms}ms` : "—"} />
+            <Metric label="Uptime 24h" value={uptime24h ? `${uptime24h}%` : "—"} />
+            <Metric label="SSL restante" value={server.ssl_days_remaining != null ? `${server.ssl_days_remaining}d` : "—"} />
+            <Metric label="Falhas seguidas" value={String(server.consecutive_failures)} />
           </div>
-          <div className="flex items-center justify-between pt-2 border-t border-border/60">
-            <div>
-              <div className="text-sm font-medium">Página pública</div>
-              {server.is_public && server.public_slug && (
-                <Link to="/status/$slug" params={{ slug: server.public_slug }} className="text-xs text-primary hover:underline font-mono">
-                  /status/{server.public_slug}
-                </Link>
+
+          <Card className="p-5">
+            <div className="mb-3"><h3 className="font-medium text-sm">Últimos 40 checks</h3></div>
+            <UptimeSparkline checks={[...checks].slice(0, 40).reverse()} />
+          </Card>
+
+          <GlobalCheckMap serverId={id} />
+
+          <Card className="p-5">
+            <h3 className="font-medium text-sm mb-4">Latência (últimas 200 verificações)</h3>
+            <div className="h-64">
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={chartData}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border)" opacity={0.4} />
+                  <XAxis dataKey="t" tick={{ fontSize: 11 }} stroke="var(--color-muted-foreground)" />
+                  <YAxis tick={{ fontSize: 11 }} stroke="var(--color-muted-foreground)" unit="ms" />
+                  <Tooltip contentStyle={{ background: "var(--color-card)", border: "1px solid var(--color-border)", borderRadius: 8, fontSize: 12 }} />
+                  <Line type="monotone" dataKey="latency" stroke="var(--color-primary)" strokeWidth={2} dot={false} />
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
+          </Card>
+
+          <div className="grid md:grid-cols-2 gap-4">
+            <Card className="p-5">
+              <h3 className="font-medium text-sm mb-4">Incidentes</h3>
+              {incidents.length === 0 ? <p className="text-sm text-muted-foreground">Nenhum incidente registrado.</p> : (
+                <ul className="space-y-2">
+                  {incidents.map((i) => (
+                    <li key={i.id} className="text-sm flex items-center justify-between">
+                      <div>
+                        <div className="font-mono text-xs">{new Date(i.started_at).toLocaleString()}</div>
+                        <div className="text-xs text-muted-foreground">{i.reason ?? "—"}</div>
+                      </div>
+                      {i.ended_at ? <Badge variant="outline" className="text-success">Resolvido</Badge> : <Badge variant="destructive">Em curso</Badge>}
+                    </li>
+                  ))}
+                </ul>
               )}
-            </div>
-            <Switch checked={server.is_public} onCheckedChange={(v) => togglePublic.mutate(v)} />
+            </Card>
+            <Card className="p-5 space-y-4">
+              <h3 className="font-medium text-sm">Configuração</h3>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Intervalo (s)</Label>
+                  <Input type="number" min={15} max={3600} defaultValue={server.interval_seconds}
+                    onBlur={(e) => { const v = Number(e.target.value); if (v !== server.interval_seconds) updateConfig.mutate({ interval_seconds: v }); }} />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Falhas p/ alerta</Label>
+                  <Input type="number" min={1} max={20} defaultValue={server.failure_threshold}
+                    onBlur={(e) => { const v = Number(e.target.value); if (v !== server.failure_threshold) updateConfig.mutate({ failure_threshold: v }); }} />
+                </div>
+              </div>
+              <div className="flex items-center justify-between pt-2 border-t border-border/60">
+                <div>
+                  <div className="text-sm font-medium">Página pública</div>
+                  {server.is_public && server.public_slug && (
+                    <Link to="/status/$slug" params={{ slug: server.public_slug }} className="text-xs text-primary hover:underline font-mono">
+                      /status/{server.public_slug}
+                    </Link>
+                  )}
+                </div>
+                <Switch checked={server.is_public} onCheckedChange={(v) => togglePublic.mutate(v)} />
+              </div>
+            </Card>
           </div>
-        </Card>
-      </div>
+        </TabsContent>
+
+        <TabsContent value="analysis" className="mt-6 space-y-4">
+          <div className="flex items-center justify-between flex-wrap gap-2">
+            <div>
+              <h3 className="font-medium">Análise técnica</h3>
+              <p className="text-xs text-muted-foreground">
+                {analysis?.analyzed_at ? `Última análise: ${new Date(analysis.analyzed_at).toLocaleString()}` : "Ainda não analisado"}
+              </p>
+            </div>
+            <Button size="sm" variant="outline" onClick={() => analyze.mutate()} disabled={analyze.isPending}>
+              <RefreshCw className={`h-4 w-4 mr-1 ${analyze.isPending ? "animate-spin" : ""}`} />
+              {analyze.isPending ? "Analisando..." : "Reanalisar"}
+            </Button>
+          </div>
+
+          {!analysis && (
+            <Card className="p-8 text-center text-sm text-muted-foreground border-dashed">
+              Clique em <strong>Reanalisar</strong> para coletar SSL, IPs, CDN, geolocalização e histórico de certificados.
+            </Card>
+          )}
+
+          {analysis && (
+            <>
+              <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                <InfoCard icon={<Cloud className="h-4 w-4" />} label="CDN" value={analysis.cdn_provider ?? (analysis.is_cloudflare ? "Cloudflare" : "Direto")} />
+                <InfoCard icon={<ShieldCheck className="h-4 w-4" />} label="Emissor SSL" value={analysis.ssl_issuer ?? "—"} />
+                <InfoCard icon={<Globe className="h-4 w-4" />} label="Localização" value={[analysis.city, analysis.country].filter(Boolean).join(", ") || "—"} />
+                <InfoCard icon={<Zap className="h-4 w-4" />} label="Resposta HEAD" value={analysis.response_ms != null ? `${analysis.response_ms}ms` : "—"} />
+              </div>
+
+              <div className="grid md:grid-cols-2 gap-4">
+                <Card className="p-5 space-y-3">
+                  <h4 className="text-sm font-medium flex items-center gap-2"><ServerIcon className="h-4 w-4" /> Endereços IP</h4>
+                  <Row label="IPv4" value={analysis.ipv4?.join(", ") || "—"} mono />
+                  <Row label="IPv6" value={analysis.ipv6?.join(", ") || "—"} mono />
+                  <Row label="TTL" value={analysis.ttl_seconds != null ? `${analysis.ttl_seconds}s` : "—"} />
+                  <Row label="ASN" value={analysis.asn ?? "—"} />
+                  <Row label="Organização" value={analysis.org ?? "—"} />
+                </Card>
+
+                <Card className="p-5 space-y-3">
+                  <h4 className="text-sm font-medium flex items-center gap-2"><Globe className="h-4 w-4" /> Nameservers</h4>
+                  {analysis.nameservers && analysis.nameservers.length > 0 ? (
+                    <ul className="space-y-1 text-xs font-mono text-muted-foreground">
+                      {analysis.nameservers.map((n: string) => <li key={n}>{n}</li>)}
+                    </ul>
+                  ) : <p className="text-xs text-muted-foreground">—</p>}
+                  <div className="pt-3 border-t border-border/60 space-y-1">
+                    <div className="text-xs font-medium text-foreground">Validade do certificado</div>
+                    <div className="text-xs text-muted-foreground">
+                      {analysis.ssl_expires_at ? new Date(analysis.ssl_expires_at).toLocaleDateString() : "—"}
+                    </div>
+                  </div>
+                </Card>
+              </div>
+
+              {Array.isArray(analysis.cert_history) && analysis.cert_history.length > 0 && (
+                <Card className="p-5">
+                  <h4 className="text-sm font-medium mb-3">Histórico de certificados <span className="text-xs text-muted-foreground">(via crt.sh)</span></h4>
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-xs">
+                      <thead className="text-muted-foreground">
+                        <tr className="text-left">
+                          <th className="py-2 pr-4 font-medium">Emissor</th>
+                          <th className="py-2 pr-4 font-medium">Emitido</th>
+                          <th className="py-2 font-medium">Expira</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {(analysis.cert_history as Array<{ issuer: string; not_before: string; not_after: string }>).map((c, i) => (
+                          <tr key={i} className="border-t border-border/40">
+                            <td className="py-2 pr-4 max-w-xs truncate">{c.issuer}</td>
+                            <td className="py-2 pr-4 font-mono">{new Date(c.not_before).toLocaleDateString()}</td>
+                            <td className="py-2 font-mono">{new Date(c.not_after).toLocaleDateString()}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </Card>
+              )}
+            </>
+          )}
+        </TabsContent>
+
+        <TabsContent value="badge" className="mt-6">
+          {server.is_public && server.public_slug ? (
+            <MonitorBadge serverName={server.name} slug={server.public_slug} />
+          ) : (
+            <Card className="p-8 text-center space-y-3 border-dashed max-w-md mx-auto">
+              <p className="text-sm text-muted-foreground">
+                Para gerar o selo com QR Code, ative a página pública deste servidor na aba <strong>Visão geral</strong>.
+              </p>
+              <Button variant="outline" size="sm" onClick={() => togglePublic.mutate(true)}>Ativar página pública</Button>
+            </Card>
+          )}
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }
@@ -222,5 +340,25 @@ function Metric({ label, value }: { label: string; value: string }) {
       <div className="text-xs uppercase tracking-wider text-muted-foreground mb-1">{label}</div>
       <div className="text-2xl font-bold font-mono">{value}</div>
     </Card>
+  );
+}
+
+function InfoCard({ icon, label, value }: { icon: React.ReactNode; label: string; value: string }) {
+  return (
+    <Card className="p-4">
+      <div className="flex items-center gap-2 text-xs uppercase tracking-wider text-muted-foreground mb-1">
+        {icon} {label}
+      </div>
+      <div className="text-sm font-semibold truncate" title={value}>{value}</div>
+    </Card>
+  );
+}
+
+function Row({ label, value, mono }: { label: string; value: string; mono?: boolean }) {
+  return (
+    <div className="flex items-start justify-between gap-3 text-xs">
+      <span className="text-muted-foreground shrink-0">{label}</span>
+      <span className={`text-right break-all ${mono ? "font-mono" : ""}`}>{value}</span>
+    </div>
   );
 }
