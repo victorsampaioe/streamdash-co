@@ -126,7 +126,7 @@ function ServerDetail() {
             <h1 className="text-2xl font-semibold tracking-tight">{server.name}</h1>
             <StatusLabel status={server.current_status} />
           </div>
-          <p className="text-sm font-mono text-muted-foreground">http://{server.host}:80</p>
+          
           {server.description && <p className="text-sm text-muted-foreground mt-1">{server.description}</p>}
         </div>
         <div className="flex gap-2">

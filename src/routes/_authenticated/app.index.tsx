@@ -135,7 +135,7 @@ function ServerCard({ server }: { server: any }) {
               <StatusDot status={server.current_status} />
               <h3 className="font-semibold truncate">{server.name}</h3>
             </div>
-            <p className="text-xs text-muted-foreground font-mono truncate">{server.host}</p>
+            
           </div>
           <ArrowRight className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors" />
         </div>
