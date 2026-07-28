@@ -54,7 +54,6 @@ function ServersList() {
           <thead className="bg-muted/40 text-xs uppercase tracking-wider text-muted-foreground">
             <tr>
               <th className="text-left p-3 font-medium">Nome</th>
-              <th className="text-left p-3 font-medium">Host</th>
               <th className="text-left p-3 font-medium">Status</th>
               <th className="text-left p-3 font-medium">Latência</th>
               <th className="text-left p-3 font-medium">SSL</th>
@@ -63,7 +62,7 @@ function ServersList() {
           </thead>
           <tbody>
             {filtered.length === 0 && (
-              <tr><td colSpan={6} className="p-8 text-center text-muted-foreground">
+              <tr><td colSpan={5} className="p-8 text-center text-muted-foreground">
                 <ServerIcon className="h-6 w-6 mx-auto mb-2 opacity-50" />
                 Nenhum servidor.
               </td></tr>
@@ -73,7 +72,6 @@ function ServersList() {
                 <td className="p-3 font-medium">
                   <Link to="/app/servers/$id" params={{ id: s.id }} className="hover:text-primary">{s.name}</Link>
                 </td>
-                <td className="p-3 font-mono text-xs text-muted-foreground">{s.host}</td>
                 <td className="p-3"><div className="flex items-center gap-2"><StatusDot status={s.current_status} /><StatusLabel status={s.current_status} /></div></td>
                 <td className="p-3 font-mono text-xs">{s.last_latency_ms ?? "—"} ms</td>
                 <td className="p-3 font-mono text-xs">{s.ssl_days_remaining != null ? `${s.ssl_days_remaining}d` : "—"}</td>
