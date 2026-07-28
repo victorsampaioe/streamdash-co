@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { CalendarDays, CheckCircle2, Clock, Copy, CreditCard, Loader2, QrCode, ShieldCheck, Sparkles, Timer, Zap } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
-import QRCode from "qrcode";
+import { QRCodeSVG } from "qrcode.react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -140,7 +140,6 @@ function PixDialog({ openPlan, onClose, pix, loading, onPaid }: {
   const getStatus = useServerFn(getPaymentStatus);
   const [remaining, setRemaining] = useState<number>(0);
   const [checking, setChecking] = useState(false);
-  const [qrImage, setQrImage] = useState<string | null>(null);
 
   // Countdown
   useEffect(() => {
@@ -154,17 +153,8 @@ function PixDialog({ openPlan, onClose, pix, loading, onPaid }: {
     return () => clearInterval(id);
   }, [pix?.expiresAt]);
 
-  useEffect(() => {
-    let cancelled = false;
-    setQrImage(null);
-    if (!pix?.copyPaste) return;
-    // Generate from the official PIX payload in the browser. Some provider
-    // base64 images are oversized or malformed even though the payload is valid.
-    QRCode.toDataURL(pix.copyPaste, { width: 360, margin: 1, errorCorrectionLevel: "M" })
-      .then((url) => { if (!cancelled) setQrImage(url); })
-      .catch(() => { if (!cancelled) setQrImage(null); });
-    return () => { cancelled = true; };
-  }, [pix?.copyPaste]);
+
+
 
   // Confirm directly with Mercado Pago every 3s. This also covers delayed webhooks.
   useEffect(() => {
