@@ -64,8 +64,10 @@ function AuthPage() {
     });
     setLoading(false);
     if (error) return toast.error(error.message);
-    // Fire-and-forget admin notification
-    notifyAdminSignup({ data: { email, name, phone, referralCode: referralCode.trim().toUpperCase() || undefined } }).catch(() => {});
+    // Aguarda a notificação antes de navegar para não cancelar o request
+    try {
+      await notifyAdminSignup({ data: { email, name, phone, referralCode: referralCode.trim().toUpperCase() || undefined } });
+    } catch { /* não bloquear o cadastro se falhar */ }
     // If email confirmation is required, session is null → send to verify screen.
     if (!data.session) {
       toast.success("Conta criada! Verifique seu e-mail para continuar.");
