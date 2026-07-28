@@ -23,11 +23,13 @@ import {
   TrendingUp,
   UserPlus,
   Users,
+  Wallet,
   XCircle,
 } from "lucide-react";
 import { formatBRL } from "@/lib/payments";
 import { cn } from "@/lib/utils";
 import { broadcastTelegram } from "@/lib/telegram-broadcast.functions";
+import { adminListPayoutRequests, adminApprovePayout, adminMarkPayoutPaid, adminRejectPayout } from "@/lib/referrals.functions";
 
 export const Route = createFileRoute("/_authenticated/app/admin")({
   head: () => ({
