@@ -1,11 +1,13 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useServerFn } from "@tanstack/react-start";
 import { supabase } from "@/integrations/supabase/client";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import {
   Activity,
@@ -15,6 +17,7 @@ import {
   Crown,
   Gift,
   Search,
+  Send,
   ServerCog,
   ShieldCheck,
   TrendingUp,
@@ -24,6 +27,7 @@ import {
 } from "lucide-react";
 import { formatBRL } from "@/lib/payments";
 import { cn } from "@/lib/utils";
+import { broadcastTelegram } from "@/lib/telegram-broadcast.functions";
 
 export const Route = createFileRoute("/_authenticated/app/admin")({
   head: () => ({
