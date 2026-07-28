@@ -175,7 +175,7 @@ async function getSslDaysRemaining(host: string): Promise<number | null> {
   });
 }
 
-async function sendAlerts(server: ServerRow, event: "up" | "down", message: string, incidentId: string) {
+async function sendAlerts(server: ServerRow, event: "up" | "down", message: string, incidentId: string | null) {
   const { data: channels } = await supabaseAdmin
     .from("alert_channels")
     .select("*")
