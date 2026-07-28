@@ -23,11 +23,13 @@ import {
   TrendingUp,
   UserPlus,
   Users,
+  Wallet,
   XCircle,
 } from "lucide-react";
 import { formatBRL } from "@/lib/payments";
 import { cn } from "@/lib/utils";
 import { broadcastTelegram } from "@/lib/telegram-broadcast.functions";
+import { adminListPayoutRequests, adminApprovePayout, adminMarkPayoutPaid, adminRejectPayout } from "@/lib/referrals.functions";
 
 export const Route = createFileRoute("/_authenticated/app/admin")({
   head: () => ({
@@ -159,6 +161,9 @@ function AdminPage() {
       </div>
 
       <TelegramBroadcastCard />
+
+      <PayoutsCard />
+
 
       {/* Users table */}
       <Card className="p-4 space-y-4">
@@ -349,4 +354,136 @@ function TelegramBroadcastCard() {
       </div>
     </Card>
   );
+}
+
+type PayoutReq = {
+  id: string;
+  user_id: string;
+  user_email: string | null;
+  user_name: string | null;
+  user_phone: string | null;
+  amount_cents: number;
+  pix_type: string;
+  pix_key: string;
+  pix_name: string;
+  status: "requested" | "approved" | "paid" | "rejected";
+  admin_note: string | null;
+  requested_at: string;
+  approved_at: string | null;
+  paid_at: string | null;
+  rejected_at: string | null;
+  referral_count: number;
+};
+
+function PayoutsCard() {
+  const qc = useQueryClient();
+  const listFn = useServerFn(adminListPayoutRequests);
+  const approveFn = useServerFn(adminApprovePayout);
+  const paidFn = useServerFn(adminMarkPayoutPaid);
+  const rejectFn = useServerFn(adminRejectPayout);
+
+  const q = useQuery({
+    queryKey: ["admin-payouts"],
+    queryFn: () => listFn(),
+  });
+
+  const rows = (q.data ?? []) as PayoutReq[];
+  const kpi = useMemo(() => ({
+    requested: rows.filter((r) => r.status === "requested").length,
+    approved: rows.filter((r) => r.status === "approved").length,
+    paid: rows.filter((r) => r.status === "paid").length,
+    total_paid_cents: rows.filter((r) => r.status === "paid").reduce((s, r) => s + r.amount_cents, 0),
+  }), [rows]);
+
+  const mut = useMutation({
+    mutationFn: async ({ action, id, note }: { action: "approve" | "paid" | "reject"; id: string; note?: string }) => {
+      if (action === "approve") await approveFn({ data: { id } });
+      else if (action === "paid") await paidFn({ data: { id } });
+      else await rejectFn({ data: { id, note } });
+    },
+    onSuccess: (_, v) => {
+      qc.invalidateQueries({ queryKey: ["admin-payouts"] });
+      toast.success(v.action === "approve" ? "Aprovado" : v.action === "paid" ? "Marcado como pago" : "Recusado");
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  return (
+    <Card className="p-4 space-y-4 border-primary/30">
+      <div className="flex items-center gap-2">
+        <Wallet className="h-4 w-4 text-primary" />
+        <h2 className="font-semibold">Solicitações de PIX (Indicações)</h2>
+      </div>
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <Kpi icon={Send} label="Solicitados" value={kpi.requested} tone="warning" />
+        <Kpi icon={BadgeCheck} label="Aprovados" value={kpi.approved} tone="primary" />
+        <Kpi icon={CircleDollarSign} label="Pagos" value={kpi.paid} tone="success" />
+        <Kpi icon={TrendingUp} label="Total pago" value={formatBRL(kpi.total_paid_cents)} tone="success" />
+      </div>
+
+      <div className="overflow-x-auto rounded-md border">
+        <table className="w-full text-sm">
+          <thead className="bg-muted/40 text-xs uppercase tracking-wider text-muted-foreground">
+            <tr>
+              <th className="text-left p-3 font-medium">Usuário</th>
+              <th className="text-left p-3 font-medium">Indic.</th>
+              <th className="text-right p-3 font-medium">Valor</th>
+              <th className="text-left p-3 font-medium">PIX</th>
+              <th className="text-left p-3 font-medium">Status</th>
+              <th className="text-left p-3 font-medium">Data</th>
+              <th className="text-right p-3 font-medium">Ações</th>
+            </tr>
+          </thead>
+          <tbody>
+            {q.isLoading && <tr><td colSpan={7} className="p-6 text-center text-muted-foreground">Carregando...</td></tr>}
+            {!q.isLoading && rows.length === 0 && (
+              <tr><td colSpan={7} className="p-6 text-center text-muted-foreground">Nenhuma solicitação de PIX ainda.</td></tr>
+            )}
+            {rows.map((r) => (
+              <tr key={r.id} className="border-t border-border/60 hover:bg-muted/20 align-top">
+                <td className="p-3">
+                  <div className="font-medium">{r.user_name ?? "—"}</div>
+                  <div className="text-[11px] text-muted-foreground">{r.user_email}</div>
+                  {r.user_phone && <div className="text-[11px] text-muted-foreground">{r.user_phone}</div>}
+                </td>
+                <td className="p-3 text-center">{r.referral_count}</td>
+                <td className="p-3 text-right font-mono">{formatBRL(r.amount_cents)}</td>
+                <td className="p-3 text-xs">
+                  <div className="font-medium uppercase">{r.pix_type}</div>
+                  <div className="font-mono">{r.pix_key}</div>
+                  <div className="text-muted-foreground">{r.pix_name}</div>
+                </td>
+                <td className="p-3"><PayoutBadge status={r.status} /></td>
+                <td className="p-3 text-xs text-muted-foreground">{new Date(r.requested_at).toLocaleDateString("pt-BR")}</td>
+                <td className="p-3 text-right space-x-1">
+                  {r.status === "requested" && (
+                    <>
+                      <Button size="sm" onClick={() => mut.mutate({ action: "approve", id: r.id })}>Aprovar</Button>
+                      <Button size="sm" variant="outline" onClick={() => {
+                        const note = prompt("Motivo da recusa (opcional):") ?? undefined;
+                        mut.mutate({ action: "reject", id: r.id, note });
+                      }}>Recusar</Button>
+                    </>
+                  )}
+                  {r.status === "approved" && (
+                    <Button size="sm" onClick={() => mut.mutate({ action: "paid", id: r.id })}>Marcar como pago</Button>
+                  )}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </Card>
+  );
+}
+
+function PayoutBadge({ status }: { status: string }) {
+  switch (status) {
+    case "requested": return <Badge variant="outline" className="border-warning/40 text-warning">Solicitado</Badge>;
+    case "approved": return <Badge variant="outline" className="border-primary/40 text-primary">Aprovado</Badge>;
+    case "paid": return <Badge className="bg-success text-success-foreground">Pago</Badge>;
+    case "rejected": return <Badge variant="destructive">Recusado</Badge>;
+    default: return <Badge variant="outline">{status}</Badge>;
+  }
 }

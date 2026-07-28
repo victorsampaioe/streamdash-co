@@ -1,119 +1,81 @@
-## Roadmap ampliado — Radar Brasil + Detector + Colaborativo + Clima
+## Sistema de Indicação Premiada — R$10 por assinatura via PIX
 
-Atualizando o plano geral. Novas fases entre a 1 (já entregue) e as antigas 2-4:
+Substitui o sistema atual (que dava +1 mês ao indicador). Mantém: 2 dias de trial pro indicado (era 10, muda pra 2), código exclusivo por usuário, link `?ref=CODIGO`.
 
----
+### 1. Banco de dados (migração)
 
-### Fase 1.5 — 📡 Radar Brasil (dashboard público)
+**Alterar `referrals`** — adicionar campos de recompensa/pagamento:
+- `reward_cents int` (default 1000 = R$10)
+- `status text` (`pending` | `trial_active` | `subscribed` | `requested` | `approved` | `paid` | `cancelled`)
+- `subscribed_at`, `requested_at`, `approved_at`, `paid_at timestamptz`
+- `pix_key text`, `pix_type text` (cpf/phone/email/random), `pix_name text`
+- `approved_by uuid` (admin)
+- `payout_request_id uuid` (agrupa várias referrals numa mesma solicitação)
 
-**Rota pública** `/radar` (SSR, com metadata SEO, sem login).
+**Nova tabela `payout_requests`**:
+- `id`, `user_id`, `amount_cents`, `pix_type`, `pix_key`, `pix_name`
+- `status` (`requested` | `approved` | `paid` | `rejected`)
+- `requested_at`, `approved_at`, `paid_at`, `approved_by`, `admin_note`
+- RLS: dono lê/insere próprio; admin lê/atualiza tudo
 
-**Cards do painel**
-- 🚨 **Serviços com incidentes**: agregador de status oficiais em tempo real:
-  - AWS Health RSS (`status.aws.amazon.com/rss/all.rss`)
-  - Cloudflare Status API (`www.cloudflarestatus.com/api/v2/summary.json`)
-  - GitHub Status (`www.githubstatus.com/api/v2/summary.json`)
-  - Discord (`discordstatus.com/api/v2/summary.json`)
-  - Microsoft 365 (RSS público)
-  - Google Workspace (RSS)
-  - WhatsApp/Meta (`metastatus.com/api/v2/summary.json`)
-  - Pix/Banco Central (página de status pública quando houver JSON)
-  Todos consumidos via server function com cache de 60s. Sem chave.
-- 🔥 **Domínios monitorados com mais instabilidade (24h)**: agrega `checks` da base — top 10 servidores com maior taxa de `down/degraded`. Anonimizado (só quem marcou `is_public=true` aparece com nome; demais entram como "servidor privado").
-- 📡 **Latência média por região**: agrega `region_checks` das últimas 24h agrupado por `region_code`.
-- 📊 **Estatísticas 24h**: total de checks, uptime médio global, incidentes abertos vs resolvidos.
-- 🌎 **Mapa de calor Brasil**: SVG estático do BR (topojson leve) colorido por estado com base na % de sucesso dos checks originados/reportados de cada UF. Sem UF suficiente ainda? Mostra badge "aguardando dados".
-- 🌐 **Provedores com mais reclamações**: começa vazio; alimentado pela Fase 1.7 (relatos). Enquanto não há dados, mostra card explicativo "Ainda coletando".
+**Alterar `profiles.signup_bonus_days`** default 2 (era 10). Atualizar registros existentes onde valor = 10 → 2.
 
-**Backend**
-- Server function `getRadarSnapshot()` que consolida tudo (cache 60s por chave).
-- Endpoint público `/api/public/radar` retornando JSON (para embutir em outros sites — bônus).
+**Trigger `grant_referral_reward`** — substituir: quando `payments.status='approved'` E é a 1ª assinatura do indicado, marcar `referrals.status='subscribed'`, setar `subscribed_at`, `reward_cents=1000`. **Não** estender mais a assinatura do indicador.
 
-**Retenção/performance**
-- Materialized view opcional só se dados crescerem muito. MVP: agregações on-the-fly com `count/avg` limitados a 24h.
+**RPCs**:
+- `get_referral_balance(_user_id)` → `{available_cents, pending_cents, paid_cents, total_referrals, in_trial, subscribed_count}`
+- `request_payout(_pix_type, _pix_key, _pix_name)` → cria `payout_request`, marca referrals elegíveis como `requested`
+- `admin_approve_payout(_id)` / `admin_mark_paid(_id)` / `admin_reject_payout(_id, _note)` — checam `has_role(admin)`
+- `get_admin_payout_requests()` → lista com dados do usuário e nº de indicações
 
----
+### 2. Frontend — usuário (`/app/referrals`)
 
-### Fase 1.6 — 🚨 Detector de Bloqueios
+Reescrever a página com:
+- **Banner promocional** 🚨💸 no topo (gradient, destaque)
+- **Cards**: Indicações, Em Teste, Assinaram, Saldo Disponível (R$), Já Recebido (R$)
+- **Bloco código + link** (copiar código / copiar link — link já usa `streammonitor.site`)
+- **Lista de indicados** com status colorido (Teste / Assinou R$10 / Pago)
+- **Botão "Solicitar Pagamento"** habilitado se `available_cents >= 1000`
+- **Modal PIX**: tipo (select), chave (input), nome (input), resumo do valor, aviso "até 2 dias úteis", botão confirmar
+- **Histórico de solicitações** (timeline: Solicitado → Aprovado → PIX enviado)
 
-**Rota pública** `/detector` (login opcional; sem login, limita a 5 checks/dia por IP).
+Notificações via `toast` nos eventos client-side + Telegram (backend) quando existir chat_id.
 
-**Como funciona**
-- Usuário digita um domínio.
-- Server function `checkBlockade({ host })` dispara em paralelo:
-  1. **DNS público**: resolve `host` via Google DNS (8.8.8.8), Cloudflare (1.1.1.1), OpenDNS, Quad9. Se resolvedores retornam IPs diferentes ou NXDOMAIN em alguns → *bloqueio DNS provável*.
-  2. **HTTP direto**: tenta conectar. Se DNS resolve mas TCP falha → *bloqueio de firewall*.
-  3. **Geo**: pede aos workers regionais AWS (mesma infra da Fase 1) para tentarem o host — se falha só em uma região, é *bloqueio geográfico*.
-- Resultado em tabela: DNS resolver × status; região × status; verdict (`OK`, `DNS bloqueado`, `Firewall`, `Geo-bloqueio`, `Inacessível global`).
+### 3. Frontend — admin (`/app/admin` → nova aba/seção "Indicações")
 
-**Cache**: 5min por (host, sessão) para evitar abuso.
+- Cards: Total Indicações, Em Teste, Assinaram, Recompensas Pendentes, PIX Solicitados, PIX Pagos
+- Tabela de `payout_requests` com status `requested`: Usuário, nº indicações válidas, valor, PIX (tipo+chave+nome), data
+- Ações: **Aprovar** / **Recusar** / **Marcar como Pago** (após aprovado)
+- Ao expandir linha: nome, email, telefone do solicitante
 
----
+### 4. Backend — server functions
 
-### Fase 1.7 — 🤝 Diagnóstico Colaborativo
+`src/lib/referrals.functions.ts`:
+- `getMyReferralSummary` (autenticado) — chama RPC
+- `requestPayout({pixType, pixKey, pixName})` — valida saldo, cria request
+- `adminListPayoutRequests`, `adminApprovePayout`, `adminMarkPaid`, `adminRejectPayout`
 
-**Ideia**: qualquer visitante pode reportar problema com um serviço/provedor a partir da localização detectada.
+Telegram admin (`ADMIN_TELEGRAM_CHAT_ID`) recebe aviso quando alguém solicita PIX.
+Telegram do usuário recebe aviso quando: indicado assina (ganhou R$10), PIX aprovado, PIX pago.
 
-**Backend**
-- Tabela `user_reports` (id, host_or_service, provider_hint, city, state, country, ip_hash, user_agent_hash, created_at). `ip_hash` = SHA-256 de IP + salt diário para agrupar sem armazenar IP.
-- Server route `POST /api/public/reports` — rate-limit 3 relatos/hora por ip_hash. Geolocalização via header do Cloudflare (`cf-ipcountry`, `cf-ipcity`) quando disponível, senão IP→geo via `ipapi.co` (grátis, sem chave até certo limite) com fallback opcional.
-- Server function `getIncidentClusters()` que detecta padrões: `>= 20 relatos do mesmo (provider, city) em 10min` → gera "incidente colaborativo" e aparece no Radar.
+### 5. Cadastro (`/auth`)
 
-**UI**
-- Botão "Relatar problema" flutuante em `/radar` e páginas de status.
-- Modal: "Que serviço está com problema? Sua cidade?" (autopreenche via geo).
-- Painel "Relatos ao vivo (últimos 10 min)" no Radar.
+- Trocar mensagem: "🎁 Você ganhou **2 dias** extras de teste"
+- Ler `?ref=` e travar o campo (readOnly) quando vier pela URL
 
-**Privacidade**
-- Documentado que só armazenamos hash de IP com salt rotacionado diariamente. Sem cookies rastreadores.
+### 6. Ajustes no fluxo de assinatura
 
----
+- Remover extensão de +30 dias no `grant_referral_reward` (não é mais mês grátis; é R$10 PIX)
+- Manter desconto de 10% na 1ª compra do indicado? **Remover** — a proposta agora é 2 dias trial + R$10 pro indicador. Confirmar na implementação removendo `REFERRAL_FIRST_PURCHASE_DISCOUNT` do `createPixPayment`.
 
-### Fase 1.8 — 📶 Clima da Internet
+### Detalhes técnicos
 
-**Rota** `/clima` (também dentro de `/radar` como widget).
+- Recompensa fixa em `reward_cents` na referral (não hardcoded) para permitir promoções futuras
+- Uma referral só entra num `payout_request` quando status = `subscribed` e `payout_request_id IS NULL`
+- Regra anti-fraude: se `payments` do indicado tiver refund futuro → trigger marca referral `cancelled` e subtrai do saldo (fora do escopo desta 1ª entrega — anotar como TODO)
+- GRANTs em todas as novas tabelas/funções conforme regras Cloud
 
-**Como funciona**
-- Detecta cidade do visitante (geo do Cloudflare / ipapi).
-- Agrega dados dos últimos 60min para aquela cidade + provider (quando detectado via ASN):
-  - `checks` regionais + `user_reports` da região.
-  - Uptime, latência média, número de relatos.
-- Classifica em 5 estados: ☀️ Excelente · 🌤️ Bom · ⛅ Regular · 🌧️ Instável · ⛈️ Crítico.
-- Mostra card:
-  ```
-  Fortaleza — Brisanet
-  ⛈️ Instabilidade
-  Latência média: 340ms (↑)
-  Uptime 1h: 82%
-  Relatos: 47 nos últimos 30min
-  ```
-
-**Reutiliza** o cluster detector da Fase 1.7.
-
----
-
-### Ordem de entrega e dependências
-
-```text
-Fase 1.5 (Radar) ─── independente, entrega solo, gera SEO
-        │
-Fase 1.6 (Detector) ── depende da infra HMAC dos workers regionais (já pronta)
-        │
-Fase 1.7 (Colaborativo) ── independente; alimenta Radar depois
-        │
-Fase 1.8 (Clima) ── consome 1.5 + 1.7 (precisa das duas para valer a pena)
-```
-
-Depois seguem as fases originais: 2 (utilidades /tools), 3 (sites/domínio/segurança), 4 (rede pesada).
-
----
-
-### O que faço agora
-
-Implemento **Fase 1.5 completa** (Radar Brasil):
-- Tabela agregadora leve se precisar; caso contrário só server functions.
-- Rota `/radar` + endpoint público JSON.
-- Todos os cards, com fallbacks honestos quando ainda não há dados.
-- Nada simulado.
-
-Ao terminar, te aviso e sigo para 1.6.
+### O que **não** muda
+- Geração do código (`generate_referral_code`)
+- Código admin fixo `REGPF89U` do Victor
+- Estrutura de auth / RLS existente

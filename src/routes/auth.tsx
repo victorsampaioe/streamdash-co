@@ -119,10 +119,17 @@ function AuthPage() {
                 <Field label="E-mail"><Input type="email" required value={email} onChange={(e) => setEmail(e.target.value)} /></Field>
                 <Field label="Senha"><Input type="password" required minLength={6} value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Mín. 6 caracteres" /></Field>
                 <Field label="Código de indicação (opcional)">
-                  <Input value={referralCode} onChange={(e) => setReferralCode(e.target.value.toUpperCase())} placeholder="Ex.: ABC12345" maxLength={12} />
+                  <Input
+                    value={referralCode}
+                    onChange={(e) => setReferralCode(e.target.value.toUpperCase())}
+                    placeholder="Ex.: ABC12345"
+                    maxLength={12}
+                    readOnly={!!ref}
+                    className={ref ? "bg-muted/50 cursor-not-allowed" : ""}
+                  />
                 </Field>
                 {referralCode && (
-                  <p className="text-xs text-primary">🎁 Você ganhará 10 dias extras de teste ao usar um código.</p>
+                  <p className="text-xs text-primary">🎁 Você ganhará <strong>2 dias</strong> extras de teste ao usar este código.</p>
                 )}
                 <Button type="submit" disabled={loading} className="w-full">
                   {loading ? "Criando..." : "Criar conta"}
