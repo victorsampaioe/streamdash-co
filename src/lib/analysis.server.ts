@@ -87,7 +87,7 @@ export type HostAnalysis = {
   org: string | null;
   response_ms: number | null;
   cert_history: Array<{ issuer: string; not_before: string; not_after: string }>;
-  raw: Record<string, unknown>;
+  raw: { analyzed_at: string; http_ok: boolean };
 };
 
 export async function analyzeHost(host: string): Promise<HostAnalysis> {
