@@ -22,14 +22,20 @@ function PublicStatus() {
   const { slug } = Route.useParams();
   const { data: server, isLoading } = useQuery({
     queryKey: ["public-server", slug],
-    queryFn: async () => (await supabase.from("servers").select("id,name,host,description,current_status,last_latency_ms,last_checked_at,ssl_days_remaining").eq("public_slug", slug).eq("is_public", true).maybeSingle()).data,
+    queryFn: async () => {
+      const { data } = await supabase.rpc("get_public_status", { _slug: slug });
+      return (data as any[])?.[0] ?? null;
+    },
     refetchInterval: 20000,
   });
 
   const { data: checks = [] } = useQuery({
     enabled: !!server?.id,
-    queryKey: ["public-checks", server?.id],
-    queryFn: async () => (await supabase.from("checks").select("status,checked_at,latency_ms").eq("server_id", server!.id).order("checked_at", { ascending: false }).limit(60)).data ?? [],
+    queryKey: ["public-checks", slug],
+    queryFn: async () => {
+      const { data } = await supabase.rpc("get_public_checks", { _slug: slug, _limit: 60 });
+      return (data as any[]) ?? [];
+    },
     refetchInterval: 20000,
   });
 
