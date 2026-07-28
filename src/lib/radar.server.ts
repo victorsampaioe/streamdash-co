@@ -137,7 +137,7 @@ async function getTopUnstableServers() {
 
   const ids = withRatio.map((x) => x.id);
   const { data: servers } = await supabaseAdmin
-    .from("servers").select("id,name,host,is_public,public_slug").in("id", ids);
+    .from("servers").select("id,name,is_public,public_slug").in("id", ids);
   const byId = new Map((servers ?? []).map((s) => [s.id, s]));
 
   return withRatio.map((x) => {
@@ -147,7 +147,7 @@ async function getTopUnstableServers() {
       total: x.total,
       bad: x.bad,
       name: s?.is_public ? s.name : "Servidor privado",
-      host: s?.is_public ? s.host : null,
+      host: null,
       slug: s?.is_public ? s.public_slug : null,
     };
   });
