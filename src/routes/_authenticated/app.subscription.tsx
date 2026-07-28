@@ -254,20 +254,14 @@ function PixDialog({ openPlan, onClose, pix, loading, onPaid }: {
           {!loading && pix?.integrationReady && pix.copyPaste && (
             <>
               <div className="mx-auto w-fit rounded-xl border-2 border-primary/20 bg-white p-3 shadow-lg">
-                {qrImage ? (
-                  <img
-                    src={qrImage}
-                    alt="QR Code PIX para pagamento da assinatura"
-                    className="h-56 w-56 block"
-                    onError={() => {
-                      QRCode.toDataURL(pix.copyPaste ?? "", { width: 360, margin: 1, errorCorrectionLevel: "M" })
-                        .then(setQrImage)
-                        .catch(() => setQrImage(null));
-                    }}
-                  />
-                ) : (
-                  <div className="h-56 w-56 flex items-center justify-center"><Loader2 className="h-6 w-6 animate-spin text-primary" /></div>
-                )}
+                <QRCodeSVG
+                  value={pix.copyPaste}
+                  size={224}
+                  level="M"
+                  marginSize={1}
+                  bgColor="#ffffff"
+                  fgColor="#000000"
+                />
               </div>
 
               <div className="space-y-2">
