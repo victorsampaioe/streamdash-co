@@ -211,9 +211,16 @@ async function sendAlerts(server: ServerRow, event: "up" | "down", message: stri
         });
         ok = r.ok; response = `${r.status}`;
       } else if (ch.kind === "telegram") {
-        // target format: "BOT_TOKEN:CHAT_ID"
-        const [botToken, chatId] = ch.target.split(":");
-        if (!botToken || !chatId) { ok = false; response = "target inválido, use TOKEN:CHAT_ID"; }
+        // Prefer shared bot via TELEGRAM_BOT_TOKEN; target is just the chat_id.
+        // Backwards-compat: if target contains ":", treat as "BOT_TOKEN:CHAT_ID".
+        const sharedToken = process.env.TELEGRAM_BOT_TOKEN;
+        let botToken = sharedToken ?? "";
+        let chatId = ch.target?.trim() ?? "";
+        if (chatId.includes(":")) {
+          const [t, c] = chatId.split(":");
+          botToken = t; chatId = c;
+        }
+        if (!botToken || !chatId) { ok = false; response = "TELEGRAM_BOT_TOKEN ausente ou chat_id inválido"; }
         else {
           const r = await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
             method: "POST",
