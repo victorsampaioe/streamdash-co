@@ -18,6 +18,32 @@ export async function notifyAdmin(text: string): Promise<{ ok: boolean; error?: 
   }
 }
 
+async function notifyUserTelegram(userId: string, text: string) {
+  const token = process.env.TELEGRAM_BOT_TOKEN;
+  if (!token) return;
+  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+  const { data: channels } = await supabaseAdmin
+    .from("alert_channels")
+    .select("target")
+    .eq("owner_id", userId)
+    .eq("kind", "telegram")
+    .eq("enabled", true);
+  if (!channels?.length) return;
+  for (const ch of channels) {
+    // Accept "chat_id" or legacy "TOKEN:chat_id" format
+    const raw = String(ch.target ?? "").trim();
+    const chatId = raw.includes(":") ? raw.split(":").slice(-1)[0] : raw;
+    if (!chatId) continue;
+    try {
+      await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ chat_id: chatId, text, parse_mode: "HTML", disable_web_page_preview: true }),
+      });
+    } catch { /* ignore */ }
+  }
+}
+
 export async function notifyNewlyExpiredSubscriptions(): Promise<{ notified: number }> {
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
   const { data: expired, error } = await supabaseAdmin
@@ -38,6 +64,12 @@ export async function notifyNewlyExpiredSubscriptions(): Promise<{ notified: num
     await notifyAdmin(
       `⏰ <b>Assinatura expirada</b>\n${label}\n${escape(prof?.full_name ?? "-")} — ${escape(prof?.email ?? "-")}\nVenceu em: ${new Date(sub.expires_at).toLocaleString("pt-BR")}`
     );
+    // Aviso para o próprio usuário no Telegram dele (se cadastrou canal)
+    const userMsg = sub.plan === "trial"
+      ? `⏰ <b>Seu teste gratuito expirou</b>\n\nPara continuar monitorando seus servidores, assine agora:\n👉 https://streammonitor.site/app/subscription\n\nPlanos: R$ 35/mês ou R$ 299/ano (via PIX).`
+      : `⏰ <b>Sua assinatura expirou</b>\n\nSeus monitoramentos foram pausados. Renove pelo PIX para reativar:\n👉 https://streammonitor.site/app/subscription\n\nPlanos: R$ 35/mês ou R$ 299/ano.`;
+    await notifyUserTelegram(sub.user_id, userMsg);
+
     await supabaseAdmin
       .from("subscriptions")
       .update({ status: "expired" })
@@ -47,6 +79,7 @@ export async function notifyNewlyExpiredSubscriptions(): Promise<{ notified: num
   }
   return { notified: count };
 }
+
 
 function escape(s: string) {
   return String(s).replace(/[<>&]/g, (c) => ({ "<": "&lt;", ">": "&gt;", "&": "&amp;" }[c]!));
