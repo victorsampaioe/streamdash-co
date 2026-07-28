@@ -18,7 +18,7 @@ export const Route = createFileRoute("/_authenticated/app/alerts")({
 const KINDS = [
   { value: "email", label: "E-mail", placeholder: "voce@empresa.com", hint: "Envia via Resend. Requer domínio verificado para produção." },
   { value: "discord", label: "Discord", placeholder: "https://discord.com/api/webhooks/...", hint: "Cole o Webhook URL de um canal do Discord." },
-  { value: "telegram", label: "Telegram", placeholder: "BOT_TOKEN:CHAT_ID", hint: "Crie um bot no @BotFather e informe TOKEN:CHAT_ID." },
+  { value: "telegram", label: "Telegram", placeholder: "Ex.: 123456789", hint: "Abra o Telegram, envie /start para @StreamMonitorBot e depois use @userinfobot para descobrir seu chat_id. Cole aqui apenas o número." },
   { value: "webhook", label: "Webhook", placeholder: "https://sua-api.com/hook", hint: "Recebe POST JSON com o evento." },
 ] as const;
 

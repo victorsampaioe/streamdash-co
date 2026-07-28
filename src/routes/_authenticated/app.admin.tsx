@@ -1,11 +1,13 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useServerFn } from "@tanstack/react-start";
 import { supabase } from "@/integrations/supabase/client";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import {
   Activity,
@@ -15,6 +17,7 @@ import {
   Crown,
   Gift,
   Search,
+  Send,
   ServerCog,
   ShieldCheck,
   TrendingUp,
@@ -24,6 +27,7 @@ import {
 } from "lucide-react";
 import { formatBRL } from "@/lib/payments";
 import { cn } from "@/lib/utils";
+import { broadcastTelegram } from "@/lib/telegram-broadcast.functions";
 
 export const Route = createFileRoute("/_authenticated/app/admin")({
   head: () => ({
@@ -153,6 +157,8 @@ function AdminPage() {
         <Kpi icon={UserPlus} label="Indicações" value={s?.total_referrals} sub={s ? `${s.converted_referrals} convertidas` : undefined} />
         <Kpi icon={ServerCog} label="Servidores monitorados" value={s?.total_servers} />
       </div>
+
+      <TelegramBroadcastCard />
 
       {/* Users table */}
       <Card className="p-4 space-y-4">
@@ -314,4 +320,33 @@ function StatusBadge({ status, expired }: { status: AdminUser["status"]; expired
     cancelled: <Badge variant="outline">Cancelado</Badge>,
   } as const;
   return map[status];
+}
+
+function TelegramBroadcastCard() {
+  const [message, setMessage] = useState("✅ StreamMonitor está online! Todas as suas monitorações estão sendo executadas normalmente.");
+  const send = useServerFn(broadcastTelegram);
+  const mut = useMutation({
+    mutationFn: async (msg: string) => await send({ data: { message: msg } }),
+    onSuccess: (r: any) => toast.success(`Enviado para ${r.sent}/${r.total} usuários${r.failed ? ` · ${r.failed} falhas` : ""}`),
+    onError: (e: Error) => toast.error(e.message),
+  });
+  return (
+    <Card className="p-4 space-y-3 border-primary/30 bg-gradient-to-br from-primary/5 to-transparent">
+      <div className="flex items-center gap-2">
+        <Send className="h-4 w-4 text-primary" />
+        <h2 className="font-semibold">Broadcast Telegram</h2>
+        <Badge variant="outline" className="text-xs">Somente admin</Badge>
+      </div>
+      <p className="text-xs text-muted-foreground">
+        Envia esta mensagem para todos os usuários que já configuraram o Telegram como canal de alerta.
+      </p>
+      <Textarea rows={3} value={message} onChange={(e) => setMessage(e.target.value)} />
+      <div className="flex justify-end">
+        <Button onClick={() => mut.mutate(message)} disabled={mut.isPending || !message.trim()}>
+          <Send className="h-4 w-4 mr-2" />
+          {mut.isPending ? "Enviando..." : "Enviar para todos"}
+        </Button>
+      </div>
+    </Card>
+  );
 }
