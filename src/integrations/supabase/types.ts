@@ -574,6 +574,19 @@ export type Database = {
           ssl_days_remaining: number
         }[]
       }
+      get_region_stats: {
+        Args: { _minutes?: number; _server_id: string }
+        Returns: {
+          avg_ms: number
+          downs: number
+          max_ms: number
+          min_ms: number
+          p95_ms: number
+          region_code: string
+          total: number
+          ups: number
+        }[]
+      }
       get_stability_ranking: {
         Args: { _limit?: number }
         Returns: {
@@ -583,6 +596,14 @@ export type Database = {
           max_latency_ms: number
           name: string
           total_checks: number
+        }[]
+      }
+      get_workers_health: {
+        Args: never
+        Returns: {
+          checks_60s: number
+          last_report_at: string
+          region_code: string
         }[]
       }
       has_role: {
