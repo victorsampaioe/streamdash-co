@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { CalendarDays, CheckCircle2, Clock, Copy, CreditCard, Loader2, QrCode, ShieldCheck, Sparkles, Timer, Zap } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
-import { QRCodeSVG } from "qrcode.react";
+import { QRCodeCanvas } from "qrcode.react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -253,8 +253,8 @@ function PixDialog({ openPlan, onClose, pix, loading, onPaid }: {
 
           {!loading && pix?.integrationReady && pix.copyPaste && (
             <>
-              <div className="mx-auto w-fit rounded-xl border-2 border-primary/20 bg-white p-3 shadow-lg">
-                <QRCodeSVG
+              <div className="mx-auto flex w-fit items-center justify-center rounded-xl border-2 border-primary/20 p-3 shadow-lg" style={{ backgroundColor: "#ffffff" }}>
+                <QRCodeCanvas
                   value={pix.copyPaste}
                   size={224}
                   level="M"
