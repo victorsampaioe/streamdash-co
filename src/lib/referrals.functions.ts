@@ -144,7 +144,7 @@ export const adminRejectPayout = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input) => z.object({ id: z.string().uuid(), note: z.string().max(500).optional() }).parse(input))
   .handler(async ({ data, context }) => {
-    const { error } = await context.supabase.rpc("admin_reject_payout", { _id: data.id, _note: data.note ?? null });
+    const { error } = await context.supabase.rpc("admin_reject_payout", { _id: data.id, _note: data.note ?? undefined });
     if (error) throw new Error(error.message);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { data: pr } = await supabaseAdmin.from("payout_requests").select("user_id").eq("id", data.id).maybeSingle();
