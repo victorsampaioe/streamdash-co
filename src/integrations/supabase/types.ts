@@ -14,6 +14,30 @@ export type Database = {
   }
   public: {
     Tables: {
+      achievements: {
+        Row: {
+          code: string
+          created_at: string
+          description: string
+          emoji: string
+          title: string
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          description: string
+          emoji: string
+          title: string
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          description?: string
+          emoji?: string
+          title?: string
+        }
+        Relationships: []
+      }
       alert_channels: {
         Row: {
           created_at: string
@@ -482,6 +506,77 @@ export type Database = {
           },
         ]
       }
+      server_analysis: {
+        Row: {
+          analyzed_at: string
+          asn: string | null
+          cdn_provider: string | null
+          cert_history: Json | null
+          city: string | null
+          country: string | null
+          ipv4: string[] | null
+          ipv6: string[] | null
+          is_cloudflare: boolean | null
+          nameservers: string[] | null
+          org: string | null
+          raw: Json | null
+          response_ms: number | null
+          server_id: string
+          ssl_algorithm: string | null
+          ssl_expires_at: string | null
+          ssl_issuer: string | null
+          ttl_seconds: number | null
+        }
+        Insert: {
+          analyzed_at?: string
+          asn?: string | null
+          cdn_provider?: string | null
+          cert_history?: Json | null
+          city?: string | null
+          country?: string | null
+          ipv4?: string[] | null
+          ipv6?: string[] | null
+          is_cloudflare?: boolean | null
+          nameservers?: string[] | null
+          org?: string | null
+          raw?: Json | null
+          response_ms?: number | null
+          server_id: string
+          ssl_algorithm?: string | null
+          ssl_expires_at?: string | null
+          ssl_issuer?: string | null
+          ttl_seconds?: number | null
+        }
+        Update: {
+          analyzed_at?: string
+          asn?: string | null
+          cdn_provider?: string | null
+          cert_history?: Json | null
+          city?: string | null
+          country?: string | null
+          ipv4?: string[] | null
+          ipv6?: string[] | null
+          is_cloudflare?: boolean | null
+          nameservers?: string[] | null
+          org?: string | null
+          raw?: Json | null
+          response_ms?: number | null
+          server_id?: string
+          ssl_algorithm?: string | null
+          ssl_expires_at?: string | null
+          ssl_issuer?: string | null
+          ttl_seconds?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "server_analysis_server_id_fkey"
+            columns: ["server_id"]
+            isOneToOne: true
+            referencedRelation: "servers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       servers: {
         Row: {
           category: string | null
@@ -578,6 +673,45 @@ export type Database = {
         }
         Relationships: []
       }
+      user_achievements: {
+        Row: {
+          achievement_code: string
+          id: string
+          server_id: string | null
+          unlocked_at: string
+          user_id: string
+        }
+        Insert: {
+          achievement_code: string
+          id?: string
+          server_id?: string | null
+          unlocked_at?: string
+          user_id: string
+        }
+        Update: {
+          achievement_code?: string
+          id?: string
+          server_id?: string | null
+          unlocked_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_achievements_achievement_code_fkey"
+            columns: ["achievement_code"]
+            isOneToOne: false
+            referencedRelation: "achievements"
+            referencedColumns: ["code"]
+          },
+          {
+            foreignKeyName: "user_achievements_server_id_fkey"
+            columns: ["server_id"]
+            isOneToOne: false
+            referencedRelation: "servers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_roles: {
         Row: {
           created_at: string
@@ -631,6 +765,7 @@ export type Database = {
         Args: { _id: string; _note?: string }
         Returns: undefined
       }
+      evaluate_achievements: { Args: { _user_id: string }; Returns: number }
       finalize_approved_payment: {
         Args: {
           _paid_at?: string
@@ -670,6 +805,14 @@ export type Database = {
           checked_at: string
           latency_ms: number
           status: Database["public"]["Enums"]["server_status"]
+        }[]
+      }
+      get_public_dns_list: {
+        Args: never
+        Returns: {
+          current_status: Database["public"]["Enums"]["server_status"]
+          last_checked_at: string
+          name: string
         }[]
       }
       get_public_status: {

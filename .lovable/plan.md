@@ -1,81 +1,93 @@
-## Sistema de Indicação Premiada — R$10 por assinatura via PIX
+# Plano — 5 melhorias no StreamMonitor
 
-Substitui o sistema atual (que dava +1 mês ao indicador). Mantém: 2 dias de trial pro indicado (era 10, muda pra 2), código exclusivo por usuário, link `?ref=CODIGO`.
+## 1. Auto-análise ao cadastrar DNS
+Ao criar/editar um servidor, disparar server function `analyzeHost` que coleta e persiste:
+- SSL válido, dias até expirar, emissor, algoritmo
+- Cloudflare / CDN detectado (via headers `server`, `cf-ray`, ASN)
+- IPv4 / IPv6 (DNS A/AAAA via Google DoH)
+- Nameservers (NS records)
+- TTL do A record
+- Tempo de resposta HTTPS
+- Geolocalização + ASN (via ip-api.com ou ipapi.co, grátis)
+- Histórico de certificado (via crt.sh)
 
-### 1. Banco de dados (migração)
+**Nova tabela `server_analysis`** (1:1 com servers): guarda snapshot JSON + campos indexáveis (is_cloudflare, cdn_provider, country, asn, ssl_issuer, ssl_expires_at, ipv6_enabled). Re-analisa sob demanda por botão "Reanalisar".
 
-**Alterar `referrals`** — adicionar campos de recompensa/pagamento:
-- `reward_cents int` (default 1000 = R$10)
-- `status text` (`pending` | `trial_active` | `subscribed` | `requested` | `approved` | `paid` | `cancelled`)
-- `subscribed_at`, `requested_at`, `approved_at`, `paid_at timestamptz`
-- `pix_key text`, `pix_type text` (cpf/phone/email/random), `pix_name text`
-- `approved_by uuid` (admin)
-- `payout_request_id uuid` (agrupa várias referrals numa mesma solicitação)
+Exibido em nova aba "Análise" na página do servidor.
 
-**Nova tabela `payout_requests`**:
-- `id`, `user_id`, `amount_cents`, `pix_type`, `pix_key`, `pix_name`
-- `status` (`requested` | `approved` | `paid` | `rejected`)
-- `requested_at`, `approved_at`, `paid_at`, `approved_by`, `admin_note`
-- RLS: dono lê/insere próprio; admin lê/atualiza tudo
+## 2. Selo "DNS Monitorada"
+Componente `<MonitorBadge server={...} />` renderizando cartão com:
+- Logo StreamMonitor + texto "DNS Monitorada"
+- Nome do servidor + status atual
+- QR Code (qrcode.react) apontando para `https://streammonitor.site/status/<slug>`
+- Botão "Baixar PNG" (html-to-image) e "Copiar embed HTML"
 
-**Alterar `profiles.signup_bonus_days`** default 2 (era 10). Atualizar registros existentes onde valor = 10 → 2.
+Disponível em `/app/servers/:id` > aba "Selo". Requer `is_public = true` (senão orienta a publicar).
 
-**Trigger `grant_referral_reward`** — substituir: quando `payments.status='approved'` E é a 1ª assinatura do indicado, marcar `referrals.status='subscribed'`, setar `subscribed_at`, `reward_cents=1000`. **Não** estender mais a assinatura do indicador.
+## 3. Trial de 2 dias (novos cadastros)
+Alterar `handle_new_user`: default `trial_days = 2` (em vez de 30). Se veio por código de indicação, soma `signup_bonus_days` (padrão 2 → total 4). Admin/Victor permanece com 30 no bônus.
 
-**RPCs**:
-- `get_referral_balance(_user_id)` → `{available_cents, pending_cents, paid_cents, total_referrals, in_trial, subscribed_count}`
-- `request_payout(_pix_type, _pix_key, _pix_name)` → cria `payout_request`, marca referrals elegíveis como `requested`
-- `admin_approve_payout(_id)` / `admin_mark_paid(_id)` / `admin_reject_payout(_id, _note)` — checam `has_role(admin)`
-- `get_admin_payout_requests()` → lista com dados do usuário e nº de indicações
+Não afeta usuários existentes.
 
-### 2. Frontend — usuário (`/app/referrals`)
+## 4. Sistema de Conquistas
+**Nova tabela `achievements`** (catálogo estático seedado) e `user_achievements` (user_id, achievement_code, server_id, unlocked_at).
 
-Reescrever a página com:
-- **Banner promocional** 🚨💸 no topo (gradient, destaque)
-- **Cards**: Indicações, Em Teste, Assinaram, Saldo Disponível (R$), Já Recebido (R$)
-- **Bloco código + link** (copiar código / copiar link — link já usa `streammonitor.site`)
-- **Lista de indicados** com status colorido (Teste / Assinou R$10 / Pago)
-- **Botão "Solicitar Pagamento"** habilitado se `available_cents >= 1000`
-- **Modal PIX**: tipo (select), chave (input), nome (input), resumo do valor, aviso "até 2 dias úteis", botão confirmar
-- **Histórico de solicitações** (timeline: Solicitado → Aprovado → PIX enviado)
+Conquistas iniciais:
+- 🏆 `no_incidents_30d` — servidor 30 dias sem incidentes
+- 🥇 `monitoring_100d` — usuário com servidor há 100+ dias
+- ⚡ `low_latency` — servidor com média < 100ms nas últimas 24h (top ranking)
+- 🛡 `ssl_always_valid` — SSL sempre válido últimos 60 dias
 
-Notificações via `toast` nos eventos client-side + Telegram (backend) quando existir chat_id.
+Função SQL `evaluate_achievements(_user_id)` executada:
+- No dashboard (query on mount) 
+- Após cada check via trigger leve (só marca, não recomputa tudo)
 
-### 3. Frontend — admin (`/app/admin` → nova aba/seção "Indicações")
+Nova página `/app/achievements` + preview no dashboard.
 
-- Cards: Total Indicações, Em Teste, Assinaram, Recompensas Pendentes, PIX Solicitados, PIX Pagos
-- Tabela de `payout_requests` com status `requested`: Usuário, nº indicações válidas, valor, PIX (tipo+chave+nome), data
-- Ações: **Aprovar** / **Recusar** / **Marcar como Pago** (após aprovado)
-- Ao expandir linha: nome, email, telefone do solicitante
+## 5. Aba DNS Pública
+Nova rota pública `/dns` (fora de auth): lista apenas **nome** dos servidores com `is_public = true`, com badge de status. Sem link, sem host, sem slug clicável — apenas nome + estado (up/down/degraded). RPC `get_public_dns_list()` security definer que retorna `name, current_status, last_checked_at`.
 
-### 4. Backend — server functions
+## Detalhes técnicos
 
-`src/lib/referrals.functions.ts`:
-- `getMyReferralSummary` (autenticado) — chama RPC
-- `requestPayout({pixType, pixKey, pixName})` — valida saldo, cria request
-- `adminListPayoutRequests`, `adminApprovePayout`, `adminMarkPaid`, `adminRejectPayout`
+**Nova migração** (uma só):
+```sql
+-- 1. server_analysis
+CREATE TABLE public.server_analysis (
+  server_id uuid PRIMARY KEY REFERENCES public.servers(id) ON DELETE CASCADE,
+  is_cloudflare boolean, cdn_provider text,
+  ipv4 text[], ipv6 text[], nameservers text[], ttl_seconds int,
+  ssl_issuer text, ssl_expires_at timestamptz, ssl_algorithm text,
+  country text, city text, asn text, org text,
+  response_ms int, cert_history jsonb,
+  raw jsonb, analyzed_at timestamptz DEFAULT now()
+);
+GRANT SELECT, INSERT, UPDATE ON public.server_analysis TO authenticated;
+GRANT ALL ON public.server_analysis TO service_role;
+ALTER TABLE public.server_analysis ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "owner reads own analysis" ON public.server_analysis FOR SELECT TO authenticated
+  USING (EXISTS(SELECT 1 FROM servers s WHERE s.id = server_id AND (s.owner_id = auth.uid() OR public.has_role(auth.uid(),'admin'))));
+CREATE POLICY "owner writes own analysis" ON public.server_analysis FOR ALL TO authenticated
+  USING (EXISTS(SELECT 1 FROM servers s WHERE s.id = server_id AND s.owner_id = auth.uid()))
+  WITH CHECK (EXISTS(SELECT 1 FROM servers s WHERE s.id = server_id AND s.owner_id = auth.uid()));
 
-Telegram admin (`ADMIN_TELEGRAM_CHAT_ID`) recebe aviso quando alguém solicita PIX.
-Telegram do usuário recebe aviso quando: indicado assina (ganhou R$10), PIX aprovado, PIX pago.
+-- 2. achievements + user_achievements (+ seed)
+-- 3. get_public_dns_list() RPC (SECURITY DEFINER, retorna nome+status)
+-- 4. UPDATE handle_new_user: trial_days := 2 (default), 2 + bonus se referido
+```
 
-### 5. Cadastro (`/auth`)
+**Arquivos novos:**
+- `src/lib/analysis.functions.ts` + `analysis.server.ts` (DoH + fetch cert + ip-api)
+- `src/lib/achievements.functions.ts`
+- `src/components/monitor-badge.tsx`
+- `src/routes/_authenticated/app.achievements.tsx`
+- `src/routes/dns.tsx` (pública)
 
-- Trocar mensagem: "🎁 Você ganhou **2 dias** extras de teste"
-- Ler `?ref=` e travar o campo (readOnly) quando vier pela URL
+**Arquivos editados:**
+- `src/routes/_authenticated/app.servers.$id.tsx` — abas Análise + Selo
+- `src/routes/_authenticated/app.servers.new.tsx` — dispara análise ao salvar
+- `src/components/app-shell.tsx` — item "Conquistas" no menu
+- `src/routes/__root.tsx` ou `index.tsx` — link para /dns
 
-### 6. Ajustes no fluxo de assinatura
+Sem breaking changes; usuários atuais continuam com o trial que já têm.
 
-- Remover extensão de +30 dias no `grant_referral_reward` (não é mais mês grátis; é R$10 PIX)
-- Manter desconto de 10% na 1ª compra do indicado? **Remover** — a proposta agora é 2 dias trial + R$10 pro indicador. Confirmar na implementação removendo `REFERRAL_FIRST_PURCHASE_DISCOUNT` do `createPixPayment`.
-
-### Detalhes técnicos
-
-- Recompensa fixa em `reward_cents` na referral (não hardcoded) para permitir promoções futuras
-- Uma referral só entra num `payout_request` quando status = `subscribed` e `payout_request_id IS NULL`
-- Regra anti-fraude: se `payments` do indicado tiver refund futuro → trigger marca referral `cancelled` e subtrai do saldo (fora do escopo desta 1ª entrega — anotar como TODO)
-- GRANTs em todas as novas tabelas/funções conforme regras Cloud
-
-### O que **não** muda
-- Geração do código (`generate_referral_code`)
-- Código admin fixo `REGPF89U` do Victor
-- Estrutura de auth / RLS existente
+Confirma que posso implementar tudo em sequência?
