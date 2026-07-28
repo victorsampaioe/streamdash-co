@@ -256,3 +256,26 @@ async function sendAlerts(server: ServerRow, event: "up" | "down", message: stri
     }
   }));
 }
+
+// Exported so the /api/public/regions/report endpoint can trigger alerts
+// when a specific region transitions to down or recovers.
+export async function sendRegionAlert(args: {
+  serverId: string;
+  region: { code: string; name: string; city: string; flag: string };
+  event: "up" | "down";
+  latencyMs: number | null;
+  error: string | null;
+}) {
+  const { data: server } = await supabaseAdmin
+    .from("servers")
+    .select("*")
+    .eq("id", args.serverId)
+    .maybeSingle();
+  if (!server) return;
+  const detail = args.event === "down"
+    ? `${args.region.flag} ${args.region.city}: OFFLINE${args.error ? ` — ${args.error}` : ""}`
+    : `${args.region.flag} ${args.region.city}: recuperado${args.latencyMs != null ? ` (${args.latencyMs}ms)` : ""}`;
+  const message = `${server.name} — ${detail}`;
+  await sendAlerts(server as ServerRow, args.event, message, args.region.code);
+}
+
