@@ -276,6 +276,6 @@ export async function sendRegionAlert(args: {
     ? `${args.region.flag} ${args.region.city}: OFFLINE${args.error ? ` — ${args.error}` : ""}`
     : `${args.region.flag} ${args.region.city}: recuperado${args.latencyMs != null ? ` (${args.latencyMs}ms)` : ""}`;
   const message = `${server.name} — ${detail}`;
-  await sendAlerts(server as ServerRow, args.event, message, args.region.code);
+  await sendAlerts(server as ServerRow, args.event, message, null);
 }
 
