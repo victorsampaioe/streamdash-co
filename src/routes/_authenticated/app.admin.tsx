@@ -158,6 +158,8 @@ function AdminPage() {
         <Kpi icon={ServerCog} label="Servidores monitorados" value={s?.total_servers} />
       </div>
 
+      <TelegramBroadcastCard />
+
       {/* Users table */}
       <Card className="p-4 space-y-4">
         <div className="flex flex-wrap gap-3 items-center justify-between">
