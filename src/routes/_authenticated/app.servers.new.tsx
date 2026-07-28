@@ -10,6 +10,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { z } from "zod";
 import { toast } from "sonner";
+import { useServerFn } from "@tanstack/react-start";
+import { analyzeServer } from "@/lib/analysis.functions";
 
 export const Route = createFileRoute("/_authenticated/app/servers/new")({
   component: NewServer,
@@ -29,6 +31,7 @@ function slugify(s: string) {
 function NewServer() {
   const navigate = useNavigate();
   const qc = useQueryClient();
+  const runAnalyze = useServerFn(analyzeServer);
   const [name, setName] = useState("");
   const [host, setHost] = useState("");
   const [description, setDescription] = useState("");
@@ -51,9 +54,10 @@ function NewServer() {
       if (error) throw error;
       return data.id as string;
     },
-    onSuccess: (id) => {
+    onSuccess: async (id) => {
       qc.invalidateQueries({ queryKey: ["servers"] });
-      toast.success("Servidor cadastrado — verificação inicia em segundos");
+      toast.success("Servidor cadastrado — analisando DNS...");
+      runAnalyze({ data: { serverId: id } }).catch(() => { /* silencioso */ });
       navigate({ to: "/app/servers/$id", params: { id } });
     },
     onError: (e: Error) => toast.error(e.message),
