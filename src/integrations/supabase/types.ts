@@ -285,6 +285,60 @@ export type Database = {
           },
         ]
       }
+      payout_requests: {
+        Row: {
+          admin_note: string | null
+          amount_cents: number
+          approved_at: string | null
+          approved_by: string | null
+          created_at: string
+          id: string
+          paid_at: string | null
+          pix_key: string
+          pix_name: string
+          pix_type: string
+          rejected_at: string | null
+          requested_at: string
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          admin_note?: string | null
+          amount_cents: number
+          approved_at?: string | null
+          approved_by?: string | null
+          created_at?: string
+          id?: string
+          paid_at?: string | null
+          pix_key: string
+          pix_name: string
+          pix_type: string
+          rejected_at?: string | null
+          requested_at?: string
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          admin_note?: string | null
+          amount_cents?: number
+          approved_at?: string | null
+          approved_by?: string | null
+          created_at?: string
+          id?: string
+          paid_at?: string | null
+          pix_key?: string
+          pix_name?: string
+          pix_type?: string
+          rejected_at?: string | null
+          requested_at?: string
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           avatar_url: string | null
@@ -323,33 +377,62 @@ export type Database = {
       }
       referrals: {
         Row: {
+          approved_at: string | null
           code_used: string
           converted_at: string | null
           created_at: string
           id: string
+          paid_at: string | null
+          payout_request_id: string | null
           referred_id: string
           referrer_id: string
+          requested_at: string | null
+          reward_cents: number
           reward_granted_at: string | null
+          status: string
+          subscribed_at: string | null
         }
         Insert: {
+          approved_at?: string | null
           code_used: string
           converted_at?: string | null
           created_at?: string
           id?: string
+          paid_at?: string | null
+          payout_request_id?: string | null
           referred_id: string
           referrer_id: string
+          requested_at?: string | null
+          reward_cents?: number
           reward_granted_at?: string | null
+          status?: string
+          subscribed_at?: string | null
         }
         Update: {
+          approved_at?: string | null
           code_used?: string
           converted_at?: string | null
           created_at?: string
           id?: string
+          paid_at?: string | null
+          payout_request_id?: string | null
           referred_id?: string
           referrer_id?: string
+          requested_at?: string | null
+          reward_cents?: number
           reward_granted_at?: string | null
+          status?: string
+          subscribed_at?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "referrals_payout_request_fk"
+            columns: ["payout_request_id"]
+            isOneToOne: false
+            referencedRelation: "payout_requests"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       region_checks: {
         Row: {
@@ -521,6 +604,33 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      admin_approve_payout: { Args: { _id: string }; Returns: undefined }
+      admin_list_payout_requests: {
+        Args: never
+        Returns: {
+          admin_note: string
+          amount_cents: number
+          approved_at: string
+          id: string
+          paid_at: string
+          pix_key: string
+          pix_name: string
+          pix_type: string
+          referral_count: number
+          rejected_at: string
+          requested_at: string
+          status: string
+          user_email: string
+          user_id: string
+          user_name: string
+          user_phone: string
+        }[]
+      }
+      admin_mark_payout_paid: { Args: { _id: string }; Returns: undefined }
+      admin_reject_payout: {
+        Args: { _id: string; _note?: string }
+        Returns: undefined
+      }
       finalize_approved_payment: {
         Args: {
           _paid_at?: string
@@ -574,6 +684,7 @@ export type Database = {
           ssl_days_remaining: number
         }[]
       }
+      get_referral_summary: { Args: { _user_id: string }; Returns: Json }
       get_region_stats: {
         Args: { _minutes?: number; _server_id: string }
         Returns: {
@@ -612,6 +723,10 @@ export type Database = {
           _user_id: string
         }
         Returns: boolean
+      }
+      request_payout: {
+        Args: { _pix_key: string; _pix_name: string; _pix_type: string }
+        Returns: string
       }
       subscription_is_active: { Args: { _user_id: string }; Returns: boolean }
     }
