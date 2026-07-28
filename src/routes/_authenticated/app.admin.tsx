@@ -321,3 +321,32 @@ function StatusBadge({ status, expired }: { status: AdminUser["status"]; expired
   } as const;
   return map[status];
 }
+
+function TelegramBroadcastCard() {
+  const [message, setMessage] = useState("✅ StreamMonitor está online! Todas as suas monitorações estão sendo executadas normalmente.");
+  const send = useServerFn(broadcastTelegram);
+  const mut = useMutation({
+    mutationFn: async (msg: string) => await send({ data: { message: msg } }),
+    onSuccess: (r: any) => toast.success(`Enviado para ${r.sent}/${r.total} usuários${r.failed ? ` · ${r.failed} falhas` : ""}`),
+    onError: (e: Error) => toast.error(e.message),
+  });
+  return (
+    <Card className="p-4 space-y-3 border-primary/30 bg-gradient-to-br from-primary/5 to-transparent">
+      <div className="flex items-center gap-2">
+        <Send className="h-4 w-4 text-primary" />
+        <h2 className="font-semibold">Broadcast Telegram</h2>
+        <Badge variant="outline" className="text-xs">Somente admin</Badge>
+      </div>
+      <p className="text-xs text-muted-foreground">
+        Envia esta mensagem para todos os usuários que já configuraram o Telegram como canal de alerta.
+      </p>
+      <Textarea rows={3} value={message} onChange={(e) => setMessage(e.target.value)} />
+      <div className="flex justify-end">
+        <Button onClick={() => mut.mutate(message)} disabled={mut.isPending || !message.trim()}>
+          <Send className="h-4 w-4 mr-2" />
+          {mut.isPending ? "Enviando..." : "Enviar para todos"}
+        </Button>
+      </div>
+    </Card>
+  );
+}
