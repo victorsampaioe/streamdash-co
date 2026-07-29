@@ -164,9 +164,6 @@ function PixDialog({ openPlan, onClose, pix, loading, error, onPaid }: {
     return () => clearInterval(id);
   }, [pix?.expiresAt]);
 
-
-
-
   // Confirm directly with Mercado Pago every 3s. This also covers delayed webhooks.
   useEffect(() => {
     if (!pix?.paymentId || !pix.integrationReady) return;
@@ -217,115 +214,166 @@ function PixDialog({ openPlan, onClose, pix, loading, error, onPaid }: {
 
   return (
     <Dialog open={!!openPlan} onOpenChange={(o) => !o && onClose()}>
-      <DialogContent className="w-[calc(100vw-2rem)] max-w-md p-0 gap-0 overflow-x-hidden overflow-y-auto max-h-[90vh]">
-        {/* Header gradient */}
-        <div className="w-full max-w-full bg-gradient-to-br from-primary/20 via-primary/5 to-transparent border-b p-4 sm:p-6">
-          <DialogHeader className="space-y-2 text-left">
-            <div className="flex items-center gap-2 min-w-0">
-              <div className="h-9 w-9 shrink-0 rounded-lg bg-primary/15 border border-primary/30 flex items-center justify-center">
-                <QrCode className="h-5 w-5 text-primary" />
+      <DialogContent className="w-[calc(100vw-1rem)] sm:w-full max-w-md p-0 gap-0 overflow-hidden border-0 bg-transparent shadow-2xl">
+        <div className="relative flex max-h-[90vh] flex-col overflow-hidden rounded-2xl border bg-card shadow-2xl">
+          {/* Header */}
+          <div className="relative overflow-hidden bg-gradient-to-br from-primary/25 via-primary/10 to-card p-5 sm:p-6">
+            <div className="absolute -right-6 -top-6 h-24 w-24 rounded-full bg-primary/10 blur-2xl" />
+            <div className="relative flex items-start justify-between gap-4">
+              <div className="flex items-center gap-3">
+                <div className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-primary/20 border border-primary/30">
+                  <QrCode className="h-5 w-5 text-primary" />
+                </div>
+                <div className="space-y-0.5">
+                  <DialogTitle className="text-base sm:text-lg font-semibold leading-tight">Pagamento via PIX</DialogTitle>
+                  <DialogDescription className="text-xs text-muted-foreground">Aprovação automática · Ativa na hora</DialogDescription>
+                </div>
               </div>
-              <div className="min-w-0">
-                <DialogTitle className="text-base truncate">Pagamento via PIX</DialogTitle>
-                <DialogDescription className="text-xs truncate">
-                  Aprovação automática · Ativa na hora
-                </DialogDescription>
-              </div>
+              <button
+                onClick={onClose}
+                className="shrink-0 grid h-8 w-8 place-items-center rounded-full bg-card/60 hover:bg-card text-muted-foreground hover:text-foreground transition-colors"
+                aria-label="Fechar"
+              >
+                <X className="h-4 w-4" />
+              </button>
             </div>
-          </DialogHeader>
-          {pix && (
-            <div className="mt-4 flex flex-wrap items-baseline justify-between gap-2">
-              <div className="min-w-0">
-                <div className="text-2xl sm:text-3xl font-bold tracking-tight">{formatBRL(pix.amountCents)}</div>
-                {pix.discountApplied && (
-                  <div className="flex items-center gap-1 text-xs text-success mt-1">
-                    <Sparkles className="h-3 w-3 shrink-0" /> <span className="truncate">Desconto de indicação aplicado</span>
+
+            {pix && (
+              <div className="relative mt-5 flex flex-wrap items-end justify-between gap-3">
+                <div>
+                  <div className="text-[11px] uppercase tracking-wider text-muted-foreground mb-0.5">Total a pagar</div>
+                  <div className="text-2xl sm:text-3xl font-bold tracking-tight">{formatBRL(pix.amountCents)}</div>
+                  {pix.discountApplied && (
+                    <div className="mt-1 inline-flex items-center gap-1 rounded-full bg-success/15 px-2 py-0.5 text-[11px] text-success">
+                      <Sparkles className="h-3 w-3 shrink-0" />
+                      <span>Desconto de indicação aplicado</span>
+                    </div>
+                  )}
+                </div>
+                <div className="shrink-0 rounded-xl border bg-card/80 px-3 py-2 backdrop-blur">
+                  <div className="text-[10px] uppercase tracking-wider text-muted-foreground">Expira em</div>
+                  <div className={cn("font-mono text-sm font-semibold tabular-nums flex items-center gap-1", remaining < 60 && remaining > 0 && "text-destructive")}>
+                    <Timer className="h-3.5 w-3.5" />
+                    {mm}:{ss}
                   </div>
-                )}
-              </div>
-              <div className="text-right shrink-0">
-                <div className="text-[10px] uppercase tracking-wider text-muted-foreground">Expira em</div>
-                <div className={cn("font-mono font-semibold tabular-nums", remaining < 60 && "text-destructive")}>
-                  <Timer className="inline h-3.5 w-3.5 mr-1 -mt-0.5" />
-                  {mm}:{ss}
                 </div>
               </div>
-            </div>
-          )}
-        </div>
+            )}
+          </div>
 
-        <div className="w-full max-w-full p-4 sm:p-6 space-y-5">
-          {loading && (
-            <div className="space-y-3">
-              <div className="mx-auto h-56 w-full max-w-56 rounded-xl bg-muted animate-pulse" />
-              <p className="text-center text-sm text-muted-foreground">Gerando cobrança PIX...</p>
-            </div>
-          )}
-
-          {!loading && !error && pix?.integrationReady && pixCode && (
-            <>
-              <div className="w-full max-w-full rounded-lg border bg-card p-3 sm:p-4 shadow-sm">
-                <div className="text-center text-xs font-medium text-muted-foreground mb-3 uppercase tracking-wider">
-                  Escaneie com o app do seu banco
+          {/* Body */}
+          <div className="flex-1 overflow-y-auto p-4 sm:p-6">
+            {loading && (
+              <div className="space-y-5 py-4">
+                <div className="mx-auto h-56 w-56 rounded-2xl bg-muted animate-pulse" />
+                <div className="space-y-2">
+                  <div className="mx-auto h-4 w-40 rounded bg-muted animate-pulse" />
+                  <div className="mx-auto h-3 w-28 rounded bg-muted animate-pulse" />
                 </div>
-                <div className="mx-auto flex w-full max-w-[260px] items-center justify-center rounded-lg border-2 border-primary/40 bg-white p-3">
-                  <QRCodeSVG
-                    value={pixCode}
-                    size={256}
-                    level="M"
-                    marginSize={2}
-                    bgColor="#ffffff"
-                    fgColor="#000000"
-                    className="block h-auto w-full max-w-full"
-                    title="QR Code para pagamento PIX"
-                  />
-                </div>
-                <div className="mt-3 text-center text-xs text-muted-foreground">
-                  Valor: <span className="font-semibold text-foreground">{formatBRL(pix.amountCents)}</span>
-                </div>
+                <div className="mx-auto h-9 w-full rounded-lg bg-muted animate-pulse" />
               </div>
+            )}
 
-              <div className="w-full max-w-full space-y-2">
-                <label className="text-xs font-medium text-muted-foreground">PIX Copia e Cola</label>
-                <div className="flex gap-2 w-full max-w-full">
-                  <div className="flex-1 min-w-0 rounded-md border bg-muted/40 px-3 py-2 font-mono text-[11px] truncate">
-                    {pixCode}
+            {!loading && !error && pix?.integrationReady && pixCode && (
+              <div className="space-y-5">
+                {/* QR Card */}
+                <div className="mx-auto w-full max-w-[280px] rounded-2xl border bg-gradient-to-b from-white to-slate-50 p-4 shadow-sm dark:from-slate-100 dark:to-slate-200">
+                  <div className="text-center text-[11px] font-semibold uppercase tracking-wider text-slate-500 mb-3">
+                    Escaneie com o app do seu banco
                   </div>
-                  <Button size="sm" variant="secondary" onClick={copyCode} className="shrink-0">
-                    <Copy className="h-3.5 w-3.5 mr-1" /> Copiar
+                  <div className="mx-auto aspect-square w-full max-w-[220px] overflow-hidden rounded-xl bg-white p-2">
+                    <QRCodeSVG
+                      value={pixCode}
+                      size={220}
+                      level="M"
+                      marginSize={2}
+                      bgColor="#ffffff"
+                      fgColor="#0f172a"
+                      className="block h-full w-full"
+                      title="QR Code para pagamento PIX"
+                    />
+                  </div>
+                  <div className="mt-3 text-center text-xs font-medium text-slate-600">
+                    Valor: <span className="font-bold text-slate-900">{formatBRL(pix.amountCents)}</span>
+                  </div>
+                </div>
+
+                {/* Copy & Paste */}
+                <div className="space-y-2">
+                  <label className="text-xs font-medium text-muted-foreground">PIX Copia e Cola</label>
+                  <div className="flex items-stretch gap-2 overflow-hidden rounded-xl border bg-muted/40 p-1">
+                    <div className="flex flex-1 items-center min-w-0 px-3 py-2">
+                      <span className="block w-full font-mono text-[11px] text-muted-foreground truncate">
+                        {pixCode}
+                      </span>
+                    </div>
+                    <Button size="sm" onClick={copyCode} className="shrink-0 rounded-lg">
+                      <Copy className="h-3.5 w-3.5 mr-1.5" /> Copiar
+                    </Button>
+                  </div>
+                </div>
+
+                {/* Steps */}
+                <div className="rounded-xl border bg-muted/30 p-4">
+                  <div className="mb-3 flex items-center gap-2 text-xs font-semibold text-foreground">
+                    <ShieldCheck className="h-4 w-4 text-primary" />
+                    Como pagar
+                  </div>
+                  <ol className="space-y-2 text-xs text-muted-foreground">
+                    {[
+                      "Abra o app do seu banco",
+                      "Escolha pagar via PIX QR Code ou Copia e Cola",
+                      `Confirme o valor de ${formatBRL(pix.amountCents)}`,
+                      "Sua assinatura é ativada automaticamente",
+                    ].map((step, i) => (
+                      <li key={i} className="flex items-start gap-2">
+                        <span className="mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-primary/15 text-[9px] font-bold text-primary">
+                          {i + 1}
+                        </span>
+                        <span>{step}</span>
+                      </li>
+                    ))}
+                  </ol>
+                </div>
+
+                {/* Actions */}
+                <div className="grid gap-2">
+                  <Button onClick={checkNow} disabled={checking} className="w-full">
+                    {checking ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <RefreshCw className="h-4 w-4 mr-2" />}
+                    Já paguei, verificar agora
+                  </Button>
+                  <Button variant="ghost" onClick={onClose} className="w-full text-muted-foreground hover:text-foreground">
+                    Voltar para assinatura
                   </Button>
                 </div>
+
+                {/* Trust badge */}
+                <div className="flex items-center justify-center gap-1.5 text-[10px] text-muted-foreground">
+                  <ShieldCheck className="h-3 w-3 text-success" />
+                  Pagamento processado com segurança pelo Mercado Pago
+                </div>
               </div>
+            )}
 
-              <div className="rounded-lg border bg-muted/30 p-3 text-xs space-y-1.5">
-                <div className="font-semibold flex items-center gap-1.5"><ShieldCheck className="h-3.5 w-3.5 text-primary" /> Como pagar</div>
-                <ol className="list-decimal list-inside space-y-0.5 text-muted-foreground">
-                  <li>Abra o app do seu banco</li>
-                  <li>Escolha pagar via PIX QR Code ou Copia e Cola</li>
-                  <li>Confirme o valor de <strong>{formatBRL(pix.amountCents)}</strong></li>
-                  <li>Sua assinatura é ativada automaticamente</li>
-                </ol>
+            {!loading && (error || (pix?.integrationReady && !pixCode)) && (
+              <div className="rounded-xl border border-destructive/40 bg-destructive/5 p-5 text-sm text-destructive">
+                <div className="mb-2 font-semibold">Não foi possível gerar o PIX</div>
+                {error ?? "O código PIX não foi recebido. Feche esta janela e tente gerar uma nova cobrança."}
+                <Button variant="outline" className="mt-4 w-full" onClick={onClose}>Voltar</Button>
               </div>
+            )}
 
-              <Button variant="outline" className="w-full" onClick={checkNow} disabled={checking}>
-                {checking ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <CheckCircle2 className="h-4 w-4 mr-2" />}
-                Já paguei, verificar agora
-              </Button>
-            </>
-          )}
-
-          {!loading && (error || (pix?.integrationReady && !pixCode)) && (
-            <div className="rounded-lg border border-destructive/40 bg-destructive/5 p-4 text-sm text-destructive">
-              {error ?? "O código PIX não foi recebido. Feche esta janela e tente gerar uma nova cobrança."}
-            </div>
-          )}
-
-          {!loading && pix && !pix.integrationReady && (
-            <div className="rounded-lg border border-dashed border-warning/50 bg-warning/5 p-4 text-xs text-muted-foreground space-y-2">
-              <p className="font-semibold text-warning">Mercado Pago não configurado</p>
-              <p>Adicione o segredo <code className="rounded bg-muted px-1">MERCADOPAGO_ACCESS_TOKEN</code> para gerar QR Codes reais.</p>
-            </div>
-          )}
+            {!loading && pix && !pix.integrationReady && (
+              <div className="rounded-xl border border-dashed border-warning/50 bg-warning/5 p-5 text-xs text-muted-foreground space-y-3">
+                <div className="flex items-center gap-2 font-semibold text-warning">
+                  <Timer className="h-4 w-4" />
+                  Mercado Pago não configurado
+                </div>
+                <p>Adicione o segredo <code className="rounded bg-muted px-1 py-0.5">MERCADOPAGO_ACCESS_TOKEN</code> para gerar QR Codes reais.</p>
+                <Button variant="outline" className="w-full" onClick={onClose}>Entendi</Button>
+              </div>
+            )}
+          </div>
         </div>
       </DialogContent>
     </Dialog>
