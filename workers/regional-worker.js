@@ -14,6 +14,16 @@ const TIMEOUT_MS = 8000;
 const CYCLES = 6;          // 6 ciclos de 10s dentro de 1 minuto
 const CYCLE_GAP_MS = 10_000;
 
+/** Remove espaços/quebras de linha/aspas que o painel da Cloudflare costuma colar junto. */
+function cleanSecret(env) {
+  return String(env.REGION_WORKER_SECRET ?? "").trim().replace(/^["']|["']$/g, "");
+}
+
+async function sha256Hex12(value) {
+  const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(value));
+  return [...new Uint8Array(buf)].map((b) => b.toString(16).padStart(2, "0")).join("").slice(0, 12);
+}
+
 async function hmacHex(secret, message) {
   const key = await crypto.subtle.importKey(
     "raw",
@@ -30,6 +40,7 @@ function requireEnv(env) {
   const missing = ["REGION_CODE", "ENDPOINT_BASE", "REGION_WORKER_SECRET"].filter((k) => !env[k]);
   if (missing.length) throw new Error(`Variáveis ausentes: ${missing.join(", ")}`);
 }
+
 
 async function loadTargets(env) {
   const sig = await hmacHex(env.REGION_WORKER_SECRET, "targets");
