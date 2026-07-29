@@ -1,24 +1,30 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { createHmac, timingSafeEqual } from "node:crypto";
-
-// Discovery endpoint: regional worker asks "what should I check right now?".
-// Auth: HMAC of the literal string "targets" using REGION_WORKER_SECRET.
-// This avoids exposing host names publicly.
-function verify(sig: string | null): boolean {
-  const secret = process.env.REGION_WORKER_SECRET;
-  if (!secret || !sig) return false;
-  const expected = createHmac("sha256", secret).update("targets").digest("hex");
-  const a = Buffer.from(sig);
-  const b = Buffer.from(expected);
-  if (a.length !== b.length) return false;
-  try { return timingSafeEqual(a, b); } catch { return false; }
-}
 
 export const Route = createFileRoute("/api/public/regions/targets")({
   server: {
     handlers: {
       GET: async ({ request }) => {
-        if (!verify(request.headers.get("x-signature"))) return new Response("Forbidden", { status: 403 });
+        const { verifyRegionSignature, secretFingerprint, getRegionSecret } = await import(
+          "@/lib/region-auth.server"
+        );
+        const url = new URL(request.url);
+
+        // Diagnostic mode: never returns the secret, only a hash prefix so the
+        // worker owner can confirm both sides share the same value.
+        if (url.searchParams.get("diag") === "1") {
+          return Response.json({
+            route: "ok",
+            secret_configured: Boolean(getRegionSecret()),
+            secret_fingerprint: secretFingerprint(),
+            signature_valid: verifyRegionSignature("targets", request.headers.get("x-signature")),
+            hint: "x-signature must be hex HMAC-SHA256 of the literal string 'targets'",
+          }, { headers: { "cache-control": "no-store" } });
+        }
+
+        if (!verifyRegionSignature("targets", request.headers.get("x-signature"))) {
+          return new Response("Forbidden", { status: 403 });
+        }
+
         const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
         // Only monitor servers owned by users with active subscription/trial.

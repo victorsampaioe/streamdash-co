@@ -1,5 +1,4 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { createHmac, timingSafeEqual } from "node:crypto";
 import { z } from "zod";
 
 const payloadSchema = z.object({
@@ -11,15 +10,6 @@ const payloadSchema = z.object({
   error: z.string().max(500).nullable().optional(),
 });
 
-function verify(rawBody: string, signature: string | null): boolean {
-  const secret = process.env.REGION_WORKER_SECRET;
-  if (!secret || !signature) return false;
-  const expected = createHmac("sha256", secret).update(rawBody).digest("hex");
-  const a = Buffer.from(signature);
-  const b = Buffer.from(expected);
-  if (a.length !== b.length) return false;
-  try { return timingSafeEqual(a, b); } catch { return false; }
-}
 
 export const Route = createFileRoute("/api/public/regions/report")({
   server: {
@@ -27,7 +17,9 @@ export const Route = createFileRoute("/api/public/regions/report")({
       POST: async ({ request }) => {
         const raw = await request.text();
         const sig = request.headers.get("x-signature");
-        if (!verify(raw, sig)) return new Response("Forbidden", { status: 403 });
+        const { verifyRegionSignature } = await import("@/lib/region-auth.server");
+        if (!verifyRegionSignature(raw, sig)) return new Response("Forbidden", { status: 403 });
+
 
         let parsed;
         try { parsed = payloadSchema.parse(JSON.parse(raw)); }
