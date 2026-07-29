@@ -22,7 +22,7 @@ export const createPixPayment = createServerFn({ method: "POST" })
     // creating multiple pending PIX payments for the same plan.
     const { data: existing } = await supabase
       .from("payments")
-      .select("id, amount_cents, expires_at, pix_qr_code, pix_qr_code_base64")
+      .select("id, amount_cents, expires_at, pix_copy_paste, pix_qr_code")
       .eq("user_id", userId)
       .eq("plan", plan.id)
       .eq("status", "pending")
@@ -33,13 +33,17 @@ export const createPixPayment = createServerFn({ method: "POST" })
       .limit(1)
       .maybeSingle();
 
-    if (existing?.pix_qr_code) {
+    const existingPixCode = typeof existing?.pix_copy_paste === "string"
+      ? existing.pix_copy_paste.trim()
+      : typeof existing?.pix_qr_code === "string"
+        ? existing.pix_qr_code.trim()
+        : "";
+
+    if (existing && existingPixCode) {
       return {
         paymentId: existing.id,
         status: "pending" as const,
-        qrCode: existing.pix_qr_code,
-        qrCodeBase64: existing.pix_qr_code_base64,
-        copyPaste: existing.pix_qr_code,
+        copyPaste: existingPixCode,
         expiresAt: existing.expires_at ?? expiresAt,
         integrationReady: true,
         amountCents: existing.amount_cents,
@@ -71,8 +75,6 @@ export const createPixPayment = createServerFn({ method: "POST" })
       return {
         paymentId: payment.id,
         status: "pending" as const,
-        qrCode: null as string | null,
-        qrCodeBase64: null as string | null,
         copyPaste: null as string | null,
         expiresAt,
         integrationReady: false,
@@ -96,14 +98,18 @@ export const createPixPayment = createServerFn({ method: "POST" })
       });
 
       const td = charge.point_of_interaction?.transaction_data;
+      const pixCopyPaste = typeof td?.qr_code === "string" ? td.qr_code.trim() : "";
+      if (!pixCopyPaste) {
+        throw new Error("O Mercado Pago não retornou um código PIX válido. Tente gerar uma nova cobrança.");
+      }
       const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
       await supabaseAdmin
         .from("payments")
         .update({
           provider_payment_id: String(charge.id),
-          pix_qr_code: td?.qr_code ?? null,
-          pix_qr_code_base64: td?.qr_code_base64 ?? null,
-          pix_copy_paste: td?.qr_code ?? null,
+          pix_qr_code: pixCopyPaste,
+          pix_qr_code_base64: null,
+          pix_copy_paste: pixCopyPaste,
           raw_payload: charge as any,
         })
         .eq("id", payment.id);
@@ -111,9 +117,7 @@ export const createPixPayment = createServerFn({ method: "POST" })
       return {
         paymentId: payment.id,
         status: "pending" as const,
-        qrCode: td?.qr_code ?? null,
-        qrCodeBase64: td?.qr_code_base64 ?? null,
-        copyPaste: td?.qr_code ?? null,
+        copyPaste: pixCopyPaste,
         expiresAt,
         integrationReady: true,
         amountCents,
