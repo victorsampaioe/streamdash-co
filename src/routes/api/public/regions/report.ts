@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { z } from "zod";
 
-const payloadSchema = z.object({
+const itemSchema = z.object({
   server_id: z.string().uuid(),
   region_code: z.string().min(1).max(64),
   status: z.enum(["up", "down", "degraded", "unknown", "pending"]),
@@ -9,6 +9,12 @@ const payloadSchema = z.object({
   latency_ms: z.number().int().nullable().optional(),
   error: z.string().max(500).nullable().optional(),
 });
+
+// Aceita 1 report (formato antigo) ou um lote { reports: [...] } (novo worker).
+const payloadSchema = z.union([
+  itemSchema.transform((r) => [r]),
+  z.object({ reports: z.array(itemSchema).min(1).max(200) }).transform((b) => b.reports),
+]);
 
 
 export const Route = createFileRoute("/api/public/regions/report")({
