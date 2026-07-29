@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { CalendarDays, CheckCircle2, Clock, Copy, CreditCard, Loader2, QrCode, ShieldCheck, Sparkles, Timer, Zap } from "lucide-react";
+import { CalendarDays, CheckCircle2, Clock, Copy, CreditCard, Loader2, QrCode, RefreshCw, ShieldCheck, Sparkles, Timer, X, Zap } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { QRCodeSVG } from "qrcode.react";
