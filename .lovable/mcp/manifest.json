@@ -1,0 +1,274 @@
+{
+  "version": 1,
+  "sdk_version": "0.25.0",
+  "path": "/mcp",
+  "auth": {
+    "type": "oauth",
+    "issuer": "https://yiwyfiaqehhmngqngxvx.supabase.co/auth/v1",
+    "accepted_audiences": [
+      "authenticated"
+    ]
+  },
+  "mcp": {
+    "server": {
+      "name": "stream-monitor",
+      "version": "1.0.0",
+      "title": "Stream Monitor"
+    },
+    "tools": [
+      {
+        "name": "get_account_info",
+        "title": "Consultar informações da conta",
+        "description": "Retorna informações da conta do usuário autenticado no Stream Monitor (e-mail, telefone, código de indicação, saldo de bônus).",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "properties": {}
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "list_dns",
+        "title": "Listar DNS monitoradas",
+        "description": "Lista todas as DNS (servidores) monitoradas pelo usuário, com status atual, latência e informações de SSL. Suporta filtro opcional por status ('up', 'down', 'degraded').",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "status": {
+              "type": "string",
+              "enum": [
+                "up",
+                "down",
+                "degraded",
+                "unknown"
+              ],
+              "description": "Filtrar apenas DNS com este status atual."
+            }
+          },
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "get_dns_status",
+        "title": "Ver status detalhado de uma DNS",
+        "description": "Retorna o status detalhado de uma DNS específica: status atual, latência, últimas verificações e incidentes abertos. Identifique a DNS por ID (UUID) ou pelo nome exato.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "format": "uuid",
+              "description": "ID (UUID) da DNS."
+            },
+            "name": {
+              "type": "string",
+              "description": "Nome exato da DNS (usado quando 'id' não é fornecido)."
+            }
+          },
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "create_dns",
+        "title": "Cadastrar nova DNS",
+        "description": "Cadastra uma nova DNS (servidor) para monitoramento na conta do usuário. Ação sensível: cria um novo recurso na conta.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": false,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "name": {
+              "type": "string",
+              "minLength": 2,
+              "maxLength": 80,
+              "description": "Nome amigável para a DNS."
+            },
+            "host": {
+              "type": "string",
+              "minLength": 3,
+              "maxLength": 255,
+              "description": "Host (domínio ou IP) a ser monitorado."
+            },
+            "description": {
+              "type": "string",
+              "maxLength": 500,
+              "description": "Descrição opcional."
+            }
+          },
+          "required": [
+            "name",
+            "host"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "update_dns",
+        "title": "Editar DNS existente",
+        "description": "Atualiza os dados de uma DNS existente (nome, host, descrição). Ação sensível: modifica dados da conta.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "format": "uuid",
+              "description": "ID (UUID) da DNS a atualizar."
+            },
+            "name": {
+              "type": "string",
+              "minLength": 2,
+              "maxLength": 80
+            },
+            "host": {
+              "type": "string",
+              "minLength": 3,
+              "maxLength": 255
+            },
+            "description": {
+              "type": "string",
+              "maxLength": 500
+            }
+          },
+          "required": [
+            "id"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "delete_dns",
+        "title": "Excluir DNS",
+        "description": "Exclui permanentemente uma DNS monitorada da conta do usuário. AÇÃO IRREVERSÍVEL: peça confirmação explícita ao usuário antes de executar.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": true,
+          "idempotentHint": false,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "format": "uuid",
+              "description": "ID (UUID) da DNS a excluir."
+            },
+            "confirm": {
+              "type": "boolean",
+              "const": true,
+              "description": "Precisa ser 'true' para confirmar a exclusão irreversível."
+            }
+          },
+          "required": [
+            "id",
+            "confirm"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "list_alerts",
+        "title": "Listar alertas e ocorrências",
+        "description": "Lista incidentes (quedas) das DNS do usuário. Por padrão retorna as últimas 24 horas; use 'hours' para outro período.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "hours": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 720,
+              "description": "Período em horas (padrão 24, máx. 720)."
+            },
+            "only_open": {
+              "type": "boolean",
+              "description": "Retornar apenas incidentes ainda em aberto."
+            }
+          },
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "get_subscription",
+        "title": "Consultar assinatura e planos",
+        "description": "Retorna o plano atual do usuário, status, dias restantes e a lista de planos disponíveis (mensal/anual) para renovação.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "properties": {}
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "generate_report",
+        "title": "Gerar relatório de DNS",
+        "description": "Gera um relatório consolidado das DNS do usuário no período informado: quantidade por status, total de incidentes, latência média e ranking dos servidores mais instáveis.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "days": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 90,
+              "description": "Período em dias (padrão 7)."
+            }
+          },
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      }
+    ]
+  }
+}

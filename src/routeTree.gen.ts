@@ -12,12 +12,15 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as VerifyEmailRouteImport } from './routes/verify-email'
 import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
 import { Route as ResetPasswordRouteImport } from './routes/reset-password'
+import { Route as McpRouteImport } from './routes/mcp'
 import { Route as DnsRouteImport } from './routes/dns'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as StatusSlugRouteImport } from './routes/status.$slug'
 import { Route as AuthenticatedAppRouteImport } from './routes/_authenticated/app'
+import { Route as Char91DotwellKnownChar93OauthProtectedResourceRouteImport } from './routes/[.well-known]/oauth-protected-resource'
+import { Route as Char91DotmcpChar93ListToolsRouteImport } from './routes/[.mcp]/list-tools'
 import { Route as AuthenticatedAppIndexRouteImport } from './routes/_authenticated/app.index'
 import { Route as ApiPublicRadarRouteImport } from './routes/api/public/radar'
 import { Route as AuthenticatedAppSubscriptionRouteImport } from './routes/_authenticated/app.subscription'
@@ -28,6 +31,7 @@ import { Route as AuthenticatedAppDetectorRouteImport } from './routes/_authenti
 import { Route as AuthenticatedAppAlertsRouteImport } from './routes/_authenticated/app.alerts'
 import { Route as AuthenticatedAppAdminRouteImport } from './routes/_authenticated/app.admin'
 import { Route as AuthenticatedAppAchievementsRouteImport } from './routes/_authenticated/app.achievements'
+import { Route as Char91DotmcpChar93InvokeToolToolRouteImport } from './routes/[.mcp]/invoke-tool/$tool'
 import { Route as AuthenticatedAppServersIndexRouteImport } from './routes/_authenticated/app.servers.index'
 import { Route as ApiPublicWebhooksMercadopagoRouteImport } from './routes/api/public/webhooks/mercadopago'
 import { Route as ApiPublicRegionsTargetsRouteImport } from './routes/api/public/regions/targets'
@@ -49,6 +53,11 @@ const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
 const ResetPasswordRoute = ResetPasswordRouteImport.update({
   id: '/reset-password',
   path: '/reset-password',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const McpRoute = McpRouteImport.update({
+  id: '/mcp',
+  path: '/mcp',
   getParentRoute: () => rootRouteImport,
 } as any)
 const DnsRoute = DnsRouteImport.update({
@@ -80,6 +89,18 @@ const AuthenticatedAppRoute = AuthenticatedAppRouteImport.update({
   path: '/app',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const Char91DotwellKnownChar93OauthProtectedResourceRoute =
+  Char91DotwellKnownChar93OauthProtectedResourceRouteImport.update({
+    id: '/.well-known/oauth-protected-resource',
+    path: '/.well-known/oauth-protected-resource',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const Char91DotmcpChar93ListToolsRoute =
+  Char91DotmcpChar93ListToolsRouteImport.update({
+    id: '/.mcp/list-tools',
+    path: '/.mcp/list-tools',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const AuthenticatedAppIndexRoute = AuthenticatedAppIndexRouteImport.update({
   id: '/',
   path: '/',
@@ -134,6 +155,12 @@ const AuthenticatedAppAchievementsRoute =
     path: '/achievements',
     getParentRoute: () => AuthenticatedAppRoute,
   } as any)
+const Char91DotmcpChar93InvokeToolToolRoute =
+  Char91DotmcpChar93InvokeToolToolRouteImport.update({
+    id: '/.mcp/invoke-tool/$tool',
+    path: '/.mcp/invoke-tool/$tool',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const AuthenticatedAppServersIndexRoute =
   AuthenticatedAppServersIndexRouteImport.update({
     id: '/servers/',
@@ -178,11 +205,15 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
   '/dns': typeof DnsRoute
+  '/mcp': typeof McpRoute
   '/reset-password': typeof ResetPasswordRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/verify-email': typeof VerifyEmailRoute
+  '/.mcp/list-tools': typeof Char91DotmcpChar93ListToolsRoute
+  '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   '/app': typeof AuthenticatedAppRouteWithChildren
   '/status/$slug': typeof StatusSlugRoute
+  '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
   '/app/achievements': typeof AuthenticatedAppAchievementsRoute
   '/app/admin': typeof AuthenticatedAppAdminRoute
   '/app/alerts': typeof AuthenticatedAppAlertsRoute
@@ -205,10 +236,14 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
   '/dns': typeof DnsRoute
+  '/mcp': typeof McpRoute
   '/reset-password': typeof ResetPasswordRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/verify-email': typeof VerifyEmailRoute
+  '/.mcp/list-tools': typeof Char91DotmcpChar93ListToolsRoute
+  '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   '/status/$slug': typeof StatusSlugRoute
+  '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
   '/app/achievements': typeof AuthenticatedAppAchievementsRoute
   '/app/admin': typeof AuthenticatedAppAdminRoute
   '/app/alerts': typeof AuthenticatedAppAlertsRoute
@@ -233,11 +268,15 @@ export interface FileRoutesById {
   '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
   '/auth': typeof AuthRoute
   '/dns': typeof DnsRoute
+  '/mcp': typeof McpRoute
   '/reset-password': typeof ResetPasswordRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/verify-email': typeof VerifyEmailRoute
+  '/.mcp/list-tools': typeof Char91DotmcpChar93ListToolsRoute
+  '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   '/_authenticated/app': typeof AuthenticatedAppRouteWithChildren
   '/status/$slug': typeof StatusSlugRoute
+  '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
   '/_authenticated/app/achievements': typeof AuthenticatedAppAchievementsRoute
   '/_authenticated/app/admin': typeof AuthenticatedAppAdminRoute
   '/_authenticated/app/alerts': typeof AuthenticatedAppAlertsRoute
@@ -262,11 +301,15 @@ export interface FileRouteTypes {
     | '/'
     | '/auth'
     | '/dns'
+    | '/mcp'
     | '/reset-password'
     | '/sitemap.xml'
     | '/verify-email'
+    | '/.mcp/list-tools'
+    | '/.well-known/oauth-protected-resource'
     | '/app'
     | '/status/$slug'
+    | '/.mcp/invoke-tool/$tool'
     | '/app/achievements'
     | '/app/admin'
     | '/app/alerts'
@@ -289,10 +332,14 @@ export interface FileRouteTypes {
     | '/'
     | '/auth'
     | '/dns'
+    | '/mcp'
     | '/reset-password'
     | '/sitemap.xml'
     | '/verify-email'
+    | '/.mcp/list-tools'
+    | '/.well-known/oauth-protected-resource'
     | '/status/$slug'
+    | '/.mcp/invoke-tool/$tool'
     | '/app/achievements'
     | '/app/admin'
     | '/app/alerts'
@@ -316,11 +363,15 @@ export interface FileRouteTypes {
     | '/_authenticated'
     | '/auth'
     | '/dns'
+    | '/mcp'
     | '/reset-password'
     | '/sitemap.xml'
     | '/verify-email'
+    | '/.mcp/list-tools'
+    | '/.well-known/oauth-protected-resource'
     | '/_authenticated/app'
     | '/status/$slug'
+    | '/.mcp/invoke-tool/$tool'
     | '/_authenticated/app/achievements'
     | '/_authenticated/app/admin'
     | '/_authenticated/app/alerts'
@@ -345,10 +396,14 @@ export interface RootRouteChildren {
   AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
   AuthRoute: typeof AuthRoute
   DnsRoute: typeof DnsRoute
+  McpRoute: typeof McpRoute
   ResetPasswordRoute: typeof ResetPasswordRoute
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
   VerifyEmailRoute: typeof VerifyEmailRoute
+  Char91DotmcpChar93ListToolsRoute: typeof Char91DotmcpChar93ListToolsRoute
+  Char91DotwellKnownChar93OauthProtectedResourceRoute: typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   StatusSlugRoute: typeof StatusSlugRoute
+  Char91DotmcpChar93InvokeToolToolRoute: typeof Char91DotmcpChar93InvokeToolToolRoute
   ApiPublicRadarRoute: typeof ApiPublicRadarRoute
   ApiPublicCronCheckRoute: typeof ApiPublicCronCheckRoute
   ApiPublicRegionsReportRoute: typeof ApiPublicRegionsReportRoute
@@ -377,6 +432,13 @@ declare module '@tanstack/react-router' {
       path: '/reset-password'
       fullPath: '/reset-password'
       preLoaderRoute: typeof ResetPasswordRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/mcp': {
+      id: '/mcp'
+      path: '/mcp'
+      fullPath: '/mcp'
+      preLoaderRoute: typeof McpRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/dns': {
@@ -420,6 +482,20 @@ declare module '@tanstack/react-router' {
       fullPath: '/app'
       preLoaderRoute: typeof AuthenticatedAppRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/.well-known/oauth-protected-resource': {
+      id: '/.well-known/oauth-protected-resource'
+      path: '/.well-known/oauth-protected-resource'
+      fullPath: '/.well-known/oauth-protected-resource'
+      preLoaderRoute: typeof Char91DotwellKnownChar93OauthProtectedResourceRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/.mcp/list-tools': {
+      id: '/.mcp/list-tools'
+      path: '/.mcp/list-tools'
+      fullPath: '/.mcp/list-tools'
+      preLoaderRoute: typeof Char91DotmcpChar93ListToolsRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/_authenticated/app/': {
       id: '/_authenticated/app/'
@@ -490,6 +566,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/app/achievements'
       preLoaderRoute: typeof AuthenticatedAppAchievementsRouteImport
       parentRoute: typeof AuthenticatedAppRoute
+    }
+    '/.mcp/invoke-tool/$tool': {
+      id: '/.mcp/invoke-tool/$tool'
+      path: '/.mcp/invoke-tool/$tool'
+      fullPath: '/.mcp/invoke-tool/$tool'
+      preLoaderRoute: typeof Char91DotmcpChar93InvokeToolToolRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/_authenticated/app/servers/': {
       id: '/_authenticated/app/servers/'
@@ -592,10 +675,15 @@ const rootRouteChildren: RootRouteChildren = {
   AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
   AuthRoute: AuthRoute,
   DnsRoute: DnsRoute,
+  McpRoute: McpRoute,
   ResetPasswordRoute: ResetPasswordRoute,
   SitemapDotxmlRoute: SitemapDotxmlRoute,
   VerifyEmailRoute: VerifyEmailRoute,
+  Char91DotmcpChar93ListToolsRoute: Char91DotmcpChar93ListToolsRoute,
+  Char91DotwellKnownChar93OauthProtectedResourceRoute:
+    Char91DotwellKnownChar93OauthProtectedResourceRoute,
   StatusSlugRoute: StatusSlugRoute,
+  Char91DotmcpChar93InvokeToolToolRoute: Char91DotmcpChar93InvokeToolToolRoute,
   ApiPublicRadarRoute: ApiPublicRadarRoute,
   ApiPublicCronCheckRoute: ApiPublicCronCheckRoute,
   ApiPublicRegionsReportRoute: ApiPublicRegionsReportRoute,
