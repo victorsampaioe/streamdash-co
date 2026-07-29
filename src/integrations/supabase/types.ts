@@ -1161,6 +1161,21 @@ export type Database = {
         }
         Returns: boolean
       }
+      hub_get_ranking: {
+        Args: { _limit?: number; _period_days?: number }
+        Returns: {
+          business_count: number
+          handle: string
+          premium: boolean
+          rating_avg: number
+          rating_count: number
+          score: number
+          user_id: string
+          verified: boolean
+        }[]
+      }
+      hub_recompute_rating: { Args: { _user: string }; Returns: undefined }
+      hub_start_conversation: { Args: { _listing_id: string }; Returns: string }
       request_payout: {
         Args: { _pix_key: string; _pix_name: string; _pix_type: string }
         Returns: string
