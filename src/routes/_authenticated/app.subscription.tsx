@@ -17,6 +17,11 @@ export const Route = createFileRoute("/_authenticated/app/subscription")({
   head: () => ({
     meta: [
       { title: "Minha Assinatura — StreamMonitor" },
+      { name: "description", content: "Gerencie sua assinatura e renove seu plano StreamMonitor com PIX." },
+      { property: "og:title", content: "Minha Assinatura — StreamMonitor" },
+      { property: "og:description", content: "Gerencie sua assinatura e renove seu plano StreamMonitor com PIX." },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" },
       { name: "robots", content: "noindex" },
     ],
   }),
@@ -27,6 +32,7 @@ function SubscriptionPage() {
   const { data, isLoading, refetch } = useSubscription();
   const [openPlan, setOpenPlan] = useState<PlanId | null>(null);
   const [pix, setPix] = useState<Awaited<ReturnType<typeof createPixPayment>> | null>(null);
+  const [paymentError, setPaymentError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const createPix = useServerFn(createPixPayment);
 
@@ -43,6 +49,7 @@ function SubscriptionPage() {
     setOpenPlan(plan);
     setLoading(true);
     setPix(null);
+    setPaymentError(null);
     try {
       const res = await createPix({ data: { plan } });
       setPix(res);
@@ -51,8 +58,9 @@ function SubscriptionPage() {
       }
       refetch();
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Falha ao iniciar pagamento");
-      setOpenPlan(null);
+      const message = e instanceof Error ? e.message : "Falha ao iniciar pagamento";
+      setPaymentError(message);
+      toast.error(message);
     } finally {
       setLoading(false);
     }
@@ -121,25 +129,28 @@ function SubscriptionPage() {
 
       <PixDialog
         openPlan={openPlan}
-        onClose={() => { setOpenPlan(null); setPix(null); }}
+        onClose={() => { setOpenPlan(null); setPix(null); setPaymentError(null); }}
         pix={pix}
         loading={loading}
+        error={paymentError}
         onPaid={handlePaid}
       />
     </div>
   );
 }
 
-function PixDialog({ openPlan, onClose, pix, loading, onPaid }: {
+function PixDialog({ openPlan, onClose, pix, loading, error, onPaid }: {
   openPlan: PlanId | null;
   onClose: () => void;
   pix: Awaited<ReturnType<typeof createPixPayment>> | null;
   loading: boolean;
+  error: string | null;
   onPaid: () => Promise<void>;
 }) {
   const getStatus = useServerFn(getPaymentStatus);
   const [remaining, setRemaining] = useState<number>(0);
   const [checking, setChecking] = useState(false);
+  const pixCode = typeof pix?.copyPaste === "string" ? pix.copyPaste.trim() : "";
 
   // Countdown
   useEffect(() => {
@@ -199,14 +210,14 @@ function PixDialog({ openPlan, onClose, pix, loading, onPaid }: {
   }
 
   function copyCode() {
-    if (!pix?.copyPaste) return;
-    navigator.clipboard.writeText(pix.copyPaste);
+    if (!pixCode) return;
+    navigator.clipboard.writeText(pixCode);
     toast.success("Código PIX copiado!");
   }
 
   return (
     <Dialog open={!!openPlan} onOpenChange={(o) => !o && onClose()}>
-      <DialogContent className="max-w-md p-0 overflow-hidden">
+      <DialogContent className="max-w-md p-0">
         {/* Header gradient */}
         <div className="relative bg-gradient-to-br from-primary/20 via-primary/5 to-transparent border-b p-6">
           <DialogHeader className="space-y-2">
@@ -251,21 +262,22 @@ function PixDialog({ openPlan, onClose, pix, loading, onPaid }: {
             </div>
           )}
 
-          {!loading && pix?.integrationReady && pix.copyPaste && (
+          {!loading && !error && pix?.integrationReady && pixCode && (
             <>
-              <div className="rounded-xl border bg-card p-4 shadow-sm">
+              <div className="rounded-lg border bg-card p-4 shadow-sm">
                 <div className="text-center text-xs font-medium text-muted-foreground mb-3 uppercase tracking-wider">
                   Escaneie com o app do seu banco
                 </div>
-                <div className="mx-auto w-fit rounded-xl border-2 border-dashed border-primary/40 bg-white p-4 shadow-lg">
+                <div className="mx-auto flex w-full max-w-72 items-center justify-center rounded-lg border-2 border-primary/40 bg-white p-4">
                   <QRCodeSVG
-                    value={pix.copyPaste}
-                    size={240}
+                    value={pixCode}
+                    size={256}
                     level="M"
                     marginSize={2}
                     bgColor="#ffffff"
                     fgColor="#000000"
-                    style={{ display: "block", width: 240, height: 240 }}
+                    className="block h-auto w-full max-w-64"
+                    title="QR Code para pagamento PIX"
                   />
                 </div>
                 <div className="mt-3 text-center text-xs text-muted-foreground">
@@ -277,7 +289,7 @@ function PixDialog({ openPlan, onClose, pix, loading, onPaid }: {
                 <label className="text-xs font-medium text-muted-foreground">PIX Copia e Cola</label>
                 <div className="flex gap-2">
                   <div className="flex-1 rounded-md border bg-muted/40 px-3 py-2 font-mono text-[11px] truncate">
-                    {pix.copyPaste}
+                    {pixCode}
                   </div>
                   <Button size="sm" variant="secondary" onClick={copyCode}>
                     <Copy className="h-3.5 w-3.5 mr-1" /> Copiar
@@ -302,9 +314,9 @@ function PixDialog({ openPlan, onClose, pix, loading, onPaid }: {
             </>
           )}
 
-          {!loading && pix?.integrationReady && !pix.copyPaste && (
+          {!loading && (error || (pix?.integrationReady && !pixCode)) && (
             <div className="rounded-lg border border-destructive/40 bg-destructive/5 p-4 text-sm text-destructive">
-              Não foi possível montar o QR Code. Feche esta janela e tente gerar o PIX novamente.
+              {error ?? "O código PIX não foi recebido. Feche esta janela e tente gerar uma nova cobrança."}
             </div>
           )}
 
