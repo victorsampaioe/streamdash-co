@@ -38,19 +38,20 @@ function ServersList() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between flex-wrap gap-3">
-        <div>
+      <div className="flex items-start justify-between flex-wrap gap-3">
+        <div className="min-w-0">
           <h1 className="text-2xl font-semibold tracking-tight">Servidores</h1>
           <p className="text-sm text-muted-foreground">Todos os hosts monitorados. Porta fixa 80 / HTTP.</p>
         </div>
-        <div className="flex gap-2">
-          <SearchInput value={q} onChange={setQ} />
-          <Link to="/app/servers/new"><Button><Plus className="h-4 w-4 mr-1" />Novo</Button></Link>
+        <div className="flex gap-2 w-full sm:w-auto">
+          <div className="flex-1 sm:flex-initial"><SearchInput value={q} onChange={setQ} /></div>
+          <Link to="/app/servers/new"><Button className="shrink-0"><Plus className="h-4 w-4 sm:mr-1" /><span className="hidden sm:inline">Novo</span></Button></Link>
         </div>
       </div>
 
       <Card className="overflow-hidden">
-        <table className="w-full text-sm">
+        <div className="overflow-x-auto">
+        <table className="w-full text-sm min-w-[520px]">
           <thead className="bg-muted/40 text-xs uppercase tracking-wider text-muted-foreground">
             <tr>
               <th className="text-left p-3 font-medium">Nome</th>
@@ -89,6 +90,7 @@ function ServersList() {
             ))}
           </tbody>
         </table>
+        </div>
       </Card>
     </div>
   );

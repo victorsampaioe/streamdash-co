@@ -135,23 +135,23 @@ function ServerDetail() {
       </div>
 
       <div className="flex items-start justify-between flex-wrap gap-3">
-        <div>
-          <div className="flex items-center gap-3 mb-1">
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-2 sm:gap-3 mb-1 flex-wrap">
             <StatusDot status={server.current_status} />
-            <h1 className="text-2xl font-semibold tracking-tight">{server.name}</h1>
+            <h1 className="text-xl sm:text-2xl font-semibold tracking-tight break-words min-w-0">{server.name}</h1>
             <StatusLabel status={server.current_status} />
           </div>
-          {server.description && <p className="text-sm text-muted-foreground mt-1">{server.description}</p>}
+          {server.description && <p className="text-sm text-muted-foreground mt-1 break-words">{server.description}</p>}
         </div>
-        <div className="flex gap-2">
-          <Button variant="outline" size="sm" onClick={handleRun}><Play className="h-4 w-4 mr-1" />Verificar agora</Button>
+        <div className="flex gap-2 flex-wrap w-full sm:w-auto">
+          <Button variant="outline" size="sm" onClick={handleRun}><Play className="h-4 w-4 mr-1" />Verificar</Button>
           <Button variant="outline" size="sm" onClick={exportCsv}><Download className="h-4 w-4 mr-1" />CSV</Button>
           <Button variant="ghost" size="icon" onClick={() => confirm("Remover?") && del.mutate()}><Trash2 className="h-4 w-4 text-destructive" /></Button>
         </div>
       </div>
 
       <Tabs defaultValue="overview">
-        <TabsList>
+        <TabsList className="w-full sm:w-auto overflow-x-auto">
           <TabsTrigger value="overview">Visão geral</TabsTrigger>
           <TabsTrigger value="analysis">Análise</TabsTrigger>
           <TabsTrigger value="badge">Selo</TabsTrigger>
