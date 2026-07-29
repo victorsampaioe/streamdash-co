@@ -32,10 +32,12 @@ function ListingDetail() {
   const { data, isLoading } = useQuery<any>({
     queryKey: ["listing", id],
     queryFn: async () => {
-      const { data } = await (supabase as any).from("listings")
-        .select("*, hub_profiles(handle,bio,location,rating_avg,rating_count,business_count,verification_status)")
-        .eq("id", id).maybeSingle();
-      return data;
+      const { data: l } = await (supabase as any).from("listings").select("*").eq("id", id).maybeSingle();
+      if (!l) return null;
+      const { data: hp } = await (supabase as any).from("hub_profiles")
+        .select("handle,bio,location,rating_avg,rating_count,business_count,verification_status")
+        .eq("id", l.author_id).maybeSingle();
+      return { ...l, hub_profiles: hp };
     },
   });
 
