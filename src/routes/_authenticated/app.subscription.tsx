@@ -243,7 +243,7 @@ function PixDialog({ openPlan, onClose, pix, loading, onPaid }: {
           )}
         </div>
 
-        <div className="p-6 space-y-4">
+        <div className="p-6 space-y-5">
           {loading && (
             <div className="space-y-3">
               <div className="mx-auto h-56 w-56 rounded-xl bg-muted animate-pulse" />
@@ -253,15 +253,23 @@ function PixDialog({ openPlan, onClose, pix, loading, onPaid }: {
 
           {!loading && pix?.integrationReady && pix.copyPaste && (
             <>
-              <div className="mx-auto flex w-fit items-center justify-center rounded-xl border-2 border-primary/20 p-3 shadow-lg" style={{ backgroundColor: "#ffffff" }}>
-                <QRCodeCanvas
-                  value={pix.copyPaste}
-                  size={224}
-                  level="M"
-                  marginSize={1}
-                  bgColor="#ffffff"
-                  fgColor="#000000"
-                />
+              <div className="rounded-xl border bg-card p-4 shadow-sm">
+                <div className="text-center text-xs font-medium text-muted-foreground mb-3 uppercase tracking-wider">
+                  Escaneie com o app do seu banco
+                </div>
+                <div className="mx-auto w-fit rounded-xl border-2 border-dashed border-primary/30 bg-white p-4 shadow-sm">
+                  <QRCodeCanvas
+                    value={pix.copyPaste}
+                    size={240}
+                    level="M"
+                    marginSize={2}
+                    bgColor="#ffffff"
+                    fgColor="#000000"
+                  />
+                </div>
+                <div className="mt-3 text-center text-xs text-muted-foreground">
+                  Valor: <span className="font-semibold text-foreground">{formatBRL(pix.amountCents)}</span>
+                </div>
               </div>
 
               <div className="space-y-2">
