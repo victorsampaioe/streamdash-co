@@ -148,6 +148,137 @@ export type Database = {
           },
         ]
       }
+      conversations: {
+        Row: {
+          buyer_id: string
+          buyer_read_at: string | null
+          closed_at: string | null
+          created_at: string
+          id: string
+          last_message_at: string | null
+          listing_id: string | null
+          seller_id: string
+          seller_read_at: string | null
+          updated_at: string
+        }
+        Insert: {
+          buyer_id: string
+          buyer_read_at?: string | null
+          closed_at?: string | null
+          created_at?: string
+          id?: string
+          last_message_at?: string | null
+          listing_id?: string | null
+          seller_id: string
+          seller_read_at?: string | null
+          updated_at?: string
+        }
+        Update: {
+          buyer_id?: string
+          buyer_read_at?: string | null
+          closed_at?: string | null
+          created_at?: string
+          id?: string
+          last_message_at?: string | null
+          listing_id?: string | null
+          seller_id?: string
+          seller_read_at?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "conversations_listing_id_fkey"
+            columns: ["listing_id"]
+            isOneToOne: false
+            referencedRelation: "listings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      hub_profiles: {
+        Row: {
+          banned: boolean
+          bio: string | null
+          business_count: number
+          created_at: string
+          handle: string | null
+          id: string
+          location: string | null
+          rating_avg: number
+          rating_count: number
+          updated_at: string
+          verification_doc_path: string | null
+          verification_status: Database["public"]["Enums"]["hub_verification_status"]
+          verified_at: string | null
+        }
+        Insert: {
+          banned?: boolean
+          bio?: string | null
+          business_count?: number
+          created_at?: string
+          handle?: string | null
+          id: string
+          location?: string | null
+          rating_avg?: number
+          rating_count?: number
+          updated_at?: string
+          verification_doc_path?: string | null
+          verification_status?: Database["public"]["Enums"]["hub_verification_status"]
+          verified_at?: string | null
+        }
+        Update: {
+          banned?: boolean
+          bio?: string | null
+          business_count?: number
+          created_at?: string
+          handle?: string | null
+          id?: string
+          location?: string | null
+          rating_avg?: number
+          rating_count?: number
+          updated_at?: string
+          verification_doc_path?: string | null
+          verification_status?: Database["public"]["Enums"]["hub_verification_status"]
+          verified_at?: string | null
+        }
+        Relationships: []
+      }
+      hub_reports: {
+        Row: {
+          created_at: string
+          detail: string | null
+          id: string
+          reason: Database["public"]["Enums"]["hub_report_reason"]
+          reporter_id: string
+          resolved_at: string | null
+          resolved_by: string | null
+          target_id: string
+          target_kind: Database["public"]["Enums"]["hub_report_target"]
+        }
+        Insert: {
+          created_at?: string
+          detail?: string | null
+          id?: string
+          reason: Database["public"]["Enums"]["hub_report_reason"]
+          reporter_id: string
+          resolved_at?: string | null
+          resolved_by?: string | null
+          target_id: string
+          target_kind: Database["public"]["Enums"]["hub_report_target"]
+        }
+        Update: {
+          created_at?: string
+          detail?: string | null
+          id?: string
+          reason?: Database["public"]["Enums"]["hub_report_reason"]
+          reporter_id?: string
+          resolved_at?: string | null
+          resolved_by?: string | null
+          target_id?: string
+          target_kind?: Database["public"]["Enums"]["hub_report_target"]
+        }
+        Relationships: []
+      }
       incidents: {
         Row: {
           ended_at: string | null
@@ -183,6 +314,57 @@ export type Database = {
           },
         ]
       }
+      listings: {
+        Row: {
+          author_id: string
+          category: Database["public"]["Enums"]["listing_category"]
+          created_at: string
+          currency: string
+          description: string
+          flagged: boolean
+          highlight: boolean
+          id: string
+          kind: Database["public"]["Enums"]["listing_kind"]
+          location: string | null
+          price_cents: number | null
+          status: Database["public"]["Enums"]["listing_status"]
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          author_id: string
+          category: Database["public"]["Enums"]["listing_category"]
+          created_at?: string
+          currency?: string
+          description: string
+          flagged?: boolean
+          highlight?: boolean
+          id?: string
+          kind: Database["public"]["Enums"]["listing_kind"]
+          location?: string | null
+          price_cents?: number | null
+          status?: Database["public"]["Enums"]["listing_status"]
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          author_id?: string
+          category?: Database["public"]["Enums"]["listing_category"]
+          created_at?: string
+          currency?: string
+          description?: string
+          flagged?: boolean
+          highlight?: boolean
+          id?: string
+          kind?: Database["public"]["Enums"]["listing_kind"]
+          location?: string | null
+          price_cents?: number | null
+          status?: Database["public"]["Enums"]["listing_status"]
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       mcp_activity_log: {
         Row: {
           args: Json | null
@@ -215,6 +397,47 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      messages: {
+        Row: {
+          attachments: Json | null
+          body: string
+          contact_shared: boolean
+          conversation_id: string
+          created_at: string
+          flagged: boolean
+          id: string
+          sender_id: string
+        }
+        Insert: {
+          attachments?: Json | null
+          body: string
+          contact_shared?: boolean
+          conversation_id: string
+          created_at?: string
+          flagged?: boolean
+          id?: string
+          sender_id: string
+        }
+        Update: {
+          attachments?: Json | null
+          body?: string
+          contact_shared?: boolean
+          conversation_id?: string
+          created_at?: string
+          flagged?: boolean
+          id?: string
+          sender_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "messages_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "conversations"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       notifications_log: {
         Row: {
@@ -431,6 +654,44 @@ export type Database = {
           signup_bonus_days?: number
         }
         Relationships: []
+      }
+      ratings: {
+        Row: {
+          comment: string | null
+          conversation_id: string
+          created_at: string
+          id: string
+          ratee_id: string
+          rater_id: string
+          stars: number
+        }
+        Insert: {
+          comment?: string | null
+          conversation_id: string
+          created_at?: string
+          id?: string
+          ratee_id: string
+          rater_id: string
+          stars: number
+        }
+        Update: {
+          comment?: string | null
+          conversation_id?: string
+          created_at?: string
+          id?: string
+          ratee_id?: string
+          rater_id?: string
+          stars?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ratings_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "conversations"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       referrals: {
         Row: {
@@ -900,6 +1161,21 @@ export type Database = {
         }
         Returns: boolean
       }
+      hub_get_ranking: {
+        Args: { _limit?: number; _period_days?: number }
+        Returns: {
+          business_count: number
+          handle: string
+          premium: boolean
+          rating_avg: number
+          rating_count: number
+          score: number
+          user_id: string
+          verified: boolean
+        }[]
+      }
+      hub_recompute_rating: { Args: { _user: string }; Returns: undefined }
+      hub_start_conversation: { Args: { _listing_id: string }; Returns: string }
       request_payout: {
         Args: { _pix_key: string; _pix_name: string; _pix_type: string }
         Returns: string
@@ -909,6 +1185,38 @@ export type Database = {
     Enums: {
       alert_kind: "email" | "discord" | "telegram" | "webhook"
       app_role: "admin" | "user"
+      hub_report_reason:
+        | "spam"
+        | "scam"
+        | "contact_leak"
+        | "offensive"
+        | "other"
+      hub_report_target: "listing" | "user" | "message"
+      hub_verification_status: "none" | "pending" | "approved" | "rejected"
+      listing_category:
+        | "credits"
+        | "panel"
+        | "dedicated"
+        | "vps"
+        | "hosting"
+        | "cdn"
+        | "proxy"
+        | "domain"
+        | "cloudflare"
+        | "service_setup"
+        | "service_install"
+        | "service_migration"
+        | "service_dns"
+        | "service_dev"
+        | "service_bot"
+        | "service_site"
+        | "service_landing"
+        | "service_app"
+        | "partnership"
+        | "help"
+        | "other"
+      listing_kind: "offer" | "demand"
+      listing_status: "active" | "paused" | "closed" | "removed"
       payment_method: "pix" | "credit_card" | "boleto"
       payment_status:
         | "pending"
@@ -1048,6 +1356,34 @@ export const Constants = {
     Enums: {
       alert_kind: ["email", "discord", "telegram", "webhook"],
       app_role: ["admin", "user"],
+      hub_report_reason: ["spam", "scam", "contact_leak", "offensive", "other"],
+      hub_report_target: ["listing", "user", "message"],
+      hub_verification_status: ["none", "pending", "approved", "rejected"],
+      listing_category: [
+        "credits",
+        "panel",
+        "dedicated",
+        "vps",
+        "hosting",
+        "cdn",
+        "proxy",
+        "domain",
+        "cloudflare",
+        "service_setup",
+        "service_install",
+        "service_migration",
+        "service_dns",
+        "service_dev",
+        "service_bot",
+        "service_site",
+        "service_landing",
+        "service_app",
+        "partnership",
+        "help",
+        "other",
+      ],
+      listing_kind: ["offer", "demand"],
+      listing_status: ["active", "paused", "closed", "removed"],
       payment_method: ["pix", "credit_card", "boleto"],
       payment_status: [
         "pending",

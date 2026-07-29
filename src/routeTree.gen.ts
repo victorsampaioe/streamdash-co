@@ -27,6 +27,7 @@ import { Route as AuthenticatedAppSubscriptionRouteImport } from './routes/_auth
 import { Route as AuthenticatedAppReferralsRouteImport } from './routes/_authenticated/app.referrals'
 import { Route as AuthenticatedAppRankingRouteImport } from './routes/_authenticated/app.ranking'
 import { Route as AuthenticatedAppRadarRouteImport } from './routes/_authenticated/app.radar'
+import { Route as AuthenticatedAppHubRouteImport } from './routes/_authenticated/app.hub'
 import { Route as AuthenticatedAppDetectorRouteImport } from './routes/_authenticated/app.detector'
 import { Route as AuthenticatedAppAlertsRouteImport } from './routes/_authenticated/app.alerts'
 import { Route as AuthenticatedAppAiIntegrationRouteImport } from './routes/_authenticated/app.ai-integration'
@@ -35,12 +36,21 @@ import { Route as AuthenticatedAppAchievementsRouteImport } from './routes/_auth
 import { Route as Char91DotmcpChar93InvokeToolToolRouteImport } from './routes/[.mcp]/invoke-tool/$tool'
 import { Route as DotlovableOauthConsentRouteImport } from './routes/[.]lovable.oauth.consent'
 import { Route as AuthenticatedAppServersIndexRouteImport } from './routes/_authenticated/app.servers.index'
+import { Route as AuthenticatedAppHubIndexRouteImport } from './routes/_authenticated/app.hub.index'
 import { Route as ApiPublicWebhooksMercadopagoRouteImport } from './routes/api/public/webhooks/mercadopago'
 import { Route as ApiPublicRegionsTargetsRouteImport } from './routes/api/public/regions/targets'
 import { Route as ApiPublicRegionsReportRouteImport } from './routes/api/public/regions/report'
 import { Route as ApiPublicCronCheckRouteImport } from './routes/api/public/cron/check'
 import { Route as AuthenticatedAppServersNewRouteImport } from './routes/_authenticated/app.servers.new'
 import { Route as AuthenticatedAppServersIdRouteImport } from './routes/_authenticated/app.servers.$id'
+import { Route as AuthenticatedAppHubVerificationRouteImport } from './routes/_authenticated/app.hub.verification'
+import { Route as AuthenticatedAppHubServicesRouteImport } from './routes/_authenticated/app.hub.services'
+import { Route as AuthenticatedAppHubRankingRouteImport } from './routes/_authenticated/app.hub.ranking'
+import { Route as AuthenticatedAppHubNewRouteImport } from './routes/_authenticated/app.hub.new'
+import { Route as AuthenticatedAppHubMessagesRouteImport } from './routes/_authenticated/app.hub.messages'
+import { Route as AuthenticatedAppHubDemandRouteImport } from './routes/_authenticated/app.hub.demand'
+import { Route as AuthenticatedAppHubUHandleRouteImport } from './routes/_authenticated/app.hub.u.$handle'
+import { Route as AuthenticatedAppHubLIdRouteImport } from './routes/_authenticated/app.hub.l.$id'
 
 const VerifyEmailRoute = VerifyEmailRouteImport.update({
   id: '/verify-email',
@@ -135,6 +145,11 @@ const AuthenticatedAppRadarRoute = AuthenticatedAppRadarRouteImport.update({
   path: '/radar',
   getParentRoute: () => AuthenticatedAppRoute,
 } as any)
+const AuthenticatedAppHubRoute = AuthenticatedAppHubRouteImport.update({
+  id: '/hub',
+  path: '/hub',
+  getParentRoute: () => AuthenticatedAppRoute,
+} as any)
 const AuthenticatedAppDetectorRoute =
   AuthenticatedAppDetectorRouteImport.update({
     id: '/detector',
@@ -180,6 +195,12 @@ const AuthenticatedAppServersIndexRoute =
     path: '/servers/',
     getParentRoute: () => AuthenticatedAppRoute,
   } as any)
+const AuthenticatedAppHubIndexRoute =
+  AuthenticatedAppHubIndexRouteImport.update({
+    id: '/',
+    path: '/',
+    getParentRoute: () => AuthenticatedAppHubRoute,
+  } as any)
 const ApiPublicWebhooksMercadopagoRoute =
   ApiPublicWebhooksMercadopagoRouteImport.update({
     id: '/api/public/webhooks/mercadopago',
@@ -213,6 +234,52 @@ const AuthenticatedAppServersIdRoute =
     path: '/servers/$id',
     getParentRoute: () => AuthenticatedAppRoute,
   } as any)
+const AuthenticatedAppHubVerificationRoute =
+  AuthenticatedAppHubVerificationRouteImport.update({
+    id: '/verification',
+    path: '/verification',
+    getParentRoute: () => AuthenticatedAppHubRoute,
+  } as any)
+const AuthenticatedAppHubServicesRoute =
+  AuthenticatedAppHubServicesRouteImport.update({
+    id: '/services',
+    path: '/services',
+    getParentRoute: () => AuthenticatedAppHubRoute,
+  } as any)
+const AuthenticatedAppHubRankingRoute =
+  AuthenticatedAppHubRankingRouteImport.update({
+    id: '/ranking',
+    path: '/ranking',
+    getParentRoute: () => AuthenticatedAppHubRoute,
+  } as any)
+const AuthenticatedAppHubNewRoute = AuthenticatedAppHubNewRouteImport.update({
+  id: '/new',
+  path: '/new',
+  getParentRoute: () => AuthenticatedAppHubRoute,
+} as any)
+const AuthenticatedAppHubMessagesRoute =
+  AuthenticatedAppHubMessagesRouteImport.update({
+    id: '/messages',
+    path: '/messages',
+    getParentRoute: () => AuthenticatedAppHubRoute,
+  } as any)
+const AuthenticatedAppHubDemandRoute =
+  AuthenticatedAppHubDemandRouteImport.update({
+    id: '/demand',
+    path: '/demand',
+    getParentRoute: () => AuthenticatedAppHubRoute,
+  } as any)
+const AuthenticatedAppHubUHandleRoute =
+  AuthenticatedAppHubUHandleRouteImport.update({
+    id: '/u/$handle',
+    path: '/u/$handle',
+    getParentRoute: () => AuthenticatedAppHubRoute,
+  } as any)
+const AuthenticatedAppHubLIdRoute = AuthenticatedAppHubLIdRouteImport.update({
+  id: '/l/$id',
+  path: '/l/$id',
+  getParentRoute: () => AuthenticatedAppHubRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -233,19 +300,29 @@ export interface FileRoutesByFullPath {
   '/app/ai-integration': typeof AuthenticatedAppAiIntegrationRoute
   '/app/alerts': typeof AuthenticatedAppAlertsRoute
   '/app/detector': typeof AuthenticatedAppDetectorRoute
+  '/app/hub': typeof AuthenticatedAppHubRouteWithChildren
   '/app/radar': typeof AuthenticatedAppRadarRoute
   '/app/ranking': typeof AuthenticatedAppRankingRoute
   '/app/referrals': typeof AuthenticatedAppReferralsRoute
   '/app/subscription': typeof AuthenticatedAppSubscriptionRoute
   '/api/public/radar': typeof ApiPublicRadarRoute
   '/app/': typeof AuthenticatedAppIndexRoute
+  '/app/hub/demand': typeof AuthenticatedAppHubDemandRoute
+  '/app/hub/messages': typeof AuthenticatedAppHubMessagesRoute
+  '/app/hub/new': typeof AuthenticatedAppHubNewRoute
+  '/app/hub/ranking': typeof AuthenticatedAppHubRankingRoute
+  '/app/hub/services': typeof AuthenticatedAppHubServicesRoute
+  '/app/hub/verification': typeof AuthenticatedAppHubVerificationRoute
   '/app/servers/$id': typeof AuthenticatedAppServersIdRoute
   '/app/servers/new': typeof AuthenticatedAppServersNewRoute
   '/api/public/cron/check': typeof ApiPublicCronCheckRoute
   '/api/public/regions/report': typeof ApiPublicRegionsReportRoute
   '/api/public/regions/targets': typeof ApiPublicRegionsTargetsRoute
   '/api/public/webhooks/mercadopago': typeof ApiPublicWebhooksMercadopagoRoute
+  '/app/hub/': typeof AuthenticatedAppHubIndexRoute
   '/app/servers/': typeof AuthenticatedAppServersIndexRoute
+  '/app/hub/l/$id': typeof AuthenticatedAppHubLIdRoute
+  '/app/hub/u/$handle': typeof AuthenticatedAppHubUHandleRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -271,13 +348,22 @@ export interface FileRoutesByTo {
   '/app/subscription': typeof AuthenticatedAppSubscriptionRoute
   '/api/public/radar': typeof ApiPublicRadarRoute
   '/app': typeof AuthenticatedAppIndexRoute
+  '/app/hub/demand': typeof AuthenticatedAppHubDemandRoute
+  '/app/hub/messages': typeof AuthenticatedAppHubMessagesRoute
+  '/app/hub/new': typeof AuthenticatedAppHubNewRoute
+  '/app/hub/ranking': typeof AuthenticatedAppHubRankingRoute
+  '/app/hub/services': typeof AuthenticatedAppHubServicesRoute
+  '/app/hub/verification': typeof AuthenticatedAppHubVerificationRoute
   '/app/servers/$id': typeof AuthenticatedAppServersIdRoute
   '/app/servers/new': typeof AuthenticatedAppServersNewRoute
   '/api/public/cron/check': typeof ApiPublicCronCheckRoute
   '/api/public/regions/report': typeof ApiPublicRegionsReportRoute
   '/api/public/regions/targets': typeof ApiPublicRegionsTargetsRoute
   '/api/public/webhooks/mercadopago': typeof ApiPublicWebhooksMercadopagoRoute
+  '/app/hub': typeof AuthenticatedAppHubIndexRoute
   '/app/servers': typeof AuthenticatedAppServersIndexRoute
+  '/app/hub/l/$id': typeof AuthenticatedAppHubLIdRoute
+  '/app/hub/u/$handle': typeof AuthenticatedAppHubUHandleRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -300,19 +386,29 @@ export interface FileRoutesById {
   '/_authenticated/app/ai-integration': typeof AuthenticatedAppAiIntegrationRoute
   '/_authenticated/app/alerts': typeof AuthenticatedAppAlertsRoute
   '/_authenticated/app/detector': typeof AuthenticatedAppDetectorRoute
+  '/_authenticated/app/hub': typeof AuthenticatedAppHubRouteWithChildren
   '/_authenticated/app/radar': typeof AuthenticatedAppRadarRoute
   '/_authenticated/app/ranking': typeof AuthenticatedAppRankingRoute
   '/_authenticated/app/referrals': typeof AuthenticatedAppReferralsRoute
   '/_authenticated/app/subscription': typeof AuthenticatedAppSubscriptionRoute
   '/api/public/radar': typeof ApiPublicRadarRoute
   '/_authenticated/app/': typeof AuthenticatedAppIndexRoute
+  '/_authenticated/app/hub/demand': typeof AuthenticatedAppHubDemandRoute
+  '/_authenticated/app/hub/messages': typeof AuthenticatedAppHubMessagesRoute
+  '/_authenticated/app/hub/new': typeof AuthenticatedAppHubNewRoute
+  '/_authenticated/app/hub/ranking': typeof AuthenticatedAppHubRankingRoute
+  '/_authenticated/app/hub/services': typeof AuthenticatedAppHubServicesRoute
+  '/_authenticated/app/hub/verification': typeof AuthenticatedAppHubVerificationRoute
   '/_authenticated/app/servers/$id': typeof AuthenticatedAppServersIdRoute
   '/_authenticated/app/servers/new': typeof AuthenticatedAppServersNewRoute
   '/api/public/cron/check': typeof ApiPublicCronCheckRoute
   '/api/public/regions/report': typeof ApiPublicRegionsReportRoute
   '/api/public/regions/targets': typeof ApiPublicRegionsTargetsRoute
   '/api/public/webhooks/mercadopago': typeof ApiPublicWebhooksMercadopagoRoute
+  '/_authenticated/app/hub/': typeof AuthenticatedAppHubIndexRoute
   '/_authenticated/app/servers/': typeof AuthenticatedAppServersIndexRoute
+  '/_authenticated/app/hub/l/$id': typeof AuthenticatedAppHubLIdRoute
+  '/_authenticated/app/hub/u/$handle': typeof AuthenticatedAppHubUHandleRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -335,19 +431,29 @@ export interface FileRouteTypes {
     | '/app/ai-integration'
     | '/app/alerts'
     | '/app/detector'
+    | '/app/hub'
     | '/app/radar'
     | '/app/ranking'
     | '/app/referrals'
     | '/app/subscription'
     | '/api/public/radar'
     | '/app/'
+    | '/app/hub/demand'
+    | '/app/hub/messages'
+    | '/app/hub/new'
+    | '/app/hub/ranking'
+    | '/app/hub/services'
+    | '/app/hub/verification'
     | '/app/servers/$id'
     | '/app/servers/new'
     | '/api/public/cron/check'
     | '/api/public/regions/report'
     | '/api/public/regions/targets'
     | '/api/public/webhooks/mercadopago'
+    | '/app/hub/'
     | '/app/servers/'
+    | '/app/hub/l/$id'
+    | '/app/hub/u/$handle'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -373,13 +479,22 @@ export interface FileRouteTypes {
     | '/app/subscription'
     | '/api/public/radar'
     | '/app'
+    | '/app/hub/demand'
+    | '/app/hub/messages'
+    | '/app/hub/new'
+    | '/app/hub/ranking'
+    | '/app/hub/services'
+    | '/app/hub/verification'
     | '/app/servers/$id'
     | '/app/servers/new'
     | '/api/public/cron/check'
     | '/api/public/regions/report'
     | '/api/public/regions/targets'
     | '/api/public/webhooks/mercadopago'
+    | '/app/hub'
     | '/app/servers'
+    | '/app/hub/l/$id'
+    | '/app/hub/u/$handle'
   id:
     | '__root__'
     | '/'
@@ -401,19 +516,29 @@ export interface FileRouteTypes {
     | '/_authenticated/app/ai-integration'
     | '/_authenticated/app/alerts'
     | '/_authenticated/app/detector'
+    | '/_authenticated/app/hub'
     | '/_authenticated/app/radar'
     | '/_authenticated/app/ranking'
     | '/_authenticated/app/referrals'
     | '/_authenticated/app/subscription'
     | '/api/public/radar'
     | '/_authenticated/app/'
+    | '/_authenticated/app/hub/demand'
+    | '/_authenticated/app/hub/messages'
+    | '/_authenticated/app/hub/new'
+    | '/_authenticated/app/hub/ranking'
+    | '/_authenticated/app/hub/services'
+    | '/_authenticated/app/hub/verification'
     | '/_authenticated/app/servers/$id'
     | '/_authenticated/app/servers/new'
     | '/api/public/cron/check'
     | '/api/public/regions/report'
     | '/api/public/regions/targets'
     | '/api/public/webhooks/mercadopago'
+    | '/_authenticated/app/hub/'
     | '/_authenticated/app/servers/'
+    | '/_authenticated/app/hub/l/$id'
+    | '/_authenticated/app/hub/u/$handle'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -565,6 +690,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAppRadarRouteImport
       parentRoute: typeof AuthenticatedAppRoute
     }
+    '/_authenticated/app/hub': {
+      id: '/_authenticated/app/hub'
+      path: '/hub'
+      fullPath: '/app/hub'
+      preLoaderRoute: typeof AuthenticatedAppHubRouteImport
+      parentRoute: typeof AuthenticatedAppRoute
+    }
     '/_authenticated/app/detector': {
       id: '/_authenticated/app/detector'
       path: '/detector'
@@ -621,6 +753,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAppServersIndexRouteImport
       parentRoute: typeof AuthenticatedAppRoute
     }
+    '/_authenticated/app/hub/': {
+      id: '/_authenticated/app/hub/'
+      path: '/'
+      fullPath: '/app/hub/'
+      preLoaderRoute: typeof AuthenticatedAppHubIndexRouteImport
+      parentRoute: typeof AuthenticatedAppHubRoute
+    }
     '/api/public/webhooks/mercadopago': {
       id: '/api/public/webhooks/mercadopago'
       path: '/api/public/webhooks/mercadopago'
@@ -663,8 +802,91 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAppServersIdRouteImport
       parentRoute: typeof AuthenticatedAppRoute
     }
+    '/_authenticated/app/hub/verification': {
+      id: '/_authenticated/app/hub/verification'
+      path: '/verification'
+      fullPath: '/app/hub/verification'
+      preLoaderRoute: typeof AuthenticatedAppHubVerificationRouteImport
+      parentRoute: typeof AuthenticatedAppHubRoute
+    }
+    '/_authenticated/app/hub/services': {
+      id: '/_authenticated/app/hub/services'
+      path: '/services'
+      fullPath: '/app/hub/services'
+      preLoaderRoute: typeof AuthenticatedAppHubServicesRouteImport
+      parentRoute: typeof AuthenticatedAppHubRoute
+    }
+    '/_authenticated/app/hub/ranking': {
+      id: '/_authenticated/app/hub/ranking'
+      path: '/ranking'
+      fullPath: '/app/hub/ranking'
+      preLoaderRoute: typeof AuthenticatedAppHubRankingRouteImport
+      parentRoute: typeof AuthenticatedAppHubRoute
+    }
+    '/_authenticated/app/hub/new': {
+      id: '/_authenticated/app/hub/new'
+      path: '/new'
+      fullPath: '/app/hub/new'
+      preLoaderRoute: typeof AuthenticatedAppHubNewRouteImport
+      parentRoute: typeof AuthenticatedAppHubRoute
+    }
+    '/_authenticated/app/hub/messages': {
+      id: '/_authenticated/app/hub/messages'
+      path: '/messages'
+      fullPath: '/app/hub/messages'
+      preLoaderRoute: typeof AuthenticatedAppHubMessagesRouteImport
+      parentRoute: typeof AuthenticatedAppHubRoute
+    }
+    '/_authenticated/app/hub/demand': {
+      id: '/_authenticated/app/hub/demand'
+      path: '/demand'
+      fullPath: '/app/hub/demand'
+      preLoaderRoute: typeof AuthenticatedAppHubDemandRouteImport
+      parentRoute: typeof AuthenticatedAppHubRoute
+    }
+    '/_authenticated/app/hub/u/$handle': {
+      id: '/_authenticated/app/hub/u/$handle'
+      path: '/u/$handle'
+      fullPath: '/app/hub/u/$handle'
+      preLoaderRoute: typeof AuthenticatedAppHubUHandleRouteImport
+      parentRoute: typeof AuthenticatedAppHubRoute
+    }
+    '/_authenticated/app/hub/l/$id': {
+      id: '/_authenticated/app/hub/l/$id'
+      path: '/l/$id'
+      fullPath: '/app/hub/l/$id'
+      preLoaderRoute: typeof AuthenticatedAppHubLIdRouteImport
+      parentRoute: typeof AuthenticatedAppHubRoute
+    }
   }
 }
+
+interface AuthenticatedAppHubRouteChildren {
+  AuthenticatedAppHubDemandRoute: typeof AuthenticatedAppHubDemandRoute
+  AuthenticatedAppHubMessagesRoute: typeof AuthenticatedAppHubMessagesRoute
+  AuthenticatedAppHubNewRoute: typeof AuthenticatedAppHubNewRoute
+  AuthenticatedAppHubRankingRoute: typeof AuthenticatedAppHubRankingRoute
+  AuthenticatedAppHubServicesRoute: typeof AuthenticatedAppHubServicesRoute
+  AuthenticatedAppHubVerificationRoute: typeof AuthenticatedAppHubVerificationRoute
+  AuthenticatedAppHubIndexRoute: typeof AuthenticatedAppHubIndexRoute
+  AuthenticatedAppHubLIdRoute: typeof AuthenticatedAppHubLIdRoute
+  AuthenticatedAppHubUHandleRoute: typeof AuthenticatedAppHubUHandleRoute
+}
+
+const AuthenticatedAppHubRouteChildren: AuthenticatedAppHubRouteChildren = {
+  AuthenticatedAppHubDemandRoute: AuthenticatedAppHubDemandRoute,
+  AuthenticatedAppHubMessagesRoute: AuthenticatedAppHubMessagesRoute,
+  AuthenticatedAppHubNewRoute: AuthenticatedAppHubNewRoute,
+  AuthenticatedAppHubRankingRoute: AuthenticatedAppHubRankingRoute,
+  AuthenticatedAppHubServicesRoute: AuthenticatedAppHubServicesRoute,
+  AuthenticatedAppHubVerificationRoute: AuthenticatedAppHubVerificationRoute,
+  AuthenticatedAppHubIndexRoute: AuthenticatedAppHubIndexRoute,
+  AuthenticatedAppHubLIdRoute: AuthenticatedAppHubLIdRoute,
+  AuthenticatedAppHubUHandleRoute: AuthenticatedAppHubUHandleRoute,
+}
+
+const AuthenticatedAppHubRouteWithChildren =
+  AuthenticatedAppHubRoute._addFileChildren(AuthenticatedAppHubRouteChildren)
 
 interface AuthenticatedAppRouteChildren {
   AuthenticatedAppAchievementsRoute: typeof AuthenticatedAppAchievementsRoute
@@ -672,6 +894,7 @@ interface AuthenticatedAppRouteChildren {
   AuthenticatedAppAiIntegrationRoute: typeof AuthenticatedAppAiIntegrationRoute
   AuthenticatedAppAlertsRoute: typeof AuthenticatedAppAlertsRoute
   AuthenticatedAppDetectorRoute: typeof AuthenticatedAppDetectorRoute
+  AuthenticatedAppHubRoute: typeof AuthenticatedAppHubRouteWithChildren
   AuthenticatedAppRadarRoute: typeof AuthenticatedAppRadarRoute
   AuthenticatedAppRankingRoute: typeof AuthenticatedAppRankingRoute
   AuthenticatedAppReferralsRoute: typeof AuthenticatedAppReferralsRoute
@@ -688,6 +911,7 @@ const AuthenticatedAppRouteChildren: AuthenticatedAppRouteChildren = {
   AuthenticatedAppAiIntegrationRoute: AuthenticatedAppAiIntegrationRoute,
   AuthenticatedAppAlertsRoute: AuthenticatedAppAlertsRoute,
   AuthenticatedAppDetectorRoute: AuthenticatedAppDetectorRoute,
+  AuthenticatedAppHubRoute: AuthenticatedAppHubRouteWithChildren,
   AuthenticatedAppRadarRoute: AuthenticatedAppRadarRoute,
   AuthenticatedAppRankingRoute: AuthenticatedAppRankingRoute,
   AuthenticatedAppReferralsRoute: AuthenticatedAppReferralsRoute,
