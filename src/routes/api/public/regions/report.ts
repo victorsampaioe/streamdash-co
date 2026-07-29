@@ -17,7 +17,9 @@ export const Route = createFileRoute("/api/public/regions/report")({
       POST: async ({ request }) => {
         const raw = await request.text();
         const sig = request.headers.get("x-signature");
-        if (!verify(raw, sig)) return new Response("Forbidden", { status: 403 });
+        const { verifyRegionSignature } = await import("@/lib/region-auth.server");
+        if (!verifyRegionSignature(raw, sig)) return new Response("Forbidden", { status: 403 });
+
 
         let parsed;
         try { parsed = payloadSchema.parse(JSON.parse(raw)); }
