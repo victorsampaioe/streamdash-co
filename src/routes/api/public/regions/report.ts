@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { z } from "zod";
 
-const payloadSchema = z.object({
+const itemSchema = z.object({
   server_id: z.string().uuid(),
   region_code: z.string().min(1).max(64),
   status: z.enum(["up", "down", "degraded", "unknown", "pending"]),
@@ -9,6 +9,12 @@ const payloadSchema = z.object({
   latency_ms: z.number().int().nullable().optional(),
   error: z.string().max(500).nullable().optional(),
 });
+
+// Aceita 1 report (formato antigo) ou um lote { reports: [...] } (novo worker).
+const payloadSchema = z.union([
+  itemSchema.transform((r) => [r]),
+  z.object({ reports: z.array(itemSchema).min(1).max(200) }).transform((b) => b.reports),
+]);
 
 
 export const Route = createFileRoute("/api/public/regions/report")({
@@ -21,54 +27,67 @@ export const Route = createFileRoute("/api/public/regions/report")({
         if (!verifyRegionSignature(raw, sig)) return new Response("Forbidden", { status: 403 });
 
 
-        let parsed;
-        try { parsed = payloadSchema.parse(JSON.parse(raw)); }
+        let items: z.infer<typeof itemSchema>[];
+        try { items = payloadSchema.parse(JSON.parse(raw)); }
         catch (e: any) { return new Response(`Invalid payload: ${e?.message ?? "error"}`, { status: 400 }); }
 
         const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
-        const { data: region } = await supabaseAdmin
-          .from("check_regions").select("code, name, city, flag").eq("code", parsed.region_code).maybeSingle();
-        if (!region) return new Response("Unknown region_code", { status: 400 });
+        const codes = [...new Set(items.map((i) => i.region_code))];
+        const { data: regions } = await supabaseAdmin
+          .from("check_regions").select("code, name, city, flag").in("code", codes);
+        const regionMap = new Map((regions ?? []).map((r) => [r.code, r]));
+        if (codes.some((c) => !regionMap.has(c))) {
+          return new Response("Unknown region_code", { status: 400 });
+        }
 
-        // Fetch previous status for this (server, region) to detect transitions.
-        const { data: prev } = await supabaseAdmin
+        // Previous status per (server, region) to detect transitions.
+        const serverIds = [...new Set(items.map((i) => i.server_id))];
+        const { data: prevRows } = await supabaseAdmin
           .from("region_checks")
-          .select("status")
-          .eq("server_id", parsed.server_id)
-          .eq("region_code", parsed.region_code)
+          .select("server_id, region_code, status, checked_at")
+          .in("server_id", serverIds)
+          .in("region_code", codes)
           .order("checked_at", { ascending: false })
-          .limit(1)
-          .maybeSingle();
+          .limit(2000);
+        const prevMap = new Map<string, string>();
+        for (const r of prevRows ?? []) {
+          const k = `${r.server_id}|${r.region_code}`;
+          if (!prevMap.has(k)) prevMap.set(k, r.status);
+        }
 
-        const { error } = await supabaseAdmin.from("region_checks").insert({
-          server_id: parsed.server_id,
-          region_code: parsed.region_code,
-          status: parsed.status,
-          http_status: parsed.http_status ?? null,
-          latency_ms: parsed.latency_ms ?? null,
-          error: parsed.error ?? null,
-        });
+        const { error } = await supabaseAdmin.from("region_checks").insert(
+          items.map((i) => ({
+            server_id: i.server_id,
+            region_code: i.region_code,
+            status: i.status,
+            http_status: i.http_status ?? null,
+            latency_ms: i.latency_ms ?? null,
+            error: i.error ?? null,
+          })),
+        );
         if (error) return new Response(`DB error: ${error.message}`, { status: 500 });
 
         // Fire alerts on state transitions (down / recovery).
-        const prevStatus = prev?.status ?? null;
-        const goingDown = parsed.status === "down" && prevStatus !== "down";
-        const recovering = parsed.status === "up" && prevStatus === "down";
-        if (goingDown || recovering) {
+        for (const i of items) {
+          const prevStatus = prevMap.get(`${i.server_id}|${i.region_code}`) ?? null;
+          const goingDown = i.status === "down" && prevStatus !== "down";
+          const recovering = i.status === "up" && prevStatus === "down";
+          if (!goingDown && !recovering) continue;
           try {
+            const region = regionMap.get(i.region_code)!;
             const { sendRegionAlert } = await import("@/lib/monitoring.server");
             await sendRegionAlert({
-              serverId: parsed.server_id,
+              serverId: i.server_id,
               region: { code: region.code, name: region.name, city: region.city, flag: region.flag },
               event: goingDown ? "down" : "up",
-              latencyMs: parsed.latency_ms ?? null,
-              error: parsed.error ?? null,
+              latencyMs: i.latency_ms ?? null,
+              error: i.error ?? null,
             });
           } catch { /* non-fatal */ }
         }
 
-        return Response.json({ ok: true });
+        return Response.json({ ok: true, inserted: items.length });
       },
     },
   },
