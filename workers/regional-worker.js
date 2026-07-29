@@ -43,7 +43,7 @@ function requireEnv(env) {
 
 
 async function loadTargets(env) {
-  const sig = await hmacHex(env.REGION_WORKER_SECRET, "targets");
+  const sig = await hmacHex(cleanSecret(env), "targets");
   const res = await fetch(`${env.ENDPOINT_BASE}/api/public/regions/targets`, {
     headers: { "x-signature": sig },
   });
@@ -89,7 +89,7 @@ async function checkOne(env, target) {
     latency_ms: latency,
     error,
   });
-  const sig = await hmacHex(env.REGION_WORKER_SECRET, body);
+  const sig = await hmacHex(cleanSecret(env), body);
   const res = await fetch(`${env.ENDPOINT_BASE}/api/public/regions/report`, {
     method: "POST",
     headers: { "content-type": "application/json", "x-signature": sig },
