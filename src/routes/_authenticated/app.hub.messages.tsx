@@ -35,9 +35,16 @@ function MessagesPage() {
     queryFn: async () => {
       const { data } = await (supabase as any)
         .from("conversations")
-        .select("id,listing_id,buyer_id,seller_id,last_message_at,closed_at,listings(title),buyer:profiles!conversations_buyer_id_fkey(full_name,email),seller:profiles!conversations_seller_id_fkey(full_name,email)")
+        .select("id,listing_id,buyer_id,seller_id,last_message_at,closed_at,listings(title)")
         .order("last_message_at", { ascending: false, nullsFirst: false });
-      return (data ?? []) as any[];
+      const rows = (data ?? []) as any[];
+      const ids = Array.from(new Set(rows.flatMap((r) => [r.buyer_id, r.seller_id])));
+      if (ids.length) {
+        const { data: profs } = await (supabase as any).from("profiles").select("id,full_name,email").in("id", ids);
+        const map = new Map((profs ?? []).map((p: any) => [p.id, p]));
+        for (const r of rows) { r.buyer = map.get(r.buyer_id); r.seller = map.get(r.seller_id); }
+      }
+      return rows;
     },
     refetchInterval: 15_000,
   });
