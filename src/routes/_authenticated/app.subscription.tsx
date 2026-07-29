@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { CalendarDays, CheckCircle2, Clock, Copy, CreditCard, Loader2, QrCode, ShieldCheck, Sparkles, Timer, Zap } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
-import { QRCodeCanvas } from "qrcode.react";
+import { QRCodeSVG } from "qrcode.react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -257,14 +257,15 @@ function PixDialog({ openPlan, onClose, pix, loading, onPaid }: {
                 <div className="text-center text-xs font-medium text-muted-foreground mb-3 uppercase tracking-wider">
                   Escaneie com o app do seu banco
                 </div>
-                <div className="mx-auto w-fit rounded-xl border-2 border-dashed border-primary/30 bg-white p-4 shadow-sm">
-                  <QRCodeCanvas
+                <div className="mx-auto w-fit rounded-xl border-2 border-dashed border-primary/40 bg-white p-4 shadow-lg">
+                  <QRCodeSVG
                     value={pix.copyPaste}
                     size={240}
                     level="M"
                     marginSize={2}
                     bgColor="#ffffff"
                     fgColor="#000000"
+                    style={{ display: "block", width: 240, height: 240 }}
                   />
                 </div>
                 <div className="mt-3 text-center text-xs text-muted-foreground">
