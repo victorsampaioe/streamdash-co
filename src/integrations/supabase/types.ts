@@ -183,6 +183,39 @@ export type Database = {
           },
         ]
       }
+      mcp_activity_log: {
+        Row: {
+          args: Json | null
+          client_id: string | null
+          created_at: string
+          detail: string | null
+          id: string
+          outcome: string
+          tool: string
+          user_id: string
+        }
+        Insert: {
+          args?: Json | null
+          client_id?: string | null
+          created_at?: string
+          detail?: string | null
+          id?: string
+          outcome: string
+          tool: string
+          user_id: string
+        }
+        Update: {
+          args?: Json | null
+          client_id?: string | null
+          created_at?: string
+          detail?: string | null
+          id?: string
+          outcome?: string
+          tool?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       notifications_log: {
         Row: {
           channel_id: string | null
