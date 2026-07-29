@@ -8,11 +8,15 @@
  *   REGION_WORKER_SECRET  = (Secret / Encrypt) mesmo valor salvo no painel
  *
  * Cron Trigger (Settings > Triggers):  */1 * * * *
+ *
+ * IMPORTANTE: o plano Free da Cloudflare permite ~50 subrequests por invocação.
+ * Por isso cada execução checa no máximo MAX_PER_RUN alvos (rotacionando a cada
+ * minuto) e envia TODOS os resultados em UM único POST em lote.
  */
 
 const TIMEOUT_MS = 8000;
-const CYCLES = 6;          // 6 ciclos de 10s dentro de 1 minuto
-const CYCLE_GAP_MS = 10_000;
+const MAX_PER_RUN = 40;   // 40 checks + 1 targets + 1 report = 42 subrequests
+const CONCURRENCY = 10;
 
 /** Remove espaços/quebras de linha/aspas que o painel da Cloudflare costuma colar junto. */
 function cleanSecret(env) {
@@ -41,7 +45,6 @@ function requireEnv(env) {
   if (missing.length) throw new Error(`Variáveis ausentes: ${missing.join(", ")}`);
 }
 
-
 async function loadTargets(env) {
   const sig = await hmacHex(cleanSecret(env), "targets");
   const res = await fetch(`${env.ENDPOINT_BASE}/api/public/regions/targets`, {
@@ -52,6 +55,7 @@ async function loadTargets(env) {
   return Array.isArray(data?.targets) ? data.targets : [];
 }
 
+/** Faz apenas a checagem HTTP e devolve o resultado (sem enviar nada). */
 async function checkOne(env, target) {
   const start = Date.now();
   let status = "unknown";
@@ -81,47 +85,70 @@ async function checkOne(env, target) {
     error = String(e?.message ?? e).slice(0, 200);
   }
 
-  const body = JSON.stringify({
+  return {
     server_id: target.server_id,
     region_code: env.REGION_CODE,
     status,
     http_status: httpStatus,
     latency_ms: latency,
     error,
+  };
+}
+
+async function runPool(items, size, fn) {
+  const out = [];
+  let idx = 0;
+  const workers = Array.from({ length: Math.min(size, items.length) }, async () => {
+    while (idx < items.length) {
+      const i = idx++;
+      out[i] = await fn(items[i]);
+    }
   });
+  await Promise.all(workers);
+  return out;
+}
+
+async function sendBatch(env, reports) {
+  const body = JSON.stringify({ reports });
   const sig = await hmacHex(cleanSecret(env), body);
   const res = await fetch(`${env.ENDPOINT_BASE}/api/public/regions/report`, {
     method: "POST",
     headers: { "content-type": "application/json", "x-signature": sig },
     body,
   });
-  if (!res.ok) throw new Error(`report HTTP ${res.status}`);
-  return { host: target.host, status, latency };
+  if (!res.ok) throw new Error(`report HTTP ${res.status}: ${(await res.text()).slice(0, 200)}`);
+  return await res.json();
 }
 
 async function tick(env) {
-  const targets = await loadTargets(env);
-  const results = await Promise.allSettled(targets.map((t) => checkOne(env, t)));
-  const ok = results.filter((r) => r.status === "fulfilled").length;
-  return { region: env.REGION_CODE, targets: targets.length, reported: ok };
+  const all = await loadTargets(env);
+  if (all.length === 0) return { region: env.REGION_CODE, targets: 0, reported: 0 };
+
+  // Rotação: distribui os alvos entre execuções sucessivas (1 por minuto).
+  const slots = Math.ceil(all.length / MAX_PER_RUN);
+  const slot = Math.floor(Date.now() / 60_000) % slots;
+  const batch = all.slice(slot * MAX_PER_RUN, slot * MAX_PER_RUN + MAX_PER_RUN);
+
+  const reports = await runPool(batch, CONCURRENCY, (t) => checkOne(env, t));
+  const resp = await sendBatch(env, reports);
+  return {
+    region: env.REGION_CODE,
+    targets: all.length,
+    checked: batch.length,
+    slot: `${slot + 1}/${slots}`,
+    reported: resp?.inserted ?? reports.length,
+  };
 }
 
-const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
-
 export default {
-  // Cron dispara 1x/min; rodamos 6 ciclos espaçados de 10s.
   async scheduled(_event, env, ctx) {
     requireEnv(env);
     ctx.waitUntil(
       (async () => {
-        for (let i = 0; i < CYCLES; i++) {
-          try {
-            const summary = await tick(env);
-            console.log("tick", i, JSON.stringify(summary));
-          } catch (e) {
-            console.error("tick error", i, String(e?.message ?? e));
-          }
-          if (i < CYCLES - 1) await sleep(CYCLE_GAP_MS);
+        try {
+          console.log("tick", JSON.stringify(await tick(env)));
+        } catch (e) {
+          console.error("tick error", String(e?.message ?? e));
         }
       })(),
     );
@@ -149,4 +176,3 @@ export default {
     }
   },
 };
-
