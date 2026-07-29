@@ -116,10 +116,21 @@ export default {
     );
   },
 
-  // GET manual para testar o deploy: abra a URL do worker.
-  async fetch(_req, env) {
+  // GET manual: abra a URL do worker.
+  //   /            -> executa um ciclo de checagem
+  //   /?diag=1     -> mostra a impressão digital do segredo do worker (não revela o valor)
+  async fetch(req, env) {
     try {
       requireEnv(env);
+      const url = new URL(req.url);
+      if (url.searchParams.get("diag") === "1") {
+        return Response.json({
+          region: env.REGION_CODE,
+          endpoint_base: env.ENDPOINT_BASE,
+          secret_fingerprint: await sha256Hex12(cleanSecret(env)),
+          hint: "Deve ser IGUAL ao secret_fingerprint de /api/public/regions/targets?diag=1",
+        });
+      }
       const summary = await tick(env);
       return Response.json({ ok: true, ...summary });
     } catch (e) {
@@ -127,3 +138,4 @@ export default {
     }
   },
 };
+
