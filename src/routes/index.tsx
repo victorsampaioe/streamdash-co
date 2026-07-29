@@ -16,7 +16,7 @@ function Landing() {
   return (
     <div className="min-h-screen bg-background text-foreground">
       <header className="border-b border-border/60 backdrop-blur bg-background/70 sticky top-0 z-40">
-        <div className="max-w-6xl mx-auto flex items-center justify-between px-6 py-4">
+        <div className="max-w-6xl mx-auto flex items-center justify-between px-4 sm:px-6 py-4 gap-2">
           <div className="flex items-center gap-2">
             <Activity className="h-5 w-5 text-primary" />
             <span className="font-bold tracking-tight">stream<span className="text-primary">monitor</span></span>
@@ -35,19 +35,19 @@ function Landing() {
       </header>
 
       <section className="grid-bg relative">
-        <div className="max-w-6xl mx-auto px-6 py-24 md:py-32 text-center">
-          <div className="inline-flex items-center gap-2 rounded-full border border-border/60 bg-card/50 px-3 py-1 text-xs text-muted-foreground mb-8">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 py-16 sm:py-24 md:py-32 text-center">
+          <div className="inline-flex items-center gap-2 rounded-full border border-border/60 bg-card/50 px-3 py-1 text-xs text-muted-foreground mb-6 sm:mb-8">
             <span className="relative flex h-2 w-2">
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-success opacity-75" />
               <span className="relative inline-flex rounded-full h-2 w-2 bg-success" />
             </span>
             Verificações a cada 30 segundos
           </div>
-          <h1 className="text-5xl md:text-7xl font-bold tracking-tight mb-6">
+          <h1 className="text-4xl sm:text-5xl md:text-7xl font-bold tracking-tight mb-6 break-words">
             Uptime, latência e SSL<br />
             <span className="text-primary">sem drama.</span>
           </h1>
-          <p className="text-lg text-muted-foreground max-w-2xl mx-auto mb-10">
+          <p className="text-base sm:text-lg text-muted-foreground max-w-2xl mx-auto mb-8 sm:mb-10">
             StreamMonitor observa seus servidores 24/7 e avisa por e-mail, Discord, Telegram
             ou webhook no primeiro sinal de problema.
           </p>
@@ -58,7 +58,7 @@ function Landing() {
         </div>
       </section>
 
-      <section id="recursos" className="max-w-6xl mx-auto px-6 py-20">
+      <section id="recursos" className="max-w-6xl mx-auto px-4 sm:px-6 py-16 sm:py-20">
         <div className="grid md:grid-cols-3 gap-6">
           <Feature icon={<Zap className="h-5 w-5" />} title="Verificação constante" desc="A cada 30s (configurável). DNS, HTTP, latência e certificado SSL." />
           <Feature icon={<Bell className="h-5 w-5" />} title="Alertas multicanal" desc="E-mail, Discord, Telegram e webhooks — após X falhas seguidas." />
@@ -70,7 +70,7 @@ function Landing() {
       </section>
 
       <section className="border-y border-border/60 bg-card/40">
-        <div className="max-w-6xl mx-auto px-6 py-12 text-center">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 py-10 sm:py-12 text-center">
           <h2 className="text-2xl font-bold tracking-tight mb-3">Acompanhe as novidades</h2>
           <p className="text-muted-foreground mb-6 max-w-xl mx-auto">
             Entre no nosso canal do Telegram para receber alertas de status, novidades e dicas de monitoramento.
@@ -84,7 +84,7 @@ function Landing() {
       </section>
 
       <footer className="border-t border-border/60">
-        <div className="max-w-6xl mx-auto px-6 py-8 text-sm text-muted-foreground flex flex-col sm:flex-row items-center justify-between gap-3">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 py-8 text-sm text-muted-foreground flex flex-col sm:flex-row items-center justify-between gap-3 text-center sm:text-left">
           <span>© {new Date().getFullYear()} streammonitor.site</span>
           <div className="flex items-center gap-4">
             <a href="https://t.me/+RId642Ac4AFkOWFh" target="_blank" rel="noopener noreferrer" className="hover:text-primary inline-flex items-center gap-1.5">

@@ -282,7 +282,7 @@ function RequestPayoutDialog({ open, onOpenChange, amountCents, onDone }: { open
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
+      <DialogContent className="w-[calc(100vw-2rem)] max-w-md max-h-[90vh] overflow-y-auto overflow-x-hidden">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2"><Wallet className="h-5 w-5 text-primary" /> Receber via PIX</DialogTitle>
           <DialogDescription>

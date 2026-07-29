@@ -62,13 +62,13 @@ function AlertsPage() {
   const cur = KINDS.find((k) => k.value === kind)!;
 
   return (
-    <div className="space-y-6 max-w-4xl">
+    <div className="space-y-6 max-w-4xl w-full">
       <div>
         <h1 className="text-2xl font-semibold tracking-tight">Alertas</h1>
         <p className="text-sm text-muted-foreground">Canais que recebem notificações quando um servidor cai (após o limite de falhas seguidas).</p>
       </div>
 
-      <Card className="p-6">
+      <Card className="p-4 sm:p-6">
         <form onSubmit={(e) => { e.preventDefault(); create.mutate(); }} className="grid md:grid-cols-4 gap-3 items-end">
           <div className="space-y-2">
             <Label>Nome</Label>
