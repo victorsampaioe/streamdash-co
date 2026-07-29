@@ -14,6 +14,16 @@ const TIMEOUT_MS = 8000;
 const CYCLES = 6;          // 6 ciclos de 10s dentro de 1 minuto
 const CYCLE_GAP_MS = 10_000;
 
+/** Remove espaços/quebras de linha/aspas que o painel da Cloudflare costuma colar junto. */
+function cleanSecret(env) {
+  return String(env.REGION_WORKER_SECRET ?? "").trim().replace(/^["']|["']$/g, "");
+}
+
+async function sha256Hex12(value) {
+  const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(value));
+  return [...new Uint8Array(buf)].map((b) => b.toString(16).padStart(2, "0")).join("").slice(0, 12);
+}
+
 async function hmacHex(secret, message) {
   const key = await crypto.subtle.importKey(
     "raw",
@@ -31,8 +41,9 @@ function requireEnv(env) {
   if (missing.length) throw new Error(`Variáveis ausentes: ${missing.join(", ")}`);
 }
 
+
 async function loadTargets(env) {
-  const sig = await hmacHex(env.REGION_WORKER_SECRET, "targets");
+  const sig = await hmacHex(cleanSecret(env), "targets");
   const res = await fetch(`${env.ENDPOINT_BASE}/api/public/regions/targets`, {
     headers: { "x-signature": sig },
   });
@@ -78,7 +89,7 @@ async function checkOne(env, target) {
     latency_ms: latency,
     error,
   });
-  const sig = await hmacHex(env.REGION_WORKER_SECRET, body);
+  const sig = await hmacHex(cleanSecret(env), body);
   const res = await fetch(`${env.ENDPOINT_BASE}/api/public/regions/report`, {
     method: "POST",
     headers: { "content-type": "application/json", "x-signature": sig },
@@ -116,10 +127,21 @@ export default {
     );
   },
 
-  // GET manual para testar o deploy: abra a URL do worker.
-  async fetch(_req, env) {
+  // GET manual: abra a URL do worker.
+  //   /            -> executa um ciclo de checagem
+  //   /?diag=1     -> mostra a impressão digital do segredo do worker (não revela o valor)
+  async fetch(req, env) {
     try {
       requireEnv(env);
+      const url = new URL(req.url);
+      if (url.searchParams.get("diag") === "1") {
+        return Response.json({
+          region: env.REGION_CODE,
+          endpoint_base: env.ENDPOINT_BASE,
+          secret_fingerprint: await sha256Hex12(cleanSecret(env)),
+          hint: "Deve ser IGUAL ao secret_fingerprint de /api/public/regions/targets?diag=1",
+        });
+      }
       const summary = await tick(env);
       return Response.json({ ok: true, ...summary });
     } catch (e) {
@@ -127,3 +149,4 @@ export default {
     }
   },
 };
+
