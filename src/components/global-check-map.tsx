@@ -137,7 +137,7 @@ export function GlobalCheckMap({ serverId }: { serverId: string }) {
   }
 
   const nonOrigin = regions.filter((r) => r.code !== "origin");
-  const workersOnline = workers.filter((w) => w.last_report_at && Date.now() - new Date(w.last_report_at).getTime() <= 60_000).length;
+  const workersOnline = workers.filter((w) => w.last_report_at && Date.now() - new Date(w.last_report_at).getTime() <= 180_000).length;
   const workersTotal = nonOrigin.length;
   const workerBadgeColor =
     workersOnline === workersTotal ? "text-success border-success/40 bg-success/10" :
