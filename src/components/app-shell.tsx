@@ -79,6 +79,7 @@ function useNavItems() {
     { to: "/app/detector", label: "Detector", icon: ShieldAlert },
     { to: "/app/ranking", label: "Ranking", icon: Trophy },
     { to: "/app/achievements", label: "Conquistas", icon: Trophy },
+    { to: "/app/hub", label: "Hub Stream", icon: Store },
     { to: "/app/subscription", label: "Assinatura", icon: CreditCard },
     { to: "/app/ai-integration", label: "Integração IA", icon: Bot },
     { to: "/app/referrals", label: "Indicações", icon: Gift },
