@@ -24,7 +24,7 @@ export default defineTool({
     if (!auth.ok) return textResult(auth.error, true);
     const cleaned = Object.fromEntries(Object.entries(patch).filter(([, v]) => v !== undefined));
     if (Object.keys(cleaned).length === 0) return textResult("Nada para atualizar.", true);
-    const { data, error } = await auth.supabase.from("servers").update(cleaned).eq("id", id).select().maybeSingle();
+    const { data, error } = await auth.supabase.from("servers").update(cleaned as Record<string, string>).eq("id", id).select().maybeSingle();
     if (error) {
       await logMcpAction(ctx, auth.userId, "update_dns", { id, patch: cleaned }, "error", error.message);
       return textResult(`Erro ao atualizar DNS: ${error.message}`, true);

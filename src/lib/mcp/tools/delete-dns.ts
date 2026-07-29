@@ -17,7 +17,6 @@ export default defineTool({
     idempotentHint: false,
     openWorldHint: false,
   },
-  needsApproval: true,
   handler: async ({ id, confirm }, ctx) => {
     const auth = await requireActiveSubscriber(ctx);
     if (!auth.ok) return textResult(auth.error, true);

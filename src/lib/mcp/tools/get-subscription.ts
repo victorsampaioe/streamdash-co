@@ -14,6 +14,7 @@ export default defineTool({
   handler: async (_args: z.infer<z.ZodObject<Record<string, never>>>, ctx) => {
     if (!ctx.isAuthenticated()) return textResult("Não autenticado.", true);
     const userId = ctx.getUserId();
+    if (!userId) return textResult("Token inválido.", true);
     const supabase = supabaseAsUser(ctx);
     const { data: sub, error } = await supabase.from("subscriptions").select("*").eq("user_id", userId).maybeSingle();
     if (error) return textResult(`Erro: ${error.message}`, true);
