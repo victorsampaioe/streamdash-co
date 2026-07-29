@@ -167,16 +167,16 @@ function AdminPage() {
 
       {/* Users table */}
       <Card className="p-4 space-y-4">
-        <div className="flex flex-wrap gap-3 items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Users className="h-4 w-4 text-muted-foreground" />
-            <h2 className="font-semibold">Usuários cadastrados</h2>
-            <Badge variant="outline">{filtered.length}</Badge>
+        <div className="flex flex-col sm:flex-row sm:flex-wrap gap-3 sm:items-center sm:justify-between">
+          <div className="flex items-center gap-2 min-w-0">
+            <Users className="h-4 w-4 text-muted-foreground shrink-0" />
+            <h2 className="font-semibold truncate">Usuários cadastrados</h2>
+            <Badge variant="outline" className="shrink-0">{filtered.length}</Badge>
           </div>
-          <div className="flex items-center gap-2">
-            <div className="relative">
+          <div className="w-full sm:w-auto">
+            <div className="relative w-full sm:w-72">
               <Search className="h-3.5 w-3.5 absolute left-2.5 top-2.5 text-muted-foreground" />
-              <Input placeholder="Buscar por nome, e-mail, telefone..." value={search} onChange={(e) => setSearch(e.target.value)} className="pl-8 w-72" />
+              <Input placeholder="Buscar por nome, e-mail, telefone..." value={search} onChange={(e) => setSearch(e.target.value)} className="pl-8 w-full" />
             </div>
           </div>
         </div>
