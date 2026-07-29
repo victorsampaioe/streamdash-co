@@ -29,9 +29,11 @@ import { Route as AuthenticatedAppRankingRouteImport } from './routes/_authentic
 import { Route as AuthenticatedAppRadarRouteImport } from './routes/_authenticated/app.radar'
 import { Route as AuthenticatedAppDetectorRouteImport } from './routes/_authenticated/app.detector'
 import { Route as AuthenticatedAppAlertsRouteImport } from './routes/_authenticated/app.alerts'
+import { Route as AuthenticatedAppAiIntegrationRouteImport } from './routes/_authenticated/app.ai-integration'
 import { Route as AuthenticatedAppAdminRouteImport } from './routes/_authenticated/app.admin'
 import { Route as AuthenticatedAppAchievementsRouteImport } from './routes/_authenticated/app.achievements'
 import { Route as Char91DotmcpChar93InvokeToolToolRouteImport } from './routes/[.mcp]/invoke-tool/$tool'
+import { Route as DotlovableOauthConsentRouteImport } from './routes/[.]lovable.oauth.consent'
 import { Route as AuthenticatedAppServersIndexRouteImport } from './routes/_authenticated/app.servers.index'
 import { Route as ApiPublicWebhooksMercadopagoRouteImport } from './routes/api/public/webhooks/mercadopago'
 import { Route as ApiPublicRegionsTargetsRouteImport } from './routes/api/public/regions/targets'
@@ -144,6 +146,12 @@ const AuthenticatedAppAlertsRoute = AuthenticatedAppAlertsRouteImport.update({
   path: '/alerts',
   getParentRoute: () => AuthenticatedAppRoute,
 } as any)
+const AuthenticatedAppAiIntegrationRoute =
+  AuthenticatedAppAiIntegrationRouteImport.update({
+    id: '/ai-integration',
+    path: '/ai-integration',
+    getParentRoute: () => AuthenticatedAppRoute,
+  } as any)
 const AuthenticatedAppAdminRoute = AuthenticatedAppAdminRouteImport.update({
   id: '/admin',
   path: '/admin',
@@ -161,6 +169,11 @@ const Char91DotmcpChar93InvokeToolToolRoute =
     path: '/.mcp/invoke-tool/$tool',
     getParentRoute: () => rootRouteImport,
   } as any)
+const DotlovableOauthConsentRoute = DotlovableOauthConsentRouteImport.update({
+  id: '/.lovable/oauth/consent',
+  path: '/.lovable/oauth/consent',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AuthenticatedAppServersIndexRoute =
   AuthenticatedAppServersIndexRouteImport.update({
     id: '/servers/',
@@ -213,9 +226,11 @@ export interface FileRoutesByFullPath {
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   '/app': typeof AuthenticatedAppRouteWithChildren
   '/status/$slug': typeof StatusSlugRoute
+  '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
   '/app/achievements': typeof AuthenticatedAppAchievementsRoute
   '/app/admin': typeof AuthenticatedAppAdminRoute
+  '/app/ai-integration': typeof AuthenticatedAppAiIntegrationRoute
   '/app/alerts': typeof AuthenticatedAppAlertsRoute
   '/app/detector': typeof AuthenticatedAppDetectorRoute
   '/app/radar': typeof AuthenticatedAppRadarRoute
@@ -243,9 +258,11 @@ export interface FileRoutesByTo {
   '/.mcp/list-tools': typeof Char91DotmcpChar93ListToolsRoute
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   '/status/$slug': typeof StatusSlugRoute
+  '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
   '/app/achievements': typeof AuthenticatedAppAchievementsRoute
   '/app/admin': typeof AuthenticatedAppAdminRoute
+  '/app/ai-integration': typeof AuthenticatedAppAiIntegrationRoute
   '/app/alerts': typeof AuthenticatedAppAlertsRoute
   '/app/detector': typeof AuthenticatedAppDetectorRoute
   '/app/radar': typeof AuthenticatedAppRadarRoute
@@ -276,9 +293,11 @@ export interface FileRoutesById {
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   '/_authenticated/app': typeof AuthenticatedAppRouteWithChildren
   '/status/$slug': typeof StatusSlugRoute
+  '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
   '/_authenticated/app/achievements': typeof AuthenticatedAppAchievementsRoute
   '/_authenticated/app/admin': typeof AuthenticatedAppAdminRoute
+  '/_authenticated/app/ai-integration': typeof AuthenticatedAppAiIntegrationRoute
   '/_authenticated/app/alerts': typeof AuthenticatedAppAlertsRoute
   '/_authenticated/app/detector': typeof AuthenticatedAppDetectorRoute
   '/_authenticated/app/radar': typeof AuthenticatedAppRadarRoute
@@ -309,9 +328,11 @@ export interface FileRouteTypes {
     | '/.well-known/oauth-protected-resource'
     | '/app'
     | '/status/$slug'
+    | '/.lovable/oauth/consent'
     | '/.mcp/invoke-tool/$tool'
     | '/app/achievements'
     | '/app/admin'
+    | '/app/ai-integration'
     | '/app/alerts'
     | '/app/detector'
     | '/app/radar'
@@ -339,9 +360,11 @@ export interface FileRouteTypes {
     | '/.mcp/list-tools'
     | '/.well-known/oauth-protected-resource'
     | '/status/$slug'
+    | '/.lovable/oauth/consent'
     | '/.mcp/invoke-tool/$tool'
     | '/app/achievements'
     | '/app/admin'
+    | '/app/ai-integration'
     | '/app/alerts'
     | '/app/detector'
     | '/app/radar'
@@ -371,9 +394,11 @@ export interface FileRouteTypes {
     | '/.well-known/oauth-protected-resource'
     | '/_authenticated/app'
     | '/status/$slug'
+    | '/.lovable/oauth/consent'
     | '/.mcp/invoke-tool/$tool'
     | '/_authenticated/app/achievements'
     | '/_authenticated/app/admin'
+    | '/_authenticated/app/ai-integration'
     | '/_authenticated/app/alerts'
     | '/_authenticated/app/detector'
     | '/_authenticated/app/radar'
@@ -403,6 +428,7 @@ export interface RootRouteChildren {
   Char91DotmcpChar93ListToolsRoute: typeof Char91DotmcpChar93ListToolsRoute
   Char91DotwellKnownChar93OauthProtectedResourceRoute: typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   StatusSlugRoute: typeof StatusSlugRoute
+  DotlovableOauthConsentRoute: typeof DotlovableOauthConsentRoute
   Char91DotmcpChar93InvokeToolToolRoute: typeof Char91DotmcpChar93InvokeToolToolRoute
   ApiPublicRadarRoute: typeof ApiPublicRadarRoute
   ApiPublicCronCheckRoute: typeof ApiPublicCronCheckRoute
@@ -553,6 +579,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAppAlertsRouteImport
       parentRoute: typeof AuthenticatedAppRoute
     }
+    '/_authenticated/app/ai-integration': {
+      id: '/_authenticated/app/ai-integration'
+      path: '/ai-integration'
+      fullPath: '/app/ai-integration'
+      preLoaderRoute: typeof AuthenticatedAppAiIntegrationRouteImport
+      parentRoute: typeof AuthenticatedAppRoute
+    }
     '/_authenticated/app/admin': {
       id: '/_authenticated/app/admin'
       path: '/admin'
@@ -572,6 +605,13 @@ declare module '@tanstack/react-router' {
       path: '/.mcp/invoke-tool/$tool'
       fullPath: '/.mcp/invoke-tool/$tool'
       preLoaderRoute: typeof Char91DotmcpChar93InvokeToolToolRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/.lovable/oauth/consent': {
+      id: '/.lovable/oauth/consent'
+      path: '/.lovable/oauth/consent'
+      fullPath: '/.lovable/oauth/consent'
+      preLoaderRoute: typeof DotlovableOauthConsentRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_authenticated/app/servers/': {
@@ -629,6 +669,7 @@ declare module '@tanstack/react-router' {
 interface AuthenticatedAppRouteChildren {
   AuthenticatedAppAchievementsRoute: typeof AuthenticatedAppAchievementsRoute
   AuthenticatedAppAdminRoute: typeof AuthenticatedAppAdminRoute
+  AuthenticatedAppAiIntegrationRoute: typeof AuthenticatedAppAiIntegrationRoute
   AuthenticatedAppAlertsRoute: typeof AuthenticatedAppAlertsRoute
   AuthenticatedAppDetectorRoute: typeof AuthenticatedAppDetectorRoute
   AuthenticatedAppRadarRoute: typeof AuthenticatedAppRadarRoute
@@ -644,6 +685,7 @@ interface AuthenticatedAppRouteChildren {
 const AuthenticatedAppRouteChildren: AuthenticatedAppRouteChildren = {
   AuthenticatedAppAchievementsRoute: AuthenticatedAppAchievementsRoute,
   AuthenticatedAppAdminRoute: AuthenticatedAppAdminRoute,
+  AuthenticatedAppAiIntegrationRoute: AuthenticatedAppAiIntegrationRoute,
   AuthenticatedAppAlertsRoute: AuthenticatedAppAlertsRoute,
   AuthenticatedAppDetectorRoute: AuthenticatedAppDetectorRoute,
   AuthenticatedAppRadarRoute: AuthenticatedAppRadarRoute,
@@ -683,6 +725,7 @@ const rootRouteChildren: RootRouteChildren = {
   Char91DotwellKnownChar93OauthProtectedResourceRoute:
     Char91DotwellKnownChar93OauthProtectedResourceRoute,
   StatusSlugRoute: StatusSlugRoute,
+  DotlovableOauthConsentRoute: DotlovableOauthConsentRoute,
   Char91DotmcpChar93InvokeToolToolRoute: Char91DotmcpChar93InvokeToolToolRoute,
   ApiPublicRadarRoute: ApiPublicRadarRoute,
   ApiPublicCronCheckRoute: ApiPublicCronCheckRoute,

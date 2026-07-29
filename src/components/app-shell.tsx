@@ -1,5 +1,5 @@
 import { Link, Outlet, useNavigate, useRouterState } from "@tanstack/react-router";
-import { Activity, LayoutDashboard, ServerIcon, Bell, Users, LogOut, Sun, Moon, Search, Plus, CreditCard, Gift, Radio, ShieldAlert, Trophy, Lock, Menu, Send } from "lucide-react";
+import { Activity, LayoutDashboard, ServerIcon, Bell, Users, LogOut, Sun, Moon, Search, Plus, CreditCard, Gift, Radio, ShieldAlert, Trophy, Lock, Menu, Send, Bot } from "lucide-react";
 import { SubscriptionBanner } from "@/components/subscription/subscription-banner";
 import { useEffect, useState, type ReactNode } from "react";
 import { supabase } from "@/integrations/supabase/client";
@@ -16,6 +16,7 @@ import { cn } from "@/lib/utils";
 const ALWAYS_OPEN_PATHS = [
   "/app/subscription",
   "/app/referrals",
+  "/app/ai-integration",
 ];
 
 export function AppShell({ children }: { children: ReactNode }) {
@@ -79,6 +80,7 @@ function useNavItems() {
     { to: "/app/ranking", label: "Ranking", icon: Trophy },
     { to: "/app/achievements", label: "Conquistas", icon: Trophy },
     { to: "/app/subscription", label: "Assinatura", icon: CreditCard },
+    { to: "/app/ai-integration", label: "Integração IA", icon: Bot },
     { to: "/app/referrals", label: "Indicações", icon: Gift },
   ];
   if (isAdmin) items.push({ to: "/app/admin", label: "Admin", icon: Users });
