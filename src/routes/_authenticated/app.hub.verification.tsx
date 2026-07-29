@@ -43,11 +43,13 @@ function VerificationPage() {
   const [location, setLocation] = useState("");
 
   // Sync form when data loads
-  if (profile && handle === "" && profile.handle) {
-    setHandle(profile.handle);
-    setBio(profile.bio ?? "");
-    setLocation(profile.location ?? "");
-  }
+  useEffect(() => {
+    if (profile) {
+      setHandle(profile.handle ?? "");
+      setBio(profile.bio ?? "");
+      setLocation(profile.location ?? "");
+    }
+  }, [profile]);
 
   async function saveProfile() {
     setBusy(true);
