@@ -7,7 +7,7 @@
  *   ENDPOINT_BASE         = https://streammonitor.site
  *   REGION_WORKER_SECRET  = (Secret / Encrypt) mesmo valor salvo no painel
  *
- * Cron Trigger (Settings > Triggers):  */1 * * * *
+ * Cron Trigger (Settings > Triggers):  a cada 1 minuto  (asterisco/1 espaco * * * *)
  *
  * IMPORTANTE: o plano Free da Cloudflare permite ~50 subrequests por invocação.
  * Por isso cada execução checa no máximo MAX_PER_RUN alvos (rotacionando a cada
