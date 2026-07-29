@@ -144,6 +144,8 @@ export function GlobalCheckMap({ serverId }: { serverId: string }) {
     workersOnline === 0 ? "text-destructive border-destructive/40 bg-destructive/10" :
     "text-warning border-warning/40 bg-warning/10";
 
+  const noWorkers = workersOnline === 0;
+
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between flex-wrap gap-2">
@@ -155,6 +157,29 @@ export function GlobalCheckMap({ serverId }: { serverId: string }) {
           <span className="text-xs text-muted-foreground hidden sm:inline">Realtime</span>
         </div>
       </div>
+
+      {noWorkers && (
+        <Card className="p-4 border-warning/40 bg-warning/5">
+          <div className="flex items-start gap-3">
+            <div className="text-2xl shrink-0">⚠️</div>
+            <div className="space-y-2 text-sm min-w-0">
+              <p className="font-medium">Nenhum worker regional está reportando ainda.</p>
+              <p className="text-muted-foreground">
+                O monitoramento multi-região (SP, Ashburn, Frankfurt, Tóquio) exige{" "}
+                <strong>Cloudflare Workers</strong> rodando fisicamente em cada colo — o Lovable Cloud
+                é uma edge única e não mede latência real de outras regiões sozinho.
+              </p>
+              <p className="text-muted-foreground">
+                Publique 1 worker gratuito por região seguindo o guia em{" "}
+                <code className="text-xs bg-muted px-1 py-0.5 rounded">docs/regional-workers.md</code>{" "}
+                (Cloudflare free tier, 100k req/dia). O painel mostra <code>4/4 Workers Online</code>{" "}
+                automaticamente assim que começarem a reportar.
+              </p>
+            </div>
+          </div>
+        </Card>
+      )}
+
 
       <div className="grid lg:grid-cols-[1fr_360px] gap-4">
         <Card className="p-4">
