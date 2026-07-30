@@ -97,7 +97,7 @@ export function IptvPanel({ serverId, server }: { serverId: string; server: any 
 
   const saveConfig = useMutation({
     mutationFn: async (patch: Record<string, unknown>) => {
-      const { error } = await supabase.from("servers").update(patch).eq("id", serverId);
+      const { error } = await supabase.from("servers").update(patch as never).eq("id", serverId);
       if (error) throw error;
     },
     onSuccess: () => { qc.invalidateQueries({ queryKey: ["server", serverId] }); toast.success("Configuração salva"); },
