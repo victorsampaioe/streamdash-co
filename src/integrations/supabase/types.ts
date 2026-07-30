@@ -563,6 +563,162 @@ export type Database = {
           },
         ]
       }
+      kuma_heartbeats: {
+        Row: {
+          checked_at: string
+          id: number
+          kind: string
+          latency_ms: number | null
+          message: string | null
+          ok: boolean
+          server_id: string
+        }
+        Insert: {
+          checked_at?: string
+          id?: number
+          kind: string
+          latency_ms?: number | null
+          message?: string | null
+          ok: boolean
+          server_id: string
+        }
+        Update: {
+          checked_at?: string
+          id?: number
+          kind?: string
+          latency_ms?: number | null
+          message?: string | null
+          ok?: boolean
+          server_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "kuma_heartbeats_server_id_fkey"
+            columns: ["server_id"]
+            isOneToOne: false
+            referencedRelation: "servers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      kuma_incidents: {
+        Row: {
+          created_at: string
+          duration_s: number | null
+          ended_at: string | null
+          id: string
+          kind: string
+          reason: string | null
+          server_id: string
+          started_at: string
+        }
+        Insert: {
+          created_at?: string
+          duration_s?: number | null
+          ended_at?: string | null
+          id?: string
+          kind: string
+          reason?: string | null
+          server_id: string
+          started_at?: string
+        }
+        Update: {
+          created_at?: string
+          duration_s?: number | null
+          ended_at?: string | null
+          id?: string
+          kind?: string
+          reason?: string | null
+          server_id?: string
+          started_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "kuma_incidents_server_id_fkey"
+            columns: ["server_id"]
+            isOneToOne: false
+            referencedRelation: "servers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      kuma_monitor_status: {
+        Row: {
+          active: boolean
+          avg_latency_ms: number | null
+          cert_days_remaining: number | null
+          cert_expires_at: string | null
+          created_at: string
+          id: string
+          kind: string
+          last_check_at: string | null
+          last_down_duration_s: number | null
+          last_down_started_at: string | null
+          latency_ms: number | null
+          message: string | null
+          monitor_id: number | null
+          resolved_ip: string | null
+          server_id: string
+          status: string
+          updated_at: string
+          uptime_24h: number | null
+          uptime_30d: number | null
+          uptime_7d: number | null
+        }
+        Insert: {
+          active?: boolean
+          avg_latency_ms?: number | null
+          cert_days_remaining?: number | null
+          cert_expires_at?: string | null
+          created_at?: string
+          id?: string
+          kind: string
+          last_check_at?: string | null
+          last_down_duration_s?: number | null
+          last_down_started_at?: string | null
+          latency_ms?: number | null
+          message?: string | null
+          monitor_id?: number | null
+          resolved_ip?: string | null
+          server_id: string
+          status?: string
+          updated_at?: string
+          uptime_24h?: number | null
+          uptime_30d?: number | null
+          uptime_7d?: number | null
+        }
+        Update: {
+          active?: boolean
+          avg_latency_ms?: number | null
+          cert_days_remaining?: number | null
+          cert_expires_at?: string | null
+          created_at?: string
+          id?: string
+          kind?: string
+          last_check_at?: string | null
+          last_down_duration_s?: number | null
+          last_down_started_at?: string | null
+          latency_ms?: number | null
+          message?: string | null
+          monitor_id?: number | null
+          resolved_ip?: string | null
+          server_id?: string
+          status?: string
+          updated_at?: string
+          uptime_24h?: number | null
+          uptime_30d?: number | null
+          uptime_7d?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "kuma_monitor_status_server_id_fkey"
+            columns: ["server_id"]
+            isOneToOne: false
+            referencedRelation: "servers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       listings: {
         Row: {
           author_id: string
@@ -1140,6 +1296,16 @@ export type Database = {
           iptv_stream_tests: boolean
           iptv_username: string | null
           is_public: boolean
+          kuma_api_id: number | null
+          kuma_dns_id: number | null
+          kuma_enabled: boolean
+          kuma_error: string | null
+          kuma_http_id: number | null
+          kuma_ping_id: number | null
+          kuma_ssl_id: number | null
+          kuma_synced_at: string | null
+          kuma_tcp_id: number | null
+          kuma_tcp_port: number
           last_checked_at: string | null
           last_iptv_sync_at: string | null
           last_latency_ms: number | null
@@ -1168,6 +1334,16 @@ export type Database = {
           iptv_stream_tests?: boolean
           iptv_username?: string | null
           is_public?: boolean
+          kuma_api_id?: number | null
+          kuma_dns_id?: number | null
+          kuma_enabled?: boolean
+          kuma_error?: string | null
+          kuma_http_id?: number | null
+          kuma_ping_id?: number | null
+          kuma_ssl_id?: number | null
+          kuma_synced_at?: string | null
+          kuma_tcp_id?: number | null
+          kuma_tcp_port?: number
           last_checked_at?: string | null
           last_iptv_sync_at?: string | null
           last_latency_ms?: number | null
@@ -1196,6 +1372,16 @@ export type Database = {
           iptv_stream_tests?: boolean
           iptv_username?: string | null
           is_public?: boolean
+          kuma_api_id?: number | null
+          kuma_dns_id?: number | null
+          kuma_enabled?: boolean
+          kuma_error?: string | null
+          kuma_http_id?: number | null
+          kuma_ping_id?: number | null
+          kuma_ssl_id?: number | null
+          kuma_synced_at?: string | null
+          kuma_tcp_id?: number | null
+          kuma_tcp_port?: number
           last_checked_at?: string | null
           last_iptv_sync_at?: string | null
           last_latency_ms?: number | null
