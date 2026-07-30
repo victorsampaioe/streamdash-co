@@ -33,7 +33,11 @@ function VerificationPage() {
     queryKey: ["my-hub-profile", me],
     enabled: !!me,
     queryFn: async () => {
-      const { data } = await (supabase as any).from("hub_profiles").select("*").eq("id", me).maybeSingle();
+      const { data } = await (supabase as any)
+        .from("hub_profiles")
+        .select("id,handle,bio,location,verification_status,verified_at,business_count,rating_avg,rating_count")
+        .eq("id", me)
+        .maybeSingle();
       return data;
     },
   });
