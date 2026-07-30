@@ -18,7 +18,11 @@ function UserProfile() {
   const { data, isLoading } = useQuery<any>({
     queryKey: ["hub-user", handle],
     queryFn: async () => {
-      const { data: hp } = await (supabase as any).from("hub_profiles").select("*").eq("handle", handle).maybeSingle();
+      const { data: hp } = await (supabase as any)
+        .from("hub_profiles")
+        .select("id,handle,bio,location,verification_status,verified_at,business_count,rating_avg,rating_count,created_at")
+        .eq("handle", handle)
+        .maybeSingle();
       if (!hp) return null;
       const { data: sub } = await (supabase as any).rpc("subscription_is_active", { _user_id: hp.id });
       const { data: listings } = await (supabase as any).from("listings")
