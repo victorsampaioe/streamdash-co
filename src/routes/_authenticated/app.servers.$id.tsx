@@ -153,9 +153,15 @@ function ServerDetail() {
       <Tabs defaultValue="overview">
         <TabsList className="w-full sm:w-auto overflow-x-auto">
           <TabsTrigger value="overview">Visão geral</TabsTrigger>
+          <TabsTrigger value="iptv">IPTV</TabsTrigger>
           <TabsTrigger value="analysis">Análise</TabsTrigger>
           <TabsTrigger value="badge">Selo</TabsTrigger>
         </TabsList>
+
+        <TabsContent value="iptv" className="mt-6">
+          <IptvPanel serverId={id} server={server} />
+        </TabsContent>
+
 
         <TabsContent value="overview" className="space-y-6 mt-6">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
