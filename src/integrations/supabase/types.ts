@@ -314,6 +314,255 @@ export type Database = {
           },
         ]
       }
+      iptv_alerts: {
+        Row: {
+          acknowledged_at: string | null
+          created_at: string
+          detail: string | null
+          id: string
+          kind: string
+          server_id: string
+          severity: string
+          title: string
+        }
+        Insert: {
+          acknowledged_at?: string | null
+          created_at?: string
+          detail?: string | null
+          id?: string
+          kind: string
+          server_id: string
+          severity?: string
+          title: string
+        }
+        Update: {
+          acknowledged_at?: string | null
+          created_at?: string
+          detail?: string | null
+          id?: string
+          kind?: string
+          server_id?: string
+          severity?: string
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "iptv_alerts_server_id_fkey"
+            columns: ["server_id"]
+            isOneToOne: false
+            referencedRelation: "servers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      iptv_ip_history: {
+        Row: {
+          changed_at: string
+          city: string | null
+          country: string | null
+          datacenter: string | null
+          id: string
+          isp: string | null
+          new_asn: string | null
+          new_ip: string | null
+          old_asn: string | null
+          old_ip: string | null
+          server_id: string
+        }
+        Insert: {
+          changed_at?: string
+          city?: string | null
+          country?: string | null
+          datacenter?: string | null
+          id?: string
+          isp?: string | null
+          new_asn?: string | null
+          new_ip?: string | null
+          old_asn?: string | null
+          old_ip?: string | null
+          server_id: string
+        }
+        Update: {
+          changed_at?: string
+          city?: string | null
+          country?: string | null
+          datacenter?: string | null
+          id?: string
+          isp?: string | null
+          new_asn?: string | null
+          new_ip?: string | null
+          old_asn?: string | null
+          old_ip?: string | null
+          server_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "iptv_ip_history_server_id_fkey"
+            columns: ["server_id"]
+            isOneToOne: false
+            referencedRelation: "servers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      iptv_stream_tests: {
+        Row: {
+          bitrate_kbps: number | null
+          buffer_ms: number | null
+          codec: string | null
+          error: string | null
+          id: string
+          kind: Database["public"]["Enums"]["iptv_stream_kind"]
+          label: string | null
+          ok: boolean
+          resolution: string | null
+          server_id: string
+          start_ms: number | null
+          sync_id: string | null
+          tested_at: string
+          total_ms: number | null
+        }
+        Insert: {
+          bitrate_kbps?: number | null
+          buffer_ms?: number | null
+          codec?: string | null
+          error?: string | null
+          id?: string
+          kind: Database["public"]["Enums"]["iptv_stream_kind"]
+          label?: string | null
+          ok?: boolean
+          resolution?: string | null
+          server_id: string
+          start_ms?: number | null
+          sync_id?: string | null
+          tested_at?: string
+          total_ms?: number | null
+        }
+        Update: {
+          bitrate_kbps?: number | null
+          buffer_ms?: number | null
+          codec?: string | null
+          error?: string | null
+          id?: string
+          kind?: Database["public"]["Enums"]["iptv_stream_kind"]
+          label?: string | null
+          ok?: boolean
+          resolution?: string | null
+          server_id?: string
+          start_ms?: number | null
+          sync_id?: string | null
+          tested_at?: string
+          total_ms?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "iptv_stream_tests_server_id_fkey"
+            columns: ["server_id"]
+            isOneToOne: false
+            referencedRelation: "servers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "iptv_stream_tests_sync_id_fkey"
+            columns: ["sync_id"]
+            isOneToOne: false
+            referencedRelation: "iptv_syncs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      iptv_syncs: {
+        Row: {
+          api_ms: number | null
+          asn: string | null
+          avg_region_ms: number | null
+          categories: number | null
+          channels: number | null
+          created_at: string
+          datacenter: string | null
+          error: string | null
+          fastest_region: string | null
+          health_score: number | null
+          id: string
+          ip: string | null
+          json_valid: boolean | null
+          latency_ms: number | null
+          login_ok: boolean | null
+          m3u_bytes: number | null
+          m3u_channels: number | null
+          m3u_groups: number | null
+          mode: Database["public"]["Enums"]["iptv_mode"]
+          movies: number | null
+          playlist_ok: boolean | null
+          series: number | null
+          server_id: string
+          slowest_region: string | null
+          synced_at: string
+        }
+        Insert: {
+          api_ms?: number | null
+          asn?: string | null
+          avg_region_ms?: number | null
+          categories?: number | null
+          channels?: number | null
+          created_at?: string
+          datacenter?: string | null
+          error?: string | null
+          fastest_region?: string | null
+          health_score?: number | null
+          id?: string
+          ip?: string | null
+          json_valid?: boolean | null
+          latency_ms?: number | null
+          login_ok?: boolean | null
+          m3u_bytes?: number | null
+          m3u_channels?: number | null
+          m3u_groups?: number | null
+          mode?: Database["public"]["Enums"]["iptv_mode"]
+          movies?: number | null
+          playlist_ok?: boolean | null
+          series?: number | null
+          server_id: string
+          slowest_region?: string | null
+          synced_at?: string
+        }
+        Update: {
+          api_ms?: number | null
+          asn?: string | null
+          avg_region_ms?: number | null
+          categories?: number | null
+          channels?: number | null
+          created_at?: string
+          datacenter?: string | null
+          error?: string | null
+          fastest_region?: string | null
+          health_score?: number | null
+          id?: string
+          ip?: string | null
+          json_valid?: boolean | null
+          latency_ms?: number | null
+          login_ok?: boolean | null
+          m3u_bytes?: number | null
+          m3u_channels?: number | null
+          m3u_groups?: number | null
+          mode?: Database["public"]["Enums"]["iptv_mode"]
+          movies?: number | null
+          playlist_ok?: boolean | null
+          series?: number | null
+          server_id?: string
+          slowest_region?: string | null
+          synced_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "iptv_syncs_server_id_fkey"
+            columns: ["server_id"]
+            isOneToOne: false
+            referencedRelation: "servers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       listings: {
         Row: {
           author_id: string
@@ -879,11 +1128,20 @@ export type Database = {
           current_status: Database["public"]["Enums"]["server_status"]
           description: string | null
           failure_threshold: number
+          health_score: number | null
           host: string
           id: string
           interval_seconds: number
+          iptv_detected: Database["public"]["Enums"]["iptv_kind"]
+          iptv_interval_minutes: number
+          iptv_mode: Database["public"]["Enums"]["iptv_mode"]
+          iptv_password: string | null
+          iptv_sample_size: number
+          iptv_stream_tests: boolean
+          iptv_username: string | null
           is_public: boolean
           last_checked_at: string | null
+          last_iptv_sync_at: string | null
           last_latency_ms: number | null
           name: string
           owner_id: string
@@ -898,11 +1156,20 @@ export type Database = {
           current_status?: Database["public"]["Enums"]["server_status"]
           description?: string | null
           failure_threshold?: number
+          health_score?: number | null
           host: string
           id?: string
           interval_seconds?: number
+          iptv_detected?: Database["public"]["Enums"]["iptv_kind"]
+          iptv_interval_minutes?: number
+          iptv_mode?: Database["public"]["Enums"]["iptv_mode"]
+          iptv_password?: string | null
+          iptv_sample_size?: number
+          iptv_stream_tests?: boolean
+          iptv_username?: string | null
           is_public?: boolean
           last_checked_at?: string | null
+          last_iptv_sync_at?: string | null
           last_latency_ms?: number | null
           name: string
           owner_id: string
@@ -917,11 +1184,20 @@ export type Database = {
           current_status?: Database["public"]["Enums"]["server_status"]
           description?: string | null
           failure_threshold?: number
+          health_score?: number | null
           host?: string
           id?: string
           interval_seconds?: number
+          iptv_detected?: Database["public"]["Enums"]["iptv_kind"]
+          iptv_interval_minutes?: number
+          iptv_mode?: Database["public"]["Enums"]["iptv_mode"]
+          iptv_password?: string | null
+          iptv_sample_size?: number
+          iptv_stream_tests?: boolean
+          iptv_username?: string | null
           is_public?: boolean
           last_checked_at?: string | null
+          last_iptv_sync_at?: string | null
           last_latency_ms?: number | null
           name?: string
           owner_id?: string
@@ -1193,6 +1469,9 @@ export type Database = {
         | "other"
       hub_report_target: "listing" | "user" | "message"
       hub_verification_status: "none" | "pending" | "approved" | "rejected"
+      iptv_kind: "none" | "xtream" | "m3u" | "both"
+      iptv_mode: "basic" | "smart" | "full"
+      iptv_stream_kind: "live" | "vod" | "series"
       listing_category:
         | "credits"
         | "panel"
@@ -1359,6 +1638,9 @@ export const Constants = {
       hub_report_reason: ["spam", "scam", "contact_leak", "offensive", "other"],
       hub_report_target: ["listing", "user", "message"],
       hub_verification_status: ["none", "pending", "approved", "rejected"],
+      iptv_kind: ["none", "xtream", "m3u", "both"],
+      iptv_mode: ["basic", "smart", "full"],
+      iptv_stream_kind: ["live", "vod", "series"],
       listing_category: [
         "credits",
         "panel",
