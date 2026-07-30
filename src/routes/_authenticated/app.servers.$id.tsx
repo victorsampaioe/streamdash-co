@@ -19,6 +19,7 @@ import { analyzeServer } from "@/lib/analysis.functions";
 import { useServerFn } from "@tanstack/react-start";
 import { GlobalCheckMap } from "@/components/global-check-map";
 import { MonitorBadge } from "@/components/monitor-badge";
+import { IptvPanel } from "@/components/iptv/iptv-panel";
 
 
 export const Route = createFileRoute("/_authenticated/app/servers/$id")({
