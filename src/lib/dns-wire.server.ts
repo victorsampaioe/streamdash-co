@@ -72,7 +72,7 @@ export async function wireQuery(
     const res = await fetch(endpoint, {
       method: "POST",
       headers: { "content-type": "application/dns-message", accept: "application/dns-message" },
-      body: encodeQuery(host, type),
+      body: encodeQuery(host, type).slice().buffer as ArrayBuffer,
       signal: AbortSignal.timeout(timeoutMs),
     });
     if (!res.ok) return { ok: false, answers: [], ad: null, error: `HTTP ${res.status}` };
