@@ -105,6 +105,8 @@ type XtreamResult = {
   api_ms: number | null;
   login_ok: boolean;
   json_valid: boolean;
+  reachable: boolean;
+  login_checked: boolean;
   http_status: number | null;
   body_snippet: string | null;
   channels: number | null;
