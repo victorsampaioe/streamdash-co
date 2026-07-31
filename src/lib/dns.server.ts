@@ -57,20 +57,20 @@ export type DnsReport = {
   health_score: number;
 };
 
-type DohEndpoint = { code: string; name: string; country: string; base: string };
+type DohEndpoint = { code: string; name: string; country: string; base: string; wire?: boolean };
 
 const RESOLVERS: DohEndpoint[] = [
   { code: "cloudflare", name: "Cloudflare 1.1.1.1", country: "Global", base: "https://cloudflare-dns.com/dns-query" },
   { code: "google", name: "Google 8.8.8.8", country: "Global", base: "https://dns.google/resolve" },
-  { code: "quad9", name: "Quad9 9.9.9.9", country: "Suíça", base: "https://dns.quad9.net:5053/dns-query" },
-  { code: "opendns", name: "OpenDNS (Cisco)", country: "EUA", base: "https://doh.opendns.com/dns-query" },
+  { code: "quad9", name: "Quad9 9.9.9.9", country: "Suíça", base: "https://dns.quad9.net/dns-query", wire: true },
+  { code: "opendns", name: "OpenDNS (Cisco)", country: "EUA", base: "https://doh.opendns.com/dns-query", wire: true },
   { code: "adguard", name: "AdGuard DNS", country: "Local/ISP", base: "https://dns.adguard-dns.com/resolve" },
 ];
 
 const REGIONS: Array<DohEndpoint & { flag: string }> = [
   { code: "us", name: "Estados Unidos", flag: "🇺🇸", country: "EUA", base: "https://dns.google/resolve" },
   { code: "br", name: "Brasil", flag: "🇧🇷", country: "Brasil", base: "https://cloudflare-dns.com/dns-query" },
-  { code: "eu", name: "Europa", flag: "🇪🇺", country: "Europa", base: "https://dns.quad9.net:5053/dns-query" },
+  { code: "eu", name: "Europa", flag: "🇪🇺", country: "Europa", base: "https://dns.quad9.net/dns-query", wire: true },
   { code: "as", name: "Ásia", flag: "🇯🇵", country: "Ásia", base: "https://dns.alidns.com/resolve" },
 ];
 
