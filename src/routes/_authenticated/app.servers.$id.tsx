@@ -21,6 +21,7 @@ import { GlobalCheckMap } from "@/components/global-check-map";
 import { MonitorBadge } from "@/components/monitor-badge";
 import { IptvPanel } from "@/components/iptv/iptv-panel";
 import { KumaPanel } from "@/components/kuma/kuma-panel";
+import { DnsPanel } from "@/components/dns/dns-panel";
 
 
 export const Route = createFileRoute("/_authenticated/app/servers/$id")({
