@@ -105,6 +105,8 @@ type XtreamResult = {
   api_ms: number | null;
   login_ok: boolean;
   json_valid: boolean;
+  reachable: boolean;
+  login_checked: boolean;
   http_status: number | null;
   body_snippet: string | null;
   channels: number | null;
@@ -134,23 +136,35 @@ class PlayerApiError extends Error {
 }
 
 /**
- * Busca JSON da Player API validando status, content-type e corpo antes do parse.
- * Lança PlayerApiError com mensagem específica e diagnóstico (status + trecho do corpo).
+ * Busca JSON da Player API validando disponibilidade, status HTTP, corpo e
+ * Content-Type ANTES do parse. Nunca propaga exceções cruas do JSON.parse.
  */
 async function getJson(url: string, ms = API_TIMEOUT_MS): Promise<unknown> {
+  const t0 = Date.now();
   let res: Response;
   try {
     res = await timedFetch(url, ms);
   } catch (e: unknown) {
-    const msg = (e as Error)?.name === "AbortError"
-      ? "❌ Timeout na Player API."
-      : "❌ Servidor Xtream indisponível.";
-    console.warn("[iptv] player_api fetch falhou", { url: safeUrl(url), reason: String((e as Error)?.message ?? e).slice(0, 200) });
+    const aborted = (e as Error)?.name === "AbortError";
+    const msg = aborted ? "❌ Timeout ao conectar." : "❌ Servidor indisponível.";
+    console.warn("[iptv] player_api falhou", {
+      url: safeUrl(url),
+      status: null,
+      elapsed_ms: Date.now() - t0,
+      reason: String((e as Error)?.message ?? e).slice(0, 200),
+      parser_error: msg,
+    });
     throw new PlayerApiError(msg, null, null);
   }
 
   const status = res.status;
-  const ctype = (res.headers.get("content-type") ?? "").toLowerCase();
+  const elapsed = Date.now() - t0;
+  const headers: Record<string, string> = {};
+  res.headers.forEach((v, k) => {
+    if (!/^set-cookie$|authorization/i.test(k)) headers[k] = v;
+  });
+  const ctype = (headers["content-type"] ?? "").toLowerCase();
+
   let text = "";
   try {
     text = await res.text();
@@ -159,27 +173,23 @@ async function getJson(url: string, ms = API_TIMEOUT_MS): Promise<unknown> {
   }
   const snippet = text.slice(0, 500);
   const log = (msg: string) =>
-    console.warn("[iptv] player_api", { url: safeUrl(url), status, content_type: ctype, body: snippet, msg });
+    console.warn("[iptv] player_api", { url: safeUrl(url), status, elapsed_ms: elapsed, headers, body: snippet, parser_error: msg });
 
   if (status !== 200) {
-    const msg = status === 403 ? "❌ Erro HTTP 403."
-      : status === 404 ? "❌ Erro HTTP 404."
-      : status >= 500 ? `❌ Erro HTTP ${status}.`
-      : `❌ Erro HTTP ${status}.`;
+    const msg = `❌ Erro HTTP ${status}.`;
     log(msg);
     throw new PlayerApiError(msg, status, snippet);
   }
 
   const trimmed = text.trim();
   if (!trimmed) {
-    const msg = "❌ Player API retornou resposta vazia.";
+    const msg = "❌ Resposta vazia da Player API.";
     log(msg);
     throw new PlayerApiError(msg, status, snippet);
   }
 
-  const looksHtml = /^\s*(<!doctype|<html|<\?xml|<)/i.test(trimmed);
-  if (looksHtml || ctype.includes("text/html")) {
-    const msg = "❌ Player API respondeu HTML em vez de JSON.";
+  if (/^\s*(<!doctype|<html|<\?xml|<)/i.test(trimmed) || ctype.includes("text/html")) {
+    const msg = "❌ Player API retornou HTML em vez de JSON.";
     log(msg);
     throw new PlayerApiError(msg, status, snippet);
   }
@@ -193,46 +203,73 @@ async function getJson(url: string, ms = API_TIMEOUT_MS): Promise<unknown> {
   try {
     return JSON.parse(trimmed);
   } catch {
-    const msg = "❌ JSON inválido retornado pelo servidor.";
+    const msg = "❌ URL Xtream inválida ou resposta não é JSON.";
     log(msg);
     throw new PlayerApiError(msg, status, snippet);
   }
 }
 
 export async function probeXtream(host: string, username: string, password: string): Promise<XtreamResult> {
-  const b = base(host);
+  const clean = host.replace(/^https?:\/\//, "").replace(/\/+$/, "");
   const auth = `username=${encodeURIComponent(username)}&password=${encodeURIComponent(password)}`;
   const out: XtreamResult = {
     api_ms: null, login_ok: false, json_valid: false,
+    reachable: false, login_checked: false,
     http_status: null, body_snippet: null,
     channels: null, movies: null, series: null, categories: null,
     sampleLive: [], sampleVod: [], sampleSeries: [], error: null,
   };
 
+  // 1) URL responde? tenta http e, se falhar, https (mesma ordem de diagnóstico)
   const t0 = Date.now();
-  try {
-    const info = (await getJson(`${b}/player_api.php?${auth}`)) as any;
-    out.api_ms = Date.now() - t0;
-    out.json_valid = true;
-    out.http_status = 200;
-    out.login_ok = String(info?.user_info?.auth ?? "0") === "1" && info?.user_info?.status !== "Disabled";
-  } catch (e: unknown) {
-    out.api_ms = Date.now() - t0;
-    if (e instanceof PlayerApiError) {
-      out.error = e.message;
-      out.http_status = e.status;
-      out.body_snippet = e.snippet;
-    } else {
-      out.error = String((e as Error)?.message ?? e).slice(0, 200);
+  let info: any = null;
+  let b = `http://${clean}`;
+  let lastErr: PlayerApiError | null = null;
+
+  for (const candidate of [`http://${clean}`, `https://${clean}`]) {
+    try {
+      info = await getJson(`${candidate}/player_api.php?${auth}`);
+      b = candidate;
+      lastErr = null;
+      break;
+    } catch (e: unknown) {
+      lastErr = e instanceof PlayerApiError ? e : new PlayerApiError("❌ Servidor indisponível.", null, null);
+      // Se o servidor respondeu (status HTTP conhecido), não vale tentar outro esquema.
+      if (lastErr.status !== null) break;
     }
+  }
+
+  out.api_ms = Date.now() - t0;
+
+  if (lastErr || info === null) {
+    out.error = lastErr?.message ?? "❌ Servidor indisponível.";
+    out.http_status = lastErr?.status ?? null;
+    out.body_snippet = lastErr?.snippet ?? null;
+    out.reachable = lastErr?.status !== null && lastErr?.status !== undefined;
     return out;
   }
 
+  // 2) JSON válido → só agora avaliamos usuário/senha
+  out.reachable = true;
+  out.json_valid = true;
+  out.http_status = 200;
+  out.login_checked = typeof info === "object" && info !== null && "user_info" in info;
+
+  if (!out.login_checked) {
+    out.error = "❌ URL Xtream inválida (resposta sem user_info).";
+    return out;
+  }
+
+  const status = String(info?.user_info?.status ?? "");
+  out.login_ok = String(info?.user_info?.auth ?? "0") === "1" && status !== "Disabled" && status !== "Banned";
 
   if (!out.login_ok) {
-    out.error = "Login inválido ou conta desativada";
+    out.error = status === "Disabled" || status === "Banned"
+      ? `❌ Conta Xtream ${status === "Banned" ? "banida" : "desativada"}.`
+      : "❌ Usuário ou senha inválidos.";
     return out;
   }
+
 
   const [live, vod, series, catsLive, catsVod, catsSeries] = await Promise.allSettled([
     getJson(`${b}/player_api.php?${auth}&action=get_live_streams`, M3U_TIMEOUT_MS),
@@ -587,7 +624,7 @@ export async function runIptvSync(serverId: string, opts: { mode?: "smart" | "fu
     drop(lastSync?.movies, x.movies, "filmes", "movies_drop"),
     drop(lastSync?.series, x.series, "séries", "series_drop"),
     drop(lastSync?.categories, x.categories, "categorias", "categories_drop"),
-    !x.login_ok ? raiseAlert(serverId, "login_invalid", "critical", "🚨 Login do Xtream inválido", x.error ?? undefined) : null,
+    x.login_checked && !x.login_ok ? raiseAlert(serverId, "login_invalid", "critical", "🚨 Login do Xtream inválido", x.error ?? undefined) : null,
     x.api_ms && x.api_ms > 5000 ? raiseAlert(serverId, "api_slow", "warning", "⚠ Player API lenta", `${x.api_ms}ms`) : null,
     !x.json_valid ? raiseAlert(serverId, "api_down", "critical", "🚨 Player API indisponível", x.error ?? undefined) : null,
     m3u && m3u.playlist_ok === false ? raiseAlert(serverId, "playlist_broken", "warning", "⚠ Playlist M3U com problema", m3u.error ?? undefined) : null,
