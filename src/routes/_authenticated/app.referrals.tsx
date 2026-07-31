@@ -143,8 +143,10 @@ function ReferralsPage() {
           <div className="flex-1 space-y-1.5">
             <h1 className="text-lg sm:text-xl font-bold">🚨💸 Indique amigos e ganhe dinheiro!</h1>
             <p className="text-sm text-muted-foreground">
-              Compartilhe seu código exclusivo. Quem se cadastrar usando ele recebe <strong className="text-foreground">2 dias de teste grátis</strong> e,
+              Compartilhe seu código exclusivo — ele é a <strong className="text-foreground">chave de acesso</strong> ao cadastro.
+              Quem entrar por ele pode testar <strong className="text-foreground">1 dia grátis</strong> e,
               quando assinar um plano, você ganha <strong className="text-primary">R$ 10,00 via PIX</strong>.
+
             </p>
             <p className="text-sm font-medium">Quanto mais indicar, mais você ganha! 🚀</p>
           </div>
