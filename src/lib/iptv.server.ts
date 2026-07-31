@@ -105,6 +105,8 @@ type XtreamResult = {
   api_ms: number | null;
   login_ok: boolean;
   json_valid: boolean;
+  http_status: number | null;
+  body_snippet: string | null;
   channels: number | null;
   movies: number | null;
   series: number | null;
@@ -115,10 +117,86 @@ type XtreamResult = {
   error: string | null;
 };
 
+/** Remove credenciais da URL antes de registrar em logs. */
+function safeUrl(url: string) {
+  return url.replace(/(username|password)=[^&]*/gi, "$1=***");
+}
+
+class PlayerApiError extends Error {
+  status: number | null;
+  snippet: string | null;
+  constructor(message: string, status: number | null, snippet: string | null) {
+    super(message);
+    this.name = "PlayerApiError";
+    this.status = status;
+    this.snippet = snippet;
+  }
+}
+
+/**
+ * Busca JSON da Player API validando status, content-type e corpo antes do parse.
+ * Lança PlayerApiError com mensagem específica e diagnóstico (status + trecho do corpo).
+ */
 async function getJson(url: string, ms = API_TIMEOUT_MS): Promise<unknown> {
-  const res = await timedFetch(url, ms);
-  const text = await res.text();
-  return JSON.parse(text);
+  let res: Response;
+  try {
+    res = await timedFetch(url, ms);
+  } catch (e: unknown) {
+    const msg = (e as Error)?.name === "AbortError"
+      ? "❌ Timeout na Player API."
+      : "❌ Servidor Xtream indisponível.";
+    console.warn("[iptv] player_api fetch falhou", { url: safeUrl(url), reason: String((e as Error)?.message ?? e).slice(0, 200) });
+    throw new PlayerApiError(msg, null, null);
+  }
+
+  const status = res.status;
+  const ctype = (res.headers.get("content-type") ?? "").toLowerCase();
+  let text = "";
+  try {
+    text = await res.text();
+  } catch {
+    text = "";
+  }
+  const snippet = text.slice(0, 500);
+  const log = (msg: string) =>
+    console.warn("[iptv] player_api", { url: safeUrl(url), status, content_type: ctype, body: snippet, msg });
+
+  if (status !== 200) {
+    const msg = status === 403 ? "❌ Erro HTTP 403."
+      : status === 404 ? "❌ Erro HTTP 404."
+      : status >= 500 ? `❌ Erro HTTP ${status}.`
+      : `❌ Erro HTTP ${status}.`;
+    log(msg);
+    throw new PlayerApiError(msg, status, snippet);
+  }
+
+  const trimmed = text.trim();
+  if (!trimmed) {
+    const msg = "❌ Player API retornou resposta vazia.";
+    log(msg);
+    throw new PlayerApiError(msg, status, snippet);
+  }
+
+  const looksHtml = /^\s*(<!doctype|<html|<\?xml|<)/i.test(trimmed);
+  if (looksHtml || ctype.includes("text/html")) {
+    const msg = "❌ Player API respondeu HTML em vez de JSON.";
+    log(msg);
+    throw new PlayerApiError(msg, status, snippet);
+  }
+
+  if (ctype && !/(json|text\/plain|application\/octet-stream)/.test(ctype)) {
+    const msg = `❌ Player API retornou Content-Type inesperado (${ctype.split(";")[0]}).`;
+    log(msg);
+    throw new PlayerApiError(msg, status, snippet);
+  }
+
+  try {
+    return JSON.parse(trimmed);
+  } catch {
+    const msg = "❌ JSON inválido retornado pelo servidor.";
+    log(msg);
+    throw new PlayerApiError(msg, status, snippet);
+  }
 }
 
 export async function probeXtream(host: string, username: string, password: string): Promise<XtreamResult> {
@@ -126,6 +204,7 @@ export async function probeXtream(host: string, username: string, password: stri
   const auth = `username=${encodeURIComponent(username)}&password=${encodeURIComponent(password)}`;
   const out: XtreamResult = {
     api_ms: null, login_ok: false, json_valid: false,
+    http_status: null, body_snippet: null,
     channels: null, movies: null, series: null, categories: null,
     sampleLive: [], sampleVod: [], sampleSeries: [], error: null,
   };
@@ -135,12 +214,20 @@ export async function probeXtream(host: string, username: string, password: stri
     const info = (await getJson(`${b}/player_api.php?${auth}`)) as any;
     out.api_ms = Date.now() - t0;
     out.json_valid = true;
+    out.http_status = 200;
     out.login_ok = String(info?.user_info?.auth ?? "0") === "1" && info?.user_info?.status !== "Disabled";
   } catch (e: unknown) {
     out.api_ms = Date.now() - t0;
-    out.error = String((e as Error)?.message ?? e).slice(0, 200);
+    if (e instanceof PlayerApiError) {
+      out.error = e.message;
+      out.http_status = e.status;
+      out.body_snippet = e.snippet;
+    } else {
+      out.error = String((e as Error)?.message ?? e).slice(0, 200);
+    }
     return out;
   }
+
 
   if (!out.login_ok) {
     out.error = "Login inválido ou conta desativada";
