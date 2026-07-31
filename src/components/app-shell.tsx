@@ -39,8 +39,9 @@ function GatedOutlet() {
   if (isLoading || data?.isActive || allowed) return <Outlet />;
   // Primeiro acesso: nunca teve assinatura nem teste → tela de boas-vindas.
   if (!data?.subscription) return <WelcomeOnboarding />;
-
+  return (
     <Card className="p-10 border-dashed text-center space-y-4 max-w-xl mx-auto mt-8">
+
       <div className="mx-auto h-14 w-14 rounded-full bg-muted flex items-center justify-center">
         <Lock className="h-6 w-6 text-muted-foreground" />
       </div>
