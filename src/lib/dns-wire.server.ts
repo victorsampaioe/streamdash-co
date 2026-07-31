@@ -62,25 +62,43 @@ export function decodeAnswers(buf: Uint8Array): { answers: WireAnswer[]; rcode: 
   return { answers, rcode, ad };
 }
 
+function b64url(bytes: Uint8Array): string {
+  let s = "";
+  for (const b of bytes) s += String.fromCharCode(b);
+  return btoa(s).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+}
+
 export async function wireQuery(
   endpoint: string,
   host: string,
   type: number,
   timeoutMs: number,
 ): Promise<{ ok: boolean; answers: WireAnswer[]; ad: boolean | null; error: string | null }> {
-  try {
-    const res = await fetch(endpoint, {
-      method: "POST",
-      headers: { "content-type": "application/dns-message", accept: "application/dns-message" },
-      body: encodeQuery(host, type).slice().buffer as ArrayBuffer,
-      signal: AbortSignal.timeout(timeoutMs),
-    });
-    if (!res.ok) return { ok: false, answers: [], ad: null, error: `HTTP ${res.status}` };
+  const query = encodeQuery(host, type);
+
+  async function send(init: RequestInit, url: string) {
+    const res = await fetch(url, { ...init, signal: AbortSignal.timeout(timeoutMs) });
+    if (!res.ok) return { ok: false, answers: [] as WireAnswer[], ad: null as boolean | null, error: `HTTP ${res.status}` };
     const bytes = new Uint8Array(await res.arrayBuffer());
     const { answers, rcode, ad } = decodeAnswers(bytes);
     if (rcode === 3) return { ok: false, answers, ad, error: "NXDOMAIN" };
     if (rcode !== 0) return { ok: false, answers, ad, error: `RCODE ${rcode}` };
-    return { ok: true, answers, ad, error: null };
+    return { ok: true, answers, ad, error: null as string | null };
+  }
+
+  try {
+    const post = await send(
+      {
+        method: "POST",
+        headers: { "content-type": "application/dns-message", accept: "application/dns-message" },
+        body: query.slice().buffer as ArrayBuffer,
+      },
+      endpoint,
+    );
+    if (post.ok) return post;
+    // Alguns resolvedores só aceitam GET com o query em base64url (RFC 8484 §4.1)
+    const get = await send({ method: "GET", headers: { accept: "application/dns-message" } }, `${endpoint}?dns=${b64url(query)}`);
+    return get.ok ? get : post;
   } catch (e) {
     return { ok: false, answers: [], ad: null, error: e instanceof Error ? e.message : "erro" };
   }
