@@ -135,18 +135,38 @@ function typeCode(t: string): number {
 }
 
 async function resolveA(ep: DohEndpoint, host: string): Promise<ResolverResult & { raw: DohAnswer[] }> {
-  const r = await dohQuery(ep.base, host, "A");
-  const ips = r.answers.filter((a) => a.type === 1).map((a) => a.data);
+  const started = Date.now();
+  let ok: boolean;
+  let answers: DohAnswer[];
+  let error: string | null;
+  let ms: number | null;
+
+  if (ep.wire) {
+    const { wireQuery } = await import("./dns-wire.server");
+    const w = await wireQuery(ep.base, host, 1, DNS_TIMEOUT_MS);
+    ms = Date.now() - started;
+    ok = w.ok;
+    error = w.error;
+    answers = w.answers.map((a) => ({ name: host, type: a.type, TTL: a.TTL, data: a.data }));
+  } else {
+    const r = await dohQuery(ep.base, host, "A");
+    ms = r.ms;
+    ok = r.ok;
+    error = r.error;
+    answers = r.answers;
+  }
+
+  const ips = answers.filter((a) => a.type === 1).map((a) => a.data);
   return {
     code: ep.code,
     name: ep.name,
     country: ep.country,
-    ok: r.ok && ips.length > 0,
+    ok: ok && ips.length > 0,
     ips,
-    response_ms: r.ms,
-    ttl: r.answers.find((a) => a.type === 1)?.TTL ?? null,
-    error: r.ok ? (ips.length ? null : "sem registro A") : r.error,
-    raw: r.answers,
+    response_ms: ms,
+    ttl: answers.find((a) => a.type === 1)?.TTL ?? null,
+    error: ok ? (ips.length ? null : "sem registro A") : error,
+    raw: answers,
   };
 }
 
