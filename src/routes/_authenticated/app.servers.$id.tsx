@@ -21,6 +21,7 @@ import { GlobalCheckMap } from "@/components/global-check-map";
 import { MonitorBadge } from "@/components/monitor-badge";
 import { IptvPanel } from "@/components/iptv/iptv-panel";
 import { KumaPanel } from "@/components/kuma/kuma-panel";
+import { DnsPanel } from "@/components/dns/dns-panel";
 
 
 export const Route = createFileRoute("/_authenticated/app/servers/$id")({
@@ -155,11 +156,16 @@ function ServerDetail() {
       <Tabs defaultValue="overview">
         <TabsList className="w-full sm:w-auto overflow-x-auto">
           <TabsTrigger value="overview">Visão geral</TabsTrigger>
+          <TabsTrigger value="dns">DNS</TabsTrigger>
           <TabsTrigger value="kuma">Monitoramento</TabsTrigger>
           <TabsTrigger value="iptv">IPTV</TabsTrigger>
           <TabsTrigger value="analysis">Análise</TabsTrigger>
           <TabsTrigger value="badge">Selo</TabsTrigger>
         </TabsList>
+
+        <TabsContent value="dns" className="mt-6">
+          <DnsPanel serverId={id} />
+        </TabsContent>
 
         <TabsContent value="kuma" className="mt-6">
           <KumaPanel serverId={id} />

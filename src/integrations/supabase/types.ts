@@ -195,6 +195,201 @@ export type Database = {
           },
         ]
       }
+      dns_alerts: {
+        Row: {
+          acknowledged_at: string | null
+          created_at: string
+          detail: string | null
+          id: string
+          kind: string
+          server_id: string
+          severity: string
+          title: string
+        }
+        Insert: {
+          acknowledged_at?: string | null
+          created_at?: string
+          detail?: string | null
+          id?: string
+          kind: string
+          server_id: string
+          severity?: string
+          title: string
+        }
+        Update: {
+          acknowledged_at?: string | null
+          created_at?: string
+          detail?: string | null
+          id?: string
+          kind?: string
+          server_id?: string
+          severity?: string
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "dns_alerts_server_id_fkey"
+            columns: ["server_id"]
+            isOneToOne: false
+            referencedRelation: "servers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      dns_ip_history: {
+        Row: {
+          changed_at: string
+          id: string
+          new_asn: string | null
+          new_ip: string | null
+          old_asn: string | null
+          old_ip: string | null
+          record_type: string
+          seconds_since_previous: number | null
+          server_id: string
+        }
+        Insert: {
+          changed_at?: string
+          id?: string
+          new_asn?: string | null
+          new_ip?: string | null
+          old_asn?: string | null
+          old_ip?: string | null
+          record_type?: string
+          seconds_since_previous?: number | null
+          server_id: string
+        }
+        Update: {
+          changed_at?: string
+          id?: string
+          new_asn?: string | null
+          new_ip?: string | null
+          old_asn?: string | null
+          old_ip?: string | null
+          record_type?: string
+          seconds_since_previous?: number | null
+          server_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "dns_ip_history_server_id_fkey"
+            columns: ["server_id"]
+            isOneToOne: false
+            referencedRelation: "servers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      dns_snapshots: {
+        Row: {
+          asn: string | null
+          avg_response_ms: number | null
+          checked_at: string
+          city: string | null
+          cloudflare_proxy: boolean | null
+          consistent: boolean | null
+          country: string | null
+          created_at: string
+          datacenter: string | null
+          diagnosis: string[] | null
+          dnssec: boolean | null
+          domain_expires_at: string | null
+          health_score: number | null
+          id: string
+          ipv4: string[] | null
+          ipv6: string[] | null
+          max_response_ms: number | null
+          min_response_ms: number | null
+          nameservers: string[] | null
+          org: string | null
+          primary_ip: string | null
+          propagation: Json
+          propagation_pct: number | null
+          records: Json
+          registrar: string | null
+          resolved_ok: number
+          resolver_count: number
+          resolvers: Json
+          server_id: string
+          status: string
+          ttl_seconds: number | null
+        }
+        Insert: {
+          asn?: string | null
+          avg_response_ms?: number | null
+          checked_at?: string
+          city?: string | null
+          cloudflare_proxy?: boolean | null
+          consistent?: boolean | null
+          country?: string | null
+          created_at?: string
+          datacenter?: string | null
+          diagnosis?: string[] | null
+          dnssec?: boolean | null
+          domain_expires_at?: string | null
+          health_score?: number | null
+          id?: string
+          ipv4?: string[] | null
+          ipv6?: string[] | null
+          max_response_ms?: number | null
+          min_response_ms?: number | null
+          nameservers?: string[] | null
+          org?: string | null
+          primary_ip?: string | null
+          propagation?: Json
+          propagation_pct?: number | null
+          records?: Json
+          registrar?: string | null
+          resolved_ok?: number
+          resolver_count?: number
+          resolvers?: Json
+          server_id: string
+          status?: string
+          ttl_seconds?: number | null
+        }
+        Update: {
+          asn?: string | null
+          avg_response_ms?: number | null
+          checked_at?: string
+          city?: string | null
+          cloudflare_proxy?: boolean | null
+          consistent?: boolean | null
+          country?: string | null
+          created_at?: string
+          datacenter?: string | null
+          diagnosis?: string[] | null
+          dnssec?: boolean | null
+          domain_expires_at?: string | null
+          health_score?: number | null
+          id?: string
+          ipv4?: string[] | null
+          ipv6?: string[] | null
+          max_response_ms?: number | null
+          min_response_ms?: number | null
+          nameservers?: string[] | null
+          org?: string | null
+          primary_ip?: string | null
+          propagation?: Json
+          propagation_pct?: number | null
+          records?: Json
+          registrar?: string | null
+          resolved_ok?: number
+          resolver_count?: number
+          resolvers?: Json
+          server_id?: string
+          status?: string
+          ttl_seconds?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "dns_snapshots_server_id_fkey"
+            columns: ["server_id"]
+            isOneToOne: false
+            referencedRelation: "servers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       hub_profiles: {
         Row: {
           banned: boolean
@@ -1283,6 +1478,9 @@ export type Database = {
           created_at: string
           current_status: Database["public"]["Enums"]["server_status"]
           description: string | null
+          dns_enabled: boolean
+          dns_health_score: number | null
+          dns_interval_minutes: number
           failure_threshold: number
           health_score: number | null
           host: string
@@ -1307,6 +1505,7 @@ export type Database = {
           kuma_tcp_id: number | null
           kuma_tcp_port: number
           last_checked_at: string | null
+          last_dns_check_at: string | null
           last_iptv_sync_at: string | null
           last_latency_ms: number | null
           name: string
@@ -1321,6 +1520,9 @@ export type Database = {
           created_at?: string
           current_status?: Database["public"]["Enums"]["server_status"]
           description?: string | null
+          dns_enabled?: boolean
+          dns_health_score?: number | null
+          dns_interval_minutes?: number
           failure_threshold?: number
           health_score?: number | null
           host: string
@@ -1345,6 +1547,7 @@ export type Database = {
           kuma_tcp_id?: number | null
           kuma_tcp_port?: number
           last_checked_at?: string | null
+          last_dns_check_at?: string | null
           last_iptv_sync_at?: string | null
           last_latency_ms?: number | null
           name: string
@@ -1359,6 +1562,9 @@ export type Database = {
           created_at?: string
           current_status?: Database["public"]["Enums"]["server_status"]
           description?: string | null
+          dns_enabled?: boolean
+          dns_health_score?: number | null
+          dns_interval_minutes?: number
           failure_threshold?: number
           health_score?: number | null
           host?: string
@@ -1383,6 +1589,7 @@ export type Database = {
           kuma_tcp_id?: number | null
           kuma_tcp_port?: number
           last_checked_at?: string | null
+          last_dns_check_at?: string | null
           last_iptv_sync_at?: string | null
           last_latency_ms?: number | null
           name?: string
