@@ -70,7 +70,7 @@ const RESOLVERS: DohEndpoint[] = [
 const REGIONS: Array<DohEndpoint & { flag: string }> = [
   { code: "us", name: "Estados Unidos", flag: "🇺🇸", country: "EUA", base: "https://dns.google/resolve" },
   { code: "br", name: "Brasil", flag: "🇧🇷", country: "Brasil", base: "https://cloudflare-dns.com/dns-query" },
-  { code: "eu", name: "Europa", flag: "🇪🇺", country: "Europa", base: "https://dns.quad9.net/dns-query", wire: true },
+  { code: "eu", name: "Europa", flag: "🇪🇺", country: "Alemanha", base: "https://dnsforge.de/dns-query", wire: true },
   { code: "as", name: "Ásia", flag: "🇯🇵", country: "Ásia", base: "https://dns.alidns.com/resolve" },
 ];
 
