@@ -13,12 +13,14 @@ async function run() {
   const { notifyNewlyExpiredSubscriptions } = await import("@/lib/admin-telegram.server");
   const { runDueIptvSyncs } = await import("@/lib/iptv.server");
   const { syncKumaStatuses, provisionPendingServers } = await import("@/lib/kuma.server");
-  const [checks, expired, iptv, kuma, kumaProv] = await Promise.all([
+  const { runDueDnsChecks } = await import("@/lib/dns.server");
+  const [checks, expired, iptv, kuma, kumaProv, dns] = await Promise.all([
     runDueChecks(),
     notifyNewlyExpiredSubscriptions().catch(() => ({ notified: 0 })),
     runDueIptvSyncs().catch(() => ({ synced: 0, errors: 0 })),
     syncKumaStatuses().catch(() => ({ synced: 0 })),
     provisionPendingServers().catch(() => ({ provisioned: 0 })),
+    runDueDnsChecks().catch(() => ({ checked: 0, errors: 0 })),
   ]);
   return {
     ...checks,
@@ -27,6 +29,8 @@ async function run() {
     iptvErrors: iptv.errors,
     kumaSynced: kuma.synced,
     kumaProvisioned: (kumaProv as any).provisioned ?? 0,
+    dnsChecked: dns.checked,
+    dnsErrors: dns.errors,
   };
 }
 
