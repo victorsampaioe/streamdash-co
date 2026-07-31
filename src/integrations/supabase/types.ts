@@ -1230,6 +1230,7 @@ export type Database = {
           referral_code: string | null
           referred_by: string | null
           signup_bonus_days: number
+          trial_used: boolean
         }
         Insert: {
           avatar_url?: string | null
@@ -1241,6 +1242,7 @@ export type Database = {
           referral_code?: string | null
           referred_by?: string | null
           signup_bonus_days?: number
+          trial_used?: boolean
         }
         Update: {
           avatar_url?: string | null
@@ -1252,6 +1254,7 @@ export type Database = {
           referral_code?: string | null
           referred_by?: string | null
           signup_bonus_days?: number
+          trial_used?: boolean
         }
         Relationships: []
       }
@@ -1701,6 +1704,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      activate_free_trial: { Args: never; Returns: Json }
       admin_approve_payout: { Args: { _id: string }; Returns: undefined }
       admin_list_payout_requests: {
         Args: never
@@ -1845,6 +1849,7 @@ export type Database = {
       }
       hub_recompute_rating: { Args: { _user: string }; Returns: undefined }
       hub_start_conversation: { Args: { _listing_id: string }; Returns: string }
+      is_valid_referral_code: { Args: { _code: string }; Returns: boolean }
       request_payout: {
         Args: { _pix_key: string; _pix_name: string; _pix_type: string }
         Returns: string
