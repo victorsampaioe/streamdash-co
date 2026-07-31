@@ -120,7 +120,7 @@ function ReferralsPage() {
       try {
         await navigator.share({
           title: "StreamMonitor",
-          text: "Monitore seus servidores com o StreamMonitor. Use meu código e ganhe 2 dias grátis!",
+          text: "Monitore seus servidores com o StreamMonitor. Use meu código para liberar seu cadastro e teste 1 dia grátis!",
           url: shareUrl,
         });
       } catch { /* cancelled */ }
