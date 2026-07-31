@@ -53,20 +53,27 @@ function AuthPage() {
 
   async function handleSignUp(e: React.FormEvent) {
     e.preventDefault();
+    const code = referralCode.trim().toUpperCase();
+    if (!code) return toast.error("Informe um código de indicação para criar sua conta.");
     setLoading(true);
+    const { data: valid, error: codeError } = await supabase.rpc("is_valid_referral_code" as never, { _code: code } as never);
+    if (codeError || !valid) {
+      setLoading(false);
+      return toast.error("Código de indicação inválido. Peça um código a quem já usa o Stream Monitor.");
+    }
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
       options: {
         emailRedirectTo: `${window.location.origin}/app`,
-        data: { full_name: name, phone, referral_code: referralCode.trim().toUpperCase() || undefined },
+        data: { full_name: name, phone, referral_code: code },
       },
     });
     setLoading(false);
     if (error) return toast.error(error.message);
     // Aguarda a notificação antes de navegar para não cancelar o request
     try {
-      await notifyAdminSignup({ data: { email, name, phone, referralCode: referralCode.trim().toUpperCase() || undefined } });
+      await notifyAdminSignup({ data: { email, name, phone, referralCode: code } });
     } catch { /* não bloquear o cadastro se falhar */ }
     // If email confirmation is required, session is null → send to verify screen.
     if (!data.session) {
@@ -77,6 +84,7 @@ function AuthPage() {
       navigate({ to: "/app", replace: true });
     }
   }
+
 
   async function handleReset() {
     if (!email) return toast.error("Digite seu e-mail primeiro");
@@ -118,8 +126,9 @@ function AuthPage() {
                 <Field label="Telefone"><Input type="tel" required value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="(11) 99999-9999" /></Field>
                 <Field label="E-mail"><Input type="email" required value={email} onChange={(e) => setEmail(e.target.value)} /></Field>
                 <Field label="Senha"><Input type="password" required minLength={6} value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Mín. 6 caracteres" /></Field>
-                <Field label="Código de indicação (opcional)">
+                <Field label="Código de indicação (obrigatório)">
                   <Input
+                    required
                     value={referralCode}
                     onChange={(e) => setReferralCode(e.target.value.toUpperCase())}
                     placeholder="Ex.: ABC12345"
@@ -128,15 +137,14 @@ function AuthPage() {
                     className={ref ? "bg-muted/50 cursor-not-allowed" : ""}
                   />
                 </Field>
-                {referralCode && (
-                  <p className="text-xs text-primary">🎁 Você ganhará <strong>2 dias</strong> extras de teste ao usar este código.</p>
-                )}
+                <p className="text-xs text-muted-foreground">
+                  🔑 O cadastro é liberado apenas com um código de indicação válido. Depois do
+                  primeiro acesso você escolhe entre <strong>1 dia de teste grátis</strong> ou assinar um plano.
+                </p>
                 <Button type="submit" disabled={loading} className="w-full">
                   {loading ? "Criando..." : "Criar conta"}
                 </Button>
-                <p className="text-xs text-muted-foreground text-center">
-                  O primeiro usuário criado vira administrador automaticamente.
-                </p>
+
               </form>
             </TabsContent>
           </Tabs>

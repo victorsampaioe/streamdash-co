@@ -1,6 +1,8 @@
 import { Link, Outlet, useNavigate, useRouterState } from "@tanstack/react-router";
 import { Activity, LayoutDashboard, ServerIcon, Bell, Users, LogOut, Sun, Moon, Search, Plus, CreditCard, Gift, Radio, ShieldAlert, Trophy, Lock, Menu, Send, Bot, Store } from "lucide-react";
 import { SubscriptionBanner } from "@/components/subscription/subscription-banner";
+import { WelcomeOnboarding } from "@/components/subscription/welcome-onboarding";
+
 import { useEffect, useState, type ReactNode } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -37,8 +39,11 @@ function GatedOutlet() {
   const { data, isLoading } = useSubscription();
   const allowed = ALWAYS_OPEN_PATHS.some((p) => pathname === p || pathname.startsWith(p + "/"));
   if (isLoading || data?.isActive || allowed) return <Outlet />;
+  // Primeiro acesso: nunca teve assinatura nem teste → tela de boas-vindas.
+  if (!data?.subscription) return <WelcomeOnboarding />;
   return (
     <Card className="p-10 border-dashed text-center space-y-4 max-w-xl mx-auto mt-8">
+
       <div className="mx-auto h-14 w-14 rounded-full bg-muted flex items-center justify-center">
         <Lock className="h-6 w-6 text-muted-foreground" />
       </div>
