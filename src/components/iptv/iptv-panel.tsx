@@ -11,7 +11,7 @@ import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { LineChart, Line, ResponsiveContainer, XAxis, YAxis, Tooltip, CartesianGrid } from "recharts";
 import { toast } from "sonner";
-import { Activity, RefreshCw, Radar, Film, Tv, Layers, Clock, MapPin, ShieldAlert } from "lucide-react";
+import { Activity, RefreshCw, Radar, Film, Tv, Layers, Clock, MapPin, ShieldAlert, Rocket, Library, Zap, Timer, BarChart3, BellRing, Lock } from "lucide-react";
 import { detectIptvNow, runIptvSyncNow, acknowledgeIptvAlert } from "@/lib/iptv.functions";
 
 type Range = "24h" | "7d" | "30d";
@@ -344,6 +344,46 @@ export function IptvPanel({ serverId, server }: { serverId: string; server: any 
                 const v = Math.min(10, Math.max(5, Number(e.target.value)));
                 if (v !== server?.iptv_sample_size) saveConfig.mutate({ iptv_sample_size: v });
               }} />
+          </div>
+        </div>
+
+        <div className="rounded-xl border border-primary/25 bg-primary/5 p-4 sm:p-5 space-y-4">
+          <div className="flex items-start gap-3">
+            <div className="rounded-lg bg-primary/15 text-primary p-2 shrink-0">
+              <Rocket className="h-5 w-5" />
+            </div>
+            <div className="min-w-0">
+              <h4 className="font-semibold text-sm">Ative o Modo Inteligente IPTV</h4>
+              <p className="text-xs text-muted-foreground mt-1">
+                Configure a URL Xtream, usuário e senha para habilitar o monitoramento avançado do seu servidor.
+                Após a configuração, o Stream Monitor realizará automaticamente:
+              </p>
+            </div>
+          </div>
+
+          <ul className="grid sm:grid-cols-2 gap-2">
+            {[
+              { icon: Tv, text: "Verificação de canais ao vivo" },
+              { icon: Film, text: "Monitoramento de Filmes (VOD)" },
+              { icon: Library, text: "Monitoramento de Séries" },
+              { icon: Zap, text: "Testes da Player API" },
+              { icon: Timer, text: "Tempo de resposta" },
+              { icon: BarChart3, text: "Análise de desempenho" },
+              { icon: BellRing, text: "Alertas automáticos de falhas" },
+            ].map(({ icon: Icon, text }) => (
+              <li key={text} className="flex items-center gap-2 text-xs rounded-lg bg-background/60 border border-border/50 px-3 py-2">
+                <Icon className="h-3.5 w-3.5 text-primary shrink-0" />
+                <span className="truncate">{text}</span>
+              </li>
+            ))}
+          </ul>
+
+          <div className="flex items-start gap-2 text-[11px] text-muted-foreground border-t border-primary/15 pt-3">
+            <Lock className="h-3.5 w-3.5 shrink-0 mt-px text-success" />
+            <span>
+              Suas credenciais são armazenadas de forma criptografada e utilizadas exclusivamente para realizar os
+              monitoramentos automáticos.
+            </span>
           </div>
         </div>
 
