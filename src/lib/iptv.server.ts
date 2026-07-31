@@ -624,7 +624,7 @@ export async function runIptvSync(serverId: string, opts: { mode?: "smart" | "fu
     drop(lastSync?.movies, x.movies, "filmes", "movies_drop"),
     drop(lastSync?.series, x.series, "séries", "series_drop"),
     drop(lastSync?.categories, x.categories, "categorias", "categories_drop"),
-    !x.login_ok ? raiseAlert(serverId, "login_invalid", "critical", "🚨 Login do Xtream inválido", x.error ?? undefined) : null,
+    x.login_checked && !x.login_ok ? raiseAlert(serverId, "login_invalid", "critical", "🚨 Login do Xtream inválido", x.error ?? undefined) : null,
     x.api_ms && x.api_ms > 5000 ? raiseAlert(serverId, "api_slow", "warning", "⚠ Player API lenta", `${x.api_ms}ms`) : null,
     !x.json_valid ? raiseAlert(serverId, "api_down", "critical", "🚨 Player API indisponível", x.error ?? undefined) : null,
     m3u && m3u.playlist_ok === false ? raiseAlert(serverId, "playlist_broken", "warning", "⚠ Playlist M3U com problema", m3u.error ?? undefined) : null,
