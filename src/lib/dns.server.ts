@@ -310,18 +310,24 @@ export async function analyzeDns(rawHost: string, recentChanges = 0): Promise<Dn
 
   const resolvers: ResolverResult[] = resolverRes.map(({ raw: _raw, ...rest }) => rest);
   const okRes = resolvers.filter((r) => r.ok);
-  const sigSet = new Set(okRes.map((r) => [...r.ips].sort().join(",")));
+
+  // Domínios atrás do Cloudflare recebem IPs anycast rotativos do mesmo pool:
+  // nesse caso todos os IPs Cloudflare são equivalentes.
+  const allCf = okRes.length > 0 && okRes.every((r) => r.ips.every((ip) => isCloudflareIp(ip)));
+  const sig = (ips: string[]) => (allCf && ips.every((ip) => isCloudflareIp(ip)) ? "cloudflare" : [...ips].sort().join(","));
+
+  const sigSet = new Set(okRes.map((r) => sig(r.ips)));
   const consistent = sigSet.size <= 1;
   const times = resolvers.map((r) => r.response_ms).filter((v): v is number => v != null);
 
   const majority = okRes[0]?.ips ?? [];
-  const majoritySig = [...majority].sort().join(",");
+  const majoritySig = sig(majority);
   const propagation: PropagationRegion[] = regionRes.map(({ region, res }) => ({
     code: region.code,
     name: region.name,
     flag: region.flag,
     ok: res.ok,
-    matches: res.ok && [...res.ips].sort().join(",") === majoritySig,
+    matches: res.ok && sig(res.ips) === majoritySig,
     ips: res.ips,
   }));
   const propagation_pct = Math.round((propagation.filter((p) => p.matches).length / propagation.length) * 100);
