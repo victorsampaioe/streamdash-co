@@ -53,20 +53,27 @@ function AuthPage() {
 
   async function handleSignUp(e: React.FormEvent) {
     e.preventDefault();
+    const code = referralCode.trim().toUpperCase();
+    if (!code) return toast.error("Informe um código de indicação para criar sua conta.");
     setLoading(true);
+    const { data: valid, error: codeError } = await supabase.rpc("is_valid_referral_code" as never, { _code: code } as never);
+    if (codeError || !valid) {
+      setLoading(false);
+      return toast.error("Código de indicação inválido. Peça um código a quem já usa o Stream Monitor.");
+    }
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
       options: {
         emailRedirectTo: `${window.location.origin}/app`,
-        data: { full_name: name, phone, referral_code: referralCode.trim().toUpperCase() || undefined },
+        data: { full_name: name, phone, referral_code: code },
       },
     });
     setLoading(false);
     if (error) return toast.error(error.message);
     // Aguarda a notificação antes de navegar para não cancelar o request
     try {
-      await notifyAdminSignup({ data: { email, name, phone, referralCode: referralCode.trim().toUpperCase() || undefined } });
+      await notifyAdminSignup({ data: { email, name, phone, referralCode: code } });
     } catch { /* não bloquear o cadastro se falhar */ }
     // If email confirmation is required, session is null → send to verify screen.
     if (!data.session) {
@@ -77,6 +84,7 @@ function AuthPage() {
       navigate({ to: "/app", replace: true });
     }
   }
+
 
   async function handleReset() {
     if (!email) return toast.error("Digite seu e-mail primeiro");
