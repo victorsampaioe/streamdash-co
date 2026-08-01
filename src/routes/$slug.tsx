@@ -198,16 +198,29 @@ function ResellerPublicPage() {
           </section>
         )}
 
-
-
-
         {p.show_novidades && news.length > 0 && (
           <section>
-            <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground mb-3">Novidades</h2>
+            <div className="flex items-center justify-between gap-3 mb-3">
+              <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">Novidades</h2>
+              <CopyButton
+                color={p.primary_color}
+                label="Copiar novidades"
+                text={news.map((n) => `• ${n.name}`).join("\n")}
+              />
+            </div>
             {todayNews.length > 0 && (
               <Card className="p-4 mb-3 border" style={{ borderColor: p.accent_color }}>
-                <div className="font-semibold mb-1">🔥 Novidades de hoje</div>
-                <p className="text-sm text-muted-foreground">{todayNews.length} novos títulos/canais adicionados hoje.</p>
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <div>
+                    <div className="font-semibold mb-1">🔥 Novidades de hoje</div>
+                    <p className="text-sm text-muted-foreground">{todayNews.length} novos títulos/canais adicionados hoje.</p>
+                  </div>
+                  <CopyButton
+                    color={p.accent_color}
+                    label="Copiar de hoje"
+                    text={todayNews.map((n) => `• ${n.name}`).join("\n")}
+                  />
+                </div>
               </Card>
             )}
             <div className="grid gap-3 sm:grid-cols-3">
@@ -227,9 +240,22 @@ function ResellerPublicPage() {
                       ))}
                       {items.length === 0 && <li>Sem novidades nos últimos 7 dias.</li>}
                     </ul>
+                    {items.length > 0 && (
+                      <div className="mt-3">
+                        <CopyButton
+                          color={p.primary_color}
+                          label="Copiar lista"
+                          text={items.map((n) => `• ${n.name}`).join("\n")}
+                        />
+                      </div>
+                    )}
                   </Card>
                 );
               })}
+            </div>
+          </section>
+        )}
+
             </div>
           </section>
         )}
