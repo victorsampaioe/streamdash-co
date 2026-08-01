@@ -104,7 +104,7 @@ function ResellerPublicPage() {
   const p = data.page;
   const servers = data.servers ?? [];
   const news = data.news ?? [];
-  const dnsList = servers.filter((s) => s.dns);
+  
   const allUp = servers.length > 0 && servers.every((s) => s.status === "up");
   const avgLatency = servers.filter((s) => s.latency_ms != null).reduce((a, s, _i, arr) => a + (s.latency_ms ?? 0) / arr.length, 0);
   const today = new Date();
