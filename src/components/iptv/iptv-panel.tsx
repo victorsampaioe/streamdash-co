@@ -69,6 +69,20 @@ export function IptvPanel({ serverId, server }: { serverId: string; server: any 
 
   const since = new Date(Date.now() - RANGE_MS[range]).toISOString();
 
+  const { data: rank } = useQuery({
+    queryKey: ["iptv-rank", serverId],
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc("get_iptv_server_rank", { _server_id: serverId });
+      if (error) throw error;
+      return data as {
+        position: number | null; total: number; channels: number | null; movies: number | null; series: number | null;
+        avg_channels: number | null; avg_movies: number | null; avg_series: number | null; content_vs_avg_pct: number | null;
+      };
+    },
+    refetchInterval: 120_000,
+  });
+
+
   const { data: syncs = [], refetch: refetchSyncs } = useQuery({
     queryKey: ["iptv-syncs", serverId, range],
     queryFn: async () =>
