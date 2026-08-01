@@ -27,8 +27,9 @@ function ServersList() {
 
   const del = useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase.from("servers").delete().eq("id", id);
+      const { data, error } = await supabase.rpc("delete_server", { _id: id });
       if (error) throw error;
+      if (data === false) throw new Error("Servidor não encontrado ou já removido");
     },
     onSuccess: () => { qc.invalidateQueries({ queryKey: ["servers"] }); toast.success("Servidor removido"); },
     onError: (e: Error) => toast.error(e.message),
