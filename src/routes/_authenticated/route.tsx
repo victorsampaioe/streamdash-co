@@ -1,5 +1,8 @@
 import { createFileRoute, Outlet, redirect, isRedirect, useRouter } from "@tanstack/react-router";
+import { useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { isChunkLoadError, recoverFromChunkError } from "@/lib/chunk-recovery";
+
 
 export const Route = createFileRoute("/_authenticated")({
   ssr: false,
