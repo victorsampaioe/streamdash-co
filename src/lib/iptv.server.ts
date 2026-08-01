@@ -41,6 +41,42 @@ function base(host: string) {
   return `http://${host.replace(/^https?:\/\//, "").replace(/\/+$/, "")}`;
 }
 
+/** User-Agents usados nos testes (padrão = player IPTV real; alternativo = navegador). */
+export const UA_PLAYER =
+  "IPTVSmartersPlayer/3.1.5 (Linux; Android 11) ExoPlayerLib/2.18.1";
+export const UA_BROWSER =
+  "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36";
+
+function playerHeaders(ua: string): Record<string, string> {
+  return {
+    "user-agent": ua,
+    accept: "application/json, text/plain, */*",
+    "accept-language": "pt-BR,pt;q=0.9,en;q=0.8",
+    "cache-control": "no-cache",
+    connection: "keep-alive",
+  };
+}
+
+/** IP de saída do monitor (cacheado por 10 min) — útil para diagnosticar bloqueio por IP. */
+let _egress: { ip: string | null; at: number } = { ip: null, at: 0 };
+export async function egressIp(): Promise<string | null> {
+  if (_egress.ip && Date.now() - _egress.at < 600_000) return _egress.ip;
+  for (const url of ["https://api.ipify.org?format=json", "https://ifconfig.me/all.json"]) {
+    try {
+      const res = await timedFetch(url, 5000);
+      const j: any = await res.json();
+      const ip = j?.ip ?? j?.ip_addr ?? null;
+      if (ip) {
+        _egress = { ip: String(ip), at: Date.now() };
+        return _egress.ip;
+      }
+    } catch {
+      /* ignora */
+    }
+  }
+  return null;
+}
+
 async function timedFetch(url: string, ms: number, init?: RequestInit) {
   const ctl = new AbortController();
   const t = setTimeout(() => ctl.abort(), ms);
@@ -50,6 +86,7 @@ async function timedFetch(url: string, ms: number, init?: RequestInit) {
     clearTimeout(t);
   }
 }
+
 
 /* ------------------------------------------------------------------ */
 /* Detection                                                           */
@@ -122,9 +159,14 @@ export type PlayerApiDiagnostics = {
   content_type: string | null;
   size_bytes: number | null;
   body_snippet: string | null;
+  user_agent: string | null;
+  request_headers: Record<string, string> | null;
+  response_headers: Record<string, string> | null;
+  egress_ip: string | null;
   stage: "network" | "http" | "empty" | "content-type" | "parse" | "ok";
   message: string;
 };
+
 
 export type XtreamAccount = {
   status: string | null;
@@ -186,12 +228,15 @@ class PlayerApiError extends Error {
 async function getJson(
   url: string,
   ms = API_TIMEOUT_MS,
+  ua: string = UA_PLAYER,
 ): Promise<{ data: unknown; diag: PlayerApiDiagnostics }> {
   const t0 = Date.now();
   const masked = safeUrl(url);
+  const reqHeaders = playerHeaders(ua);
+  const outIp = await egressIp();
   let res: Response;
   try {
-    res = await timedFetch(url, ms);
+    res = await timedFetch(url, ms, { headers: reqHeaders });
   } catch (e: unknown) {
     const aborted = (e as Error)?.name === "AbortError";
     const diag: PlayerApiDiagnostics = {
@@ -204,6 +249,10 @@ async function getJson(
       content_type: null,
       size_bytes: null,
       body_snippet: null,
+      user_agent: ua,
+      request_headers: reqHeaders,
+      response_headers: null,
+      egress_ip: outIp,
       stage: "network",
       message: aborted
         ? "❌ Sem resposta: tempo limite excedido ao conectar no servidor."
@@ -236,6 +285,10 @@ async function getJson(
     content_type: headers["content-type"] ?? null,
     size_bytes: text.length,
     body_snippet: text.slice(0, 500) || null,
+    user_agent: ua,
+    request_headers: reqHeaders,
+    response_headers: headers,
+    egress_ip: outIp,
     stage: "ok",
     message: "",
   };
@@ -243,9 +296,10 @@ async function getJson(
   const fail = (stage: PlayerApiDiagnostics["stage"], message: string): never => {
     diag.stage = stage;
     diag.message = message;
-    console.warn("[iptv] player_api", { ...diag, headers });
+    console.warn("[iptv] player_api", diag);
     throw new PlayerApiError(diag);
   };
+
 
   if (res.status !== 200) {
     const extra = res.status === 403 || res.status === 401 ? " (acesso bloqueado pelo servidor)" : "";
@@ -307,6 +361,7 @@ export async function probeXtream(host: string, username: string, password: stri
             url: safeUrl(`${candidate}/player_api.php?${auth}`),
             final_url: null, redirected: false, http_status: null, status_text: null,
             elapsed_ms: 0, content_type: null, size_bytes: null, body_snippet: null,
+            user_agent: UA_PLAYER, request_headers: null, response_headers: null, egress_ip: null,
             stage: "network", message: "❌ Sem resposta do servidor.",
           });
       // Se o servidor respondeu (status HTTP conhecido), não vale tentar outro esquema.
@@ -798,4 +853,68 @@ export async function runDueIptvSyncs() {
     catch { errors++; }
   }
   return { synced, errors };
+}
+
+/* ------------------------------------------------------------------ */
+/* Teste comparativo de User-Agent (diagnóstico de bloqueio 403)       */
+/* ------------------------------------------------------------------ */
+
+export type UaProbe = {
+  label: string;
+  user_agent: string;
+  ok: boolean;
+  diagnostics: PlayerApiDiagnostics | null;
+  error: string | null;
+};
+
+/**
+ * Chama a Player API com dois User-Agents (player IPTV e navegador) para
+ * distinguir bloqueio por identificação da requisição x bloqueio por IP.
+ */
+export async function comparePlayerApiUserAgents(
+  host: string,
+  username: string,
+  password: string,
+): Promise<{ egress_ip: string | null; probes: UaProbe[]; verdict: string }> {
+  const clean = host.replace(/^https?:\/\//, "").replace(/\/+$/, "");
+  const auth = `username=${encodeURIComponent(username)}&password=${encodeURIComponent(password)}`;
+  const url = `http://${clean}/player_api.php?${auth}`;
+
+  const run = async (label: string, ua: string): Promise<UaProbe> => {
+    try {
+      const { diag } = await getJson(url, API_TIMEOUT_MS, ua);
+      return { label, user_agent: ua, ok: true, diagnostics: diag, error: null };
+    } catch (e: unknown) {
+      const err = e as PlayerApiError;
+      return {
+        label,
+        user_agent: ua,
+        ok: false,
+        diagnostics: err?.diag ?? null,
+        error: String(err?.message ?? e).slice(0, 240),
+      };
+    }
+  };
+
+  const probes = [
+    await run("Player IPTV (padrão)", UA_PLAYER),
+    await run("Navegador (Mozilla/5.0)", UA_BROWSER),
+  ];
+
+  const [player, browser] = probes;
+  let verdict: string;
+  if (player!.ok || browser!.ok) {
+    verdict = player!.ok && browser!.ok
+      ? "✅ Servidor aceita ambos os User-Agents. O bloqueio anterior não é por identificação da requisição."
+      : `⚠️ Servidor aceita apenas o User-Agent "${player!.ok ? player!.label : browser!.label}". O bloqueio é por identificação da requisição (User-Agent).`;
+  } else if (
+    player!.diagnostics?.http_status === 403 &&
+    browser!.diagnostics?.http_status === 403
+  ) {
+    verdict = "🚫 HTTP 403 com os dois User-Agents: bloqueio provavelmente pelo IP de saída do monitor (ou firewall/anti-bot do servidor).";
+  } else {
+    verdict = "❌ Falha nos dois testes por motivos diferentes — veja os diagnósticos abaixo.";
+  }
+
+  return { egress_ip: await egressIp(), probes, verdict };
 }

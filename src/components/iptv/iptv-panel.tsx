@@ -11,8 +11,8 @@ import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { LineChart, Line, ResponsiveContainer, XAxis, YAxis, Tooltip, CartesianGrid } from "recharts";
 import { toast } from "sonner";
-import { Activity, RefreshCw, Radar, Film, Tv, Layers, Clock, MapPin, ShieldAlert, Rocket, Library, Zap, Timer, BarChart3, BellRing, Lock } from "lucide-react";
-import { detectIptvNow, runIptvSyncNow, acknowledgeIptvAlert } from "@/lib/iptv.functions";
+import { Activity, RefreshCw, Radar, Film, Tv, Layers, Clock, MapPin, ShieldAlert, Rocket, Library, Zap, Timer, BarChart3, BellRing, Lock, Globe } from "lucide-react";
+import { detectIptvNow, runIptvSyncNow, acknowledgeIptvAlert, testPlayerApiUserAgents } from "@/lib/iptv.functions";
 
 type Range = "24h" | "7d" | "30d";
 const RANGE_MS: Record<Range, number> = { "24h": 864e5, "7d": 7 * 864e5, "30d": 30 * 864e5 };
@@ -32,8 +32,19 @@ export function IptvPanel({ serverId, server }: { serverId: string; server: any 
   const detect = useServerFn(detectIptvNow);
   const sync = useServerFn(runIptvSyncNow);
   const ack = useServerFn(acknowledgeIptvAlert);
+  const uaTest = useServerFn(testPlayerApiUserAgents);
   const [range, setRange] = useState<Range>("7d");
   const [creds, setCreds] = useState({ u: server?.iptv_username ?? "", p: server?.iptv_password ?? "" });
+  const [uaResult, setUaResult] = useState<any>(null);
+
+  const doUaTest = useMutation({
+    mutationFn: async () => await uaTest({ data: { serverId } }),
+    onSuccess: (r: any) => {
+      setUaResult(r);
+      toast.success("Teste de User-Agent concluído");
+    },
+    onError: (e: any) => toast.error(e?.message ?? "Falha no teste de User-Agent"),
+  });
 
   const since = new Date(Date.now() - RANGE_MS[range]).toISOString();
 
@@ -175,6 +186,50 @@ export function IptvPanel({ serverId, server }: { serverId: string; server: any 
 
       {/* Diagnóstico da Player API */}
       {last?.diagnostics && <ApiDiagnostics diag={last.diagnostics as any} error={last.error} />}
+
+      {/* Teste comparativo de User-Agent (investigar HTTP 403) */}
+      <Card className="p-5 space-y-4">
+        <div className="flex items-start justify-between gap-3 flex-wrap">
+          <div>
+            <h3 className="font-medium text-sm flex items-center gap-2">
+              <Globe className="h-4 w-4" />Teste alternativo de User-Agent
+            </h3>
+            <p className="text-xs text-muted-foreground mt-1 max-w-xl">
+              Chama a Player API duas vezes — com User-Agent de player IPTV e com
+              <span className="font-mono"> Mozilla/5.0</span> — para saber se o HTTP 403 é bloqueio por
+              identificação da requisição ou pelo IP de saída do monitor.
+            </p>
+          </div>
+          <Button size="sm" variant="outline" onClick={() => doUaTest.mutate()} disabled={doUaTest.isPending}>
+            <RefreshCw className={`h-4 w-4 mr-1 ${doUaTest.isPending ? "animate-spin" : ""}`} />
+            Executar teste
+          </Button>
+        </div>
+
+        {uaResult && (
+          <div className="space-y-4">
+            <div className="rounded-lg border border-border/60 bg-muted/40 p-3 text-xs">
+              {uaResult.verdict}
+            </div>
+            <KV label="IP de saída do monitor" value={uaResult.egress_ip ?? "—"} />
+            <div className="grid lg:grid-cols-2 gap-4">
+              {uaResult.probes?.map((p: any) => (
+                <div key={p.label} className="rounded-lg border border-border/60 p-3 space-y-2">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-xs font-medium">{p.label}</span>
+                    <Badge variant={p.ok ? "outline" : "destructive"} className="text-[10px] uppercase">
+                      {p.ok ? "aceito" : `HTTP ${p.diagnostics?.http_status ?? "—"}`}
+                    </Badge>
+                  </div>
+                  {p.diagnostics && <ApiDiagnostics diag={p.diagnostics} error={p.error} embedded />}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </Card>
+
+
 
 
       {/* Streams */}
@@ -445,29 +500,49 @@ function Mini({ label, value, tone = "muted" }: { label: string; value: string; 
   );
 }
 
+function HeaderList({ label, headers }: { label: string; headers?: Record<string, string> | null }) {
+  const entries = Object.entries(headers ?? {});
+  return (
+    <div>
+      <div className="text-xs text-muted-foreground mb-1">{label}</div>
+      <pre className="text-[11px] font-mono whitespace-pre-wrap break-words max-h-32 overflow-y-auto rounded-lg border border-border/60 bg-muted/40 p-3">
+        {entries.length ? entries.map(([k, v]) => `${k}: ${v}`).join("\n") : "(sem dados)"}
+      </pre>
+    </div>
+  );
+}
+
 function ApiDiagnostics({
   diag,
   error,
+  embedded,
 }: {
   diag: {
     url?: string; final_url?: string | null; redirected?: boolean;
     http_status?: number | null; status_text?: string | null; elapsed_ms?: number | null;
     content_type?: string | null; size_bytes?: number | null; body_snippet?: string | null;
+    user_agent?: string | null; egress_ip?: string | null;
+    request_headers?: Record<string, string> | null;
+    response_headers?: Record<string, string> | null;
     stage?: string; message?: string;
   };
   error?: string | null;
+  embedded?: boolean;
 }) {
   const ok = diag.stage === "ok";
+  const Wrapper: any = embedded ? "div" : Card;
   return (
-    <Card className="p-5 space-y-3">
-      <div className="flex items-center justify-between gap-3 flex-wrap">
-        <h3 className="font-medium text-sm flex items-center gap-2">
-          <Activity className="h-4 w-4" />Diagnóstico da Player API
-        </h3>
-        <Badge variant={ok ? "outline" : "destructive"} className="text-[10px] uppercase">
-          {ok ? "resposta válida" : `falha: ${diag.stage ?? "desconhecida"}`}
-        </Badge>
-      </div>
+    <Wrapper className={embedded ? "space-y-3" : "p-5 space-y-3"}>
+      {!embedded && (
+        <div className="flex items-center justify-between gap-3 flex-wrap">
+          <h3 className="font-medium text-sm flex items-center gap-2">
+            <Activity className="h-4 w-4" />Diagnóstico da Player API
+          </h3>
+          <Badge variant={ok ? "outline" : "destructive"} className="text-[10px] uppercase">
+            {ok ? "resposta válida" : `falha: ${diag.stage ?? "desconhecida"}`}
+          </Badge>
+        </div>
+      )}
 
       {!ok && (diag.message || error) && (
         <p className="text-xs text-destructive break-words">{diag.message || error}</p>
@@ -480,6 +555,13 @@ function ApiDiagnostics({
         <KV label="Content-Type" value={diag.content_type ?? "—"} />
         <KV label="Tamanho" value={diag.size_bytes != null ? `${diag.size_bytes.toLocaleString("pt-BR")} bytes` : "—"} />
         <KV label="Redirect" value={diag.redirected ? `Sim → ${diag.final_url ?? "—"}` : "Não"} />
+        <KV label="User-Agent enviado" value={diag.user_agent ?? "—"} />
+        <KV label="IP de saída do monitor" value={diag.egress_ip ?? "—"} />
+      </div>
+
+      <div className="grid sm:grid-cols-2 gap-3">
+        <HeaderList label="Headers enviados" headers={diag.request_headers} />
+        <HeaderList label="Headers retornados" headers={diag.response_headers} />
       </div>
 
       <div>
@@ -488,9 +570,10 @@ function ApiDiagnostics({
           {diag.body_snippet?.trim() || "(resposta vazia)"}
         </pre>
       </div>
-    </Card>
+    </Wrapper>
   );
 }
+
 
 function KV({ label, value }: { label: string; value: string }) {
 
