@@ -82,8 +82,13 @@ function ResellerPublicPage() {
       const { data } = await (supabase as any).rpc("get_reseller_page", { _slug: slug });
       return (data as PageData | null) ?? null;
     },
-    refetchInterval: 60000,
+    staleTime: 0,
+    gcTime: 0,
+    refetchOnMount: "always",
+    refetchOnWindowFocus: true,
+    refetchInterval: 30000,
   });
+
 
   if (isLoading) {
     return <div className="min-h-screen bg-background flex items-center justify-center text-muted-foreground">Carregando...</div>;
