@@ -90,6 +90,17 @@ type DailyRow = {
   removed_count: number;
 };
 
+type FindRow = {
+  title_key: string;
+  title: string;
+  kind: string;
+  server_count: number;
+  first_server: string;
+  first_seen_at: string;
+  mine_has: boolean;
+  servers: { server_name: string; seen_at: string; is_mine: boolean }[];
+};
+
 const rpc = (fn: string, args: Record<string, unknown>) =>
   (supabase as unknown as { rpc: (f: string, a: unknown) => Promise<{ data: unknown }> }).rpc(fn, args);
 
