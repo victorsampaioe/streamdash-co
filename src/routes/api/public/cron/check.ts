@@ -14,13 +14,15 @@ async function run() {
   const { runDueIptvSyncs } = await import("@/lib/iptv.server");
   const { syncKumaStatuses, provisionPendingServers } = await import("@/lib/kuma.server");
   const { runDueDnsChecks } = await import("@/lib/dns.server");
-  const [checks, expired, iptv, kuma, kumaProv, dns] = await Promise.all([
+  const { reconcilePendingPayments } = await import("@/lib/mercadopago.server");
+  const [checks, expired, iptv, kuma, kumaProv, dns, payments] = await Promise.all([
     runDueChecks(),
     notifyNewlyExpiredSubscriptions().catch(() => ({ notified: 0 })),
     runDueIptvSyncs().catch(() => ({ synced: 0, errors: 0 })),
     syncKumaStatuses().catch(() => ({ synced: 0 })),
     provisionPendingServers().catch(() => ({ provisioned: 0 })),
     runDueDnsChecks().catch(() => ({ checked: 0, errors: 0 })),
+    reconcilePendingPayments().catch(() => ({ checked: 0, approved: 0 })),
   ]);
   return {
     ...checks,
@@ -31,8 +33,11 @@ async function run() {
     kumaProvisioned: (kumaProv as any).provisioned ?? 0,
     dnsChecked: dns.checked,
     dnsErrors: dns.errors,
+    paymentsChecked: payments.checked,
+    paymentsApproved: payments.approved,
   };
 }
+
 
 
 export const Route = createFileRoute("/api/public/cron/check")({
