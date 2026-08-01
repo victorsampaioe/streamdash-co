@@ -1,5 +1,8 @@
 import { createFileRoute, Outlet, redirect, isRedirect, useRouter } from "@tanstack/react-router";
+import { useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { isChunkLoadError, recoverFromChunkError } from "@/lib/chunk-recovery";
+
 
 export const Route = createFileRoute("/_authenticated")({
   ssr: false,
@@ -28,14 +31,28 @@ export const Route = createFileRoute("/_authenticated")({
 
 function AuthedError({ error, reset }: { error: Error; reset: () => void }) {
   const router = useRouter();
-  console.error(error);
+  const chunk = isChunkLoadError(error);
+
+  useEffect(() => {
+    console.error(error);
+    // Slow/unstable mobile connections often drop a lazily-loaded script.
+    // Recover automatically instead of showing a dead end.
+    if (chunk) recoverFromChunkError();
+  }, [error, chunk]);
+
   return (
     <div className="flex min-h-screen items-center justify-center bg-background px-4">
       <div className="max-w-md text-center">
-        <h1 className="text-xl font-semibold">Não foi possível carregar o painel</h1>
+        <h1 className="text-xl font-semibold">
+          {chunk ? "Recarregando o painel..." : "Não foi possível carregar o painel"}
+        </h1>
         <p className="mt-2 text-sm text-muted-foreground">
-          Verifique sua conexão e tente novamente.
+          {chunk
+            ? "A conexão caiu durante o carregamento. Estamos tentando de novo."
+            : "Verifique sua conexão e tente novamente."}
         </p>
+        <p className="mt-2 break-words text-xs text-muted-foreground/70">{error?.message}</p>
+
         <div className="mt-6 flex flex-wrap justify-center gap-2">
           <button
             onClick={() => { router.invalidate(); reset(); }}
