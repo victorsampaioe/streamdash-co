@@ -184,9 +184,6 @@ export function IptvPanel({ serverId, server }: { serverId: string; server: any 
         <Mini label="Última sync" value={last ? new Date(last.synced_at).toLocaleString() : "—"} />
       </div>
 
-      {/* Diagnóstico da Player API */}
-      {last?.diagnostics && <ApiDiagnostics diag={last.diagnostics as any} error={last.error} />}
-
       {/* Teste comparativo de User-Agent (investigar HTTP 403) */}
       <Card className="p-5 space-y-4">
         <div className="flex items-start justify-between gap-3 flex-wrap">
