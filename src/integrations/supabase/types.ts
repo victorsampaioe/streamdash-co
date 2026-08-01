@@ -1813,6 +1813,23 @@ export type Database = {
           total_paid_cents: number
         }[]
       }
+      get_iptv_ranking: {
+        Args: { _limit?: number }
+        Returns: {
+          api_ms: number
+          categories: number
+          channels: number
+          health_score: number
+          is_mine: boolean
+          latency_ms: number
+          movies: number
+          name: string
+          series: number
+          server_id: string
+          synced_at: string
+        }[]
+      }
+      get_iptv_server_rank: { Args: { _server_id: string }; Returns: Json }
       get_public_checks: {
         Args: { _limit?: number; _slug: string }
         Returns: {
