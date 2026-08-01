@@ -777,6 +777,10 @@ export async function runIptvSync(serverId: string, opts: { mode?: "smart" | "fu
     ? Math.round(streamProbes.reduce((a, s) => a + (s.start_ms ?? 0), 0) / streamProbes.length)
     : null;
 
+  const probeOk = (kind: "live" | "vod" | "series") => {
+    const p = streamProbes.find((s) => s.kind === kind);
+    return p ? p.ok : null;
+  };
   const health = computeHealthScore({
     uptimePct,
     latencyMs: server.last_latency_ms,
@@ -784,7 +788,11 @@ export async function runIptvSync(serverId: string, opts: { mode?: "smart" | "fu
     streamStartMs: streamStart,
     instability24h: instability,
     ipChanges7d: ipChanges7d ?? 0,
+    liveOk: x.login_ok ? (probeOk("live") ?? x.content.live_ok) : false,
+    vodOk: x.login_ok ? (probeOk("vod") ?? x.content.vod_ok) : false,
+    seriesOk: x.login_ok ? (probeOk("series") ?? x.content.series_ok) : false,
   });
+
 
   const { data: sync } = await supabaseAdmin.from("iptv_syncs").insert({
     server_id: serverId,
