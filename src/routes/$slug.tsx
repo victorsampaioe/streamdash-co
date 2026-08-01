@@ -49,7 +49,7 @@ export const Route = createFileRoute("/$slug")({
   component: ResellerPublicPage,
 });
 
-function CopyDns({ dns, color }: { dns: string; color: string }) {
+function CopyButton({ text, color, label = "Copiar" }: { text: string; color: string; label?: string }) {
   const [copied, setCopied] = useState(false);
   return (
     <Button
@@ -58,9 +58,9 @@ function CopyDns({ dns, color }: { dns: string; color: string }) {
       className="gap-2"
       onClick={async () => {
         try {
-          await navigator.clipboard.writeText(dns);
+          await navigator.clipboard.writeText(text);
           setCopied(true);
-          toast.success("DNS copiada!");
+          toast.success("Copiado!");
           setTimeout(() => setCopied(false), 2000);
         } catch {
           toast.error("Não foi possível copiar");
@@ -69,10 +69,11 @@ function CopyDns({ dns, color }: { dns: string; color: string }) {
       style={{ borderColor: color }}
     >
       {copied ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
-      {copied ? "Copiado" : "Copiar DNS"}
+      {copied ? "Copiado" : label}
     </Button>
   );
 }
+
 
 function ResellerPublicPage() {
   const { slug } = Route.useParams();
