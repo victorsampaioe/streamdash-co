@@ -5,8 +5,12 @@ import { Button } from "@/components/ui/button";
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "StreamMonitor — Monitoramento de infraestrutura em tempo real" },
-      { name: "description", content: "Monitore uptime, latência, DNS e SSL dos seus servidores. Alertas por e-mail, Discord, Telegram e webhooks. Dashboard em tempo real." },
+      { title: "StreamMonitor — Descubra a queda antes do seu cliente" },
+      { name: "description", content: "Plataforma premium de monitoramento para revendas e provedores: uptime, latência, DNS, SSL e IPTV vigiados 24/7 com alerta imediato no Telegram, Discord, e-mail e webhook." },
+      { property: "og:title", content: "StreamMonitor — Descubra a queda antes do seu cliente" },
+      { property: "og:description", content: "Monitoramento 24/7 de uptime, DNS, SSL e IPTV com alertas instantâneos e página pública de status para seus clientes." },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary_large_image" },
     ],
   }),
   component: Landing,
@@ -41,31 +45,44 @@ function Landing() {
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-success opacity-75" />
               <span className="relative inline-flex rounded-full h-2 w-2 bg-success" />
             </span>
-            Verificações a cada 30 segundos
+            Monitoramento ativo a cada 30 segundos
           </div>
           <h1 className="text-4xl sm:text-5xl md:text-7xl font-bold tracking-tight mb-6 break-words">
-            Uptime, latência e SSL<br />
-            <span className="text-primary">sem drama.</span>
+            Evite descobrir uma queda<br />
+            <span className="text-primary">pelo seu cliente.</span>
           </h1>
           <p className="text-base sm:text-lg text-muted-foreground max-w-2xl mx-auto mb-8 sm:mb-10">
-            StreamMonitor observa seus servidores 24/7 e avisa por e-mail, Discord, Telegram
-            ou webhook no primeiro sinal de problema.
+            O StreamMonitor vigia seus servidores, DNS, certificados e painéis IPTV 24 horas por dia
+            e te avisa no Telegram em segundos — antes que o suporte encha de mensagem.
           </p>
           <div className="flex flex-wrap items-center justify-center gap-3">
-            <Link to="/auth"><Button size="lg" className="glow-primary">Criar conta grátis</Button></Link>
+            <Link to="/auth"><Button size="lg" className="glow-primary">Começar agora</Button></Link>
             <a href="#recursos"><Button size="lg" variant="outline">Ver recursos</Button></a>
+          </div>
+          <div className="mt-10 grid grid-cols-2 sm:grid-cols-4 gap-4 max-w-3xl mx-auto">
+            {[
+              { k: "30s", v: "Intervalo de checagem" },
+              { k: "4", v: "Regiões globais" },
+              { k: "< 1 min", v: "Alerta após a falha" },
+              { k: "24/7", v: "Vigilância contínua" },
+            ].map((m) => (
+              <div key={m.v} className="rounded-xl border border-border/60 bg-card/50 px-4 py-3">
+                <div className="text-xl font-bold text-primary">{m.k}</div>
+                <div className="text-[11px] uppercase tracking-wide text-muted-foreground">{m.v}</div>
+              </div>
+            ))}
           </div>
         </div>
       </section>
 
       <section id="recursos" className="max-w-6xl mx-auto px-4 sm:px-6 py-16 sm:py-20">
         <div className="grid md:grid-cols-3 gap-6">
-          <Feature icon={<Zap className="h-5 w-5" />} title="Verificação constante" desc="A cada 30s (configurável). DNS, HTTP, latência e certificado SSL." />
-          <Feature icon={<Bell className="h-5 w-5" />} title="Alertas multicanal" desc="E-mail, Discord, Telegram e webhooks — após X falhas seguidas." />
-          <Feature icon={<LineChart className="h-5 w-5" />} title="Dashboard em tempo real" desc="Gráficos de disponibilidade, histórico completo e exportação em CSV." />
-          <Feature icon={<Globe className="h-5 w-5" />} title="Página pública de status" desc="Compartilhe o status dos seus serviços com seus clientes." />
-          <Feature icon={<ShieldCheck className="h-5 w-5" />} title="Permissões finas" desc="Painel administrativo com controle de usuários e papéis." />
-          <Feature icon={<Activity className="h-5 w-5" />} title="API e webhooks" desc="Integre com seu stack existente — REST e webhooks nativos." />
+          <Feature icon={<Zap className="h-5 w-5" />} title="Vigilância a cada 30s" desc="DNS, HTTP, latência e certificado SSL conferidos sem parar, de várias regiões." />
+          <Feature icon={<Bell className="h-5 w-5" />} title="Alerta antes da reclamação" desc="Telegram, Discord, e-mail e webhook disparados no primeiro sinal de instabilidade." />
+          <Feature icon={<LineChart className="h-5 w-5" />} title="Histórico que prova" desc="Gráficos de disponibilidade, incidentes documentados e exportação em CSV." />
+          <Feature icon={<Globe className="h-5 w-5" />} title="Status page da sua marca" desc="Uma página pública elegante para tranquilizar clientes durante um incidente." />
+          <Feature icon={<ShieldCheck className="h-5 w-5" />} title="Segurança de verdade" desc="Credenciais criptografadas, logs sem dados sensíveis e bloqueio anti força bruta." />
+          <Feature icon={<Activity className="h-5 w-5" />} title="Inteligência IPTV" desc="Player API, playlist, canais, VOD e séries monitorados com health score." />
         </div>
       </section>
 

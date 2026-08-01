@@ -12,7 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { LineChart, Line, ResponsiveContainer, XAxis, YAxis, Tooltip, CartesianGrid } from "recharts";
 import { toast } from "sonner";
 import { Activity, RefreshCw, Radar, Film, Tv, Layers, Clock, MapPin, ShieldAlert, Rocket, Library, Zap, Timer, BarChart3, BellRing, Lock, Globe } from "lucide-react";
-import { detectIptvNow, runIptvSyncNow, acknowledgeIptvAlert, testPlayerApiUserAgents } from "@/lib/iptv.functions";
+import { detectIptvNow, runIptvSyncNow, acknowledgeIptvAlert, testPlayerApiUserAgents, saveIptvCredentials, getIptvLoginGuard } from "@/lib/iptv.functions";
 
 type Range = "24h" | "7d" | "30d";
 const RANGE_MS: Record<Range, number> = { "24h": 864e5, "7d": 7 * 864e5, "30d": 30 * 864e5 };
@@ -34,7 +34,11 @@ export function IptvPanel({ serverId, server }: { serverId: string; server: any 
   const ack = useServerFn(acknowledgeIptvAlert);
   const uaTest = useServerFn(testPlayerApiUserAgents);
   const [range, setRange] = useState<Range>("7d");
-  const [creds, setCreds] = useState({ u: server?.iptv_username ?? "", p: server?.iptv_password ?? "" });
+  const saveCreds = useServerFn(saveIptvCredentials);
+  const loginGuard = useServerFn(getIptvLoginGuard);
+  // Credenciais nunca voltam do servidor: os campos começam vazios.
+  const hasCreds = Boolean(server?.iptv_username && server?.iptv_password);
+  const [creds, setCreds] = useState({ u: "", p: "" });
   const [uaResult, setUaResult] = useState<any>(null);
 
   const doUaTest = useMutation({
@@ -44,6 +48,23 @@ export function IptvPanel({ serverId, server }: { serverId: string; server: any 
       toast.success("Teste de User-Agent concluído");
     },
     onError: (e: any) => toast.error(e?.message ?? "Falha no teste de User-Agent"),
+  });
+
+  const { data: guard, refetch: refetchGuard } = useQuery({
+    queryKey: ["iptv-login-guard", serverId],
+    queryFn: async () => (await loginGuard({ data: { serverId } })) as { allowed: boolean; blockedUntil: string | null; failures: number },
+  });
+
+  const saveSecrets = useMutation({
+    mutationFn: async () =>
+      await saveCreds({ data: { serverId, username: creds.u || null, password: creds.p || null } }),
+    onSuccess: () => {
+      setCreds({ u: "", p: "" });
+      refetchGuard();
+      qc.invalidateQueries({ queryKey: ["server", serverId] });
+      toast.success("Credenciais salvas com criptografia");
+    },
+    onError: (e: any) => toast.error(e?.message ?? "Falha ao salvar credenciais"),
   });
 
   const since = new Date(Date.now() - RANGE_MS[range]).toISOString();
@@ -450,16 +471,43 @@ export function IptvPanel({ serverId, server }: { serverId: string; server: any 
         <div className="grid sm:grid-cols-2 gap-3">
           <div className="space-y-1.5">
             <Label className="text-xs">Usuário Xtream</Label>
-            <Input value={creds.u} onChange={(e) => setCreds({ ...creds, u: e.target.value })} placeholder="usuario" />
+            <Input
+              value={creds.u}
+              onChange={(e) => setCreds({ ...creds, u: e.target.value })}
+              placeholder={hasCreds ? "•••••••• (salvo)" : "usuario"}
+              autoComplete="off"
+            />
           </div>
           <div className="space-y-1.5">
             <Label className="text-xs">Senha Xtream</Label>
-            <Input type="password" value={creds.p} onChange={(e) => setCreds({ ...creds, p: e.target.value })} placeholder="••••••" />
+            <Input
+              type="password"
+              value={creds.p}
+              onChange={(e) => setCreds({ ...creds, p: e.target.value })}
+              placeholder={hasCreds ? "•••••••• (salva)" : "••••••"}
+              autoComplete="new-password"
+            />
           </div>
         </div>
-        <Button size="sm" variant="outline" onClick={() => saveConfig.mutate({ iptv_username: creds.u || null, iptv_password: creds.p || null })}>
-          Salvar credenciais
-        </Button>
+        <div className="flex flex-wrap items-center gap-2">
+          <Button size="sm" variant="outline" disabled={saveSecrets.isPending} onClick={() => saveSecrets.mutate()}>
+            {saveSecrets.isPending ? "Salvando…" : "Salvar credenciais"}
+          </Button>
+          {hasCreds && (
+            <Badge variant="outline" className="gap-1 text-[11px]">
+              <Lock className="h-3 w-3 text-success" /> Criptografadas no banco
+            </Badge>
+          )}
+        </div>
+        {guard?.blockedUntil && new Date(guard.blockedUntil).getTime() > Date.now() && (
+          <div className="flex items-start gap-2 rounded-md border border-destructive/40 bg-destructive/10 p-3 text-xs">
+            <ShieldAlert className="h-4 w-4 shrink-0 text-destructive" />
+            <span>
+              Login bloqueado temporariamente após {guard.failures} falhas seguidas. Liberado em{" "}
+              {new Date(guard.blockedUntil).toLocaleString("pt-BR")}. Atualize as credenciais para desbloquear na hora.
+            </span>
+          </div>
+        )}
 
         <div className="flex items-center justify-between pt-3 border-t border-border/60">
           <div>
