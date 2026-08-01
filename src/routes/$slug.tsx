@@ -256,9 +256,7 @@ function ResellerPublicPage() {
           </section>
         )}
 
-            </div>
-          </section>
-        )}
+
       </main>
 
       <footer className="px-6 py-8 text-center text-xs text-muted-foreground">
