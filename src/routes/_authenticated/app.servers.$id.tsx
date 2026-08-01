@@ -17,7 +17,7 @@ import { useSubscription } from "@/hooks/use-subscription";
 import { StatusDot, StatusLabel } from "@/components/status-dot";
 import { UptimeSparkline } from "@/components/uptime-sparkline";
 import { LineChart, Line, ResponsiveContainer, XAxis, YAxis, Tooltip, CartesianGrid } from "recharts";
-import { ArrowLeft, Download, Play, Trash2, RefreshCw, ShieldCheck, Cloud, Globe, Server as ServerIcon, Zap } from "lucide-react";
+import { ArrowLeft, Download, Play, Trash2, RefreshCw, ShieldCheck, Cloud, Globe, Server as ServerIcon, Zap, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { runCheckNow } from "@/lib/monitoring.functions";
 import { analyzeServer } from "@/lib/analysis.functions";
