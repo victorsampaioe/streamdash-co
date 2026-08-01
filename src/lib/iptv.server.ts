@@ -198,6 +198,12 @@ type XtreamResult = {
   sampleLive: { id: string | number; name: string }[];
   sampleVod: { id: string | number; name: string; ext: string }[];
   sampleSeries: { id: string | number; name: string }[];
+  /** Metadados completos do catálogo (sem vídeo) para a Inteligência de Conteúdo. */
+  catalog: {
+    live: { id: string; name: string; category?: string | null }[];
+    vod: { id: string; name: string; category?: string | null }[];
+    series: { id: string; name: string; category?: string | null }[];
+  };
   error: string | null;
 };
 
