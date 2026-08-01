@@ -30,9 +30,11 @@ export function AppShell({ children }: { children: ReactNode }) {
         <SubscriptionBanner />
         <main className="flex-1 p-4 sm:p-6 md:p-8 max-w-[1600px] w-full mx-auto">{children}</main>
       </div>
+      <SupportFab />
     </div>
   );
 }
+
 
 function GatedOutlet() {
   const pathname = useRouterState({ select: (r) => r.location.pathname });
