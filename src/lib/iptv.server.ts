@@ -60,29 +60,39 @@ export async function detectIptvKind(
   username?: string | null,
   password?: string | null,
 ): Promise<{ kind: "none" | "xtream" | "m3u" | "both"; details: Record<string, unknown> }> {
-  const b = base(host);
+  const clean = host.replace(/^https?:\/\//, "").replace(/\/+$/, "");
   const u = username ?? "test";
   const p = password ?? "test";
+  const auth = `username=${encodeURIComponent(u)}&password=${encodeURIComponent(p)}`;
   let xtream = false;
   let m3u = false;
   const details: Record<string, unknown> = {};
 
-  try {
-    const res = await timedFetch(`${b}/player_api.php?username=${encodeURIComponent(u)}&password=${encodeURIComponent(p)}`, API_TIMEOUT_MS);
-    const text = await res.text();
-    details.player_api_status = res.status;
-    if (res.ok && /^\s*[[{]/.test(text)) {
-      const json = JSON.parse(text);
-      xtream = typeof json === "object" && json !== null;
-      details.auth = json?.user_info?.auth ?? null;
+  // 1) Fonte de verdade: Player API (Xtream). Tenta http e https.
+  for (const candidate of [`http://${clean}`, `https://${clean}`]) {
+    try {
+      const { data, diag } = await getJson(`${candidate}/player_api.php?${auth}`);
+      details.player_api_status = diag.http_status;
+      details.player_api_base = candidate;
+      const info = data as any;
+      if (info && typeof info === "object" && "user_info" in info) {
+        xtream = true;
+        details.auth = info?.user_info?.auth ?? null;
+        details.status = info?.user_info?.status ?? null;
+      }
+      break;
+    } catch (e: unknown) {
+      const err = e as PlayerApiError;
+      details.player_api_status = err?.status ?? null;
+      details.player_api_error = String(err?.message ?? e).slice(0, 160);
+      if (err?.status != null) break; // servidor respondeu: não tentar outro esquema
     }
-  } catch (e: unknown) {
-    details.player_api_error = String((e as Error)?.message ?? e).slice(0, 160);
   }
 
+  // 2) get.php é apenas teste de playlist M3U — NUNCA define validade do login.
   try {
     const res = await timedFetch(
-      `${b}/get.php?username=${encodeURIComponent(u)}&password=${encodeURIComponent(p)}&type=m3u_plus&output=ts`,
+      `http://${clean}/get.php?${auth}&type=m3u_plus&output=ts`,
       API_TIMEOUT_MS,
       { headers: { Range: "bytes=0-2048" } },
     );
@@ -96,6 +106,7 @@ export async function detectIptvKind(
   const kind = xtream && m3u ? "both" : xtream ? "xtream" : m3u ? "m3u" : "none";
   return { kind, details };
 }
+
 
 /* ------------------------------------------------------------------ */
 /* Xtream Player API                                                   */
@@ -115,6 +126,18 @@ export type PlayerApiDiagnostics = {
   message: string;
 };
 
+export type XtreamAccount = {
+  status: string | null;
+  is_trial: boolean | null;
+  exp_date: string | null; // ISO ou null (conta sem expiração)
+  days_to_expire: number | null;
+  max_connections: number | null;
+  active_connections: number | null;
+  created_at: string | null;
+  timezone: string | null;
+  server_url: string | null;
+};
+
 type XtreamResult = {
   api_ms: number | null;
   login_ok: boolean;
@@ -124,6 +147,8 @@ type XtreamResult = {
   http_status: number | null;
   body_snippet: string | null;
   diagnostics: PlayerApiDiagnostics | null;
+  account: XtreamAccount | null;
+  content: { live_ok: boolean; vod_ok: boolean; series_ok: boolean };
   channels: number | null;
   movies: number | null;
   series: number | null;
@@ -133,6 +158,7 @@ type XtreamResult = {
   sampleSeries: { id: string | number; name: string }[];
   error: string | null;
 };
+
 
 /** Remove credenciais da URL antes de registrar em logs. */
 function safeUrl(url: string) {
@@ -253,9 +279,11 @@ export async function probeXtream(host: string, username: string, password: stri
     api_ms: null, login_ok: false, json_valid: false,
     reachable: false, login_checked: false,
     http_status: null, body_snippet: null, diagnostics: null,
+    account: null, content: { live_ok: false, vod_ok: false, series_ok: false },
     channels: null, movies: null, series: null, categories: null,
     sampleLive: [], sampleVod: [], sampleSeries: [], error: null,
   };
+
 
   // 1) URL responde? tenta http e, se falhar, https (mesma ordem de diagnóstico)
   const t0 = Date.now();
@@ -312,17 +340,43 @@ export async function probeXtream(host: string, username: string, password: stri
     return out;
   }
 
-  const status = String(info?.user_info?.status ?? "");
-  out.login_ok = String(info?.user_info?.auth ?? "0") === "1" && status !== "Disabled" && status !== "Banned";
+  // 3) Autenticação + informações da conta (status, expiração, conexões)
+  const ui = info.user_info ?? {};
+  const status = String(ui.status ?? "");
+  const expTs = Number(ui.exp_date);
+  const expIso = Number.isFinite(expTs) && expTs > 0 ? new Date(expTs * 1000).toISOString() : null;
+  const createdTs = Number(ui.created_at);
+  const num = (v: unknown) => (v == null || v === "" || Number.isNaN(Number(v)) ? null : Number(v));
+
+  out.account = {
+    status: status || null,
+    is_trial: ui.is_trial == null ? null : String(ui.is_trial) === "1",
+    exp_date: expIso,
+    days_to_expire: expIso ? Math.ceil((new Date(expIso).getTime() - Date.now()) / 864e5) : null,
+    max_connections: num(ui.max_connections),
+    active_connections: num(ui.active_cons),
+    created_at: Number.isFinite(createdTs) && createdTs > 0 ? new Date(createdTs * 1000).toISOString() : null,
+    timezone: info?.server_info?.timezone ?? null,
+    server_url: info?.server_info?.url
+      ? `${info.server_info.url}${info.server_info.port ? `:${info.server_info.port}` : ""}`
+      : null,
+  };
+
+  const expired = expIso != null && new Date(expIso).getTime() <= Date.now();
+  out.login_ok =
+    String(ui.auth ?? "0") === "1" && status !== "Disabled" && status !== "Banned" && !expired;
 
   if (!out.login_ok) {
-    out.error = status === "Disabled" || status === "Banned"
-      ? `❌ Conta Xtream ${status === "Banned" ? "banida" : "desativada"}.`
-      : "❌ Usuário ou senha inválidos.";
+    out.error =
+      status === "Disabled" || status === "Banned"
+        ? `❌ Conta Xtream ${status === "Banned" ? "banida" : "desativada"}.`
+        : expired
+          ? `❌ Conta Xtream expirada em ${new Date(expIso!).toLocaleString("pt-BR")}.`
+          : "❌ Usuário ou senha inválidos.";
     return out;
   }
 
-
+  // 4) Somente após login válido: testar conteúdos (Live, VOD, Séries)
   const [live, vod, series, catsLive, catsVod, catsSeries] = await Promise.allSettled([
     getJson(`${b}/player_api.php?${auth}&action=get_live_streams`, M3U_TIMEOUT_MS),
     getJson(`${b}/player_api.php?${auth}&action=get_vod_streams`, M3U_TIMEOUT_MS),
@@ -340,11 +394,18 @@ export async function probeXtream(host: string, username: string, password: stri
   const vodList = arr(vod);
   const seriesList = arr(series);
 
+  out.content = {
+    live_ok: live.status === "fulfilled" && liveList.length > 0,
+    vod_ok: vod.status === "fulfilled" && vodList.length > 0,
+    series_ok: series.status === "fulfilled" && seriesList.length > 0,
+  };
+
   out.channels = liveList.length || null;
   out.movies = vodList.length || null;
   out.series = seriesList.length || null;
   const catCount = arr(catsLive).length + arr(catsVod).length + arr(catsSeries).length;
   out.categories = catCount || null;
+
 
   const pick = <T,>(list: T[], n: number): T[] => {
     if (list.length <= n) return list;
@@ -647,7 +708,9 @@ export async function runIptvSync(serverId: string, opts: { mode?: "smart" | "fu
     ip: currentIp,
     asn: currentAsn,
     datacenter: analysis?.org ?? null,
-    error: x.error ?? m3u?.error ?? null,
+    // Erro da Player API tem prioridade; falha do get.php é só de playlist.
+    error: x.error ?? (m3u?.error ? `Playlist M3U: ${m3u.error}` : null),
+
     login_checked: x.login_checked,
     diagnostics: x.diagnostics as never,
 
@@ -683,7 +746,21 @@ export async function runIptvSync(serverId: string, opts: { mode?: "smart" | "fu
     x.login_checked && !x.login_ok ? raiseAlert(serverId, "login_invalid", "critical", "🚨 Login do Xtream inválido", x.error ?? undefined) : null,
     x.api_ms && x.api_ms > 5000 ? raiseAlert(serverId, "api_slow", "warning", "⚠ Player API lenta", `${x.api_ms}ms`) : null,
     !x.json_valid ? raiseAlert(serverId, "api_down", "critical", "🚨 Player API indisponível", x.error ?? undefined) : null,
+    // get.php é apenas playlist: nunca gera alerta de login inválido.
     m3u && m3u.playlist_ok === false ? raiseAlert(serverId, "playlist_broken", "warning", "⚠ Playlist M3U com problema", m3u.error ?? undefined) : null,
+    x.account?.days_to_expire != null && x.account.days_to_expire <= 7 && x.account.days_to_expire >= 0
+      ? raiseAlert(serverId, "account_expiring", "warning", "⚠ Conta Xtream perto do vencimento",
+          `Expira em ${x.account.days_to_expire} dia(s) — ${new Date(x.account.exp_date!).toLocaleString("pt-BR")}`)
+      : null,
+    x.account?.max_connections != null && x.account.active_connections != null && x.account.max_connections > 0 &&
+    x.account.active_connections >= x.account.max_connections
+      ? raiseAlert(serverId, "connections_limit", "warning", "⚠ Limite de conexões atingido",
+          `${x.account.active_connections}/${x.account.max_connections} conexões ativas`)
+      : null,
+    x.login_ok && !x.content.live_ok
+      ? raiseAlert(serverId, "content_live_empty", "warning", "⚠ Nenhum canal ao vivo retornado pela Player API")
+      : null,
+
     streamProbes.some((s) => !s.ok) ? raiseAlert(serverId, "stream_offline", "warning", "⚠ Streams de amostra offline",
       streamProbes.filter((s) => !s.ok).map((s) => `${s.kind}: ${s.error ?? "falhou"}`).join(" · ")) : null,
     health < 70 && (lastSync?.health_score ?? 100) >= 70
