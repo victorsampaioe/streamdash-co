@@ -113,6 +113,18 @@ function NovidadesPage() {
   const [hours, setHours] = useState(24);
   const [firstKind, setFirstKind] = useState<"vod" | "series" | "live">("vod");
   const [sort, setSort] = useState<keyof CompareRow>("health_score");
+  const [term, setTerm] = useState("");
+  const [findKind, setFindKind] = useState<"vod" | "series" | "live">("vod");
+  const [query, setQuery] = useState("");
+
+  const { data: found = [], isFetching: finding } = useQuery({
+    queryKey: ["iptv-find-title", query, findKind],
+    enabled: query.trim().length >= 2,
+    queryFn: async () =>
+      ((await rpc("iptv_find_title", { _query: query.trim(), _kind: findKind, _limit: 30 })).data ?? []) as FindRow[],
+  });
+
+
 
   const { data: nov } = useQuery({
     queryKey: ["iptv-novelties", hours],
