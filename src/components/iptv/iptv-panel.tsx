@@ -11,8 +11,8 @@ import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { LineChart, Line, ResponsiveContainer, XAxis, YAxis, Tooltip, CartesianGrid } from "recharts";
 import { toast } from "sonner";
-import { Activity, RefreshCw, Radar, Film, Tv, Layers, Clock, MapPin, ShieldAlert, Rocket, Library, Zap, Timer, BarChart3, BellRing, Lock } from "lucide-react";
-import { detectIptvNow, runIptvSyncNow, acknowledgeIptvAlert } from "@/lib/iptv.functions";
+import { Activity, RefreshCw, Radar, Film, Tv, Layers, Clock, MapPin, ShieldAlert, Rocket, Library, Zap, Timer, BarChart3, BellRing, Lock, Globe } from "lucide-react";
+import { detectIptvNow, runIptvSyncNow, acknowledgeIptvAlert, testPlayerApiUserAgents } from "@/lib/iptv.functions";
 
 type Range = "24h" | "7d" | "30d";
 const RANGE_MS: Record<Range, number> = { "24h": 864e5, "7d": 7 * 864e5, "30d": 30 * 864e5 };
