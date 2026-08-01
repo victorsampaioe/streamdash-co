@@ -1,6 +1,10 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { supabase } from "@/integrations/supabase/client";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -13,7 +17,7 @@ import { useSubscription } from "@/hooks/use-subscription";
 import { StatusDot, StatusLabel } from "@/components/status-dot";
 import { UptimeSparkline } from "@/components/uptime-sparkline";
 import { LineChart, Line, ResponsiveContainer, XAxis, YAxis, Tooltip, CartesianGrid } from "recharts";
-import { ArrowLeft, Download, Play, Trash2, RefreshCw, ShieldCheck, Cloud, Globe, Server as ServerIcon, Zap } from "lucide-react";
+import { ArrowLeft, Download, Play, Trash2, RefreshCw, ShieldCheck, Cloud, Globe, Server as ServerIcon, Zap, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { runCheckNow } from "@/lib/monitoring.functions";
 import { analyzeServer } from "@/lib/analysis.functions";
@@ -33,6 +37,7 @@ function ServerDetail() {
   const { id } = Route.useParams();
   const navigate = useNavigate();
   const qc = useQueryClient();
+  const [confirmDel, setConfirmDel] = useState(false);
   const runNow = useServerFn(runCheckNow);
   const runAnalyze = useServerFn(analyzeServer);
   const { data: subInfo } = useSubscription();
@@ -160,7 +165,7 @@ function ServerDetail() {
         <div className="flex gap-2 flex-wrap w-full sm:w-auto">
           <Button variant="outline" size="sm" onClick={handleRun}><Play className="h-4 w-4 mr-1" />Verificar</Button>
           <Button variant="outline" size="sm" onClick={exportCsv}><Download className="h-4 w-4 mr-1" />CSV</Button>
-          <Button variant="ghost" size="icon" onClick={() => confirm("Remover?") && del.mutate()}><Trash2 className="h-4 w-4 text-destructive" /></Button>
+          <Button variant="ghost" size="icon" onClick={() => setConfirmDel(true)}><Trash2 className="h-4 w-4 text-destructive" /></Button>
         </div>
       </div>
 
@@ -361,6 +366,24 @@ function ServerDetail() {
           )}
         </TabsContent>
       </Tabs>
+
+      <AlertDialog open={confirmDel} onOpenChange={(o) => { if (!o && !del.isPending) setConfirmDel(false); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Remover servidor</AlertDialogTitle>
+            <AlertDialogDescription>
+              Isso apaga permanentemente "{server.name}" e todo o histórico de monitoramento. Não dá para desfazer.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={del.isPending}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction disabled={del.isPending} onClick={(e) => { e.preventDefault(); del.mutate(); }}>
+              {del.isPending && <Loader2 className="h-4 w-4 mr-1 animate-spin" />}
+              {del.isPending ? "Removendo..." : "Remover"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

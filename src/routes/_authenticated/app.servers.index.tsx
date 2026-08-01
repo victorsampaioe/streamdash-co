@@ -10,8 +10,12 @@ import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { StatusDot, StatusLabel } from "@/components/status-dot";
 import { SearchInput } from "@/components/app-shell";
-import { Plus, ServerIcon, Trash2, ExternalLink } from "lucide-react";
+import { Plus, ServerIcon, Trash2, ExternalLink, Loader2 } from "lucide-react";
 import { toast } from "sonner";
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 export const Route = createFileRoute("/_authenticated/app/servers/")({
   component: ServersList,
@@ -19,6 +23,7 @@ export const Route = createFileRoute("/_authenticated/app/servers/")({
 
 function ServersList() {
   const [q, setQ] = useState("");
+  const [target, setTarget] = useState<{ id: string; name: string } | null>(null);
   const qc = useQueryClient();
   const { data: servers = [] } = useQuery({
     queryKey: ["servers"],
@@ -31,8 +36,8 @@ function ServersList() {
       if (error) throw error;
       if (data === false) throw new Error("Servidor não encontrado ou já removido");
     },
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ["servers"] }); toast.success("Servidor removido"); },
-    onError: (e: Error) => toast.error(e.message),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ["servers"] }); toast.success("Servidor removido"); setTarget(null); },
+    onError: (e: Error) => toast.error(e.message ?? "Falha ao remover"),
   });
 
   const filtered = servers.filter((s) => !q || `${s.name} ${s.host}`.toLowerCase().includes(q.toLowerCase()));
@@ -83,7 +88,7 @@ function ServersList() {
                       <Button variant="ghost" size="icon" title="Ver página pública"><ExternalLink className="h-4 w-4" /></Button>
                     </Link>
                   )}
-                  <Button variant="ghost" size="icon" onClick={() => confirm(`Remover "${s.name}"?`) && del.mutate(s.id)} title="Remover">
+                  <Button variant="ghost" size="icon" onClick={() => setTarget({ id: s.id, name: s.name })} title="Remover">
                     <Trash2 className="h-4 w-4 text-destructive" />
                   </Button>
                 </td>
@@ -93,6 +98,27 @@ function ServersList() {
         </table>
         </div>
       </Card>
+
+      <AlertDialog open={!!target} onOpenChange={(o) => { if (!o && !del.isPending) setTarget(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Remover servidor</AlertDialogTitle>
+            <AlertDialogDescription>
+              Isso apaga permanentemente "{target?.name}" e todo o histórico de monitoramento. Não dá para desfazer.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={del.isPending}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              disabled={del.isPending}
+              onClick={(e) => { e.preventDefault(); if (target) del.mutate(target.id); }}
+            >
+              {del.isPending && <Loader2 className="h-4 w-4 mr-1 animate-spin" />}
+              {del.isPending ? "Removendo..." : "Remover"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
