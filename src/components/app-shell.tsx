@@ -1,5 +1,5 @@
 import { Link, Outlet, useNavigate, useRouterState } from "@tanstack/react-router";
-import { Activity, LayoutDashboard, ServerIcon, Bell, Users, LogOut, Sun, Moon, Search, Plus, CreditCard, Gift, Radio, ShieldAlert, Trophy, Lock, Menu, Send, Bot, Sparkles, BookOpen, Globe } from "lucide-react";
+import { Activity, LayoutDashboard, ServerIcon, Bell, Users, LogOut, Sun, Moon, Search, Plus, CreditCard, Gift, Radio, ShieldAlert, Trophy, Lock, Menu, Send, Bot, Sparkles, BookOpen, Globe, Palette } from "lucide-react";
 import { SubscriptionBanner } from "@/components/subscription/subscription-banner";
 import { WelcomeOnboarding } from "@/components/subscription/welcome-onboarding";
 import { SupportFab } from "@/components/support-fab";
@@ -97,7 +97,10 @@ function useNavItems() {
     { to: "/app/referrals", label: "Indicações", icon: Gift },
     { to: "/app/ajuda", label: "Central de Ajuda", icon: BookOpen },
   ];
-  if (isAdmin) items.push({ to: "/app/admin", label: "Admin", icon: Users });
+  if (isAdmin) {
+    items.push({ to: "/app/artes", label: "Artes de Novidades", icon: Palette });
+    items.push({ to: "/app/admin", label: "Admin", icon: Users });
+  }
   return items;
 }
 
