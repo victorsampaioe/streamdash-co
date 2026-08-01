@@ -361,6 +361,7 @@ export async function probeXtream(host: string, username: string, password: stri
             url: safeUrl(`${candidate}/player_api.php?${auth}`),
             final_url: null, redirected: false, http_status: null, status_text: null,
             elapsed_ms: 0, content_type: null, size_bytes: null, body_snippet: null,
+            user_agent: UA_PLAYER, request_headers: null, response_headers: null, egress_ip: null,
             stage: "network", message: "❌ Sem resposta do servidor.",
           });
       // Se o servidor respondeu (status HTTP conhecido), não vale tentar outro esquema.
