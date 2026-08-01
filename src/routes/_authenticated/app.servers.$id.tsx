@@ -35,6 +35,7 @@ function ServerDetail() {
   const qc = useQueryClient();
   const runNow = useServerFn(runCheckNow);
   const runAnalyze = useServerFn(analyzeServer);
+  const { data: subInfo } = useSubscription();
 
   const { data: server, refetch } = useQuery({
     queryKey: ["server", id],
