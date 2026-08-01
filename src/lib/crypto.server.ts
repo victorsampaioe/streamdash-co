@@ -1,0 +1,73 @@
+// Server-only: criptografia simétrica (AES-256-GCM) para segredos guardados no banco.
+// Chave: IPTV_ENC_KEY (secret do ambiente). Nunca exponha valores decifrados ao cliente.
+
+const PREFIX = "enc:v1:";
+const enc = new TextEncoder();
+const dec = new TextDecoder();
+
+let _key: Promise<CryptoKey> | null = null;
+
+function keyMaterial(): string {
+  const raw = process.env.IPTV_ENC_KEY;
+  if (!raw) throw new Error("IPTV_ENC_KEY não configurada — impossível criptografar credenciais.");
+  return raw;
+}
+
+async function getKey(): Promise<CryptoKey> {
+  if (!_key) {
+    _key = (async () => {
+      const digest = await crypto.subtle.digest("SHA-256", enc.encode(keyMaterial()));
+      return crypto.subtle.importKey("raw", digest, { name: "AES-GCM" }, false, ["encrypt", "decrypt"]);
+    })();
+  }
+  return _key;
+}
+
+function toB64(bytes: Uint8Array): string {
+  let s = "";
+  for (const b of bytes) s += String.fromCharCode(b);
+  return btoa(s);
+}
+
+function fromB64(value: string): Uint8Array {
+  const bin = atob(value);
+  const out = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i);
+  return out;
+}
+
+export function isEncrypted(value: string | null | undefined): boolean {
+  return typeof value === "string" && value.startsWith(PREFIX);
+}
+
+/** Criptografa um texto. Valores vazios/nulos retornam null. */
+export async function encryptSecret(plain: string | null | undefined): Promise<string | null> {
+  if (plain == null || plain === "") return null;
+  if (isEncrypted(plain)) return plain;
+  const key = await getKey();
+  const iv = crypto.getRandomValues(new Uint8Array(12));
+  const ct = new Uint8Array(
+    await crypto.subtle.encrypt({ name: "AES-GCM", iv }, key, enc.encode(plain)),
+  );
+  return `${PREFIX}${toB64(iv)}.${toB64(ct)}`;
+}
+
+/** Descriptografa. Valores legados (texto puro) são devolvidos como estão. */
+export async function decryptSecret(value: string | null | undefined): Promise<string | null> {
+  if (value == null || value === "") return null;
+  if (!isEncrypted(value)) return value; // legado: ainda não migrado
+  const [ivPart, ctPart] = value.slice(PREFIX.length).split(".");
+  if (!ivPart || !ctPart) return null;
+  try {
+    const key = await getKey();
+    const plain = await crypto.subtle.decrypt(
+      { name: "AES-GCM", iv: fromB64(ivPart) },
+      key,
+      fromB64(ctPart),
+    );
+    return dec.decode(plain);
+  } catch {
+    console.warn("[crypto] falha ao descriptografar segredo (chave alterada?)");
+    return null;
+  }
+}
