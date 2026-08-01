@@ -140,3 +140,31 @@ export async function syncMpPayment(paymentId: string | number) {
 
   return { paymentId: row.id, status, paidAt: row.paid_at, subscriptionExpiresAt: null };
 }
+
+/**
+ * Safety net: re-checks recent pending PIX charges directly with Mercado Pago
+ * and finalizes any that were already paid (e.g. when the webhook was missed).
+ */
+export async function reconcilePendingPayments(limit = 40) {
+  if (!getMpToken()) return { checked: 0, approved: 0 };
+  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+  const { data: rows } = await supabaseAdmin
+    .from("payments")
+    .select("id, provider_payment_id")
+    .eq("status", "pending")
+    .not("provider_payment_id", "is", null)
+    .gt("created_at", new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString())
+    .order("created_at", { ascending: false })
+    .limit(limit);
+
+  let approved = 0;
+  for (const row of rows ?? []) {
+    try {
+      const res = await syncMpPayment(row.provider_payment_id as string);
+      if (res.status === "approved") approved++;
+    } catch (e) {
+      console.error("[mercadopago] reconcile failed for", row.id, e);
+    }
+  }
+  return { checked: rows?.length ?? 0, approved };
+}
