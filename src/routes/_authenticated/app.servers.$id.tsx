@@ -366,6 +366,24 @@ function ServerDetail() {
           )}
         </TabsContent>
       </Tabs>
+
+      <AlertDialog open={confirmDel} onOpenChange={(o) => { if (!o && !del.isPending) setConfirmDel(false); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Remover servidor</AlertDialogTitle>
+            <AlertDialogDescription>
+              Isso apaga permanentemente "{server.name}" e todo o histórico de monitoramento. Não dá para desfazer.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={del.isPending}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction disabled={del.isPending} onClick={(e) => { e.preventDefault(); del.mutate(); }}>
+              {del.isPending && <Loader2 className="h-4 w-4 mr-1 animate-spin" />}
+              {del.isPending ? "Removendo..." : "Remover"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
