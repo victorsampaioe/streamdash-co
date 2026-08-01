@@ -49,7 +49,7 @@ export const Route = createFileRoute("/$slug")({
   component: ResellerPublicPage,
 });
 
-function CopyDns({ dns, color }: { dns: string; color: string }) {
+function CopyButton({ text, color, label = "Copiar" }: { text: string; color: string; label?: string }) {
   const [copied, setCopied] = useState(false);
   return (
     <Button
@@ -58,9 +58,9 @@ function CopyDns({ dns, color }: { dns: string; color: string }) {
       className="gap-2"
       onClick={async () => {
         try {
-          await navigator.clipboard.writeText(dns);
+          await navigator.clipboard.writeText(text);
           setCopied(true);
-          toast.success("DNS copiada!");
+          toast.success("Copiado!");
           setTimeout(() => setCopied(false), 2000);
         } catch {
           toast.error("Não foi possível copiar");
@@ -69,10 +69,11 @@ function CopyDns({ dns, color }: { dns: string; color: string }) {
       style={{ borderColor: color }}
     >
       {copied ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
-      {copied ? "Copiado" : "Copiar DNS"}
+      {copied ? "Copiado" : label}
     </Button>
   );
 }
+
 
 function ResellerPublicPage() {
   const { slug } = Route.useParams();
@@ -103,7 +104,7 @@ function ResellerPublicPage() {
   const p = data.page;
   const servers = data.servers ?? [];
   const news = data.news ?? [];
-  const dnsList = servers.filter((s) => s.dns);
+  
   const allUp = servers.length > 0 && servers.every((s) => s.status === "up");
   const avgLatency = servers.filter((s) => s.latency_ms != null).reduce((a, s, _i, arr) => a + (s.latency_ms ?? 0) / arr.length, 0);
   const today = new Date();
@@ -197,30 +198,29 @@ function ResellerPublicPage() {
           </section>
         )}
 
-        {p.show_dns && dnsList.length > 0 && (
-          <section>
-            <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground mb-3">🌐 DNS Oficial</h2>
-            <div className="space-y-2">
-              {dnsList.map((s) => (
-                <Card key={s.id} className="p-4 flex flex-wrap items-center justify-between gap-3">
-                  <div className="min-w-0">
-                    <div className="text-xs text-muted-foreground">{s.name}</div>
-                    <div className="font-mono text-sm truncate">{s.dns}</div>
-                  </div>
-                  <CopyDns dns={s.dns!} color={p.primary_color} />
-                </Card>
-              ))}
-            </div>
-          </section>
-        )}
-
         {p.show_novidades && news.length > 0 && (
           <section>
-            <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground mb-3">Novidades</h2>
+            <div className="flex items-center justify-between gap-3 mb-3">
+              <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">Novidades</h2>
+              <CopyButton
+                color={p.primary_color}
+                label="Copiar novidades"
+                text={news.map((n) => `• ${n.name}`).join("\n")}
+              />
+            </div>
             {todayNews.length > 0 && (
               <Card className="p-4 mb-3 border" style={{ borderColor: p.accent_color }}>
-                <div className="font-semibold mb-1">🔥 Novidades de hoje</div>
-                <p className="text-sm text-muted-foreground">{todayNews.length} novos títulos/canais adicionados hoje.</p>
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <div>
+                    <div className="font-semibold mb-1">🔥 Novidades de hoje</div>
+                    <p className="text-sm text-muted-foreground">{todayNews.length} novos títulos/canais adicionados hoje.</p>
+                  </div>
+                  <CopyButton
+                    color={p.accent_color}
+                    label="Copiar de hoje"
+                    text={todayNews.map((n) => `• ${n.name}`).join("\n")}
+                  />
+                </div>
               </Card>
             )}
             <div className="grid gap-3 sm:grid-cols-3">
@@ -240,12 +240,23 @@ function ResellerPublicPage() {
                       ))}
                       {items.length === 0 && <li>Sem novidades nos últimos 7 dias.</li>}
                     </ul>
+                    {items.length > 0 && (
+                      <div className="mt-3">
+                        <CopyButton
+                          color={p.primary_color}
+                          label="Copiar lista"
+                          text={items.map((n) => `• ${n.name}`).join("\n")}
+                        />
+                      </div>
+                    )}
                   </Card>
                 );
               })}
             </div>
           </section>
         )}
+
+
       </main>
 
       <footer className="px-6 py-8 text-center text-xs text-muted-foreground">
