@@ -384,7 +384,12 @@ export async function provisionPendingServers(limit = 5) {
   let provisioned = 0;
   for (const srv of servers ?? []) {
     try {
-      const created = await ensureMonitors(srv as any, {});
+      const { getIptvCredentials } = await import("./iptv-credentials.server");
+      const creds = await getIptvCredentials(srv.id);
+      const created = await ensureMonitors(
+        { ...(srv as any), iptv_username: creds.username, iptv_password: creds.password },
+        {},
+      );
       const patch: Record<string, any> = { kuma_synced_at: new Date().toISOString(), kuma_error: null };
       for (const [kind, id] of Object.entries(created)) patch[KUMA_ID_COLUMN[kind as KumaKind]] = id;
       await supabaseAdmin.from("servers").update(patch as never).eq("id", srv.id);

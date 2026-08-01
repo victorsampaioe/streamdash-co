@@ -74,7 +74,7 @@ export const provisionKumaMonitors = createServerFn({ method: "POST" })
     const { data: srv } = await context.supabase
       .from("servers")
       .select(
-        "id, name, host, kuma_tcp_port, iptv_username, iptv_password, kuma_http_id, kuma_ping_id, kuma_dns_id, kuma_tcp_id, kuma_api_id, kuma_ssl_id",
+        "id, name, host, kuma_tcp_port, kuma_http_id, kuma_ping_id, kuma_dns_id, kuma_tcp_id, kuma_api_id, kuma_ssl_id",
       )
       .eq("id", data.serverId)
       .maybeSingle();
@@ -89,7 +89,12 @@ export const provisionKumaMonitors = createServerFn({ method: "POST" })
     for (const [kind, col] of Object.entries(KUMA_ID_COLUMN)) existing[kind] = (srv as any)[col] ?? null;
 
     try {
-      const created = await ensureMonitors(srv as any, existing as any);
+      const { getIptvCredentials } = await import("./iptv-credentials.server");
+      const creds = await getIptvCredentials((srv as any).id);
+      const created = await ensureMonitors(
+        { ...(srv as any), iptv_username: creds.username, iptv_password: creds.password },
+        existing as any,
+      );
       const patch: Record<string, any> = { kuma_synced_at: new Date().toISOString(), kuma_error: null };
       for (const [kind, id] of Object.entries(created)) patch[(KUMA_ID_COLUMN as any)[kind]] = id;
       const { error } = await context.supabase.from("servers").update(patch as never).eq("id", srv.id);
