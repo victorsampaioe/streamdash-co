@@ -1,6 +1,8 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { Activity, Bell, Globe, Zap, ShieldCheck, LineChart, Send } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { SupportFab } from "@/components/support-fab";
+
 
 export const Route = createFileRoute("/")({
   head: () => ({
