@@ -164,10 +164,18 @@ export function IptvPanel({ serverId, server }: { serverId: string; server: any 
 
       <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-3">
         <Mini label="Player API" value={last?.api_ms != null ? `${last.api_ms}ms` : "—"} tone={last?.api_ms && last.api_ms > 5000 ? "bad" : "ok"} />
-        <Mini label="Login Xtream" value={last ? (last.login_ok ? "Válido" : "Inválido") : "—"} tone={last?.login_ok ? "ok" : last ? "bad" : "muted"} />
+        <Mini
+          label="Login Xtream"
+          value={!last ? "—" : !last.login_checked ? "Não verificado" : last.login_ok ? "Válido" : "Inválido"}
+          tone={!last || !last.login_checked ? "muted" : last.login_ok ? "ok" : "bad"}
+        />
         <Mini label="JSON válido" value={last ? (last.json_valid ? "Sim" : "Não") : "—"} tone={last?.json_valid ? "ok" : last ? "bad" : "muted"} />
         <Mini label="Última sync" value={last ? new Date(last.synced_at).toLocaleString() : "—"} />
       </div>
+
+      {/* Diagnóstico da Player API */}
+      {last?.diagnostics && <ApiDiagnostics diag={last.diagnostics as any} error={last.error} />}
+
 
       {/* Streams */}
       <Card className="p-5">
