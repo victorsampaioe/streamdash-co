@@ -104,6 +104,7 @@ export function buildMonitorPayload(kind: KumaKind, srv: ServerRow) {
         port: srv.kuma_tcp_port || 80,
       };
     case "api": {
+      // Credenciais chegam já decifradas pelo chamador (nunca lidas do banco em texto puro).
       const u = srv.iptv_username ?? "";
       const p = srv.iptv_password ?? "";
       const url = u
