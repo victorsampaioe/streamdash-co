@@ -23,6 +23,7 @@ export const Route = createFileRoute("/_authenticated/app/servers/")({
 
 function ServersList() {
   const [q, setQ] = useState("");
+  const [target, setTarget] = useState<{ id: string; name: string } | null>(null);
   const qc = useQueryClient();
   const { data: servers = [] } = useQuery({
     queryKey: ["servers"],
@@ -35,8 +36,8 @@ function ServersList() {
       if (error) throw error;
       if (data === false) throw new Error("Servidor não encontrado ou já removido");
     },
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ["servers"] }); toast.success("Servidor removido"); },
-    onError: (e: Error) => toast.error(e.message),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ["servers"] }); toast.success("Servidor removido"); setTarget(null); },
+    onError: (e: Error) => toast.error(e.message ?? "Falha ao remover"),
   });
 
   const filtered = servers.filter((s) => !q || `${s.name} ${s.host}`.toLowerCase().includes(q.toLowerCase()));
