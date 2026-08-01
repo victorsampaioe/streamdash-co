@@ -252,7 +252,7 @@ export async function probeXtream(host: string, username: string, password: stri
   const out: XtreamResult = {
     api_ms: null, login_ok: false, json_valid: false,
     reachable: false, login_checked: false,
-    http_status: null, body_snippet: null,
+    http_status: null, body_snippet: null, diagnostics: null,
     channels: null, movies: null, series: null, categories: null,
     sampleLive: [], sampleVod: [], sampleSeries: [], error: null,
   };
@@ -260,17 +260,27 @@ export async function probeXtream(host: string, username: string, password: stri
   // 1) URL responde? tenta http e, se falhar, https (mesma ordem de diagnóstico)
   const t0 = Date.now();
   let info: any = null;
+  let okDiag: PlayerApiDiagnostics | null = null;
   let b = `http://${clean}`;
   let lastErr: PlayerApiError | null = null;
 
   for (const candidate of [`http://${clean}`, `https://${clean}`]) {
     try {
-      info = await getJson(`${candidate}/player_api.php?${auth}`);
+      const r = await getJson(`${candidate}/player_api.php?${auth}`);
+      info = r.data;
+      okDiag = r.diag;
       b = candidate;
       lastErr = null;
       break;
     } catch (e: unknown) {
-      lastErr = e instanceof PlayerApiError ? e : new PlayerApiError("❌ Servidor indisponível.", null, null);
+      lastErr = e instanceof PlayerApiError
+        ? e
+        : new PlayerApiError({
+            url: safeUrl(`${candidate}/player_api.php?${auth}`),
+            final_url: null, redirected: false, http_status: null, status_text: null,
+            elapsed_ms: 0, content_type: null, size_bytes: null, body_snippet: null,
+            stage: "network", message: "❌ Sem resposta do servidor.",
+          });
       // Se o servidor respondeu (status HTTP conhecido), não vale tentar outro esquema.
       if (lastErr.status !== null) break;
     }
@@ -279,21 +289,26 @@ export async function probeXtream(host: string, username: string, password: stri
   out.api_ms = Date.now() - t0;
 
   if (lastErr || info === null) {
-    out.error = lastErr?.message ?? "❌ Servidor indisponível.";
+    out.error = lastErr?.message ?? "❌ Sem resposta do servidor.";
     out.http_status = lastErr?.status ?? null;
     out.body_snippet = lastErr?.snippet ?? null;
-    out.reachable = lastErr?.status !== null && lastErr?.status !== undefined;
+    out.diagnostics = lastErr?.diag ?? null;
+    out.reachable = lastErr?.status != null;
+    // Falha de transporte/servidor: login NÃO foi verificado.
+    out.login_checked = false;
     return out;
   }
 
   // 2) JSON válido → só agora avaliamos usuário/senha
   out.reachable = true;
   out.json_valid = true;
-  out.http_status = 200;
+  out.http_status = okDiag?.http_status ?? 200;
+  out.body_snippet = okDiag?.body_snippet ?? null;
+  out.diagnostics = okDiag;
   out.login_checked = typeof info === "object" && info !== null && "user_info" in info;
 
   if (!out.login_checked) {
-    out.error = "❌ URL Xtream inválida (resposta sem user_info).";
+    out.error = "❌ Resposta JSON sem 'user_info' — login não pôde ser verificado (URL Xtream incorreta?).";
     return out;
   }
 
@@ -317,8 +332,9 @@ export async function probeXtream(host: string, username: string, password: stri
     getJson(`${b}/player_api.php?${auth}&action=get_series_categories`),
   ]);
 
-  const arr = (r: PromiseSettledResult<unknown>): any[] =>
-    r.status === "fulfilled" && Array.isArray(r.value) ? (r.value as any[]) : [];
+  const arr = (r: PromiseSettledResult<{ data: unknown }>): any[] =>
+    r.status === "fulfilled" && Array.isArray(r.value.data) ? (r.value.data as any[]) : [];
+
 
   const liveList = arr(live);
   const vodList = arr(vod);
