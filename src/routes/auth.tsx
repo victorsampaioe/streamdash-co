@@ -128,9 +128,8 @@ function AuthPage() {
                 <Field label="Telefone"><Input type="tel" required value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="(11) 99999-9999" /></Field>
                 <Field label="E-mail"><Input type="email" required value={email} onChange={(e) => setEmail(e.target.value)} /></Field>
                 <Field label="Senha"><Input type="password" required minLength={6} value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Mín. 6 caracteres" /></Field>
-                <Field label="Código de indicação (obrigatório)">
+                <Field label="Código de indicação (opcional)">
                   <Input
-                    required
                     value={referralCode}
                     onChange={(e) => setReferralCode(e.target.value.toUpperCase())}
                     placeholder="Ex.: ABC12345"
@@ -140,9 +139,11 @@ function AuthPage() {
                   />
                 </Field>
                 <p className="text-xs text-muted-foreground">
-                  🔑 O cadastro é liberado apenas com um código de indicação válido. Depois do
-                  primeiro acesso você escolhe entre <strong>1 dia de teste grátis</strong> ou assinar um plano.
+                  🔑 Com um código de indicação válido você ganha <strong>1 dia de teste grátis</strong>.
+                  Sem código, a conta é criada normalmente, mas o acesso só é liberado
+                  <strong> após o pagamento</strong> do plano.
                 </p>
+
                 <Button type="submit" disabled={loading} className="w-full">
                   {loading ? "Criando..." : "Criar conta"}
                 </Button>
