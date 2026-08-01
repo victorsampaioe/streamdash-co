@@ -15,7 +15,7 @@ export const createPixPayment = createServerFn({ method: "POST" })
 
     // Referral rewards agora são pagas em PIX (R$10) para o indicador,
     // não há mais desconto na compra do indicado.
-    const amountCents = plan.priceCents;
+    const amountCents = effectivePriceCents(plan);
     const discountApplied = false;
 
     // Reuse a still-valid charge. This makes retries instant and avoids
