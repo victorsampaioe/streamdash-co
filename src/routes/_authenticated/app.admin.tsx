@@ -491,3 +491,65 @@ function PayoutBadge({ status }: { status: string }) {
     default: return <Badge variant="outline">{status}</Badge>;
   }
 }
+
+function GrantPlanDialog({ user }: { user: AdminUser }) {
+  const qc = useQueryClient();
+  const [open, setOpen] = useState(false);
+  const [days, setDays] = useState("30");
+
+  const grant = useMutation({
+    mutationFn: async ({ plan, d }: { plan: "monthly" | "yearly" | "trial"; d: number }) => {
+      const { error } = await supabase.rpc("admin_grant_subscription", {
+        _user_id: user.id,
+        _plan: plan,
+        _days: d,
+      });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["admin-users"] });
+      qc.invalidateQueries({ queryKey: ["admin-stats"] });
+      toast.success("Assinatura atualizada");
+      setOpen(false);
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <Button size="sm" variant="outline"><CalendarClock className="h-3.5 w-3.5 mr-1" />Plano</Button>
+      </DialogTrigger>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>Liberar acesso</DialogTitle>
+          <DialogDescription className="truncate">{user.full_name ?? user.email}</DialogDescription>
+        </DialogHeader>
+        <div className="space-y-3">
+          <p className="text-xs text-muted-foreground">
+            O tempo é somado ao vencimento atual{user.expires_at ? ` (${new Date(user.expires_at).toLocaleDateString("pt-BR")})` : ""}.
+          </p>
+          <div className="grid grid-cols-2 gap-2">
+            <Button disabled={grant.isPending} onClick={() => grant.mutate({ plan: "monthly", d: 31 })}>1 mês (31d)</Button>
+            <Button disabled={grant.isPending} onClick={() => grant.mutate({ plan: "yearly", d: 365 })}>1 ano (365d)</Button>
+            <Button variant="outline" disabled={grant.isPending} onClick={() => grant.mutate({ plan: "monthly", d: 7 })}>+7 dias</Button>
+            <Button variant="outline" disabled={grant.isPending} onClick={() => grant.mutate({ plan: "trial", d: 2 })}>Teste 2 dias</Button>
+          </div>
+          <div className="flex items-end gap-2 pt-2 border-t">
+            <div className="flex-1">
+              <label className="text-[11px] uppercase tracking-wider text-muted-foreground">Dias personalizados</label>
+              <Input type="number" value={days} onChange={(e) => setDays(e.target.value)} />
+            </div>
+            <Button
+              variant="secondary"
+              disabled={grant.isPending || !Number(days)}
+              onClick={() => grant.mutate({ plan: Number(days) >= 365 ? "yearly" : "monthly", d: Number(days) })}
+            >
+              Aplicar
+            </Button>
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
