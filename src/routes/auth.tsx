@@ -54,12 +54,13 @@ function AuthPage() {
   async function handleSignUp(e: React.FormEvent) {
     e.preventDefault();
     const code = referralCode.trim().toUpperCase();
-    if (!code) return toast.error("Informe um código de indicação para criar sua conta.");
     setLoading(true);
-    const { data: valid, error: codeError } = await supabase.rpc("is_valid_referral_code" as never, { _code: code } as never);
-    if (codeError || !valid) {
-      setLoading(false);
-      return toast.error("Código de indicação inválido. Peça um código a quem já usa o Stream Monitor.");
+    if (code) {
+      const { data: valid, error: codeError } = await supabase.rpc("is_valid_referral_code" as never, { _code: code } as never);
+      if (codeError || !valid) {
+        setLoading(false);
+        return toast.error("Código de indicação inválido. Deixe o campo em branco para criar a conta sem teste grátis.");
+      }
     }
     const { data, error } = await supabase.auth.signUp({
       email,
@@ -69,6 +70,7 @@ function AuthPage() {
         data: { full_name: name, phone, referral_code: code },
       },
     });
+
     setLoading(false);
     if (error) return toast.error(error.message);
     // Aguarda a notificação antes de navegar para não cancelar o request
