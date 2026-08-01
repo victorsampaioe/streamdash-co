@@ -648,6 +648,9 @@ export async function runIptvSync(serverId: string, opts: { mode?: "smart" | "fu
     asn: currentAsn,
     datacenter: analysis?.org ?? null,
     error: x.error ?? m3u?.error ?? null,
+    login_checked: x.login_checked,
+    diagnostics: x.diagnostics as never,
+
   }).select("id").maybeSingle();
 
   if (sync?.id && streamProbes.length) {
