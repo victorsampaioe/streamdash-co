@@ -1597,6 +1597,66 @@ export type Database = {
           },
         ]
       }
+      reseller_pages: {
+        Row: {
+          accent_color: string
+          created_at: string
+          display_name: string
+          id: string
+          intro: string | null
+          logo_url: string | null
+          owner_id: string
+          primary_color: string
+          published: boolean
+          show_dns: boolean
+          show_novidades: boolean
+          show_servers: boolean
+          slug: string
+          tagline: string
+          telegram: string | null
+          updated_at: string
+          whatsapp: string | null
+        }
+        Insert: {
+          accent_color?: string
+          created_at?: string
+          display_name: string
+          id?: string
+          intro?: string | null
+          logo_url?: string | null
+          owner_id: string
+          primary_color?: string
+          published?: boolean
+          show_dns?: boolean
+          show_novidades?: boolean
+          show_servers?: boolean
+          slug: string
+          tagline?: string
+          telegram?: string | null
+          updated_at?: string
+          whatsapp?: string | null
+        }
+        Update: {
+          accent_color?: string
+          created_at?: string
+          display_name?: string
+          id?: string
+          intro?: string | null
+          logo_url?: string | null
+          owner_id?: string
+          primary_color?: string
+          published?: boolean
+          show_dns?: boolean
+          show_novidades?: boolean
+          show_servers?: boolean
+          slug?: string
+          tagline?: string
+          telegram?: string | null
+          updated_at?: string
+          whatsapp?: string | null
+        }
+        Relationships: []
+      }
       server_analysis: {
         Row: {
           analyzed_at: string
@@ -1710,7 +1770,10 @@ export type Database = {
           last_latency_ms: number | null
           name: string
           owner_id: string
+          public_display_name: string | null
+          public_dns_label: string | null
           public_slug: string | null
+          show_on_reseller_page: boolean
           ssl_days_remaining: number | null
           updated_at: string
         }
@@ -1755,7 +1818,10 @@ export type Database = {
           last_latency_ms?: number | null
           name: string
           owner_id: string
+          public_display_name?: string | null
+          public_dns_label?: string | null
           public_slug?: string | null
+          show_on_reseller_page?: boolean
           ssl_days_remaining?: number | null
           updated_at?: string
         }
@@ -1800,7 +1866,10 @@ export type Database = {
           last_latency_ms?: number | null
           name?: string
           owner_id?: string
+          public_display_name?: string | null
+          public_dns_label?: string | null
           public_slug?: string | null
+          show_on_reseller_page?: boolean
           ssl_days_remaining?: number | null
           updated_at?: string
         }
@@ -2037,6 +2106,7 @@ export type Database = {
           ups: number
         }[]
       }
+      get_reseller_page: { Args: { _slug: string }; Returns: Json }
       get_stability_ranking: {
         Args: { _limit?: number }
         Returns: {
