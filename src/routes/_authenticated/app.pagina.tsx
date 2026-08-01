@@ -118,19 +118,29 @@ function ResellerPageEditor() {
 
   const updateServer = useMutation({
     mutationFn: async ({ id, patch }: { id: string; patch: Record<string, unknown> }) => {
-      const { data, error } = await (supabase as any).from("servers").update(patch).eq("id", id).select("id");
+      const { data, error } = await (supabase as any).from("servers").update(patch).eq("id", id).select("id, show_on_reseller_page");
       if (error) throw new Error(error.message);
       if (!data || data.length === 0) throw new Error("Não foi possível salvar este servidor. Recarregue e tente novamente.");
+    },
+    onMutate: async ({ id, patch }) => {
+      await qc.cancelQueries({ queryKey: ["my-servers-public-page"] });
+      const prev = qc.getQueryData(["my-servers-public-page"]);
+      qc.setQueryData(["my-servers-public-page"], (old: any) =>
+        Array.isArray(old) ? old.map((s: any) => (s.id === id ? { ...s, ...patch } : s)) : old,
+      );
+      return { prev };
     },
     onSuccess: () => {
       toast.success("Salvo!");
       qc.invalidateQueries({ queryKey: ["my-servers-public-page"] });
     },
-    onError: (e: Error) => {
+    onError: (e: Error, _v, ctx) => {
+      if (ctx?.prev) qc.setQueryData(["my-servers-public-page"], ctx.prev);
       toast.error(e.message);
       qc.invalidateQueries({ queryKey: ["my-servers-public-page"] });
     },
   });
+
 
   const toggleAll = useMutation({
     mutationFn: async (value: boolean) => {
