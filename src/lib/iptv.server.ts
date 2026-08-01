@@ -279,9 +279,11 @@ export async function probeXtream(host: string, username: string, password: stri
     api_ms: null, login_ok: false, json_valid: false,
     reachable: false, login_checked: false,
     http_status: null, body_snippet: null, diagnostics: null,
+    account: null, content: { live_ok: false, vod_ok: false, series_ok: false },
     channels: null, movies: null, series: null, categories: null,
     sampleLive: [], sampleVod: [], sampleSeries: [], error: null,
   };
+
 
   // 1) URL responde? tenta http e, se falhar, https (mesma ordem de diagnóstico)
   const t0 = Date.now();
