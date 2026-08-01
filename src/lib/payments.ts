@@ -30,6 +30,23 @@ export const PLANS: PlanDefinition[] = [
   },
 ];
 
+// Promoção relâmpago do plano Anual (válida só hoje, até 23:59 no horário de Brasília).
+export const YEARLY_PROMO = {
+  priceCents: 15000,
+  endsAt: "2026-08-02T02:59:59.000Z", // 01/08/2026 23:59:59 BRT
+  label: "Só hoje",
+};
+
+export function isYearlyPromoActive(now: number = Date.now()) {
+  return now < Date.parse(YEARLY_PROMO.endsAt);
+}
+
+/** Preço efetivo do plano considerando promoções ativas. */
+export function effectivePriceCents(plan: PlanDefinition, now: number = Date.now()) {
+  if (plan.id === "yearly" && isYearlyPromoActive(now)) return YEARLY_PROMO.priceCents;
+  return plan.priceCents;
+}
+
 // Referral: novo usuário que se cadastrou com código de indicação ganha
 // 10% de desconto na PRIMEIRA compra (mensal ou anual).
 export const REFERRAL_FIRST_PURCHASE_DISCOUNT = 0.10;
