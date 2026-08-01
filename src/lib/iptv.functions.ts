@@ -54,3 +54,21 @@ export const acknowledgeIptvAlert = createServerFn({ method: "POST" })
     if (error) throw new Error(error.message);
     return { ok: true };
   });
+
+export const testPlayerApiUserAgents = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: { serverId: string }) => z.object({ serverId: z.string().uuid() }).parse(d))
+  .handler(async ({ data, context }) => {
+    const { data: srv } = await context.supabase
+      .from("servers")
+      .select("id, host, iptv_username, iptv_password")
+      .eq("id", data.serverId)
+      .maybeSingle();
+    if (!srv) throw new Error("Servidor não encontrado");
+    if (!srv.iptv_username || !srv.iptv_password) {
+      throw new Error("Configure usuário e senha Xtream antes de executar o teste.");
+    }
+
+    const { comparePlayerApiUserAgents } = await import("./iptv.server");
+    return await comparePlayerApiUserAgents(srv.host, srv.iptv_username, srv.iptv_password);
+  });
