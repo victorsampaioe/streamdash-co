@@ -68,6 +68,53 @@ export type Database = {
         }
         Relationships: []
       }
+      art_generations: {
+        Row: {
+          channels: Json
+          created_at: string
+          created_by: string
+          id: string
+          movies: Json
+          period_hours: number
+          series: Json
+          server_id: string
+          server_name: string
+          total_new: number
+        }
+        Insert: {
+          channels?: Json
+          created_at?: string
+          created_by: string
+          id?: string
+          movies?: Json
+          period_hours?: number
+          series?: Json
+          server_id: string
+          server_name: string
+          total_new?: number
+        }
+        Update: {
+          channels?: Json
+          created_at?: string
+          created_by?: string
+          id?: string
+          movies?: Json
+          period_hours?: number
+          series?: Json
+          server_id?: string
+          server_name?: string
+          total_new?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "art_generations_server_id_fkey"
+            columns: ["server_id"]
+            isOneToOne: false
+            referencedRelation: "servers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       check_regions: {
         Row: {
           city: string
