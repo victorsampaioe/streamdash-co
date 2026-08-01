@@ -708,7 +708,9 @@ export async function runIptvSync(serverId: string, opts: { mode?: "smart" | "fu
     ip: currentIp,
     asn: currentAsn,
     datacenter: analysis?.org ?? null,
-    error: x.error ?? m3u?.error ?? null,
+    // Erro da Player API tem prioridade; falha do get.php é só de playlist.
+    error: x.error ?? (m3u?.error ? `Playlist M3U: ${m3u.error}` : null),
+
     login_checked: x.login_checked,
     diagnostics: x.diagnostics as never,
 
