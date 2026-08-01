@@ -228,12 +228,15 @@ class PlayerApiError extends Error {
 async function getJson(
   url: string,
   ms = API_TIMEOUT_MS,
+  ua: string = UA_PLAYER,
 ): Promise<{ data: unknown; diag: PlayerApiDiagnostics }> {
   const t0 = Date.now();
   const masked = safeUrl(url);
+  const reqHeaders = playerHeaders(ua);
+  const outIp = await egressIp();
   let res: Response;
   try {
-    res = await timedFetch(url, ms);
+    res = await timedFetch(url, ms, { headers: reqHeaders });
   } catch (e: unknown) {
     const aborted = (e as Error)?.name === "AbortError";
     const diag: PlayerApiDiagnostics = {
@@ -246,6 +249,10 @@ async function getJson(
       content_type: null,
       size_bytes: null,
       body_snippet: null,
+      user_agent: ua,
+      request_headers: reqHeaders,
+      response_headers: null,
+      egress_ip: outIp,
       stage: "network",
       message: aborted
         ? "❌ Sem resposta: tempo limite excedido ao conectar no servidor."
@@ -278,6 +285,10 @@ async function getJson(
     content_type: headers["content-type"] ?? null,
     size_bytes: text.length,
     body_snippet: text.slice(0, 500) || null,
+    user_agent: ua,
+    request_headers: reqHeaders,
+    response_headers: headers,
+    egress_ip: outIp,
     stage: "ok",
     message: "",
   };
@@ -285,9 +296,10 @@ async function getJson(
   const fail = (stage: PlayerApiDiagnostics["stage"], message: string): never => {
     diag.stage = stage;
     diag.message = message;
-    console.warn("[iptv] player_api", { ...diag, headers });
+    console.warn("[iptv] player_api", diag);
     throw new PlayerApiError(diag);
   };
+
 
   if (res.status !== 200) {
     const extra = res.status === 403 || res.status === 401 ? " (acesso bloqueado pelo servidor)" : "";
