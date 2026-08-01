@@ -340,17 +340,43 @@ export async function probeXtream(host: string, username: string, password: stri
     return out;
   }
 
-  const status = String(info?.user_info?.status ?? "");
-  out.login_ok = String(info?.user_info?.auth ?? "0") === "1" && status !== "Disabled" && status !== "Banned";
+  // 3) Autenticação + informações da conta (status, expiração, conexões)
+  const ui = info.user_info ?? {};
+  const status = String(ui.status ?? "");
+  const expTs = Number(ui.exp_date);
+  const expIso = Number.isFinite(expTs) && expTs > 0 ? new Date(expTs * 1000).toISOString() : null;
+  const createdTs = Number(ui.created_at);
+  const num = (v: unknown) => (v == null || v === "" || Number.isNaN(Number(v)) ? null : Number(v));
+
+  out.account = {
+    status: status || null,
+    is_trial: ui.is_trial == null ? null : String(ui.is_trial) === "1",
+    exp_date: expIso,
+    days_to_expire: expIso ? Math.ceil((new Date(expIso).getTime() - Date.now()) / 864e5) : null,
+    max_connections: num(ui.max_connections),
+    active_connections: num(ui.active_cons),
+    created_at: Number.isFinite(createdTs) && createdTs > 0 ? new Date(createdTs * 1000).toISOString() : null,
+    timezone: info?.server_info?.timezone ?? null,
+    server_url: info?.server_info?.url
+      ? `${info.server_info.url}${info.server_info.port ? `:${info.server_info.port}` : ""}`
+      : null,
+  };
+
+  const expired = expIso != null && new Date(expIso).getTime() <= Date.now();
+  out.login_ok =
+    String(ui.auth ?? "0") === "1" && status !== "Disabled" && status !== "Banned" && !expired;
 
   if (!out.login_ok) {
-    out.error = status === "Disabled" || status === "Banned"
-      ? `❌ Conta Xtream ${status === "Banned" ? "banida" : "desativada"}.`
-      : "❌ Usuário ou senha inválidos.";
+    out.error =
+      status === "Disabled" || status === "Banned"
+        ? `❌ Conta Xtream ${status === "Banned" ? "banida" : "desativada"}.`
+        : expired
+          ? `❌ Conta Xtream expirada em ${new Date(expIso!).toLocaleString("pt-BR")}.`
+          : "❌ Usuário ou senha inválidos.";
     return out;
   }
 
-
+  // 4) Somente após login válido: testar conteúdos (Live, VOD, Séries)
   const [live, vod, series, catsLive, catsVod, catsSeries] = await Promise.allSettled([
     getJson(`${b}/player_api.php?${auth}&action=get_live_streams`, M3U_TIMEOUT_MS),
     getJson(`${b}/player_api.php?${auth}&action=get_vod_streams`, M3U_TIMEOUT_MS),
@@ -368,11 +394,18 @@ export async function probeXtream(host: string, username: string, password: stri
   const vodList = arr(vod);
   const seriesList = arr(series);
 
+  out.content = {
+    live_ok: live.status === "fulfilled" && liveList.length > 0,
+    vod_ok: vod.status === "fulfilled" && vodList.length > 0,
+    series_ok: series.status === "fulfilled" && seriesList.length > 0,
+  };
+
   out.channels = liveList.length || null;
   out.movies = vodList.length || null;
   out.series = seriesList.length || null;
   const catCount = arr(catsLive).length + arr(catsVod).length + arr(catsSeries).length;
   out.categories = catCount || null;
+
 
   const pick = <T,>(list: T[], n: number): T[] => {
     if (list.length <= n) return list;
