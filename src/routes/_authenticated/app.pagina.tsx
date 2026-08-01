@@ -237,11 +237,20 @@ function ResellerPageEditor() {
       </Card>
 
       <Card className="p-5 space-y-4">
-        <div>
-          <h2 className="font-semibold">Servidores exibidos</h2>
-          <p className="text-xs text-muted-foreground mt-1">
-            Escolha quais servidores aparecem, com um nome comercial e a DNS que o cliente pode copiar. O host real permanece privado.
-          </p>
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <h2 className="font-semibold">Servidores exibidos</h2>
+            <p className="text-xs text-muted-foreground mt-1">
+              Escolha quais servidores aparecem na sua página. O host real, usuário e senha permanecem privados.
+            </p>
+            <p className="text-xs text-muted-foreground mt-1">
+              {servers.filter((s) => s.show_on_reseller_page).length} de {servers.length} exibidos
+            </p>
+          </div>
+          <div className="flex gap-2">
+            <Button size="sm" variant="secondary" disabled={toggleAll.isPending} onClick={() => toggleAll.mutate(true)}>Exibir todos</Button>
+            <Button size="sm" variant="outline" disabled={toggleAll.isPending} onClick={() => toggleAll.mutate(false)}>Ocultar todos</Button>
+          </div>
         </div>
         {servers.length === 0 && <p className="text-sm text-muted-foreground">Nenhum servidor cadastrado ainda.</p>}
         <div className="space-y-3">
