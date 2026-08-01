@@ -198,22 +198,8 @@ function ResellerPublicPage() {
           </section>
         )}
 
-        {p.show_dns && dnsList.length > 0 && (
-          <section>
-            <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground mb-3">🌐 DNS Oficial</h2>
-            <div className="space-y-2">
-              {dnsList.map((s) => (
-                <Card key={s.id} className="p-4 flex flex-wrap items-center justify-between gap-3">
-                  <div className="min-w-0">
-                    <div className="text-xs text-muted-foreground">{s.name}</div>
-                    <div className="font-mono text-sm truncate">{s.dns}</div>
-                  </div>
-                  <CopyDns dns={s.dns!} color={p.primary_color} />
-                </Card>
-              ))}
-            </div>
-          </section>
-        )}
+
+
 
         {p.show_novidades && news.length > 0 && (
           <section>
