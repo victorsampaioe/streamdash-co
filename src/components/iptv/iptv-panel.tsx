@@ -69,6 +69,20 @@ export function IptvPanel({ serverId, server }: { serverId: string; server: any 
 
   const since = new Date(Date.now() - RANGE_MS[range]).toISOString();
 
+  const { data: rank } = useQuery({
+    queryKey: ["iptv-rank", serverId],
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc("get_iptv_server_rank", { _server_id: serverId });
+      if (error) throw error;
+      return data as {
+        position: number | null; total: number; channels: number | null; movies: number | null; series: number | null;
+        avg_channels: number | null; avg_movies: number | null; avg_series: number | null; content_vs_avg_pct: number | null;
+      };
+    },
+    refetchInterval: 120_000,
+  });
+
+
   const { data: syncs = [], refetch: refetchSyncs } = useQuery({
     queryKey: ["iptv-syncs", serverId, range],
     queryFn: async () =>
@@ -169,8 +183,9 @@ export function IptvPanel({ serverId, server }: { serverId: string; server: any 
               />
             </div>
             <p className="text-xs text-muted-foreground mt-2">
-              Uptime 30% · Latência 20% · Player API 15% · Streams 20% · Estabilidade 10% · IP/DNS 5%
+              Uptime 30% · Player API 15% · Tempo de resposta 15% · Live 20% · VOD 10% · Séries 5% · IP/DNS 5%
             </p>
+
           </div>
           <div className="flex flex-wrap gap-2">
             <Button size="sm" variant="outline" onClick={() => doDetect.mutate()} disabled={doDetect.isPending}>
@@ -185,6 +200,34 @@ export function IptvPanel({ serverId, server }: { serverId: string; server: any 
           </div>
         </div>
       </Card>
+
+      {/* Posição no Ranking IPTV Inteligente */}
+      {rank?.position != null && (
+        <Card className="p-5">
+          <div className="flex items-start justify-between gap-4 flex-wrap">
+            <div>
+              <div className="text-xs uppercase tracking-wider text-muted-foreground mb-1">Ranking IPTV Inteligente</div>
+              <div className="text-2xl font-bold font-mono">
+                #{rank.position} <span className="text-sm font-normal text-muted-foreground">de {rank.total} servidores</span>
+              </div>
+              {rank.content_vs_avg_pct != null && (
+                <p className="text-xs text-muted-foreground mt-1">
+                  {rank.content_vs_avg_pct >= 0
+                    ? `${rank.content_vs_avg_pct}% mais conteúdo que a média da plataforma`
+                    : `${Math.abs(rank.content_vs_avg_pct)}% menos conteúdo que a média da plataforma`}
+                </p>
+              )}
+            </div>
+            <div className="grid grid-cols-3 gap-4 text-xs">
+              <RankCmp label="Canais" mine={rank.channels} avg={rank.avg_channels} />
+              <RankCmp label="Filmes" mine={rank.movies} avg={rank.avg_movies} />
+              <RankCmp label="Séries" mine={rank.series} avg={rank.avg_series} />
+            </div>
+          </div>
+        </Card>
+      )}
+
+
 
       {/* Conteúdo + variações */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
@@ -626,6 +669,16 @@ function KV({ label, value }: { label: string; value: string }) {
     <div className="flex items-center justify-between gap-3 text-sm">
       <span className="text-muted-foreground text-xs">{label}</span>
       <span className="font-mono text-xs truncate max-w-[60%]">{value}</span>
+    </div>
+  );
+}
+
+function RankCmp({ label, mine, avg }: { label: string; mine: number | null | undefined; avg: number | null | undefined }) {
+  return (
+    <div>
+      <div className="text-muted-foreground">{label}</div>
+      <div className="font-mono font-semibold">{num(mine)}</div>
+      <div className="text-[11px] text-muted-foreground">média {num(avg)}</div>
     </div>
   );
 }

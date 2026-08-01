@@ -619,6 +619,9 @@ export function computeHealthScore(input: {
   streamStartMs: number | null;
   instability24h: number | null;  // 0..1 (fração de checks não-up)
   ipChanges7d: number;
+  liveOk?: boolean | null;
+  vodOk?: boolean | null;
+  seriesOk?: boolean | null;
 }): number {
   const scale = (v: number | null, good: number, bad: number) => {
     if (v == null) return 0.7;
@@ -626,16 +629,27 @@ export function computeHealthScore(input: {
     if (v >= bad) return 0;
     return 1 - (v - good) / (bad - good);
   };
-  const uptime = input.uptimePct == null ? 0.7 : Math.max(0, Math.min(1, input.uptimePct / 100));
-  const latency = scale(input.latencyMs, 120, 1500);
-  const api = scale(input.apiMs, 400, 5000);
-  const stream = scale(input.streamStartMs, 1200, 8000);
+  const flag = (v: boolean | null | undefined) => (v == null ? 0.7 : v ? 1 : 0);
+
+  const uptimeBase = input.uptimePct == null ? 0.7 : Math.max(0, Math.min(1, input.uptimePct / 100));
   const stability = input.instability24h == null ? 0.7 : Math.max(0, 1 - input.instability24h * 3);
+  const uptime = uptimeBase * 0.7 + stability * 0.3;
+  const response = scale(input.latencyMs, 120, 1500) * 0.6 + scale(input.streamStartMs, 1200, 8000) * 0.4;
+  const api = scale(input.apiMs, 400, 5000);
   const ip = input.ipChanges7d === 0 ? 1 : input.ipChanges7d === 1 ? 0.6 : 0.2;
 
-  const score = uptime * 30 + latency * 20 + api * 15 + stream * 20 + stability * 10 + ip * 5;
+  // Uptime 30 · Player API 15 · Tempo de resposta 15 · Live 20 · VOD 10 · Séries 5 · IP/DNS 5
+  const score =
+    uptime * 30 +
+    api * 15 +
+    response * 15 +
+    flag(input.liveOk) * 20 +
+    flag(input.vodOk) * 10 +
+    flag(input.seriesOk) * 5 +
+    ip * 5;
   return Math.max(0, Math.min(100, Math.round(score)));
 }
+
 
 export function healthLabel(score: number): { label: string; tone: "success" | "warning" | "destructive" } {
   if (score >= 95) return { label: "Excelente", tone: "success" };
@@ -763,6 +777,10 @@ export async function runIptvSync(serverId: string, opts: { mode?: "smart" | "fu
     ? Math.round(streamProbes.reduce((a, s) => a + (s.start_ms ?? 0), 0) / streamProbes.length)
     : null;
 
+  const probeOk = (kind: "live" | "vod" | "series") => {
+    const p = streamProbes.find((s) => s.kind === kind);
+    return p ? p.ok : null;
+  };
   const health = computeHealthScore({
     uptimePct,
     latencyMs: server.last_latency_ms,
@@ -770,7 +788,11 @@ export async function runIptvSync(serverId: string, opts: { mode?: "smart" | "fu
     streamStartMs: streamStart,
     instability24h: instability,
     ipChanges7d: ipChanges7d ?? 0,
+    liveOk: x.login_ok ? (probeOk("live") ?? x.content.live_ok) : false,
+    vodOk: x.login_ok ? (probeOk("vod") ?? x.content.vod_ok) : false,
+    seriesOk: x.login_ok ? (probeOk("series") ?? x.content.series_ok) : false,
   });
+
 
   const { data: sync } = await supabaseAdmin.from("iptv_syncs").insert({
     server_id: serverId,
