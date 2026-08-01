@@ -101,6 +101,20 @@ export async function detectIptvKind(
 /* Xtream Player API                                                   */
 /* ------------------------------------------------------------------ */
 
+export type PlayerApiDiagnostics = {
+  url: string;
+  final_url: string | null;
+  redirected: boolean;
+  http_status: number | null;
+  status_text: string | null;
+  elapsed_ms: number;
+  content_type: string | null;
+  size_bytes: number | null;
+  body_snippet: string | null;
+  stage: "network" | "http" | "empty" | "content-type" | "parse" | "ok";
+  message: string;
+};
+
 type XtreamResult = {
   api_ms: number | null;
   login_ok: boolean;
@@ -109,6 +123,7 @@ type XtreamResult = {
   login_checked: boolean;
   http_status: number | null;
   body_snippet: string | null;
+  diagnostics: PlayerApiDiagnostics | null;
   channels: number | null;
   movies: number | null;
   series: number | null;
@@ -127,38 +142,51 @@ function safeUrl(url: string) {
 class PlayerApiError extends Error {
   status: number | null;
   snippet: string | null;
-  constructor(message: string, status: number | null, snippet: string | null) {
-    super(message);
+  diag: PlayerApiDiagnostics;
+  constructor(diag: PlayerApiDiagnostics) {
+    super(diag.message);
     this.name = "PlayerApiError";
-    this.status = status;
-    this.snippet = snippet;
+    this.status = diag.http_status;
+    this.snippet = diag.body_snippet;
+    this.diag = diag;
   }
 }
 
 /**
  * Busca JSON da Player API validando disponibilidade, status HTTP, corpo e
  * Content-Type ANTES do parse. Nunca propaga exceções cruas do JSON.parse.
+ * Sempre devolve um diagnóstico completo (mascarando credenciais).
  */
-async function getJson(url: string, ms = API_TIMEOUT_MS): Promise<unknown> {
+async function getJson(
+  url: string,
+  ms = API_TIMEOUT_MS,
+): Promise<{ data: unknown; diag: PlayerApiDiagnostics }> {
   const t0 = Date.now();
+  const masked = safeUrl(url);
   let res: Response;
   try {
     res = await timedFetch(url, ms);
   } catch (e: unknown) {
     const aborted = (e as Error)?.name === "AbortError";
-    const msg = aborted ? "❌ Timeout ao conectar." : "❌ Servidor indisponível.";
-    console.warn("[iptv] player_api falhou", {
-      url: safeUrl(url),
-      status: null,
+    const diag: PlayerApiDiagnostics = {
+      url: masked,
+      final_url: null,
+      redirected: false,
+      http_status: null,
+      status_text: null,
       elapsed_ms: Date.now() - t0,
-      reason: String((e as Error)?.message ?? e).slice(0, 200),
-      parser_error: msg,
-    });
-    throw new PlayerApiError(msg, null, null);
+      content_type: null,
+      size_bytes: null,
+      body_snippet: null,
+      stage: "network",
+      message: aborted
+        ? "❌ Sem resposta: tempo limite excedido ao conectar no servidor."
+        : `❌ Sem resposta do servidor (${String((e as Error)?.message ?? e).slice(0, 120)}).`,
+    };
+    console.warn("[iptv] player_api falhou", diag);
+    throw new PlayerApiError(diag);
   }
 
-  const status = res.status;
-  const elapsed = Date.now() - t0;
   const headers: Record<string, string> = {};
   res.headers.forEach((v, k) => {
     if (!/^set-cookie$|authorization/i.test(k)) headers[k] = v;
@@ -171,43 +199,52 @@ async function getJson(url: string, ms = API_TIMEOUT_MS): Promise<unknown> {
   } catch {
     text = "";
   }
-  const snippet = text.slice(0, 500);
-  const log = (msg: string) =>
-    console.warn("[iptv] player_api", { url: safeUrl(url), status, elapsed_ms: elapsed, headers, body: snippet, parser_error: msg });
 
-  if (status !== 200) {
-    const msg = `❌ Erro HTTP ${status}.`;
-    log(msg);
-    throw new PlayerApiError(msg, status, snippet);
+  const diag: PlayerApiDiagnostics = {
+    url: masked,
+    final_url: res.url ? safeUrl(res.url) : null,
+    redirected: Boolean(res.redirected) || (!!res.url && safeUrl(res.url) !== masked),
+    http_status: res.status,
+    status_text: res.statusText || null,
+    elapsed_ms: Date.now() - t0,
+    content_type: headers["content-type"] ?? null,
+    size_bytes: text.length,
+    body_snippet: text.slice(0, 500) || null,
+    stage: "ok",
+    message: "",
+  };
+
+  const fail = (stage: PlayerApiDiagnostics["stage"], message: string): never => {
+    diag.stage = stage;
+    diag.message = message;
+    console.warn("[iptv] player_api", { ...diag, headers });
+    throw new PlayerApiError(diag);
+  };
+
+  if (res.status !== 200) {
+    const extra = res.status === 403 || res.status === 401 ? " (acesso bloqueado pelo servidor)" : "";
+    fail("http", `❌ Servidor respondeu HTTP ${res.status}${extra}. Não foi possível validar o login.`);
   }
 
   const trimmed = text.trim();
-  if (!trimmed) {
-    const msg = "❌ Resposta vazia da Player API.";
-    log(msg);
-    throw new PlayerApiError(msg, status, snippet);
-  }
+  if (!trimmed) fail("empty", "❌ Resposta vazia da Player API (0 bytes). Não foi possível validar o login.");
 
   if (/^\s*(<!doctype|<html|<\?xml|<)/i.test(trimmed) || ctype.includes("text/html")) {
-    const msg = "❌ Player API retornou HTML em vez de JSON.";
-    log(msg);
-    throw new PlayerApiError(msg, status, snippet);
+    fail("content-type", "❌ Player API retornou HTML em vez de JSON (possível bloqueio/proxy).");
   }
 
   if (ctype && !/(json|text\/plain|application\/octet-stream)/.test(ctype)) {
-    const msg = `❌ Player API retornou Content-Type inesperado (${ctype.split(";")[0]}).`;
-    log(msg);
-    throw new PlayerApiError(msg, status, snippet);
+    fail("content-type", `❌ Content-Type inesperado (${ctype.split(";")[0]}). Resposta não é JSON.`);
   }
 
   try {
-    return JSON.parse(trimmed);
+    return { data: JSON.parse(trimmed), diag };
   } catch {
-    const msg = "❌ URL Xtream inválida ou resposta não é JSON.";
-    log(msg);
-    throw new PlayerApiError(msg, status, snippet);
+    fail("parse", "❌ Resposta incompleta ou inválida: não foi possível interpretar o JSON.");
   }
+  throw new Error("unreachable");
 }
+
 
 export async function probeXtream(host: string, username: string, password: string): Promise<XtreamResult> {
   const clean = host.replace(/^https?:\/\//, "").replace(/\/+$/, "");
