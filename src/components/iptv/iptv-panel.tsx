@@ -187,6 +187,50 @@ export function IptvPanel({ serverId, server }: { serverId: string; server: any 
       {/* Diagnóstico da Player API */}
       {last?.diagnostics && <ApiDiagnostics diag={last.diagnostics as any} error={last.error} />}
 
+      {/* Teste comparativo de User-Agent (investigar HTTP 403) */}
+      <Card className="p-5 space-y-4">
+        <div className="flex items-start justify-between gap-3 flex-wrap">
+          <div>
+            <h3 className="font-medium text-sm flex items-center gap-2">
+              <Globe className="h-4 w-4" />Teste alternativo de User-Agent
+            </h3>
+            <p className="text-xs text-muted-foreground mt-1 max-w-xl">
+              Chama a Player API duas vezes — com User-Agent de player IPTV e com
+              <span className="font-mono"> Mozilla/5.0</span> — para saber se o HTTP 403 é bloqueio por
+              identificação da requisição ou pelo IP de saída do monitor.
+            </p>
+          </div>
+          <Button size="sm" variant="outline" onClick={() => doUaTest.mutate()} disabled={doUaTest.isPending}>
+            <RefreshCw className={`h-4 w-4 mr-1 ${doUaTest.isPending ? "animate-spin" : ""}`} />
+            Executar teste
+          </Button>
+        </div>
+
+        {uaResult && (
+          <div className="space-y-4">
+            <div className="rounded-lg border border-border/60 bg-muted/40 p-3 text-xs">
+              {uaResult.verdict}
+            </div>
+            <KV label="IP de saída do monitor" value={uaResult.egress_ip ?? "—"} />
+            <div className="grid lg:grid-cols-2 gap-4">
+              {uaResult.probes?.map((p: any) => (
+                <div key={p.label} className="rounded-lg border border-border/60 p-3 space-y-2">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-xs font-medium">{p.label}</span>
+                    <Badge variant={p.ok ? "outline" : "destructive"} className="text-[10px] uppercase">
+                      {p.ok ? "aceito" : `HTTP ${p.diagnostics?.http_status ?? "—"}`}
+                    </Badge>
+                  </div>
+                  {p.diagnostics && <ApiDiagnostics diag={p.diagnostics} error={p.error} embedded />}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </Card>
+
+
+
 
       {/* Streams */}
       <Card className="p-5">
