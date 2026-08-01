@@ -169,8 +169,9 @@ export function IptvPanel({ serverId, server }: { serverId: string; server: any 
               />
             </div>
             <p className="text-xs text-muted-foreground mt-2">
-              Uptime 30% · Latência 20% · Player API 15% · Streams 20% · Estabilidade 10% · IP/DNS 5%
+              Uptime 30% · Player API 15% · Tempo de resposta 15% · Live 20% · VOD 10% · Séries 5% · IP/DNS 5%
             </p>
+
           </div>
           <div className="flex flex-wrap gap-2">
             <Button size="sm" variant="outline" onClick={() => doDetect.mutate()} disabled={doDetect.isPending}>
