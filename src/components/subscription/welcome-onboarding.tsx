@@ -53,11 +53,14 @@ export function WelcomeOnboarding() {
         </div>
         <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">🎉 Bem-vindo ao Stream Monitor</h1>
         <p className="text-sm text-muted-foreground">
-          Seu cadastro foi realizado com sucesso. Agora escolha como deseja começar:
+          {canTrial === false
+            ? "Sua conta foi criada sem código de indicação — o acesso é liberado após o pagamento."
+            : "Seu cadastro foi realizado com sucesso. Agora escolha como deseja começar:"}
         </p>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2">
+      <div className={canTrial === false ? "grid gap-4 max-w-md mx-auto" : "grid gap-4 md:grid-cols-2"}>
+        {canTrial !== false && (
         <Card className="p-6 flex flex-col gap-4">
           <div className="flex items-center gap-3">
             <div className="grid h-10 w-10 place-items-center rounded-xl bg-muted">
@@ -76,14 +79,16 @@ export function WelcomeOnboarding() {
               </li>
             ))}
           </ul>
-          <Button variant="outline" className="w-full" onClick={startTrial} disabled={loading}>
+          <Button variant="outline" className="w-full" onClick={startTrial} disabled={loading || canTrial === null}>
             {loading ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Rocket className="h-4 w-4 mr-2" />}
             Iniciar Teste
           </Button>
           <p className="text-[11px] text-muted-foreground text-center">
-            Disponível apenas uma vez por conta.
+            Disponível apenas uma vez por conta, com código de indicação.
           </p>
         </Card>
+        )}
+
 
         <Card className="p-6 flex flex-col gap-4 border-primary/60 ring-1 ring-primary/30">
           <div className="flex items-center gap-3">
