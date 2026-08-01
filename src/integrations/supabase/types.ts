@@ -2069,6 +2069,19 @@ export type Database = {
       }
       hub_recompute_rating: { Args: { _user: string }; Returns: undefined }
       hub_start_conversation: { Args: { _listing_id: string }; Returns: string }
+      iptv_find_title: {
+        Args: { _kind?: string; _limit?: number; _query: string }
+        Returns: {
+          first_seen_at: string
+          first_server: string
+          kind: string
+          mine_has: boolean
+          server_count: number
+          servers: Json
+          title: string
+          title_key: string
+        }[]
+      }
       iptv_first_detected: {
         Args: { _days?: number; _kind?: string; _limit?: number }
         Returns: {
