@@ -15,6 +15,7 @@ import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as McpRouteImport } from './routes/mcp'
 import { Route as DnsRouteImport } from './routes/dns'
 import { Route as AuthRouteImport } from './routes/auth'
+import { Route as SlugRouteImport } from './routes/$slug'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as StatusSlugRouteImport } from './routes/status.$slug'
@@ -27,6 +28,7 @@ import { Route as AuthenticatedAppSubscriptionRouteImport } from './routes/_auth
 import { Route as AuthenticatedAppReferralsRouteImport } from './routes/_authenticated/app.referrals'
 import { Route as AuthenticatedAppRankingRouteImport } from './routes/_authenticated/app.ranking'
 import { Route as AuthenticatedAppRadarRouteImport } from './routes/_authenticated/app.radar'
+import { Route as AuthenticatedAppPaginaRouteImport } from './routes/_authenticated/app.pagina'
 import { Route as AuthenticatedAppNovidadesRouteImport } from './routes/_authenticated/app.novidades'
 import { Route as AuthenticatedAppHubRouteImport } from './routes/_authenticated/app.hub'
 import { Route as AuthenticatedAppDetectorRouteImport } from './routes/_authenticated/app.detector'
@@ -82,6 +84,11 @@ const DnsRoute = DnsRouteImport.update({
 const AuthRoute = AuthRouteImport.update({
   id: '/auth',
   path: '/auth',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SlugRoute = SlugRouteImport.update({
+  id: '/$slug',
+  path: '/$slug',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AuthenticatedRouteRoute = AuthenticatedRouteRouteImport.update({
@@ -145,6 +152,11 @@ const AuthenticatedAppRankingRoute = AuthenticatedAppRankingRouteImport.update({
 const AuthenticatedAppRadarRoute = AuthenticatedAppRadarRouteImport.update({
   id: '/radar',
   path: '/radar',
+  getParentRoute: () => AuthenticatedAppRoute,
+} as any)
+const AuthenticatedAppPaginaRoute = AuthenticatedAppPaginaRouteImport.update({
+  id: '/pagina',
+  path: '/pagina',
   getParentRoute: () => AuthenticatedAppRoute,
 } as any)
 const AuthenticatedAppNovidadesRoute =
@@ -296,6 +308,7 @@ const AuthenticatedAppHubLIdRoute = AuthenticatedAppHubLIdRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/$slug': typeof SlugRoute
   '/auth': typeof AuthRoute
   '/dns': typeof DnsRoute
   '/mcp': typeof McpRoute
@@ -316,6 +329,7 @@ export interface FileRoutesByFullPath {
   '/app/detector': typeof AuthenticatedAppDetectorRoute
   '/app/hub': typeof AuthenticatedAppHubRouteWithChildren
   '/app/novidades': typeof AuthenticatedAppNovidadesRoute
+  '/app/pagina': typeof AuthenticatedAppPaginaRoute
   '/app/radar': typeof AuthenticatedAppRadarRoute
   '/app/ranking': typeof AuthenticatedAppRankingRoute
   '/app/referrals': typeof AuthenticatedAppReferralsRoute
@@ -341,6 +355,7 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/$slug': typeof SlugRoute
   '/auth': typeof AuthRoute
   '/dns': typeof DnsRoute
   '/mcp': typeof McpRoute
@@ -359,6 +374,7 @@ export interface FileRoutesByTo {
   '/app/alerts': typeof AuthenticatedAppAlertsRoute
   '/app/detector': typeof AuthenticatedAppDetectorRoute
   '/app/novidades': typeof AuthenticatedAppNovidadesRoute
+  '/app/pagina': typeof AuthenticatedAppPaginaRoute
   '/app/radar': typeof AuthenticatedAppRadarRoute
   '/app/ranking': typeof AuthenticatedAppRankingRoute
   '/app/referrals': typeof AuthenticatedAppReferralsRoute
@@ -386,6 +402,7 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
+  '/$slug': typeof SlugRoute
   '/auth': typeof AuthRoute
   '/dns': typeof DnsRoute
   '/mcp': typeof McpRoute
@@ -406,6 +423,7 @@ export interface FileRoutesById {
   '/_authenticated/app/detector': typeof AuthenticatedAppDetectorRoute
   '/_authenticated/app/hub': typeof AuthenticatedAppHubRouteWithChildren
   '/_authenticated/app/novidades': typeof AuthenticatedAppNovidadesRoute
+  '/_authenticated/app/pagina': typeof AuthenticatedAppPaginaRoute
   '/_authenticated/app/radar': typeof AuthenticatedAppRadarRoute
   '/_authenticated/app/ranking': typeof AuthenticatedAppRankingRoute
   '/_authenticated/app/referrals': typeof AuthenticatedAppReferralsRoute
@@ -433,6 +451,7 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/$slug'
     | '/auth'
     | '/dns'
     | '/mcp'
@@ -453,6 +472,7 @@ export interface FileRouteTypes {
     | '/app/detector'
     | '/app/hub'
     | '/app/novidades'
+    | '/app/pagina'
     | '/app/radar'
     | '/app/ranking'
     | '/app/referrals'
@@ -478,6 +498,7 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/$slug'
     | '/auth'
     | '/dns'
     | '/mcp'
@@ -496,6 +517,7 @@ export interface FileRouteTypes {
     | '/app/alerts'
     | '/app/detector'
     | '/app/novidades'
+    | '/app/pagina'
     | '/app/radar'
     | '/app/ranking'
     | '/app/referrals'
@@ -522,6 +544,7 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/_authenticated'
+    | '/$slug'
     | '/auth'
     | '/dns'
     | '/mcp'
@@ -542,6 +565,7 @@ export interface FileRouteTypes {
     | '/_authenticated/app/detector'
     | '/_authenticated/app/hub'
     | '/_authenticated/app/novidades'
+    | '/_authenticated/app/pagina'
     | '/_authenticated/app/radar'
     | '/_authenticated/app/ranking'
     | '/_authenticated/app/referrals'
@@ -569,6 +593,7 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
+  SlugRoute: typeof SlugRoute
   AuthRoute: typeof AuthRoute
   DnsRoute: typeof DnsRoute
   McpRoute: typeof McpRoute
@@ -629,6 +654,13 @@ declare module '@tanstack/react-router' {
       path: '/auth'
       fullPath: '/auth'
       preLoaderRoute: typeof AuthRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/$slug': {
+      id: '/$slug'
+      path: '/$slug'
+      fullPath: '/$slug'
+      preLoaderRoute: typeof SlugRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_authenticated': {
@@ -713,6 +745,13 @@ declare module '@tanstack/react-router' {
       path: '/radar'
       fullPath: '/app/radar'
       preLoaderRoute: typeof AuthenticatedAppRadarRouteImport
+      parentRoute: typeof AuthenticatedAppRoute
+    }
+    '/_authenticated/app/pagina': {
+      id: '/_authenticated/app/pagina'
+      path: '/pagina'
+      fullPath: '/app/pagina'
+      preLoaderRoute: typeof AuthenticatedAppPaginaRouteImport
       parentRoute: typeof AuthenticatedAppRoute
     }
     '/_authenticated/app/novidades': {
@@ -936,6 +975,7 @@ interface AuthenticatedAppRouteChildren {
   AuthenticatedAppDetectorRoute: typeof AuthenticatedAppDetectorRoute
   AuthenticatedAppHubRoute: typeof AuthenticatedAppHubRouteWithChildren
   AuthenticatedAppNovidadesRoute: typeof AuthenticatedAppNovidadesRoute
+  AuthenticatedAppPaginaRoute: typeof AuthenticatedAppPaginaRoute
   AuthenticatedAppRadarRoute: typeof AuthenticatedAppRadarRoute
   AuthenticatedAppRankingRoute: typeof AuthenticatedAppRankingRoute
   AuthenticatedAppReferralsRoute: typeof AuthenticatedAppReferralsRoute
@@ -955,6 +995,7 @@ const AuthenticatedAppRouteChildren: AuthenticatedAppRouteChildren = {
   AuthenticatedAppDetectorRoute: AuthenticatedAppDetectorRoute,
   AuthenticatedAppHubRoute: AuthenticatedAppHubRouteWithChildren,
   AuthenticatedAppNovidadesRoute: AuthenticatedAppNovidadesRoute,
+  AuthenticatedAppPaginaRoute: AuthenticatedAppPaginaRoute,
   AuthenticatedAppRadarRoute: AuthenticatedAppRadarRoute,
   AuthenticatedAppRankingRoute: AuthenticatedAppRankingRoute,
   AuthenticatedAppReferralsRoute: AuthenticatedAppReferralsRoute,
@@ -982,6 +1023,7 @@ const AuthenticatedRouteRouteWithChildren =
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
+  SlugRoute: SlugRoute,
   AuthRoute: AuthRoute,
   DnsRoute: DnsRoute,
   McpRoute: McpRoute,
