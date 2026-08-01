@@ -1,6 +1,8 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { Activity, Bell, Globe, Zap, ShieldCheck, LineChart, Send } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { SupportFab } from "@/components/support-fab";
+
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -111,9 +113,12 @@ function Landing() {
           </div>
         </div>
       </footer>
+
+      <SupportFab />
     </div>
   );
 }
+
 
 function Feature({ icon, title, desc }: { icon: React.ReactNode; title: string; desc: string }) {
   return (

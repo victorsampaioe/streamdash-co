@@ -2,6 +2,8 @@ import { Link, Outlet, useNavigate, useRouterState } from "@tanstack/react-route
 import { Activity, LayoutDashboard, ServerIcon, Bell, Users, LogOut, Sun, Moon, Search, Plus, CreditCard, Gift, Radio, ShieldAlert, Trophy, Lock, Menu, Send, Bot, Sparkles } from "lucide-react";
 import { SubscriptionBanner } from "@/components/subscription/subscription-banner";
 import { WelcomeOnboarding } from "@/components/subscription/welcome-onboarding";
+import { SupportFab } from "@/components/support-fab";
+
 
 import { useEffect, useState, type ReactNode } from "react";
 import { supabase } from "@/integrations/supabase/client";
@@ -30,9 +32,11 @@ export function AppShell({ children }: { children: ReactNode }) {
         <SubscriptionBanner />
         <main className="flex-1 p-4 sm:p-6 md:p-8 max-w-[1600px] w-full mx-auto">{children}</main>
       </div>
+      <SupportFab />
     </div>
   );
 }
+
 
 function GatedOutlet() {
   const pathname = useRouterState({ select: (r) => r.location.pathname });
