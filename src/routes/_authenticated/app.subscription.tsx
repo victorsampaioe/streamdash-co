@@ -8,7 +8,7 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { useSubscription, planLabel, statusLabel } from "@/hooks/use-subscription";
-import { PLANS, formatBRL, type PlanId } from "@/lib/payments";
+import { PLANS, formatBRL, effectivePriceCents, isYearlyPromoActive, type PlanId } from "@/lib/payments";
 import { createPixPayment, getPaymentStatus } from "@/lib/mercadopago.functions";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
