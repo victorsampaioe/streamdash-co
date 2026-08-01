@@ -207,6 +207,26 @@ function safeUrl(url: string) {
   return url.replace(/(username|password)=[^&]*/gi, "$1=***");
 }
 
+/** Remove credenciais do corpo retornado (o Xtream ecoa usuário/senha em user_info). */
+export function redactSnippet(text: string | null | undefined): string | null {
+  if (!text) return null;
+  return text
+    .replace(/("(?:username|password|auth_?token|token)"\s*:\s*")[^"]*(")/gi, "$1***$2")
+    .replace(/(username|password)=[^&"\s]*/gi, "$1=***");
+}
+
+/**
+ * Versão do diagnóstico segura para persistir: sem corpo da resposta e sem
+ * headers. Guardamos apenas status, tempo, tamanho, estágio e mensagem.
+ */
+export function sanitizeDiagnostics(
+  diag: PlayerApiDiagnostics | null | undefined,
+): Omit<PlayerApiDiagnostics, "body_snippet" | "request_headers" | "response_headers"> | null {
+  if (!diag) return null;
+  const { body_snippet: _b, request_headers: _q, response_headers: _r, ...rest } = diag;
+  return rest;
+}
+
 class PlayerApiError extends Error {
   status: number | null;
   snippet: string | null;
@@ -258,7 +278,7 @@ async function getJson(
         ? "❌ Sem resposta: tempo limite excedido ao conectar no servidor."
         : `❌ Sem resposta do servidor (${String((e as Error)?.message ?? e).slice(0, 120)}).`,
     };
-    console.warn("[iptv] player_api falhou", diag);
+    console.warn("[iptv] player_api falhou", sanitizeDiagnostics(diag));
     throw new PlayerApiError(diag);
   }
 
@@ -284,7 +304,7 @@ async function getJson(
     elapsed_ms: Date.now() - t0,
     content_type: headers["content-type"] ?? null,
     size_bytes: text.length,
-    body_snippet: text.slice(0, 500) || null,
+    body_snippet: redactSnippet(text.slice(0, 500)),
     user_agent: ua,
     request_headers: reqHeaders,
     response_headers: headers,
@@ -296,7 +316,7 @@ async function getJson(
   const fail = (stage: PlayerApiDiagnostics["stage"], message: string): never => {
     diag.stage = stage;
     diag.message = message;
-    console.warn("[iptv] player_api", diag);
+    console.warn("[iptv] player_api", sanitizeDiagnostics(diag));
     throw new PlayerApiError(diag);
   };
 
@@ -647,9 +667,16 @@ export async function runIptvSync(serverId: string, opts: { mode?: "smart" | "fu
     return { skipped: true, reason: "rate-limit" as const };
   }
 
-  const username = server.iptv_username ?? "";
-  const password = server.iptv_password ?? "";
+  const { getIptvCredentials, checkLoginGuard, guardMessage, registerLoginResult } = await import(
+    "./iptv-credentials.server"
+  );
+  const cred0 = await getIptvCredentials(serverId);
+  const username = cred0.username ?? "";
+  const password = cred0.password ?? "";
   if (!username || !password) throw new Error("Configure usuário e senha do Xtream para o modo inteligente.");
+
+  const guard = await checkLoginGuard(serverId);
+  if (!guard.allowed) throw new Error(guardMessage(guard));
 
   // Detecção automática (barata) quando ainda desconhecida
   let detected = server.iptv_detected;
@@ -659,6 +686,10 @@ export async function runIptvSync(serverId: string, opts: { mode?: "smart" | "fu
   }
 
   const x = await probeXtream(server.host, username, password);
+
+  // Contabiliza tentativas apenas quando o login foi de fato verificado
+  // (falhas de rede/servidor não contam como senha errada).
+  if (x.login_checked) await registerLoginResult(serverId, x.login_ok, x.error);
 
   let m3u: Awaited<ReturnType<typeof probeM3U>> | null = null;
   if (mode === "full" && (detected === "m3u" || detected === "both")) {
@@ -767,7 +798,7 @@ export async function runIptvSync(serverId: string, opts: { mode?: "smart" | "fu
     error: x.error ?? (m3u?.error ? `Playlist M3U: ${m3u.error}` : null),
 
     login_checked: x.login_checked,
-    diagnostics: x.diagnostics as never,
+    diagnostics: sanitizeDiagnostics(x.diagnostics) as never,
 
   }).select("id").maybeSingle();
 
