@@ -113,9 +113,12 @@ function Landing() {
           </div>
         </div>
       </footer>
+
+      <SupportFab />
     </div>
   );
 }
+
 
 function Feature({ icon, title, desc }: { icon: React.ReactNode; title: string; desc: string }) {
   return (
