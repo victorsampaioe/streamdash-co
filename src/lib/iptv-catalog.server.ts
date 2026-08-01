@@ -1,0 +1,251 @@
+// Server-only: Inteligência de Conteúdo IPTV.
+// Compara o catálogo atual (metadados apenas) com o último estado conhecido,
+// registra adições/remoções, histórico diário e assinatura (hash) do catálogo.
+
+import { supabaseAdmin } from "@/integrations/supabase/client.server";
+
+export type CatalogKind = "live" | "vod" | "series";
+
+export type CatalogEntry = { id: string; name: string; category?: string | null };
+export type CatalogInput = Record<CatalogKind, CatalogEntry[]>;
+
+export type CatalogDiff = {
+  skipped: boolean;
+  reason?: string;
+  hash: string;
+  sync_ms: number;
+  added: Record<CatalogKind, number>;
+  removed: number;
+  totals: Record<CatalogKind, number>;
+};
+
+const MAX_ITEMS_PER_KIND = 40_000;
+const CHUNK = 500;
+
+/** Normaliza o título para comparar o mesmo conteúdo entre servidores diferentes. */
+export function titleKey(name: string): string {
+  return name
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/\b(4k|fhd|hd|sd|h265|hevc|dublado|legendado|leg|dub|l|d)\b/g, " ")
+    .replace(/\(\d{4}\)/g, " ")
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim()
+    .slice(0, 160);
+}
+
+/** Hash rápido e estável (FNV-1a) da lista completa — evita reprocessar catálogo idêntico. */
+function hashCatalog(input: CatalogInput): string {
+  let h = 0x811c9dc5;
+  const feed = (s: string) => {
+    for (let i = 0; i < s.length; i++) {
+      h ^= s.charCodeAt(i);
+      h = Math.imul(h, 0x01000193);
+    }
+  };
+  for (const kind of ["live", "vod", "series"] as CatalogKind[]) {
+    feed(kind);
+    for (const it of input[kind]) feed(`${it.id}:${it.name}|`);
+  }
+  return (h >>> 0).toString(16);
+}
+
+async function chunked<T>(rows: T[], fn: (part: T[]) => Promise<unknown>) {
+  for (let i = 0; i < rows.length; i += CHUNK) await fn(rows.slice(i, i + CHUNK));
+}
+
+/**
+ * Sincroniza o catálogo de um servidor.
+ * Só armazena metadados (id, nome, categoria) — nunca conteúdo de vídeo.
+ */
+export async function syncCatalog(
+  serverId: string,
+  input: CatalogInput,
+  opts: { force?: boolean } = {},
+): Promise<CatalogDiff> {
+  const started = Date.now();
+  const kinds: CatalogKind[] = ["live", "vod", "series"];
+
+  const clean: CatalogInput = { live: [], vod: [], series: [] };
+  for (const kind of kinds) {
+    const seen = new Set<string>();
+    for (const raw of input[kind] ?? []) {
+      const id = String(raw.id ?? "").trim();
+      const name = String(raw.name ?? "").trim();
+      if (!id || !name || seen.has(id)) continue;
+      seen.add(id);
+      clean[kind].push({ id, name, category: raw.category ?? null });
+      if (clean[kind].length >= MAX_ITEMS_PER_KIND) break;
+    }
+  }
+
+  const totals = { live: clean.live.length, vod: clean.vod.length, series: clean.series.length };
+  const hash = hashCatalog(clean);
+
+  const { data: srv } = await supabaseAdmin
+    .from("servers")
+    .select("catalog_hash")
+    .eq("id", serverId)
+    .maybeSingle();
+
+  if (!opts.force && srv && (srv as { catalog_hash: string | null }).catalog_hash === hash) {
+    await supabaseAdmin
+      .from("servers")
+      .update({ catalog_synced_at: new Date().toISOString() } as never)
+      .eq("id", serverId);
+    return {
+      skipped: true,
+      reason: "catálogo idêntico (hash)",
+      hash,
+      sync_ms: Date.now() - started,
+      added: { live: 0, vod: 0, series: 0 },
+      removed: 0,
+      totals,
+    };
+  }
+
+  // Estado atual no banco (apenas itens ativos)
+  const known = new Map<string, { name: string }>();
+  {
+    let from = 0;
+    for (;;) {
+      const { data } = await supabaseAdmin
+        .from("iptv_catalog_items")
+        .select("kind, external_id, name")
+        .eq("server_id", serverId)
+        .is("removed_at", null)
+        .range(from, from + 999);
+      const rows = (data ?? []) as { kind: string; external_id: string; name: string }[];
+      for (const r of rows) known.set(`${r.kind}:${r.external_id}`, { name: r.name });
+      if (rows.length < 1000) break;
+      from += 1000;
+      if (from > 200_000) break;
+    }
+  }
+
+  const nowIso = new Date().toISOString();
+  const firstRun = known.size === 0;
+  const upserts: Record<string, unknown>[] = [];
+  const changes: Record<string, unknown>[] = [];
+  const added = { live: 0, vod: 0, series: 0 } as Record<CatalogKind, number>;
+  const currentKeys = new Set<string>();
+
+  for (const kind of kinds) {
+    for (const it of clean[kind]) {
+      const key = `${kind}:${it.id}`;
+      currentKeys.add(key);
+      const prev = known.get(key);
+      upserts.push({
+        server_id: serverId,
+        kind,
+        external_id: it.id,
+        name: it.name,
+        title_key: titleKey(it.name),
+        category: it.category ?? null,
+        last_seen_at: nowIso,
+        removed_at: null,
+        ...(prev ? {} : { first_seen_at: nowIso }),
+      });
+      if (!prev) {
+        added[kind]++;
+        // No primeiro mapeamento tudo é "novo": não gera ruído de novidades.
+        if (!firstRun) {
+          changes.push({
+            server_id: serverId,
+            kind,
+            action: "added",
+            external_id: it.id,
+            name: it.name,
+            category: it.category ?? null,
+            detected_at: nowIso,
+          });
+        }
+      }
+    }
+  }
+
+  const removedKeys: { kind: string; id: string; name: string }[] = [];
+  for (const [key, val] of known) {
+    if (currentKeys.has(key)) continue;
+    const [kind, ...rest] = key.split(":");
+    removedKeys.push({ kind: kind!, id: rest.join(":"), name: val.name });
+  }
+
+  await chunked(upserts, async (part) => {
+    await supabaseAdmin
+      .from("iptv_catalog_items")
+      .upsert(part as never, { onConflict: "server_id,kind,external_id" });
+  });
+
+  if (removedKeys.length) {
+    await chunked(removedKeys, async (part) => {
+      await supabaseAdmin
+        .from("iptv_catalog_items")
+        .update({ removed_at: nowIso } as never)
+        .eq("server_id", serverId)
+        .in("external_id", part.map((r) => r.id));
+    });
+    for (const r of removedKeys) {
+      changes.push({
+        server_id: serverId,
+        kind: r.kind,
+        action: "removed",
+        external_id: r.id,
+        name: r.name,
+        detected_at: nowIso,
+      });
+    }
+  }
+
+  if (changes.length) {
+    await chunked(changes, async (part) => {
+      await supabaseAdmin.from("iptv_catalog_changes").insert(part as never);
+    });
+  }
+
+  const syncMs = Date.now() - started;
+  const day = nowIso.slice(0, 10);
+  const { data: today } = await supabaseAdmin
+    .from("iptv_catalog_daily")
+    .select("added_channels, added_movies, added_series, removed_count")
+    .eq("server_id", serverId)
+    .eq("day", day)
+    .maybeSingle();
+  const prevDay = (today ?? {
+    added_channels: 0,
+    added_movies: 0,
+    added_series: 0,
+    removed_count: 0,
+  }) as Record<string, number>;
+
+  await supabaseAdmin.from("iptv_catalog_daily").upsert(
+    {
+      server_id: serverId,
+      day,
+      channels: totals.live,
+      movies: totals.vod,
+      series: totals.series,
+      added_channels: (prevDay["added_channels"] ?? 0) + (firstRun ? 0 : added.live),
+      added_movies: (prevDay["added_movies"] ?? 0) + (firstRun ? 0 : added.vod),
+      added_series: (prevDay["added_series"] ?? 0) + (firstRun ? 0 : added.series),
+      removed_count: (prevDay["removed_count"] ?? 0) + removedKeys.length,
+      sync_ms: syncMs,
+    } as never,
+    { onConflict: "server_id,day" },
+  );
+
+  await supabaseAdmin
+    .from("servers")
+    .update({ catalog_hash: hash, catalog_synced_at: nowIso, catalog_sync_ms: syncMs } as never)
+    .eq("id", serverId);
+
+  return {
+    skipped: false,
+    hash,
+    sync_ms: syncMs,
+    added: firstRun ? { live: 0, vod: 0, series: 0 } : added,
+    removed: removedKeys.length,
+    totals,
+  };
+}

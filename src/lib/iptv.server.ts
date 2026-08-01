@@ -198,6 +198,12 @@ type XtreamResult = {
   sampleLive: { id: string | number; name: string }[];
   sampleVod: { id: string | number; name: string; ext: string }[];
   sampleSeries: { id: string | number; name: string }[];
+  /** Metadados completos do catálogo (sem vídeo) para a Inteligência de Conteúdo. */
+  catalog: {
+    live: { id: string; name: string; category?: string | null }[];
+    vod: { id: string; name: string; category?: string | null }[];
+    series: { id: string; name: string; category?: string | null }[];
+  };
   error: string | null;
 };
 
@@ -355,7 +361,9 @@ export async function probeXtream(host: string, username: string, password: stri
     http_status: null, body_snippet: null, diagnostics: null,
     account: null, content: { live_ok: false, vod_ok: false, series_ok: false },
     channels: null, movies: null, series: null, categories: null,
-    sampleLive: [], sampleVod: [], sampleSeries: [], error: null,
+    sampleLive: [], sampleVod: [], sampleSeries: [],
+    catalog: { live: [], vod: [], series: [] },
+    error: null,
   };
 
 
@@ -491,6 +499,18 @@ export async function probeXtream(host: string, username: string, password: stri
   out.sampleLive = pick(liveList, 3).map((x) => ({ id: x?.stream_id, name: x?.name ?? "" }));
   out.sampleVod = pick(vodList, 2).map((x) => ({ id: x?.stream_id, name: x?.name ?? "", ext: x?.container_extension ?? "mp4" }));
   out.sampleSeries = pick(seriesList, 2).map((x) => ({ id: x?.series_id, name: x?.name ?? "" }));
+
+  // Catálogo (apenas metadados) para a Inteligência de Conteúdo.
+  const entry = (id: unknown, name: unknown, cat: unknown) => ({
+    id: String(id ?? ""),
+    name: String(name ?? "").trim(),
+    category: cat == null ? null : String(cat),
+  });
+  out.catalog = {
+    live: liveList.map((x) => entry(x?.stream_id, x?.name, x?.category_id)),
+    vod: vodList.map((x) => entry(x?.stream_id, x?.name, x?.category_id)),
+    series: seriesList.map((x) => entry(x?.series_id, x?.name, x?.category_id)),
+  };
 
   return out;
 }
@@ -834,6 +854,37 @@ export async function runIptvSync(serverId: string, opts: { mode?: "smart" | "fu
     .update({ health_score: health, last_iptv_sync_at: new Date().toISOString() })
     .eq("id", serverId);
 
+  /* ---- Inteligência de Conteúdo: catálogo, novidades e histórico ---- */
+  let catalogDiff: Awaited<ReturnType<typeof import("./iptv-catalog.server").syncCatalog>> | null = null;
+  if (x.login_ok && x.catalog.live.length + x.catalog.vod.length + x.catalog.series.length > 0) {
+    try {
+      const { syncCatalog } = await import("./iptv-catalog.server");
+      catalogDiff = await syncCatalog(serverId, x.catalog);
+      if (catalogDiff && !catalogDiff.skipped) {
+        const parts: string[] = [];
+        if (catalogDiff.added.vod) parts.push(`🎬 +${catalogDiff.added.vod} filmes`);
+        if (catalogDiff.added.series) parts.push(`📚 +${catalogDiff.added.series} séries`);
+        if (catalogDiff.added.live) parts.push(`📺 +${catalogDiff.added.live} canais`);
+        if (parts.length) {
+          await raiseAlert(serverId, "catalog_added", "info", "🎬 Novos conteúdos no catálogo", parts.join(" · "));
+        }
+        if (catalogDiff.removed > 0) {
+          await raiseAlert(
+            serverId,
+            "catalog_removed",
+            catalogDiff.removed > 50 ? "warning" : "info",
+            `📉 ${catalogDiff.removed} conteúdo(s) removido(s) do catálogo`,
+            `Total atual: ${catalogDiff.totals.live} canais · ${catalogDiff.totals.vod} filmes · ${catalogDiff.totals.series} séries`,
+          );
+        }
+      }
+    } catch (e) {
+      console.warn("[iptv] falha ao sincronizar catálogo:", (e as Error)?.message);
+    }
+  }
+
+
+
   /* ---- Alertas inteligentes ---- */
   const drop = (prev: number | null | undefined, curr: number | null, label: string, kind: string) => {
     if (!prev || !curr) return null;
@@ -877,7 +928,7 @@ export async function runIptvSync(serverId: string, opts: { mode?: "smart" | "fu
       : null,
   ].filter(Boolean) as Promise<unknown>[]);
 
-  return { skipped: false as const, sync_id: sync?.id ?? null, health, channels: x.channels, streams: streamProbes };
+  return { skipped: false as const, sync_id: sync?.id ?? null, health, channels: x.channels, streams: streamProbes, catalog: catalogDiff };
 }
 
 export async function runDueIptvSyncs() {

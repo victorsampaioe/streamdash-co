@@ -122,6 +122,30 @@ export function IptvPanel({ serverId, server }: { serverId: string; server: any 
     refetchInterval: 60_000,
   });
 
+  // Inteligência de Conteúdo: histórico diário do catálogo deste servidor (30 dias)
+  const { data: catalogDaily = [] } = useQuery({
+    queryKey: ["iptv-catalog-daily", serverId],
+    queryFn: async () =>
+      ((await (supabase as any)
+        .from("iptv_catalog_daily")
+        .select("day, channels, movies, series, added_channels, added_movies, added_series, removed_count")
+        .eq("server_id", serverId)
+        .order("day", { ascending: false })
+        .limit(30)).data ?? []) as {
+        day: string; channels: number; movies: number; series: number;
+        added_channels: number; added_movies: number; added_series: number; removed_count: number;
+      }[],
+    refetchInterval: 120_000,
+  });
+
+  const catalogToday = catalogDaily[0] ?? null;
+  const catalogGrowth7d = catalogDaily.slice(0, 7).reduce(
+    (a, r) => a + r.added_channels + r.added_movies + r.added_series, 0,
+  );
+  const catalogRemoved7d = catalogDaily.slice(0, 7).reduce((a, r) => a + r.removed_count, 0);
+
+
+
   useEffect(() => {
     const ch = supabase
       .channel(`iptv-${serverId}`)
@@ -227,6 +251,34 @@ export function IptvPanel({ serverId, server }: { serverId: string; server: any 
         </Card>
       )}
 
+      {/* Inteligência de Conteúdo */}
+      {catalogToday && (
+        <Card className="p-5">
+          <div className="text-xs uppercase tracking-wider text-muted-foreground mb-3">Inteligência de Conteúdo (catálogo)</div>
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 text-sm">
+            <div>
+              <div className="text-muted-foreground text-xs mb-0.5">📺 Canais</div>
+              <div className="font-mono font-semibold">{catalogToday.channels.toLocaleString("pt-BR")}</div>
+              <div className="text-xs text-success">+{catalogToday.added_channels} hoje</div>
+            </div>
+            <div>
+              <div className="text-muted-foreground text-xs mb-0.5">🎬 Filmes</div>
+              <div className="font-mono font-semibold">{catalogToday.movies.toLocaleString("pt-BR")}</div>
+              <div className="text-xs text-success">+{catalogToday.added_movies} hoje</div>
+            </div>
+            <div>
+              <div className="text-muted-foreground text-xs mb-0.5">📚 Séries</div>
+              <div className="font-mono font-semibold">{catalogToday.series.toLocaleString("pt-BR")}</div>
+              <div className="text-xs text-success">+{catalogToday.added_series} hoje</div>
+            </div>
+            <div>
+              <div className="text-muted-foreground text-xs mb-0.5">📈 Últimos 7 dias</div>
+              <div className="font-mono font-semibold text-success">+{catalogGrowth7d.toLocaleString("pt-BR")}</div>
+              <div className="text-xs text-destructive">-{catalogRemoved7d} removidos</div>
+            </div>
+          </div>
+        </Card>
+      )}
 
 
       {/* Conteúdo + variações */}

@@ -550,6 +550,153 @@ export type Database = {
           },
         ]
       }
+      iptv_catalog_changes: {
+        Row: {
+          action: string
+          category: string | null
+          detected_at: string
+          external_id: string | null
+          id: number
+          kind: Database["public"]["Enums"]["iptv_stream_kind"]
+          name: string
+          server_id: string
+        }
+        Insert: {
+          action: string
+          category?: string | null
+          detected_at?: string
+          external_id?: string | null
+          id?: never
+          kind: Database["public"]["Enums"]["iptv_stream_kind"]
+          name: string
+          server_id: string
+        }
+        Update: {
+          action?: string
+          category?: string | null
+          detected_at?: string
+          external_id?: string | null
+          id?: never
+          kind?: Database["public"]["Enums"]["iptv_stream_kind"]
+          name?: string
+          server_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "iptv_catalog_changes_server_id_fkey"
+            columns: ["server_id"]
+            isOneToOne: false
+            referencedRelation: "servers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      iptv_catalog_daily: {
+        Row: {
+          added_channels: number
+          added_movies: number
+          added_series: number
+          channels: number
+          created_at: string
+          day: string
+          movies: number
+          removed_count: number
+          series: number
+          server_id: string
+          sync_ms: number | null
+          updated_at: string
+        }
+        Insert: {
+          added_channels?: number
+          added_movies?: number
+          added_series?: number
+          channels?: number
+          created_at?: string
+          day: string
+          movies?: number
+          removed_count?: number
+          series?: number
+          server_id: string
+          sync_ms?: number | null
+          updated_at?: string
+        }
+        Update: {
+          added_channels?: number
+          added_movies?: number
+          added_series?: number
+          channels?: number
+          created_at?: string
+          day?: string
+          movies?: number
+          removed_count?: number
+          series?: number
+          server_id?: string
+          sync_ms?: number | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "iptv_catalog_daily_server_id_fkey"
+            columns: ["server_id"]
+            isOneToOne: false
+            referencedRelation: "servers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      iptv_catalog_items: {
+        Row: {
+          category: string | null
+          created_at: string
+          external_id: string
+          first_seen_at: string
+          id: number
+          kind: Database["public"]["Enums"]["iptv_stream_kind"]
+          last_seen_at: string
+          name: string
+          removed_at: string | null
+          server_id: string
+          title_key: string
+          updated_at: string
+        }
+        Insert: {
+          category?: string | null
+          created_at?: string
+          external_id: string
+          first_seen_at?: string
+          id?: never
+          kind: Database["public"]["Enums"]["iptv_stream_kind"]
+          last_seen_at?: string
+          name: string
+          removed_at?: string | null
+          server_id: string
+          title_key: string
+          updated_at?: string
+        }
+        Update: {
+          category?: string | null
+          created_at?: string
+          external_id?: string
+          first_seen_at?: string
+          id?: never
+          kind?: Database["public"]["Enums"]["iptv_stream_kind"]
+          last_seen_at?: string
+          name?: string
+          removed_at?: string | null
+          server_id?: string
+          title_key?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "iptv_catalog_items_server_id_fkey"
+            columns: ["server_id"]
+            isOneToOne: false
+            referencedRelation: "servers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       iptv_ip_history: {
         Row: {
           changed_at: string
@@ -1523,6 +1670,9 @@ export type Database = {
       }
       servers: {
         Row: {
+          catalog_hash: string | null
+          catalog_sync_ms: number | null
+          catalog_synced_at: string | null
           category: string | null
           consecutive_failures: number
           created_at: string
@@ -1565,6 +1715,9 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          catalog_hash?: string | null
+          catalog_sync_ms?: number | null
+          catalog_synced_at?: string | null
           category?: string | null
           consecutive_failures?: number
           created_at?: string
@@ -1607,6 +1760,9 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          catalog_hash?: string | null
+          catalog_sync_ms?: number | null
+          catalog_synced_at?: string | null
           category?: string | null
           consecutive_failures?: number
           created_at?: string
@@ -1913,6 +2069,44 @@ export type Database = {
       }
       hub_recompute_rating: { Args: { _user: string }; Returns: undefined }
       hub_start_conversation: { Args: { _listing_id: string }; Returns: string }
+      iptv_first_detected: {
+        Args: { _days?: number; _kind?: string; _limit?: number }
+        Returns: {
+          kind: string
+          servers: Json
+          title: string
+          title_key: string
+        }[]
+      }
+      iptv_novelties: { Args: { _hours?: number }; Returns: Json }
+      iptv_server_comparison: {
+        Args: { _limit?: number }
+        Returns: {
+          channels: number
+          growth_7d: number
+          health_score: number
+          is_mine: boolean
+          latency_ms: number
+          movies: number
+          name: string
+          removed_7d: number
+          series: number
+          server_id: string
+          synced_at: string
+        }[]
+      }
+      iptv_update_ranking: {
+        Args: { _days?: number; _limit?: number }
+        Returns: {
+          added_channels: number
+          added_movies: number
+          added_series: number
+          added_total: number
+          is_mine: boolean
+          name: string
+          server_id: string
+        }[]
+      }
       is_valid_referral_code: { Args: { _code: string }; Returns: boolean }
       request_payout: {
         Args: { _pix_key: string; _pix_name: string; _pix_type: string }
