@@ -239,9 +239,12 @@ function AdminPage() {
                     </td>
                     <td className="p-3 text-xs text-muted-foreground">{new Date(u.created_at).toLocaleDateString("pt-BR")}</td>
                     <td className="p-3 text-right">
-                      <Button size="sm" variant={u.is_admin ? "outline" : "default"} onClick={() => toggleAdmin.mutate({ userId: u.id, makeAdmin: !u.is_admin })}>
-                        {u.is_admin ? "Remover admin" : "Tornar admin"}
-                      </Button>
+                      <div className="flex justify-end gap-2">
+                        <GrantPlanDialog user={u} />
+                        <Button size="sm" variant={u.is_admin ? "outline" : "default"} onClick={() => toggleAdmin.mutate({ userId: u.id, makeAdmin: !u.is_admin })}>
+                          {u.is_admin ? "Remover admin" : "Tornar admin"}
+                        </Button>
+                      </div>
                     </td>
                   </tr>
                 );
