@@ -600,6 +600,47 @@ export type Database = {
           },
         ]
       }
+      iptv_login_attempts: {
+        Row: {
+          blocked_until: string | null
+          created_at: string
+          failures: number
+          last_attempt_at: string | null
+          last_failure_at: string | null
+          last_reason: string | null
+          server_id: string
+          updated_at: string
+        }
+        Insert: {
+          blocked_until?: string | null
+          created_at?: string
+          failures?: number
+          last_attempt_at?: string | null
+          last_failure_at?: string | null
+          last_reason?: string | null
+          server_id: string
+          updated_at?: string
+        }
+        Update: {
+          blocked_until?: string | null
+          created_at?: string
+          failures?: number
+          last_attempt_at?: string | null
+          last_failure_at?: string | null
+          last_reason?: string | null
+          server_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "iptv_login_attempts_server_id_fkey"
+            columns: ["server_id"]
+            isOneToOne: true
+            referencedRelation: "servers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       iptv_stream_tests: {
         Row: {
           bitrate_kbps: number | null
