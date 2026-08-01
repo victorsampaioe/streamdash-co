@@ -361,7 +361,9 @@ export async function probeXtream(host: string, username: string, password: stri
     http_status: null, body_snippet: null, diagnostics: null,
     account: null, content: { live_ok: false, vod_ok: false, series_ok: false },
     channels: null, movies: null, series: null, categories: null,
-    sampleLive: [], sampleVod: [], sampleSeries: [], error: null,
+    sampleLive: [], sampleVod: [], sampleSeries: [],
+    catalog: { live: [], vod: [], series: [] },
+    error: null,
   };
 
 
