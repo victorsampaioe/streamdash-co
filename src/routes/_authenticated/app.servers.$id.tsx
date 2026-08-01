@@ -9,6 +9,7 @@ import { Switch } from "@/components/ui/switch";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { useSubscription } from "@/hooks/use-subscription";
 import { StatusDot, StatusLabel } from "@/components/status-dot";
 import { UptimeSparkline } from "@/components/uptime-sparkline";
 import { LineChart, Line, ResponsiveContainer, XAxis, YAxis, Tooltip, CartesianGrid } from "recharts";
@@ -34,6 +35,7 @@ function ServerDetail() {
   const qc = useQueryClient();
   const runNow = useServerFn(runCheckNow);
   const runAnalyze = useServerFn(analyzeServer);
+  const { data: subInfo } = useSubscription();
 
   const { data: server, refetch } = useQuery({
     queryKey: ["server", id],
@@ -120,6 +122,10 @@ function ServerDetail() {
   }
 
   function exportCsv() {
+    if (!subInfo?.isActive) {
+      toast.error("Assinatura inativa. Renove seu plano via PIX para exportar relatórios.");
+      return;
+    }
     const header = "checked_at,status,http_status,latency_ms,ssl_days_remaining,error\n";
     const rows = checks.map((c) => `${c.checked_at},${c.status},${c.http_status ?? ""},${c.latency_ms ?? ""},${c.ssl_days_remaining ?? ""},"${(c.error ?? "").replace(/"/g, '""')}"`).join("\n");
     const blob = new Blob([header + rows], { type: "text/csv" });

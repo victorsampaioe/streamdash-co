@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { CalendarDays, CheckCircle2, Clock, Copy, CreditCard, Loader2, QrCode, RefreshCw, ShieldCheck, Sparkles, Timer, X, Zap } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
@@ -35,6 +35,7 @@ function SubscriptionPage() {
   const [paymentError, setPaymentError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const createPix = useServerFn(createPixPayment);
+  const navigate = useNavigate();
 
   const sub = data?.subscription;
 
@@ -43,7 +44,9 @@ function SubscriptionPage() {
     toast.success("Pagamento confirmado! Assinatura ativada e recursos liberados.");
     setOpenPlan(null);
     setPix(null);
-  }, [refetch]);
+    // Libera o acesso na hora e leva o usuário ao painel já desbloqueado.
+    navigate({ to: "/app" });
+  }, [refetch, navigate]);
 
   async function handleRenew(plan: PlanId) {
     setOpenPlan(plan);

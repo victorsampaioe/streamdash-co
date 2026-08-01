@@ -1,9 +1,9 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
-import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { requireActiveSubscription } from "@/lib/subscription-guard";
 
 export const analyzeServer = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireActiveSubscription])
   .inputValidator((d: { serverId: string }) => z.object({ serverId: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }) => {
     const { data: srv, error } = await context.supabase

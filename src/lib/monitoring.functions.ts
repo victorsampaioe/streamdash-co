@@ -1,11 +1,11 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
-import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { requireActiveSubscription } from "@/lib/subscription-guard";
 import { runCheckForServer, runDueChecks } from "./monitoring.server";
 
 // Authenticated: user forces a check on their own server (RLS-protected)
 export const runCheckNow = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireActiveSubscription])
   .inputValidator((d: { serverId: string }) => z.object({ serverId: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }) => {
     // Verify ownership OR admin via RLS-scoped client

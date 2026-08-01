@@ -1,9 +1,9 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
-import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { requireActiveSubscription } from "@/lib/subscription-guard";
 
 export const detectIptvNow = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireActiveSubscription])
   .inputValidator((d: { serverId: string }) => z.object({ serverId: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }) => {
     const { data: srv } = await context.supabase
@@ -28,7 +28,7 @@ export const detectIptvNow = createServerFn({ method: "POST" })
   });
 
 export const runIptvSyncNow = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireActiveSubscription])
   .inputValidator((d: { serverId: string; mode?: "smart" | "full" }) =>
     z.object({ serverId: z.string().uuid(), mode: z.enum(["smart", "full"]).optional() }).parse(d),
   )
@@ -46,7 +46,7 @@ export const runIptvSyncNow = createServerFn({ method: "POST" })
   });
 
 export const acknowledgeIptvAlert = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireActiveSubscription])
   .inputValidator((d: { alertId: string }) => z.object({ alertId: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }) => {
     const { error } = await context.supabase
@@ -58,7 +58,7 @@ export const acknowledgeIptvAlert = createServerFn({ method: "POST" })
   });
 
 export const testPlayerApiUserAgents = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireActiveSubscription])
   .inputValidator((d: { serverId: string }) => z.object({ serverId: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }) => {
     const { data: srv } = await context.supabase
@@ -82,7 +82,7 @@ export const testPlayerApiUserAgents = createServerFn({ method: "POST" })
 
 /** Salva credenciais Xtream sempre criptografadas (nunca em texto puro). */
 export const saveIptvCredentials = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireActiveSubscription])
   .inputValidator((d: { serverId: string; username: string | null; password: string | null }) =>
     z
       .object({
@@ -111,7 +111,7 @@ export const saveIptvCredentials = createServerFn({ method: "POST" })
 
 /** Estado do bloqueio anti força bruta do login Xtream. */
 export const getIptvLoginGuard = createServerFn({ method: "GET" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireActiveSubscription])
   .inputValidator((d: { serverId: string }) => z.object({ serverId: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }) => {
     const { data: srv } = await context.supabase

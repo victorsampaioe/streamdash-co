@@ -12,6 +12,7 @@ import { z } from "zod";
 import { toast } from "sonner";
 import { useServerFn } from "@tanstack/react-start";
 import { analyzeServer } from "@/lib/analysis.functions";
+import { PremiumGate } from "@/components/subscription/premium-gate";
 
 export const Route = createFileRoute("/_authenticated/app/servers/new")({
   component: NewServer,
@@ -70,6 +71,7 @@ function NewServer() {
         <p className="text-sm text-muted-foreground">Só precisamos do nome, do host e uma descrição opcional. Verificações usam HTTP na porta 80.</p>
       </div>
 
+      <PremiumGate title="Cadastro de servidores bloqueado">
       <Card className="p-6">
         <form onSubmit={(e) => { e.preventDefault(); create.mutate(); }} className="space-y-5">
           <div className="space-y-2">
@@ -98,6 +100,7 @@ function NewServer() {
           </div>
         </form>
       </Card>
+      </PremiumGate>
     </div>
   );
 }
