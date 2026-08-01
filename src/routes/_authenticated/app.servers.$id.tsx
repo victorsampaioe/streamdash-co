@@ -37,6 +37,7 @@ function ServerDetail() {
   const { id } = Route.useParams();
   const navigate = useNavigate();
   const qc = useQueryClient();
+  const [confirmDel, setConfirmDel] = useState(false);
   const runNow = useServerFn(runCheckNow);
   const runAnalyze = useServerFn(analyzeServer);
   const { data: subInfo } = useSubscription();
