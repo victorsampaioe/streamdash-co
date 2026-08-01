@@ -28,6 +28,7 @@ import { Route as AuthenticatedAppSubscriptionRouteImport } from './routes/_auth
 import { Route as AuthenticatedAppReferralsRouteImport } from './routes/_authenticated/app.referrals'
 import { Route as AuthenticatedAppRankingRouteImport } from './routes/_authenticated/app.ranking'
 import { Route as AuthenticatedAppRadarRouteImport } from './routes/_authenticated/app.radar'
+import { Route as AuthenticatedAppPaginaRouteImport } from './routes/_authenticated/app.pagina'
 import { Route as AuthenticatedAppNovidadesRouteImport } from './routes/_authenticated/app.novidades'
 import { Route as AuthenticatedAppHubRouteImport } from './routes/_authenticated/app.hub'
 import { Route as AuthenticatedAppDetectorRouteImport } from './routes/_authenticated/app.detector'
@@ -151,6 +152,11 @@ const AuthenticatedAppRankingRoute = AuthenticatedAppRankingRouteImport.update({
 const AuthenticatedAppRadarRoute = AuthenticatedAppRadarRouteImport.update({
   id: '/radar',
   path: '/radar',
+  getParentRoute: () => AuthenticatedAppRoute,
+} as any)
+const AuthenticatedAppPaginaRoute = AuthenticatedAppPaginaRouteImport.update({
+  id: '/pagina',
+  path: '/pagina',
   getParentRoute: () => AuthenticatedAppRoute,
 } as any)
 const AuthenticatedAppNovidadesRoute =
@@ -323,6 +329,7 @@ export interface FileRoutesByFullPath {
   '/app/detector': typeof AuthenticatedAppDetectorRoute
   '/app/hub': typeof AuthenticatedAppHubRouteWithChildren
   '/app/novidades': typeof AuthenticatedAppNovidadesRoute
+  '/app/pagina': typeof AuthenticatedAppPaginaRoute
   '/app/radar': typeof AuthenticatedAppRadarRoute
   '/app/ranking': typeof AuthenticatedAppRankingRoute
   '/app/referrals': typeof AuthenticatedAppReferralsRoute
@@ -367,6 +374,7 @@ export interface FileRoutesByTo {
   '/app/alerts': typeof AuthenticatedAppAlertsRoute
   '/app/detector': typeof AuthenticatedAppDetectorRoute
   '/app/novidades': typeof AuthenticatedAppNovidadesRoute
+  '/app/pagina': typeof AuthenticatedAppPaginaRoute
   '/app/radar': typeof AuthenticatedAppRadarRoute
   '/app/ranking': typeof AuthenticatedAppRankingRoute
   '/app/referrals': typeof AuthenticatedAppReferralsRoute
@@ -415,6 +423,7 @@ export interface FileRoutesById {
   '/_authenticated/app/detector': typeof AuthenticatedAppDetectorRoute
   '/_authenticated/app/hub': typeof AuthenticatedAppHubRouteWithChildren
   '/_authenticated/app/novidades': typeof AuthenticatedAppNovidadesRoute
+  '/_authenticated/app/pagina': typeof AuthenticatedAppPaginaRoute
   '/_authenticated/app/radar': typeof AuthenticatedAppRadarRoute
   '/_authenticated/app/ranking': typeof AuthenticatedAppRankingRoute
   '/_authenticated/app/referrals': typeof AuthenticatedAppReferralsRoute
@@ -463,6 +472,7 @@ export interface FileRouteTypes {
     | '/app/detector'
     | '/app/hub'
     | '/app/novidades'
+    | '/app/pagina'
     | '/app/radar'
     | '/app/ranking'
     | '/app/referrals'
@@ -507,6 +517,7 @@ export interface FileRouteTypes {
     | '/app/alerts'
     | '/app/detector'
     | '/app/novidades'
+    | '/app/pagina'
     | '/app/radar'
     | '/app/ranking'
     | '/app/referrals'
@@ -554,6 +565,7 @@ export interface FileRouteTypes {
     | '/_authenticated/app/detector'
     | '/_authenticated/app/hub'
     | '/_authenticated/app/novidades'
+    | '/_authenticated/app/pagina'
     | '/_authenticated/app/radar'
     | '/_authenticated/app/ranking'
     | '/_authenticated/app/referrals'
@@ -733,6 +745,13 @@ declare module '@tanstack/react-router' {
       path: '/radar'
       fullPath: '/app/radar'
       preLoaderRoute: typeof AuthenticatedAppRadarRouteImport
+      parentRoute: typeof AuthenticatedAppRoute
+    }
+    '/_authenticated/app/pagina': {
+      id: '/_authenticated/app/pagina'
+      path: '/pagina'
+      fullPath: '/app/pagina'
+      preLoaderRoute: typeof AuthenticatedAppPaginaRouteImport
       parentRoute: typeof AuthenticatedAppRoute
     }
     '/_authenticated/app/novidades': {
@@ -956,6 +975,7 @@ interface AuthenticatedAppRouteChildren {
   AuthenticatedAppDetectorRoute: typeof AuthenticatedAppDetectorRoute
   AuthenticatedAppHubRoute: typeof AuthenticatedAppHubRouteWithChildren
   AuthenticatedAppNovidadesRoute: typeof AuthenticatedAppNovidadesRoute
+  AuthenticatedAppPaginaRoute: typeof AuthenticatedAppPaginaRoute
   AuthenticatedAppRadarRoute: typeof AuthenticatedAppRadarRoute
   AuthenticatedAppRankingRoute: typeof AuthenticatedAppRankingRoute
   AuthenticatedAppReferralsRoute: typeof AuthenticatedAppReferralsRoute
@@ -975,6 +995,7 @@ const AuthenticatedAppRouteChildren: AuthenticatedAppRouteChildren = {
   AuthenticatedAppDetectorRoute: AuthenticatedAppDetectorRoute,
   AuthenticatedAppHubRoute: AuthenticatedAppHubRouteWithChildren,
   AuthenticatedAppNovidadesRoute: AuthenticatedAppNovidadesRoute,
+  AuthenticatedAppPaginaRoute: AuthenticatedAppPaginaRoute,
   AuthenticatedAppRadarRoute: AuthenticatedAppRadarRoute,
   AuthenticatedAppRankingRoute: AuthenticatedAppRankingRoute,
   AuthenticatedAppReferralsRoute: AuthenticatedAppReferralsRoute,
