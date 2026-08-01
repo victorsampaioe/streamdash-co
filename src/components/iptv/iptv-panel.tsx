@@ -672,3 +672,13 @@ function KV({ label, value }: { label: string; value: string }) {
     </div>
   );
 }
+
+function RankCmp({ label, mine, avg }: { label: string; mine: number | null | undefined; avg: number | null | undefined }) {
+  return (
+    <div>
+      <div className="text-muted-foreground">{label}</div>
+      <div className="font-mono font-semibold">{num(mine)}</div>
+      <div className="text-[11px] text-muted-foreground">média {num(avg)}</div>
+    </div>
+  );
+}
