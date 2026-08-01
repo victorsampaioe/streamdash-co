@@ -1,7 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
-import { PLANS, type PlanId } from "./payments";
+import { PLANS, effectivePriceCents, type PlanId } from "./payments";
 
 export const createPixPayment = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
@@ -15,7 +15,7 @@ export const createPixPayment = createServerFn({ method: "POST" })
 
     // Referral rewards agora são pagas em PIX (R$10) para o indicador,
     // não há mais desconto na compra do indicado.
-    const amountCents = plan.priceCents;
+    const amountCents = effectivePriceCents(plan);
     const discountApplied = false;
 
     // Reuse a still-valid charge. This makes retries instant and avoids

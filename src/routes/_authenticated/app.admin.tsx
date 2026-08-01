@@ -333,6 +333,7 @@ function StatusBadge({ status, expired }: { status: AdminUser["status"]; expired
 
 function TelegramBroadcastCard() {
   const [message, setMessage] = useState("✅ StreamMonitor está online! Todas as suas monitorações estão sendo executadas normalmente.");
+  const PROMO_MSG = "🔥 <b>PROMOÇÃO RELÂMPAGO — SÓ HOJE!</b>\n\nPlano <b>ANUAL</b> por apenas <b>R$ 150,00</b> (de R$ 299,00).\n\n⏰ Amanhã volta ao valor normal.\n\n👉 Assine agora pelo PIX: https://streammonitor.site/app/subscription";
   const send = useServerFn(broadcastTelegram);
   const mut = useMutation({
     mutationFn: async (msg: string) => await send({ data: { message: msg } }),
@@ -349,8 +350,11 @@ function TelegramBroadcastCard() {
       <p className="text-xs text-muted-foreground">
         Envia esta mensagem para todos os usuários que já configuraram o Telegram como canal de alerta.
       </p>
-      <Textarea rows={3} value={message} onChange={(e) => setMessage(e.target.value)} />
-      <div className="flex justify-end">
+      <Textarea rows={4} value={message} onChange={(e) => setMessage(e.target.value)} />
+      <div className="flex justify-end gap-2 flex-wrap">
+        <Button variant="outline" onClick={() => setMessage(PROMO_MSG)}>
+          🔥 Usar mensagem da promoção anual
+        </Button>
         <Button onClick={() => mut.mutate(message)} disabled={mut.isPending || !message.trim()}>
           <Send className="h-4 w-4 mr-2" />
           {mut.isPending ? "Enviando..." : "Enviar para todos"}

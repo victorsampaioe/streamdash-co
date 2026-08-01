@@ -8,7 +8,7 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { useSubscription, planLabel, statusLabel } from "@/hooks/use-subscription";
-import { PLANS, formatBRL, type PlanId } from "@/lib/payments";
+import { PLANS, formatBRL, effectivePriceCents, isYearlyPromoActive, type PlanId } from "@/lib/payments";
 import { createPixPayment, getPaymentStatus } from "@/lib/mercadopago.functions";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -106,15 +106,26 @@ function SubscriptionPage() {
           {data?.isExpired ? "Renovar Assinatura" : "Fazer upgrade"}
         </h2>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {PLANS.map((plan) => (
-            <Card key={plan.id} className={cn("p-6 relative", plan.highlight && "border-primary/60 ring-1 ring-primary/30")}>
-              {plan.highlight && <Badge className="absolute -top-2 right-4">Mais popular</Badge>}
+          {PLANS.map((plan) => {
+            const promo = plan.id === "yearly" && isYearlyPromoActive();
+            const price = effectivePriceCents(plan);
+            return (
+            <Card key={plan.id} className={cn("p-6 relative", plan.highlight && "border-primary/60 ring-1 ring-primary/30", promo && "border-warning/60 ring-1 ring-warning/30")}>
+              {promo ? (
+                <Badge className="absolute -top-2 right-4 bg-warning text-warning-foreground">🔥 Só hoje</Badge>
+              ) : plan.highlight ? (
+                <Badge className="absolute -top-2 right-4">Mais popular</Badge>
+              ) : null}
               <div className="space-y-3">
                 <h3 className="font-semibold">{plan.name}</h3>
                 <div className="text-3xl font-bold">
-                  {formatBRL(plan.priceCents)}
+                  {promo && <span className="text-base font-normal text-muted-foreground line-through mr-2">{formatBRL(plan.priceCents)}</span>}
+                  {formatBRL(price)}
                   <span className="text-sm text-muted-foreground font-normal"> /{plan.id === "monthly" ? "mês" : "ano"}</span>
                 </div>
+                {promo && (
+                  <p className="text-xs text-warning font-medium">Promoção válida só hoje — amanhã volta para {formatBRL(plan.priceCents)}.</p>
+                )}
                 <ul className="space-y-1.5 text-sm text-muted-foreground">
                   {plan.perks.map((p) => (
                     <li key={p} className="flex items-center gap-2"><CheckCircle2 className="h-3.5 w-3.5 text-success" />{p}</li>
@@ -126,7 +137,8 @@ function SubscriptionPage() {
                 </Button>
               </div>
             </Card>
-          ))}
+            );
+          })}
         </div>
       </div>
 
