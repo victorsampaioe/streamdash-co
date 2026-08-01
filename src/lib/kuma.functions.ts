@@ -1,9 +1,9 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
-import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { requireActiveSubscription } from "@/lib/subscription-guard";
 
 export const getKumaStatus = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireActiveSubscription])
   .inputValidator((d: { serverId: string; hours?: number }) =>
     z.object({ serverId: z.string().uuid(), hours: z.number().min(1).max(720).optional() }).parse(d),
   )
@@ -63,7 +63,7 @@ export const getKumaStatus = createServerFn({ method: "POST" })
   });
 
 export const provisionKumaMonitors = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireActiveSubscription])
   .inputValidator((d: { serverId: string; tcpPort?: number }) =>
     z.object({ serverId: z.string().uuid(), tcpPort: z.number().int().min(1).max(65535).optional() }).parse(d),
   )
@@ -108,14 +108,14 @@ export const provisionKumaMonitors = createServerFn({ method: "POST" })
   });
 
 export const syncKumaNow = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireActiveSubscription])
   .handler(async () => {
     const { syncKumaStatuses } = await import("./kuma.server");
     return await syncKumaStatuses();
   });
 
 export const setKumaEnabled = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireActiveSubscription])
   .inputValidator((d: { serverId: string; enabled: boolean }) =>
     z.object({ serverId: z.string().uuid(), enabled: z.boolean() }).parse(d),
   )
