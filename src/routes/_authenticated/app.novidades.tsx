@@ -5,9 +5,10 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
-  Sparkles, Film, Library, Tv, TrendingDown, Trophy, Medal, History, Gauge, Info,
+  Sparkles, Film, Library, Tv, TrendingDown, Trophy, Medal, History, Gauge, Info, Search, CheckCircle2, XCircle,
 } from "lucide-react";
 import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 
