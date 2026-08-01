@@ -41,6 +41,42 @@ function base(host: string) {
   return `http://${host.replace(/^https?:\/\//, "").replace(/\/+$/, "")}`;
 }
 
+/** User-Agents usados nos testes (padrão = player IPTV real; alternativo = navegador). */
+export const UA_PLAYER =
+  "IPTVSmartersPlayer/3.1.5 (Linux; Android 11) ExoPlayerLib/2.18.1";
+export const UA_BROWSER =
+  "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36";
+
+function playerHeaders(ua: string): Record<string, string> {
+  return {
+    "user-agent": ua,
+    accept: "application/json, text/plain, */*",
+    "accept-language": "pt-BR,pt;q=0.9,en;q=0.8",
+    "cache-control": "no-cache",
+    connection: "keep-alive",
+  };
+}
+
+/** IP de saída do monitor (cacheado por 10 min) — útil para diagnosticar bloqueio por IP. */
+let _egress: { ip: string | null; at: number } = { ip: null, at: 0 };
+export async function egressIp(): Promise<string | null> {
+  if (_egress.ip && Date.now() - _egress.at < 600_000) return _egress.ip;
+  for (const url of ["https://api.ipify.org?format=json", "https://ifconfig.me/all.json"]) {
+    try {
+      const res = await timedFetch(url, 5000);
+      const j: any = await res.json();
+      const ip = j?.ip ?? j?.ip_addr ?? null;
+      if (ip) {
+        _egress = { ip: String(ip), at: Date.now() };
+        return _egress.ip;
+      }
+    } catch {
+      /* ignora */
+    }
+  }
+  return null;
+}
+
 async function timedFetch(url: string, ms: number, init?: RequestInit) {
   const ctl = new AbortController();
   const t = setTimeout(() => ctl.abort(), ms);
@@ -50,6 +86,7 @@ async function timedFetch(url: string, ms: number, init?: RequestInit) {
     clearTimeout(t);
   }
 }
+
 
 /* ------------------------------------------------------------------ */
 /* Detection                                                           */
