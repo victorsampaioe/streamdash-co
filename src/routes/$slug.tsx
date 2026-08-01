@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { StatusDot, StatusLabel } from "@/components/status-dot";
-import { Copy, Check, MessageCircle, Send, Zap, ShieldCheck, Activity, Film, Tv, Radio } from "lucide-react";
+import { Copy, Check, MessageCircle, Send, Zap, ShieldCheck, Activity, Film, Tv, Radio, Sparkles } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 
@@ -38,10 +38,10 @@ type PageData = {
 export const Route = createFileRoute("/$slug")({
   head: ({ params }) => ({
     meta: [
-      { title: `${params.slug} — Servidores, DNS e Novidades` },
-      { name: "description", content: "Página oficial com status dos servidores, DNS atualizada e novidades de filmes, séries e canais." },
-      { property: "og:title", content: `${params.slug} — Servidores, DNS e Novidades` },
-      { property: "og:description", content: "Status em tempo real, DNS oficial e novidades adicionadas recentemente." },
+      { title: `${params.slug} — Servidores, Status e Novidades` },
+      { name: "description", content: "Página oficial com status dos servidores em tempo real e novidades de filmes, séries e canais." },
+      { property: "og:title", content: `${params.slug} — Servidores, Status e Novidades` },
+      { property: "og:description", content: "Status em tempo real e novidades adicionadas recentemente." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
     ],
@@ -55,7 +55,7 @@ function CopyButton({ text, color, label = "Copiar" }: { text: string; color: st
     <Button
       size="sm"
       variant="secondary"
-      className="gap-2"
+      className="gap-2 rounded-full"
       onClick={async () => {
         try {
           await navigator.clipboard.writeText(text);
@@ -73,7 +73,6 @@ function CopyButton({ text, color, label = "Copiar" }: { text: string; color: st
     </Button>
   );
 }
-
 
 function ResellerPublicPage() {
   const { slug } = Route.useParams();
@@ -104,93 +103,136 @@ function ResellerPublicPage() {
   const p = data.page;
   const servers = data.servers ?? [];
   const news = data.news ?? [];
-  
+
   const allUp = servers.length > 0 && servers.every((s) => s.status === "up");
-  const avgLatency = servers.filter((s) => s.latency_ms != null).reduce((a, s, _i, arr) => a + (s.latency_ms ?? 0) / arr.length, 0);
+  const onlineCount = servers.filter((s) => s.status === "up").length;
+  const latencies = servers.filter((s) => s.latency_ms != null).map((s) => s.latency_ms as number);
+  const avgLatency = latencies.length ? Math.round(latencies.reduce((a, b) => a + b, 0) / latencies.length) : 0;
+  const healths = servers.filter((s) => s.health != null).map((s) => s.health as number);
+  const avgHealth = healths.length ? Math.round(healths.reduce((a, b) => a + b, 0) / healths.length) : null;
   const today = new Date();
   const todayNews = news.filter((n) => new Date(n.detected_at).toDateString() === today.toDateString());
   const byKind = (k: string) => news.filter((n) => n.kind === k);
 
   return (
-    <div className="min-h-screen bg-background text-foreground" style={{ ["--brand" as any]: p.primary_color, ["--brand2" as any]: p.accent_color }}>
-      <div
-        className="px-6 py-12 text-center border-b border-border/60"
-        style={{ background: `linear-gradient(135deg, ${p.primary_color}22, ${p.accent_color}22)` }}
-      >
-        {p.logo_url ? (
-          <img src={p.logo_url} alt={`Logo ${p.display_name}`} className="h-16 w-16 rounded-2xl object-cover mx-auto mb-4 border border-border/60" />
-        ) : (
+    <div className="min-h-screen bg-background text-foreground">
+      {/* Hero */}
+      <header className="relative overflow-hidden border-b border-border/50">
+        <div
+          className="absolute inset-0 opacity-90"
+          style={{ background: `radial-gradient(1200px 400px at 50% -10%, ${p.primary_color}33, transparent 70%), radial-gradient(800px 320px at 15% 110%, ${p.accent_color}2b, transparent 70%)` }}
+        />
+        <div className="absolute inset-x-0 top-0 h-px" style={{ background: `linear-gradient(90deg, transparent, ${p.primary_color}, transparent)` }} />
+        <div className="relative px-6 py-16 text-center max-w-3xl mx-auto">
+          {p.logo_url ? (
+            <img
+              src={p.logo_url}
+              alt={`Logo ${p.display_name}`}
+              className="h-20 w-20 rounded-3xl object-cover mx-auto mb-5 ring-1 ring-border/60 shadow-2xl"
+            />
+          ) : (
+            <div
+              className="h-20 w-20 rounded-3xl mx-auto mb-5 flex items-center justify-center text-3xl font-black text-white shadow-2xl"
+              style={{ background: `linear-gradient(135deg, ${p.primary_color}, ${p.accent_color})` }}
+            >
+              {p.display_name.slice(0, 1).toUpperCase()}
+            </div>
+          )}
+
           <div
-            className="h-16 w-16 rounded-2xl mx-auto mb-4 flex items-center justify-center text-2xl font-bold text-white"
-            style={{ background: `linear-gradient(135deg, ${p.primary_color}, ${p.accent_color})` }}
+            className="inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs font-medium backdrop-blur mb-4"
+            style={{ borderColor: `${p.primary_color}55`, color: p.primary_color, background: `${p.primary_color}12` }}
           >
-            {p.display_name.slice(0, 1).toUpperCase()}
+            <span className="relative flex h-2 w-2">
+              <span className="absolute inline-flex h-full w-full animate-ping rounded-full opacity-70" style={{ background: p.primary_color }} />
+              <span className="relative inline-flex h-2 w-2 rounded-full" style={{ background: p.primary_color }} />
+            </span>
+            {allUp ? "Todos os sistemas operando" : "Monitoramento ativo 24/7"}
           </div>
-        )}
-        <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">{p.display_name}</h1>
-        <p className="mt-2 text-base sm:text-lg font-medium" style={{ color: p.primary_color }}>{p.tagline}</p>
-        {p.intro && <p className="mt-3 text-sm text-muted-foreground max-w-xl mx-auto">{p.intro}</p>}
-        <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
-          {p.whatsapp && (
-            <Button asChild className="gap-2" style={{ background: p.primary_color }}>
-              <a href={`https://wa.me/${p.whatsapp.replace(/\D/g, "")}`} target="_blank" rel="noopener noreferrer">
-                <MessageCircle className="h-4 w-4" /> WhatsApp
-              </a>
-            </Button>
-          )}
-          {p.telegram && (
-            <Button asChild variant="secondary" className="gap-2">
-              <a href={`https://t.me/${p.telegram.replace(/^@/, "")}`} target="_blank" rel="noopener noreferrer">
-                <Send className="h-4 w-4" /> Telegram
-              </a>
-            </Button>
-          )}
+
+          <h1 className="text-3xl sm:text-5xl font-black tracking-tight leading-tight">{p.display_name}</h1>
+          <p
+            className="mt-3 text-lg sm:text-xl font-semibold bg-clip-text text-transparent"
+            style={{ backgroundImage: `linear-gradient(90deg, ${p.primary_color}, ${p.accent_color})` }}
+          >
+            {p.tagline}
+          </p>
+          {p.intro && <p className="mt-4 text-sm sm:text-base text-muted-foreground max-w-xl mx-auto leading-relaxed">{p.intro}</p>}
+
+          <div className="mt-7 flex flex-wrap items-center justify-center gap-3">
+            {p.whatsapp && (
+              <Button asChild size="lg" className="gap-2 rounded-full text-white shadow-lg hover:opacity-90" style={{ background: `linear-gradient(135deg, ${p.primary_color}, ${p.accent_color})` }}>
+                <a href={`https://wa.me/${p.whatsapp.replace(/\D/g, "")}`} target="_blank" rel="noopener noreferrer">
+                  <MessageCircle className="h-4 w-4" /> Falar no WhatsApp
+                </a>
+              </Button>
+            )}
+            {p.telegram && (
+              <Button asChild size="lg" variant="outline" className="gap-2 rounded-full backdrop-blur">
+                <a href={`https://t.me/${p.telegram.replace(/^@/, "")}`} target="_blank" rel="noopener noreferrer">
+                  <Send className="h-4 w-4" /> Telegram
+                </a>
+              </Button>
+            )}
+          </div>
         </div>
-      </div>
+      </header>
 
-      <main className="max-w-3xl mx-auto px-4 sm:px-6 py-8 space-y-6">
-        <Card className={`p-5 border ${allUp ? "border-success/40 bg-success/5" : "border-warning/40 bg-warning/5"}`}>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-sm">
-            <div className="flex items-center gap-2">
-              <Activity className="h-4 w-4" style={{ color: p.primary_color }} />
-              {allUp ? "🟢 Servidor funcionando normalmente" : "🟡 Monitorando instabilidades"}
-            </div>
-            <div className="flex items-center gap-2">
-              <Zap className="h-4 w-4" style={{ color: p.accent_color }} />
-              ⚡ {avgLatency ? `${Math.round(avgLatency)}ms de latência média` : "Baixa latência"}
-            </div>
-            <div className="flex items-center gap-2">
-              <ShieldCheck className="h-4 w-4 text-success" /> ✅ Alta estabilidade
-            </div>
-          </div>
-        </Card>
+      <main className="max-w-4xl mx-auto px-4 sm:px-6 py-10 space-y-10">
+        {/* Stats */}
+        <section className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+          {[
+            { icon: Activity, label: "Servidores online", value: `${onlineCount}/${servers.length || 0}`, color: p.primary_color },
+            { icon: Zap, label: "Latência média", value: avgLatency ? `${avgLatency}ms` : "Baixa", color: p.accent_color },
+            { icon: ShieldCheck, label: "Saúde geral", value: avgHealth != null ? `${avgHealth}%` : "Alta", color: p.primary_color },
+            { icon: Sparkles, label: "Novidades 7 dias", value: `${news.length}`, color: p.accent_color },
+          ].map(({ icon: Icon, label, value, color }) => (
+            <Card key={label} className="relative overflow-hidden p-4 border-border/60 bg-card/60 backdrop-blur">
+              <div className="absolute inset-x-0 top-0 h-0.5" style={{ background: `linear-gradient(90deg, ${color}, transparent)` }} />
+              <Icon className="h-4 w-4 mb-2" style={{ color }} />
+              <div className="text-2xl font-bold tracking-tight">{value}</div>
+              <div className="text-[11px] uppercase tracking-wide text-muted-foreground mt-0.5">{label}</div>
+            </Card>
+          ))}
+        </section>
 
+        {/* Servidores */}
         {p.show_servers && servers.length > 0 && (
           <section>
-            <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground mb-3">📡 Servidores</h2>
+            <div className="flex items-center gap-2 mb-4">
+              <h2 className="text-lg font-bold tracking-tight">📡 Servidores</h2>
+              <div className="h-px flex-1 bg-border/60" />
+            </div>
             <div className="grid gap-3 sm:grid-cols-2">
               {servers.map((s) => (
-                <Card key={s.id} className="p-4">
-                  <div className="flex items-center justify-between gap-2 mb-2">
+                <Card key={s.id} className="group relative overflow-hidden p-5 border-border/60 bg-card/60 backdrop-blur transition-all hover:-translate-y-0.5 hover:shadow-xl">
+                  <div
+                    className="absolute -right-10 -top-10 h-24 w-24 rounded-full blur-2xl opacity-30 transition-opacity group-hover:opacity-60"
+                    style={{ background: s.status === "up" ? p.primary_color : p.accent_color }}
+                  />
+                  <div className="relative flex items-center justify-between gap-2 mb-3">
                     <div className="flex items-center gap-2 min-w-0">
                       <StatusDot status={s.status} />
-                      <span className="font-medium truncate">{s.name}</span>
+                      <span className="font-semibold truncate">{s.name}</span>
                     </div>
                     <StatusLabel status={s.status} />
                   </div>
                   {s.health != null && (
-                    <div className="mb-2">
-                      <div className="flex justify-between text-xs text-muted-foreground mb-1">
+                    <div className="relative mb-3">
+                      <div className="flex justify-between text-xs text-muted-foreground mb-1.5">
                         <span>Saúde</span>
-                        <span className="font-mono">{s.health}%</span>
+                        <span className="font-mono font-semibold text-foreground">{s.health}%</span>
                       </div>
                       <div className="h-2 rounded-full bg-muted overflow-hidden">
-                        <div className="h-full rounded-full" style={{ width: `${s.health}%`, background: p.primary_color }} />
+                        <div
+                          className="h-full rounded-full transition-all duration-700"
+                          style={{ width: `${s.health}%`, background: `linear-gradient(90deg, ${p.primary_color}, ${p.accent_color})` }}
+                        />
                       </div>
                     </div>
                   )}
-                  <p className="text-xs text-muted-foreground">
-                    Última atualização: {s.last_checked_at ? new Date(s.last_checked_at).toLocaleString("pt-BR") : "—"}
+                  <p className="relative text-[11px] text-muted-foreground">
+                    Atualizado: {s.last_checked_at ? new Date(s.last_checked_at).toLocaleString("pt-BR") : "—"}
                   </p>
                 </Card>
               ))}
@@ -198,55 +240,52 @@ function ResellerPublicPage() {
           </section>
         )}
 
+        {/* Novidades */}
         {p.show_novidades && news.length > 0 && (
           <section>
-            <div className="flex items-center justify-between gap-3 mb-3">
-              <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">Novidades</h2>
-              <CopyButton
-                color={p.primary_color}
-                label="Copiar novidades"
-                text={news.map((n) => `• ${n.name}`).join("\n")}
-              />
+            <div className="flex items-center gap-3 mb-4">
+              <h2 className="text-lg font-bold tracking-tight">✨ Novidades</h2>
+              <div className="h-px flex-1 bg-border/60" />
+              <CopyButton color={p.primary_color} label="Copiar tudo" text={news.map((n) => `• ${n.name}`).join("\n")} />
             </div>
+
             {todayNews.length > 0 && (
-              <Card className="p-4 mb-3 border" style={{ borderColor: p.accent_color }}>
+              <Card
+                className="relative overflow-hidden p-5 mb-4 border"
+                style={{ borderColor: `${p.accent_color}66`, background: `linear-gradient(135deg, ${p.primary_color}14, ${p.accent_color}14)` }}
+              >
                 <div className="flex flex-wrap items-center justify-between gap-3">
                   <div>
-                    <div className="font-semibold mb-1">🔥 Novidades de hoje</div>
-                    <p className="text-sm text-muted-foreground">{todayNews.length} novos títulos/canais adicionados hoje.</p>
+                    <div className="font-bold text-base mb-1">🔥 Novidades de hoje</div>
+                    <p className="text-sm text-muted-foreground">{todayNews.length} novos títulos e canais adicionados hoje.</p>
                   </div>
-                  <CopyButton
-                    color={p.accent_color}
-                    label="Copiar de hoje"
-                    text={todayNews.map((n) => `• ${n.name}`).join("\n")}
-                  />
+                  <CopyButton color={p.accent_color} label="Copiar de hoje" text={todayNews.map((n) => `• ${n.name}`).join("\n")} />
                 </div>
               </Card>
             )}
+
             <div className="grid gap-3 sm:grid-cols-3">
               {[
-                { key: "vod", label: "🎬 Filmes adicionados", icon: Film },
-                { key: "series", label: "📺 Séries novas", icon: Tv },
-                { key: "live", label: "📡 Canais atualizados", icon: Radio },
-              ].map(({ key, label }) => {
+                { key: "vod", label: "Filmes adicionados", icon: Film },
+                { key: "series", label: "Séries novas", icon: Tv },
+                { key: "live", label: "Canais atualizados", icon: Radio },
+              ].map(({ key, label, icon: Icon }) => {
                 const items = byKind(key);
                 return (
-                  <Card key={key} className="p-4">
-                    <div className="text-sm font-medium mb-2">{label}</div>
-                    <div className="text-2xl font-bold mb-2" style={{ color: p.primary_color }}>{items.length}</div>
-                    <ul className="space-y-1 text-xs text-muted-foreground">
+                  <Card key={key} className="p-5 border-border/60 bg-card/60 backdrop-blur flex flex-col">
+                    <div className="flex items-center gap-2 text-sm font-semibold mb-3">
+                      <Icon className="h-4 w-4" style={{ color: p.accent_color }} /> {label}
+                    </div>
+                    <div className="text-3xl font-black mb-3" style={{ color: p.primary_color }}>{items.length}</div>
+                    <ul className="space-y-1 text-xs text-muted-foreground flex-1">
                       {items.slice(0, 6).map((n, i) => (
                         <li key={i} className="truncate">• {n.name}</li>
                       ))}
                       {items.length === 0 && <li>Sem novidades nos últimos 7 dias.</li>}
                     </ul>
                     {items.length > 0 && (
-                      <div className="mt-3">
-                        <CopyButton
-                          color={p.primary_color}
-                          label="Copiar lista"
-                          text={items.map((n) => `• ${n.name}`).join("\n")}
-                        />
+                      <div className="mt-4">
+                        <CopyButton color={p.primary_color} label="Copiar lista" text={items.map((n) => `• ${n.name}`).join("\n")} />
                       </div>
                     )}
                   </Card>
@@ -256,11 +295,40 @@ function ResellerPublicPage() {
           </section>
         )}
 
-
+        {/* CTA */}
+        {(p.whatsapp || p.telegram) && (
+          <section>
+            <Card
+              className="relative overflow-hidden p-8 text-center border-border/60"
+              style={{ background: `linear-gradient(135deg, ${p.primary_color}18, ${p.accent_color}18)` }}
+            >
+              <h2 className="text-xl font-bold tracking-tight">Pronto para começar?</h2>
+              <p className="text-sm text-muted-foreground mt-2 max-w-md mx-auto">
+                Fale agora com o suporte e garanta seu acesso com estabilidade monitorada 24 horas por dia.
+              </p>
+              <div className="mt-5 flex flex-wrap justify-center gap-3">
+                {p.whatsapp && (
+                  <Button asChild size="lg" className="gap-2 rounded-full text-white" style={{ background: `linear-gradient(135deg, ${p.primary_color}, ${p.accent_color})` }}>
+                    <a href={`https://wa.me/${p.whatsapp.replace(/\D/g, "")}`} target="_blank" rel="noopener noreferrer">
+                      <MessageCircle className="h-4 w-4" /> Chamar no WhatsApp
+                    </a>
+                  </Button>
+                )}
+                {p.telegram && (
+                  <Button asChild size="lg" variant="outline" className="gap-2 rounded-full">
+                    <a href={`https://t.me/${p.telegram.replace(/^@/, "")}`} target="_blank" rel="noopener noreferrer">
+                      <Send className="h-4 w-4" /> Telegram
+                    </a>
+                  </Button>
+                )}
+              </div>
+            </Card>
+          </section>
+        )}
       </main>
 
-      <footer className="px-6 py-8 text-center text-xs text-muted-foreground">
-        Monitorado 24/7 por <a href="/" className="text-primary hover:underline">streammonitor.site</a>
+      <footer className="px-6 py-10 text-center text-xs text-muted-foreground border-t border-border/50">
+        Monitorado 24/7 por <a href="/" className="text-primary hover:underline font-medium">streammonitor.site</a>
       </footer>
     </div>
   );
