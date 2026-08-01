@@ -103,8 +103,13 @@ function ServerDetail() {
   });
 
   const del = useMutation({
-    mutationFn: async () => { const { error } = await supabase.from("servers").delete().eq("id", id); if (error) throw error; },
-    onSuccess: () => { toast.success("Removido"); navigate({ to: "/app/servers" }); },
+    mutationFn: async () => {
+      const { data, error } = await supabase.rpc("delete_server", { _id: id });
+      if (error) throw error;
+      if (data === false) throw new Error("Servidor não encontrado ou já removido");
+    },
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ["servers"] }); toast.success("Removido"); navigate({ to: "/app/servers" }); },
+    onError: (e: Error) => toast.error(e.message),
   });
 
   const analyze = useMutation({
