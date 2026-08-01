@@ -187,6 +187,34 @@ export function IptvPanel({ serverId, server }: { serverId: string; server: any 
         </div>
       </Card>
 
+      {/* Posição no Ranking IPTV Inteligente */}
+      {rank?.position != null && (
+        <Card className="p-5">
+          <div className="flex items-start justify-between gap-4 flex-wrap">
+            <div>
+              <div className="text-xs uppercase tracking-wider text-muted-foreground mb-1">Ranking IPTV Inteligente</div>
+              <div className="text-2xl font-bold font-mono">
+                #{rank.position} <span className="text-sm font-normal text-muted-foreground">de {rank.total} servidores</span>
+              </div>
+              {rank.content_vs_avg_pct != null && (
+                <p className="text-xs text-muted-foreground mt-1">
+                  {rank.content_vs_avg_pct >= 0
+                    ? `${rank.content_vs_avg_pct}% mais conteúdo que a média da plataforma`
+                    : `${Math.abs(rank.content_vs_avg_pct)}% menos conteúdo que a média da plataforma`}
+                </p>
+              )}
+            </div>
+            <div className="grid grid-cols-3 gap-4 text-xs">
+              <RankCmp label="Canais" mine={rank.channels} avg={rank.avg_channels} />
+              <RankCmp label="Filmes" mine={rank.movies} avg={rank.avg_movies} />
+              <RankCmp label="Séries" mine={rank.series} avg={rank.avg_series} />
+            </div>
+          </div>
+        </Card>
+      )}
+
+
+
       {/* Conteúdo + variações */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         <Delta icon={<Tv className="h-4 w-4" />} label="Canais" curr={last?.channels} prev={prev?.channels} />
