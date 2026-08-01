@@ -11,6 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Trash2, Bell, Send, Copy, ExternalLink, HelpCircle } from "lucide-react";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { toast } from "sonner";
+import { PremiumGate } from "@/components/subscription/premium-gate";
 
 export const Route = createFileRoute("/_authenticated/app/alerts")({
   component: AlertsPage,
@@ -69,6 +70,7 @@ function AlertsPage() {
         <p className="text-sm text-muted-foreground">Canais que recebem notificações quando um servidor cai (após o limite de falhas seguidas).</p>
       </div>
 
+      <PremiumGate title="Criação de canais de alerta bloqueada">
       <Card className="p-4 sm:p-6">
         <form onSubmit={(e) => { e.preventDefault(); create.mutate(); }} className="grid md:grid-cols-4 gap-3 items-end">
           <div className="space-y-2">
@@ -99,6 +101,7 @@ function AlertsPage() {
           </div>
         </form>
       </Card>
+      </PremiumGate>
 
       <Card>
         <div className="p-4 border-b border-border/60 flex items-center gap-2 text-sm font-medium">

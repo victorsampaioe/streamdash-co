@@ -12,6 +12,7 @@ import { z } from "zod";
 import { toast } from "sonner";
 import { useServerFn } from "@tanstack/react-start";
 import { analyzeServer } from "@/lib/analysis.functions";
+import { PremiumGate } from "@/components/subscription/premium-gate";
 
 export const Route = createFileRoute("/_authenticated/app/servers/new")({
   component: NewServer,
@@ -99,6 +100,7 @@ function NewServer() {
           </div>
         </form>
       </Card>
+      </PremiumGate>
     </div>
   );
 }
