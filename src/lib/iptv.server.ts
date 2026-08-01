@@ -928,7 +928,7 @@ export async function runIptvSync(serverId: string, opts: { mode?: "smart" | "fu
       : null,
   ].filter(Boolean) as Promise<unknown>[]);
 
-  return { skipped: false as const, sync_id: sync?.id ?? null, health, channels: x.channels, streams: streamProbes };
+  return { skipped: false as const, sync_id: sync?.id ?? null, health, channels: x.channels, streams: streamProbes, catalog: catalogDiff };
 }
 
 export async function runDueIptvSyncs() {
