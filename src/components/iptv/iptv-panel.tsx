@@ -445,7 +445,55 @@ function Mini({ label, value, tone = "muted" }: { label: string; value: string; 
   );
 }
 
+function ApiDiagnostics({
+  diag,
+  error,
+}: {
+  diag: {
+    url?: string; final_url?: string | null; redirected?: boolean;
+    http_status?: number | null; status_text?: string | null; elapsed_ms?: number | null;
+    content_type?: string | null; size_bytes?: number | null; body_snippet?: string | null;
+    stage?: string; message?: string;
+  };
+  error?: string | null;
+}) {
+  const ok = diag.stage === "ok";
+  return (
+    <Card className="p-5 space-y-3">
+      <div className="flex items-center justify-between gap-3 flex-wrap">
+        <h3 className="font-medium text-sm flex items-center gap-2">
+          <Activity className="h-4 w-4" />Diagnóstico da Player API
+        </h3>
+        <Badge variant={ok ? "outline" : "destructive"} className="text-[10px] uppercase">
+          {ok ? "resposta válida" : `falha: ${diag.stage ?? "desconhecida"}`}
+        </Badge>
+      </div>
+
+      {!ok && (diag.message || error) && (
+        <p className="text-xs text-destructive break-words">{diag.message || error}</p>
+      )}
+
+      <div className="grid sm:grid-cols-2 gap-x-6 gap-y-1.5">
+        <KV label="URL chamada" value={diag.url ?? "—"} />
+        <KV label="Status HTTP" value={diag.http_status != null ? `${diag.http_status} ${diag.status_text ?? ""}`.trim() : "sem resposta"} />
+        <KV label="Tempo de resposta" value={diag.elapsed_ms != null ? `${diag.elapsed_ms}ms` : "—"} />
+        <KV label="Content-Type" value={diag.content_type ?? "—"} />
+        <KV label="Tamanho" value={diag.size_bytes != null ? `${diag.size_bytes.toLocaleString("pt-BR")} bytes` : "—"} />
+        <KV label="Redirect" value={diag.redirected ? `Sim → ${diag.final_url ?? "—"}` : "Não"} />
+      </div>
+
+      <div>
+        <div className="text-xs text-muted-foreground mb-1">Primeiro trecho da resposta</div>
+        <pre className="text-[11px] font-mono whitespace-pre-wrap break-words max-h-40 overflow-y-auto rounded-lg border border-border/60 bg-muted/40 p-3">
+          {diag.body_snippet?.trim() || "(resposta vazia)"}
+        </pre>
+      </div>
+    </Card>
+  );
+}
+
 function KV({ label, value }: { label: string; value: string }) {
+
   return (
     <div className="flex items-center justify-between gap-3 text-sm">
       <span className="text-muted-foreground text-xs">{label}</span>
