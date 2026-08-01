@@ -675,6 +675,7 @@ export type Database = {
           channels: number | null
           created_at: string
           datacenter: string | null
+          diagnostics: Json | null
           error: string | null
           fastest_region: string | null
           health_score: number | null
@@ -682,6 +683,7 @@ export type Database = {
           ip: string | null
           json_valid: boolean | null
           latency_ms: number | null
+          login_checked: boolean
           login_ok: boolean | null
           m3u_bytes: number | null
           m3u_channels: number | null
@@ -702,6 +704,7 @@ export type Database = {
           channels?: number | null
           created_at?: string
           datacenter?: string | null
+          diagnostics?: Json | null
           error?: string | null
           fastest_region?: string | null
           health_score?: number | null
@@ -709,6 +712,7 @@ export type Database = {
           ip?: string | null
           json_valid?: boolean | null
           latency_ms?: number | null
+          login_checked?: boolean
           login_ok?: boolean | null
           m3u_bytes?: number | null
           m3u_channels?: number | null
@@ -729,6 +733,7 @@ export type Database = {
           channels?: number | null
           created_at?: string
           datacenter?: string | null
+          diagnostics?: Json | null
           error?: string | null
           fastest_region?: string | null
           health_score?: number | null
@@ -736,6 +741,7 @@ export type Database = {
           ip?: string | null
           json_valid?: boolean | null
           latency_ms?: number | null
+          login_checked?: boolean
           login_ok?: boolean | null
           m3u_bytes?: number | null
           m3u_channels?: number | null
