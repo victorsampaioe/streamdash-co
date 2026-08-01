@@ -126,6 +126,18 @@ export type PlayerApiDiagnostics = {
   message: string;
 };
 
+export type XtreamAccount = {
+  status: string | null;
+  is_trial: boolean | null;
+  exp_date: string | null; // ISO ou null (conta sem expiração)
+  days_to_expire: number | null;
+  max_connections: number | null;
+  active_connections: number | null;
+  created_at: string | null;
+  timezone: string | null;
+  server_url: string | null;
+};
+
 type XtreamResult = {
   api_ms: number | null;
   login_ok: boolean;
@@ -135,6 +147,8 @@ type XtreamResult = {
   http_status: number | null;
   body_snippet: string | null;
   diagnostics: PlayerApiDiagnostics | null;
+  account: XtreamAccount | null;
+  content: { live_ok: boolean; vod_ok: boolean; series_ok: boolean };
   channels: number | null;
   movies: number | null;
   series: number | null;
@@ -144,6 +158,7 @@ type XtreamResult = {
   sampleSeries: { id: string | number; name: string }[];
   error: string | null;
 };
+
 
 /** Remove credenciais da URL antes de registrar em logs. */
 function safeUrl(url: string) {
