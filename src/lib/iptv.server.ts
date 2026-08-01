@@ -854,3 +854,67 @@ export async function runDueIptvSyncs() {
   }
   return { synced, errors };
 }
+
+/* ------------------------------------------------------------------ */
+/* Teste comparativo de User-Agent (diagnóstico de bloqueio 403)       */
+/* ------------------------------------------------------------------ */
+
+export type UaProbe = {
+  label: string;
+  user_agent: string;
+  ok: boolean;
+  diagnostics: PlayerApiDiagnostics | null;
+  error: string | null;
+};
+
+/**
+ * Chama a Player API com dois User-Agents (player IPTV e navegador) para
+ * distinguir bloqueio por identificação da requisição x bloqueio por IP.
+ */
+export async function comparePlayerApiUserAgents(
+  host: string,
+  username: string,
+  password: string,
+): Promise<{ egress_ip: string | null; probes: UaProbe[]; verdict: string }> {
+  const clean = host.replace(/^https?:\/\//, "").replace(/\/+$/, "");
+  const auth = `username=${encodeURIComponent(username)}&password=${encodeURIComponent(password)}`;
+  const url = `http://${clean}/player_api.php?${auth}`;
+
+  const run = async (label: string, ua: string): Promise<UaProbe> => {
+    try {
+      const { diag } = await getJson(url, API_TIMEOUT_MS, ua);
+      return { label, user_agent: ua, ok: true, diagnostics: diag, error: null };
+    } catch (e: unknown) {
+      const err = e as PlayerApiError;
+      return {
+        label,
+        user_agent: ua,
+        ok: false,
+        diagnostics: err?.diag ?? null,
+        error: String(err?.message ?? e).slice(0, 240),
+      };
+    }
+  };
+
+  const probes = [
+    await run("Player IPTV (padrão)", UA_PLAYER),
+    await run("Navegador (Mozilla/5.0)", UA_BROWSER),
+  ];
+
+  const [player, browser] = probes;
+  let verdict: string;
+  if (player!.ok || browser!.ok) {
+    verdict = player!.ok && browser!.ok
+      ? "✅ Servidor aceita ambos os User-Agents. O bloqueio anterior não é por identificação da requisição."
+      : `⚠️ Servidor aceita apenas o User-Agent "${player!.ok ? player!.label : browser!.label}". O bloqueio é por identificação da requisição (User-Agent).`;
+  } else if (
+    player!.diagnostics?.http_status === 403 &&
+    browser!.diagnostics?.http_status === 403
+  ) {
+    verdict = "🚫 HTTP 403 com os dois User-Agents: bloqueio provavelmente pelo IP de saída do monitor (ou firewall/anti-bot do servidor).";
+  } else {
+    verdict = "❌ Falha nos dois testes por motivos diferentes — veja os diagnósticos abaixo.";
+  }
+
+  return { egress_ip: await egressIp(), probes, verdict };
+}
