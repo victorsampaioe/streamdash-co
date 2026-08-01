@@ -1909,6 +1909,14 @@ export type Database = {
     Functions: {
       activate_free_trial: { Args: never; Returns: Json }
       admin_approve_payout: { Args: { _id: string }; Returns: undefined }
+      admin_grant_subscription: {
+        Args: {
+          _days: number
+          _plan: Database["public"]["Enums"]["plan_type"]
+          _user_id: string
+        }
+        Returns: Json
+      }
       admin_list_payout_requests: {
         Args: never
         Returns: {
@@ -1935,6 +1943,7 @@ export type Database = {
         Args: { _id: string; _note?: string }
         Returns: undefined
       }
+      delete_server: { Args: { _id: string }; Returns: boolean }
       evaluate_achievements: { Args: { _user_id: string }; Returns: number }
       finalize_approved_payment: {
         Args: {
