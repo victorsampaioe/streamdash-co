@@ -82,6 +82,7 @@ function useNavItems() {
     { to: "/app/alerts", label: "Alertas", icon: Bell },
     { to: "/app/radar", label: "Radar Brasil", icon: Radio },
     { to: "/app/detector", label: "Detector", icon: ShieldAlert },
+    { to: "/app/novidades", label: "Novidades IPTV", icon: Sparkles },
     { to: "/app/ranking", label: "Ranking", icon: Trophy },
     { to: "/app/achievements", label: "Conquistas", icon: Trophy },
     
