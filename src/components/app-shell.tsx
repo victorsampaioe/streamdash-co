@@ -40,9 +40,10 @@ export function AppShell({ children }: { children: ReactNode }) {
 
 function GatedOutlet() {
   const pathname = useRouterState({ select: (r) => r.location.pathname });
-  const { data, isLoading } = useSubscription();
+  const { data, isLoading, isError } = useSubscription();
   const allowed = ALWAYS_OPEN_PATHS.some((p) => pathname === p || pathname.startsWith(p + "/"));
-  if (isLoading || data?.isActive || allowed) return <Outlet />;
+  // On a failed status check, never block the user — just let the app render.
+  if (isLoading || isError || data?.isActive || allowed) return <Outlet />;
   // Primeiro acesso: nunca teve assinatura nem teste → tela de boas-vindas.
   if (!data?.subscription) return <WelcomeOnboarding />;
   return (
