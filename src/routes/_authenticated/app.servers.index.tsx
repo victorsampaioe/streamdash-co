@@ -88,7 +88,7 @@ function ServersList() {
                       <Button variant="ghost" size="icon" title="Ver página pública"><ExternalLink className="h-4 w-4" /></Button>
                     </Link>
                   )}
-                  <Button variant="ghost" size="icon" onClick={() => confirm(`Remover "${s.name}"?`) && del.mutate(s.id)} title="Remover">
+                  <Button variant="ghost" size="icon" onClick={() => setTarget({ id: s.id, name: s.name })} title="Remover">
                     <Trash2 className="h-4 w-4 text-destructive" />
                   </Button>
                 </td>
@@ -98,6 +98,27 @@ function ServersList() {
         </table>
         </div>
       </Card>
+
+      <AlertDialog open={!!target} onOpenChange={(o) => { if (!o && !del.isPending) setTarget(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Remover servidor</AlertDialogTitle>
+            <AlertDialogDescription>
+              Isso apaga permanentemente "{target?.name}" e todo o histórico de monitoramento. Não dá para desfazer.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={del.isPending}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              disabled={del.isPending}
+              onClick={(e) => { e.preventDefault(); if (target) del.mutate(target.id); }}
+            >
+              {del.isPending && <Loader2 className="h-4 w-4 mr-1 animate-spin" />}
+              {del.isPending ? "Removendo..." : "Remover"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
