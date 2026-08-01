@@ -89,6 +89,11 @@ function AlertsPage() {
             <Input value={target} onChange={(e) => setTarget(e.target.value)} placeholder={cur.placeholder} required />
           </div>
           <p className="text-xs text-muted-foreground md:col-span-4 -mt-1">{cur.hint}</p>
+          {kind === "telegram" && (
+            <div className="md:col-span-4">
+              <TelegramGuide />
+            </div>
+          )}
           <div className="md:col-span-4">
             <Button type="submit" disabled={create.isPending}>Adicionar canal</Button>
           </div>
