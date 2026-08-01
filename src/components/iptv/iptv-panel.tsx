@@ -500,29 +500,49 @@ function Mini({ label, value, tone = "muted" }: { label: string; value: string; 
   );
 }
 
+function HeaderList({ label, headers }: { label: string; headers?: Record<string, string> | null }) {
+  const entries = Object.entries(headers ?? {});
+  return (
+    <div>
+      <div className="text-xs text-muted-foreground mb-1">{label}</div>
+      <pre className="text-[11px] font-mono whitespace-pre-wrap break-words max-h-32 overflow-y-auto rounded-lg border border-border/60 bg-muted/40 p-3">
+        {entries.length ? entries.map(([k, v]) => `${k}: ${v}`).join("\n") : "(sem dados)"}
+      </pre>
+    </div>
+  );
+}
+
 function ApiDiagnostics({
   diag,
   error,
+  embedded,
 }: {
   diag: {
     url?: string; final_url?: string | null; redirected?: boolean;
     http_status?: number | null; status_text?: string | null; elapsed_ms?: number | null;
     content_type?: string | null; size_bytes?: number | null; body_snippet?: string | null;
+    user_agent?: string | null; egress_ip?: string | null;
+    request_headers?: Record<string, string> | null;
+    response_headers?: Record<string, string> | null;
     stage?: string; message?: string;
   };
   error?: string | null;
+  embedded?: boolean;
 }) {
   const ok = diag.stage === "ok";
+  const Wrapper: any = embedded ? "div" : Card;
   return (
-    <Card className="p-5 space-y-3">
-      <div className="flex items-center justify-between gap-3 flex-wrap">
-        <h3 className="font-medium text-sm flex items-center gap-2">
-          <Activity className="h-4 w-4" />Diagnóstico da Player API
-        </h3>
-        <Badge variant={ok ? "outline" : "destructive"} className="text-[10px] uppercase">
-          {ok ? "resposta válida" : `falha: ${diag.stage ?? "desconhecida"}`}
-        </Badge>
-      </div>
+    <Wrapper className={embedded ? "space-y-3" : "p-5 space-y-3"}>
+      {!embedded && (
+        <div className="flex items-center justify-between gap-3 flex-wrap">
+          <h3 className="font-medium text-sm flex items-center gap-2">
+            <Activity className="h-4 w-4" />Diagnóstico da Player API
+          </h3>
+          <Badge variant={ok ? "outline" : "destructive"} className="text-[10px] uppercase">
+            {ok ? "resposta válida" : `falha: ${diag.stage ?? "desconhecida"}`}
+          </Badge>
+        </div>
+      )}
 
       {!ok && (diag.message || error) && (
         <p className="text-xs text-destructive break-words">{diag.message || error}</p>
@@ -535,6 +555,13 @@ function ApiDiagnostics({
         <KV label="Content-Type" value={diag.content_type ?? "—"} />
         <KV label="Tamanho" value={diag.size_bytes != null ? `${diag.size_bytes.toLocaleString("pt-BR")} bytes` : "—"} />
         <KV label="Redirect" value={diag.redirected ? `Sim → ${diag.final_url ?? "—"}` : "Não"} />
+        <KV label="User-Agent enviado" value={diag.user_agent ?? "—"} />
+        <KV label="IP de saída do monitor" value={diag.egress_ip ?? "—"} />
+      </div>
+
+      <div className="grid sm:grid-cols-2 gap-3">
+        <HeaderList label="Headers enviados" headers={diag.request_headers} />
+        <HeaderList label="Headers retornados" headers={diag.response_headers} />
       </div>
 
       <div>
@@ -543,9 +570,10 @@ function ApiDiagnostics({
           {diag.body_snippet?.trim() || "(resposta vazia)"}
         </pre>
       </div>
-    </Card>
+    </Wrapper>
   );
 }
+
 
 function KV({ label, value }: { label: string; value: string }) {
 
