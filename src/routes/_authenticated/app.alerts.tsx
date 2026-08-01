@@ -127,3 +127,64 @@ function AlertsPage() {
     </div>
   );
 }
+
+const BOT_USERNAME = "MonitordeFluxoBot";
+
+function TelegramGuide() {
+  const steps = [
+    { t: "Abra o nosso bot no Telegram", d: "Toque no botão abaixo ou procure por @MonitordeFluxoBot na busca do Telegram." },
+    { t: "Envie /start para o bot", d: "Isso autoriza o bot a te enviar mensagens. Sem esse passo o Telegram bloqueia os alertas." },
+    { t: "Descubra o seu código (chat_id)", d: "Abra o @userinfobot e envie /start. Ele responde com o seu Id, por exemplo: Id: 123456789." },
+    { t: "Cole apenas o número aqui", d: "No campo Destino acima, cole somente os números do Id (sem @, sem espaços) e clique em Adicionar canal." },
+  ];
+
+  return (
+    <Collapsible className="rounded-lg border border-border/60 bg-muted/30">
+      <CollapsibleTrigger asChild>
+        <button type="button" className="flex w-full items-center gap-2 p-3 text-sm font-medium">
+          <HelpCircle className="h-4 w-4 text-primary" />
+          Não sei pegar meu código do Telegram — me ensine
+        </button>
+      </CollapsibleTrigger>
+      <CollapsibleContent className="px-3 pb-3 space-y-3">
+        <ol className="space-y-3">
+          {steps.map((s, i) => (
+            <li key={s.t} className="flex gap-3">
+              <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary/10 text-xs font-semibold text-primary">{i + 1}</span>
+              <div className="space-y-0.5">
+                <p className="text-sm font-medium leading-tight">{s.t}</p>
+                <p className="text-xs text-muted-foreground">{s.d}</p>
+              </div>
+            </li>
+          ))}
+        </ol>
+        <div className="flex flex-wrap gap-2">
+          <Button type="button" size="sm" asChild>
+            <a href={`https://t.me/${BOT_USERNAME}`} target="_blank" rel="noreferrer">
+              <Send className="h-4 w-4" /> Abrir @{BOT_USERNAME}
+            </a>
+          </Button>
+          <Button type="button" size="sm" variant="outline" asChild>
+            <a href="https://t.me/userinfobot" target="_blank" rel="noreferrer">
+              <ExternalLink className="h-4 w-4" /> Pegar meu código (@userinfobot)
+            </a>
+          </Button>
+          <Button
+            type="button"
+            size="sm"
+            variant="ghost"
+            onClick={() => {
+              navigator.clipboard.writeText("/start");
+              toast.success("Comando /start copiado");
+            }}
+          >
+            <Copy className="h-4 w-4" /> Copiar /start
+          </Button>
+        </div>
+        <p className="text-xs text-muted-foreground">
+          Dica: o código é só de números (ex.: 123456789). Se receber "chat not found", envie /start para o @{BOT_USERNAME} novamente.
+        </p>
+      </CollapsibleContent>
+    </Collapsible>
+  );
+}
