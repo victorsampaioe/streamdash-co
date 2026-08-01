@@ -122,6 +122,30 @@ export function IptvPanel({ serverId, server }: { serverId: string; server: any 
     refetchInterval: 60_000,
   });
 
+  // Inteligência de Conteúdo: histórico diário do catálogo deste servidor (30 dias)
+  const { data: catalogDaily = [] } = useQuery({
+    queryKey: ["iptv-catalog-daily", serverId],
+    queryFn: async () =>
+      ((await (supabase as any)
+        .from("iptv_catalog_daily")
+        .select("day, channels, movies, series, added_channels, added_movies, added_series, removed_count")
+        .eq("server_id", serverId)
+        .order("day", { ascending: false })
+        .limit(30)).data ?? []) as {
+        day: string; channels: number; movies: number; series: number;
+        added_channels: number; added_movies: number; added_series: number; removed_count: number;
+      }[],
+    refetchInterval: 120_000,
+  });
+
+  const catalogToday = catalogDaily[0] ?? null;
+  const catalogGrowth7d = catalogDaily.slice(0, 7).reduce(
+    (a, r) => a + r.added_channels + r.added_movies + r.added_series, 0,
+  );
+  const catalogRemoved7d = catalogDaily.slice(0, 7).reduce((a, r) => a + r.removed_count, 0);
+
+
+
   useEffect(() => {
     const ch = supabase
       .channel(`iptv-${serverId}`)
