@@ -233,6 +233,7 @@ function NovidadesPage() {
         <TabsList className="flex-wrap h-auto">
           <TabsTrigger value="novidades">Novidades</TabsTrigger>
           <TabsTrigger value="ranking">Ranking de atualização</TabsTrigger>
+          <TabsTrigger value="detector">Detector de filmes</TabsTrigger>
           <TabsTrigger value="first">Quem adicionou primeiro</TabsTrigger>
           <TabsTrigger value="compare">Comparativo</TabsTrigger>
           <TabsTrigger value="history">Histórico</TabsTrigger>
