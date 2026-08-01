@@ -854,6 +854,37 @@ export async function runIptvSync(serverId: string, opts: { mode?: "smart" | "fu
     .update({ health_score: health, last_iptv_sync_at: new Date().toISOString() })
     .eq("id", serverId);
 
+  /* ---- Inteligência de Conteúdo: catálogo, novidades e histórico ---- */
+  let catalogDiff: Awaited<ReturnType<typeof import("./iptv-catalog.server").syncCatalog>> | null = null;
+  if (x.login_ok && x.catalog.live.length + x.catalog.vod.length + x.catalog.series.length > 0) {
+    try {
+      const { syncCatalog } = await import("./iptv-catalog.server");
+      catalogDiff = await syncCatalog(serverId, x.catalog);
+      if (catalogDiff && !catalogDiff.skipped) {
+        const parts: string[] = [];
+        if (catalogDiff.added.vod) parts.push(`🎬 +${catalogDiff.added.vod} filmes`);
+        if (catalogDiff.added.series) parts.push(`📚 +${catalogDiff.added.series} séries`);
+        if (catalogDiff.added.live) parts.push(`📺 +${catalogDiff.added.live} canais`);
+        if (parts.length) {
+          await raiseAlert(serverId, "catalog_added", "info", "🎬 Novos conteúdos no catálogo", parts.join(" · "));
+        }
+        if (catalogDiff.removed > 0) {
+          await raiseAlert(
+            serverId,
+            "catalog_removed",
+            catalogDiff.removed > 50 ? "warning" : "info",
+            `📉 ${catalogDiff.removed} conteúdo(s) removido(s) do catálogo`,
+            `Total atual: ${catalogDiff.totals.live} canais · ${catalogDiff.totals.vod} filmes · ${catalogDiff.totals.series} séries`,
+          );
+        }
+      }
+    } catch (e) {
+      console.warn("[iptv] falha ao sincronizar catálogo:", (e as Error)?.message);
+    }
+  }
+
+
+
   /* ---- Alertas inteligentes ---- */
   const drop = (prev: number | null | undefined, curr: number | null, label: string, kind: string) => {
     if (!prev || !curr) return null;
