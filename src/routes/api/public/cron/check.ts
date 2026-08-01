@@ -15,6 +15,7 @@ async function run() {
   const { syncKumaStatuses, provisionPendingServers } = await import("@/lib/kuma.server");
   const { runDueDnsChecks } = await import("@/lib/dns.server");
   const { reconcilePendingPayments } = await import("@/lib/mercadopago.server");
+  const { migratePlaintextCredentials } = await import("@/lib/iptv-credentials.server");
   const [checks, expired, iptv, kuma, kumaProv, dns, payments] = await Promise.all([
     runDueChecks(),
     notifyNewlyExpiredSubscriptions().catch(() => ({ notified: 0 })),
@@ -24,6 +25,8 @@ async function run() {
     runDueDnsChecks().catch(() => ({ checked: 0, errors: 0 })),
     reconcilePendingPayments().catch(() => ({ checked: 0, approved: 0 })),
   ]);
+  // Rede de segurança: criptografa credenciais Xtream legadas em texto puro.
+  const encrypted = await migratePlaintextCredentials(50).catch(() => ({ migrated: 0 }));
   return {
     ...checks,
     expiredNotified: expired.notified,
@@ -35,6 +38,7 @@ async function run() {
     dnsErrors: dns.errors,
     paymentsChecked: payments.checked,
     paymentsApproved: payments.approved,
+    credentialsEncrypted: encrypted.migrated,
   };
 }
 
