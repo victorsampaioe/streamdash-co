@@ -500,6 +500,18 @@ export async function probeXtream(host: string, username: string, password: stri
   out.sampleVod = pick(vodList, 2).map((x) => ({ id: x?.stream_id, name: x?.name ?? "", ext: x?.container_extension ?? "mp4" }));
   out.sampleSeries = pick(seriesList, 2).map((x) => ({ id: x?.series_id, name: x?.name ?? "" }));
 
+  // Catálogo (apenas metadados) para a Inteligência de Conteúdo.
+  const entry = (id: unknown, name: unknown, cat: unknown) => ({
+    id: String(id ?? ""),
+    name: String(name ?? "").trim(),
+    category: cat == null ? null : String(cat),
+  });
+  out.catalog = {
+    live: liveList.map((x) => entry(x?.stream_id, x?.name, x?.category_id)),
+    vod: vodList.map((x) => entry(x?.stream_id, x?.name, x?.category_id)),
+    series: seriesList.map((x) => entry(x?.series_id, x?.name, x?.category_id)),
+  };
+
   return out;
 }
 
