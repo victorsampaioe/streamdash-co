@@ -159,9 +159,14 @@ export type PlayerApiDiagnostics = {
   content_type: string | null;
   size_bytes: number | null;
   body_snippet: string | null;
+  user_agent: string | null;
+  request_headers: Record<string, string> | null;
+  response_headers: Record<string, string> | null;
+  egress_ip: string | null;
   stage: "network" | "http" | "empty" | "content-type" | "parse" | "ok";
   message: string;
 };
+
 
 export type XtreamAccount = {
   status: string | null;
