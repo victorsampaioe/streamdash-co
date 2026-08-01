@@ -746,7 +746,21 @@ export async function runIptvSync(serverId: string, opts: { mode?: "smart" | "fu
     x.login_checked && !x.login_ok ? raiseAlert(serverId, "login_invalid", "critical", "🚨 Login do Xtream inválido", x.error ?? undefined) : null,
     x.api_ms && x.api_ms > 5000 ? raiseAlert(serverId, "api_slow", "warning", "⚠ Player API lenta", `${x.api_ms}ms`) : null,
     !x.json_valid ? raiseAlert(serverId, "api_down", "critical", "🚨 Player API indisponível", x.error ?? undefined) : null,
+    // get.php é apenas playlist: nunca gera alerta de login inválido.
     m3u && m3u.playlist_ok === false ? raiseAlert(serverId, "playlist_broken", "warning", "⚠ Playlist M3U com problema", m3u.error ?? undefined) : null,
+    x.account?.days_to_expire != null && x.account.days_to_expire <= 7 && x.account.days_to_expire >= 0
+      ? raiseAlert(serverId, "account_expiring", "warning", "⚠ Conta Xtream perto do vencimento",
+          `Expira em ${x.account.days_to_expire} dia(s) — ${new Date(x.account.exp_date!).toLocaleString("pt-BR")}`)
+      : null,
+    x.account?.max_connections != null && x.account.active_connections != null && x.account.max_connections > 0 &&
+    x.account.active_connections >= x.account.max_connections
+      ? raiseAlert(serverId, "connections_limit", "warning", "⚠ Limite de conexões atingido",
+          `${x.account.active_connections}/${x.account.max_connections} conexões ativas`)
+      : null,
+    x.login_ok && !x.content.live_ok
+      ? raiseAlert(serverId, "content_live_empty", "warning", "⚠ Nenhum canal ao vivo retornado pela Player API")
+      : null,
+
     streamProbes.some((s) => !s.ok) ? raiseAlert(serverId, "stream_offline", "warning", "⚠ Streams de amostra offline",
       streamProbes.filter((s) => !s.ok).map((s) => `${s.kind}: ${s.error ?? "falhou"}`).join(" · ")) : null,
     health < 70 && (lastSync?.health_score ?? 100) >= 70
