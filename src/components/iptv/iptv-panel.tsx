@@ -32,8 +32,19 @@ export function IptvPanel({ serverId, server }: { serverId: string; server: any 
   const detect = useServerFn(detectIptvNow);
   const sync = useServerFn(runIptvSyncNow);
   const ack = useServerFn(acknowledgeIptvAlert);
+  const uaTest = useServerFn(testPlayerApiUserAgents);
   const [range, setRange] = useState<Range>("7d");
   const [creds, setCreds] = useState({ u: server?.iptv_username ?? "", p: server?.iptv_password ?? "" });
+  const [uaResult, setUaResult] = useState<any>(null);
+
+  const doUaTest = useMutation({
+    mutationFn: async () => await uaTest({ data: { serverId } }),
+    onSuccess: (r: any) => {
+      setUaResult(r);
+      toast.success("Teste de User-Agent concluído");
+    },
+    onError: (e: any) => toast.error(e?.message ?? "Falha no teste de User-Agent"),
+  });
 
   const since = new Date(Date.now() - RANGE_MS[range]).toISOString();
 
