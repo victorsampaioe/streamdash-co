@@ -5,9 +5,10 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
-  Sparkles, Film, Library, Tv, TrendingDown, Trophy, Medal, History, Gauge, Info,
+  Sparkles, Film, Library, Tv, TrendingDown, Trophy, Medal, History, Gauge, Info, Search, CheckCircle2, XCircle,
 } from "lucide-react";
 import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 
@@ -89,6 +90,17 @@ type DailyRow = {
   removed_count: number;
 };
 
+type FindRow = {
+  title_key: string;
+  title: string;
+  kind: string;
+  server_count: number;
+  first_server: string;
+  first_seen_at: string;
+  mine_has: boolean;
+  servers: { server_name: string; seen_at: string; is_mine: boolean }[];
+};
+
 const rpc = (fn: string, args: Record<string, unknown>) =>
   (supabase as unknown as { rpc: (f: string, a: unknown) => Promise<{ data: unknown }> }).rpc(fn, args);
 
@@ -101,6 +113,18 @@ function NovidadesPage() {
   const [hours, setHours] = useState(24);
   const [firstKind, setFirstKind] = useState<"vod" | "series" | "live">("vod");
   const [sort, setSort] = useState<keyof CompareRow>("health_score");
+  const [term, setTerm] = useState("");
+  const [findKind, setFindKind] = useState<"vod" | "series" | "live">("vod");
+  const [query, setQuery] = useState("");
+
+  const { data: found = [], isFetching: finding } = useQuery({
+    queryKey: ["iptv-find-title", query, findKind],
+    enabled: query.trim().length >= 2,
+    queryFn: async () =>
+      ((await rpc("iptv_find_title", { _query: query.trim(), _kind: findKind, _limit: 30 })).data ?? []) as FindRow[],
+  });
+
+
 
   const { data: nov } = useQuery({
     queryKey: ["iptv-novelties", hours],
@@ -209,6 +233,7 @@ function NovidadesPage() {
         <TabsList className="flex-wrap h-auto">
           <TabsTrigger value="novidades">Novidades</TabsTrigger>
           <TabsTrigger value="ranking">Ranking de atualização</TabsTrigger>
+          <TabsTrigger value="detector">Detector de filmes</TabsTrigger>
           <TabsTrigger value="first">Quem adicionou primeiro</TabsTrigger>
           <TabsTrigger value="compare">Comparativo</TabsTrigger>
           <TabsTrigger value="history">Histórico</TabsTrigger>
@@ -270,6 +295,96 @@ function NovidadesPage() {
               </div>
             )}
           </Card>
+        </TabsContent>
+
+        {/* -------- Detector de filmes -------- */}
+        <TabsContent value="detector" className="mt-4 space-y-3">
+          <Card className="p-4 space-y-3">
+            <div className="flex items-center gap-2">
+              <Search className="h-5 w-5 text-primary" />
+              <h2 className="font-semibold">Detector de filmes e séries</h2>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Digite um título para descobrir quais servidores monitorados já possuem o conteúdo, quem detectou primeiro
+              e se o seu servidor está atualizado.
+            </p>
+            <form
+              className="flex flex-col sm:flex-row gap-2"
+              onSubmit={(e) => {
+                e.preventDefault();
+                setQuery(term);
+              }}
+            >
+              <Input
+                value={term}
+                onChange={(e) => setTerm(e.target.value)}
+                placeholder="Ex.: Duna, Round 6, Premiere Clubes..."
+                className="flex-1"
+              />
+              <Button type="submit" disabled={term.trim().length < 2}>
+                Buscar
+              </Button>
+            </form>
+            <div className="flex gap-2">
+              {(["vod", "series", "live"] as const).map((k) => (
+                <Button
+                  key={k}
+                  size="sm"
+                  variant={findKind === k ? "default" : "outline"}
+                  onClick={() => setFindKind(k)}
+                >
+                  {k === "vod" ? "Filmes" : k === "series" ? "Séries" : "Canais"}
+                </Button>
+              ))}
+            </div>
+          </Card>
+
+          {query.trim().length < 2 ? (
+            <Card className="p-8 text-center text-sm text-muted-foreground">
+              Faça uma busca para comparar a disponibilidade do título entre os servidores.
+            </Card>
+          ) : finding ? (
+            <Card className="p-8 text-center text-sm text-muted-foreground">Procurando nos catálogos...</Card>
+          ) : found.length === 0 ? (
+            <Card className="p-8 text-center text-sm text-muted-foreground">
+              Nenhum servidor monitorado possui “{query}” no catálogo de{" "}
+              {findKind === "vod" ? "filmes" : findKind === "series" ? "séries" : "canais"}.
+            </Card>
+          ) : (
+            <div className="grid gap-3 md:grid-cols-2">
+              {found.map((f) => (
+                <Card key={f.title_key} className="p-4 space-y-2">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="font-medium">{f.title}</div>
+                    {f.mine_has ? (
+                      <Badge variant="secondary" className="gap-1 shrink-0 border-emerald-500/40 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
+                        <CheckCircle2 className="h-3 w-3" /> Você tem
+                      </Badge>
+                    ) : (
+                      <Badge variant="destructive" className="gap-1 shrink-0">
+                        <XCircle className="h-3 w-3" /> Falta no seu
+                      </Badge>
+                    )}
+                  </div>
+                  <div className="text-xs text-muted-foreground">
+                    Em {f.server_count} servidor{f.server_count > 1 ? "es" : ""} · 🥇 primeiro: {f.first_server} (
+                    {dt(f.first_seen_at)})
+                  </div>
+                  <div className="space-y-1 pt-1 border-t">
+                    {(f.servers ?? []).map((s, i) => (
+                      <div key={i} className="flex items-center justify-between text-sm">
+                        <span className="truncate">
+                          {MEDALS[i] ?? `#${i + 1}`} {s.server_name}
+                          {s.is_mine && <Badge variant="outline" className="ml-2 text-[10px]">Seu</Badge>}
+                        </span>
+                        <span className="text-xs text-muted-foreground font-mono">{dt(s.seen_at)}</span>
+                      </div>
+                    ))}
+                  </div>
+                </Card>
+              ))}
+            </div>
+          )}
         </TabsContent>
 
         {/* -------- Quem adicionou primeiro -------- */}
