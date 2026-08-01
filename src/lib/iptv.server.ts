@@ -60,29 +60,39 @@ export async function detectIptvKind(
   username?: string | null,
   password?: string | null,
 ): Promise<{ kind: "none" | "xtream" | "m3u" | "both"; details: Record<string, unknown> }> {
-  const b = base(host);
+  const clean = host.replace(/^https?:\/\//, "").replace(/\/+$/, "");
   const u = username ?? "test";
   const p = password ?? "test";
+  const auth = `username=${encodeURIComponent(u)}&password=${encodeURIComponent(p)}`;
   let xtream = false;
   let m3u = false;
   const details: Record<string, unknown> = {};
 
-  try {
-    const res = await timedFetch(`${b}/player_api.php?username=${encodeURIComponent(u)}&password=${encodeURIComponent(p)}`, API_TIMEOUT_MS);
-    const text = await res.text();
-    details.player_api_status = res.status;
-    if (res.ok && /^\s*[[{]/.test(text)) {
-      const json = JSON.parse(text);
-      xtream = typeof json === "object" && json !== null;
-      details.auth = json?.user_info?.auth ?? null;
+  // 1) Fonte de verdade: Player API (Xtream). Tenta http e https.
+  for (const candidate of [`http://${clean}`, `https://${clean}`]) {
+    try {
+      const { data, diag } = await getJson(`${candidate}/player_api.php?${auth}`);
+      details.player_api_status = diag.http_status;
+      details.player_api_base = candidate;
+      const info = data as any;
+      if (info && typeof info === "object" && "user_info" in info) {
+        xtream = true;
+        details.auth = info?.user_info?.auth ?? null;
+        details.status = info?.user_info?.status ?? null;
+      }
+      break;
+    } catch (e: unknown) {
+      const err = e as PlayerApiError;
+      details.player_api_status = err?.status ?? null;
+      details.player_api_error = String(err?.message ?? e).slice(0, 160);
+      if (err?.status != null) break; // servidor respondeu: não tentar outro esquema
     }
-  } catch (e: unknown) {
-    details.player_api_error = String((e as Error)?.message ?? e).slice(0, 160);
   }
 
+  // 2) get.php é apenas teste de playlist M3U — NUNCA define validade do login.
   try {
     const res = await timedFetch(
-      `${b}/get.php?username=${encodeURIComponent(u)}&password=${encodeURIComponent(p)}&type=m3u_plus&output=ts`,
+      `http://${clean}/get.php?${auth}&type=m3u_plus&output=ts`,
       API_TIMEOUT_MS,
       { headers: { Range: "bytes=0-2048" } },
     );
@@ -96,6 +106,7 @@ export async function detectIptvKind(
   const kind = xtream && m3u ? "both" : xtream ? "xtream" : m3u ? "m3u" : "none";
   return { kind, details };
 }
+
 
 /* ------------------------------------------------------------------ */
 /* Xtream Player API                                                   */
