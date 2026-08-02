@@ -136,6 +136,32 @@ function AlertsPage() {
 
 const BOT_USERNAME = "MonitordeFluxoBot";
 
+function DigestCard() {
+  const send = useServerFn(sendMyDigestNow);
+  const m = useMutation({
+    mutationFn: async () => await send({}),
+    onSuccess: (r: { ok: boolean; reason?: string }) =>
+      r.ok ? toast.success("Resumo enviado no seu Telegram") : toast.error(r.reason ?? "Não foi possível enviar"),
+    onError: (e: Error) => toast.error(e.message),
+  });
+  return (
+    <Card className="p-4 space-y-3">
+      <div className="flex items-center gap-2 text-sm font-medium">
+        <Send className="h-4 w-4" /> Resumo inteligente no Telegram
+      </div>
+      <p className="text-sm text-muted-foreground">
+        Todo dia às <strong>08:00</strong> e às <strong>20:00</strong> você recebe um resumo com o status dos seus
+        servidores, novidades de catálogo (filmes, séries e canais), saúde média, incidentes, alertas, mudanças de IP,
+        SSL/domínio a vencer — e um texto pronto para divulgar aos seus clientes.
+      </p>
+      <Button size="sm" onClick={() => m.mutate()} disabled={m.isPending}>
+        {m.isPending ? "Enviando..." : "Enviar resumo agora (teste)"}
+      </Button>
+    </Card>
+  );
+}
+
+
 function TelegramGuide() {
   const steps = [
     { t: "Abra o nosso bot no Telegram", d: "Toque no botão abaixo ou procure por @MonitordeFluxoBot na busca do Telegram." },
