@@ -94,18 +94,24 @@ export function GlobalCheckMap({ serverId }: { serverId: string }) {
   });
 
 
-  // Realtime: append on insert
+  // Realtime: refetch com throttle (evita uma consulta por inserção)
   useEffect(() => {
+    let pending = false;
     const ch = supabase
       .channel(`region_checks_${serverId}`)
       .on(
         "postgres_changes",
         { event: "INSERT", schema: "public", table: "region_checks", filter: `server_id=eq.${serverId}` },
-        () => refetch(),
+        () => {
+          if (pending) return;
+          pending = true;
+          setTimeout(() => { pending = false; void refetch(); }, 15_000);
+        },
       )
       .subscribe();
     return () => { supabase.removeChannel(ch); };
   }, [serverId, refetch]);
+
 
   // Global worker heartbeat
   const { data: workers = [] } = useQuery<{ region_code: string; last_report_at: string | null; checks_60s: number }[]>({
