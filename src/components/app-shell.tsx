@@ -1,6 +1,7 @@
 import { Link, Outlet, useNavigate, useRouterState } from "@tanstack/react-router";
 import { Activity, LayoutDashboard, ServerIcon, Bell, Users, LogOut, Sun, Moon, Search, Plus, CreditCard, Gift, Radio, ShieldAlert, Trophy, Lock, Menu, Send, Bot, Sparkles, BookOpen, Globe, Palette } from "lucide-react";
 import { SubscriptionBanner } from "@/components/subscription/subscription-banner";
+import { TelegramBanner } from "@/components/telegram-banner";
 import { WelcomeOnboarding } from "@/components/subscription/welcome-onboarding";
 import { SupportFab } from "@/components/support-fab";
 
@@ -30,6 +31,7 @@ export function AppShell({ children }: { children: ReactNode }) {
       <div className="flex-1 flex flex-col min-w-0">
         <Topbar />
         <SubscriptionBanner />
+        <TelegramBanner />
         <main className="flex-1 p-4 sm:p-6 md:p-8 max-w-[1600px] w-full mx-auto">{children}</main>
       </div>
       <SupportFab />
