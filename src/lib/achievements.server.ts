@@ -1,0 +1,49 @@
+// Notificações de conquistas no Telegram.
+// MODO TESTE: por enquanto só o Telegram do admin recebe.
+import { supabaseAdmin } from "@/integrations/supabase/client.server";
+
+async function send(chatId: string, text: string) {
+  const token = process.env["TELEGRAM_BOT_TOKEN"];
+  if (!token || !chatId) return;
+  try {
+    await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ chat_id: chatId, text, parse_mode: "HTML", disable_web_page_preview: true }),
+    });
+  } catch {
+    /* ignora falhas de notificação */
+  }
+}
+
+/** Avisa o admin quando um usuário desbloqueia novas conquistas. */
+export async function notifyAchievements(userId: string, granted: number) {
+  const adminChat = process.env["ADMIN_TELEGRAM_CHAT_ID"];
+  if (!adminChat || granted <= 0) return;
+
+  const { data: profile } = await supabaseAdmin
+    .from("profiles")
+    .select("email, full_name")
+    .eq("id", userId)
+    .maybeSingle();
+
+  const { data: latest } = await supabaseAdmin
+    .from("user_achievements")
+    .select("achievement_code, unlocked_at")
+    .eq("user_id", userId)
+    .order("unlocked_at", { ascending: false })
+    .limit(granted);
+
+  const codes = (latest ?? []).map((a) => a.achievement_code);
+  const { data: meta } = await supabaseAdmin
+    .from("achievements")
+    .select("code, emoji, title")
+    .in("code", codes.length ? codes : ["__none__"]);
+
+  const list = (meta ?? []).map((m) => `${m.emoji} <b>${m.title}</b>`).join("\n") || `${granted} nova(s)`;
+
+  await send(
+    adminChat,
+    `🏆 <b>Nova conquista desbloqueada</b>\n\n👤 ${profile?.full_name ?? profile?.email ?? userId}\n${profile?.email ? `✉️ ${profile.email}\n` : ""}\n${list}`,
+  );
+}
