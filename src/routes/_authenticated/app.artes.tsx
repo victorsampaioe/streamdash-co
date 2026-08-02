@@ -295,24 +295,39 @@ function ArtStudio() {
           </Card>
 
           <Card className="p-5 space-y-3">
-            <h2 className="font-semibold flex items-center gap-2"><History className="h-4 w-4" /> Histórico</h2>
+            <h2 className="font-semibold flex items-center gap-2"><History className="h-4 w-4" /> Artes geradas</h2>
+            <p className="text-xs text-muted-foreground">
+              O sistema cria artes automaticamente quando detecta novidades em um servidor.
+            </p>
             {history.length === 0 && <p className="text-sm text-muted-foreground">Nenhuma arte gerada ainda.</p>}
             <div className="space-y-2">
               {history.map((row) => (
-                <div key={row.id} className="flex items-center justify-between gap-3 rounded-lg border border-border/60 px-3 py-2">
+                <div key={row.id} className="rounded-lg border border-border/60 px-3 py-2 space-y-2">
                   <div className="min-w-0">
                     <p className="text-sm font-medium truncate">{row.server_name}</p>
                     <p className="text-xs text-muted-foreground">
-                      +{row.total_new} · {new Date(row.created_at).toLocaleString("pt-BR")}
+                      🚀 +{row.total_new} · {new Date(row.created_at).toLocaleString("pt-BR")}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      🎬 {(row.movies ?? []).length} · 📺 {(row.series ?? []).length} · 📡 {(row.channels ?? []).length}
                     </p>
                   </div>
-                  <Button size="sm" variant="ghost" onClick={() => regenerate(row)} disabled={busy}>
-                    <RefreshCw className="h-3.5 w-3.5" />
-                  </Button>
+                  <div className="flex gap-1.5">
+                    <Button size="sm" variant="secondary" className="flex-1" onClick={() => regenerate(row)} disabled={busy}>
+                      <RefreshCw className="h-3.5 w-3.5 mr-1" />Ver
+                    </Button>
+                    <Button size="sm" variant="outline" className="flex-1" onClick={() => downloadRow(row)} disabled={busy}>
+                      <Download className="h-3.5 w-3.5 mr-1" />Baixar
+                    </Button>
+                    <Button size="sm" variant="ghost" className="flex-1" onClick={() => shareRow(row)} disabled={busy}>
+                      <Share2 className="h-3.5 w-3.5 mr-1" />Enviar
+                    </Button>
+                  </div>
                 </div>
               ))}
             </div>
           </Card>
+
         </div>
 
         <Card className="p-5 flex items-center justify-center bg-[radial-gradient(circle_at_top,hsl(var(--primary)/0.12),transparent_60%)] min-h-[420px]">
