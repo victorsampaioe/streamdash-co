@@ -106,18 +106,18 @@ export async function syncCatalog(
   }
 
   // Estado atual no banco (apenas itens ativos)
-  const known = new Map<string, { name: string }>();
+  const known = new Map<string, { name: string; category: string | null }>();
   {
     let from = 0;
     for (;;) {
       const { data } = await supabaseAdmin
         .from("iptv_catalog_items")
-        .select("kind, external_id, name")
+        .select("kind, external_id, name, category")
         .eq("server_id", serverId)
         .is("removed_at", null)
         .range(from, from + 999);
-      const rows = (data ?? []) as { kind: string; external_id: string; name: string }[];
-      for (const r of rows) known.set(`${r.kind}:${r.external_id}`, { name: r.name });
+      const rows = (data ?? []) as { kind: string; external_id: string; name: string; category: string | null }[];
+      for (const r of rows) known.set(`${r.kind}:${r.external_id}`, { name: r.name, category: r.category ?? null });
       if (rows.length < 1000) break;
       from += 1000;
       if (from > 200_000) break;
@@ -136,17 +136,24 @@ export async function syncCatalog(
       const key = `${kind}:${it.id}`;
       currentKeys.add(key);
       const prev = known.get(key);
-      upserts.push({
-        server_id: serverId,
-        kind,
-        external_id: it.id,
-        name: it.name,
-        title_key: titleKey(it.name),
-        category: it.category ?? null,
-        last_seen_at: nowIso,
-        removed_at: null,
-        ...(prev ? {} : { first_seen_at: nowIso }),
-      });
+      const category = it.category ?? null;
+      // Só grava quando o item é novo ou mudou de fato: evita reescrever
+      // centenas de milhares de linhas idênticas a cada sincronização.
+      const changed = !prev || prev.name !== it.name || prev.category !== category;
+      if (changed) {
+        upserts.push({
+          server_id: serverId,
+          kind,
+          external_id: it.id,
+          name: it.name,
+          title_key: titleKey(it.name),
+          category,
+          last_seen_at: nowIso,
+          removed_at: null,
+          ...(prev ? {} : { first_seen_at: nowIso }),
+        });
+      }
+
       if (!prev) {
         added[kind]++;
         // No primeiro mapeamento tudo é "novo": não gera ruído de novidades.
