@@ -45,6 +45,7 @@ import { Route as AuthenticatedAppHubIndexRouteImport } from './routes/_authenti
 import { Route as ApiPublicWebhooksMercadopagoRouteImport } from './routes/api/public/webhooks/mercadopago'
 import { Route as ApiPublicRegionsTargetsRouteImport } from './routes/api/public/regions/targets'
 import { Route as ApiPublicRegionsReportRouteImport } from './routes/api/public/regions/report'
+import { Route as ApiPublicCronDigestRouteImport } from './routes/api/public/cron/digest'
 import { Route as ApiPublicCronCheckRouteImport } from './routes/api/public/cron/check'
 import { Route as AuthenticatedAppServersNewRouteImport } from './routes/_authenticated/app.servers.new'
 import { Route as AuthenticatedAppServersIdRouteImport } from './routes/_authenticated/app.servers.$id'
@@ -248,6 +249,11 @@ const ApiPublicRegionsReportRoute = ApiPublicRegionsReportRouteImport.update({
   path: '/api/public/regions/report',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicCronDigestRoute = ApiPublicCronDigestRouteImport.update({
+  id: '/api/public/cron/digest',
+  path: '/api/public/cron/digest',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiPublicCronCheckRoute = ApiPublicCronCheckRouteImport.update({
   id: '/api/public/cron/check',
   path: '/api/public/cron/check',
@@ -352,6 +358,7 @@ export interface FileRoutesByFullPath {
   '/app/servers/$id': typeof AuthenticatedAppServersIdRoute
   '/app/servers/new': typeof AuthenticatedAppServersNewRoute
   '/api/public/cron/check': typeof ApiPublicCronCheckRoute
+  '/api/public/cron/digest': typeof ApiPublicCronDigestRoute
   '/api/public/regions/report': typeof ApiPublicRegionsReportRoute
   '/api/public/regions/targets': typeof ApiPublicRegionsTargetsRoute
   '/api/public/webhooks/mercadopago': typeof ApiPublicWebhooksMercadopagoRoute
@@ -398,6 +405,7 @@ export interface FileRoutesByTo {
   '/app/servers/$id': typeof AuthenticatedAppServersIdRoute
   '/app/servers/new': typeof AuthenticatedAppServersNewRoute
   '/api/public/cron/check': typeof ApiPublicCronCheckRoute
+  '/api/public/cron/digest': typeof ApiPublicCronDigestRoute
   '/api/public/regions/report': typeof ApiPublicRegionsReportRoute
   '/api/public/regions/targets': typeof ApiPublicRegionsTargetsRoute
   '/api/public/webhooks/mercadopago': typeof ApiPublicWebhooksMercadopagoRoute
@@ -448,6 +456,7 @@ export interface FileRoutesById {
   '/_authenticated/app/servers/$id': typeof AuthenticatedAppServersIdRoute
   '/_authenticated/app/servers/new': typeof AuthenticatedAppServersNewRoute
   '/api/public/cron/check': typeof ApiPublicCronCheckRoute
+  '/api/public/cron/digest': typeof ApiPublicCronDigestRoute
   '/api/public/regions/report': typeof ApiPublicRegionsReportRoute
   '/api/public/regions/targets': typeof ApiPublicRegionsTargetsRoute
   '/api/public/webhooks/mercadopago': typeof ApiPublicWebhooksMercadopagoRoute
@@ -498,6 +507,7 @@ export interface FileRouteTypes {
     | '/app/servers/$id'
     | '/app/servers/new'
     | '/api/public/cron/check'
+    | '/api/public/cron/digest'
     | '/api/public/regions/report'
     | '/api/public/regions/targets'
     | '/api/public/webhooks/mercadopago'
@@ -544,6 +554,7 @@ export interface FileRouteTypes {
     | '/app/servers/$id'
     | '/app/servers/new'
     | '/api/public/cron/check'
+    | '/api/public/cron/digest'
     | '/api/public/regions/report'
     | '/api/public/regions/targets'
     | '/api/public/webhooks/mercadopago'
@@ -593,6 +604,7 @@ export interface FileRouteTypes {
     | '/_authenticated/app/servers/$id'
     | '/_authenticated/app/servers/new'
     | '/api/public/cron/check'
+    | '/api/public/cron/digest'
     | '/api/public/regions/report'
     | '/api/public/regions/targets'
     | '/api/public/webhooks/mercadopago'
@@ -619,6 +631,7 @@ export interface RootRouteChildren {
   Char91DotmcpChar93InvokeToolToolRoute: typeof Char91DotmcpChar93InvokeToolToolRoute
   ApiPublicRadarRoute: typeof ApiPublicRadarRoute
   ApiPublicCronCheckRoute: typeof ApiPublicCronCheckRoute
+  ApiPublicCronDigestRoute: typeof ApiPublicCronDigestRoute
   ApiPublicRegionsReportRoute: typeof ApiPublicRegionsReportRoute
   ApiPublicRegionsTargetsRoute: typeof ApiPublicRegionsTargetsRoute
   ApiPublicWebhooksMercadopagoRoute: typeof ApiPublicWebhooksMercadopagoRoute
@@ -878,6 +891,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicRegionsReportRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/cron/digest': {
+      id: '/api/public/cron/digest'
+      path: '/api/public/cron/digest'
+      fullPath: '/api/public/cron/digest'
+      preLoaderRoute: typeof ApiPublicCronDigestRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/cron/check': {
       id: '/api/public/cron/check'
       path: '/api/public/cron/check'
@@ -1059,6 +1079,7 @@ const rootRouteChildren: RootRouteChildren = {
   Char91DotmcpChar93InvokeToolToolRoute: Char91DotmcpChar93InvokeToolToolRoute,
   ApiPublicRadarRoute: ApiPublicRadarRoute,
   ApiPublicCronCheckRoute: ApiPublicCronCheckRoute,
+  ApiPublicCronDigestRoute: ApiPublicCronDigestRoute,
   ApiPublicRegionsReportRoute: ApiPublicRegionsReportRoute,
   ApiPublicRegionsTargetsRoute: ApiPublicRegionsTargetsRoute,
   ApiPublicWebhooksMercadopagoRoute: ApiPublicWebhooksMercadopagoRoute,
