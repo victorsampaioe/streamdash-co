@@ -263,7 +263,7 @@ export async function renderArt(data: ArtData): Promise<HTMLCanvasElement> {
   const gap = 18;
   const colW = (W - gap * 2) / 3;
   const colY = nameY + nameH + 52;
-  const colH = 880;
+  const colH = 780;
 
   const cols: Col[] = [
     { title: "FILMES", icon: "🎬", items: data.movies ?? [], color: "#38bdf8", tag: true },
