@@ -165,6 +165,9 @@ function AdminPage() {
 
       <PayoutsCard />
 
+      <StorageReportCard />
+
+
 
       {/* Users table */}
       <Card className="p-4 space-y-4">
