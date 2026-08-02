@@ -7,47 +7,62 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Trash2, Bell, Send, Copy, ExternalLink, HelpCircle } from "lucide-react";
+import { Trash2, Bell, Send, Copy, ExternalLink, HelpCircle, AlertTriangle, CheckCircle2 } from "lucide-react";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { toast } from "sonner";
 import { PremiumGate } from "@/components/subscription/premium-gate";
 import { useServerFn } from "@tanstack/react-start";
 import { sendMyDigestNow } from "@/lib/digest.functions";
-
+import { testTelegramChat } from "@/lib/telegram-verify.functions";
 
 export const Route = createFileRoute("/_authenticated/app/alerts")({
   component: AlertsPage,
 });
 
-const KINDS = [
-  { value: "email", label: "E-mail", placeholder: "voce@empresa.com", hint: "Envia via Resend. Requer domínio verificado para produção." },
-  { value: "discord", label: "Discord", placeholder: "https://discord.com/api/webhooks/...", hint: "Cole o Webhook URL de um canal do Discord." },
-  { value: "telegram", label: "Telegram", placeholder: "Ex.: 123456789", hint: "Abra o Telegram, envie /start para @MonitordeFluxoBot e depois use @userinfobot para descobrir seu chat_id. Cole aqui apenas o número." },
-  { value: "webhook", label: "Webhook", placeholder: "https://sua-api.com/hook", hint: "Recebe POST JSON com o evento." },
-] as const;
+const BOT_USERNAME = "MonitordeFluxoBot";
+
+function normalizeChatId(raw: string) {
+  const t = String(raw ?? "").trim();
+  return t.includes(":") ? t.split(":").slice(-1)[0].trim() : t;
+}
+function isValidChatId(raw: string) {
+  return /^-?\d{5,20}$/.test(normalizeChatId(raw));
+}
 
 function AlertsPage() {
   const qc = useQueryClient();
   const [name, setName] = useState("");
-  const [kind, setKind] = useState<(typeof KINDS)[number]["value"]>("email");
   const [target, setTarget] = useState("");
+  const test = useServerFn(testTelegramChat);
 
   const { data: channels = [] } = useQuery({
     queryKey: ["alert-channels"],
-    queryFn: async () => (await supabase.from("alert_channels").select("*").order("created_at", { ascending: false })).data ?? [],
+    queryFn: async () =>
+      (await supabase.from("alert_channels").select("*").eq("kind", "telegram").order("created_at", { ascending: false })).data ?? [],
   });
 
   const create = useMutation({
     mutationFn: async () => {
+      const chatId = normalizeChatId(target);
+      if (!isValidChatId(chatId)) {
+        throw new Error("Código inválido: use apenas os números do seu Id (ex.: 123456789).");
+      }
+      const check = await test({ data: { target: chatId } });
+      if (!check.ok) throw new Error(`${check.error}${check.hint ? ` ${check.hint}` : ""}`);
+
       const { data: u } = await supabase.auth.getUser();
       if (!u.user) throw new Error("Não autenticado");
       const { error } = await supabase.from("alert_channels").insert({
-        owner_id: u.user.id, name: name || kind, kind, target,
+        owner_id: u.user.id, name: name || "Telegram", kind: "telegram", target: chatId,
       });
       if (error) throw error;
     },
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ["alert-channels"] }); setName(""); setTarget(""); toast.success("Canal adicionado"); },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["alert-channels"] });
+      qc.invalidateQueries({ queryKey: ["telegram-channels-banner"] });
+      setName(""); setTarget("");
+      toast.success("Telegram conectado! Confira a mensagem de teste no app.");
+    },
     onError: (e: Error) => toast.error(e.message),
   });
 
@@ -56,88 +71,137 @@ function AlertsPage() {
       const { error } = await supabase.from("alert_channels").update({ enabled }).eq("id", id);
       if (error) throw error;
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["alert-channels"] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["alert-channels"] });
+      qc.invalidateQueries({ queryKey: ["telegram-channels-banner"] });
+    },
   });
 
   const del = useMutation({
     mutationFn: async (id: string) => { const { error } = await supabase.from("alert_channels").delete().eq("id", id); if (error) throw error; },
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ["alert-channels"] }); toast.success("Canal removido"); },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["alert-channels"] });
+      qc.invalidateQueries({ queryKey: ["telegram-channels-banner"] });
+      toast.success("Canal removido");
+    },
   });
 
-  const cur = KINDS.find((k) => k.value === kind)!;
+  const retest = useMutation({
+    mutationFn: async (t: string) => await test({ data: { target: t } }),
+    onSuccess: (r: { ok: boolean; error?: string; hint?: string }) =>
+      r.ok ? toast.success("Mensagem de teste enviada no seu Telegram")
+           : toast.error(`${r.error}${r.hint ? ` ${r.hint}` : ""}`),
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const hasValid = channels.some((c) => c.enabled && isValidChatId(String(c.target ?? "")));
 
   return (
     <div className="space-y-6 max-w-4xl w-full">
       <div>
-        <h1 className="text-2xl font-semibold tracking-tight">Alertas</h1>
-        <p className="text-sm text-muted-foreground">Canais que recebem notificações quando um servidor cai (após o limite de falhas seguidas).</p>
+        <h1 className="text-2xl font-semibold tracking-tight">Alertas no Telegram</h1>
+        <p className="text-sm text-muted-foreground">
+          Os alertas do Stream Monitor são enviados pelo Telegram (@{BOT_USERNAME}): quedas de servidor, instabilidade e o resumo inteligente diário.
+        </p>
       </div>
 
-      <PremiumGate title="Criação de canais de alerta bloqueada">
-      <Card className="p-4 sm:p-6">
-        <form onSubmit={(e) => { e.preventDefault(); create.mutate(); }} className="grid md:grid-cols-4 gap-3 items-end">
-          <div className="space-y-2">
-            <Label>Nome</Label>
-            <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="Time DevOps" />
+      {!hasValid && (
+        <div className="rounded-lg border border-amber-500/40 bg-amber-500/10 p-4 flex items-start gap-3">
+          <AlertTriangle className="h-5 w-5 shrink-0 text-amber-500 mt-0.5" />
+          <div className="text-sm">
+            <p className="font-medium">
+              {channels.length > 0 ? "Seu Telegram está incorreto ou desativado" : "Você ainda não cadastrou o Telegram"}
+            </p>
+            <p className="text-muted-foreground">
+              Sem um chat_id válido você não recebe alertas de queda nem o resumo diário. Siga o passo a passo abaixo — leva menos de 1 minuto.
+            </p>
           </div>
-          <div className="space-y-2">
-            <Label>Canal</Label>
-            <Select value={kind} onValueChange={(v) => setKind(v as any)}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
-              <SelectContent>
-                {KINDS.map((k) => <SelectItem key={k.value} value={k.value}>{k.label}</SelectItem>)}
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="space-y-2 md:col-span-2">
-            <Label>Destino</Label>
-            <Input value={target} onChange={(e) => setTarget(e.target.value)} placeholder={cur.placeholder} required />
-          </div>
-          <p className="text-xs text-muted-foreground md:col-span-4 -mt-1">{cur.hint}</p>
-          {kind === "telegram" && (
-            <div className="md:col-span-4">
+        </div>
+      )}
+
+      <PremiumGate title="Cadastro do Telegram bloqueado">
+        <Card className="p-4 sm:p-6 space-y-4">
+          <form onSubmit={(e) => { e.preventDefault(); create.mutate(); }} className="grid md:grid-cols-3 gap-3 items-end">
+            <div className="space-y-2">
+              <Label>Nome (opcional)</Label>
+              <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="Meu Telegram" />
+            </div>
+            <div className="space-y-2 md:col-span-2">
+              <Label>Seu código do Telegram (chat_id)</Label>
+              <Input
+                value={target}
+                onChange={(e) => setTarget(e.target.value)}
+                placeholder="Ex.: 123456789"
+                inputMode="numeric"
+                required
+                aria-invalid={target.length > 0 && !isValidChatId(target)}
+              />
+              {target.length > 0 && !isValidChatId(target) ? (
+                <p className="text-xs text-destructive">
+                  Código errado: cole somente os números do seu Id (sem @, sem espaços, sem link). Ex.: 123456789.
+                </p>
+              ) : (
+                <p className="text-xs text-muted-foreground">
+                  Vamos enviar uma mensagem de teste antes de salvar — se não chegar, avisamos o que corrigir.
+                </p>
+              )}
+            </div>
+            <div className="md:col-span-3">
               <TelegramGuide />
             </div>
-          )}
-          <div className="md:col-span-4">
-            <Button type="submit" disabled={create.isPending}>Adicionar canal</Button>
-          </div>
-        </form>
-      </Card>
+            <div className="md:col-span-3">
+              <Button type="submit" disabled={create.isPending || !isValidChatId(target)}>
+                {create.isPending ? "Validando..." : "Conectar Telegram"}
+              </Button>
+            </div>
+          </form>
+        </Card>
       </PremiumGate>
 
       <Card>
         <div className="p-4 border-b border-border/60 flex items-center gap-2 text-sm font-medium">
-          <Bell className="h-4 w-4" /> Canais configurados
+          <Bell className="h-4 w-4" /> Telegram cadastrado
         </div>
         {channels.length === 0 ? (
-          <p className="p-6 text-sm text-muted-foreground">Nenhum canal.</p>
+          <p className="p-6 text-sm text-muted-foreground">Nenhum Telegram cadastrado.</p>
         ) : (
           <ul>
-            {channels.map((c) => (
-              <li key={c.id} className="p-4 border-b border-border/40 last:border-0 flex items-center gap-3">
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2">
-                    <span className="font-medium">{c.name}</span>
-                    <span className="text-xs px-2 py-0.5 rounded bg-accent text-accent-foreground uppercase">{c.kind}</span>
+            {channels.map((c) => {
+              const valid = isValidChatId(String(c.target ?? ""));
+              return (
+                <li key={c.id} className="p-4 border-b border-border/40 last:border-0 flex flex-wrap items-center gap-3">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <span className="font-medium">{c.name}</span>
+                      {valid ? (
+                        <span className="inline-flex items-center gap-1 text-xs text-emerald-500"><CheckCircle2 className="h-3.5 w-3.5" /> válido</span>
+                      ) : (
+                        <span className="inline-flex items-center gap-1 text-xs text-destructive"><AlertTriangle className="h-3.5 w-3.5" /> código errado</span>
+                      )}
+                    </div>
+                    <div className="text-xs text-muted-foreground font-mono truncate">{c.target}</div>
+                    {!valid && (
+                      <p className="text-xs text-destructive mt-1">
+                        Remova e cadastre novamente usando somente números do Id (pegue no @userinfobot).
+                      </p>
+                    )}
                   </div>
-                  <div className="text-xs text-muted-foreground font-mono truncate">{c.target}</div>
-                </div>
-                <Switch checked={c.enabled} onCheckedChange={(v) => toggle.mutate({ id: c.id, enabled: v })} />
-                <Button variant="ghost" size="icon" onClick={() => del.mutate(c.id)}><Trash2 className="h-4 w-4 text-destructive" /></Button>
-              </li>
-            ))}
+                  <Button variant="outline" size="sm" disabled={retest.isPending} onClick={() => retest.mutate(String(c.target))}>
+                    <Send className="h-4 w-4" /> Testar
+                  </Button>
+                  <Switch checked={c.enabled} onCheckedChange={(v) => toggle.mutate({ id: c.id, enabled: v })} />
+                  <Button variant="ghost" size="icon" onClick={() => del.mutate(c.id)}><Trash2 className="h-4 w-4 text-destructive" /></Button>
+                </li>
+              );
+            })}
           </ul>
         )}
       </Card>
 
       <DigestCard />
     </div>
-
   );
 }
-
-const BOT_USERNAME = "MonitordeFluxoBot";
 
 function DigestCard() {
   const send = useServerFn(sendMyDigestNow);
@@ -164,17 +228,16 @@ function DigestCard() {
   );
 }
 
-
 function TelegramGuide() {
   const steps = [
     { t: "Abra o nosso bot no Telegram", d: "Toque no botão abaixo ou procure por @MonitordeFluxoBot na busca do Telegram." },
     { t: "Envie /start para o bot", d: "Isso autoriza o bot a te enviar mensagens. Sem esse passo o Telegram bloqueia os alertas." },
     { t: "Descubra o seu código (chat_id)", d: "Abra o @userinfobot e envie /start. Ele responde com o seu Id, por exemplo: Id: 123456789." },
-    { t: "Cole apenas o número aqui", d: "No campo Destino acima, cole somente os números do Id (sem @, sem espaços) e clique em Adicionar canal." },
+    { t: "Cole apenas o número aqui", d: "No campo acima, cole somente os números do Id (sem @, sem espaços) e clique em Conectar Telegram." },
   ];
 
   return (
-    <Collapsible className="rounded-lg border border-border/60 bg-muted/30">
+    <Collapsible defaultOpen className="rounded-lg border border-border/60 bg-muted/30">
       <CollapsibleTrigger asChild>
         <button type="button" className="flex w-full items-center gap-2 p-3 text-sm font-medium">
           <HelpCircle className="h-4 w-4 text-primary" />
