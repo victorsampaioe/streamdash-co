@@ -43,6 +43,7 @@ import { Route as DotlovableOauthConsentRouteImport } from './routes/[.]lovable.
 import { Route as AuthenticatedAppServersIndexRouteImport } from './routes/_authenticated/app.servers.index'
 import { Route as AuthenticatedAppHubIndexRouteImport } from './routes/_authenticated/app.hub.index'
 import { Route as ApiPublicWebhooksMercadopagoRouteImport } from './routes/api/public/webhooks/mercadopago'
+import { Route as ApiPublicTelegramWebhookRouteImport } from './routes/api/public/telegram/webhook'
 import { Route as ApiPublicRegionsTargetsRouteImport } from './routes/api/public/regions/targets'
 import { Route as ApiPublicRegionsReportRouteImport } from './routes/api/public/regions/report'
 import { Route as ApiPublicCronDigestRouteImport } from './routes/api/public/cron/digest'
@@ -239,6 +240,12 @@ const ApiPublicWebhooksMercadopagoRoute =
     path: '/api/public/webhooks/mercadopago',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiPublicTelegramWebhookRoute =
+  ApiPublicTelegramWebhookRouteImport.update({
+    id: '/api/public/telegram/webhook',
+    path: '/api/public/telegram/webhook',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiPublicRegionsTargetsRoute = ApiPublicRegionsTargetsRouteImport.update({
   id: '/api/public/regions/targets',
   path: '/api/public/regions/targets',
@@ -361,6 +368,7 @@ export interface FileRoutesByFullPath {
   '/api/public/cron/digest': typeof ApiPublicCronDigestRoute
   '/api/public/regions/report': typeof ApiPublicRegionsReportRoute
   '/api/public/regions/targets': typeof ApiPublicRegionsTargetsRoute
+  '/api/public/telegram/webhook': typeof ApiPublicTelegramWebhookRoute
   '/api/public/webhooks/mercadopago': typeof ApiPublicWebhooksMercadopagoRoute
   '/app/hub/': typeof AuthenticatedAppHubIndexRoute
   '/app/servers/': typeof AuthenticatedAppServersIndexRoute
@@ -408,6 +416,7 @@ export interface FileRoutesByTo {
   '/api/public/cron/digest': typeof ApiPublicCronDigestRoute
   '/api/public/regions/report': typeof ApiPublicRegionsReportRoute
   '/api/public/regions/targets': typeof ApiPublicRegionsTargetsRoute
+  '/api/public/telegram/webhook': typeof ApiPublicTelegramWebhookRoute
   '/api/public/webhooks/mercadopago': typeof ApiPublicWebhooksMercadopagoRoute
   '/app/hub': typeof AuthenticatedAppHubIndexRoute
   '/app/servers': typeof AuthenticatedAppServersIndexRoute
@@ -459,6 +468,7 @@ export interface FileRoutesById {
   '/api/public/cron/digest': typeof ApiPublicCronDigestRoute
   '/api/public/regions/report': typeof ApiPublicRegionsReportRoute
   '/api/public/regions/targets': typeof ApiPublicRegionsTargetsRoute
+  '/api/public/telegram/webhook': typeof ApiPublicTelegramWebhookRoute
   '/api/public/webhooks/mercadopago': typeof ApiPublicWebhooksMercadopagoRoute
   '/_authenticated/app/hub/': typeof AuthenticatedAppHubIndexRoute
   '/_authenticated/app/servers/': typeof AuthenticatedAppServersIndexRoute
@@ -510,6 +520,7 @@ export interface FileRouteTypes {
     | '/api/public/cron/digest'
     | '/api/public/regions/report'
     | '/api/public/regions/targets'
+    | '/api/public/telegram/webhook'
     | '/api/public/webhooks/mercadopago'
     | '/app/hub/'
     | '/app/servers/'
@@ -557,6 +568,7 @@ export interface FileRouteTypes {
     | '/api/public/cron/digest'
     | '/api/public/regions/report'
     | '/api/public/regions/targets'
+    | '/api/public/telegram/webhook'
     | '/api/public/webhooks/mercadopago'
     | '/app/hub'
     | '/app/servers'
@@ -607,6 +619,7 @@ export interface FileRouteTypes {
     | '/api/public/cron/digest'
     | '/api/public/regions/report'
     | '/api/public/regions/targets'
+    | '/api/public/telegram/webhook'
     | '/api/public/webhooks/mercadopago'
     | '/_authenticated/app/hub/'
     | '/_authenticated/app/servers/'
@@ -634,6 +647,7 @@ export interface RootRouteChildren {
   ApiPublicCronDigestRoute: typeof ApiPublicCronDigestRoute
   ApiPublicRegionsReportRoute: typeof ApiPublicRegionsReportRoute
   ApiPublicRegionsTargetsRoute: typeof ApiPublicRegionsTargetsRoute
+  ApiPublicTelegramWebhookRoute: typeof ApiPublicTelegramWebhookRoute
   ApiPublicWebhooksMercadopagoRoute: typeof ApiPublicWebhooksMercadopagoRoute
 }
 
@@ -877,6 +891,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicWebhooksMercadopagoRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/telegram/webhook': {
+      id: '/api/public/telegram/webhook'
+      path: '/api/public/telegram/webhook'
+      fullPath: '/api/public/telegram/webhook'
+      preLoaderRoute: typeof ApiPublicTelegramWebhookRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/regions/targets': {
       id: '/api/public/regions/targets'
       path: '/api/public/regions/targets'
@@ -1082,6 +1103,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPublicCronDigestRoute: ApiPublicCronDigestRoute,
   ApiPublicRegionsReportRoute: ApiPublicRegionsReportRoute,
   ApiPublicRegionsTargetsRoute: ApiPublicRegionsTargetsRoute,
+  ApiPublicTelegramWebhookRoute: ApiPublicTelegramWebhookRoute,
   ApiPublicWebhooksMercadopagoRoute: ApiPublicWebhooksMercadopagoRoute,
 }
 export const routeTree = rootRouteImport
