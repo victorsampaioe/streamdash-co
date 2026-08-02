@@ -64,13 +64,15 @@ function ArtStudio() {
   const { data: history = [] } = useQuery({
     enabled: !!isAdmin,
     queryKey: ["artes-history", serverId],
+    refetchInterval: 60_000,
     queryFn: async () => {
-      let q = (supabase as any).from("art_generations").select("*").order("created_at", { ascending: false }).limit(20);
+      let q = (supabase as any).from("art_generations").select("*").order("created_at", { ascending: false }).limit(50);
       if (serverId) q = q.eq("server_id", serverId);
       const { data } = await q;
       return (data as Array<any>) ?? [];
     },
   });
+
 
   useEffect(() => {
     if (!serverId && servers.length) setServerId(servers[0]!.id);
