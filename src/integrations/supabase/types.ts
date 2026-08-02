@@ -2199,6 +2199,39 @@ export type Database = {
         }
         Relationships: []
       }
+      telegram_digests: {
+        Row: {
+          had_news: boolean
+          id: string
+          kind: string
+          period_end: string
+          period_start: string
+          sent_at: string
+          summary: Json
+          user_id: string
+        }
+        Insert: {
+          had_news?: boolean
+          id?: string
+          kind: string
+          period_end?: string
+          period_start: string
+          sent_at?: string
+          summary?: Json
+          user_id: string
+        }
+        Update: {
+          had_news?: boolean
+          id?: string
+          kind?: string
+          period_end?: string
+          period_start?: string
+          sent_at?: string
+          summary?: Json
+          user_id?: string
+        }
+        Relationships: []
+      }
       user_achievements: {
         Row: {
           achievement_code: string
