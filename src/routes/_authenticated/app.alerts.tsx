@@ -127,7 +127,10 @@ function AlertsPage() {
           </ul>
         )}
       </Card>
+
+      <DigestCard />
     </div>
+
   );
 }
 
