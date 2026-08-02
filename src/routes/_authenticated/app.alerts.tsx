@@ -12,6 +12,9 @@ import { Trash2, Bell, Send, Copy, ExternalLink, HelpCircle } from "lucide-react
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { toast } from "sonner";
 import { PremiumGate } from "@/components/subscription/premium-gate";
+import { useServerFn } from "@tanstack/react-start";
+import { sendMyDigestNow } from "@/lib/digest.functions";
+
 
 export const Route = createFileRoute("/_authenticated/app/alerts")({
   component: AlertsPage,
