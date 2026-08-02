@@ -1,5 +1,5 @@
 // Notificações de conquistas no Telegram.
-// MODO TESTE: por enquanto só o Telegram do admin recebe.
+// O usuário que desbloqueou recebe o aviso nos canais Telegram dele + cópia para o admin.
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 
 async function send(chatId: string, text: string) {
