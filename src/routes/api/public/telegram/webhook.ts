@@ -50,7 +50,8 @@ export const Route = createFileRoute("/api/public/telegram/webhook")({
 
         console.log("[telegram-webhook] update", { chat_id: chatId, text: text.slice(0, 32) });
 
-        if (text.startsWith("/start") || text.startsWith("/id") || text.startsWith("/codigo") || text.startsWith("/código")) {
+        if (text.startsWith("/start")) {
+          const { COMMAND_HELP } = await import("@/lib/telegram-commands.server");
           await send(
             token,
             chatId,
@@ -59,15 +60,28 @@ export const Route = createFileRoute("/api/public/telegram/webhook")({
               `1️⃣ Toque no número acima para copiar.\n` +
               `2️⃣ Acesse <b>streammonitor.site → Alertas</b>.\n` +
               `3️⃣ Cole o código e clique em <b>Conectar Telegram</b>.\n\n` +
-              `Depois disso você recebe aqui os alertas de queda, instabilidade e o resumo inteligente diário. ✅`,
+              `Depois disso você recebe aqui os alertas, o resumo diário — e pode usar os comandos abaixo. ✅\n\n` +
+              COMMAND_HELP,
           );
-        } else {
-          await send(
-            token,
-            chatId,
-            `Seu código de vinculação é:\n\n<code>${chatId}</code>\n\nCole ele em <b>streammonitor.site → Alertas</b>. Envie /start para ver as instruções completas.`,
-          );
+          return Response.json({ ok: true });
         }
+
+        const { handleTelegramCommand, COMMAND_HELP } = await import("@/lib/telegram-commands.server");
+        let reply: string | null = null;
+        try {
+          reply = await handleTelegramCommand(chatId, text);
+        } catch (e: any) {
+          console.error("[telegram-webhook] erro no comando", text, e?.message);
+          reply = "⚠️ Não consegui buscar esses dados agora. Tente novamente em instantes.";
+        }
+
+        await send(
+          token,
+          chatId,
+          reply ??
+            `Seu código de vinculação é:\n\n<code>${chatId}</code>\n\nCole ele em <b>streammonitor.site → Alertas</b>.\n\n${COMMAND_HELP}`,
+        );
+
 
         return Response.json({ ok: true });
       },
