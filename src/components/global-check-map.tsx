@@ -80,29 +80,38 @@ export function GlobalCheckMap({ serverId }: { serverId: string }) {
 
   const { data: checks = [], refetch } = useQuery<RegionCheck[]>({
     queryKey: ["region_checks_series", serverId],
+    staleTime: 30_000,
+    refetchOnWindowFocus: false,
     queryFn: async () => {
       const { data } = await supabase
         .from("region_checks")
         .select("region_code,status,latency_ms,http_status,error,checked_at")
         .eq("server_id", serverId)
         .order("checked_at", { ascending: false })
-        .limit(600);
+        .limit(240);
       return data ?? [];
     },
   });
 
-  // Realtime: append on insert
+
+  // Realtime: refetch com throttle (evita uma consulta por inserção)
   useEffect(() => {
+    let pending = false;
     const ch = supabase
       .channel(`region_checks_${serverId}`)
       .on(
         "postgres_changes",
         { event: "INSERT", schema: "public", table: "region_checks", filter: `server_id=eq.${serverId}` },
-        () => refetch(),
+        () => {
+          if (pending) return;
+          pending = true;
+          setTimeout(() => { pending = false; void refetch(); }, 15_000);
+        },
       )
       .subscribe();
     return () => { supabase.removeChannel(ch); };
   }, [serverId, refetch]);
+
 
   // Global worker heartbeat
   const { data: workers = [] } = useQuery<{ region_code: string; last_report_at: string | null; checks_60s: number }[]>({

@@ -35,22 +35,24 @@ export const getKumaStatus = createServerFn({ method: "POST" })
         .eq("server_id", data.serverId)
         .order("started_at", { ascending: false })
         .limit(20),
+      // Uptime de 7 dias vem do resumo diário (dezenas de linhas, não milhares)
       context.supabase
-        .from("kuma_heartbeats")
-        .select("kind, ok")
+        .from("kuma_heartbeats_daily")
+        .select("kind, total, ok_count")
         .eq("server_id", data.serverId)
-        .gte("checked_at", new Date(Date.now() - 7 * 24 * 3600_000).toISOString())
-        .limit(5000),
+        .gte("day", new Date(Date.now() - 7 * 24 * 3600_000).toISOString().slice(0, 10))
+        .limit(200),
     ]);
 
     const uptime7d: Record<string, number> = {};
     const agg: Record<string, { ok: number; total: number }> = {};
     for (const b of week ?? []) {
       const a = (agg[b.kind] ??= { ok: 0, total: 0 });
-      a.total++;
-      if (b.ok) a.ok++;
+      a.total += b.total ?? 0;
+      a.ok += b.ok_count ?? 0;
     }
     for (const [k, a] of Object.entries(agg)) uptime7d[k] = a.total ? (a.ok / a.total) * 100 : 0;
+
 
     return {
       configured: kumaConfig().configured,

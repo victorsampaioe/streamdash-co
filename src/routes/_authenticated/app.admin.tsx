@@ -31,6 +31,8 @@ import { formatBRL } from "@/lib/payments";
 import { cn } from "@/lib/utils";
 import { broadcastTelegram } from "@/lib/telegram-broadcast.functions";
 import { adminListPayoutRequests, adminApprovePayout, adminMarkPayoutPaid, adminRejectPayout } from "@/lib/referrals.functions";
+import { StorageReportCard } from "@/components/storage-report-card";
+
 
 export const Route = createFileRoute("/_authenticated/app/admin")({
   head: () => ({
@@ -164,6 +166,9 @@ function AdminPage() {
       <TelegramBroadcastCard />
 
       <PayoutsCard />
+
+      <StorageReportCard />
+
 
 
       {/* Users table */}
