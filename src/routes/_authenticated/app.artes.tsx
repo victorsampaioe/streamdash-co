@@ -136,18 +136,27 @@ function ArtStudio() {
     }
   }
 
+  async function blobFromRow(row: any) {
+    const canvas = await renderArt({
+      serverName: row.server_name,
+      movies: row.movies ?? [],
+      series: row.series ?? [],
+      channels: row.channels ?? [],
+      total: row.total_new,
+      updatedAt: row.created_at,
+    });
+    return await canvasToBlob(canvas);
+  }
+
+  function rowFileName(row: any) {
+    const n = String(row.server_name ?? "servidor").toLowerCase().replace(/[^a-z0-9]+/g, "-");
+    return `novidades-${n}.png`;
+  }
+
   async function regenerate(row: any) {
     setBusy(true);
     try {
-      const canvas = await renderArt({
-        serverName: row.server_name,
-        movies: row.movies ?? [],
-        series: row.series ?? [],
-        channels: row.channels ?? [],
-        total: row.total_new,
-        updatedAt: row.created_at,
-      });
-      const blob = await canvasToBlob(canvas);
+      const blob = await blobFromRow(row);
       blobRef.current = blob;
       if (preview) URL.revokeObjectURL(preview);
       setPreview(URL.createObjectURL(blob));
@@ -157,6 +166,42 @@ function ArtStudio() {
       setBusy(false);
     }
   }
+
+  async function downloadRow(row: any) {
+    setBusy(true);
+    try {
+      const blob = await blobFromRow(row);
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = rowFileName(row);
+      a.click();
+      setTimeout(() => URL.revokeObjectURL(url), 5000);
+    } catch (e: any) {
+      toast.error(e?.message ?? "Falha ao baixar a arte");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function shareRow(row: any) {
+    setBusy(true);
+    try {
+      const blob = await blobFromRow(row);
+      const file = new File([blob], rowFileName(row), { type: "image/png" });
+      if (navigator.canShare?.({ files: [file] })) {
+        await navigator.share({ files: [file], title: "Novidades do servidor" });
+        return;
+      }
+      await navigator.clipboard.write([new ClipboardItem({ "image/png": blob })]);
+      toast.success("Arte copiada para a área de transferência!");
+    } catch {
+      /* usuário cancelou ou navegador sem suporte */
+    } finally {
+      setBusy(false);
+    }
+  }
+
 
   function fileName() {
     const srv = servers.find((s) => s.id === serverId)?.name ?? "servidor";
