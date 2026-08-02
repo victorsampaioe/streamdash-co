@@ -99,7 +99,7 @@ function ArtStudio() {
       const pick = (k: string) => changes.filter((c) => c.kind === k).map((c) => c.name);
       const art: ArtData = {
         serverName: srv.name,
-        movies: pick("movie"),
+        movies: pick("vod"),
         series: pick("series"),
         channels: pick("live"),
         total: changes.length,
