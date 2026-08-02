@@ -60,17 +60,23 @@ async function getExternalIncidents(): Promise<FeedIncident[]> {
 async function getInternalStats() {
   const since = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
 
-  const [{ count: totalChecks24h }, { count: incidentsOpen }, { count: incidentsClosed }, { count: serversMonitored }] = await Promise.all([
-    supabaseAdmin.from("checks").select("*", { count: "exact", head: true }).gte("checked_at", since),
+  const [{ count: incidentsOpen }, { count: incidentsClosed }, { count: serversMonitored }] = await Promise.all([
     supabaseAdmin.from("incidents").select("*", { count: "exact", head: true }).is("ended_at", null),
     supabaseAdmin.from("incidents").select("*", { count: "exact", head: true }).gte("started_at", since).not("ended_at", "is", null),
     supabaseAdmin.from("servers").select("*", { count: "exact", head: true }),
   ]);
 
-  const { data: statusRows } = await supabaseAdmin.from("checks").select("status").gte("checked_at", since).limit(20000);
-  const total = statusRows?.length ?? 0;
-  const ups = statusRows?.filter((r) => r.status === "up").length ?? 0;
+  // Totais e uptime vêm do resumo horário (sem varrer a tabela detalhada).
+  const { data: hourly } = await supabaseAdmin
+    .from("checks_hourly")
+    .select("total,ups")
+    .gte("hour", since)
+    .limit(5000);
+  const total = (hourly ?? []).reduce((s, r) => s + (r.total ?? 0), 0);
+  const ups = (hourly ?? []).reduce((s, r) => s + (r.ups ?? 0), 0);
+  const totalChecks24h = total;
   const uptimePct = total > 0 ? (ups / total) * 100 : null;
+
 
   return {
     totalChecks24h: totalChecks24h ?? 0,
