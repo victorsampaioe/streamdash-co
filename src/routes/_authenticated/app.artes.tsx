@@ -64,13 +64,15 @@ function ArtStudio() {
   const { data: history = [] } = useQuery({
     enabled: !!isAdmin,
     queryKey: ["artes-history", serverId],
+    refetchInterval: 60_000,
     queryFn: async () => {
-      let q = (supabase as any).from("art_generations").select("*").order("created_at", { ascending: false }).limit(20);
+      let q = (supabase as any).from("art_generations").select("*").order("created_at", { ascending: false }).limit(50);
       if (serverId) q = q.eq("server_id", serverId);
       const { data } = await q;
       return (data as Array<any>) ?? [];
     },
   });
+
 
   useEffect(() => {
     if (!serverId && servers.length) setServerId(servers[0]!.id);
@@ -97,7 +99,7 @@ function ArtStudio() {
       const pick = (k: string) => changes.filter((c) => c.kind === k).map((c) => c.name);
       const art: ArtData = {
         serverName: srv.name,
-        movies: pick("movie"),
+        movies: pick("vod"),
         series: pick("series"),
         channels: pick("live"),
         total: changes.length,
@@ -134,18 +136,27 @@ function ArtStudio() {
     }
   }
 
+  async function blobFromRow(row: any) {
+    const canvas = await renderArt({
+      serverName: row.server_name,
+      movies: row.movies ?? [],
+      series: row.series ?? [],
+      channels: row.channels ?? [],
+      total: row.total_new,
+      updatedAt: row.created_at,
+    });
+    return await canvasToBlob(canvas);
+  }
+
+  function rowFileName(row: any) {
+    const n = String(row.server_name ?? "servidor").toLowerCase().replace(/[^a-z0-9]+/g, "-");
+    return `novidades-${n}.png`;
+  }
+
   async function regenerate(row: any) {
     setBusy(true);
     try {
-      const canvas = await renderArt({
-        serverName: row.server_name,
-        movies: row.movies ?? [],
-        series: row.series ?? [],
-        channels: row.channels ?? [],
-        total: row.total_new,
-        updatedAt: row.created_at,
-      });
-      const blob = await canvasToBlob(canvas);
+      const blob = await blobFromRow(row);
       blobRef.current = blob;
       if (preview) URL.revokeObjectURL(preview);
       setPreview(URL.createObjectURL(blob));
@@ -155,6 +166,42 @@ function ArtStudio() {
       setBusy(false);
     }
   }
+
+  async function downloadRow(row: any) {
+    setBusy(true);
+    try {
+      const blob = await blobFromRow(row);
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = rowFileName(row);
+      a.click();
+      setTimeout(() => URL.revokeObjectURL(url), 5000);
+    } catch (e: any) {
+      toast.error(e?.message ?? "Falha ao baixar a arte");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function shareRow(row: any) {
+    setBusy(true);
+    try {
+      const blob = await blobFromRow(row);
+      const file = new File([blob], rowFileName(row), { type: "image/png" });
+      if (navigator.canShare?.({ files: [file] })) {
+        await navigator.share({ files: [file], title: "Novidades do servidor" });
+        return;
+      }
+      await navigator.clipboard.write([new ClipboardItem({ "image/png": blob })]);
+      toast.success("Arte copiada para a área de transferência!");
+    } catch {
+      /* usuário cancelou ou navegador sem suporte */
+    } finally {
+      setBusy(false);
+    }
+  }
+
 
   function fileName() {
     const srv = servers.find((s) => s.id === serverId)?.name ?? "servidor";
@@ -248,24 +295,39 @@ function ArtStudio() {
           </Card>
 
           <Card className="p-5 space-y-3">
-            <h2 className="font-semibold flex items-center gap-2"><History className="h-4 w-4" /> Histórico</h2>
+            <h2 className="font-semibold flex items-center gap-2"><History className="h-4 w-4" /> Artes geradas</h2>
+            <p className="text-xs text-muted-foreground">
+              O sistema cria artes automaticamente quando detecta novidades em um servidor.
+            </p>
             {history.length === 0 && <p className="text-sm text-muted-foreground">Nenhuma arte gerada ainda.</p>}
             <div className="space-y-2">
               {history.map((row) => (
-                <div key={row.id} className="flex items-center justify-between gap-3 rounded-lg border border-border/60 px-3 py-2">
+                <div key={row.id} className="rounded-lg border border-border/60 px-3 py-2 space-y-2">
                   <div className="min-w-0">
                     <p className="text-sm font-medium truncate">{row.server_name}</p>
                     <p className="text-xs text-muted-foreground">
-                      +{row.total_new} · {new Date(row.created_at).toLocaleString("pt-BR")}
+                      🚀 +{row.total_new} · {new Date(row.created_at).toLocaleString("pt-BR")}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      🎬 {(row.movies ?? []).length} · 📺 {(row.series ?? []).length} · 📡 {(row.channels ?? []).length}
                     </p>
                   </div>
-                  <Button size="sm" variant="ghost" onClick={() => regenerate(row)} disabled={busy}>
-                    <RefreshCw className="h-3.5 w-3.5" />
-                  </Button>
+                  <div className="flex gap-1.5">
+                    <Button size="sm" variant="secondary" className="flex-1" onClick={() => regenerate(row)} disabled={busy}>
+                      <RefreshCw className="h-3.5 w-3.5 mr-1" />Ver
+                    </Button>
+                    <Button size="sm" variant="outline" className="flex-1" onClick={() => downloadRow(row)} disabled={busy}>
+                      <Download className="h-3.5 w-3.5 mr-1" />Baixar
+                    </Button>
+                    <Button size="sm" variant="ghost" className="flex-1" onClick={() => shareRow(row)} disabled={busy}>
+                      <Share2 className="h-3.5 w-3.5 mr-1" />Enviar
+                    </Button>
+                  </div>
                 </div>
               ))}
             </div>
           </Card>
+
         </div>
 
         <Card className="p-5 flex items-center justify-center bg-[radial-gradient(circle_at_top,hsl(var(--primary)/0.12),transparent_60%)] min-h-[420px]">
