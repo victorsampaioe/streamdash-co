@@ -68,6 +68,24 @@ export type Database = {
         }
         Relationships: []
       }
+      app_settings: {
+        Row: {
+          key: string
+          updated_at: string
+          value: Json
+        }
+        Insert: {
+          key: string
+          updated_at?: string
+          value: Json
+        }
+        Update: {
+          key?: string
+          updated_at?: string
+          value?: Json
+        }
+        Relationships: []
+      }
       art_generations: {
         Row: {
           channels: Json
@@ -188,6 +206,103 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "checks_server_id_fkey"
+            columns: ["server_id"]
+            isOneToOne: false
+            referencedRelation: "servers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      checks_daily: {
+        Row: {
+          avg_latency_ms: number | null
+          created_at: string
+          day: string
+          degraded: number
+          downs: number
+          max_latency_ms: number | null
+          server_id: string
+          total: number
+          ups: number
+          uptime_pct: number | null
+        }
+        Insert: {
+          avg_latency_ms?: number | null
+          created_at?: string
+          day: string
+          degraded?: number
+          downs?: number
+          max_latency_ms?: number | null
+          server_id: string
+          total?: number
+          ups?: number
+          uptime_pct?: number | null
+        }
+        Update: {
+          avg_latency_ms?: number | null
+          created_at?: string
+          day?: string
+          degraded?: number
+          downs?: number
+          max_latency_ms?: number | null
+          server_id?: string
+          total?: number
+          ups?: number
+          uptime_pct?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "checks_daily_server_id_fkey"
+            columns: ["server_id"]
+            isOneToOne: false
+            referencedRelation: "servers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      checks_hourly: {
+        Row: {
+          avg_latency_ms: number | null
+          created_at: string
+          degraded: number
+          downs: number
+          hour: string
+          max_latency_ms: number | null
+          min_latency_ms: number | null
+          server_id: string
+          ssl_days_remaining: number | null
+          total: number
+          ups: number
+        }
+        Insert: {
+          avg_latency_ms?: number | null
+          created_at?: string
+          degraded?: number
+          downs?: number
+          hour: string
+          max_latency_ms?: number | null
+          min_latency_ms?: number | null
+          server_id: string
+          ssl_days_remaining?: number | null
+          total?: number
+          ups?: number
+        }
+        Update: {
+          avg_latency_ms?: number | null
+          created_at?: string
+          degraded?: number
+          downs?: number
+          hour?: string
+          max_latency_ms?: number | null
+          min_latency_ms?: number | null
+          server_id?: string
+          ssl_days_remaining?: number | null
+          total?: number
+          ups?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "checks_hourly_server_id_fkey"
             columns: ["server_id"]
             isOneToOne: false
             referencedRelation: "servers"
@@ -1037,6 +1152,88 @@ export type Database = {
           },
         ]
       }
+      kuma_heartbeats_daily: {
+        Row: {
+          avg_latency_ms: number | null
+          created_at: string
+          day: string
+          kind: string
+          ok_count: number
+          server_id: string
+          total: number
+          uptime_pct: number | null
+        }
+        Insert: {
+          avg_latency_ms?: number | null
+          created_at?: string
+          day: string
+          kind: string
+          ok_count?: number
+          server_id: string
+          total?: number
+          uptime_pct?: number | null
+        }
+        Update: {
+          avg_latency_ms?: number | null
+          created_at?: string
+          day?: string
+          kind?: string
+          ok_count?: number
+          server_id?: string
+          total?: number
+          uptime_pct?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "kuma_heartbeats_daily_server_id_fkey"
+            columns: ["server_id"]
+            isOneToOne: false
+            referencedRelation: "servers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      kuma_heartbeats_hourly: {
+        Row: {
+          avg_latency_ms: number | null
+          created_at: string
+          hour: string
+          kind: string
+          max_latency_ms: number | null
+          ok_count: number
+          server_id: string
+          total: number
+        }
+        Insert: {
+          avg_latency_ms?: number | null
+          created_at?: string
+          hour: string
+          kind: string
+          max_latency_ms?: number | null
+          ok_count?: number
+          server_id: string
+          total?: number
+        }
+        Update: {
+          avg_latency_ms?: number | null
+          created_at?: string
+          hour?: string
+          kind?: string
+          max_latency_ms?: number | null
+          ok_count?: number
+          server_id?: string
+          total?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "kuma_heartbeats_hourly_server_id_fkey"
+            columns: ["server_id"]
+            isOneToOne: false
+            referencedRelation: "servers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       kuma_incidents: {
         Row: {
           created_at: string
@@ -1644,6 +1841,50 @@ export type Database = {
           },
         ]
       }
+      region_checks_hourly: {
+        Row: {
+          avg_latency_ms: number | null
+          created_at: string
+          downs: number
+          hour: string
+          max_latency_ms: number | null
+          region_code: string
+          server_id: string
+          total: number
+          ups: number
+        }
+        Insert: {
+          avg_latency_ms?: number | null
+          created_at?: string
+          downs?: number
+          hour: string
+          max_latency_ms?: number | null
+          region_code: string
+          server_id: string
+          total?: number
+          ups?: number
+        }
+        Update: {
+          avg_latency_ms?: number | null
+          created_at?: string
+          downs?: number
+          hour?: string
+          max_latency_ms?: number | null
+          region_code?: string
+          server_id?: string
+          total?: number
+          ups?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "region_checks_hourly_server_id_fkey"
+            columns: ["server_id"]
+            isOneToOne: false
+            referencedRelation: "servers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       reseller_pages: {
         Row: {
           accent_color: string
@@ -2165,6 +2406,19 @@ export type Database = {
           total_checks: number
         }[]
       }
+      get_storage_report: {
+        Args: never
+        Returns: {
+          deletes: number
+          index_pretty: string
+          inserts: number
+          rows: number
+          table_name: string
+          total_bytes: number
+          total_pretty: string
+          updates: number
+        }[]
+      }
       get_workers_health: {
         Args: never
         Returns: {
@@ -2247,10 +2501,12 @@ export type Database = {
         }[]
       }
       is_valid_referral_code: { Args: { _code: string }; Returns: boolean }
+      purge_old_metrics: { Args: { _dry_run?: boolean }; Returns: Json }
       request_payout: {
         Args: { _pix_key: string; _pix_name: string; _pix_type: string }
         Returns: string
       }
+      rollup_metrics: { Args: { _hours?: number }; Returns: Json }
       subscription_is_active: { Args: { _user_id: string }; Returns: boolean }
     }
     Enums: {
