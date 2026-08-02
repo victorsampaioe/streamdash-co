@@ -311,30 +311,45 @@ export async function syncKumaStatuses() {
         { onConflict: "server_id,kind" },
       );
 
-      // store recent heartbeats (dedup by timestamp)
+      // store recent heartbeats (dedup by timestamp + downsample)
+      // Guardamos apenas mudanças de estado e no máximo 1 ponto a cada 5 min:
+      // preserva o formato dos gráficos e reduz ~80% das gravações.
+      const MIN_GAP_MS = 5 * 60_000;
       const recent = beats.slice(-40);
       if (recent.length) {
         const { data: lastStored } = await supabaseAdmin
           .from("kuma_heartbeats")
-          .select("checked_at")
+          .select("checked_at, ok")
           .eq("server_id", srv.id)
           .eq("kind", kind)
           .order("checked_at", { ascending: false })
           .limit(1)
           .maybeSingle();
         const cutoff = lastStored?.checked_at ? new Date(lastStored.checked_at).getTime() : 0;
-        const rows = recent
-          .filter((b: any) => b.time && new Date(b.time).getTime() > cutoff)
-          .map((b: any) => ({
+        let lastKeptAt = cutoff;
+        let lastKeptOk = lastStored?.ok ?? null;
+        const rows: Record<string, unknown>[] = [];
+        for (const b of recent) {
+          if (!b?.time) continue;
+          const t = new Date(b.time).getTime();
+          if (!(t > cutoff)) continue;
+          const ok = Number(b.status) === 1;
+          const isTransition = lastKeptOk === null || ok !== lastKeptOk;
+          if (!isTransition && t - lastKeptAt < MIN_GAP_MS) continue;
+          lastKeptAt = t;
+          lastKeptOk = ok;
+          rows.push({
             server_id: srv.id,
             kind,
-            ok: Number(b.status) === 1,
+            ok,
             latency_ms: b.ping != null ? Math.round(Number(b.ping)) : null,
             message: b.msg ?? null,
-            checked_at: new Date(b.time).toISOString(),
-          }));
-        if (rows.length) await supabaseAdmin.from("kuma_heartbeats").insert(rows);
+            checked_at: new Date(t).toISOString(),
+          });
+        }
+        if (rows.length) await supabaseAdmin.from("kuma_heartbeats").insert(rows as never);
       }
+
 
       // incident tracking
       const isDown = statusFromBeat(active, last) === "down";
