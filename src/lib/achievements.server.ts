@@ -16,10 +16,10 @@ async function send(chatId: string, text: string) {
   }
 }
 
-/** Avisa o admin quando um usuário desbloqueia novas conquistas. */
+/** Avisa o usuário (e o admin) quando novas conquistas são desbloqueadas. */
 export async function notifyAchievements(userId: string, granted: number) {
   const adminChat = process.env["ADMIN_TELEGRAM_CHAT_ID"];
-  if (!adminChat || granted <= 0) return;
+  if (granted <= 0) return;
 
   const { data: profile } = await supabaseAdmin
     .from("profiles")
@@ -37,13 +37,35 @@ export async function notifyAchievements(userId: string, granted: number) {
   const codes = (latest ?? []).map((a) => a.achievement_code);
   const { data: meta } = await supabaseAdmin
     .from("achievements")
-    .select("code, emoji, title")
+    .select("code, emoji, title, description")
     .in("code", codes.length ? codes : ["__none__"]);
 
   const list = (meta ?? []).map((m) => `${m.emoji} <b>${m.title}</b>`).join("\n") || `${granted} nova(s)`;
+  const detailed =
+    (meta ?? []).map((m) => `${m.emoji} <b>${m.title}</b>\n<i>${m.description}</i>`).join("\n\n") || list;
 
-  await send(
-    adminChat,
-    `🏆 <b>Nova conquista desbloqueada</b>\n\n👤 ${profile?.full_name ?? profile?.email ?? userId}\n${profile?.email ? `✉️ ${profile.email}\n` : ""}\n${list}`,
+  // Canais Telegram do próprio usuário
+  const { data: channels } = await supabaseAdmin
+    .from("alert_channels")
+    .select("target")
+    .eq("owner_id", userId)
+    .eq("kind", "telegram")
+    .eq("enabled", true);
+
+  const targets = Array.from(new Set((channels ?? []).map((c) => c.target).filter(Boolean)));
+  await Promise.all(
+    targets.map((chatId) =>
+      send(
+        String(chatId),
+        `🏆 <b>Parabéns! Você desbloqueou uma conquista</b>\n\n${detailed}\n\nAcesse o painel para ver todas: streammonitor.site`,
+      ),
+    ),
   );
+
+  if (adminChat) {
+    await send(
+      adminChat,
+      `🏆 <b>Nova conquista desbloqueada</b>\n\n👤 ${profile?.full_name ?? profile?.email ?? userId}\n${profile?.email ? `✉️ ${profile.email}\n` : ""}\n${list}`,
+    );
+  }
 }
