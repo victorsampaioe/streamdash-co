@@ -86,15 +86,23 @@ async function getLatencyByRegion() {
   const since = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
   const { data: regions } = await supabaseAdmin
     .from("check_regions").select("code,name,city,country,flag,latitude,longitude").eq("enabled", true);
+  // Lê o resumo horário (algumas centenas de linhas) em vez de dezenas de
+  // milhares de verificações detalhadas.
   const { data: checks } = await supabaseAdmin
-    .from("region_checks").select("region_code,latency_ms,status").gte("checked_at", since).limit(50000);
+    .from("region_checks_hourly")
+    .select("region_code,total,ups,avg_latency_ms")
+    .gte("hour", since)
+    .limit(5000);
 
   const map = new Map<string, { total: number; ups: number; latencySum: number; latencyCount: number }>();
   for (const c of checks ?? []) {
     const m = map.get(c.region_code) ?? { total: 0, ups: 0, latencySum: 0, latencyCount: 0 };
-    m.total += 1;
-    if (c.status === "up") m.ups += 1;
-    if (typeof c.latency_ms === "number") { m.latencySum += c.latency_ms; m.latencyCount += 1; }
+    m.total += c.total ?? 0;
+    m.ups += c.ups ?? 0;
+    if (typeof c.avg_latency_ms === "number") {
+      m.latencySum += c.avg_latency_ms * (c.total ?? 1);
+      m.latencyCount += c.total ?? 1;
+    }
     map.set(c.region_code, m);
   }
 
@@ -117,13 +125,16 @@ async function getLatencyByRegion() {
 async function getTopUnstableServers() {
   const since = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
   const { data } = await supabaseAdmin
-    .from("checks").select("server_id,status").gte("checked_at", since).limit(50000);
+    .from("checks_hourly")
+    .select("server_id,total,ups,degraded,downs")
+    .gte("hour", since)
+    .limit(5000);
 
   const per = new Map<string, { total: number; bad: number }>();
   for (const c of data ?? []) {
     const m = per.get(c.server_id) ?? { total: 0, bad: 0 };
-    m.total += 1;
-    if (c.status === "down" || c.status === "degraded") m.bad += 1;
+    m.total += c.total ?? 0;
+    m.bad += (c.downs ?? 0) + (c.degraded ?? 0);
     per.set(c.server_id, m);
   }
 
@@ -132,6 +143,7 @@ async function getTopUnstableServers() {
     .map(([id, m]) => ({ id, total: m.total, bad: m.bad, badPct: (m.bad / m.total) * 100 }))
     .sort((a, b) => b.badPct - a.badPct)
     .slice(0, 10);
+
 
   if (withRatio.length === 0) return [];
 
