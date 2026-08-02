@@ -172,7 +172,7 @@ async function getTopUnstableServers() {
 }
 
 let snapshotCache: { at: number; data: RadarSnapshot } | null = null;
-const CACHE_TTL_MS = 60_000;
+const CACHE_TTL_MS = 5 * 60_000;
 
 export type RadarSnapshot = Awaited<ReturnType<typeof computeRadarSnapshot>>;
 
