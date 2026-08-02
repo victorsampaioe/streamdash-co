@@ -80,16 +80,19 @@ export function GlobalCheckMap({ serverId }: { serverId: string }) {
 
   const { data: checks = [], refetch } = useQuery<RegionCheck[]>({
     queryKey: ["region_checks_series", serverId],
+    staleTime: 30_000,
+    refetchOnWindowFocus: false,
     queryFn: async () => {
       const { data } = await supabase
         .from("region_checks")
         .select("region_code,status,latency_ms,http_status,error,checked_at")
         .eq("server_id", serverId)
         .order("checked_at", { ascending: false })
-        .limit(600);
+        .limit(240);
       return data ?? [];
     },
   });
+
 
   // Realtime: append on insert
   useEffect(() => {
