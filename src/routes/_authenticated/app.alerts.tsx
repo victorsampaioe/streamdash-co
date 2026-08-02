@@ -231,9 +231,9 @@ function DigestCard() {
 function TelegramGuide() {
   const steps = [
     { t: "Abra o nosso bot no Telegram", d: "Toque no botão abaixo ou procure por @MonitordeFluxoBot na busca do Telegram." },
-    { t: "Envie /start para o bot", d: "Isso autoriza o bot a te enviar mensagens. Sem esse passo o Telegram bloqueia os alertas." },
-    { t: "Descubra o seu código (chat_id)", d: "Abra o @userinfobot e envie /start. Ele responde com o seu Id, por exemplo: Id: 123456789." },
-    { t: "Cole apenas o número aqui", d: "No campo acima, cole somente os números do Id (sem @, sem espaços) e clique em Conectar Telegram." },
+    { t: "Envie /start para o bot", d: "O próprio bot responde na hora com o seu código de vinculação (chat_id). Isso também autoriza o envio dos alertas." },
+    { t: "Copie o número que o bot enviou", d: "Toque no número em destaque na resposta do bot para copiar (ex.: 123456789)." },
+    { t: "Cole apenas o número aqui", d: "No campo acima, cole somente os números (sem @, sem espaços) e clique em Conectar Telegram." },
   ];
 
   return (
