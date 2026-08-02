@@ -313,43 +313,70 @@ export async function sendDigests(kind: DigestKind): Promise<{ sent: number; ski
   );
 
   let sent = 0, skipped = 0;
-  for (const [userId, targets] of byUser) {
+  for (const userId of byUser.keys()) {
     if (!active.has(userId)) { skipped++; continue; }
-    try {
-      const { data: last } = await supabaseAdmin
-        .from("telegram_digests")
-        .select("sent_at")
-        .eq("user_id", userId)
-        .order("sent_at", { ascending: false })
-        .limit(1)
-        .maybeSingle();
-      const since = last?.sent_at
-        ? new Date(last.sent_at)
-        : new Date(Date.now() - (kind === "weekly" ? 7 * 24 : 24) * 3600_000);
-      // evita duplicidade se o cron rodar duas vezes na mesma janela
-      if (Date.now() - since.getTime() < 60 * 60_000) { skipped++; continue; }
-
-      const built = await buildDigestForUser(userId, since);
-      if (!built) { skipped++; continue; }
-
-      for (const chatId of chatIdsFrom(targets)) {
-        await sendTelegram(chatId, built.message, true);
-        if (built.commercial) {
-          await sendTelegram(chatId, `📲 <b>Texto pronto para divulgar</b>\n\n${built.commercial}`, false);
-        }
-      }
-
-      await supabaseAdmin.from("telegram_digests").insert({
-        user_id: userId,
-        kind,
-        period_start: since.toISOString(),
-        had_news: built.hadNews,
-        summary: built.summary as never,
-      });
-      sent++;
-    } catch {
-      skipped++;
-    }
+    const r = await sendDigestToUser(userId, kind, false);
+    if (r.ok) sent++; else skipped++;
   }
   return { sent, skipped };
 }
+
+/** Envia o resumo de um único usuário. `force` ignora a janela mínima de 1h. */
+export async function sendDigestToUser(
+  userId: string,
+  kind: DigestKind = "daily",
+  force = false,
+): Promise<{ ok: boolean; reason?: string }> {
+  if (!process.env.TELEGRAM_BOT_TOKEN) return { ok: false, reason: "Telegram não configurado" };
+
+  const { data: channels } = await supabaseAdmin
+    .from("alert_channels")
+    .select("target")
+    .eq("owner_id", userId)
+    .eq("kind", "telegram")
+    .eq("enabled", true);
+  const chatIds = chatIdsFrom(channels ?? []);
+  if (!chatIds.length) return { ok: false, reason: "Nenhum Telegram cadastrado" };
+
+  try {
+    const { data: last } = await supabaseAdmin
+      .from("telegram_digests")
+      .select("sent_at")
+      .eq("user_id", userId)
+      .order("sent_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    const fallbackHours = kind === "weekly" ? 7 * 24 : 24;
+    const since = last?.sent_at
+      ? new Date(last.sent_at)
+      : new Date(Date.now() - fallbackHours * 3600_000);
+    // evita duplicidade se o cron rodar duas vezes na mesma janela
+    if (!force && Date.now() - since.getTime() < 60 * 60_000) return { ok: false, reason: "Resumo recente" };
+
+    const window = force && Date.now() - since.getTime() < 60 * 60_000
+      ? new Date(Date.now() - fallbackHours * 3600_000)
+      : since;
+
+    const built = await buildDigestForUser(userId, window);
+    if (!built) return { ok: false, reason: "Nenhum servidor cadastrado" };
+
+    for (const chatId of chatIds) {
+      await sendTelegram(chatId, built.message, true);
+      if (built.commercial) {
+        await sendTelegram(chatId, `📲 <b>Texto pronto para divulgar</b>\n\n${built.commercial}`, false);
+      }
+    }
+
+    await supabaseAdmin.from("telegram_digests").insert({
+      user_id: userId,
+      kind,
+      period_start: window.toISOString(),
+      had_news: built.hadNews,
+      summary: built.summary as never,
+    });
+    return { ok: true };
+  } catch (e: any) {
+    return { ok: false, reason: e?.message ?? "erro" };
+  }
+}
+
