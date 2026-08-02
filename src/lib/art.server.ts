@@ -17,24 +17,29 @@ async function send(chatId: string, text: string) {
   } catch { /* best-effort */ }
 }
 
-/** Envia uma mensagem para os canais Telegram do dono do servidor + admin. */
-async function notifyOwner(ownerId: string | null | undefined, message: string) {
-  if (ownerId) {
-    const { data: channels } = await supabaseAdmin
-      .from("alert_channels")
-      .select("target")
-      .eq("owner_id", ownerId)
-      .eq("kind", "telegram")
-      .eq("enabled", true);
-    for (const ch of channels ?? []) {
-      const raw = String(ch.target ?? "").trim();
-      const chatId = raw.includes(":") ? raw.split(":").slice(-1)[0]! : raw;
-      await send(chatId, message);
-    }
-  }
+/**
+ * MODO TESTE: por enquanto as artes só são enviadas para o Telegram do admin.
+ * Para voltar a avisar os revendedores, reative o bloco comentado abaixo.
+ */
+async function notifyOwner(_ownerId: string | null | undefined, message: string) {
+  // TODO(reativar): envio para os canais Telegram do revendedor dono do servidor.
+  // if (_ownerId) {
+  //   const { data: channels } = await supabaseAdmin
+  //     .from("alert_channels")
+  //     .select("target")
+  //     .eq("owner_id", _ownerId)
+  //     .eq("kind", "telegram")
+  //     .eq("enabled", true);
+  //   for (const ch of channels ?? []) {
+  //     const raw = String(ch.target ?? "").trim();
+  //     const chatId = raw.includes(":") ? raw.split(":").slice(-1)[0]! : raw;
+  //     await send(chatId, message);
+  //   }
+  // }
   const adminChat = process.env.ADMIN_TELEGRAM_CHAT_ID;
   if (adminChat) await send(adminChat, message);
 }
+
 
 /** Avisa o dono do servidor (canais Telegram dele) + o admin que há nova arte. */
 export async function notifyNewArt(serverId: string, serverName: string, total: number) {
