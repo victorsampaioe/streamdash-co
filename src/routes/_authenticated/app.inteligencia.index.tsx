@@ -7,7 +7,6 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Skeleton } from "@/components/ui/skeleton";
 import { Brain, Search, Star, Server, Film, Tv } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/app/inteligencia/")({
@@ -100,7 +99,7 @@ function ContentIntelligence() {
       ) : isLoading ? (
         <div className="grid gap-4 grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 xl:grid-cols-6">
           {Array.from({ length: 12 }).map((_, i) => (
-            <Skeleton key={i} className="aspect-[2/3] w-full rounded-lg" />
+            <div key={i} className="aspect-[2/3] w-full rounded-lg bg-muted animate-pulse" />
           ))}
         </div>
       ) : (
