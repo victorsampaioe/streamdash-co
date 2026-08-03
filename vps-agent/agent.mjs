@@ -1,16 +1,22 @@
 #!/usr/bin/env node
 /**
- * Stream Monitor — Agente Regional (VPS)
- * Executa verificações completas (DNS, HTTP/HTTPS, latência, SSL, Player API,
- * Login Xtream e Streams de amostra) e envia assinado por HMAC-SHA256.
+ * Stream Monitor — Agente Regional (VPS) — Modo Inteligente
+ *
+ * Executa verificações (DNS, HTTP/HTTPS, latência, SSL, Player API, Login e
+ * Streams de amostra) e envia assinado por HMAC-SHA256, porém sem inundar o
+ * banco: quando o alvo está estável, envia apenas um heartbeat agregado; os
+ * detalhes completos só são gravados quando algo muda ou falha.
  *
  * Config por variáveis de ambiente (ver /etc/streammonitor-agent.env):
- *   SM_BASE_URL     ex: https://streammonitor.site
- *   SM_AGENT_ID     uuid do agente
- *   SM_AGENT_SECRET segredo HMAC do agente
- *   SM_REGION       ex: br-sp-vps
- *   SM_INTERVAL     segundos entre rodadas (padrão 30)
- *   SM_CONCURRENCY  verificações simultâneas (padrão 8)
+ *   SM_BASE_URL       ex: https://streammonitor.site
+ *   SM_AGENT_ID       uuid do agente
+ *   SM_AGENT_SECRET   segredo HMAC do agente
+ *   SM_REGION         ex: br-sp-vps
+ *   SM_INTERVAL       segundos entre rodadas (padrão 30)
+ *   SM_CONCURRENCY    verificações simultâneas (padrão 8)
+ *   SM_HEARTBEAT_MIN  minutos entre heartbeats quando estável (padrão 10)
+ *   SM_DEEP_EVERY     ciclos entre testes profundos quando estável (padrão 20)
+ *   SM_LATENCY_FACTOR multiplicador da média para considerar latência anormal (padrão 2.5)
  */
 import { createHmac } from "node:crypto";
 import dns from "node:dns/promises";
@@ -22,6 +28,9 @@ const SECRET = process.env.SM_AGENT_SECRET;
 const REGION = process.env.SM_REGION || "br-sp-vps";
 const INTERVAL = Number(process.env.SM_INTERVAL || 30) * 1000;
 const CONCURRENCY = Number(process.env.SM_CONCURRENCY || 8);
+const HEARTBEAT_MS = Number(process.env.SM_HEARTBEAT_MIN || 10) * 60 * 1000;
+const DEEP_EVERY = Number(process.env.SM_DEEP_EVERY || 20);
+const LATENCY_FACTOR = Number(process.env.SM_LATENCY_FACTOR || 2.5);
 const TIMEOUT = 12000;
 
 if (!AGENT_ID || !SECRET) {
@@ -31,6 +40,9 @@ if (!AGENT_ID || !SECRET) {
 
 const sign = (msg) => createHmac("sha256", SECRET).update(msg).digest("hex");
 const log = (...a) => console.log(new Date().toISOString(), ...a);
+
+/** Estado local por alvo: evita gravações desnecessárias no banco. */
+const state = new Map(); // server_id -> { status, avg, sentAt, cycles, samples }
 
 async function withTimeout(fn, ms = TIMEOUT) {
   const ctrl = new AbortController();
@@ -87,7 +99,7 @@ async function checkHttp(host, port) {
   const t0 = Date.now();
   try {
     const res = await withTimeout((signal) =>
-      fetch(url, { method: "GET", redirect: "manual", signal, headers: { "user-agent": "StreamMonitorAgent/1.0" } }));
+      fetch(url, { method: "GET", redirect: "manual", signal, headers: { "user-agent": "StreamMonitorAgent/2.0" } }));
     return { ok: res.status < 500, status: res.status, ms: Date.now() - t0 };
   } catch (e) {
     return { ok: false, status: null, ms: Date.now() - t0, error: e.name === "AbortError" ? "TIMEOUT" : (e.cause?.code || e.message) };
@@ -139,25 +151,70 @@ async function checkSampleStream(host, port, iptv) {
 async function checkTarget(t) {
   const host = hostOnly(t.host);
   const port = portOf(t.host);
+  const st = state.get(t.server_id) || { status: null, avg: null, sentAt: 0, cycles: 0, samples: 0 };
+  st.cycles++;
+
   const [dnsR, httpR] = await Promise.all([checkDns(host), checkHttp(host, port)]);
-  const ssl = await checkSsl(host).catch(() => null);
-  const api = await checkPlayerApi(host, port, t.iptv);
-  const streams = api?.login ? await checkSampleStream(host, port, t.iptv) : null;
+
+  // Testes profundos: sempre quando há suspeita de problema; quando estável,
+  // apenas a cada SM_DEEP_EVERY ciclos (economiza banda, CPU e banco).
+  const suspicious = !dnsR.ok || !httpR.ok || st.status !== "up";
+  const deep = suspicious || st.cycles % DEEP_EVERY === 0;
+
+  const ssl = deep ? await checkSsl(host).catch(() => null) : null;
+  const api = deep ? await checkPlayerApi(host, port, t.iptv) : null;
+  const streams = deep && api?.login ? await checkSampleStream(host, port, t.iptv) : null;
 
   let status = "up";
   if (!dnsR.ok || !httpR.ok) status = "down";
   else if ((api && api.ok === false) || (streams && streams.tested > 0 && streams.ok === 0)) status = "degraded";
   else if (httpR.ms > 4000) status = "degraded";
 
+  // Latência anormal em relação à média móvel do próprio alvo.
+  const latency = httpR.ms ?? null;
+  const abnormal =
+    latency != null && st.avg != null && st.samples >= 5 &&
+    latency > Math.max(st.avg * LATENCY_FACTOR, st.avg + 300);
+
+  if (latency != null) {
+    st.avg = st.avg == null ? latency : st.avg * 0.8 + latency * 0.2;
+    st.samples++;
+  }
+
+  const changed = st.status !== null && st.status !== status;
+  const firstSeen = st.status === null;
+  const problem = status !== "up";
+  const errored = Boolean(httpR.error || dnsR.error);
+  const failedTest = Boolean((api && api.ok === false) || (streams && streams.tested > 0 && streams.ok === 0));
+  const heartbeatDue = Date.now() - st.sentAt >= HEARTBEAT_MS;
+
+  const detailed = changed || firstSeen || problem || errored || abnormal || failedTest;
+  const shouldSend = detailed || heartbeatDue;
+
+  st.status = status;
+  state.set(t.server_id, st);
+
+  if (!shouldSend) return null;
+  st.sentAt = Date.now();
+
+  const reasonTags = [
+    changed && "status_change", firstSeen && "first_seen", problem && "problem",
+    errored && "error", abnormal && "latency_spike", failedTest && "test_failed",
+  ].filter(Boolean);
+
   return {
     server_id: t.server_id,
     region_code: REGION,
     status,
     http_status: httpR.status ?? null,
-    latency_ms: httpR.ms ?? null,
+    latency_ms: latency,
     error: httpR.error || dnsR.error || null,
     source: "vps",
-    details: { dns: dnsR, http: httpR, ssl, player_api: api, streams },
+    details: detailed
+      ? { mode: "full", reason: reasonTags, avg_latency_ms: st.avg ? Math.round(st.avg) : null,
+          dns: dnsR, http: httpR, ssl, player_api: api, streams }
+      : { mode: "heartbeat", avg_latency_ms: st.avg ? Math.round(st.avg) : null,
+          cycles: st.cycles, http_status: httpR.status ?? null },
   };
 }
 
@@ -167,7 +224,10 @@ async function runPool(items, worker, size) {
   await Promise.all(Array.from({ length: Math.min(size, items.length) }, async () => {
     while (i < items.length) {
       const idx = i++;
-      try { out.push(await worker(items[idx])); } catch (e) { log("erro alvo:", e.message); }
+      try {
+        const r = await worker(items[idx]);
+        if (r) out.push(r);
+      } catch (e) { log("erro alvo:", e.message); }
     }
   }));
   return out;
@@ -195,12 +255,12 @@ async function cycle() {
   const targets = await fetchTargets();
   if (!targets.length) return log("nenhum alvo ativo");
   const reports = await runPool(targets, checkTarget, CONCURRENCY);
-  await report(reports);
-  log(`ciclo ok: ${reports.length} alvos em ${((Date.now() - t0) / 1000).toFixed(1)}s`);
+  if (reports.length) await report(reports);
+  log(`ciclo ok: ${targets.length} alvos verificados, ${reports.length} enviados em ${((Date.now() - t0) / 1000).toFixed(1)}s`);
 }
 
 async function main() {
-  log(`Agente Stream Monitor iniciado — região ${REGION} → ${BASE}`);
+  log(`Agente Stream Monitor (modo inteligente) — região ${REGION} → ${BASE}`);
   for (;;) {
     try { await cycle(); } catch (e) { log("erro no ciclo:", e.message); }
     await new Promise((r) => setTimeout(r, INTERVAL));

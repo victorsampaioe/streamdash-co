@@ -220,6 +220,7 @@ export type Database = {
           day: string
           degraded: number
           downs: number
+          incidents: number
           max_latency_ms: number | null
           server_id: string
           total: number
@@ -232,6 +233,7 @@ export type Database = {
           day: string
           degraded?: number
           downs?: number
+          incidents?: number
           max_latency_ms?: number | null
           server_id: string
           total?: number
@@ -244,6 +246,7 @@ export type Database = {
           day?: string
           degraded?: number
           downs?: number
+          incidents?: number
           max_latency_ms?: number | null
           server_id?: string
           total?: number
@@ -266,6 +269,7 @@ export type Database = {
           created_at: string
           degraded: number
           downs: number
+          first_detector_region: string | null
           hour: string
           max_latency_ms: number | null
           min_latency_ms: number | null
@@ -279,6 +283,7 @@ export type Database = {
           created_at?: string
           degraded?: number
           downs?: number
+          first_detector_region?: string | null
           hour: string
           max_latency_ms?: number | null
           min_latency_ms?: number | null
@@ -292,6 +297,7 @@ export type Database = {
           created_at?: string
           degraded?: number
           downs?: number
+          first_detector_region?: string | null
           hour?: string
           max_latency_ms?: number | null
           min_latency_ms?: number | null
@@ -2264,6 +2270,56 @@ export type Database = {
           },
         ]
       }
+      region_checks_daily: {
+        Row: {
+          avg_latency_ms: number | null
+          created_at: string
+          day: string
+          downs: number
+          downtime_minutes: number
+          max_latency_ms: number | null
+          region_code: string
+          server_id: string
+          total: number
+          ups: number
+          uptime_pct: number | null
+        }
+        Insert: {
+          avg_latency_ms?: number | null
+          created_at?: string
+          day: string
+          downs?: number
+          downtime_minutes?: number
+          max_latency_ms?: number | null
+          region_code: string
+          server_id: string
+          total?: number
+          ups?: number
+          uptime_pct?: number | null
+        }
+        Update: {
+          avg_latency_ms?: number | null
+          created_at?: string
+          day?: string
+          downs?: number
+          downtime_minutes?: number
+          max_latency_ms?: number | null
+          region_code?: string
+          server_id?: string
+          total?: number
+          ups?: number
+          uptime_pct?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "region_checks_daily_server_id_fkey"
+            columns: ["server_id"]
+            isOneToOne: false
+            referencedRelation: "servers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       region_checks_hourly: {
         Row: {
           avg_latency_ms: number | null
@@ -2907,6 +2963,10 @@ export type Database = {
           ups: number
         }[]
       }
+      get_region_verdict: {
+        Args: { _server_id: string; _window_minutes?: number }
+        Returns: Json
+      }
       get_reseller_page: { Args: { _slug: string }; Returns: Json }
       get_stability_ranking: {
         Args: { _limit?: number }
@@ -3055,6 +3115,7 @@ export type Database = {
         Returns: string
       }
       rollup_metrics: { Args: { _hours?: number }; Returns: Json }
+      rollup_regional: { Args: { _hours?: number }; Returns: Json }
       subscription_is_active: { Args: { _user_id: string }; Returns: boolean }
     }
     Enums: {
