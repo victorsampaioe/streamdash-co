@@ -21,7 +21,7 @@ export function StatusLabel({ status }: { status: string }) {
   const map: Record<string, { label: string; cls: string }> = {
     up: { label: "Online", cls: "text-success" },
     down: { label: "Offline", cls: "text-destructive" },
-    degraded: { label: "Degradado", cls: "text-warning" },
+    degraded: { label: "Instabilidade detectada", cls: "text-warning" },
     unknown: { label: "Aguardando", cls: "text-muted-foreground" },
   };
   const it = map[status] ?? map.unknown;
