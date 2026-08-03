@@ -15,5 +15,19 @@ export default defineConfig({
   },
   vite: {
     plugins: [mcpPlugin()],
+    build: {
+      // Nunca publicar sourcemaps: evita expor o código-fonte original no navegador
+      sourcemap: false,
+      minify: "esbuild",
+      cssMinify: true,
+      // Não emitir o relatório de tamanho/nomes de módulos
+      reportCompressedSize: false,
+    },
+    esbuild: {
+      // Remove comentários internos (inclusive licenças/notas de dev) do bundle
+      legalComments: "none",
+      // Remove logs e breakpoints de desenvolvimento apenas em produção
+      drop: process.env.NODE_ENV === "production" ? ["console", "debugger"] : [],
+    },
   },
 });
