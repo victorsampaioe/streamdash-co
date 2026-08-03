@@ -2829,6 +2829,23 @@ export type Database = {
         }[]
       }
       iptv_novelties: { Args: { _hours?: number }; Returns: Json }
+      iptv_recent_titles: {
+        Args: {
+          _kind?: string
+          _limit?: number
+          _offset?: number
+          _order?: string
+        }
+        Returns: {
+          first_seen_at: string
+          first_server: string
+          kind: string
+          mine_has: boolean
+          server_count: number
+          title: string
+          title_key: string
+        }[]
+      }
       iptv_server_comparison: {
         Args: { _limit?: number }
         Returns: {
@@ -2843,6 +2860,14 @@ export type Database = {
           series: number
           server_id: string
           synced_at: string
+        }[]
+      }
+      iptv_title_servers: {
+        Args: { _title_key: string }
+        Returns: {
+          is_mine: boolean
+          seen_at: string
+          server_name: string
         }[]
       }
       iptv_update_ranking: {

@@ -11,6 +11,8 @@ import {
   Sparkles, Film, Library, Tv, TrendingDown, Trophy, Medal, History, Gauge, Info, Search, CheckCircle2, XCircle,
 } from "lucide-react";
 import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
+import { RecentContents } from "@/components/iptv/recent-contents";
+
 
 export const Route = createFileRoute("/_authenticated/app/novidades")({
   component: NovidadesPage,
@@ -229,8 +231,9 @@ function NovidadesPage() {
         <Stat icon={<TrendingDown className="h-4 w-4" />} label="Conteúdos removidos" value={`-${num(nov?.removed ?? 0)}`} tone="destructive" />
       </div>
 
-      <Tabs defaultValue="novidades">
+      <Tabs defaultValue="recentes">
         <TabsList className="flex-wrap h-auto">
+          <TabsTrigger value="recentes">Conteúdos recentes</TabsTrigger>
           <TabsTrigger value="novidades">Novidades</TabsTrigger>
           <TabsTrigger value="ranking">Ranking de atualização</TabsTrigger>
           <TabsTrigger value="detector">Detector de filmes</TabsTrigger>
@@ -238,6 +241,12 @@ function NovidadesPage() {
           <TabsTrigger value="compare">Comparativo</TabsTrigger>
           <TabsTrigger value="history">Histórico</TabsTrigger>
         </TabsList>
+
+        {/* -------- Conteúdos recentes por servidor -------- */}
+        <TabsContent value="recentes" className="mt-4">
+          <RecentContents />
+        </TabsContent>
+
 
         {/* -------- Novidades -------- */}
         <TabsContent value="novidades" className="mt-4">
