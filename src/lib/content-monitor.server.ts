@@ -700,16 +700,18 @@ export async function runDueContentScans() {
       .map((s) => s.user_id),
   );
 
+  const eligible = servers.filter((s) => active.has(s.owner_id));
   let tested = 0, count = 0;
-  for (const s of servers) {
-    if (!active.has(s.owner_id)) continue;
+  // Até 3 servidores em paralelo, cada um com seu pool interno.
+  await runPool(eligible, 3, async (s) => {
     try {
-      const r = await runContentScan(s.id, { batch: 24 });
+      const r = await runContentScan(s.id, { batch: 60, concurrency: CONCURRENCY });
       tested += r.tested;
       count++;
     } catch { /* ignora servidor com erro */ }
-  }
+  });
   return { servers: count, tested };
+
 }
 
 // -------------------------------------------------------- resumo / score
