@@ -280,8 +280,67 @@ function streamUrl(host: string, u: string, p: string, row: any): string {
   return `${b}/movie/${u}/${p}/${row.external_content_id}.${ext}`;
 }
 
+/**
+ * HEAD rápido: descarta cedo os casos óbvios (401/403/404) sem gastar
+ * banda com o GET parcial. Retorna null quando é preciso testar de verdade.
+ */
+export async function headPrecheck(
+  url: string,
+): Promise<{ verdict: ProbeResult | null; ms: number }> {
+  const started = Date.now();
+  const ctrl = new AbortController();
+  const t = setTimeout(() => ctrl.abort(), HEAD_TIMEOUT_MS);
+  try {
+    const res = await fetch(url, {
+      method: "HEAD",
+      redirect: "follow",
+      headers: { "user-agent": UA_PLAYER, accept: "*/*" },
+      signal: ctrl.signal,
+    });
+    const ms = Date.now() - started;
+    if (res.status === 401 || res.status === 403) {
+      return { verdict: fail("blocked", res.status, started, `HTTP ${res.status}`), ms };
+    }
+    if (res.status === 404 || res.status === 410) {
+      return { verdict: fail("removed", res.status, started, `HTTP ${res.status}`), ms };
+    }
+    return { verdict: null, ms };
+  } catch {
+    // HEAD falhou/não suportado: segue para o teste completo.
+    return { verdict: null, ms: Date.now() - started };
+  } finally {
+    clearTimeout(t);
+  }
+}
+
+/** Executa `worker` sobre `items` com pool de concorrência fixa (rolling). */
+export async function runPool<T, R>(
+  items: T[],
+  limit: number,
+  worker: (item: T, index: number) => Promise<R>,
+): Promise<R[]> {
+  const out = new Array<R>(items.length);
+  let cursor = 0;
+  const size = Math.max(1, Math.min(limit, items.length));
+  await Promise.all(
+    Array.from({ length: size }, async () => {
+      for (;;) {
+        const i = cursor++;
+        if (i >= items.length) return;
+        out[i] = await worker(items[i], i);
+      }
+    }),
+  );
+  return out;
+}
+
 /** GET parcial com timeout e limite de bytes. Nunca baixa o conteúdo inteiro. */
-export async function probeContentUrl(url: string): Promise<ProbeResult> {
+export async function probeContentUrl(url: string, opts: { head?: boolean } = {}): Promise<ProbeResult> {
+  if (opts.head) {
+    const pre = await headPrecheck(url);
+    if (pre.verdict) return pre.verdict;
+  }
+
   const started = Date.now();
   const ctrl = new AbortController();
   const hard = setTimeout(() => ctrl.abort(), TOTAL_TIMEOUT_MS);
