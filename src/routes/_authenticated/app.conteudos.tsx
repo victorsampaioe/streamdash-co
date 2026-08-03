@@ -211,9 +211,21 @@ function ContentMonitorPage() {
               ))}
             </SelectContent>
           </Select>
+          <Select value={concurrency} onValueChange={setConcurrency}>
+            <SelectTrigger className="w-[150px]"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              {["8", "20", "35", "50"].map((n) => (
+                <SelectItem key={n} value={n}>{n} em paralelo</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
           <Button variant="outline" disabled={!!busy || !effectiveServer} onClick={() => run("import")}>
             <DownloadCloud className="mr-2 h-4 w-4" />
             {busy === "import" ? "Importando..." : "Importar catálogo"}
+          </Button>
+          <Button variant="secondary" disabled={!!busy || !effectiveServer} onClick={() => run("turbo")}>
+            <Zap className="mr-2 h-4 w-4" />
+            {busy === "turbo" ? "Turbo..." : "Verificação Turbo"}
           </Button>
           <Button disabled={!!busy || !effectiveServer} onClick={() => run("scan")}>
             <Activity className="mr-2 h-4 w-4" />
@@ -221,6 +233,24 @@ function ContentMonitorPage() {
           </Button>
         </div>
       </header>
+
+      {turbo && (
+        <Card className="p-4">
+          <p className="flex items-center gap-2 text-sm font-semibold">
+            <Zap className="h-4 w-4 text-primary" /> Verificação Turbo — {(turbo.elapsedMs / 1000).toFixed(1)}s
+          </p>
+          <div className="mt-3 grid gap-3 text-sm sm:grid-cols-4">
+            <div><p className="text-xs text-muted-foreground">Player API</p><p>{turbo.apiOk ? `🟢 ok · ${turbo.apiMs} ms` : "🔴 falhou"}</p></div>
+            <div><p className="text-xs text-muted-foreground">Catálogo</p><p>{Number(turbo.catalog).toLocaleString("pt-BR")} itens</p></div>
+            <div><p className="text-xs text-muted-foreground">Amostra testada</p><p>{turbo.sample} · {turbo.failed} falhas</p></div>
+            <div><p className="text-xs text-muted-foreground">Sincronizado</p><p>{turbo.catalogSyncedAt ? new Date(turbo.catalogSyncedAt).toLocaleString("pt-BR") : "—"}</p></div>
+          </div>
+          {turbo.generalFailure && (
+            <p className="mt-2 text-sm text-red-400">🚨 Muitas falhas na amostra — provável problema geral do servidor.</p>
+          )}
+        </Card>
+      )}
+
 
       <Tabs defaultValue="dashboard">
         <TabsList>
