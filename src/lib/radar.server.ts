@@ -112,6 +112,28 @@ async function getLatencyByRegion() {
     map.set(c.region_code, m);
   }
 
+  // O resumo horário só é gerado pelo cron de agregação; as verificações da
+  // última hora ainda não estão lá. Sem esse complemento, regiões novas (ou
+  // recém-ativadas) aparecem como "sem dados". Aqui somamos as verificações
+  // brutas recentes ao que já foi agregado.
+  const rawSince = new Date(Date.now() - 3 * 60 * 60 * 1000).toISOString();
+  const { data: raw } = await supabaseAdmin
+    .from("region_checks")
+    .select("region_code,status,latency_ms")
+    .gte("checked_at", rawSince)
+    .limit(5000);
+  for (const c of raw ?? []) {
+    const m = map.get(c.region_code) ?? { total: 0, ups: 0, latencySum: 0, latencyCount: 0 };
+    m.total += 1;
+    if (c.status === "up") m.ups += 1;
+    if (typeof c.latency_ms === "number") {
+      m.latencySum += c.latency_ms;
+      m.latencyCount += 1;
+    }
+    map.set(c.region_code, m);
+  }
+
+
   return (regions ?? []).map((r) => {
     const m = map.get(r.code);
     return {
