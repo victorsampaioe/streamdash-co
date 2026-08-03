@@ -1,10 +1,11 @@
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
+import { WORLD_MASK, WORLD_COLS, WORLD_ROWS_TOTAL, WORLD_ROW_OFFSET } from "./world-mask";
 
 type Region = {
   code: string;
@@ -28,6 +29,32 @@ type RegionCheck = {
   source?: string | null;
 };
 
+type MatrixRow = {
+  region_code: string;
+  region_name: string;
+  city: string;
+  country: string;
+  flag: string;
+  status: string;
+  latency_ms: number | null;
+  http_status: number | null;
+  error: string | null;
+  details: Record<string, any> | null;
+  source: string | null;
+  checked_at: string | null;
+};
+
+type StatRow = {
+  region_code: string;
+  total: number;
+  ups: number;
+  downs: number;
+  min_ms: number | null;
+  max_ms: number | null;
+  avg_ms: number | null;
+  p95_ms: number | null;
+};
+
 type Verdict = {
   verdict: "up" | "investigating" | "possible_down" | "down" | "nodata";
   total: number;
@@ -42,13 +69,13 @@ type Verdict = {
   }[];
 };
 
-const statusColor: Record<string, string> = {
-  up: "fill-success",
-  degraded: "fill-warning",
-  down: "fill-destructive",
-  testing: "fill-primary",
-  unknown: "fill-muted-foreground",
-  nodata: "fill-muted-foreground/40",
+const STATUS_HEX: Record<string, string> = {
+  up: "hsl(142 72% 45%)",
+  degraded: "hsl(38 92% 55%)",
+  down: "hsl(0 84% 60%)",
+  testing: "hsl(199 89% 55%)",
+  unknown: "hsl(215 16% 55%)",
+  nodata: "hsl(215 16% 40%)",
 };
 
 const dotBg: Record<string, string> = {
@@ -107,13 +134,16 @@ function connectionHealth(avg: number | null): { emoji: string; label: string; c
   return { emoji: "🔴", label: "Crítica", cls: "text-destructive" };
 }
 
+// ---------- Projeção equirretangular (mesma da máscara de terra) ----------
+const MAP_W = WORLD_COLS * 10;                      // 1320
+const MAP_H = WORLD_ROWS_TOTAL * 10;                // 660
+const VIEW_Y = WORLD_ROW_OFFSET * 10;               // corte superior
+const VIEW_H = WORLD_MASK.length * 10;              // altura visível
+const projX = (lon: number) => ((lon + 180) / 360) * MAP_W;
+const projY = (lat: number) => ((90 - lat) / 180) * MAP_H;
+
 export function GlobalCheckMap({ serverId }: { serverId: string }) {
-  const [tick, setTick] = useState(0);
   const [openRegion, setOpenRegion] = useState<string | null>(null);
-  useEffect(() => {
-    const t = setInterval(() => setTick((x) => x + 1), 5000);
-    return () => clearInterval(t);
-  }, []);
 
   const { data: regions = [] } = useQuery<Region[]>({
     queryKey: ["check_regions"],
@@ -134,71 +164,71 @@ export function GlobalCheckMap({ serverId }: { serverId: string }) {
     },
   });
 
-  const { data: checks = [], refetch } = useQuery<RegionCheck[]>({
-    queryKey: ["region_checks_series", serverId],
-    staleTime: 30_000,
-    refetchOnWindowFocus: false,
+  // Última checagem por região (RPC segura: funciona para o dono e para o admin)
+  const { data: matrix = [] } = useQuery<MatrixRow[]>({
+    queryKey: ["region_matrix", serverId],
+    refetchInterval: 30_000,
     queryFn: async () => {
-      const { data } = await supabase
-        .from("region_checks")
-        .select("region_code,status,latency_ms,http_status,error,checked_at,details,source")
-        .eq("server_id", serverId)
-        .order("checked_at", { ascending: false })
-        .limit(240);
+      const { data } = await (supabase as any).rpc("get_region_matrix", {
+        _server_id: serverId,
+        _window_minutes: 25,
+      });
+      return (data as MatrixRow[]) ?? [];
+    },
+  });
+
+  // Histórico recente para as barrinhas e o modal de detalhes
+  const { data: series = [] } = useQuery<RegionCheck[]>({
+    queryKey: ["region_series", serverId],
+    refetchInterval: 60_000,
+    queryFn: async () => {
+      const { data } = await (supabase as any).rpc("get_region_series", {
+        _server_id: serverId,
+        _minutes: 240,
+        _limit: 900,
+      });
       return (data as RegionCheck[]) ?? [];
     },
   });
 
-
-  // Realtime: refetch com throttle (evita uma consulta por inserção)
-  useEffect(() => {
-    let pending = false;
-    const ch = supabase
-      .channel(`region_checks_${serverId}`)
-      .on(
-        "postgres_changes",
-        { event: "INSERT", schema: "public", table: "region_checks", filter: `server_id=eq.${serverId}` },
-        () => {
-          if (pending) return;
-          pending = true;
-          setTimeout(() => { pending = false; void refetch(); }, 15_000);
-        },
-      )
-      .subscribe();
-    return () => { supabase.removeChannel(ch); };
-  }, [serverId, refetch]);
-
-
-  // Global worker heartbeat
   const { data: workers = [] } = useQuery<{ region_code: string; last_report_at: string | null; checks_60s: number }[]>({
     queryKey: ["workers_health"],
     queryFn: async () => (await supabase.rpc("get_workers_health")).data ?? [],
-    refetchInterval: 15_000,
+    refetchInterval: 30_000,
   });
 
   const byRegion = useMemo(() => {
     const m = new Map<string, RegionCheck[]>();
-    for (const c of checks) {
+    for (const c of series) {
       const arr = m.get(c.region_code) ?? [];
       arr.push(c);
       m.set(c.region_code, arr);
     }
     return m;
-  }, [checks]);
+  }, [series]);
 
   const latestByRegion = useMemo(() => {
     const m = new Map<string, RegionCheck>();
-    for (const [code, arr] of byRegion) m.set(code, arr[0]);
+    for (const r of matrix) {
+      if (!r.checked_at) continue;
+      m.set(r.region_code, {
+        region_code: r.region_code,
+        status: r.status,
+        latency_ms: r.latency_ms,
+        http_status: r.http_status,
+        error: r.error,
+        checked_at: r.checked_at,
+        details: r.details,
+        source: r.source,
+      });
+    }
     return m;
-  }, [byRegion]);
+  }, [matrix]);
 
-  // Compute effective status for a region using both latest sample age and worker heartbeat.
   function effectiveStatus(code: string): { status: string; latest?: RegionCheck } {
     const latest = latestByRegion.get(code);
     if (!latest) return { status: "nodata" };
-    // Amostra antiga (mais de 20 min) é tratada como sem dados. O agente
-    // inteligente envia heartbeat a cada ~10 min quando tudo está estável.
-    if (Date.now() - new Date(latest.checked_at).getTime() > 20 * 60_000) return { status: "nodata", latest };
+    if (Date.now() - new Date(latest.checked_at).getTime() > 25 * 60_000) return { status: "nodata", latest };
     return { status: latest.status, latest };
   }
 
@@ -215,6 +245,9 @@ export function GlobalCheckMap({ serverId }: { serverId: string }) {
   const vui = VERDICT_UI[v?.verdict ?? "nodata"];
   const health = connectionHealth(v?.avg_latency_ms ?? null);
   const selected = openRegion ? regions.find((r) => r.code === openRegion) ?? null : null;
+
+  // Ponto âncora das linhas (origem do servidor) — usa "origin" se existir.
+  const anchor = regions.find((r) => r.code === "origin") ?? nonOrigin[0] ?? null;
 
   return (
     <div className="space-y-4">
@@ -280,61 +313,17 @@ export function GlobalCheckMap({ serverId }: { serverId: string }) {
         </Card>
       )}
 
-
       <div className="grid lg:grid-cols-[1fr_360px] gap-4">
-        <Card className="p-4">
-          <div className="relative w-full aspect-[2/1] rounded-md overflow-hidden bg-muted/20 border border-border/50">
-            <svg viewBox="0 0 800 400" className="absolute inset-0 w-full h-full">
-              <defs>
-                <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
-                  <path d="M 40 0 L 0 0 0 40" fill="none" className="stroke-border/40" strokeWidth="0.5" />
-                </pattern>
-              </defs>
-              <rect width="800" height="400" fill="url(#grid)" />
-              <g className="fill-muted/40">
-                <ellipse cx="200" cy="180" rx="90" ry="70" />
-                <ellipse cx="230" cy="290" rx="55" ry="90" />
-                <ellipse cx="420" cy="170" rx="80" ry="55" />
-                <ellipse cx="470" cy="260" rx="55" ry="65" />
-                <ellipse cx="600" cy="180" rx="120" ry="70" />
-                <ellipse cx="680" cy="290" rx="60" ry="45" />
-              </g>
-              {nonOrigin.map((r) => {
-                const x = ((r.longitude + 180) / 360) * 800;
-                const y = ((90 - r.latitude) / 180) * 400;
-                const { status: s, latest } = effectiveStatus(r.code);
-                const colorClass = statusColor[s] ?? statusColor.nodata;
-                const isDown = s === "down";
-                return (
-                  <g
-                    key={r.code}
-                    transform={`translate(${x},${y})`}
-                    className="cursor-pointer"
-                    onClick={() => setOpenRegion(r.code)}
-                  >
-                    {(s === "up" || isDown) && (
-                      <circle
-                        r={isDown ? 18 : 14}
-                        className={cn(isDown ? "fill-destructive/25" : "fill-success/20", "animate-ping")}
-                      />
-                    )}
-                    <circle r={isDown ? 9 : 7} className={cn(colorClass, "stroke-background")} strokeWidth={2}>
-                      <title>
-                        {r.flag} {r.city} — {statusLabel(s)}
-                        {latest?.latency_ms != null ? ` · ${latest.latency_ms}ms` : ""}
-                        {latest ? ` · ${humanAgo(latest.checked_at)}` : ""}
-                        {latest?.error ? ` · ${latest.error}` : ""}
-                      </title>
-                    </circle>
-                    <text y="-14" textAnchor="middle" className="fill-foreground text-[10px] font-medium">
-                      {r.flag} {r.city}
-                    </text>
-                  </g>
-                );
-              })}
-            </svg>
-          </div>
-          <p className="mt-2 text-[11px] text-muted-foreground">Clique em um ponto para ver DNS, HTTP, SSL, Player API e streams.</p>
+        <Card className="p-0 overflow-hidden">
+          <WorldMap
+            regions={nonOrigin}
+            anchor={anchor}
+            effectiveStatus={effectiveStatus}
+            onSelect={setOpenRegion}
+          />
+          <p className="px-4 py-2 text-[11px] text-muted-foreground border-t border-border/50">
+            Clique em um ponto para ver DNS, HTTP, SSL, Player API e streams.
+          </p>
         </Card>
 
         <Card className="p-4">
@@ -342,16 +331,16 @@ export function GlobalCheckMap({ serverId }: { serverId: string }) {
           <ul className="space-y-2">
             {regions.map((r) => {
               const { status: s, latest } = effectiveStatus(r.code);
-              const series = (byRegion.get(r.code) ?? []).slice(0, 40).reverse();
+              const hist = (byRegion.get(r.code) ?? []).slice(0, 40).reverse();
               return (
                 <li
                   key={r.code}
                   onClick={() => setOpenRegion(r.code)}
                   className="rounded-md border border-border/50 px-3 py-2 space-y-1.5 cursor-pointer hover:bg-muted/40 transition"
                 >
-                  <div className="flex items-center justify-between gap-2">
+                  <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-2">
                     <div className="flex items-center gap-2 min-w-0">
-                      <span className="text-lg leading-none">{r.flag}</span>
+                      <span className="text-lg leading-none shrink-0">{r.flag}</span>
                       <div className="min-w-0">
                         <div className="text-sm font-medium truncate">{r.city}</div>
                         <div className="text-[11px] text-muted-foreground truncate">
@@ -367,10 +356,10 @@ export function GlobalCheckMap({ serverId }: { serverId: string }) {
                       <span className="text-xs font-medium w-16 text-right">{statusLabel(s)}</span>
                     </div>
                   </div>
-                  {series.length > 0 && (
+                  {hist.length > 0 && (
                     <div className="flex gap-0.5 h-4">
                       {Array.from({ length: 40 }, (_, i) => {
-                        const c = series[series.length - 40 + i] ?? null;
+                        const c = hist[hist.length - 40 + i] ?? null;
                         const cls = !c
                           ? "bg-muted/30"
                           : c.status === "up" ? "bg-success/80"
@@ -401,10 +390,11 @@ export function GlobalCheckMap({ serverId }: { serverId: string }) {
         </Card>
       </div>
 
-      <RegionStats serverId={serverId} regions={nonOrigin} byRegion={byRegion} tickKey={tick} />
+      <RegionStats serverId={serverId} regions={regions} />
 
       <RegionDetailDialog
         region={selected}
+        latest={selected ? latestByRegion.get(selected.code) : undefined}
         history={selected ? byRegion.get(selected.code) ?? [] : []}
         onClose={() => setOpenRegion(null)}
       />
@@ -412,36 +402,146 @@ export function GlobalCheckMap({ serverId }: { serverId: string }) {
   );
 }
 
+/** Mapa-múndi em matriz de pontos com halos, arcos e pulsos por status. */
+function WorldMap({
+  regions,
+  anchor,
+  effectiveStatus,
+  onSelect,
+}: {
+  regions: Region[];
+  anchor: Region | null;
+  effectiveStatus: (code: string) => { status: string; latest?: RegionCheck };
+  onSelect: (code: string) => void;
+}) {
+  const dots = useMemo(() => {
+    const out: { x: number; y: number }[] = [];
+    WORLD_MASK.forEach((row, ri) => {
+      const y = (ri + WORLD_ROW_OFFSET) * 10 + 5;
+      for (let ci = 0; ci < row.length; ci++) {
+        if (row[ci] === "1") out.push({ x: ci * 10 + 5, y });
+      }
+    });
+    return out;
+  }, []);
+
+  return (
+    <div className="relative w-full aspect-[2.44/1] bg-[radial-gradient(120%_120%_at_50%_0%,hsl(var(--primary)/0.10),transparent_60%)]">
+      <svg viewBox={`0 ${VIEW_Y} ${MAP_W} ${VIEW_H}`} className="absolute inset-0 h-full w-full">
+        <defs>
+          <radialGradient id="gm-glow-up" cx="50%" cy="50%">
+            <stop offset="0%" stopColor={STATUS_HEX.up} stopOpacity="0.55" />
+            <stop offset="100%" stopColor={STATUS_HEX.up} stopOpacity="0" />
+          </radialGradient>
+          <radialGradient id="gm-glow-down" cx="50%" cy="50%">
+            <stop offset="0%" stopColor={STATUS_HEX.down} stopOpacity="0.6" />
+            <stop offset="100%" stopColor={STATUS_HEX.down} stopOpacity="0" />
+          </radialGradient>
+          <radialGradient id="gm-glow-degraded" cx="50%" cy="50%">
+            <stop offset="0%" stopColor={STATUS_HEX.degraded} stopOpacity="0.5" />
+            <stop offset="100%" stopColor={STATUS_HEX.degraded} stopOpacity="0" />
+          </radialGradient>
+          <linearGradient id="gm-arc" x1="0" y1="0" x2="1" y2="0">
+            <stop offset="0%" stopColor="hsl(var(--primary))" stopOpacity="0.05" />
+            <stop offset="50%" stopColor="hsl(var(--primary))" stopOpacity="0.45" />
+            <stop offset="100%" stopColor="hsl(var(--primary))" stopOpacity="0.05" />
+          </linearGradient>
+        </defs>
+
+        {/* continentes em matriz de pontos */}
+        <g className="fill-foreground/25">
+          {dots.map((d, i) => (
+            <circle key={i} cx={d.x} cy={d.y} r={3.1} />
+          ))}
+        </g>
+
+        {/* arcos ligando a origem às regiões */}
+        {anchor && regions.map((r) => {
+          const x1 = projX(anchor.longitude), y1 = projY(anchor.latitude);
+          const x2 = projX(r.longitude), y2 = projY(r.latitude);
+          const mx = (x1 + x2) / 2;
+          const my = (y1 + y2) / 2 - Math.abs(x2 - x1) * 0.22 - 30;
+          return (
+            <path
+              key={`arc-${r.code}`}
+              d={`M ${x1} ${y1} Q ${mx} ${my} ${x2} ${y2}`}
+              fill="none"
+              stroke="url(#gm-arc)"
+              strokeWidth={2.5}
+              strokeDasharray="10 12"
+              className="animate-[dash_6s_linear_infinite]"
+            />
+          );
+        })}
+
+        {/* pontos de monitoramento */}
+        {regions.map((r) => {
+          const x = projX(r.longitude);
+          const y = projY(r.latitude);
+          const { status: s, latest } = effectiveStatus(r.code);
+          const color = STATUS_HEX[s] ?? STATUS_HEX.nodata;
+          const glow = s === "down" ? "url(#gm-glow-down)" : s === "degraded" ? "url(#gm-glow-degraded)" : s === "up" ? "url(#gm-glow-up)" : null;
+          const active = s === "up" || s === "down" || s === "degraded";
+          return (
+            <g key={r.code} transform={`translate(${x},${y})`} className="cursor-pointer" onClick={() => onSelect(r.code)}>
+              {glow && <circle r={52} fill={glow} />}
+              {active && (
+                <circle r={14} fill="none" stroke={color} strokeWidth={2} opacity={0.5} className="origin-center animate-ping" />
+              )}
+              <circle r={9} fill={color} className="stroke-background" strokeWidth={3} />
+              <circle r={3.2} fill="hsl(var(--background))" opacity={0.85} />
+              <text y={-24} textAnchor="middle" className="fill-foreground" fontSize={19} fontWeight={600}>
+                {r.city}
+              </text>
+              <text y={-6} textAnchor="middle" className="fill-muted-foreground" fontSize={16} fontFamily="monospace">
+                {latest?.latency_ms != null && s !== "nodata" ? `${latest.latency_ms}ms` : statusLabel(s)}
+              </text>
+              <title>
+                {r.flag} {r.city} — {statusLabel(s)}
+                {latest?.latency_ms != null ? ` · ${latest.latency_ms}ms` : ""}
+                {latest ? ` · ${humanAgo(latest.checked_at)}` : ""}
+                {latest?.error ? ` · ${latest.error}` : ""}
+              </title>
+            </g>
+          );
+        })}
+      </svg>
+    </div>
+  );
+}
+
 function RegionDetailDialog({
   region,
+  latest,
   history,
   onClose,
 }: {
   region: Region | null;
+  latest?: RegionCheck;
   history: RegionCheck[];
   onClose: () => void;
 }) {
-  const latest = history[0];
-  const d = (latest?.details ?? {}) as Record<string, any>;
-  const health = connectionHealth(latest?.latency_ms ?? null);
+  const current = latest ?? history[0];
+  const d = (current?.details ?? {}) as Record<string, any>;
+  const health = connectionHealth(current?.latency_ms ?? null);
 
   return (
     <Dialog open={Boolean(region)} onOpenChange={(o) => { if (!o) onClose(); }}>
       <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>
-            {region?.flag} {region?.city} — {statusLabel(latest?.status ?? "nodata")}
+            {region?.flag} {region?.city} — {statusLabel(current?.status ?? "nodata")}
           </DialogTitle>
         </DialogHeader>
-        {!latest ? (
+        {!current ? (
           <p className="text-sm text-muted-foreground">Sem verificações recentes desta região.</p>
         ) : (
           <div className="space-y-3 text-sm">
             <div className="grid grid-cols-2 gap-2">
-              <DetailRow label="Latência" value={latest.latency_ms != null ? `${latest.latency_ms}ms` : "—"} />
+              <DetailRow label="Latência" value={current.latency_ms != null ? `${current.latency_ms}ms` : "—"} />
               <DetailRow label="Saúde da conexão" value={`${health.emoji} ${health.label}`} />
-              <DetailRow label="HTTP/HTTPS" value={latest.http_status ? `HTTP ${latest.http_status}` : (d.http?.ok ? "OK" : "sem resposta")} />
-              <DetailRow label="Última verificação" value={humanAgo(latest.checked_at)} />
+              <DetailRow label="HTTP/HTTPS" value={current.http_status ? `HTTP ${current.http_status}` : (d.http?.ok ? "OK" : "sem resposta")} />
+              <DetailRow label="Última verificação" value={humanAgo(current.checked_at)} />
               <DetailRow
                 label="DNS"
                 value={d.dns ? (d.dns.ok ? `✅ ${d.dns.ip ?? "resolvido"} (${d.dns.ms}ms)` : `❌ ${d.dns.error ?? "falhou"}`) : "—"}
@@ -460,11 +560,11 @@ function RegionDetailDialog({
                 label="Stream teste"
                 value={d.streams ? `${d.streams.ok}/${d.streams.tested} amostras ok` : "—"}
               />
-              <DetailRow label="Origem" value={latest.source === "vps" ? "Agente VPS" : latest.source ?? "worker"} />
+              <DetailRow label="Origem" value={current.source === "vps" ? "Agente VPS" : current.source ?? "worker"} />
               <DetailRow label="Modo do envio" value={d.mode === "heartbeat" ? "Heartbeat (estável)" : "Detalhado"} />
             </div>
-            {latest.error && (
-              <div className="rounded-md border border-destructive/40 bg-destructive/5 p-2 text-xs">{latest.error}</div>
+            {current.error && (
+              <div className="rounded-md border border-destructive/40 bg-destructive/5 p-2 text-xs">{current.error}</div>
             )}
             <div>
               <div className="text-xs font-medium mb-1">Histórico recente</div>
@@ -478,6 +578,7 @@ function RegionDetailDialog({
                     </span>
                   </li>
                 ))}
+                {history.length === 0 && <li className="text-muted-foreground">Sem histórico nas últimas 4h.</li>}
               </ul>
             </div>
           </div>
@@ -505,55 +606,48 @@ function LegendItem({ status }: { status: string }) {
   );
 }
 
-function RegionStats({
-  regions,
-  byRegion,
-}: {
-  serverId: string;
-  regions: Region[];
-  byRegion: Map<string, RegionCheck[]>;
-  tickKey: number;
-}) {
-  // Compute min/max/avg/p95 from the last 60min of samples per region on the client.
-  const rows = regions.map((r) => {
-    const cutoff = Date.now() - 60 * 60_000;
-    const arr = (byRegion.get(r.code) ?? [])
-      .filter((c) => new Date(c.checked_at).getTime() >= cutoff && c.latency_ms != null)
-      .map((c) => c.latency_ms as number)
-      .sort((a, b) => a - b);
-    if (arr.length === 0) return { r, count: 0 };
-    const min = arr[0];
-    const max = arr[arr.length - 1];
-    const avg = Math.round(arr.reduce((s, x) => s + x, 0) / arr.length);
-    const p95 = arr[Math.min(arr.length - 1, Math.floor(arr.length * 0.95))];
-    return { r, count: arr.length, min, max, avg, p95 };
+function RegionStats({ serverId, regions }: { serverId: string; regions: Region[] }) {
+  const { data: stats = [] } = useQuery<StatRow[]>({
+    queryKey: ["region_stats", serverId],
+    refetchInterval: 60_000,
+    queryFn: async () => {
+      const { data } = await (supabase as any).rpc("get_region_stats", { _server_id: serverId, _minutes: 1440 });
+      return (data as StatRow[]) ?? [];
+    },
   });
+  const byCode = new Map(stats.map((s) => [s.region_code, s]));
+
   return (
     <Card className="p-4">
-      <div className="flex items-baseline justify-between mb-3">
-        <h3 className="text-sm font-medium">Latência por região (última hora)</h3>
+      <div className="flex items-baseline justify-between mb-3 flex-wrap gap-2">
+        <h3 className="text-sm font-medium">📡 Latência por região (24h)</h3>
         <span className="text-xs text-muted-foreground">min · avg · p95 · max</span>
       </div>
       <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-2">
-        {rows.map(({ r, count, min, max, avg, p95 }) => {
-          const h = connectionHealth(avg ?? null);
+        {regions.map((r) => {
+          const s = byCode.get(r.code);
+          const h = connectionHealth(s?.avg_ms != null ? Number(s.avg_ms) : null);
+          const uptime = s && s.total > 0 ? Math.round((Number(s.ups) / Number(s.total)) * 1000) / 10 : null;
           return (
             <div key={r.code} className="rounded-md border border-border/50 p-3 text-sm">
-              <div className="flex items-center gap-2 mb-1">
-                <span className="text-lg leading-none">{r.flag}</span>
-                <span className="font-medium">{r.city}</span>
+              <div className="flex items-center gap-2 mb-1 min-w-0">
+                <span className="text-lg leading-none shrink-0">{r.flag}</span>
+                <span className="font-medium truncate">{r.city}</span>
               </div>
-              {count === 0 ? (
-                <div className="text-xs text-muted-foreground">Sem amostras na última hora</div>
+              {!s || s.total === 0 ? (
+                <div className="text-xs text-muted-foreground">Sem amostras nas últimas 24h</div>
               ) : (
                 <>
-                  <div className={cn("text-xs mb-1 font-medium", h.cls)}>{h.emoji} {h.label}</div>
-                  <div className="grid grid-cols-4 gap-1 font-mono text-xs">
-                    <Stat label="min" value={`${min}ms`} />
-                    <Stat label="avg" value={`${avg}ms`} />
-                    <Stat label="p95" value={`${p95}ms`} />
-                    <Stat label="max" value={`${max}ms`} />
+                  <div className={cn("text-xs mb-1 font-medium", h.cls)}>
+                    {h.emoji} {h.label}{uptime != null ? ` · ${uptime}% uptime` : ""}
                   </div>
+                  <div className="grid grid-cols-4 gap-1 font-mono text-xs">
+                    <Stat label="min" value={`${s.min_ms ?? "—"}`} />
+                    <Stat label="avg" value={`${s.avg_ms ?? "—"}`} />
+                    <Stat label="p95" value={`${s.p95_ms ?? "—"}`} />
+                    <Stat label="max" value={`${s.max_ms ?? "—"}`} />
+                  </div>
+                  <div className="mt-1 text-[10px] text-muted-foreground">{s.total} amostras</div>
                 </>
               )}
             </div>
@@ -566,8 +660,8 @@ function RegionStats({
 
 function Stat({ label, value }: { label: string; value: string }) {
   return (
-    <div>
-      <div className="text-[10px] uppercase tracking-wider text-muted-foreground">{label}</div>
+    <div className="rounded bg-muted/40 px-1.5 py-1 text-center">
+      <div className="text-[9px] uppercase text-muted-foreground">{label}</div>
       <div>{value}</div>
     </div>
   );

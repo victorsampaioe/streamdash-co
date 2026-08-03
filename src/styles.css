@@ -145,3 +145,7 @@
   box-shadow: 0 0 0 1px oklch(from var(--primary) l c h / 0.3),
               0 10px 40px -10px oklch(from var(--primary) l c h / 0.4);
 }
+
+@keyframes dash {
+  to { stroke-dashoffset: -220; }
+}
