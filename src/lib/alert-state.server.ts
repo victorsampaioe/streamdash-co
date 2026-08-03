@@ -27,7 +27,12 @@ type StateRow = {
  * Processa todos os candidatos de alerta de um servidor de uma só vez.
  * Retorna quantos alertas foram efetivamente notificados.
  */
-export async function dispatchAlerts(serverId: string, candidates: AlertCandidate[]) {
+export async function dispatchAlerts(
+  serverId: string,
+  candidates: AlertCandidate[],
+  /** Tipos de alerta que esta execução avalia — só eles podem ser resolvidos. */
+  manages?: string[],
+) {
   const nowIso = new Date().toISOString();
   const stateful = candidates.filter((c) => !c.transient);
   const transient = candidates.filter((c) => c.transient);
