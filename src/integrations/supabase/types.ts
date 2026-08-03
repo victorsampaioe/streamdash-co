@@ -2950,6 +2950,19 @@ export type Database = {
           status: string
         }[]
       }
+      get_region_series: {
+        Args: { _limit?: number; _minutes?: number; _server_id: string }
+        Returns: {
+          checked_at: string
+          details: Json
+          error: string
+          http_status: number
+          latency_ms: number
+          region_code: string
+          source: string
+          status: string
+        }[]
+      }
       get_region_stats: {
         Args: { _minutes?: number; _server_id: string }
         Returns: {
