@@ -4,6 +4,8 @@ import { supabaseAdmin } from "@/integrations/supabase/client.server";
 
 const FETCH_TIMEOUT_MS = 8000;
 const SSL_TIMEOUT_MS = 6000;
+// Janela de confirmação de status antes de disparar alertas (~2 minutos)
+const CONFIRM_WINDOW_MS = 120_000;
 
 type ServerRow = {
   id: string;
@@ -126,37 +128,71 @@ async function performCheck(server: ServerRow) {
     error: errorMsg,
   });
 
-
   // Update server aggregates
   const isFailure = status === "down";
   const newConsecutive = isFailure ? server.consecutive_failures + 1 : 0;
   const wasDown = server.current_status === "down";
 
+  // Janela de confirmação: só alerta depois que a falha (ou a recuperação)
+  // persistir por ~2 minutos de verificações consecutivas.
+  const { data: recent } = await supabaseAdmin
+    .from("checks")
+    .select("status, checked_at")
+    .eq("server_id", server.id)
+    .order("checked_at", { ascending: false })
+    .limit(20);
+  const rows = recent ?? [];
+  const streakMs = (isDown: boolean) => {
+    let last: number | null = null;
+    for (const r of rows) {
+      if ((r.status === "down") !== isDown) break;
+      last = new Date(r.checked_at).getTime();
+    }
+    return last == null ? 0 : Date.now() - last;
+  };
+
+  const downConfirmed = isFailure
+    && newConsecutive >= server.failure_threshold
+    && streakMs(true) >= CONFIRM_WINDOW_MS;
+  const upConfirmed = !isFailure && streakMs(false) >= CONFIRM_WINDOW_MS;
+
+  // Estado intermediário "Instabilidade detectada" enquanto não há confirmação.
+  let displayStatus: typeof status = status;
+  if (isFailure && !downConfirmed) displayStatus = "degraded";
+  else if (!isFailure && wasDown && !upConfirmed) displayStatus = "degraded";
+
   await supabaseAdmin.from("servers").update({
-    current_status: status,
+    current_status: displayStatus,
     last_checked_at: new Date().toISOString(),
     last_latency_ms: latency,
     ssl_days_remaining: sslDays,
     consecutive_failures: newConsecutive,
   }).eq("id", server.id);
 
-  // Incident handling + alerts
-  if (isFailure && newConsecutive === server.failure_threshold) {
+  // Incident handling + alerts (somente após confirmação)
+  const { data: openIncident } = await supabaseAdmin
+    .from("incidents")
+    .select("id")
+    .eq("server_id", server.id)
+    .is("ended_at", null)
+    .order("started_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (downConfirmed && !openIncident) {
     const { data: inc } = await supabaseAdmin.from("incidents").insert({
       server_id: server.id,
       reason: errorMsg ?? `HTTP ${httpStatus ?? "-"}`,
     }).select("id").single();
-    if (inc) await sendAlerts(server, "down", `${server.name} está OFFLINE (${errorMsg ?? httpStatus ?? "sem resposta"})`, inc.id);
-  } else if (!isFailure && wasDown) {
-    const { data: open } = await supabaseAdmin.from("incidents").select("id").eq("server_id", server.id).is("ended_at", null).order("started_at", { ascending: false }).limit(1).maybeSingle();
-    if (open) {
-      await supabaseAdmin.from("incidents").update({ ended_at: new Date().toISOString() }).eq("id", open.id);
-      await sendAlerts(server, "up", `${server.name} voltou ao AR (${latency}ms)`, open.id);
-    }
+    if (inc) await sendAlerts(server, "down", `${server.name} está OFFLINE (confirmado em ~2min) — ${errorMsg ?? httpStatus ?? "sem resposta"}`, inc.id);
+  } else if (upConfirmed && openIncident) {
+    await supabaseAdmin.from("incidents").update({ ended_at: new Date().toISOString() }).eq("id", openIncident.id);
+    await sendAlerts(server, "up", `${server.name} voltou ao AR e está estável (${latency}ms)`, openIncident.id);
   }
 
-  return { status, latency, httpStatus, sslDays, dnsIp, error: errorMsg };
+  return { status: displayStatus, rawStatus: status, latency, httpStatus, sslDays, dnsIp, error: errorMsg };
 }
+
 
 async function getSslDaysRemaining(host: string): Promise<number | null> {
   return await new Promise((resolve) => {
