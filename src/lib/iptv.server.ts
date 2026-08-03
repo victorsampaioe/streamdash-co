@@ -868,17 +868,17 @@ export async function runIptvSync(serverId: string, opts: { mode?: "smart" | "fu
         if (catalogDiff.added.series) parts.push(`📚 +${catalogDiff.added.series} séries`);
         if (catalogDiff.added.live) parts.push(`📺 +${catalogDiff.added.live} canais`);
         if (parts.length) {
-          await raiseAlert(serverId, "catalog_added", "info", "🎬 Novos conteúdos no catálogo", parts.join(" · "));
+          pushAlert({ kind: "catalog_added", severity: "info", title: "🎬 Novos conteúdos no catálogo", detail: parts.join(" · "), transient: true });
         }
 
         if (catalogDiff.removed > 0) {
-          await raiseAlert(
-            serverId,
-            "catalog_removed",
-            catalogDiff.removed > 50 ? "warning" : "info",
-            `📉 ${catalogDiff.removed} conteúdo(s) removido(s) do catálogo`,
-            `Total atual: ${catalogDiff.totals.live} canais · ${catalogDiff.totals.vod} filmes · ${catalogDiff.totals.series} séries`,
-          );
+          pushAlert({
+            kind: "catalog_removed",
+            severity: catalogDiff.removed > 50 ? "warning" : "info",
+            title: `📉 ${catalogDiff.removed} conteúdo(s) removido(s) do catálogo`,
+            detail: `Total atual: ${catalogDiff.totals.live} canais · ${catalogDiff.totals.vod} filmes · ${catalogDiff.totals.series} séries`,
+            transient: true,
+          });
         }
       }
     } catch (e) {
@@ -888,48 +888,80 @@ export async function runIptvSync(serverId: string, opts: { mode?: "smart" | "fu
 
 
 
-  /* ---- Alertas inteligentes ---- */
+  /* ---- Alertas inteligentes (agrupados em uma única notificação) ---- */
   const drop = (prev: number | null | undefined, curr: number | null, label: string, kind: string) => {
-    if (!prev || !curr) return null;
+    if (!prev || !curr) return;
     const diff = prev - curr;
     if (diff > Math.max(5, prev * 0.02)) {
-      return raiseAlert(serverId, kind, diff > prev * 0.1 ? "critical" : "warning",
-        `⚠ Servidor perdeu ${diff.toLocaleString("pt-BR")} ${label}`,
-        `${prev.toLocaleString("pt-BR")} → ${curr.toLocaleString("pt-BR")}`);
+      pushAlert({
+        kind,
+        severity: diff > prev * 0.1 ? "critical" : "warning",
+        title: `⚠ Servidor perdeu ${diff.toLocaleString("pt-BR")} ${label}`,
+        detail: `${prev.toLocaleString("pt-BR")} → ${curr.toLocaleString("pt-BR")}`,
+        transient: true,
+      });
     }
-    return null;
   };
 
-  await Promise.allSettled([
-    drop(lastSync?.channels, x.channels, "canais", "channels_drop"),
-    drop(lastSync?.movies, x.movies, "filmes", "movies_drop"),
-    drop(lastSync?.series, x.series, "séries", "series_drop"),
-    drop(lastSync?.categories, x.categories, "categorias", "categories_drop"),
-    x.login_checked && !x.login_ok ? raiseAlert(serverId, "login_invalid", "critical", "🚨 Login do Xtream inválido", x.error ?? undefined) : null,
-    x.api_ms && x.api_ms > 5000 ? raiseAlert(serverId, "api_slow", "warning", "⚠ Player API lenta", `${x.api_ms}ms`) : null,
-    !x.json_valid ? raiseAlert(serverId, "api_down", "critical", "🚨 Player API indisponível", x.error ?? undefined) : null,
-    // get.php é apenas playlist: nunca gera alerta de login inválido.
-    m3u && m3u.playlist_ok === false ? raiseAlert(serverId, "playlist_broken", "warning", "⚠ Playlist M3U com problema", m3u.error ?? undefined) : null,
-    x.account?.days_to_expire != null && x.account.days_to_expire <= 7 && x.account.days_to_expire >= 0
-      ? raiseAlert(serverId, "account_expiring", "warning", "⚠ Conta Xtream perto do vencimento",
-          `Expira em ${x.account.days_to_expire} dia(s) — ${new Date(x.account.exp_date!).toLocaleString("pt-BR")}`)
-      : null,
-    x.account?.max_connections != null && x.account.active_connections != null && x.account.max_connections > 0 &&
-    x.account.active_connections >= x.account.max_connections
-      ? raiseAlert(serverId, "connections_limit", "warning", "⚠ Limite de conexões atingido",
-          `${x.account.active_connections}/${x.account.max_connections} conexões ativas`)
-      : null,
-    x.login_ok && !x.content.live_ok
-      ? raiseAlert(serverId, "content_live_empty", "warning", "⚠ Nenhum canal ao vivo retornado pela Player API")
-      : null,
+  drop(lastSync?.channels, x.channels, "canais", "channels_drop");
+  drop(lastSync?.movies, x.movies, "filmes", "movies_drop");
+  drop(lastSync?.series, x.series, "séries", "series_drop");
+  drop(lastSync?.categories, x.categories, "categorias", "categories_drop");
 
-    streamProbes.some((s) => !s.ok) ? raiseAlert(serverId, "stream_offline", "warning", "⚠ Streams de amostra offline",
-      streamProbes.filter((s) => !s.ok).map((s) => `${s.kind}: ${s.error ?? "falhou"}`).join(" · ")) : null,
-    health < 70 && (lastSync?.health_score ?? 100) >= 70
-      ? raiseAlert(serverId, "health_drop", "critical", "🚨 Seu servidor perdeu desempenho",
-          `Detectamos degradação antes da queda. Health Score: ${health}%`)
-      : null,
-  ].filter(Boolean) as Promise<unknown>[]);
+  if (x.login_checked && !x.login_ok) {
+    pushAlert({ kind: "login_invalid", severity: "critical", title: "🚨 Login do Xtream inválido", detail: x.error });
+  }
+  // Player API lenta só alerta após 2 detecções seguidas (confirmação).
+  if (x.api_ms && x.api_ms > 5000) {
+    pushAlert({ kind: "api_slow", severity: "warning", title: "⚠ Player API lenta", detail: `${x.api_ms}ms`, confirmations: 2 });
+  }
+  if (!x.json_valid) {
+    pushAlert({ kind: "api_down", severity: "critical", title: "🚨 Player API indisponível", detail: x.error });
+  }
+  // get.php é apenas playlist: nunca gera alerta de login inválido.
+  if (m3u && m3u.playlist_ok === false) {
+    pushAlert({ kind: "playlist_broken", severity: "warning", title: "⚠ Playlist M3U com problema", detail: m3u.error });
+  }
+  if (x.account?.days_to_expire != null && x.account.days_to_expire <= 7 && x.account.days_to_expire >= 0) {
+    pushAlert({
+      kind: "account_expiring", severity: "warning", title: "⚠ Conta Xtream perto do vencimento",
+      detail: `Expira em ${x.account.days_to_expire} dia(s) — ${new Date(x.account.exp_date!).toLocaleString("pt-BR")}`,
+    });
+  }
+  if (
+    x.account?.max_connections != null && x.account.active_connections != null &&
+    x.account.max_connections > 0 && x.account.active_connections >= x.account.max_connections
+  ) {
+    pushAlert({
+      kind: "connections_limit", severity: "warning", title: "⚠ Limite de conexões atingido",
+      detail: `${x.account.active_connections}/${x.account.max_connections} conexões ativas`,
+    });
+  }
+  if (x.login_ok && !x.content.live_ok) {
+    pushAlert({ kind: "content_live_empty", severity: "warning", title: "⚠ Nenhum canal ao vivo retornado pela Player API" });
+  }
+  // Streams de amostra só alertam após 2 detecções seguidas (confirmação).
+  if (streamProbes.some((s) => !s.ok)) {
+    pushAlert({
+      kind: "stream_offline", severity: "warning", title: "⚠ Streams de amostra offline",
+      detail: streamProbes.filter((s) => !s.ok).map((s) => `${s.kind}: ${s.error ?? "falhou"}`).join(" · "),
+      confirmations: 2,
+    });
+  }
+  if (health < 70 && (lastSync?.health_score ?? 100) >= 70) {
+    pushAlert({
+      kind: "health_drop", severity: "critical", title: "🚨 Seu servidor perdeu desempenho",
+      detail: `Detectamos degradação antes da queda. Health Score: ${health}%`,
+    });
+  }
+
+  try {
+    const { dispatchAlerts } = await import("./alert-state.server");
+    await dispatchAlerts(serverId, alerts);
+  } catch (e) {
+    console.warn("[iptv] falha ao despachar alertas:", (e as Error)?.message);
+  }
+
 
   return { skipped: false as const, sync_id: sync?.id ?? null, health, channels: x.channels, streams: streamProbes, catalog: catalogDiff };
 }
