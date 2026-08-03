@@ -8,6 +8,9 @@ SM_BASE_URL="${SM_BASE_URL:-https://streammonitor.site}"
 SM_REGION="${SM_REGION:-br-sp-vps}"
 SM_INTERVAL="${SM_INTERVAL:-30}"
 SM_CONCURRENCY="${SM_CONCURRENCY:-8}"
+SM_HEARTBEAT_MIN="${SM_HEARTBEAT_MIN:-10}"
+SM_DEEP_EVERY="${SM_DEEP_EVERY:-20}"
+SM_LATENCY_FACTOR="${SM_LATENCY_FACTOR:-2.5}"
 DIR=/opt/streammonitor-agent
 
 if [ -z "${SM_AGENT_ID:-}" ] || [ -z "${SM_AGENT_SECRET:-}" ]; then
