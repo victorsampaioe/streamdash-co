@@ -784,10 +784,11 @@ export async function runIptvSync(serverId: string, opts: { mode?: "smart" | "fu
       old_asn: lastSync.asn, new_asn: currentAsn, datacenter: analysis?.org ?? null,
       country: analysis?.country ?? null, city: analysis?.city ?? null,
     });
-    await raiseAlert(serverId, "ip_change", "warning", `⚠ DNS mudou de IP`, `${lastSync.ip} → ${currentIp}`);
+    pushAlert({ kind: "ip_change", severity: "warning", title: "⚠ DNS mudou de IP", detail: `${lastSync.ip} → ${currentIp}`, transient: true });
   }
   if (lastSync?.asn && currentAsn && lastSync.asn !== currentAsn) {
-    await raiseAlert(serverId, "asn_change", "warning", "⚠ Mudança de ASN/Datacenter", `${lastSync.asn} → ${currentAsn}`);
+    pushAlert({ kind: "asn_change", severity: "warning", title: "⚠ Mudança de ASN/Datacenter", detail: `${lastSync.asn} → ${currentAsn}`, transient: true });
+
   }
 
   const { count: ipChanges7d } = await supabaseAdmin
