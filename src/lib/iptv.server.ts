@@ -692,6 +692,12 @@ export async function runIptvSync(serverId: string, opts: { mode?: "smart" | "fu
   const server = srv as unknown as ServerRow;
   const mode = opts.mode ?? (server.iptv_mode === "basic" ? "smart" : server.iptv_mode);
 
+  // Todos os problemas detectados nesta execução são acumulados e enviados
+  // em UMA única mensagem consolidada no final (ver dispatchAlerts).
+  const alerts: AlertCandidate[] = [];
+  const pushAlert = (c: AlertCandidate) => { alerts.push(c); };
+
+
   if (!opts.force && server.last_iptv_sync_at && Date.now() - new Date(server.last_iptv_sync_at).getTime() < MIN_GAP_MS) {
     return { skipped: true, reason: "rate-limit" as const };
   }
