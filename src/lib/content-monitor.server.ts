@@ -756,21 +756,26 @@ export async function runContentScan(
 
   await upsertDailySummary(serverId);
 
-  if (protectedMode) {
-    try {
-      await supabaseAdmin.from("iptv_alerts").insert({
-        server_id: serverId,
-        kind: "content_protection",
-        severity: "warning",
-        title: "🚨 Servidor pode estar bloqueando verificações automáticas",
-        detail:
-          `${blockSignals} de ${tested} testes retornaram 401/403/429. ` +
-          `O Modo Seguro reduziu a velocidade (nível ${newThrottle.level}) e o servidor ` +
-          `ficará em descanso até ${newThrottle.cooldownUntil ? new Date(newThrottle.cooldownUntil).toLocaleString("pt-BR") : "a próxima rodada"}. ` +
-          `Nenhum conteúdo foi marcado como offline nesta rodada.`,
-      });
-    } catch { /* alerta nunca quebra o scan */ }
-  }
+  try {
+    const { dispatchAlerts } = await import("./alert-state.server");
+    await dispatchAlerts(
+      serverId,
+      protectedMode
+        ? [{
+            kind: "content_protection",
+            severity: "warning" as const,
+            title: "🚨 Servidor pode estar bloqueando verificações automáticas",
+            detail:
+              `${blockSignals} de ${tested} testes retornaram 401/403/429. ` +
+              `O Modo Seguro reduziu a velocidade (nível ${newThrottle.level}) e o servidor ` +
+              `ficará em descanso até ${newThrottle.cooldownUntil ? new Date(newThrottle.cooldownUntil).toLocaleString("pt-BR") : "a próxima rodada"}. ` +
+              `Nenhum conteúdo foi marcado como offline nesta rodada.`,
+          }]
+        : [],
+      ["content_protection"],
+    );
+  } catch { /* alerta nunca quebra o scan */ }
+
 
   try {
     const { notifyContentEvents } = await import("./content-alerts.server");
