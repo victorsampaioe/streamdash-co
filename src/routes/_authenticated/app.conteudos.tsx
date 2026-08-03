@@ -48,6 +48,7 @@ export const Route = createFileRoute("/_authenticated/app/conteudos")({
 const STATUS: Record<string, { label: string; cls: string }> = {
   online: { label: "🟢 Online", cls: "bg-emerald-500/10 text-emerald-400 border-emerald-500/30" },
   slow: { label: "🟡 Lento", cls: "bg-amber-500/10 text-amber-400 border-amber-500/30" },
+  suspect: { label: "🟡 Suspeito", cls: "bg-yellow-500/10 text-yellow-400 border-yellow-500/30" },
   unstable: { label: "🟠 Instável", cls: "bg-orange-500/10 text-orange-400 border-orange-500/30" },
   offline: { label: "🔴 Offline", cls: "bg-red-500/10 text-red-400 border-red-500/30" },
   blocked: { label: "🔒 Bloqueado", cls: "bg-purple-500/10 text-purple-300 border-purple-500/30" },
@@ -280,6 +281,7 @@ function ContentMonitorPage() {
             {[
               ["Online", s.online, "text-emerald-400"],
               ["Lentos", s.slow, "text-amber-400"],
+              ["Suspeitos", s.suspect, "text-yellow-400"],
               ["Instáveis", s.unstable, "text-orange-400"],
               ["Offline", s.offline, "text-red-400"],
               ["Bloqueados", s.blocked, "text-purple-300"],
