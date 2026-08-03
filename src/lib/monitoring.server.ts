@@ -68,112 +68,177 @@ export async function runDueChecks() {
   };
 }
 
-async function performCheck(server: ServerRow) {
+type ProbeResult = {
+  status: "up" | "down" | "degraded" | "unknown";
+  httpStatus: number | null;
+  latency: number | null;
+  dnsIp: string | null;
+  error: string | null;
+};
+
+/** Traduz o erro técnico em um motivo compreensível para a revenda. */
+function classifyError(e: any, phase: "dns" | "http", latency: number | null): string {
+  const raw = String(e?.code ?? e?.cause?.code ?? e?.message ?? "").toLowerCase();
+  if (phase === "dns") {
+    if (raw.includes("enotfound") || raw.includes("nxdomain")) return "DNS não encontrado (domínio não resolve)";
+    if (raw.includes("timeout") || raw.includes("etimeout")) return "Timeout na resolução de DNS";
+    return "Falha de DNS";
+  }
+  if (raw.includes("abort") || raw.includes("etimedout") || raw.includes("timeout")) {
+    return `Timeout de conexão (sem resposta em ${Math.round(FETCH_TIMEOUT_MS / 1000)}s)`;
+  }
+  if (raw.includes("econnrefused")) return "Conexão recusada pelo servidor";
+  if (raw.includes("econnreset") || raw.includes("epipe")) return "Conexão interrompida (instabilidade temporária)";
+  if (raw.includes("ehostunreach") || raw.includes("enetunreach")) return "Host inacessível na rede";
+  if (raw.includes("cert") || raw.includes("ssl") || raw.includes("tls")) return "Certificado SSL inválido";
+  if (latency != null && latency >= FETCH_TIMEOUT_MS) return "Latência muito alta";
+  return `Instabilidade temporária${raw ? ` (${raw.slice(0, 60)})` : ""}`;
+}
+
+function classifyHttp(code: number, latency: number | null): string | null {
+  if (code >= 500) {
+    if (code === 502) return "HTTP 502 — Bad Gateway";
+    if (code === 503) return "HTTP 503 — Serviço indisponível";
+    if (code === 504) return "HTTP 504 — Gateway Timeout";
+    return `HTTP ${code} — Erro interno do servidor`;
+  }
+  if (code === 403) return "HTTP 403 — Acesso bloqueado";
+  if (code === 404) return "HTTP 404 — Recurso não encontrado";
+  if (code >= 400) return `HTTP ${code} — Resposta inesperada`;
+  if (latency != null && latency > 3000) return `Latência muito alta (${latency}ms)`;
+  return null;
+}
+
+/** Uma verificação isolada (DNS + HTTP porta 80). */
+async function probe(host: string): Promise<ProbeResult> {
   const startedAt = Date.now();
-  let status: "up" | "down" | "degraded" | "unknown" = "unknown";
+  let status: ProbeResult["status"] = "unknown";
   let httpStatus: number | null = null;
   let latency: number | null = null;
   let dnsIp: string | null = null;
-  let sslDays: number | null = null;
   let errorMsg: string | null = null;
 
-  // 1) DNS
   try {
-    const addrs = await dns.lookup(server.host, { all: false });
+    const addrs = await dns.lookup(host, { all: false });
     dnsIp = addrs.address;
   } catch (e: any) {
-    errorMsg = `DNS: ${e?.message ?? "erro"}`;
+    errorMsg = classifyError(e, "dns", null);
     status = "down";
   }
 
-  // 2) HTTP on port 80 (fixed)
   if (status !== "down") {
     try {
       const controller = new AbortController();
       const t = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
-      const url = `http://${server.host}:80/`;
-      const res = await fetch(url, { method: "GET", redirect: "manual", signal: controller.signal });
+      const res = await fetch(`http://${host}:80/`, { method: "GET", redirect: "manual", signal: controller.signal });
       clearTimeout(t);
       latency = Date.now() - startedAt;
       httpStatus = res.status;
+      errorMsg = classifyHttp(res.status, latency);
       if (res.status >= 200 && res.status < 400) status = latency > 3000 ? "degraded" : "up";
       else if (res.status >= 400 && res.status < 500) status = "degraded";
       else status = "down";
     } catch (e: any) {
-      status = "down";
-      errorMsg = errorMsg ?? `HTTP: ${e?.message ?? "timeout"}`;
       latency = Date.now() - startedAt;
+      status = "down";
+      errorMsg = errorMsg ?? classifyError(e, "http", latency);
     }
   }
 
-  // 3) SSL (opportunistic, non-fatal)
+  return { status, httpStatus, latency, dnsIp, error: errorMsg };
+}
+
+async function recordCheck(serverId: string, p: ProbeResult, sslDays: number | null) {
+  await supabaseAdmin.from("checks").insert({
+    server_id: serverId,
+    status: p.status,
+    http_status: p.httpStatus,
+    latency_ms: p.latency,
+    dns_resolved_ip: p.dnsIp,
+    ssl_days_remaining: sslDays,
+    error: p.error,
+  });
+  await supabaseAdmin.from("region_checks").insert({
+    server_id: serverId,
+    region_code: "origin",
+    status: p.status,
+    http_status: p.httpStatus,
+    latency_ms: p.latency,
+    error: p.error,
+  });
+}
+
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
+/** Modo "Confirmação": novas verificações a cada ~20s, gravando cada uma no histórico. */
+async function confirmationBurst(server: ServerRow, probes: number, sslDays: number | null) {
+  const results: ProbeResult[] = [];
+  for (let i = 0; i < probes; i++) {
+    await sleep(CONFIRM_PROBE_INTERVAL_MS);
+    const p = await probe(server.host);
+    await recordCheck(server.id, p, sslDays);
+    results.push(p);
+  }
+  return results;
+}
+
+async function performCheck(server: ServerRow) {
+  const first = await probe(server.host);
+
+  // SSL (oportunista, não fatal)
+  let sslDays: number | null = null;
   try {
     sslDays = await getSslDaysRemaining(server.host);
   } catch { /* ignore */ }
 
-  // Record check
-  await supabaseAdmin.from("checks").insert({
-    server_id: server.id,
-    status,
-    http_status: httpStatus,
-    latency_ms: latency,
-    dns_resolved_ip: dnsIp,
-    ssl_days_remaining: sslDays,
-    error: errorMsg,
-  });
+  await recordCheck(server.id, first, sslDays);
 
-  // Also record as an "origin" region datapoint for the Global Map
-  await supabaseAdmin.from("region_checks").insert({
-    server_id: server.id,
-    region_code: "origin",
-    status,
-    http_status: httpStatus,
-    latency_ms: latency,
-    error: errorMsg,
-  });
-
-  // Update server aggregates
-  const isFailure = status === "down";
-  const newConsecutive = isFailure ? server.consecutive_failures + 1 : 0;
   const wasDown = server.current_status === "down";
+  let final = first;
+  let displayStatus: ProbeResult["status"] = first.status;
+  let downConfirmed = false;
+  let upConfirmed = false;
+  let confirmNote = "";
 
-  // Janela de confirmação: só alerta depois que a falha (ou a recuperação)
-  // persistir por ~2 minutos de verificações consecutivas.
-  const { data: recent } = await supabaseAdmin
-    .from("checks")
-    .select("status, checked_at")
-    .eq("server_id", server.id)
-    .order("checked_at", { ascending: false })
-    .limit(20);
-  const rows = recent ?? [];
-  const streakMs = (isDown: boolean) => {
-    let last: number | null = null;
-    for (const r of rows) {
-      if ((r.status === "down") !== isDown) break;
-      last = new Date(r.checked_at).getTime();
+  if (first.status === "down") {
+    // 1ª falha -> não considerar offline; entrar em Confirmação de Queda (~2min).
+    const burst = await confirmationBurst(server, DOWN_CONFIRM_PROBES, sslDays);
+    const all = [first, ...burst];
+    const fails = all.filter((p) => p.status === "down").length;
+    const ratio = fails / all.length;
+    final = burst[burst.length - 1] ?? first;
+    if (ratio >= DOWN_CONFIRM_RATIO) {
+      downConfirmed = true;
+      displayStatus = "down";
+      confirmNote = `${fails}/${all.length} verificações falharam em ~2min`;
+    } else {
+      // Alternância entre ❌ e ✅ -> instabilidade, sem alerta de OFFLINE.
+      displayStatus = "degraded";
     }
-    return last == null ? 0 : Date.now() - last;
-  };
+  } else if (wasDown) {
+    // Retorno detectado -> confirmar estabilidade por ~1 minuto.
+    const burst = await confirmationBurst(server, UP_CONFIRM_PROBES, sslDays);
+    const all = [first, ...burst];
+    final = burst[burst.length - 1] ?? first;
+    upConfirmed = all.every((p) => p.status !== "down");
+    displayStatus = upConfirmed ? final.status : "degraded";
+  }
 
-  const downConfirmed = isFailure
-    && newConsecutive >= server.failure_threshold
-    && streakMs(true) >= CONFIRM_WINDOW_MS;
-  const upConfirmed = !isFailure && streakMs(false) >= CONFIRM_WINDOW_MS;
-
-  // Estado intermediário "Instabilidade detectada" enquanto não há confirmação.
-  let displayStatus: typeof status = status;
-  if (isFailure && !downConfirmed) displayStatus = "degraded";
-  else if (!isFailure && wasDown && !upConfirmed) displayStatus = "degraded";
+  const newConsecutive = downConfirmed
+    ? server.consecutive_failures + 1
+    : first.status === "down"
+      ? server.consecutive_failures + 1
+      : 0;
 
   await supabaseAdmin.from("servers").update({
     current_status: displayStatus,
     last_checked_at: new Date().toISOString(),
-    last_latency_ms: latency,
+    last_latency_ms: final.latency,
     ssl_days_remaining: sslDays,
     consecutive_failures: newConsecutive,
   }).eq("id", server.id);
 
-  // Incident handling + alerts (somente após confirmação)
+  // Incidentes + alertas (somente após confirmação)
   const { data: openIncident } = await supabaseAdmin
     .from("incidents")
     .select("id")
@@ -183,19 +248,42 @@ async function performCheck(server: ServerRow) {
     .limit(1)
     .maybeSingle();
 
+  const reason = final.error ?? first.error ?? `HTTP ${final.httpStatus ?? "-"}`;
+
   if (downConfirmed && !openIncident) {
     const { data: inc } = await supabaseAdmin.from("incidents").insert({
       server_id: server.id,
-      reason: errorMsg ?? `HTTP ${httpStatus ?? "-"}`,
+      reason,
     }).select("id").single();
-    if (inc) await sendAlerts(server, "down", `${server.name} está OFFLINE (confirmado em ~2min) — ${errorMsg ?? httpStatus ?? "sem resposta"}`, inc.id);
+    if (inc) {
+      await sendAlerts(
+        server,
+        "down",
+        `${server.name} está OFFLINE (confirmado — ${confirmNote})\nMotivo: ${reason}`,
+        inc.id,
+      );
+    }
   } else if (upConfirmed && openIncident) {
     await supabaseAdmin.from("incidents").update({ ended_at: new Date().toISOString() }).eq("id", openIncident.id);
-    await sendAlerts(server, "up", `${server.name} voltou ao AR e está estável (${latency}ms)`, openIncident.id);
+    await sendAlerts(
+      server,
+      "up",
+      `${server.name} normalizado — estabilidade confirmada em ~1min (${final.latency}ms)`,
+      openIncident.id,
+    );
   }
 
-  return { status: displayStatus, rawStatus: status, latency, httpStatus, sslDays, dnsIp, error: errorMsg };
+  return {
+    status: displayStatus,
+    rawStatus: first.status,
+    latency: final.latency,
+    httpStatus: final.httpStatus,
+    sslDays,
+    dnsIp: final.dnsIp,
+    error: reason,
+  };
 }
+
 
 
 async function getSslDaysRemaining(host: string): Promise<number | null> {
