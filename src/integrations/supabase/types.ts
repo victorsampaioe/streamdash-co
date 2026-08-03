@@ -2166,35 +2166,85 @@ export type Database = {
           },
         ]
       }
+      region_agents: {
+        Row: {
+          created_at: string
+          enabled: boolean
+          id: string
+          last_report_count: number
+          last_seen_at: string | null
+          name: string
+          region_code: string
+          secret_hash: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          enabled?: boolean
+          id?: string
+          last_report_count?: number
+          last_seen_at?: string | null
+          name: string
+          region_code: string
+          secret_hash: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          enabled?: boolean
+          id?: string
+          last_report_count?: number
+          last_seen_at?: string | null
+          name?: string
+          region_code?: string
+          secret_hash?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "region_agents_region_code_fkey"
+            columns: ["region_code"]
+            isOneToOne: false
+            referencedRelation: "check_regions"
+            referencedColumns: ["code"]
+          },
+        ]
+      }
       region_checks: {
         Row: {
           checked_at: string
+          details: Json
           error: string | null
           http_status: number | null
           id: string
           latency_ms: number | null
           region_code: string
           server_id: string
+          source: string
           status: string
         }
         Insert: {
           checked_at?: string
+          details?: Json
           error?: string | null
           http_status?: number | null
           id?: string
           latency_ms?: number | null
           region_code: string
           server_id: string
+          source?: string
           status: string
         }
         Update: {
           checked_at?: string
+          details?: Json
           error?: string | null
           http_status?: number | null
           id?: string
           latency_ms?: number | null
           region_code?: string
           server_id?: string
+          source?: string
           status?: string
         }
         Relationships: [
@@ -2827,6 +2877,23 @@ export type Database = {
         }[]
       }
       get_referral_summary: { Args: { _user_id: string }; Returns: Json }
+      get_region_matrix: {
+        Args: { _server_id: string; _window_minutes?: number }
+        Returns: {
+          checked_at: string
+          city: string
+          country: string
+          details: Json
+          error: string
+          flag: string
+          http_status: number
+          latency_ms: number
+          region_code: string
+          region_name: string
+          source: string
+          status: string
+        }[]
+      }
       get_region_stats: {
         Args: { _minutes?: number; _server_id: string }
         Returns: {
@@ -2979,6 +3046,10 @@ export type Database = {
       }
       purge_content_checks: { Args: { _days?: number }; Returns: number }
       purge_old_metrics: { Args: { _dry_run?: boolean }; Returns: Json }
+      region_consensus: {
+        Args: { _server_id: string; _window_minutes?: number }
+        Returns: Json
+      }
       request_payout: {
         Args: { _pix_key: string; _pix_name: string; _pix_type: string }
         Returns: string
