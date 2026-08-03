@@ -27,7 +27,15 @@ function ServersList() {
   const qc = useQueryClient();
   const { data: servers = [] } = useQuery({
     queryKey: ["servers"],
-    queryFn: async () => (await supabase.from("servers").select("*").order("created_at", { ascending: false })).data ?? [],
+    queryFn: async () =>
+      (
+        await supabase
+          .from("servers")
+          .select(
+            "id, name, description, category, current_status, last_latency_ms, last_checked_at, ssl_days_remaining, health_score, dns_health_score, is_public, public_slug, created_at",
+          )
+          .order("created_at", { ascending: false })
+      ).data ?? [],
   });
 
   const del = useMutation({
@@ -40,7 +48,7 @@ function ServersList() {
     onError: (e: Error) => toast.error(e.message ?? "Falha ao remover"),
   });
 
-  const filtered = servers.filter((s) => !q || `${s.name} ${s.host}`.toLowerCase().includes(q.toLowerCase()));
+  const filtered = servers.filter((s) => !q || `${s.name} ${s.description ?? ""}`.toLowerCase().includes(q.toLowerCase()));
 
   return (
     <div className="space-y-6">

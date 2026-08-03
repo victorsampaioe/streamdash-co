@@ -54,7 +54,20 @@ function ServerDetail() {
 
   const { data: server, refetch } = useQuery({
     queryKey: ["server", id],
-    queryFn: async () => (await supabase.from("servers").select("*").eq("id", id).maybeSingle()).data,
+    queryFn: async () => {
+      // Nunca trazer ao navegador host/DNS nem credenciais IPTV — apenas campos de exibição.
+      const [{ data: base }, { data: creds }] = await Promise.all([
+        supabase
+          .from("servers")
+          .select(
+            "id, name, description, category, current_status, last_latency_ms, last_checked_at, ssl_days_remaining, consecutive_failures, health_score, dns_health_score, interval_seconds, failure_threshold, is_public, public_slug, iptv_detected, iptv_mode, iptv_interval_minutes, iptv_sample_size, iptv_stream_tests, dns_enabled, kuma_enabled, created_at",
+          )
+          .eq("id", id)
+          .maybeSingle(),
+        supabase.from("servers").select("id").eq("id", id).not("iptv_username", "is", null).maybeSingle(),
+      ]);
+      return base ? { ...base, has_iptv_creds: !!creds } : base;
+    },
   });
 
   const { data: checks = [], refetch: refetchChecks } = useQuery({

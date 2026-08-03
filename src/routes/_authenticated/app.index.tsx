@@ -32,7 +32,12 @@ function Dashboard() {
   const { data: servers = [], refetch } = useQuery({
     queryKey: ["servers"],
     queryFn: async () => {
-      const { data, error } = await supabase.from("servers").select("*").order("created_at", { ascending: false });
+      const { data, error } = await supabase
+        .from("servers")
+        .select(
+          "id, name, description, category, current_status, last_latency_ms, last_checked_at, ssl_days_remaining, health_score, dns_health_score, is_public, public_slug, created_at",
+        )
+        .order("created_at", { ascending: false });
       if (error) throw error;
       return data;
     },
@@ -81,7 +86,7 @@ function Dashboard() {
   const filtered = useMemo(() => {
     return servers.filter((s) => {
       if (filter !== "all" && s.current_status !== filter) return false;
-      if (query && !`${s.name} ${s.host}`.toLowerCase().includes(query.toLowerCase())) return false;
+      if (query && !`${s.name} ${s.description ?? ""}`.toLowerCase().includes(query.toLowerCase())) return false;
       return true;
     });
   }, [servers, filter, query]);

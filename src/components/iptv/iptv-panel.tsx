@@ -37,7 +37,7 @@ export function IptvPanel({ serverId, server }: { serverId: string; server: any 
   const saveCreds = useServerFn(saveIptvCredentials);
   const loginGuard = useServerFn(getIptvLoginGuard);
   // Credenciais nunca voltam do servidor: os campos começam vazios.
-  const hasCreds = Boolean(server?.iptv_username && server?.iptv_password);
+  const hasCreds = Boolean(server?.has_iptv_creds);
   const [creds, setCreds] = useState({ u: "", p: "" });
   const [uaResult, setUaResult] = useState<any>(null);
 
