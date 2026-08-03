@@ -315,7 +315,7 @@ export async function headPrecheck(
       signal: ctrl.signal,
     });
     const ms = Date.now() - started;
-    if (res.status === 401 || res.status === 403) {
+    if (res.status === 401 || res.status === 403 || res.status === 429) {
       return { verdict: fail("blocked", res.status, started, `HTTP ${res.status}`), ms };
     }
     if (res.status === 404 || res.status === 410) {
@@ -370,7 +370,7 @@ export async function probeContentUrl(url: string, opts: { head?: boolean } = {}
       signal: ctrl.signal,
     });
     const http = res.status;
-    if (http === 401 || http === 403) {
+    if (http === 401 || http === 403 || http === 429) {
       return fail("blocked", http, started, `HTTP ${http}`);
     }
     if (http === 404 || http === 410) {
@@ -444,16 +444,33 @@ function fail(status: ContentStatus, http: number | null, started: number, msg: 
   };
 }
 
-/** Aplica a regra anti-falso-positivo: 1ª falha suspeita, 2ª instável, 3ª offline. */
-export function classify(prev: { current_status: ContentStatus; consecutive_failures: number }, probe: ProbeResult) {
-  const bad = probe.status === "offline";
-  if (probe.status === "blocked" || probe.status === "removed") {
+/**
+ * Regra anti-falso-positivo em 3 etapas:
+ * 1ª falha → 🟡 Suspeito · 2ª → 🟠 Instável · 3ª → 🔴 Offline.
+ * `protectedMode` = servidor aparentando bloquear as verificações: nesse caso
+ * não rebaixamos o conteúdo, só marcamos como suspeito.
+ */
+export function classify(
+  prev: { current_status: ContentStatus; consecutive_failures: number },
+  probe: ProbeResult,
+  protectedMode = false,
+) {
+  if (probe.status === "removed") {
     return { status: probe.status, failures: prev.consecutive_failures + 1 };
   }
-  if (!bad) return { status: probe.status, failures: 0 };
+  if (probe.status === "blocked") {
+    const failures = prev.consecutive_failures + 1;
+    // Bloqueio pode ser proteção anti-bot do servidor: não condenar de cara.
+    if (protectedMode || failures < 2) return { status: "suspect" as ContentStatus, failures };
+    return { status: "blocked" as ContentStatus, failures };
+  }
+  if (probe.status !== "offline") return { status: probe.status, failures: 0 };
+
   const failures = prev.consecutive_failures + 1;
+  if (protectedMode) return { status: "suspect" as ContentStatus, failures };
   if (failures >= 3) return { status: "offline" as ContentStatus, failures };
-  return { status: "unstable" as ContentStatus, failures };
+  if (failures === 2) return { status: "unstable" as ContentStatus, failures };
+  return { status: "suspect" as ContentStatus, failures };
 }
 
 // --------------------------------------------------------------- fila / lote
