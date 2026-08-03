@@ -69,7 +69,7 @@ export const getTmdbDetail = createServerFn({ method: "POST" })
     // Apenas servidores verificados (com catálogo IPTV sincronizado).
     const { data: servers } = await context.supabase
       .from("servers")
-      .select("id, name, current_status, last_iptv_sync_at")
+      .select("id, name, owner_id, current_status, last_iptv_sync_at")
       .not("catalog_synced_at", "is", null)
       .order("name");
 
@@ -86,13 +86,20 @@ export const getTmdbDetail = createServerFn({ method: "POST" })
       }
     }
 
-    const availability = (servers ?? []).map((s) => ({
-      server_id: s.id,
-      name: s.name,
-      status: s.current_status as string,
-      last_sync_at: s.last_iptv_sync_at as string | null,
-      found_at: firstSeen.get(s.id) ?? null,
-    }));
+    // Nunca enviar ao navegador o ID interno nem o nome real de servidores de terceiros.
+    const { maskServerId, maskServerName } = await import("./server-mask.server");
+
+    const availability = (servers ?? []).map((s) => {
+      const mine = s.owner_id === context.userId;
+      return {
+        server_id: maskServerId(s.id, mine),
+        name: maskServerName(s.id, mine, s.name),
+        is_mine: mine,
+        status: s.current_status as string,
+        last_sync_at: s.last_iptv_sync_at as string | null,
+        found_at: firstSeen.get(s.id) ?? null,
+      };
+    });
 
     const podium = availability
       .filter((a) => a.found_at)
