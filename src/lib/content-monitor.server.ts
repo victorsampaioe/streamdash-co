@@ -11,8 +11,21 @@ export const TOTAL_TIMEOUT_MS = 15_000;
 export const MAX_BYTES = 256 * 1024;
 export const SLOW_THRESHOLD_MS = 8_000;
 export const BATCH_SIZE = 8; // legado (compatibilidade)
-export const CONCURRENCY = 20; // testes realmente simultâneos por servidor
+
+// ------------------------------------------------- Modo Seguro (padrão ligado)
+/** Testes simultâneos por servidor no Modo Seguro. */
+export const SAFE_CONCURRENCY = 5;
+/** Teto de simultaneidade quando o Modo Seguro está desligado. */
+export const CONCURRENCY = 20;
 export const MAX_CONCURRENCY = 50;
+export const MAX_SAFE_CONCURRENCY = 10;
+/** Pausa entre lotes (ms) e respiro entre requisições do mesmo worker. */
+export const SAFE_BATCH_PAUSE_MS = 2_000;
+export const SAFE_REQUEST_DELAY_MS = 300;
+/** % de respostas 401/403/429 que caracteriza bloqueio do servidor. */
+export const BLOCK_SIGNAL_PCT = 0.25;
+export const MIN_BLOCK_SAMPLE = 6;
+
 export const HEAD_TIMEOUT_MS = 4_000;
 export const GENERAL_FAILURE_PCT = 0.3;
 
@@ -21,21 +34,25 @@ export const CATALOG_TTL_MINUTES = 120;
 
 /** Intervalo mínimo entre testes por faixa de prioridade (minutos). */
 export const TIER_INTERVAL_MIN = {
-  live: 5,        // canais ao vivo
+  live: 15,       // canais ao vivo (amostra por categoria)
   hot: 60,        // favoritos, novos e que falharam antes
-  recent: 360,    // filmes/séries recentes
-  cold: 1440,     // catálogo antigo, sob demanda
+  recent: 720,    // filmes/séries recentes
+  cold: 2880,     // catálogo antigo, verificação bem lenta
 };
+
+/** Máximo de canais testados por categoria em cada rodada. */
+export const LIVE_SAMPLE_PER_CATEGORY = 3;
 
 
 export type ContentStatus =
-  | "unknown" | "online" | "slow" | "unstable" | "offline" | "blocked" | "removed";
+  | "unknown" | "online" | "slow" | "suspect" | "unstable" | "offline" | "blocked" | "removed";
 export type ContentKind = "live" | "movie" | "series" | "episode";
 
 export const STATUS_LABEL: Record<ContentStatus, string> = {
   unknown: "⚪ Sem análise",
   online: "🟢 Online",
   slow: "🟡 Lento",
+  suspect: "🟡 Suspeito",
   unstable: "🟠 Instável",
   offline: "🔴 Offline",
   blocked: "🔒 Bloqueado",
@@ -298,7 +315,7 @@ export async function headPrecheck(
       signal: ctrl.signal,
     });
     const ms = Date.now() - started;
-    if (res.status === 401 || res.status === 403) {
+    if (res.status === 401 || res.status === 403 || res.status === 429) {
       return { verdict: fail("blocked", res.status, started, `HTTP ${res.status}`), ms };
     }
     if (res.status === 404 || res.status === 410) {
@@ -353,7 +370,7 @@ export async function probeContentUrl(url: string, opts: { head?: boolean } = {}
       signal: ctrl.signal,
     });
     const http = res.status;
-    if (http === 401 || http === 403) {
+    if (http === 401 || http === 403 || http === 429) {
       return fail("blocked", http, started, `HTTP ${http}`);
     }
     if (http === 404 || http === 410) {
@@ -427,16 +444,33 @@ function fail(status: ContentStatus, http: number | null, started: number, msg: 
   };
 }
 
-/** Aplica a regra anti-falso-positivo: 1ª falha suspeita, 2ª instável, 3ª offline. */
-export function classify(prev: { current_status: ContentStatus; consecutive_failures: number }, probe: ProbeResult) {
-  const bad = probe.status === "offline";
-  if (probe.status === "blocked" || probe.status === "removed") {
+/**
+ * Regra anti-falso-positivo em 3 etapas:
+ * 1ª falha → 🟡 Suspeito · 2ª → 🟠 Instável · 3ª → 🔴 Offline.
+ * `protectedMode` = servidor aparentando bloquear as verificações: nesse caso
+ * não rebaixamos o conteúdo, só marcamos como suspeito.
+ */
+export function classify(
+  prev: { current_status: ContentStatus; consecutive_failures: number },
+  probe: ProbeResult,
+  protectedMode = false,
+) {
+  if (probe.status === "removed") {
     return { status: probe.status, failures: prev.consecutive_failures + 1 };
   }
-  if (!bad) return { status: probe.status, failures: 0 };
+  if (probe.status === "blocked") {
+    const failures = prev.consecutive_failures + 1;
+    // Bloqueio pode ser proteção anti-bot do servidor: não condenar de cara.
+    if (protectedMode || failures < 2) return { status: "suspect" as ContentStatus, failures };
+    return { status: "blocked" as ContentStatus, failures };
+  }
+  if (probe.status !== "offline") return { status: probe.status, failures: 0 };
+
   const failures = prev.consecutive_failures + 1;
+  if (protectedMode) return { status: "suspect" as ContentStatus, failures };
   if (failures >= 3) return { status: "offline" as ContentStatus, failures };
-  return { status: "unstable" as ContentStatus, failures };
+  if (failures === 2) return { status: "unstable" as ContentStatus, failures };
+  return { status: "suspect" as ContentStatus, failures };
 }
 
 // --------------------------------------------------------------- fila / lote
@@ -464,11 +498,47 @@ async function tierRows(serverId: string, size: number, build: (q: any) => any) 
 }
 
 /**
- * Fila inteligente por prioridade:
- *  1) canais ao vivo (a cada 5 min)
- *  2) favoritos / novos / que já falharam (a cada 1h)
- *  3) filmes e séries recentes (a cada 6h)
- *  4) catálogo antigo (1x por dia)
+ * Canais ao vivo: nunca testamos a grade inteira.
+ * Pegamos só uma amostra por categoria (favoritos primeiro) e giramos as
+ * categorias conforme a hora do dia, para distribuir a carga no servidor.
+ */
+async function pickLiveSample(serverId: string, size: number) {
+  if (size <= 0) return [];
+  const rows = await tierRows(serverId, size * 8, (q) =>
+    dueFilter(q.eq("content_type", "live"), TIER_INTERVAL_MIN.live));
+  if (!rows.length) return [];
+
+  const byCat = new Map<string, any[]>();
+  for (const r of rows) {
+    const key = r.category_name || "sem categoria";
+    if (!byCat.has(key)) byCat.set(key, []);
+    byCat.get(key)!.push(r);
+  }
+
+  // Rotação por hora: categorias diferentes em horários diferentes.
+  const cats = Array.from(byCat.keys()).sort();
+  const offset = new Date().getUTCHours() % Math.max(1, cats.length);
+  const rotated = [...cats.slice(offset), ...cats.slice(0, offset)];
+
+  const out: any[] = [];
+  for (const cat of rotated) {
+    const list = byCat.get(cat)!
+      .sort((a, b) =>
+        Number(b.is_favorite) - Number(a.is_favorite) ||
+        (b.priority ?? 0) - (a.priority ?? 0) ||
+        (b.consecutive_failures ?? 0) - (a.consecutive_failures ?? 0));
+    out.push(...list.slice(0, LIVE_SAMPLE_PER_CATEGORY));
+    if (out.length >= size) break;
+  }
+  return out.slice(0, size);
+}
+
+/**
+ * Fila inteligente do Modo Seguro:
+ *  1) canais ao vivo — amostra por categoria, com rodízio de horário
+ *  2) favoritos / conteúdos novos / que já falharam antes
+ *  3) filmes e séries recentes (verificação lenta)
+ *  4) catálogo antigo (bem esporádico, só sobra de lote)
  */
 export async function pickQueue(serverId: string, size: number) {
   const seen = new Set<string>();
@@ -481,20 +551,24 @@ export async function pickQueue(serverId: string, size: number) {
     }
   };
 
-  push(await tierRows(serverId, Math.ceil(size * 0.35), (q) =>
-    dueFilter(q.eq("content_type", "live"), TIER_INTERVAL_MIN.live)));
+  push(await pickLiveSample(serverId, Math.ceil(size * 0.3)));
 
-  push(await tierRows(serverId, Math.ceil(size * 0.35), (q) =>
+  // Filmes/séries: prioridade para novos, com erro e favoritos.
+  push(await tierRows(serverId, Math.ceil(size * 0.45), (q) =>
     dueFilter(
-      q.or("is_favorite.eq.true,consecutive_failures.gt.0,current_status.eq.unknown"),
+      q.neq("content_type", "live")
+        .or("is_favorite.eq.true,consecutive_failures.gt.0,current_status.eq.unknown,current_status.eq.suspect"),
       TIER_INTERVAL_MIN.hot,
     )));
 
   push(await tierRows(serverId, size - out.length, (q) =>
-    dueFilter(q.gt("first_seen_at", cutoff(60 * 24 * 14)), TIER_INTERVAL_MIN.recent)));
+    dueFilter(
+      q.neq("content_type", "live").gt("first_seen_at", cutoff(60 * 24 * 14)),
+      TIER_INTERVAL_MIN.recent,
+    )));
 
-  push(await tierRows(serverId, size - out.length, (q) =>
-    dueFilter(q, TIER_INTERVAL_MIN.cold)));
+  push(await tierRows(serverId, Math.min(size - out.length, Math.ceil(size * 0.15)), (q) =>
+    dueFilter(q.neq("content_type", "live"), TIER_INTERVAL_MIN.cold)));
 
   return out.slice(0, size);
 }
@@ -529,10 +603,38 @@ export async function runContentScan(
     userId?: string;
     turbo?: boolean;
     head?: boolean;
+    /** Modo Seguro (padrão): poucos testes simultâneos, pausa entre lotes e freio adaptativo. */
+    safe?: boolean;
+    /** Ignora o descanso ativo (usado em verificações manuais). */
+    ignoreCooldown?: boolean;
   } = {},
 ) {
+  const safe = opts.safe ?? true;
   const batch = Math.min(opts.batch ?? 40, 300);
-  const concurrency = Math.min(Math.max(1, opts.concurrency ?? CONCURRENCY), MAX_CONCURRENCY);
+
+  const {
+    getThrottle, escalateThrottle, relaxThrottle, isCoolingDown,
+    THROTTLE_FACTOR, sleep,
+  } = await import("./content-safe.server");
+
+  const throttle = await getThrottle(serverId);
+  if (safe && !opts.ignoreCooldown && isCoolingDown(throttle)) {
+    return {
+      tested: 0, failed: 0, recovered: 0, generalFailure: false,
+      concurrency: 0, safe: true, throttleLevel: throttle.level,
+      cooldownUntil: throttle.cooldownUntil, blocked: true,
+      skipped: "Servidor em descanso (Modo Seguro)",
+    };
+  }
+
+  const factor = THROTTLE_FACTOR[Math.min(throttle.level, THROTTLE_FACTOR.length - 1)];
+  const concurrency = safe
+    ? Math.max(1, Math.floor(
+        Math.min(opts.concurrency ?? SAFE_CONCURRENCY, MAX_SAFE_CONCURRENCY) / factor))
+    : Math.min(Math.max(1, opts.concurrency ?? CONCURRENCY), MAX_CONCURRENCY);
+  const batchPause = safe ? SAFE_BATCH_PAUSE_MS * factor : 0;
+  const requestDelay = safe ? SAFE_REQUEST_DELAY_MS * factor : 0;
+
   const { data: server } = await supabaseAdmin
     .from("servers").select("id, owner_id, name, host").eq("id", serverId).maybeSingle();
   if (!server) throw new Error("Servidor não encontrado");
@@ -557,18 +659,22 @@ export async function runContentScan(
     queue = await pickQueue(serverId, batch);
   }
 
-  let tested = 0, failed = 0, recovered = 0;
+  let tested = 0, failed = 0, recovered = 0, blockSignals = 0;
+  let protectedMode = false;
+  let aborted = false;
   const events: { row: any; status: ContentStatus; probe: ProbeResult }[] = [];
   const checkRows: any[] = [];
 
-  // Consulta em paralelo real: pool rolante, sem esperar o lote inteiro terminar.
-  await runPool(queue, concurrency, async (row) => {
+  const testOne = async (row: any) => {
     const probe = await probeContentUrl(
       streamUrl(server.host, username, password, row),
       { head: opts.head ?? true },
     );
-    const { status, failures } = classify(row, probe);
-    const wasBad = ["offline", "blocked", "removed", "unstable"].includes(row.current_status);
+    if (probe.http_status === 401 || probe.http_status === 403 || probe.http_status === 429) {
+      blockSignals++;
+    }
+    const { status, failures } = classify(row, probe, protectedMode);
+    const wasBad = ["offline", "blocked", "removed", "unstable", "suspect"].includes(row.current_status);
     const isBad = ["offline", "blocked", "removed"].includes(status);
     tested++;
     if (isBad) failed++;
@@ -600,35 +706,83 @@ export async function runContentScan(
     }).eq("id", row.id);
 
     if (row.current_status !== status) events.push({ row, status, probe });
-  });
+    if (requestDelay) await sleep(requestDelay);
+  };
+
+  // Lotes pequenos, com pausa entre eles: nunca testamos tudo de uma vez.
+  for (let i = 0; i < queue.length; i += concurrency) {
+    const slice = queue.slice(i, i + concurrency);
+    await runPool(slice, concurrency, testOne);
+
+    // Freio adaptativo: muitos 401/403/429 => o servidor está nos barrando.
+    if (safe && !protectedMode && tested >= MIN_BLOCK_SAMPLE
+      && blockSignals / tested >= BLOCK_SIGNAL_PCT) {
+      protectedMode = true;
+      aborted = true;
+      break;
+    }
+    if (batchPause && i + concurrency < queue.length) await sleep(batchPause);
+  }
 
   // Histórico gravado em lote (menos escritas no banco).
   for (let i = 0; i < checkRows.length; i += 200) {
     await supabaseAdmin.from("content_checks").insert(checkRows.slice(i, i + 200));
   }
 
+  let newThrottle = throttle;
+  if (safe) {
+    newThrottle = protectedMode
+      ? await escalateThrottle(serverId)
+      : (tested > 0 ? await relaxThrottle(serverId) : throttle);
+  }
+
   // Detector de falha geral: muitos erros de uma vez => provável problema no servidor.
-  const generalFailure = tested >= 10 && failed / tested >= GENERAL_FAILURE_PCT;
+  const generalFailure = !protectedMode && tested >= 10 && failed / tested >= GENERAL_FAILURE_PCT;
+
+  const note = protectedMode
+    ? "🚨 Servidor pode estar bloqueando verificações automáticas — velocidade reduzida"
+    : generalFailure
+      ? "Possível falha geral do servidor — testes suspensos"
+      : opts.turbo ? "Verificação Turbo (amostra)" : null;
 
   if (run) {
     await supabaseAdmin.from("content_scan_runs").update({
       finished_at: new Date().toISOString(),
       tested, failed, recovered,
-      general_failure: generalFailure,
-      note: generalFailure
-        ? "Possível falha geral do servidor — testes suspensos"
-        : opts.turbo ? "Verificação Turbo (amostra)" : null,
+      general_failure: generalFailure || protectedMode,
+      note,
     }).eq("id", run.id);
   }
 
   await upsertDailySummary(serverId);
+
+  if (protectedMode) {
+    try {
+      await supabaseAdmin.from("iptv_alerts").insert({
+        server_id: serverId,
+        kind: "content_protection",
+        severity: "warning",
+        title: "🚨 Servidor pode estar bloqueando verificações automáticas",
+        detail:
+          `${blockSignals} de ${tested} testes retornaram 401/403/429. ` +
+          `O Modo Seguro reduziu a velocidade (nível ${newThrottle.level}) e o servidor ` +
+          `ficará em descanso até ${newThrottle.cooldownUntil ? new Date(newThrottle.cooldownUntil).toLocaleString("pt-BR") : "a próxima rodada"}. ` +
+          `Nenhum conteúdo foi marcado como offline nesta rodada.`,
+      });
+    } catch { /* alerta nunca quebra o scan */ }
+  }
 
   try {
     const { notifyContentEvents } = await import("./content-alerts.server");
     await notifyContentEvents(server as any, events, { tested, failed, recovered, generalFailure });
   } catch { /* alertas nunca quebram o scan */ }
 
-  return { tested, failed, recovered, generalFailure, concurrency };
+  return {
+    tested, failed, recovered, generalFailure, concurrency,
+    safe, aborted, blockSignals, protectedMode,
+    throttleLevel: newThrottle.level,
+    cooldownUntil: newThrottle.cooldownUntil,
+  };
 }
 
 /**
@@ -662,11 +816,13 @@ export async function runTurboScan(
 
   const scan = await runContentScan(serverId, {
     batch: opts.sample ?? 24,
-    concurrency: opts.concurrency ?? CONCURRENCY,
+    concurrency: opts.concurrency ?? SAFE_CONCURRENCY,
     turbo: true,
     manual: true,
     userId: opts.userId,
     head: true,
+    safe: true,
+    ignoreCooldown: true,
   });
 
   return {
@@ -678,6 +834,8 @@ export async function runTurboScan(
     failed: scan.failed,
     recovered: scan.recovered,
     generalFailure: scan.generalFailure,
+    protectedMode: !!scan.protectedMode,
+    throttleLevel: scan.throttleLevel ?? 0,
     elapsedMs: Date.now() - started,
   };
 }
@@ -701,16 +859,17 @@ export async function runDueContentScans() {
   );
 
   const eligible = servers.filter((s) => active.has(s.owner_id));
-  let tested = 0, count = 0;
-  // Até 3 servidores em paralelo, cada um com seu pool interno.
-  await runPool(eligible, 3, async (s) => {
+  let tested = 0, count = 0, throttled = 0;
+  // Modo Seguro: só 2 servidores por vez, lotes pequenos e pausados em cada um.
+  await runPool(eligible, 2, async (s) => {
     try {
-      const r = await runContentScan(s.id, { batch: 60, concurrency: CONCURRENCY });
+      const r = await runContentScan(s.id, { batch: 40, safe: true });
       tested += r.tested;
+      if ((r as any).protectedMode || (r as any).blocked) throttled++;
       count++;
     } catch { /* ignora servidor com erro */ }
   });
-  return { servers: count, tested };
+  return { servers: count, tested, throttled };
 
 }
 

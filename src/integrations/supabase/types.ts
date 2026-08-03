@@ -2879,6 +2879,7 @@ export type Database = {
         | "offline"
         | "blocked"
         | "removed"
+        | "suspect"
       hub_report_reason:
         | "spam"
         | "scam"
@@ -3062,6 +3063,7 @@ export const Constants = {
         "offline",
         "blocked",
         "removed",
+        "suspect",
       ],
       hub_report_reason: ["spam", "scam", "contact_leak", "offensive", "other"],
       hub_report_target: ["listing", "user", "message"],

@@ -16,7 +16,7 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import {
-  RefreshCw, DownloadCloud, Star, Activity, ShieldAlert, Search, Radar, Brain, Zap,
+  RefreshCw, DownloadCloud, Star, Activity, ShieldAlert, ShieldCheck, Search, Radar, Brain, Zap,
 } from "lucide-react";
 import {
   importContentCatalog, scanServerContents, recheckContent, turboScanServer,
@@ -48,6 +48,7 @@ export const Route = createFileRoute("/_authenticated/app/conteudos")({
 const STATUS: Record<string, { label: string; cls: string }> = {
   online: { label: "🟢 Online", cls: "bg-emerald-500/10 text-emerald-400 border-emerald-500/30" },
   slow: { label: "🟡 Lento", cls: "bg-amber-500/10 text-amber-400 border-amber-500/30" },
+  suspect: { label: "🟡 Suspeito", cls: "bg-yellow-500/10 text-yellow-400 border-yellow-500/30" },
   unstable: { label: "🟠 Instável", cls: "bg-orange-500/10 text-orange-400 border-orange-500/30" },
   offline: { label: "🔴 Offline", cls: "bg-red-500/10 text-red-400 border-red-500/30" },
   blocked: { label: "🔒 Bloqueado", cls: "bg-purple-500/10 text-purple-300 border-purple-500/30" },
@@ -74,8 +75,10 @@ function ContentMonitorPage() {
   const [type, setType] = useState<string>("all");
   const [search, setSearch] = useState("");
   const [busy, setBusy] = useState<string | null>(null);
-  const [concurrency, setConcurrency] = useState("20");
+  const [concurrency, setConcurrency] = useState("5");
+  const [safeMode, setSafeMode] = useState(true);
   const [turbo, setTurbo] = useState<any>(null);
+  const [safeInfo, setSafeInfo] = useState<any>(null);
 
   const doImport = useServerFn(importContentCatalog);
   const doScan = useServerFn(scanServerContents);
@@ -170,12 +173,20 @@ function ContentMonitorPage() {
         );
       } else {
         const r: any = await doScan({
-          data: { serverId: effectiveServer, batch: 60, concurrency: Number(concurrency) },
+          data: {
+            serverId: effectiveServer,
+            batch: safeMode ? 40 : 60,
+            concurrency: Number(concurrency),
+            safe: safeMode,
+          },
         });
+        setSafeInfo(r);
         toast.success(
-          r.generalFailure
-            ? "🚨 Possível falha geral do servidor — testes suspensos"
-            : `Verificados ${r.tested} · ${r.failed} falhas · ${r.recovered} recuperados`,
+          r.protectedMode
+            ? "🚨 O servidor pode estar bloqueando as verificações — velocidade reduzida automaticamente"
+            : r.generalFailure
+              ? "🚨 Possível falha geral do servidor — testes suspensos"
+              : `Verificados ${r.tested} · ${r.failed} falhas · ${r.recovered} recuperados`,
         );
       }
       qc.invalidateQueries({ queryKey: ["cm-summary"] });
@@ -212,13 +223,22 @@ function ContentMonitorPage() {
             </SelectContent>
           </Select>
           <Select value={concurrency} onValueChange={setConcurrency}>
-            <SelectTrigger className="w-[150px]"><SelectValue /></SelectTrigger>
+            <SelectTrigger className="w-[160px]"><SelectValue /></SelectTrigger>
             <SelectContent>
-              {["8", "20", "35", "50"].map((n) => (
+              {(safeMode ? ["3", "5", "8", "10"] : ["8", "20", "35", "50"]).map((n) => (
                 <SelectItem key={n} value={n}>{n} em paralelo</SelectItem>
               ))}
             </SelectContent>
           </Select>
+          <div className="flex items-center gap-2 rounded-md border border-border px-3">
+            <ShieldCheck className={`h-4 w-4 ${safeMode ? "text-emerald-400" : "text-muted-foreground"}`} />
+            <Label htmlFor="safe-mode" className="text-xs whitespace-nowrap">Modo Seguro</Label>
+            <Switch
+              id="safe-mode"
+              checked={safeMode}
+              onCheckedChange={(v) => { setSafeMode(v); setConcurrency(v ? "5" : "20"); }}
+            />
+          </div>
           <Button variant="outline" disabled={!!busy || !effectiveServer} onClick={() => run("import")}>
             <DownloadCloud className="mr-2 h-4 w-4" />
             {busy === "import" ? "Importando..." : "Importar catálogo"}
@@ -233,6 +253,36 @@ function ContentMonitorPage() {
           </Button>
         </div>
       </header>
+
+      {safeMode && (
+        <Card className="border-emerald-500/30 bg-emerald-500/5 p-4">
+          <p className="flex items-center gap-2 text-sm font-semibold text-emerald-400">
+            <ShieldCheck className="h-4 w-4" /> Modo Seguro ativo
+          </p>
+          <p className="mt-1 text-xs text-muted-foreground">
+            Máximo de 5 testes simultâneos por servidor, intervalo entre requisições, fila
+            inteligente por prioridade e amostra por categoria. Nada é marcado como offline na
+            primeira falha: 🟡 Suspeito → 🟠 Instável → 🔴 Offline. Se o servidor responder com
+            403/429, a velocidade cai sozinha e ele entra em descanso.
+          </p>
+          {safeInfo?.protectedMode && (
+            <p className="mt-2 rounded-md bg-amber-500/10 px-3 py-2 text-xs text-amber-300">
+              🚨 Freio adaptativo acionado (nível {safeInfo.throttleLevel}) — o servidor sinalizou
+              bloqueio em {safeInfo.blockSignals} de {safeInfo.tested} testes.
+              {safeInfo.cooldownUntil
+                ? ` Próxima verificação após ${new Date(safeInfo.cooldownUntil).toLocaleTimeString("pt-BR")}.`
+                : ""}
+            </p>
+          )}
+          {safeInfo?.blocked && (
+            <p className="mt-2 rounded-md bg-amber-500/10 px-3 py-2 text-xs text-amber-300">
+              ⏸️ Servidor em descanso pelo Modo Seguro para não sobrecarregá-lo.
+            </p>
+          )}
+        </Card>
+      )}
+
+
 
       {turbo && (
         <Card className="p-4">
@@ -280,6 +330,7 @@ function ContentMonitorPage() {
             {[
               ["Online", s.online, "text-emerald-400"],
               ["Lentos", s.slow, "text-amber-400"],
+              ["Suspeitos", s.suspect, "text-yellow-400"],
               ["Instáveis", s.unstable, "text-orange-400"],
               ["Offline", s.offline, "text-red-400"],
               ["Bloqueados", s.blocked, "text-purple-300"],
