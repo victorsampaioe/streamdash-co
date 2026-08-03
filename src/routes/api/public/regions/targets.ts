@@ -21,7 +21,11 @@ export const Route = createFileRoute("/api/public/regions/targets")({
           }, { headers: { "cache-control": "no-store" } });
         }
 
-        if (!verifyRegionSignature("targets", request.headers.get("x-signature"))) {
+        const sig = request.headers.get("x-signature");
+        const agentId = request.headers.get("x-agent-id");
+        const { authenticateAgent } = await import("@/lib/region-agent.server");
+        const agent = agentId ? await authenticateAgent(agentId, "targets", sig) : null;
+        if (!agent && !verifyRegionSignature("targets", sig)) {
           return new Response("Forbidden", { status: 403 });
         }
 
@@ -41,12 +45,20 @@ export const Route = createFileRoute("/api/public/regions/targets")({
 
         const { data: servers } = await supabaseAdmin
           .from("servers")
-          .select("id, host, owner_id");
+          .select("id, host, owner_id, iptv_username, iptv_password, iptv_detected");
         const targets = (servers ?? [])
           .filter((s) => activeOwners.has(s.owner_id))
-          .map((s) => ({ server_id: s.id, host: s.host }));
+          .map((s) => (agent
+            ? {
+                server_id: s.id,
+                host: s.host,
+                iptv: s.iptv_username && s.iptv_password
+                  ? { username: s.iptv_username, password: s.iptv_password, kind: s.iptv_detected }
+                  : null,
+              }
+            : { server_id: s.id, host: s.host }));
 
-        return Response.json({ targets, count: targets.length }, {
+        return Response.json({ region: agent?.region_code ?? null, targets, count: targets.length }, {
           headers: { "cache-control": "no-store" },
         });
       },
