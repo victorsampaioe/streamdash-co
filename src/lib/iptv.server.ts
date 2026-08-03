@@ -957,7 +957,11 @@ export async function runIptvSync(serverId: string, opts: { mode?: "smart" | "fu
 
   try {
     const { dispatchAlerts } = await import("./alert-state.server");
-    await dispatchAlerts(serverId, alerts);
+    await dispatchAlerts(serverId, alerts, [
+      "login_invalid", "api_slow", "api_down", "playlist_broken",
+      "account_expiring", "connections_limit", "content_live_empty",
+      "stream_offline", "health_drop",
+    ]);
   } catch (e) {
     console.warn("[iptv] falha ao despachar alertas:", (e as Error)?.message);
   }
