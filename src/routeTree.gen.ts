@@ -32,6 +32,7 @@ import { Route as AuthenticatedAppPaginaRouteImport } from './routes/_authentica
 import { Route as AuthenticatedAppNovidadesRouteImport } from './routes/_authenticated/app.novidades'
 import { Route as AuthenticatedAppHubRouteImport } from './routes/_authenticated/app.hub'
 import { Route as AuthenticatedAppDetectorRouteImport } from './routes/_authenticated/app.detector'
+import { Route as AuthenticatedAppConteudosRouteImport } from './routes/_authenticated/app.conteudos'
 import { Route as AuthenticatedAppArtesRouteImport } from './routes/_authenticated/app.artes'
 import { Route as AuthenticatedAppAlertsRouteImport } from './routes/_authenticated/app.alerts'
 import { Route as AuthenticatedAppAjudaRouteImport } from './routes/_authenticated/app.ajuda'
@@ -177,6 +178,12 @@ const AuthenticatedAppDetectorRoute =
   AuthenticatedAppDetectorRouteImport.update({
     id: '/detector',
     path: '/detector',
+    getParentRoute: () => AuthenticatedAppRoute,
+  } as any)
+const AuthenticatedAppConteudosRoute =
+  AuthenticatedAppConteudosRouteImport.update({
+    id: '/conteudos',
+    path: '/conteudos',
     getParentRoute: () => AuthenticatedAppRoute,
   } as any)
 const AuthenticatedAppArtesRoute = AuthenticatedAppArtesRouteImport.update({
@@ -346,6 +353,7 @@ export interface FileRoutesByFullPath {
   '/app/ajuda': typeof AuthenticatedAppAjudaRoute
   '/app/alerts': typeof AuthenticatedAppAlertsRoute
   '/app/artes': typeof AuthenticatedAppArtesRoute
+  '/app/conteudos': typeof AuthenticatedAppConteudosRoute
   '/app/detector': typeof AuthenticatedAppDetectorRoute
   '/app/hub': typeof AuthenticatedAppHubRouteWithChildren
   '/app/novidades': typeof AuthenticatedAppNovidadesRoute
@@ -395,6 +403,7 @@ export interface FileRoutesByTo {
   '/app/ajuda': typeof AuthenticatedAppAjudaRoute
   '/app/alerts': typeof AuthenticatedAppAlertsRoute
   '/app/artes': typeof AuthenticatedAppArtesRoute
+  '/app/conteudos': typeof AuthenticatedAppConteudosRoute
   '/app/detector': typeof AuthenticatedAppDetectorRoute
   '/app/novidades': typeof AuthenticatedAppNovidadesRoute
   '/app/pagina': typeof AuthenticatedAppPaginaRoute
@@ -446,6 +455,7 @@ export interface FileRoutesById {
   '/_authenticated/app/ajuda': typeof AuthenticatedAppAjudaRoute
   '/_authenticated/app/alerts': typeof AuthenticatedAppAlertsRoute
   '/_authenticated/app/artes': typeof AuthenticatedAppArtesRoute
+  '/_authenticated/app/conteudos': typeof AuthenticatedAppConteudosRoute
   '/_authenticated/app/detector': typeof AuthenticatedAppDetectorRoute
   '/_authenticated/app/hub': typeof AuthenticatedAppHubRouteWithChildren
   '/_authenticated/app/novidades': typeof AuthenticatedAppNovidadesRoute
@@ -498,6 +508,7 @@ export interface FileRouteTypes {
     | '/app/ajuda'
     | '/app/alerts'
     | '/app/artes'
+    | '/app/conteudos'
     | '/app/detector'
     | '/app/hub'
     | '/app/novidades'
@@ -547,6 +558,7 @@ export interface FileRouteTypes {
     | '/app/ajuda'
     | '/app/alerts'
     | '/app/artes'
+    | '/app/conteudos'
     | '/app/detector'
     | '/app/novidades'
     | '/app/pagina'
@@ -597,6 +609,7 @@ export interface FileRouteTypes {
     | '/_authenticated/app/ajuda'
     | '/_authenticated/app/alerts'
     | '/_authenticated/app/artes'
+    | '/_authenticated/app/conteudos'
     | '/_authenticated/app/detector'
     | '/_authenticated/app/hub'
     | '/_authenticated/app/novidades'
@@ -812,6 +825,13 @@ declare module '@tanstack/react-router' {
       path: '/detector'
       fullPath: '/app/detector'
       preLoaderRoute: typeof AuthenticatedAppDetectorRouteImport
+      parentRoute: typeof AuthenticatedAppRoute
+    }
+    '/_authenticated/app/conteudos': {
+      id: '/_authenticated/app/conteudos'
+      path: '/conteudos'
+      fullPath: '/app/conteudos'
+      preLoaderRoute: typeof AuthenticatedAppConteudosRouteImport
       parentRoute: typeof AuthenticatedAppRoute
     }
     '/_authenticated/app/artes': {
@@ -1033,6 +1053,7 @@ interface AuthenticatedAppRouteChildren {
   AuthenticatedAppAjudaRoute: typeof AuthenticatedAppAjudaRoute
   AuthenticatedAppAlertsRoute: typeof AuthenticatedAppAlertsRoute
   AuthenticatedAppArtesRoute: typeof AuthenticatedAppArtesRoute
+  AuthenticatedAppConteudosRoute: typeof AuthenticatedAppConteudosRoute
   AuthenticatedAppDetectorRoute: typeof AuthenticatedAppDetectorRoute
   AuthenticatedAppHubRoute: typeof AuthenticatedAppHubRouteWithChildren
   AuthenticatedAppNovidadesRoute: typeof AuthenticatedAppNovidadesRoute
@@ -1054,6 +1075,7 @@ const AuthenticatedAppRouteChildren: AuthenticatedAppRouteChildren = {
   AuthenticatedAppAjudaRoute: AuthenticatedAppAjudaRoute,
   AuthenticatedAppAlertsRoute: AuthenticatedAppAlertsRoute,
   AuthenticatedAppArtesRoute: AuthenticatedAppArtesRoute,
+  AuthenticatedAppConteudosRoute: AuthenticatedAppConteudosRoute,
   AuthenticatedAppDetectorRoute: AuthenticatedAppDetectorRoute,
   AuthenticatedAppHubRoute: AuthenticatedAppHubRouteWithChildren,
   AuthenticatedAppNovidadesRoute: AuthenticatedAppNovidadesRoute,

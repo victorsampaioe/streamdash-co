@@ -310,6 +310,234 @@ export type Database = {
           },
         ]
       }
+      content_alert_settings: {
+        Row: {
+          created_at: string
+          id: string
+          minimum_failures: number
+          notify_channels: boolean
+          notify_movies: boolean
+          notify_only_favorites: boolean
+          notify_recovery: boolean
+          notify_series: boolean
+          server_id: string | null
+          telegram_enabled: boolean
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          minimum_failures?: number
+          notify_channels?: boolean
+          notify_movies?: boolean
+          notify_only_favorites?: boolean
+          notify_recovery?: boolean
+          notify_series?: boolean
+          server_id?: string | null
+          telegram_enabled?: boolean
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          minimum_failures?: number
+          notify_channels?: boolean
+          notify_movies?: boolean
+          notify_only_favorites?: boolean
+          notify_recovery?: boolean
+          notify_series?: boolean
+          server_id?: string | null
+          telegram_enabled?: boolean
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "content_alert_settings_server_id_fkey"
+            columns: ["server_id"]
+            isOneToOne: false
+            referencedRelation: "servers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      content_checks: {
+        Row: {
+          bytes_received: number | null
+          checked_at: string
+          checked_by: string | null
+          content_id: string
+          detected_format: string | null
+          error_message: string | null
+          first_byte_time_ms: number | null
+          http_status: number | null
+          id: number
+          manual: boolean
+          region: string
+          response_time_ms: number | null
+          server_id: string
+          status: Database["public"]["Enums"]["content_status"]
+        }
+        Insert: {
+          bytes_received?: number | null
+          checked_at?: string
+          checked_by?: string | null
+          content_id: string
+          detected_format?: string | null
+          error_message?: string | null
+          first_byte_time_ms?: number | null
+          http_status?: number | null
+          id?: number
+          manual?: boolean
+          region?: string
+          response_time_ms?: number | null
+          server_id: string
+          status: Database["public"]["Enums"]["content_status"]
+        }
+        Update: {
+          bytes_received?: number | null
+          checked_at?: string
+          checked_by?: string | null
+          content_id?: string
+          detected_format?: string | null
+          error_message?: string | null
+          first_byte_time_ms?: number | null
+          http_status?: number | null
+          id?: number
+          manual?: boolean
+          region?: string
+          response_time_ms?: number | null
+          server_id?: string
+          status?: Database["public"]["Enums"]["content_status"]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "content_checks_content_id_fkey"
+            columns: ["content_id"]
+            isOneToOne: false
+            referencedRelation: "monitored_contents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "content_checks_server_id_fkey"
+            columns: ["server_id"]
+            isOneToOne: false
+            referencedRelation: "servers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      content_daily_summary: {
+        Row: {
+          average_response_time: number | null
+          blocked_count: number
+          created_at: string
+          health_score: number | null
+          id: string
+          offline_count: number
+          online_count: number
+          recovered_count: number
+          removed_count: number
+          server_id: string
+          slow_count: number
+          summary_date: string
+          total_contents: number
+          unstable_count: number
+          updated_at: string
+        }
+        Insert: {
+          average_response_time?: number | null
+          blocked_count?: number
+          created_at?: string
+          health_score?: number | null
+          id?: string
+          offline_count?: number
+          online_count?: number
+          recovered_count?: number
+          removed_count?: number
+          server_id: string
+          slow_count?: number
+          summary_date: string
+          total_contents?: number
+          unstable_count?: number
+          updated_at?: string
+        }
+        Update: {
+          average_response_time?: number | null
+          blocked_count?: number
+          created_at?: string
+          health_score?: number | null
+          id?: string
+          offline_count?: number
+          online_count?: number
+          recovered_count?: number
+          removed_count?: number
+          server_id?: string
+          slow_count?: number
+          summary_date?: string
+          total_contents?: number
+          unstable_count?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "content_daily_summary_server_id_fkey"
+            columns: ["server_id"]
+            isOneToOne: false
+            referencedRelation: "servers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      content_scan_runs: {
+        Row: {
+          failed: number
+          finished_at: string | null
+          general_failure: boolean
+          id: string
+          note: string | null
+          recovered: number
+          server_id: string
+          started_at: string
+          tested: number
+          triggered_by: string | null
+        }
+        Insert: {
+          failed?: number
+          finished_at?: string | null
+          general_failure?: boolean
+          id?: string
+          note?: string | null
+          recovered?: number
+          server_id: string
+          started_at?: string
+          tested?: number
+          triggered_by?: string | null
+        }
+        Update: {
+          failed?: number
+          finished_at?: string | null
+          general_failure?: boolean
+          id?: string
+          note?: string | null
+          recovered?: number
+          server_id?: string
+          started_at?: string
+          tested?: number
+          triggered_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "content_scan_runs_server_id_fkey"
+            columns: ["server_id"]
+            isOneToOne: false
+            referencedRelation: "servers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       conversations: {
         Row: {
           buyer_id: string
@@ -1477,6 +1705,101 @@ export type Database = {
           },
         ]
       }
+      monitored_contents: {
+        Row: {
+          category_name: string | null
+          consecutive_failures: number
+          container_ext: string | null
+          content_type: Database["public"]["Enums"]["content_kind"]
+          cover_url: string | null
+          created_at: string
+          current_status: Database["public"]["Enums"]["content_status"]
+          episode_number: number | null
+          external_content_id: string
+          first_seen_at: string
+          http_status: number | null
+          id: string
+          is_favorite: boolean
+          last_checked_at: string | null
+          last_error: string | null
+          last_online_at: string | null
+          last_seen_at: string
+          name: string
+          parent_external_id: string | null
+          priority: number
+          reseller_id: string
+          response_time_ms: number | null
+          season_number: number | null
+          server_id: string
+          stream_url_encrypted: string | null
+          updated_at: string
+        }
+        Insert: {
+          category_name?: string | null
+          consecutive_failures?: number
+          container_ext?: string | null
+          content_type: Database["public"]["Enums"]["content_kind"]
+          cover_url?: string | null
+          created_at?: string
+          current_status?: Database["public"]["Enums"]["content_status"]
+          episode_number?: number | null
+          external_content_id: string
+          first_seen_at?: string
+          http_status?: number | null
+          id?: string
+          is_favorite?: boolean
+          last_checked_at?: string | null
+          last_error?: string | null
+          last_online_at?: string | null
+          last_seen_at?: string
+          name: string
+          parent_external_id?: string | null
+          priority?: number
+          reseller_id: string
+          response_time_ms?: number | null
+          season_number?: number | null
+          server_id: string
+          stream_url_encrypted?: string | null
+          updated_at?: string
+        }
+        Update: {
+          category_name?: string | null
+          consecutive_failures?: number
+          container_ext?: string | null
+          content_type?: Database["public"]["Enums"]["content_kind"]
+          cover_url?: string | null
+          created_at?: string
+          current_status?: Database["public"]["Enums"]["content_status"]
+          episode_number?: number | null
+          external_content_id?: string
+          first_seen_at?: string
+          http_status?: number | null
+          id?: string
+          is_favorite?: boolean
+          last_checked_at?: string | null
+          last_error?: string | null
+          last_online_at?: string | null
+          last_seen_at?: string
+          name?: string
+          parent_external_id?: string | null
+          priority?: number
+          reseller_id?: string
+          response_time_ms?: number | null
+          season_number?: number | null
+          server_id?: string
+          stream_url_encrypted?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "monitored_contents_server_id_fkey"
+            columns: ["server_id"]
+            isOneToOne: false
+            referencedRelation: "servers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       notifications_log: {
         Row: {
           channel_id: string | null
@@ -2333,6 +2656,7 @@ export type Database = {
         Args: { _id: string; _note?: string }
         Returns: undefined
       }
+      content_health_overview: { Args: { _server_id?: string }; Returns: Json }
       delete_server: { Args: { _id: string }; Returns: boolean }
       evaluate_achievements: { Args: { _user_id: string }; Returns: number }
       finalize_approved_payment: {
@@ -2534,6 +2858,7 @@ export type Database = {
         }[]
       }
       is_valid_referral_code: { Args: { _code: string }; Returns: boolean }
+      purge_content_checks: { Args: { _days?: number }; Returns: number }
       purge_old_metrics: { Args: { _dry_run?: boolean }; Returns: Json }
       request_payout: {
         Args: { _pix_key: string; _pix_name: string; _pix_type: string }
@@ -2545,6 +2870,15 @@ export type Database = {
     Enums: {
       alert_kind: "email" | "discord" | "telegram" | "webhook"
       app_role: "admin" | "user"
+      content_kind: "live" | "movie" | "series" | "episode"
+      content_status:
+        | "unknown"
+        | "online"
+        | "slow"
+        | "unstable"
+        | "offline"
+        | "blocked"
+        | "removed"
       hub_report_reason:
         | "spam"
         | "scam"
@@ -2719,6 +3053,16 @@ export const Constants = {
     Enums: {
       alert_kind: ["email", "discord", "telegram", "webhook"],
       app_role: ["admin", "user"],
+      content_kind: ["live", "movie", "series", "episode"],
+      content_status: [
+        "unknown",
+        "online",
+        "slow",
+        "unstable",
+        "offline",
+        "blocked",
+        "removed",
+      ],
       hub_report_reason: ["spam", "scam", "contact_leak", "offensive", "other"],
       hub_report_target: ["listing", "user", "message"],
       hub_verification_status: ["none", "pending", "approved", "rejected"],

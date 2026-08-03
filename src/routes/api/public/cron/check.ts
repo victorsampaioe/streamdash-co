@@ -16,7 +16,8 @@ async function run() {
   const { runDueDnsChecks } = await import("@/lib/dns.server");
   const { reconcilePendingPayments } = await import("@/lib/mercadopago.server");
   const { migratePlaintextCredentials } = await import("@/lib/iptv-credentials.server");
-  const [checks, expired, iptv, kuma, kumaProv, dns, payments] = await Promise.all([
+  const { runDueContentScans } = await import("@/lib/content-monitor.server");
+  const [checks, expired, iptv, kuma, kumaProv, dns, payments, contents] = await Promise.all([
     runDueChecks(),
     notifyNewlyExpiredSubscriptions().catch(() => ({ notified: 0 })),
     runDueIptvSyncs().catch(() => ({ synced: 0, errors: 0 })),
@@ -24,6 +25,7 @@ async function run() {
     provisionPendingServers().catch(() => ({ provisioned: 0 })),
     runDueDnsChecks().catch(() => ({ checked: 0, errors: 0 })),
     reconcilePendingPayments().catch(() => ({ checked: 0, approved: 0 })),
+    runDueContentScans().catch(() => ({ servers: 0, tested: 0 })),
   ]);
   // Rede de segurança: criptografa credenciais Xtream legadas em texto puro.
   const encrypted = await migratePlaintextCredentials(50).catch(() => ({ migrated: 0 }));
@@ -39,6 +41,8 @@ async function run() {
     paymentsChecked: payments.checked,
     paymentsApproved: payments.approved,
     credentialsEncrypted: encrypted.migrated,
+    contentServersScanned: contents.servers,
+    contentsTested: contents.tested,
   };
 }
 
