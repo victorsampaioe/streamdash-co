@@ -86,12 +86,12 @@ export const Route = createFileRoute("/api/public/regions/report")({
           const goingDown = i.status === "down" && prevStatus !== "down";
           const recovering = i.status === "up" && prevStatus === "down";
           if (!goingDown && !recovering) continue;
-          // Consenso: só alerta queda quando a maioria dos pontos falha.
-          if (goingDown) {
-            const { data: consensus } = await (supabaseAdmin as any)
-              .rpc("region_consensus", { _server_id: i.server_id, _window_minutes: 15 });
-            if (consensus?.verdict !== "down") continue;
-          }
+          // Consenso: nunca alertar queda com apenas 1 região falhando,
+          // e só confirmar recuperação quando o consenso voltar a "up".
+          const { data: consensus } = await (supabaseAdmin as any)
+            .rpc("region_consensus", { _server_id: i.server_id, _window_minutes: 15 });
+          if (goingDown && consensus?.verdict !== "down") continue;
+          if (recovering && consensus?.verdict !== "up") continue;
           try {
             const region = regionMap.get(i.region_code)!;
             const { sendRegionAlert } = await import("@/lib/monitoring.server");
