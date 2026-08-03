@@ -315,7 +315,7 @@ async function sendAdminCopy(server: ServerRow, event: "up" | "down", message: s
       String(s ?? "-").replace(/[<>&]/g, (c) => ({ "<": "&lt;", ">": "&gt;", "&": "&amp;" }[c]!));
     const hasCreds = Boolean((server as any).iptv_username && (server as any).iptv_password);
     await notifyAdmin(
-      `${event === "down" ? "🔴 <b>DNS OFFLINE</b>" : "🟢 <b>DNS recuperado</b>"}\n` +
+      `${event === "down" ? "🚨 <b>OFFLINE CONFIRMADO</b>" : "✅ <b>SERVIÇO RESTABELECIDO</b>"}\n` +
         `${esc(message)}\n` +
         `Revenda: ${esc(prof?.full_name)} — ${esc(prof?.email)}\n` +
         `Host: <code>${esc(server.host)}</code>${hasCreds ? "\nIPTV: credenciais ativas ✅" : ""}`,
