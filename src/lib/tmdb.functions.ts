@@ -18,8 +18,13 @@ export const getTmdbFeed = createServerFn({ method: "POST" })
       ? await searchTmdb(data.query.trim())
       : await fetchFeed(data.feed, data.page ?? 1);
 
-    const { data: servers } = await context.supabase.from("servers").select("id");
+    // Apenas servidores verificados: com catálogo IPTV já sincronizado.
+    const { data: servers } = await context.supabase
+      .from("servers")
+      .select("id")
+      .not("catalog_synced_at", "is", null);
     const totalServers = servers?.length ?? 0;
+    const verifiedIds = new Set((servers ?? []).map((s) => s.id));
 
     const keys = [...new Set(cards.flatMap((c) => [titleKey(c.title), titleKey(c.original_title)]).filter(Boolean))];
     const matchMap = new Map<string, Set<string>>();
