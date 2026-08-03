@@ -48,7 +48,7 @@ function ServersList() {
     onError: (e: Error) => toast.error(e.message ?? "Falha ao remover"),
   });
 
-  const filtered = servers.filter((s) => !q || `${s.name} ${s.host}`.toLowerCase().includes(q.toLowerCase()));
+  const filtered = servers.filter((s) => !q || `${s.name} ${s.description ?? ""}`.toLowerCase().includes(q.toLowerCase()));
 
   return (
     <div className="space-y-6">
