@@ -16,7 +16,13 @@ export default defineTool({
     const auth = await requireActiveSubscriber(ctx);
     if (!auth.ok) return textResult(auth.error, true);
     if (!id && !name) return textResult("Informe 'id' ou 'name' da DNS.", true);
-    const base = auth.supabase.from("servers").select("*");
+    // Nunca expor host/credenciais IPTV a clientes MCP externos.
+    const base = auth.supabase
+      .from("servers")
+      .select(
+        "id, name, description, category, current_status, last_checked_at, last_latency_ms, consecutive_failures, ssl_days_remaining, health_score, dns_health_score, is_public, created_at",
+      );
+
     const { data: server, error } = await (id ? base.eq("id", id) : base.eq("name", name!)).maybeSingle();
     if (error || !server) return textResult("DNS não encontrada ou sem permissão.", true);
     const [{ data: checks }, { data: incidents }] = await Promise.all([
