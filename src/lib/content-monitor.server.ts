@@ -816,11 +816,13 @@ export async function runTurboScan(
 
   const scan = await runContentScan(serverId, {
     batch: opts.sample ?? 24,
-    concurrency: opts.concurrency ?? CONCURRENCY,
+    concurrency: opts.concurrency ?? SAFE_CONCURRENCY,
     turbo: true,
     manual: true,
     userId: opts.userId,
     head: true,
+    safe: true,
+    ignoreCooldown: true,
   });
 
   return {
@@ -832,6 +834,8 @@ export async function runTurboScan(
     failed: scan.failed,
     recovered: scan.recovered,
     generalFailure: scan.generalFailure,
+    protectedMode: !!scan.protectedMode,
+    throttleLevel: scan.throttleLevel ?? 0,
     elapsedMs: Date.now() - started,
   };
 }
@@ -855,16 +859,17 @@ export async function runDueContentScans() {
   );
 
   const eligible = servers.filter((s) => active.has(s.owner_id));
-  let tested = 0, count = 0;
-  // Até 3 servidores em paralelo, cada um com seu pool interno.
-  await runPool(eligible, 3, async (s) => {
+  let tested = 0, count = 0, throttled = 0;
+  // Modo Seguro: só 2 servidores por vez, lotes pequenos e pausados em cada um.
+  await runPool(eligible, 2, async (s) => {
     try {
-      const r = await runContentScan(s.id, { batch: 60, concurrency: CONCURRENCY });
+      const r = await runContentScan(s.id, { batch: 40, safe: true });
       tested += r.tested;
+      if ((r as any).protectedMode || (r as any).blocked) throttled++;
       count++;
     } catch { /* ignora servidor com erro */ }
   });
-  return { servers: count, tested };
+  return { servers: count, tested, throttled };
 
 }
 
