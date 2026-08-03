@@ -10,8 +10,23 @@ export const CONNECT_TIMEOUT_MS = 8_000;
 export const TOTAL_TIMEOUT_MS = 15_000;
 export const MAX_BYTES = 256 * 1024;
 export const SLOW_THRESHOLD_MS = 8_000;
-export const BATCH_SIZE = 8; // testes simultâneos por servidor
+export const BATCH_SIZE = 8; // legado (compatibilidade)
+export const CONCURRENCY = 20; // testes realmente simultâneos por servidor
+export const MAX_CONCURRENCY = 50;
+export const HEAD_TIMEOUT_MS = 4_000;
 export const GENERAL_FAILURE_PCT = 0.3;
+
+/** Cache do catálogo: só chama a Player API se passou desse intervalo. */
+export const CATALOG_TTL_MINUTES = 120;
+
+/** Intervalo mínimo entre testes por faixa de prioridade (minutos). */
+export const TIER_INTERVAL_MIN = {
+  live: 5,        // canais ao vivo
+  hot: 60,        // favoritos, novos e que falharam antes
+  recent: 360,    // filmes/séries recentes
+  cold: 1440,     // catálogo antigo, sob demanda
+};
+
 
 export type ContentStatus =
   | "unknown" | "online" | "slow" | "unstable" | "offline" | "blocked" | "removed";
