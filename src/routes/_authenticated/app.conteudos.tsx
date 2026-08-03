@@ -149,15 +149,29 @@ function ContentMonitorPage() {
     return Math.round((ok / total) * 1000) / 10;
   }, [summary.data]);
 
-  async function run(kind: "import" | "scan") {
+  async function run(kind: "import" | "scan" | "turbo") {
     if (!effectiveServer) return;
     setBusy(kind);
     try {
       if (kind === "import") {
-        const r: any = await doImport({ data: { serverId: effectiveServer } });
-        toast.success(`Catálogo importado: ${r.imported} conteúdos`);
+        const r: any = await doImport({ data: { serverId: effectiveServer, force: true } });
+        toast.success(
+          r.cached
+            ? `Catálogo em cache (${r.imported} conteúdos)`
+            : `Catálogo importado: ${r.imported} conteúdos`,
+        );
+      } else if (kind === "turbo") {
+        const r: any = await doTurbo({
+          data: { serverId: effectiveServer, sample: 24, concurrency: Number(concurrency) },
+        });
+        setTurbo(r);
+        toast.success(
+          `Turbo em ${(r.elapsedMs / 1000).toFixed(1)}s · API ${r.apiOk ? "ok" : "falhou"} · ${r.sample} amostras · ${r.failed} falhas`,
+        );
       } else {
-        const r: any = await doScan({ data: { serverId: effectiveServer, batch: 24 } });
+        const r: any = await doScan({
+          data: { serverId: effectiveServer, batch: 60, concurrency: Number(concurrency) },
+        });
         toast.success(
           r.generalFailure
             ? "🚨 Possível falha geral do servidor — testes suspensos"
@@ -177,6 +191,7 @@ function ContentMonitorPage() {
   const s = summary.data ?? {};
 
   return (
+
     <div className="space-y-6">
       <header className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
         <div>
