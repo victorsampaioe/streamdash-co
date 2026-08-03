@@ -18,8 +18,13 @@ export const getTmdbFeed = createServerFn({ method: "POST" })
       ? await searchTmdb(data.query.trim())
       : await fetchFeed(data.feed, data.page ?? 1);
 
-    const { data: servers } = await context.supabase.from("servers").select("id");
+    // Apenas servidores verificados: com catálogo IPTV já sincronizado.
+    const { data: servers } = await context.supabase
+      .from("servers")
+      .select("id")
+      .not("catalog_synced_at", "is", null);
     const totalServers = servers?.length ?? 0;
+    const verifiedIds = new Set((servers ?? []).map((s) => s.id));
 
     const keys = [...new Set(cards.flatMap((c) => [titleKey(c.title), titleKey(c.original_title)]).filter(Boolean))];
     const matchMap = new Map<string, Set<string>>();
@@ -30,6 +35,7 @@ export const getTmdbFeed = createServerFn({ method: "POST" })
         .in("title_key", keys)
         .is("removed_at", null);
       for (const r of rows ?? []) {
+        if (!verifiedIds.has(r.server_id)) continue;
         const set = matchMap.get(r.title_key) ?? new Set<string>();
         set.add(r.server_id);
         matchMap.set(r.title_key, set);
@@ -60,9 +66,11 @@ export const getTmdbDetail = createServerFn({ method: "POST" })
     const detail = await fetchDetail(data.media, data.id);
     const keys = [...new Set([titleKey(detail.title), titleKey(detail.original_title)].filter(Boolean))];
 
+    // Apenas servidores verificados (com catálogo IPTV sincronizado).
     const { data: servers } = await context.supabase
       .from("servers")
       .select("id, name, current_status, last_iptv_sync_at")
+      .not("catalog_synced_at", "is", null)
       .order("name");
 
     const firstSeen = new Map<string, string>();
