@@ -57,11 +57,21 @@ export function WelcomeOnboarding() {
         </div>
         <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">🎉 Bem-vindo ao Stream Monitor</h1>
         <p className="text-sm text-muted-foreground">
-          {canTrial === false
+          {trialUsed
+            ? "O teste gratuito já foi utilizado nesta conta."
+            : canTrial === false
             ? "Sua conta foi criada sem código de indicação — o acesso é liberado após o pagamento."
             : "Seu cadastro foi realizado com sucesso. Agora escolha como deseja começar:"}
         </p>
       </div>
+
+      {trialUsed && (
+        <Card className="p-4 border-destructive/50 bg-destructive/10 text-sm max-w-md mx-auto text-center">
+          🚫 <strong>Teste gratuito indisponível.</strong> Você já ativou o teste (nesta conta ou em outra
+          com o mesmo telefone). O teste é permitido apenas uma vez por pessoa — para voltar a usar o
+          painel, assine um plano via PIX.
+        </Card>
+      )}
 
       <div className={canTrial === false ? "grid gap-4 max-w-md mx-auto" : "grid gap-4 md:grid-cols-2"}>
         {canTrial !== false && (
