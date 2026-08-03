@@ -406,7 +406,7 @@ export function GlobalCheckMap({ serverId }: { serverId: string }) {
         </Card>
       </div>
 
-      <RegionStats serverId={serverId} regions={regions} />
+      <RegionStats serverId={serverId} regions={activeRegions} />
 
       <RegionDetailDialog
         region={selected}
