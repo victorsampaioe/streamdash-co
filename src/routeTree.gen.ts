@@ -57,6 +57,7 @@ import { Route as AuthenticatedAppHubRankingRouteImport } from './routes/_authen
 import { Route as AuthenticatedAppHubNewRouteImport } from './routes/_authenticated/app.hub.new'
 import { Route as AuthenticatedAppHubMessagesRouteImport } from './routes/_authenticated/app.hub.messages'
 import { Route as AuthenticatedAppHubDemandRouteImport } from './routes/_authenticated/app.hub.demand'
+import { Route as AuthenticatedAppInteligenciaMediaIdRouteImport } from './routes/_authenticated/app.inteligencia.$media.$id'
 import { Route as AuthenticatedAppHubUHandleRouteImport } from './routes/_authenticated/app.hub.u.$handle'
 import { Route as AuthenticatedAppHubLIdRouteImport } from './routes/_authenticated/app.hub.l.$id'
 
@@ -321,6 +322,12 @@ const AuthenticatedAppHubDemandRoute =
     path: '/demand',
     getParentRoute: () => AuthenticatedAppHubRoute,
   } as any)
+const AuthenticatedAppInteligenciaMediaIdRoute =
+  AuthenticatedAppInteligenciaMediaIdRouteImport.update({
+    id: '/inteligencia/$media/$id',
+    path: '/inteligencia/$media/$id',
+    getParentRoute: () => AuthenticatedAppRoute,
+  } as any)
 const AuthenticatedAppHubUHandleRoute =
   AuthenticatedAppHubUHandleRouteImport.update({
     id: '/u/$handle',
@@ -383,6 +390,7 @@ export interface FileRoutesByFullPath {
   '/app/servers/': typeof AuthenticatedAppServersIndexRoute
   '/app/hub/l/$id': typeof AuthenticatedAppHubLIdRoute
   '/app/hub/u/$handle': typeof AuthenticatedAppHubUHandleRoute
+  '/app/inteligencia/$media/$id': typeof AuthenticatedAppInteligenciaMediaIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -432,6 +440,7 @@ export interface FileRoutesByTo {
   '/app/servers': typeof AuthenticatedAppServersIndexRoute
   '/app/hub/l/$id': typeof AuthenticatedAppHubLIdRoute
   '/app/hub/u/$handle': typeof AuthenticatedAppHubUHandleRoute
+  '/app/inteligencia/$media/$id': typeof AuthenticatedAppInteligenciaMediaIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -485,6 +494,7 @@ export interface FileRoutesById {
   '/_authenticated/app/servers/': typeof AuthenticatedAppServersIndexRoute
   '/_authenticated/app/hub/l/$id': typeof AuthenticatedAppHubLIdRoute
   '/_authenticated/app/hub/u/$handle': typeof AuthenticatedAppHubUHandleRoute
+  '/_authenticated/app/inteligencia/$media/$id': typeof AuthenticatedAppInteligenciaMediaIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -538,6 +548,7 @@ export interface FileRouteTypes {
     | '/app/servers/'
     | '/app/hub/l/$id'
     | '/app/hub/u/$handle'
+    | '/app/inteligencia/$media/$id'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -587,6 +598,7 @@ export interface FileRouteTypes {
     | '/app/servers'
     | '/app/hub/l/$id'
     | '/app/hub/u/$handle'
+    | '/app/inteligencia/$media/$id'
   id:
     | '__root__'
     | '/'
@@ -639,6 +651,7 @@ export interface FileRouteTypes {
     | '/_authenticated/app/servers/'
     | '/_authenticated/app/hub/l/$id'
     | '/_authenticated/app/hub/u/$handle'
+    | '/_authenticated/app/inteligencia/$media/$id'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -1003,6 +1016,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAppHubDemandRouteImport
       parentRoute: typeof AuthenticatedAppHubRoute
     }
+    '/_authenticated/app/inteligencia/$media/$id': {
+      id: '/_authenticated/app/inteligencia/$media/$id'
+      path: '/inteligencia/$media/$id'
+      fullPath: '/app/inteligencia/$media/$id'
+      preLoaderRoute: typeof AuthenticatedAppInteligenciaMediaIdRouteImport
+      parentRoute: typeof AuthenticatedAppRoute
+    }
     '/_authenticated/app/hub/u/$handle': {
       id: '/_authenticated/app/hub/u/$handle'
       path: '/u/$handle'
@@ -1067,6 +1087,7 @@ interface AuthenticatedAppRouteChildren {
   AuthenticatedAppServersNewRoute: typeof AuthenticatedAppServersNewRoute
   AuthenticatedAppInteligenciaIndexRoute: typeof AuthenticatedAppInteligenciaIndexRoute
   AuthenticatedAppServersIndexRoute: typeof AuthenticatedAppServersIndexRoute
+  AuthenticatedAppInteligenciaMediaIdRoute: typeof AuthenticatedAppInteligenciaMediaIdRoute
 }
 
 const AuthenticatedAppRouteChildren: AuthenticatedAppRouteChildren = {
@@ -1090,6 +1111,8 @@ const AuthenticatedAppRouteChildren: AuthenticatedAppRouteChildren = {
   AuthenticatedAppInteligenciaIndexRoute:
     AuthenticatedAppInteligenciaIndexRoute,
   AuthenticatedAppServersIndexRoute: AuthenticatedAppServersIndexRoute,
+  AuthenticatedAppInteligenciaMediaIdRoute:
+    AuthenticatedAppInteligenciaMediaIdRoute,
 }
 
 const AuthenticatedAppRouteWithChildren =
