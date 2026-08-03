@@ -16,12 +16,13 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import {
-  RefreshCw, DownloadCloud, Star, Activity, ShieldAlert, Search, Radar, Brain,
+  RefreshCw, DownloadCloud, Star, Activity, ShieldAlert, Search, Radar, Brain, Zap,
 } from "lucide-react";
 import {
-  importContentCatalog, scanServerContents, recheckContent,
+  importContentCatalog, scanServerContents, recheckContent, turboScanServer,
   getBrokenCatalogInsights, toggleContentFavorite, saveContentAlertSettings,
 } from "@/lib/content-monitor.functions";
+
 
 export const Route = createFileRoute("/_authenticated/app/conteudos")({
   component: ContentMonitorPage,
