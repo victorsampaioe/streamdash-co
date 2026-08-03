@@ -86,7 +86,7 @@ function Dashboard() {
   const filtered = useMemo(() => {
     return servers.filter((s) => {
       if (filter !== "all" && s.current_status !== filter) return false;
-      if (query && !`${s.name} ${s.host}`.toLowerCase().includes(query.toLowerCase())) return false;
+      if (query && !`${s.name} ${s.description ?? ""}`.toLowerCase().includes(query.toLowerCase())) return false;
       return true;
     });
   }, [servers, filter, query]);
