@@ -4,8 +4,12 @@ import { supabaseAdmin } from "@/integrations/supabase/client.server";
 
 const FETCH_TIMEOUT_MS = 8000;
 const SSL_TIMEOUT_MS = 6000;
-// Janela de confirmação de status antes de disparar alertas (~2 minutos)
-const CONFIRM_WINDOW_MS = 120_000;
+// Modo "Confirmação de Queda": novas verificações a cada ~20s durante ~2 minutos.
+const CONFIRM_PROBE_INTERVAL_MS = 20_000;
+const DOWN_CONFIRM_PROBES = 6;   // ~2 minutos
+const UP_CONFIRM_PROBES = 3;     // ~1 minuto
+const DOWN_CONFIRM_RATIO = 0.8;  // 80% ou mais das checagens falhando
+
 
 type ServerRow = {
   id: string;
