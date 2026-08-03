@@ -683,13 +683,8 @@ export function healthLabel(score: number): { label: string; tone: "success" | "
 /* Sync orchestration                                                  */
 /* ------------------------------------------------------------------ */
 
-async function raiseAlert(serverId: string, kind: string, severity: string, title: string, detail?: string) {
-  await supabaseAdmin.from("iptv_alerts").insert({ server_id: serverId, kind, severity, title, detail: detail ?? null });
-  try {
-    const { notifyServerIptvAlert } = await import("./iptv-notify.server");
-    await notifyServerIptvAlert(serverId, title, detail ?? "");
-  } catch { /* notificação é best-effort */ }
-}
+import type { AlertCandidate } from "./alert-state.server";
+
 
 export async function runIptvSync(serverId: string, opts: { mode?: "smart" | "full"; force?: boolean } = {}) {
   const { data: srv } = await supabaseAdmin.from("servers").select("*").eq("id", serverId).maybeSingle();
