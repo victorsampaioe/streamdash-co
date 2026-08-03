@@ -383,9 +383,9 @@ function PixDialog({ openPlan, onClose, pix, loading, error, onPaid }: {
               <div className="rounded-xl border border-dashed border-warning/50 bg-warning/5 p-5 text-xs text-muted-foreground space-y-3">
                 <div className="flex items-center gap-2 font-semibold text-warning">
                   <Timer className="h-4 w-4" />
-                  Mercado Pago não configurado
+                  Pagamento indisponível no momento
                 </div>
-                <p>Adicione o segredo <code className="rounded bg-muted px-1 py-0.5">MERCADOPAGO_ACCESS_TOKEN</code> para gerar QR Codes reais.</p>
+                <p>Não foi possível gerar o QR Code agora. Tente novamente em instantes ou fale com o suporte.</p>
                 <Button variant="outline" className="w-full" onClick={onClose}>Entendi</Button>
               </div>
             )}
