@@ -20,19 +20,23 @@ export const importContentCatalog = createServerFn({ method: "POST" })
 
 export const scanServerContents = createServerFn({ method: "POST" })
   .middleware([requireActiveSubscription])
-  .inputValidator((d: { serverId: string; batch?: number; concurrency?: number }) =>
+  .inputValidator((d: { serverId: string; batch?: number; concurrency?: number; safe?: boolean }) =>
     z.object({
       serverId: z.string().uuid(),
       batch: z.number().min(1).max(300).optional(),
       concurrency: z.number().min(1).max(50).optional(),
+      safe: z.boolean().optional(),
     }).parse(d))
   .handler(async ({ data, context }) => {
     await assertOwnership(context, data.serverId);
     const { runContentScan } = await import("./content-monitor.server");
+    const safe = data.safe ?? true;
     return await runContentScan(data.serverId, {
-      batch: data.batch ?? 60,
-      concurrency: data.concurrency ?? 20,
+      batch: data.batch ?? (safe ? 40 : 60),
+      concurrency: data.concurrency ?? (safe ? 5 : 20),
       manual: true,
+      safe,
+      ignoreCooldown: true,
       userId: context.userId,
     });
   });
@@ -50,9 +54,26 @@ export const turboScanServer = createServerFn({ method: "POST" })
     const { runTurboScan } = await import("./content-monitor.server");
     return await runTurboScan(data.serverId, {
       sample: data.sample ?? 24,
-      concurrency: data.concurrency ?? 20,
+      concurrency: data.concurrency ?? 5,
       userId: context.userId,
     });
+  });
+
+/** Estado do Modo Seguro (freio adaptativo) do servidor. */
+export const getSafeModeStatus = createServerFn({ method: "POST" })
+  .middleware([requireActiveSubscription])
+  .inputValidator((d: { serverId: string }) => z.object({ serverId: z.string().uuid() }).parse(d))
+  .handler(async ({ data, context }) => {
+    await assertOwnership(context, data.serverId);
+    const { getThrottle, isCoolingDown, THROTTLE_FACTOR } = await import("./content-safe.server");
+    const t = await getThrottle(data.serverId);
+    return {
+      level: t.level,
+      cooldownUntil: t.cooldownUntil,
+      cooling: isCoolingDown(t),
+      lastBlockAt: t.lastBlockAt,
+      factor: THROTTLE_FACTOR[Math.min(t.level, THROTTLE_FACTOR.length - 1)],
+    };
   });
 
 
@@ -65,7 +86,7 @@ export const recheckContent = createServerFn({ method: "POST" })
     if (!row) throw new Error("Conteúdo não encontrado ou sem permissão");
     const { runContentScan } = await import("./content-monitor.server");
     return await runContentScan(row.server_id, {
-      contentIds: [row.id], manual: true, userId: context.userId,
+      contentIds: [row.id], manual: true, userId: context.userId, ignoreCooldown: true,
     });
   });
 
