@@ -16,7 +16,7 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import {
-  RefreshCw, DownloadCloud, Star, Activity, ShieldAlert, Search, Radar, Brain, Zap,
+  RefreshCw, DownloadCloud, Star, Activity, ShieldAlert, ShieldCheck, Search, Radar, Brain, Zap,
 } from "lucide-react";
 import {
   importContentCatalog, scanServerContents, recheckContent, turboScanServer,
@@ -78,6 +78,7 @@ function ContentMonitorPage() {
   const [concurrency, setConcurrency] = useState("5");
   const [safeMode, setSafeMode] = useState(true);
   const [turbo, setTurbo] = useState<any>(null);
+  const [safeInfo, setSafeInfo] = useState<any>(null);
 
   const doImport = useServerFn(importContentCatalog);
   const doScan = useServerFn(scanServerContents);
