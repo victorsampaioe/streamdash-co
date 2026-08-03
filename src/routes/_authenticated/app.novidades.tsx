@@ -11,6 +11,8 @@ import {
   Sparkles, Film, Library, Tv, TrendingDown, Trophy, Medal, History, Gauge, Info, Search, CheckCircle2, XCircle,
 } from "lucide-react";
 import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
+import { RecentContents } from "@/components/iptv/recent-contents";
+
 
 export const Route = createFileRoute("/_authenticated/app/novidades")({
   component: NovidadesPage,
