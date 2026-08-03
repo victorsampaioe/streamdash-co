@@ -66,7 +66,7 @@ export const Route = createFileRoute("/api/public/regions/report")({
           if (!prevMap.has(k)) prevMap.set(k, r.status);
         }
 
-        const { error } = await supabaseAdmin.from("region_checks").insert(
+        const { error } = await (supabaseAdmin as any).from("region_checks").insert(
           items.map((i) => ({
             server_id: i.server_id,
             region_code: i.region_code,
