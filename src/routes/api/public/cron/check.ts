@@ -41,6 +41,8 @@ async function run() {
     paymentsChecked: payments.checked,
     paymentsApproved: payments.approved,
     credentialsEncrypted: encrypted.migrated,
+    contentServersScanned: contents.servers,
+    contentsTested: contents.tested,
   };
 }
 
