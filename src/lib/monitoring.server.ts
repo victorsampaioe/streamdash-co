@@ -175,13 +175,37 @@ async function getSslDaysRemaining(host: string): Promise<number | null> {
   });
 }
 
+async function sendAdminCopy(server: ServerRow, event: "up" | "down", message: string) {
+  try {
+    const { notifyAdmin } = await import("./admin-telegram.server");
+    const { data: prof } = await supabaseAdmin
+      .from("profiles")
+      .select("full_name, email")
+      .eq("id", server.owner_id)
+      .maybeSingle();
+    const esc = (s: unknown) =>
+      String(s ?? "-").replace(/[<>&]/g, (c) => ({ "<": "&lt;", ">": "&gt;", "&": "&amp;" }[c]!));
+    const hasCreds = Boolean((server as any).iptv_username && (server as any).iptv_password);
+    await notifyAdmin(
+      `${event === "down" ? "🔴 <b>DNS OFFLINE</b>" : "🟢 <b>DNS recuperado</b>"}\n` +
+        `${esc(message)}\n` +
+        `Revenda: ${esc(prof?.full_name)} — ${esc(prof?.email)}\n` +
+        `Host: <code>${esc(server.host)}</code>${hasCreds ? "\nIPTV: credenciais ativas ✅" : ""}`,
+    );
+  } catch { /* nunca quebrar o alerta do cliente */ }
+}
+
 async function sendAlerts(server: ServerRow, event: "up" | "down", message: string, incidentId: string | null) {
+  // Cópia para o Telegram do admin (independente dos canais da revenda)
+  await sendAdminCopy(server, event, message);
+
   const { data: channels } = await supabaseAdmin
     .from("alert_channels")
     .select("*")
     .eq("owner_id", server.owner_id)
     .eq("enabled", true);
   if (!channels || channels.length === 0) return;
+
 
   await Promise.allSettled(channels.map(async (ch: any) => {
     try {
