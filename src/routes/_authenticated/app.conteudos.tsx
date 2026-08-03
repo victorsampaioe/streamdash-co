@@ -172,12 +172,20 @@ function ContentMonitorPage() {
         );
       } else {
         const r: any = await doScan({
-          data: { serverId: effectiveServer, batch: 60, concurrency: Number(concurrency) },
+          data: {
+            serverId: effectiveServer,
+            batch: safeMode ? 40 : 60,
+            concurrency: Number(concurrency),
+            safe: safeMode,
+          },
         });
+        setSafeInfo(r);
         toast.success(
-          r.generalFailure
-            ? "🚨 Possível falha geral do servidor — testes suspensos"
-            : `Verificados ${r.tested} · ${r.failed} falhas · ${r.recovered} recuperados`,
+          r.protectedMode
+            ? "🚨 O servidor pode estar bloqueando as verificações — velocidade reduzida automaticamente"
+            : r.generalFailure
+              ? "🚨 Possível falha geral do servidor — testes suspensos"
+              : `Verificados ${r.tested} · ${r.failed} falhas · ${r.recovered} recuperados`,
         );
       }
       qc.invalidateQueries({ queryKey: ["cm-summary"] });
@@ -214,13 +222,22 @@ function ContentMonitorPage() {
             </SelectContent>
           </Select>
           <Select value={concurrency} onValueChange={setConcurrency}>
-            <SelectTrigger className="w-[150px]"><SelectValue /></SelectTrigger>
+            <SelectTrigger className="w-[160px]"><SelectValue /></SelectTrigger>
             <SelectContent>
-              {["8", "20", "35", "50"].map((n) => (
+              {(safeMode ? ["3", "5", "8", "10"] : ["8", "20", "35", "50"]).map((n) => (
                 <SelectItem key={n} value={n}>{n} em paralelo</SelectItem>
               ))}
             </SelectContent>
           </Select>
+          <div className="flex items-center gap-2 rounded-md border border-border px-3">
+            <ShieldCheck className={`h-4 w-4 ${safeMode ? "text-emerald-400" : "text-muted-foreground"}`} />
+            <Label htmlFor="safe-mode" className="text-xs whitespace-nowrap">Modo Seguro</Label>
+            <Switch
+              id="safe-mode"
+              checked={safeMode}
+              onCheckedChange={(v) => { setSafeMode(v); setConcurrency(v ? "5" : "20"); }}
+            />
+          </div>
           <Button variant="outline" disabled={!!busy || !effectiveServer} onClick={() => run("import")}>
             <DownloadCloud className="mr-2 h-4 w-4" />
             {busy === "import" ? "Importando..." : "Importar catálogo"}
