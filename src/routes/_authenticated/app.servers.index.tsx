@@ -27,7 +27,15 @@ function ServersList() {
   const qc = useQueryClient();
   const { data: servers = [] } = useQuery({
     queryKey: ["servers"],
-    queryFn: async () => (await supabase.from("servers").select("*").order("created_at", { ascending: false })).data ?? [],
+    queryFn: async () =>
+      (
+        await supabase
+          .from("servers")
+          .select(
+            "id, name, description, category, current_status, last_latency_ms, last_checked_at, ssl_days_remaining, health_score, dns_health_score, is_public, public_slug, created_at",
+          )
+          .order("created_at", { ascending: false })
+      ).data ?? [],
   });
 
   const del = useMutation({
