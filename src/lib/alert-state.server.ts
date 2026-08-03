@@ -72,8 +72,10 @@ export async function dispatchAlerts(
   }
 
   // Resolve incidentes que não foram detectados nesta execução.
+  const scope = manages ? new Set(manages) : null;
   const resolvedKinds = (rows ?? [])
     .filter((r) => (r.active || r.pending_count > 0) && !detectedKinds.has(r.kind))
+    .filter((r) => !scope || scope.has(r.kind))
     .map((r) => r.kind);
   if (resolvedKinds.length) {
     await supabaseAdmin
