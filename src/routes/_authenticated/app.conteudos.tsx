@@ -343,7 +343,7 @@ function ContentMonitorPage() {
                 <p key={c.name}>🔁 <b>{c.name}</b> está offline em {c.servers} servidores monitorados.</p>
               ))}
               {(insights.data?.newBroken ?? []).length > 0 && (
-                <p>🆕 {insights.data.newBroken.length} novidades adicionadas já com link quebrado.</p>
+                <p>🆕 {(insights.data?.newBroken ?? []).length} novidades adicionadas já com link quebrado.</p>
               )}
               {(insights.data?.slowest ?? []).slice(0, 5).map((c: any) => (
                 <p key={c.name}>🐌 <b>{c.name}</b> abre em {c.ms} ms.</p>
