@@ -254,6 +254,36 @@ function ContentMonitorPage() {
         </div>
       </header>
 
+      {safeMode && (
+        <Card className="border-emerald-500/30 bg-emerald-500/5 p-4">
+          <p className="flex items-center gap-2 text-sm font-semibold text-emerald-400">
+            <ShieldCheck className="h-4 w-4" /> Modo Seguro ativo
+          </p>
+          <p className="mt-1 text-xs text-muted-foreground">
+            Máximo de 5 testes simultâneos por servidor, intervalo entre requisições, fila
+            inteligente por prioridade e amostra por categoria. Nada é marcado como offline na
+            primeira falha: 🟡 Suspeito → 🟠 Instável → 🔴 Offline. Se o servidor responder com
+            403/429, a velocidade cai sozinha e ele entra em descanso.
+          </p>
+          {safeInfo?.protectedMode && (
+            <p className="mt-2 rounded-md bg-amber-500/10 px-3 py-2 text-xs text-amber-300">
+              🚨 Freio adaptativo acionado (nível {safeInfo.throttleLevel}) — o servidor sinalizou
+              bloqueio em {safeInfo.blockSignals} de {safeInfo.tested} testes.
+              {safeInfo.cooldownUntil
+                ? ` Próxima verificação após ${new Date(safeInfo.cooldownUntil).toLocaleTimeString("pt-BR")}.`
+                : ""}
+            </p>
+          )}
+          {safeInfo?.blocked && (
+            <p className="mt-2 rounded-md bg-amber-500/10 px-3 py-2 text-xs text-amber-300">
+              ⏸️ Servidor em descanso pelo Modo Seguro para não sobrecarregá-lo.
+            </p>
+          )}
+        </Card>
+      )}
+
+
+
       {turbo && (
         <Card className="p-4">
           <p className="flex items-center gap-2 text-sm font-semibold">
