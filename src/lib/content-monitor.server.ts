@@ -603,10 +603,38 @@ export async function runContentScan(
     userId?: string;
     turbo?: boolean;
     head?: boolean;
+    /** Modo Seguro (padrão): poucos testes simultâneos, pausa entre lotes e freio adaptativo. */
+    safe?: boolean;
+    /** Ignora o descanso ativo (usado em verificações manuais). */
+    ignoreCooldown?: boolean;
   } = {},
 ) {
+  const safe = opts.safe ?? true;
   const batch = Math.min(opts.batch ?? 40, 300);
-  const concurrency = Math.min(Math.max(1, opts.concurrency ?? CONCURRENCY), MAX_CONCURRENCY);
+
+  const {
+    getThrottle, escalateThrottle, relaxThrottle, isCoolingDown,
+    THROTTLE_FACTOR, sleep,
+  } = await import("./content-safe.server");
+
+  const throttle = await getThrottle(serverId);
+  if (safe && !opts.ignoreCooldown && isCoolingDown(throttle)) {
+    return {
+      tested: 0, failed: 0, recovered: 0, generalFailure: false,
+      concurrency: 0, safe: true, throttleLevel: throttle.level,
+      cooldownUntil: throttle.cooldownUntil, blocked: true,
+      skipped: "Servidor em descanso (Modo Seguro)",
+    };
+  }
+
+  const factor = THROTTLE_FACTOR[Math.min(throttle.level, THROTTLE_FACTOR.length - 1)];
+  const concurrency = safe
+    ? Math.max(1, Math.floor(
+        Math.min(opts.concurrency ?? SAFE_CONCURRENCY, MAX_SAFE_CONCURRENCY) / factor))
+    : Math.min(Math.max(1, opts.concurrency ?? CONCURRENCY), MAX_CONCURRENCY);
+  const batchPause = safe ? SAFE_BATCH_PAUSE_MS * factor : 0;
+  const requestDelay = safe ? SAFE_REQUEST_DELAY_MS * factor : 0;
+
   const { data: server } = await supabaseAdmin
     .from("servers").select("id, owner_id, name, host").eq("id", serverId).maybeSingle();
   if (!server) throw new Error("Servidor não encontrado");
@@ -631,18 +659,22 @@ export async function runContentScan(
     queue = await pickQueue(serverId, batch);
   }
 
-  let tested = 0, failed = 0, recovered = 0;
+  let tested = 0, failed = 0, recovered = 0, blockSignals = 0;
+  let protectedMode = false;
+  let aborted = false;
   const events: { row: any; status: ContentStatus; probe: ProbeResult }[] = [];
   const checkRows: any[] = [];
 
-  // Consulta em paralelo real: pool rolante, sem esperar o lote inteiro terminar.
-  await runPool(queue, concurrency, async (row) => {
+  const testOne = async (row: any) => {
     const probe = await probeContentUrl(
       streamUrl(server.host, username, password, row),
       { head: opts.head ?? true },
     );
-    const { status, failures } = classify(row, probe);
-    const wasBad = ["offline", "blocked", "removed", "unstable"].includes(row.current_status);
+    if (probe.http_status === 401 || probe.http_status === 403 || probe.http_status === 429) {
+      blockSignals++;
+    }
+    const { status, failures } = classify(row, probe, protectedMode);
+    const wasBad = ["offline", "blocked", "removed", "unstable", "suspect"].includes(row.current_status);
     const isBad = ["offline", "blocked", "removed"].includes(status);
     tested++;
     if (isBad) failed++;
@@ -674,35 +706,83 @@ export async function runContentScan(
     }).eq("id", row.id);
 
     if (row.current_status !== status) events.push({ row, status, probe });
-  });
+    if (requestDelay) await sleep(requestDelay);
+  };
+
+  // Lotes pequenos, com pausa entre eles: nunca testamos tudo de uma vez.
+  for (let i = 0; i < queue.length; i += concurrency) {
+    const slice = queue.slice(i, i + concurrency);
+    await runPool(slice, concurrency, testOne);
+
+    // Freio adaptativo: muitos 401/403/429 => o servidor está nos barrando.
+    if (safe && !protectedMode && tested >= MIN_BLOCK_SAMPLE
+      && blockSignals / tested >= BLOCK_SIGNAL_PCT) {
+      protectedMode = true;
+      aborted = true;
+      break;
+    }
+    if (batchPause && i + concurrency < queue.length) await sleep(batchPause);
+  }
 
   // Histórico gravado em lote (menos escritas no banco).
   for (let i = 0; i < checkRows.length; i += 200) {
     await supabaseAdmin.from("content_checks").insert(checkRows.slice(i, i + 200));
   }
 
+  let newThrottle = throttle;
+  if (safe) {
+    newThrottle = protectedMode
+      ? await escalateThrottle(serverId)
+      : (tested > 0 ? await relaxThrottle(serverId) : throttle);
+  }
+
   // Detector de falha geral: muitos erros de uma vez => provável problema no servidor.
-  const generalFailure = tested >= 10 && failed / tested >= GENERAL_FAILURE_PCT;
+  const generalFailure = !protectedMode && tested >= 10 && failed / tested >= GENERAL_FAILURE_PCT;
+
+  const note = protectedMode
+    ? "🚨 Servidor pode estar bloqueando verificações automáticas — velocidade reduzida"
+    : generalFailure
+      ? "Possível falha geral do servidor — testes suspensos"
+      : opts.turbo ? "Verificação Turbo (amostra)" : null;
 
   if (run) {
     await supabaseAdmin.from("content_scan_runs").update({
       finished_at: new Date().toISOString(),
       tested, failed, recovered,
-      general_failure: generalFailure,
-      note: generalFailure
-        ? "Possível falha geral do servidor — testes suspensos"
-        : opts.turbo ? "Verificação Turbo (amostra)" : null,
+      general_failure: generalFailure || protectedMode,
+      note,
     }).eq("id", run.id);
   }
 
   await upsertDailySummary(serverId);
+
+  if (protectedMode) {
+    try {
+      await supabaseAdmin.from("iptv_alerts").insert({
+        server_id: serverId,
+        kind: "content_protection",
+        severity: "warning",
+        title: "🚨 Servidor pode estar bloqueando verificações automáticas",
+        detail:
+          `${blockSignals} de ${tested} testes retornaram 401/403/429. ` +
+          `O Modo Seguro reduziu a velocidade (nível ${newThrottle.level}) e o servidor ` +
+          `ficará em descanso até ${newThrottle.cooldownUntil ? new Date(newThrottle.cooldownUntil).toLocaleString("pt-BR") : "a próxima rodada"}. ` +
+          `Nenhum conteúdo foi marcado como offline nesta rodada.`,
+      });
+    } catch { /* alerta nunca quebra o scan */ }
+  }
 
   try {
     const { notifyContentEvents } = await import("./content-alerts.server");
     await notifyContentEvents(server as any, events, { tested, failed, recovered, generalFailure });
   } catch { /* alertas nunca quebram o scan */ }
 
-  return { tested, failed, recovered, generalFailure, concurrency };
+  return {
+    tested, failed, recovered, generalFailure, concurrency,
+    safe, aborted, blockSignals, protectedMode,
+    throttleLevel: newThrottle.level,
+    cooldownUntil: newThrottle.cooldownUntil,
+  };
 }
 
 /**
