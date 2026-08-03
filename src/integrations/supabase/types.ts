@@ -2555,6 +2555,45 @@ export type Database = {
         }
         Relationships: []
       }
+      tmdb_follows: {
+        Row: {
+          created_at: string
+          id: string
+          media_type: string
+          poster_path: string | null
+          release_date: string | null
+          title: string
+          title_key: string
+          tmdb_id: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          media_type: string
+          poster_path?: string | null
+          release_date?: string | null
+          title: string
+          title_key: string
+          tmdb_id: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          media_type?: string
+          poster_path?: string | null
+          release_date?: string | null
+          title?: string
+          title_key?: string
+          tmdb_id?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       user_achievements: {
         Row: {
           achievement_code: string

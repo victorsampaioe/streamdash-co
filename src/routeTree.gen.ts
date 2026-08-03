@@ -41,6 +41,7 @@ import { Route as AuthenticatedAppAchievementsRouteImport } from './routes/_auth
 import { Route as Char91DotmcpChar93InvokeToolToolRouteImport } from './routes/[.mcp]/invoke-tool/$tool'
 import { Route as DotlovableOauthConsentRouteImport } from './routes/[.]lovable.oauth.consent'
 import { Route as AuthenticatedAppServersIndexRouteImport } from './routes/_authenticated/app.servers.index'
+import { Route as AuthenticatedAppInteligenciaIndexRouteImport } from './routes/_authenticated/app.inteligencia.index'
 import { Route as AuthenticatedAppHubIndexRouteImport } from './routes/_authenticated/app.hub.index'
 import { Route as ApiPublicWebhooksMercadopagoRouteImport } from './routes/api/public/webhooks/mercadopago'
 import { Route as ApiPublicTelegramWebhookRouteImport } from './routes/api/public/telegram/webhook'
@@ -56,6 +57,7 @@ import { Route as AuthenticatedAppHubRankingRouteImport } from './routes/_authen
 import { Route as AuthenticatedAppHubNewRouteImport } from './routes/_authenticated/app.hub.new'
 import { Route as AuthenticatedAppHubMessagesRouteImport } from './routes/_authenticated/app.hub.messages'
 import { Route as AuthenticatedAppHubDemandRouteImport } from './routes/_authenticated/app.hub.demand'
+import { Route as AuthenticatedAppInteligenciaMediaIdRouteImport } from './routes/_authenticated/app.inteligencia.$media.$id'
 import { Route as AuthenticatedAppHubUHandleRouteImport } from './routes/_authenticated/app.hub.u.$handle'
 import { Route as AuthenticatedAppHubLIdRouteImport } from './routes/_authenticated/app.hub.l.$id'
 
@@ -229,6 +231,12 @@ const AuthenticatedAppServersIndexRoute =
     path: '/servers/',
     getParentRoute: () => AuthenticatedAppRoute,
   } as any)
+const AuthenticatedAppInteligenciaIndexRoute =
+  AuthenticatedAppInteligenciaIndexRouteImport.update({
+    id: '/inteligencia/',
+    path: '/inteligencia/',
+    getParentRoute: () => AuthenticatedAppRoute,
+  } as any)
 const AuthenticatedAppHubIndexRoute =
   AuthenticatedAppHubIndexRouteImport.update({
     id: '/',
@@ -314,6 +322,12 @@ const AuthenticatedAppHubDemandRoute =
     path: '/demand',
     getParentRoute: () => AuthenticatedAppHubRoute,
   } as any)
+const AuthenticatedAppInteligenciaMediaIdRoute =
+  AuthenticatedAppInteligenciaMediaIdRouteImport.update({
+    id: '/inteligencia/$media/$id',
+    path: '/inteligencia/$media/$id',
+    getParentRoute: () => AuthenticatedAppRoute,
+  } as any)
 const AuthenticatedAppHubUHandleRoute =
   AuthenticatedAppHubUHandleRouteImport.update({
     id: '/u/$handle',
@@ -372,9 +386,11 @@ export interface FileRoutesByFullPath {
   '/api/public/telegram/webhook': typeof ApiPublicTelegramWebhookRoute
   '/api/public/webhooks/mercadopago': typeof ApiPublicWebhooksMercadopagoRoute
   '/app/hub/': typeof AuthenticatedAppHubIndexRoute
+  '/app/inteligencia/': typeof AuthenticatedAppInteligenciaIndexRoute
   '/app/servers/': typeof AuthenticatedAppServersIndexRoute
   '/app/hub/l/$id': typeof AuthenticatedAppHubLIdRoute
   '/app/hub/u/$handle': typeof AuthenticatedAppHubUHandleRoute
+  '/app/inteligencia/$media/$id': typeof AuthenticatedAppInteligenciaMediaIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -420,9 +436,11 @@ export interface FileRoutesByTo {
   '/api/public/telegram/webhook': typeof ApiPublicTelegramWebhookRoute
   '/api/public/webhooks/mercadopago': typeof ApiPublicWebhooksMercadopagoRoute
   '/app/hub': typeof AuthenticatedAppHubIndexRoute
+  '/app/inteligencia': typeof AuthenticatedAppInteligenciaIndexRoute
   '/app/servers': typeof AuthenticatedAppServersIndexRoute
   '/app/hub/l/$id': typeof AuthenticatedAppHubLIdRoute
   '/app/hub/u/$handle': typeof AuthenticatedAppHubUHandleRoute
+  '/app/inteligencia/$media/$id': typeof AuthenticatedAppInteligenciaMediaIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -472,9 +490,11 @@ export interface FileRoutesById {
   '/api/public/telegram/webhook': typeof ApiPublicTelegramWebhookRoute
   '/api/public/webhooks/mercadopago': typeof ApiPublicWebhooksMercadopagoRoute
   '/_authenticated/app/hub/': typeof AuthenticatedAppHubIndexRoute
+  '/_authenticated/app/inteligencia/': typeof AuthenticatedAppInteligenciaIndexRoute
   '/_authenticated/app/servers/': typeof AuthenticatedAppServersIndexRoute
   '/_authenticated/app/hub/l/$id': typeof AuthenticatedAppHubLIdRoute
   '/_authenticated/app/hub/u/$handle': typeof AuthenticatedAppHubUHandleRoute
+  '/_authenticated/app/inteligencia/$media/$id': typeof AuthenticatedAppInteligenciaMediaIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -524,9 +544,11 @@ export interface FileRouteTypes {
     | '/api/public/telegram/webhook'
     | '/api/public/webhooks/mercadopago'
     | '/app/hub/'
+    | '/app/inteligencia/'
     | '/app/servers/'
     | '/app/hub/l/$id'
     | '/app/hub/u/$handle'
+    | '/app/inteligencia/$media/$id'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -572,9 +594,11 @@ export interface FileRouteTypes {
     | '/api/public/telegram/webhook'
     | '/api/public/webhooks/mercadopago'
     | '/app/hub'
+    | '/app/inteligencia'
     | '/app/servers'
     | '/app/hub/l/$id'
     | '/app/hub/u/$handle'
+    | '/app/inteligencia/$media/$id'
   id:
     | '__root__'
     | '/'
@@ -623,9 +647,11 @@ export interface FileRouteTypes {
     | '/api/public/telegram/webhook'
     | '/api/public/webhooks/mercadopago'
     | '/_authenticated/app/hub/'
+    | '/_authenticated/app/inteligencia/'
     | '/_authenticated/app/servers/'
     | '/_authenticated/app/hub/l/$id'
     | '/_authenticated/app/hub/u/$handle'
+    | '/_authenticated/app/inteligencia/$media/$id'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -878,6 +904,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAppServersIndexRouteImport
       parentRoute: typeof AuthenticatedAppRoute
     }
+    '/_authenticated/app/inteligencia/': {
+      id: '/_authenticated/app/inteligencia/'
+      path: '/inteligencia'
+      fullPath: '/app/inteligencia/'
+      preLoaderRoute: typeof AuthenticatedAppInteligenciaIndexRouteImport
+      parentRoute: typeof AuthenticatedAppRoute
+    }
     '/_authenticated/app/hub/': {
       id: '/_authenticated/app/hub/'
       path: '/'
@@ -983,6 +1016,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAppHubDemandRouteImport
       parentRoute: typeof AuthenticatedAppHubRoute
     }
+    '/_authenticated/app/inteligencia/$media/$id': {
+      id: '/_authenticated/app/inteligencia/$media/$id'
+      path: '/inteligencia/$media/$id'
+      fullPath: '/app/inteligencia/$media/$id'
+      preLoaderRoute: typeof AuthenticatedAppInteligenciaMediaIdRouteImport
+      parentRoute: typeof AuthenticatedAppRoute
+    }
     '/_authenticated/app/hub/u/$handle': {
       id: '/_authenticated/app/hub/u/$handle'
       path: '/u/$handle'
@@ -1045,7 +1085,9 @@ interface AuthenticatedAppRouteChildren {
   AuthenticatedAppIndexRoute: typeof AuthenticatedAppIndexRoute
   AuthenticatedAppServersIdRoute: typeof AuthenticatedAppServersIdRoute
   AuthenticatedAppServersNewRoute: typeof AuthenticatedAppServersNewRoute
+  AuthenticatedAppInteligenciaIndexRoute: typeof AuthenticatedAppInteligenciaIndexRoute
   AuthenticatedAppServersIndexRoute: typeof AuthenticatedAppServersIndexRoute
+  AuthenticatedAppInteligenciaMediaIdRoute: typeof AuthenticatedAppInteligenciaMediaIdRoute
 }
 
 const AuthenticatedAppRouteChildren: AuthenticatedAppRouteChildren = {
@@ -1066,7 +1108,11 @@ const AuthenticatedAppRouteChildren: AuthenticatedAppRouteChildren = {
   AuthenticatedAppIndexRoute: AuthenticatedAppIndexRoute,
   AuthenticatedAppServersIdRoute: AuthenticatedAppServersIdRoute,
   AuthenticatedAppServersNewRoute: AuthenticatedAppServersNewRoute,
+  AuthenticatedAppInteligenciaIndexRoute:
+    AuthenticatedAppInteligenciaIndexRoute,
   AuthenticatedAppServersIndexRoute: AuthenticatedAppServersIndexRoute,
+  AuthenticatedAppInteligenciaMediaIdRoute:
+    AuthenticatedAppInteligenciaMediaIdRoute,
 }
 
 const AuthenticatedAppRouteWithChildren =
