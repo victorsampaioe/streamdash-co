@@ -11,8 +11,21 @@ export const TOTAL_TIMEOUT_MS = 15_000;
 export const MAX_BYTES = 256 * 1024;
 export const SLOW_THRESHOLD_MS = 8_000;
 export const BATCH_SIZE = 8; // legado (compatibilidade)
-export const CONCURRENCY = 20; // testes realmente simultâneos por servidor
+
+// ------------------------------------------------- Modo Seguro (padrão ligado)
+/** Testes simultâneos por servidor no Modo Seguro. */
+export const SAFE_CONCURRENCY = 5;
+/** Teto de simultaneidade quando o Modo Seguro está desligado. */
+export const CONCURRENCY = 20;
 export const MAX_CONCURRENCY = 50;
+export const MAX_SAFE_CONCURRENCY = 10;
+/** Pausa entre lotes (ms) e respiro entre requisições do mesmo worker. */
+export const SAFE_BATCH_PAUSE_MS = 2_000;
+export const SAFE_REQUEST_DELAY_MS = 300;
+/** % de respostas 401/403/429 que caracteriza bloqueio do servidor. */
+export const BLOCK_SIGNAL_PCT = 0.25;
+export const MIN_BLOCK_SAMPLE = 6;
+
 export const HEAD_TIMEOUT_MS = 4_000;
 export const GENERAL_FAILURE_PCT = 0.3;
 
@@ -21,21 +34,25 @@ export const CATALOG_TTL_MINUTES = 120;
 
 /** Intervalo mínimo entre testes por faixa de prioridade (minutos). */
 export const TIER_INTERVAL_MIN = {
-  live: 5,        // canais ao vivo
+  live: 15,       // canais ao vivo (amostra por categoria)
   hot: 60,        // favoritos, novos e que falharam antes
-  recent: 360,    // filmes/séries recentes
-  cold: 1440,     // catálogo antigo, sob demanda
+  recent: 720,    // filmes/séries recentes
+  cold: 2880,     // catálogo antigo, verificação bem lenta
 };
+
+/** Máximo de canais testados por categoria em cada rodada. */
+export const LIVE_SAMPLE_PER_CATEGORY = 3;
 
 
 export type ContentStatus =
-  | "unknown" | "online" | "slow" | "unstable" | "offline" | "blocked" | "removed";
+  | "unknown" | "online" | "slow" | "suspect" | "unstable" | "offline" | "blocked" | "removed";
 export type ContentKind = "live" | "movie" | "series" | "episode";
 
 export const STATUS_LABEL: Record<ContentStatus, string> = {
   unknown: "⚪ Sem análise",
   online: "🟢 Online",
   slow: "🟡 Lento",
+  suspect: "🟡 Suspeito",
   unstable: "🟠 Instável",
   offline: "🔴 Offline",
   blocked: "🔒 Bloqueado",
