@@ -345,7 +345,7 @@ export function GlobalCheckMap({ serverId }: { serverId: string }) {
         <Card className="p-4">
           <h3 className="text-sm font-medium mb-3">Status por região</h3>
           <ul className="space-y-2">
-            {regions.map((r) => {
+            {activeRegions.map((r) => {
               const { status: s, latest } = effectiveStatus(r.code);
               const hist = (byRegion.get(r.code) ?? []).slice(0, 40).reverse();
               return (
