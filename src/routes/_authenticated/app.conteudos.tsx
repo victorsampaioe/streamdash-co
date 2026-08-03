@@ -16,12 +16,13 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import {
-  RefreshCw, DownloadCloud, Star, Activity, ShieldAlert, Search, Radar, Brain,
+  RefreshCw, DownloadCloud, Star, Activity, ShieldAlert, Search, Radar, Brain, Zap,
 } from "lucide-react";
 import {
-  importContentCatalog, scanServerContents, recheckContent,
+  importContentCatalog, scanServerContents, recheckContent, turboScanServer,
   getBrokenCatalogInsights, toggleContentFavorite, saveContentAlertSettings,
 } from "@/lib/content-monitor.functions";
+
 
 export const Route = createFileRoute("/_authenticated/app/conteudos")({
   component: ContentMonitorPage,
@@ -73,12 +74,16 @@ function ContentMonitorPage() {
   const [type, setType] = useState<string>("all");
   const [search, setSearch] = useState("");
   const [busy, setBusy] = useState<string | null>(null);
+  const [concurrency, setConcurrency] = useState("20");
+  const [turbo, setTurbo] = useState<any>(null);
 
   const doImport = useServerFn(importContentCatalog);
   const doScan = useServerFn(scanServerContents);
+  const doTurbo = useServerFn(turboScanServer);
   const doRecheck = useServerFn(recheckContent);
   const doFav = useServerFn(toggleContentFavorite);
   const doSaveSettings = useServerFn(saveContentAlertSettings);
+
 
   const servers = useQuery({
     queryKey: ["cm-servers"],
@@ -144,15 +149,29 @@ function ContentMonitorPage() {
     return Math.round((ok / total) * 1000) / 10;
   }, [summary.data]);
 
-  async function run(kind: "import" | "scan") {
+  async function run(kind: "import" | "scan" | "turbo") {
     if (!effectiveServer) return;
     setBusy(kind);
     try {
       if (kind === "import") {
-        const r: any = await doImport({ data: { serverId: effectiveServer } });
-        toast.success(`Catálogo importado: ${r.imported} conteúdos`);
+        const r: any = await doImport({ data: { serverId: effectiveServer, force: true } });
+        toast.success(
+          r.cached
+            ? `Catálogo em cache (${r.imported} conteúdos)`
+            : `Catálogo importado: ${r.imported} conteúdos`,
+        );
+      } else if (kind === "turbo") {
+        const r: any = await doTurbo({
+          data: { serverId: effectiveServer, sample: 24, concurrency: Number(concurrency) },
+        });
+        setTurbo(r);
+        toast.success(
+          `Turbo em ${(r.elapsedMs / 1000).toFixed(1)}s · API ${r.apiOk ? "ok" : "falhou"} · ${r.sample} amostras · ${r.failed} falhas`,
+        );
       } else {
-        const r: any = await doScan({ data: { serverId: effectiveServer, batch: 24 } });
+        const r: any = await doScan({
+          data: { serverId: effectiveServer, batch: 60, concurrency: Number(concurrency) },
+        });
         toast.success(
           r.generalFailure
             ? "🚨 Possível falha geral do servidor — testes suspensos"
@@ -172,6 +191,7 @@ function ContentMonitorPage() {
   const s = summary.data ?? {};
 
   return (
+
     <div className="space-y-6">
       <header className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
         <div>
@@ -191,9 +211,21 @@ function ContentMonitorPage() {
               ))}
             </SelectContent>
           </Select>
+          <Select value={concurrency} onValueChange={setConcurrency}>
+            <SelectTrigger className="w-[150px]"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              {["8", "20", "35", "50"].map((n) => (
+                <SelectItem key={n} value={n}>{n} em paralelo</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
           <Button variant="outline" disabled={!!busy || !effectiveServer} onClick={() => run("import")}>
             <DownloadCloud className="mr-2 h-4 w-4" />
             {busy === "import" ? "Importando..." : "Importar catálogo"}
+          </Button>
+          <Button variant="secondary" disabled={!!busy || !effectiveServer} onClick={() => run("turbo")}>
+            <Zap className="mr-2 h-4 w-4" />
+            {busy === "turbo" ? "Turbo..." : "Verificação Turbo"}
           </Button>
           <Button disabled={!!busy || !effectiveServer} onClick={() => run("scan")}>
             <Activity className="mr-2 h-4 w-4" />
@@ -201,6 +233,24 @@ function ContentMonitorPage() {
           </Button>
         </div>
       </header>
+
+      {turbo && (
+        <Card className="p-4">
+          <p className="flex items-center gap-2 text-sm font-semibold">
+            <Zap className="h-4 w-4 text-primary" /> Verificação Turbo — {(turbo.elapsedMs / 1000).toFixed(1)}s
+          </p>
+          <div className="mt-3 grid gap-3 text-sm sm:grid-cols-4">
+            <div><p className="text-xs text-muted-foreground">Player API</p><p>{turbo.apiOk ? `🟢 ok · ${turbo.apiMs} ms` : "🔴 falhou"}</p></div>
+            <div><p className="text-xs text-muted-foreground">Catálogo</p><p>{Number(turbo.catalog).toLocaleString("pt-BR")} itens</p></div>
+            <div><p className="text-xs text-muted-foreground">Amostra testada</p><p>{turbo.sample} · {turbo.failed} falhas</p></div>
+            <div><p className="text-xs text-muted-foreground">Sincronizado</p><p>{turbo.catalogSyncedAt ? new Date(turbo.catalogSyncedAt).toLocaleString("pt-BR") : "—"}</p></div>
+          </div>
+          {turbo.generalFailure && (
+            <p className="mt-2 text-sm text-red-400">🚨 Muitas falhas na amostra — provável problema geral do servidor.</p>
+          )}
+        </Card>
+      )}
+
 
       <Tabs defaultValue="dashboard">
         <TabsList>

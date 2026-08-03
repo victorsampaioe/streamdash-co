@@ -10,8 +10,23 @@ export const CONNECT_TIMEOUT_MS = 8_000;
 export const TOTAL_TIMEOUT_MS = 15_000;
 export const MAX_BYTES = 256 * 1024;
 export const SLOW_THRESHOLD_MS = 8_000;
-export const BATCH_SIZE = 8; // testes simultâneos por servidor
+export const BATCH_SIZE = 8; // legado (compatibilidade)
+export const CONCURRENCY = 20; // testes realmente simultâneos por servidor
+export const MAX_CONCURRENCY = 50;
+export const HEAD_TIMEOUT_MS = 4_000;
 export const GENERAL_FAILURE_PCT = 0.3;
+
+/** Cache do catálogo: só chama a Player API se passou desse intervalo. */
+export const CATALOG_TTL_MINUTES = 120;
+
+/** Intervalo mínimo entre testes por faixa de prioridade (minutos). */
+export const TIER_INTERVAL_MIN = {
+  live: 5,        // canais ao vivo
+  hot: 60,        // favoritos, novos e que falharam antes
+  recent: 360,    // filmes/séries recentes
+  cold: 1440,     // catálogo antigo, sob demanda
+};
+
 
 export type ContentStatus =
   | "unknown" | "online" | "slow" | "unstable" | "offline" | "blocked" | "removed";
@@ -81,8 +96,23 @@ type ImportRow = {
   episode_number?: number | null;
 };
 
+/** Última sincronização do catálogo monitorado (cache). */
+export async function catalogSyncedAt(serverId: string): Promise<string | null> {
+  const { data } = await supabaseAdmin
+    .from("monitored_contents")
+    .select("last_seen_at")
+    .eq("server_id", serverId)
+    .order("last_seen_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  return data?.last_seen_at ?? null;
+}
+
 /** Importa/atualiza o catálogo monitorado de um servidor. */
-export async function importServerCatalog(serverId: string, opts: { limitPerKind?: number } = {}) {
+export async function importServerCatalog(
+  serverId: string,
+  opts: { limitPerKind?: number; force?: boolean } = {},
+) {
   const limit = opts.limitPerKind ?? 1500;
   const { data: server } = await supabaseAdmin
     .from("servers")
@@ -91,6 +121,19 @@ export async function importServerCatalog(serverId: string, opts: { limitPerKind
     .maybeSingle();
   if (!server) throw new Error("Servidor não encontrado");
   if (isForbiddenHost(server.host)) throw new Error("Host não permitido");
+
+  // Cache: evita bater na Player API toda hora.
+  if (!opts.force) {
+    const last = await catalogSyncedAt(serverId);
+    if (last && Date.now() - new Date(last).getTime() < CATALOG_TTL_MINUTES * 60_000) {
+      const { count } = await supabaseAdmin
+        .from("monitored_contents")
+        .select("id", { count: "exact", head: true })
+        .eq("server_id", serverId);
+      return { imported: count ?? 0, upserted: 0, cached: true, syncedAt: last };
+    }
+  }
+
 
   const { username, password } = await getIptvCredentials(serverId);
   if (!username || !password) throw new Error("Servidor sem credenciais Xtream cadastradas");
@@ -237,8 +280,67 @@ function streamUrl(host: string, u: string, p: string, row: any): string {
   return `${b}/movie/${u}/${p}/${row.external_content_id}.${ext}`;
 }
 
+/**
+ * HEAD rápido: descarta cedo os casos óbvios (401/403/404) sem gastar
+ * banda com o GET parcial. Retorna null quando é preciso testar de verdade.
+ */
+export async function headPrecheck(
+  url: string,
+): Promise<{ verdict: ProbeResult | null; ms: number }> {
+  const started = Date.now();
+  const ctrl = new AbortController();
+  const t = setTimeout(() => ctrl.abort(), HEAD_TIMEOUT_MS);
+  try {
+    const res = await fetch(url, {
+      method: "HEAD",
+      redirect: "follow",
+      headers: { "user-agent": UA_PLAYER, accept: "*/*" },
+      signal: ctrl.signal,
+    });
+    const ms = Date.now() - started;
+    if (res.status === 401 || res.status === 403) {
+      return { verdict: fail("blocked", res.status, started, `HTTP ${res.status}`), ms };
+    }
+    if (res.status === 404 || res.status === 410) {
+      return { verdict: fail("removed", res.status, started, `HTTP ${res.status}`), ms };
+    }
+    return { verdict: null, ms };
+  } catch {
+    // HEAD falhou/não suportado: segue para o teste completo.
+    return { verdict: null, ms: Date.now() - started };
+  } finally {
+    clearTimeout(t);
+  }
+}
+
+/** Executa `worker` sobre `items` com pool de concorrência fixa (rolling). */
+export async function runPool<T, R>(
+  items: T[],
+  limit: number,
+  worker: (item: T, index: number) => Promise<R>,
+): Promise<R[]> {
+  const out = new Array<R>(items.length);
+  let cursor = 0;
+  const size = Math.max(1, Math.min(limit, items.length));
+  await Promise.all(
+    Array.from({ length: size }, async () => {
+      for (;;) {
+        const i = cursor++;
+        if (i >= items.length) return;
+        out[i] = await worker(items[i], i);
+      }
+    }),
+  );
+  return out;
+}
+
 /** GET parcial com timeout e limite de bytes. Nunca baixa o conteúdo inteiro. */
-export async function probeContentUrl(url: string): Promise<ProbeResult> {
+export async function probeContentUrl(url: string, opts: { head?: boolean } = {}): Promise<ProbeResult> {
+  if (opts.head) {
+    const pre = await headPrecheck(url);
+    if (pre.verdict) return pre.verdict;
+  }
+
   const started = Date.now();
   const ctrl = new AbortController();
   const hard = setTimeout(() => ctrl.abort(), TOTAL_TIMEOUT_MS);
@@ -339,25 +441,98 @@ export function classify(prev: { current_status: ContentStatus; consecutive_fail
 
 // --------------------------------------------------------------- fila / lote
 
-/** Seleciona o próximo lote respeitando a prioridade descrita no módulo. */
-async function pickQueue(serverId: string, size: number) {
-  const { data } = await supabaseAdmin
+function cutoff(minutes: number) {
+  return new Date(Date.now() - minutes * 60_000).toISOString();
+}
+
+const dueFilter = (q: any, minutes: number) =>
+  q.or(`last_checked_at.is.null,last_checked_at.lt.${cutoff(minutes)}`);
+
+async function tierRows(serverId: string, size: number, build: (q: any) => any) {
+  if (size <= 0) return [];
+  let q = supabaseAdmin
     .from("monitored_contents")
     .select("*")
     .eq("server_id", serverId)
-    .neq("current_status", "removed")
+    .neq("current_status", "removed");
+  q = build(q);
+  const { data } = await q
     .order("priority", { ascending: false })
-    .order("consecutive_failures", { ascending: false })
     .order("last_checked_at", { ascending: true, nullsFirst: true })
     .limit(size);
   return data ?? [];
 }
 
+/**
+ * Fila inteligente por prioridade:
+ *  1) canais ao vivo (a cada 5 min)
+ *  2) favoritos / novos / que já falharam (a cada 1h)
+ *  3) filmes e séries recentes (a cada 6h)
+ *  4) catálogo antigo (1x por dia)
+ */
+export async function pickQueue(serverId: string, size: number) {
+  const seen = new Set<string>();
+  const out: any[] = [];
+  const push = (rows: any[]) => {
+    for (const r of rows) {
+      if (out.length >= size || seen.has(r.id)) continue;
+      seen.add(r.id);
+      out.push(r);
+    }
+  };
+
+  push(await tierRows(serverId, Math.ceil(size * 0.35), (q) =>
+    dueFilter(q.eq("content_type", "live"), TIER_INTERVAL_MIN.live)));
+
+  push(await tierRows(serverId, Math.ceil(size * 0.35), (q) =>
+    dueFilter(
+      q.or("is_favorite.eq.true,consecutive_failures.gt.0,current_status.eq.unknown"),
+      TIER_INTERVAL_MIN.hot,
+    )));
+
+  push(await tierRows(serverId, size - out.length, (q) =>
+    dueFilter(q.gt("first_seen_at", cutoff(60 * 24 * 14)), TIER_INTERVAL_MIN.recent)));
+
+  push(await tierRows(serverId, size - out.length, (q) =>
+    dueFilter(q, TIER_INTERVAL_MIN.cold)));
+
+  return out.slice(0, size);
+}
+
+/** Amostra rápida usada pela Verificação Turbo (canais + falhas + favoritos). */
+async function pickTurboSample(serverId: string, size: number) {
+  const seen = new Set<string>();
+  const out: any[] = [];
+  const push = (rows: any[]) => {
+    for (const r of rows) {
+      if (out.length >= size || seen.has(r.id)) continue;
+      seen.add(r.id);
+      out.push(r);
+    }
+  };
+  push(await tierRows(serverId, Math.ceil(size * 0.4), (q) =>
+    q.gt("consecutive_failures", 0)));
+  push(await tierRows(serverId, Math.ceil(size * 0.3), (q) =>
+    q.eq("content_type", "live")));
+  push(await tierRows(serverId, size - out.length, (q) => q.eq("is_favorite", true)));
+  push(await tierRows(serverId, size - out.length, (q) => q));
+  return out.slice(0, size);
+}
+
 export async function runContentScan(
   serverId: string,
-  opts: { batch?: number; contentIds?: string[]; manual?: boolean; userId?: string } = {},
+  opts: {
+    batch?: number;
+    concurrency?: number;
+    contentIds?: string[];
+    manual?: boolean;
+    userId?: string;
+    turbo?: boolean;
+    head?: boolean;
+  } = {},
 ) {
-  const batch = Math.min(opts.batch ?? BATCH_SIZE * 4, 60);
+  const batch = Math.min(opts.batch ?? 40, 300);
+  const concurrency = Math.min(Math.max(1, opts.concurrency ?? CONCURRENCY), MAX_CONCURRENCY);
   const { data: server } = await supabaseAdmin
     .from("servers").select("id, owner_id, name, host").eq("id", serverId).maybeSingle();
   if (!server) throw new Error("Servidor não encontrado");
@@ -376,56 +551,60 @@ export async function runContentScan(
     const { data } = await supabaseAdmin
       .from("monitored_contents").select("*").eq("server_id", serverId).in("id", opts.contentIds);
     queue = data ?? [];
+  } else if (opts.turbo) {
+    queue = await pickTurboSample(serverId, batch);
   } else {
     queue = await pickQueue(serverId, batch);
   }
 
   let tested = 0, failed = 0, recovered = 0;
   const events: { row: any; status: ContentStatus; probe: ProbeResult }[] = [];
+  const checkRows: any[] = [];
 
-  for (let i = 0; i < queue.length; i += BATCH_SIZE) {
-    const slice = queue.slice(i, i + BATCH_SIZE);
-    const results = await Promise.all(
-      slice.map(async (row) => {
-        const probe = await probeContentUrl(streamUrl(server.host, username, password, row));
-        return { row, probe };
-      }),
+  // Consulta em paralelo real: pool rolante, sem esperar o lote inteiro terminar.
+  await runPool(queue, concurrency, async (row) => {
+    const probe = await probeContentUrl(
+      streamUrl(server.host, username, password, row),
+      { head: opts.head ?? true },
     );
-    for (const { row, probe } of results) {
-      tested++;
-      const { status, failures } = classify(row, probe);
-      const wasBad = ["offline", "blocked", "removed", "unstable"].includes(row.current_status);
-      const isBad = ["offline", "blocked", "removed"].includes(status);
-      if (isBad) failed++;
-      if (wasBad && (status === "online" || status === "slow")) recovered++;
+    const { status, failures } = classify(row, probe);
+    const wasBad = ["offline", "blocked", "removed", "unstable"].includes(row.current_status);
+    const isBad = ["offline", "blocked", "removed"].includes(status);
+    tested++;
+    if (isBad) failed++;
+    if (wasBad && (status === "online" || status === "slow")) recovered++;
 
-      await supabaseAdmin.from("content_checks").insert({
-        content_id: row.id,
-        server_id: serverId,
-        status,
-        http_status: probe.http_status,
-        response_time_ms: probe.response_time_ms,
-        first_byte_time_ms: probe.first_byte_time_ms,
-        bytes_received: probe.bytes_received,
-        detected_format: probe.detected_format,
-        error_message: probe.error_message,
-        manual: !!opts.manual,
-        checked_by: opts.userId ?? null,
-      });
+    checkRows.push({
+      content_id: row.id,
+      server_id: serverId,
+      status,
+      http_status: probe.http_status,
+      response_time_ms: probe.response_time_ms,
+      first_byte_time_ms: probe.first_byte_time_ms,
+      bytes_received: probe.bytes_received,
+      detected_format: probe.detected_format,
+      error_message: probe.error_message,
+      manual: !!opts.manual,
+      checked_by: opts.userId ?? null,
+    });
 
-      await supabaseAdmin.from("monitored_contents").update({
-        current_status: status,
-        consecutive_failures: failures,
-        response_time_ms: probe.response_time_ms,
-        http_status: probe.http_status,
-        last_error: probe.error_message,
-        last_checked_at: new Date().toISOString(),
-        ...(status === "online" || status === "slow" ? { last_online_at: new Date().toISOString() } : {}),
-      }).eq("id", row.id);
+    const now = new Date().toISOString();
+    await supabaseAdmin.from("monitored_contents").update({
+      current_status: status,
+      consecutive_failures: failures,
+      response_time_ms: probe.response_time_ms,
+      http_status: probe.http_status,
+      last_error: probe.error_message,
+      last_checked_at: now,
+      ...(status === "online" || status === "slow" ? { last_online_at: now } : {}),
+    }).eq("id", row.id);
 
-      if (row.current_status !== status) events.push({ row, status, probe });
-    }
-    if (i + BATCH_SIZE < queue.length) await new Promise((r) => setTimeout(r, 800));
+    if (row.current_status !== status) events.push({ row, status, probe });
+  });
+
+  // Histórico gravado em lote (menos escritas no banco).
+  for (let i = 0; i < checkRows.length; i += 200) {
+    await supabaseAdmin.from("content_checks").insert(checkRows.slice(i, i + 200));
   }
 
   // Detector de falha geral: muitos erros de uma vez => provável problema no servidor.
@@ -436,7 +615,9 @@ export async function runContentScan(
       finished_at: new Date().toISOString(),
       tested, failed, recovered,
       general_failure: generalFailure,
-      note: generalFailure ? "Possível falha geral do servidor — testes suspensos" : null,
+      note: generalFailure
+        ? "Possível falha geral do servidor — testes suspensos"
+        : opts.turbo ? "Verificação Turbo (amostra)" : null,
     }).eq("id", run.id);
   }
 
@@ -447,8 +628,60 @@ export async function runContentScan(
     await notifyContentEvents(server as any, events, { tested, failed, recovered, generalFailure });
   } catch { /* alertas nunca quebram o scan */ }
 
-  return { tested, failed, recovered, generalFailure };
+  return { tested, failed, recovered, generalFailure, concurrency };
 }
+
+/**
+ * Verificação Turbo: visão geral do servidor em segundos.
+ * Ping na Player API + validação do catálogo + amostra priorizada de streams.
+ */
+export async function runTurboScan(
+  serverId: string,
+  opts: { sample?: number; concurrency?: number; userId?: string } = {},
+) {
+  const started = Date.now();
+  const { data: server } = await supabaseAdmin
+    .from("servers").select("id, host").eq("id", serverId).maybeSingle();
+  if (!server) throw new Error("Servidor não encontrado");
+  if (isForbiddenHost(server.host)) throw new Error("Host não permitido");
+  const { username, password } = await getIptvCredentials(serverId);
+  if (!username || !password) throw new Error("Servidor sem credenciais Xtream");
+
+  const apiStart = Date.now();
+  const info = await jsonApi(server.host, username, password, {});
+  const apiMs = Date.now() - apiStart;
+  const apiOk = !!info?.user_info;
+
+  const [{ count: catalogCount }, syncedAt] = await Promise.all([
+    supabaseAdmin
+      .from("monitored_contents")
+      .select("id", { count: "exact", head: true })
+      .eq("server_id", serverId),
+    catalogSyncedAt(serverId),
+  ]);
+
+  const scan = await runContentScan(serverId, {
+    batch: opts.sample ?? 24,
+    concurrency: opts.concurrency ?? CONCURRENCY,
+    turbo: true,
+    manual: true,
+    userId: opts.userId,
+    head: true,
+  });
+
+  return {
+    apiOk,
+    apiMs,
+    catalog: catalogCount ?? 0,
+    catalogSyncedAt: syncedAt,
+    sample: scan.tested,
+    failed: scan.failed,
+    recovered: scan.recovered,
+    generalFailure: scan.generalFailure,
+    elapsedMs: Date.now() - started,
+  };
+}
+
 
 /** Percorre servidores elegíveis (assinatura ativa) e roda um lote em cada um. */
 export async function runDueContentScans() {
@@ -467,16 +700,18 @@ export async function runDueContentScans() {
       .map((s) => s.user_id),
   );
 
+  const eligible = servers.filter((s) => active.has(s.owner_id));
   let tested = 0, count = 0;
-  for (const s of servers) {
-    if (!active.has(s.owner_id)) continue;
+  // Até 3 servidores em paralelo, cada um com seu pool interno.
+  await runPool(eligible, 3, async (s) => {
     try {
-      const r = await runContentScan(s.id, { batch: 24 });
+      const r = await runContentScan(s.id, { batch: 60, concurrency: CONCURRENCY });
       tested += r.tested;
       count++;
     } catch { /* ignora servidor com erro */ }
-  }
+  });
   return { servers: count, tested };
+
 }
 
 // -------------------------------------------------------- resumo / score
