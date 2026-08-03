@@ -26,7 +26,8 @@ export async function authenticateAgent(
 ): Promise<RegionAgent | null> {
   if (!agentId || !signature) return null;
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-  const { data } = await supabaseAdmin
+  const db = supabaseAdmin as any;
+  const { data } = await db
     .from("region_agents")
     .select("id, region_code, name, secret_hash, enabled")
     .eq("id", agentId)
@@ -41,7 +42,7 @@ export async function authenticateAgent(
 
 export async function touchAgent(agentId: string, count: number) {
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-  await supabaseAdmin
+  await (supabaseAdmin as any)
     .from("region_agents")
     .update({ last_seen_at: new Date().toISOString(), last_report_count: count })
     .eq("id", agentId);
