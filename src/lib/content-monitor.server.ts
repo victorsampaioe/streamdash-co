@@ -498,11 +498,47 @@ async function tierRows(serverId: string, size: number, build: (q: any) => any) 
 }
 
 /**
- * Fila inteligente por prioridade:
- *  1) canais ao vivo (a cada 5 min)
- *  2) favoritos / novos / que já falharam (a cada 1h)
- *  3) filmes e séries recentes (a cada 6h)
- *  4) catálogo antigo (1x por dia)
+ * Canais ao vivo: nunca testamos a grade inteira.
+ * Pegamos só uma amostra por categoria (favoritos primeiro) e giramos as
+ * categorias conforme a hora do dia, para distribuir a carga no servidor.
+ */
+async function pickLiveSample(serverId: string, size: number) {
+  if (size <= 0) return [];
+  const rows = await tierRows(serverId, size * 8, (q) =>
+    dueFilter(q.eq("content_type", "live"), TIER_INTERVAL_MIN.live));
+  if (!rows.length) return [];
+
+  const byCat = new Map<string, any[]>();
+  for (const r of rows) {
+    const key = r.category_name || "sem categoria";
+    if (!byCat.has(key)) byCat.set(key, []);
+    byCat.get(key)!.push(r);
+  }
+
+  // Rotação por hora: categorias diferentes em horários diferentes.
+  const cats = Array.from(byCat.keys()).sort();
+  const offset = new Date().getUTCHours() % Math.max(1, cats.length);
+  const rotated = [...cats.slice(offset), ...cats.slice(0, offset)];
+
+  const out: any[] = [];
+  for (const cat of rotated) {
+    const list = byCat.get(cat)!
+      .sort((a, b) =>
+        Number(b.is_favorite) - Number(a.is_favorite) ||
+        (b.priority ?? 0) - (a.priority ?? 0) ||
+        (b.consecutive_failures ?? 0) - (a.consecutive_failures ?? 0));
+    out.push(...list.slice(0, LIVE_SAMPLE_PER_CATEGORY));
+    if (out.length >= size) break;
+  }
+  return out.slice(0, size);
+}
+
+/**
+ * Fila inteligente do Modo Seguro:
+ *  1) canais ao vivo — amostra por categoria, com rodízio de horário
+ *  2) favoritos / conteúdos novos / que já falharam antes
+ *  3) filmes e séries recentes (verificação lenta)
+ *  4) catálogo antigo (bem esporádico, só sobra de lote)
  */
 export async function pickQueue(serverId: string, size: number) {
   const seen = new Set<string>();
@@ -515,20 +551,24 @@ export async function pickQueue(serverId: string, size: number) {
     }
   };
 
-  push(await tierRows(serverId, Math.ceil(size * 0.35), (q) =>
-    dueFilter(q.eq("content_type", "live"), TIER_INTERVAL_MIN.live)));
+  push(await pickLiveSample(serverId, Math.ceil(size * 0.3)));
 
-  push(await tierRows(serverId, Math.ceil(size * 0.35), (q) =>
+  // Filmes/séries: prioridade para novos, com erro e favoritos.
+  push(await tierRows(serverId, Math.ceil(size * 0.45), (q) =>
     dueFilter(
-      q.or("is_favorite.eq.true,consecutive_failures.gt.0,current_status.eq.unknown"),
+      q.neq("content_type", "live")
+        .or("is_favorite.eq.true,consecutive_failures.gt.0,current_status.eq.unknown,current_status.eq.suspect"),
       TIER_INTERVAL_MIN.hot,
     )));
 
   push(await tierRows(serverId, size - out.length, (q) =>
-    dueFilter(q.gt("first_seen_at", cutoff(60 * 24 * 14)), TIER_INTERVAL_MIN.recent)));
+    dueFilter(
+      q.neq("content_type", "live").gt("first_seen_at", cutoff(60 * 24 * 14)),
+      TIER_INTERVAL_MIN.recent,
+    )));
 
-  push(await tierRows(serverId, size - out.length, (q) =>
-    dueFilter(q, TIER_INTERVAL_MIN.cold)));
+  push(await tierRows(serverId, Math.min(size - out.length, Math.ceil(size * 0.15)), (q) =>
+    dueFilter(q.neq("content_type", "live"), TIER_INTERVAL_MIN.cold)));
 
   return out.slice(0, size);
 }
