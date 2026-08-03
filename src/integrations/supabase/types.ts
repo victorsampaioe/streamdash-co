@@ -2922,6 +2922,11 @@ export type Database = {
         }[]
       }
       is_valid_referral_code: { Args: { _code: string }; Returns: boolean }
+      mask_server_id: { Args: { _id: string; _owner: string }; Returns: string }
+      mask_server_name: {
+        Args: { _id: string; _name: string; _owner: string }
+        Returns: string
+      }
       purge_content_checks: { Args: { _days?: number }; Returns: number }
       purge_old_metrics: { Args: { _dry_run?: boolean }; Returns: Json }
       request_payout: {
