@@ -74,12 +74,16 @@ function ContentMonitorPage() {
   const [type, setType] = useState<string>("all");
   const [search, setSearch] = useState("");
   const [busy, setBusy] = useState<string | null>(null);
+  const [concurrency, setConcurrency] = useState("20");
+  const [turbo, setTurbo] = useState<any>(null);
 
   const doImport = useServerFn(importContentCatalog);
   const doScan = useServerFn(scanServerContents);
+  const doTurbo = useServerFn(turboScanServer);
   const doRecheck = useServerFn(recheckContent);
   const doFav = useServerFn(toggleContentFavorite);
   const doSaveSettings = useServerFn(saveContentAlertSettings);
+
 
   const servers = useQuery({
     queryKey: ["cm-servers"],
