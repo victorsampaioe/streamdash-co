@@ -396,6 +396,9 @@ export function GlobalCheckMap({ serverId }: { serverId: string }) {
               );
             })}
           </ul>
+          {activeRegions.length === 0 && (
+            <p className="text-xs text-muted-foreground">Nenhum ponto regional conectado no momento.</p>
+          )}
           <div className="mt-3 pt-3 border-t border-border/50 flex items-center gap-3 text-[11px] text-muted-foreground flex-wrap">
             <LegendItem status="up" />
             <LegendItem status="degraded" />
