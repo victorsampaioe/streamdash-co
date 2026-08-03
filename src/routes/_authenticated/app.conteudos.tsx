@@ -75,7 +75,8 @@ function ContentMonitorPage() {
   const [type, setType] = useState<string>("all");
   const [search, setSearch] = useState("");
   const [busy, setBusy] = useState<string | null>(null);
-  const [concurrency, setConcurrency] = useState("20");
+  const [concurrency, setConcurrency] = useState("5");
+  const [safeMode, setSafeMode] = useState(true);
   const [turbo, setTurbo] = useState<any>(null);
 
   const doImport = useServerFn(importContentCatalog);
