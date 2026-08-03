@@ -35,6 +35,7 @@ export const getTmdbFeed = createServerFn({ method: "POST" })
         .in("title_key", keys)
         .is("removed_at", null);
       for (const r of rows ?? []) {
+        if (!verifiedIds.has(r.server_id)) continue;
         const set = matchMap.get(r.title_key) ?? new Set<string>();
         set.add(r.server_id);
         matchMap.set(r.title_key, set);
