@@ -4,6 +4,8 @@ import { supabaseAdmin } from "@/integrations/supabase/client.server";
 
 const FETCH_TIMEOUT_MS = 8000;
 const SSL_TIMEOUT_MS = 6000;
+// Janela de confirmação de status antes de disparar alertas (~2 minutos)
+const CONFIRM_WINDOW_MS = 120_000;
 
 type ServerRow = {
   id: string;
