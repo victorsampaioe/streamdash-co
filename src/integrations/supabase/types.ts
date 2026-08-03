@@ -899,6 +899,56 @@ export type Database = {
           },
         ]
       }
+      iptv_alert_state: {
+        Row: {
+          active: boolean
+          created_at: string
+          first_seen_at: string | null
+          id: string
+          kind: string
+          last_seen_at: string | null
+          notified_at: string | null
+          pending_count: number
+          resolved_at: string | null
+          server_id: string
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          created_at?: string
+          first_seen_at?: string | null
+          id?: string
+          kind: string
+          last_seen_at?: string | null
+          notified_at?: string | null
+          pending_count?: number
+          resolved_at?: string | null
+          server_id: string
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          created_at?: string
+          first_seen_at?: string | null
+          id?: string
+          kind?: string
+          last_seen_at?: string | null
+          notified_at?: string | null
+          pending_count?: number
+          resolved_at?: string | null
+          server_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "iptv_alert_state_server_id_fkey"
+            columns: ["server_id"]
+            isOneToOne: false
+            referencedRelation: "servers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       iptv_alerts: {
         Row: {
           acknowledged_at: string | null
