@@ -10,22 +10,51 @@ async function assertOwnership(context: any, serverId: string) {
 
 export const importContentCatalog = createServerFn({ method: "POST" })
   .middleware([requireActiveSubscription])
-  .inputValidator((d: { serverId: string }) => z.object({ serverId: z.string().uuid() }).parse(d))
+  .inputValidator((d: { serverId: string; force?: boolean }) =>
+    z.object({ serverId: z.string().uuid(), force: z.boolean().optional() }).parse(d))
   .handler(async ({ data, context }) => {
     await assertOwnership(context, data.serverId);
     const { importServerCatalog } = await import("./content-monitor.server");
-    return await importServerCatalog(data.serverId);
+    return await importServerCatalog(data.serverId, { force: data.force ?? false });
   });
 
 export const scanServerContents = createServerFn({ method: "POST" })
   .middleware([requireActiveSubscription])
-  .inputValidator((d: { serverId: string; batch?: number }) =>
-    z.object({ serverId: z.string().uuid(), batch: z.number().min(1).max(60).optional() }).parse(d))
+  .inputValidator((d: { serverId: string; batch?: number; concurrency?: number }) =>
+    z.object({
+      serverId: z.string().uuid(),
+      batch: z.number().min(1).max(300).optional(),
+      concurrency: z.number().min(1).max(50).optional(),
+    }).parse(d))
   .handler(async ({ data, context }) => {
     await assertOwnership(context, data.serverId);
     const { runContentScan } = await import("./content-monitor.server");
-    return await runContentScan(data.serverId, { batch: data.batch ?? 24, manual: true, userId: context.userId });
+    return await runContentScan(data.serverId, {
+      batch: data.batch ?? 60,
+      concurrency: data.concurrency ?? 20,
+      manual: true,
+      userId: context.userId,
+    });
   });
+
+export const turboScanServer = createServerFn({ method: "POST" })
+  .middleware([requireActiveSubscription])
+  .inputValidator((d: { serverId: string; sample?: number; concurrency?: number }) =>
+    z.object({
+      serverId: z.string().uuid(),
+      sample: z.number().min(5).max(120).optional(),
+      concurrency: z.number().min(1).max(50).optional(),
+    }).parse(d))
+  .handler(async ({ data, context }) => {
+    await assertOwnership(context, data.serverId);
+    const { runTurboScan } = await import("./content-monitor.server");
+    return await runTurboScan(data.serverId, {
+      sample: data.sample ?? 24,
+      concurrency: data.concurrency ?? 20,
+      userId: context.userId,
+    });
+  });
+
 
 export const recheckContent = createServerFn({ method: "POST" })
   .middleware([requireActiveSubscription])
