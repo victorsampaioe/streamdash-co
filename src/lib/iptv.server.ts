@@ -867,13 +867,6 @@ export async function runIptvSync(serverId: string, opts: { mode?: "smart" | "fu
         if (catalogDiff.added.live) parts.push(`📺 +${catalogDiff.added.live} canais`);
         if (parts.length) {
           await raiseAlert(serverId, "catalog_added", "info", "🎬 Novos conteúdos no catálogo", parts.join(" · "));
-          // Arte automática de novidades para o servidor que recebeu conteúdo novo.
-          try {
-            const { autoGenerateArt } = await import("./art.server");
-            await autoGenerateArt(serverId);
-          } catch (e) {
-            console.warn("[art] falha ao gerar arte automática:", (e as Error)?.message);
-          }
         }
 
         if (catalogDiff.removed > 0) {

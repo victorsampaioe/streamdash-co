@@ -17,7 +17,7 @@ import { useSubscription } from "@/hooks/use-subscription";
 import { StatusDot, StatusLabel } from "@/components/status-dot";
 import { UptimeSparkline } from "@/components/uptime-sparkline";
 import { LineChart, Line, ResponsiveContainer, XAxis, YAxis, Tooltip, CartesianGrid } from "recharts";
-import { ArrowLeft, Download, Play, Trash2, RefreshCw, ShieldCheck, Cloud, Globe, Server as ServerIcon, Zap, Loader2, Palette } from "lucide-react";
+import { ArrowLeft, Download, Play, Trash2, RefreshCw, ShieldCheck, Cloud, Globe, Server as ServerIcon, Zap, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { runCheckNow } from "@/lib/monitoring.functions";
 import { analyzeServer } from "@/lib/analysis.functions";
@@ -175,11 +175,6 @@ function ServerDetail() {
         <div className="flex gap-2 flex-wrap w-full sm:w-auto">
           <Button variant="outline" size="sm" onClick={handleRun}><Play className="h-4 w-4 mr-1" />Verificar</Button>
           <Button variant="outline" size="sm" onClick={exportCsv}><Download className="h-4 w-4 mr-1" />CSV</Button>
-          {isAdmin && (
-            <Button variant="outline" size="sm" asChild>
-              <Link to="/app/artes" search={{ server: id }}><Palette className="h-4 w-4 mr-1" />Gerar Arte de Novidades</Link>
-            </Button>
-          )}
           <Button variant="ghost" size="icon" onClick={() => setConfirmDel(true)}><Trash2 className="h-4 w-4 text-destructive" /></Button>
         </div>
       </div>
