@@ -18,6 +18,7 @@ export function WelcomeOnboarding() {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [canTrial, setCanTrial] = useState<boolean | null>(null);
+  const [trialUsed, setTrialUsed] = useState(false);
 
   useEffect(() => {
     let active = true;
@@ -29,7 +30,10 @@ export function WelcomeOnboarding() {
         .select("referred_by, trial_used")
         .eq("id", userData.user.id)
         .maybeSingle();
-      if (active) setCanTrial(!!data?.referred_by && !data?.trial_used);
+      if (active) {
+        setTrialUsed(!!data?.trial_used);
+        setCanTrial(!!data?.referred_by && !data?.trial_used);
+      }
     })();
     return () => { active = false; };
   }, []);
