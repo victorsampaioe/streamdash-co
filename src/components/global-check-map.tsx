@@ -232,11 +232,26 @@ export function GlobalCheckMap({ serverId }: { serverId: string }) {
     return { status: latest.status, latest };
   }
 
-  const nonOrigin = regions.filter((r) => r.code !== "origin");
+  // Só exibe regiões que realmente possuem um agente conectado (ou dados recentes).
+  const liveCodes = useMemo(() => {
+    const s = new Set<string>();
+    for (const w of workers) {
+      if (w.last_report_at && Date.now() - new Date(w.last_report_at).getTime() <= 60 * 60_000) s.add(w.region_code);
+    }
+    for (const r of matrix) if (r.checked_at) s.add(r.region_code);
+    return s;
+  }, [workers, matrix]);
+
+  const activeRegions = useMemo(
+    () => regions.filter((r) => r.code === "origin" || liveCodes.has(r.code)),
+    [regions, liveCodes],
+  );
+
+  const nonOrigin = activeRegions.filter((r) => r.code !== "origin");
   const workersOnline = workers.filter((w) => w.last_report_at && Date.now() - new Date(w.last_report_at).getTime() <= 20 * 60_000).length;
-  const workersTotal = nonOrigin.length;
+  const workersTotal = Math.max(nonOrigin.length, workersOnline);
   const workerBadgeColor =
-    workersOnline === workersTotal ? "text-success border-success/40 bg-success/10" :
+    workersTotal > 0 && workersOnline === workersTotal ? "text-success border-success/40 bg-success/10" :
     workersOnline === 0 ? "text-destructive border-destructive/40 bg-destructive/10" :
     "text-warning border-warning/40 bg-warning/10";
 
@@ -247,7 +262,8 @@ export function GlobalCheckMap({ serverId }: { serverId: string }) {
   const selected = openRegion ? regions.find((r) => r.code === openRegion) ?? null : null;
 
   // Ponto âncora das linhas (origem do servidor) — usa "origin" se existir.
-  const anchor = regions.find((r) => r.code === "origin") ?? nonOrigin[0] ?? null;
+  const anchor = activeRegions.find((r) => r.code === "origin") ?? nonOrigin[0] ?? null;
+
 
   return (
     <div className="space-y-4">
