@@ -411,6 +411,8 @@ async function sendAlerts(server: ServerRow, event: "up" | "down", message: stri
 
 // Exported so the /api/public/regions/report endpoint can trigger alerts
 // when a specific region transitions to down or recovers.
+// A mensagem é consolidada: mostra o veredito de consenso e a checagem
+// de cada região, em vez de um alerta isolado por ponto de monitoramento.
 export async function sendRegionAlert(args: {
   serverId: string;
   region: { code: string; name: string; city: string; flag: string };
@@ -424,10 +426,53 @@ export async function sendRegionAlert(args: {
     .eq("id", args.serverId)
     .maybeSingle();
   if (!server) return;
-  const detail = args.event === "down"
-    ? `${args.region.flag} ${args.region.city}: OFFLINE${args.error ? ` — ${args.error}` : ""}`
-    : `${args.region.flag} ${args.region.city}: recuperado${args.latencyMs != null ? ` (${args.latencyMs}ms)` : ""}`;
-  const message = `${server.name} — ${detail}`;
+
+  // Situação atual de cada região (janela de 15 min).
+  const { data: regions } = await supabaseAdmin
+    .from("check_regions")
+    .select("code, city, flag")
+    .eq("enabled", true);
+
+  const { data: recent } = await supabaseAdmin
+    .from("region_checks")
+    .select("region_code, status, latency_ms, checked_at")
+    .eq("server_id", args.serverId)
+    .gte("checked_at", new Date(Date.now() - 15 * 60_000).toISOString())
+    .order("checked_at", { ascending: false })
+    .limit(500);
+
+  const latest = new Map<string, { status: string; latency_ms: number | null }>();
+  for (const r of recent ?? []) {
+    if (!latest.has(r.region_code)) latest.set(r.region_code, { status: r.status, latency_ms: r.latency_ms });
+  }
+
+  const icon = (s?: string) =>
+    s === "up" ? "✅" : s === "down" ? "❌" : s === "degraded" ? "⚠️" : "➖";
+
+  const lines = (regions ?? [])
+    .filter((r) => r.code !== "origin" || latest.has(r.code))
+    .map((r) => {
+      const l = latest.get(r.code);
+      const ms = l?.latency_ms != null ? ` (${l.latency_ms}ms)` : "";
+      return `${r.flag} ${r.city} ${icon(l?.status)}${ms}`;
+    });
+
+  const downs = [...latest.values()].filter((l) => l.status === "down").length;
+  const total = latest.size;
+  const at = new Date().toLocaleTimeString("pt-BR", { timeZone: "America/Sao_Paulo", hour: "2-digit", minute: "2-digit" });
+
+  const header = args.event === "down"
+    ? `🚨 OFFLINE CONFIRMADO — ${downs} de ${total} regiões detectaram falha`
+    : `✅ SERVIÇO RESTABELECIDO — confirmado por ${total - downs} de ${total} regiões`;
+
+  const message =
+    `${header}\n\n` +
+    `Servidor: ${server.name}\n\n` +
+    `Confirmação:\n${lines.join("\n")}\n\n` +
+    (args.error && args.event === "down" ? `Motivo: ${args.error}\n` : "") +
+    `Detectado às ${at}`;
+
   await sendAlerts(server as ServerRow, args.event, message, null);
 }
+
 
