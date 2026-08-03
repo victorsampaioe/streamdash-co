@@ -1,6 +1,8 @@
 // Server-only helper to notify the admin via Telegram (single chat).
 // Do NOT import this file from client bundles.
 
+import { formatBRL, effectivePriceCents, PLANS } from "./payments";
+
 export async function notifyAdmin(text: string): Promise<{ ok: boolean; error?: string }> {
   const token = process.env.TELEGRAM_BOT_TOKEN;
   const chatId = process.env.ADMIN_TELEGRAM_CHAT_ID;
