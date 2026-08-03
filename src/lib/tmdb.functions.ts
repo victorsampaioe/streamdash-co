@@ -66,9 +66,11 @@ export const getTmdbDetail = createServerFn({ method: "POST" })
     const detail = await fetchDetail(data.media, data.id);
     const keys = [...new Set([titleKey(detail.title), titleKey(detail.original_title)].filter(Boolean))];
 
+    // Apenas servidores verificados (com catálogo IPTV sincronizado).
     const { data: servers } = await context.supabase
       .from("servers")
       .select("id, name, current_status, last_iptv_sync_at")
+      .not("catalog_synced_at", "is", null)
       .order("name");
 
     const firstSeen = new Map<string, string>();
