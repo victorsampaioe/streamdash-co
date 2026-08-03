@@ -30,6 +30,17 @@ export const PLANS: PlanDefinition[] = [
   },
 ];
 
+// Promoção relâmpago do plano Mensal (válida só hoje, até 23:59 no horário de Brasília).
+export const MONTHLY_PROMO = {
+  priceCents: 2500,
+  endsAt: "2026-08-04T02:59:59.000Z", // 03/08/2026 23:59:59 BRT
+  label: "Só hoje",
+};
+
+export function isMonthlyPromoActive(now: number = Date.now()) {
+  return now < Date.parse(MONTHLY_PROMO.endsAt);
+}
+
 // Promoção relâmpago do plano Anual (válida só hoje, até 23:59 no horário de Brasília).
 export const YEARLY_PROMO = {
   priceCents: 15000,
@@ -43,6 +54,7 @@ export function isYearlyPromoActive(now: number = Date.now()) {
 
 /** Preço efetivo do plano considerando promoções ativas. */
 export function effectivePriceCents(plan: PlanDefinition, now: number = Date.now()) {
+  if (plan.id === "monthly" && isMonthlyPromoActive(now)) return MONTHLY_PROMO.priceCents;
   if (plan.id === "yearly" && isYearlyPromoActive(now)) return YEARLY_PROMO.priceCents;
   return plan.priceCents;
 }

@@ -1,6 +1,8 @@
 // Server-only helper to notify the admin via Telegram (single chat).
 // Do NOT import this file from client bundles.
 
+import { formatBRL, effectivePriceCents, PLANS } from "./payments";
+
 export async function notifyAdmin(text: string): Promise<{ ok: boolean; error?: string }> {
   const token = process.env.TELEGRAM_BOT_TOKEN;
   const chatId = process.env.ADMIN_TELEGRAM_CHAT_ID;
@@ -64,10 +66,14 @@ export async function notifyNewlyExpiredSubscriptions(): Promise<{ notified: num
     await notifyAdmin(
       `⏰ <b>Assinatura expirada</b>\n${label}\n${escape(prof?.full_name ?? "-")} — ${escape(prof?.email ?? "-")}\nVenceu em: ${new Date(sub.expires_at).toLocaleString("pt-BR")}`
     );
+    const monthly = PLANS.find((p) => p.id === "monthly")!;
+    const yearly = PLANS.find((p) => p.id === "yearly")!;
+    const monthlyPrice = formatBRL(effectivePriceCents(monthly));
+    const yearlyPrice = formatBRL(effectivePriceCents(yearly));
     // Aviso para o próprio usuário no Telegram dele (se cadastrou canal)
     const userMsg = sub.plan === "trial"
-      ? `⏰ <b>Seu teste gratuito expirou</b>\n\nPara continuar monitorando seus servidores, assine agora:\n👉 https://streammonitor.site/app/subscription\n\nPlanos: R$ 35/mês ou R$ 299/ano (via PIX).`
-      : `⏰ <b>Sua assinatura expirou</b>\n\nSeus monitoramentos foram pausados. Renove pelo PIX para reativar:\n👉 https://streammonitor.site/app/subscription\n\nPlanos: R$ 35/mês ou R$ 299/ano.`;
+      ? `⏰ <b>Seu teste gratuito expirou</b>\n\nPara continuar monitorando seus servidores, assine agora:\n👉 https://streammonitor.site/app/subscription\n\nPlanos: ${monthlyPrice}/mês ou ${yearlyPrice}/ano (via PIX).`
+      : `⏰ <b>Sua assinatura expirou</b>\n\nSeus monitoramentos foram pausados. Renove pelo PIX para reativar:\n👉 https://streammonitor.site/app/subscription\n\nPlanos: ${monthlyPrice}/mês ou ${yearlyPrice}/ano.`;
     await notifyUserTelegram(sub.user_id, userMsg);
 
     await supabaseAdmin
