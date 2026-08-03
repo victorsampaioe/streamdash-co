@@ -8,6 +8,8 @@ const itemSchema = z.object({
   http_status: z.number().int().nullable().optional(),
   latency_ms: z.number().int().nullable().optional(),
   error: z.string().max(500).nullable().optional(),
+  details: z.record(z.any()).optional(),
+  source: z.string().max(32).optional(),
 });
 
 // Aceita 1 report (formato antigo) ou um lote { reports: [...] } (novo worker).
@@ -23,8 +25,13 @@ export const Route = createFileRoute("/api/public/regions/report")({
       POST: async ({ request }) => {
         const raw = await request.text();
         const sig = request.headers.get("x-signature");
+        const agentId = request.headers.get("x-agent-id");
         const { verifyRegionSignature } = await import("@/lib/region-auth.server");
-        if (!verifyRegionSignature(raw, sig)) return new Response("Forbidden", { status: 403 });
+        const { authenticateAgent, touchAgent } = await import("@/lib/region-agent.server");
+        const agent = agentId ? await authenticateAgent(agentId, raw, sig) : null;
+        if (!agent && !verifyRegionSignature(raw, sig)) {
+          return new Response("Forbidden", { status: 403 });
+        }
 
 
         let items: z.infer<typeof itemSchema>[];
@@ -39,6 +46,9 @@ export const Route = createFileRoute("/api/public/regions/report")({
         const regionMap = new Map((regions ?? []).map((r) => [r.code, r]));
         if (codes.some((c) => !regionMap.has(c))) {
           return new Response("Unknown region_code", { status: 400 });
+        }
+        if (agent && codes.some((c) => c !== agent.region_code)) {
+          return new Response("Region not allowed for this agent", { status: 403 });
         }
 
         // Previous status per (server, region) to detect transitions.
@@ -56,7 +66,7 @@ export const Route = createFileRoute("/api/public/regions/report")({
           if (!prevMap.has(k)) prevMap.set(k, r.status);
         }
 
-        const { error } = await supabaseAdmin.from("region_checks").insert(
+        const { error } = await (supabaseAdmin as any).from("region_checks").insert(
           items.map((i) => ({
             server_id: i.server_id,
             region_code: i.region_code,
@@ -64,6 +74,8 @@ export const Route = createFileRoute("/api/public/regions/report")({
             http_status: i.http_status ?? null,
             latency_ms: i.latency_ms ?? null,
             error: i.error ?? null,
+            details: i.details ?? {},
+            source: agent ? "vps" : (i.source ?? "worker"),
           })),
         );
         if (error) return new Response(`DB error: ${error.message}`, { status: 500 });
@@ -74,6 +86,12 @@ export const Route = createFileRoute("/api/public/regions/report")({
           const goingDown = i.status === "down" && prevStatus !== "down";
           const recovering = i.status === "up" && prevStatus === "down";
           if (!goingDown && !recovering) continue;
+          // Consenso: só alerta queda quando a maioria dos pontos falha.
+          if (goingDown) {
+            const { data: consensus } = await (supabaseAdmin as any)
+              .rpc("region_consensus", { _server_id: i.server_id, _window_minutes: 15 });
+            if (consensus?.verdict !== "down") continue;
+          }
           try {
             const region = regionMap.get(i.region_code)!;
             const { sendRegionAlert } = await import("@/lib/monitoring.server");
@@ -86,6 +104,8 @@ export const Route = createFileRoute("/api/public/regions/report")({
             });
           } catch { /* non-fatal */ }
         }
+
+        if (agent) { try { await touchAgent(agent.id, items.length); } catch { /* noop */ } }
 
         return Response.json({ ok: true, inserted: items.length });
       },
