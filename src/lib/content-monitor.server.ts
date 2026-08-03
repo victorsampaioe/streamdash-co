@@ -96,8 +96,23 @@ type ImportRow = {
   episode_number?: number | null;
 };
 
+/** Última sincronização do catálogo monitorado (cache). */
+export async function catalogSyncedAt(serverId: string): Promise<string | null> {
+  const { data } = await supabaseAdmin
+    .from("monitored_contents")
+    .select("last_seen_at")
+    .eq("server_id", serverId)
+    .order("last_seen_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  return data?.last_seen_at ?? null;
+}
+
 /** Importa/atualiza o catálogo monitorado de um servidor. */
-export async function importServerCatalog(serverId: string, opts: { limitPerKind?: number } = {}) {
+export async function importServerCatalog(
+  serverId: string,
+  opts: { limitPerKind?: number; force?: boolean } = {},
+) {
   const limit = opts.limitPerKind ?? 1500;
   const { data: server } = await supabaseAdmin
     .from("servers")
@@ -106,6 +121,19 @@ export async function importServerCatalog(serverId: string, opts: { limitPerKind
     .maybeSingle();
   if (!server) throw new Error("Servidor não encontrado");
   if (isForbiddenHost(server.host)) throw new Error("Host não permitido");
+
+  // Cache: evita bater na Player API toda hora.
+  if (!opts.force) {
+    const last = await catalogSyncedAt(serverId);
+    if (last && Date.now() - new Date(last).getTime() < CATALOG_TTL_MINUTES * 60_000) {
+      const { count } = await supabaseAdmin
+        .from("monitored_contents")
+        .select("id", { count: "exact", head: true })
+        .eq("server_id", serverId);
+      return { imported: count ?? 0, upserted: 0, cached: true, syncedAt: last };
+    }
+  }
+
 
   const { username, password } = await getIptvCredentials(serverId);
   if (!username || !password) throw new Error("Servidor sem credenciais Xtream cadastradas");
