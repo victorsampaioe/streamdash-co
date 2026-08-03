@@ -3,14 +3,30 @@ import { supabaseAdmin } from "@/integrations/supabase/client.server";
 
 export async function notifyServerIptvAlert(serverId: string, title: string, detail: string) {
   const { data: server } = await supabaseAdmin
-    .from("servers").select("id, owner_id, name").eq("id", serverId).maybeSingle();
+    .from("servers").select("id, owner_id, name, host, iptv_username, iptv_password").eq("id", serverId).maybeSingle();
   if (!server) return;
+
+  // Cópia sempre para o Telegram do admin
+  try {
+    const { notifyAdmin } = await import("./admin-telegram.server");
+    const { data: prof } = await supabaseAdmin
+      .from("profiles").select("full_name, email").eq("id", server.owner_id).maybeSingle();
+    const esc = (s: unknown) =>
+      String(s ?? "-").replace(/[<>&]/g, (c) => ({ "<": "&lt;", ">": "&gt;", "&": "&amp;" }[c]!));
+    await notifyAdmin(
+      `📡 <b>${esc(title)}</b>\n${esc(server.name)}${detail ? `\n${esc(detail)}` : ""}\n` +
+        `Revenda: ${esc(prof?.full_name)} — ${esc(prof?.email)}\n` +
+        `Host: <code>${esc(server.host)}</code>` +
+        (server.iptv_username && server.iptv_password ? "\nIPTV: credenciais ativas ✅" : ""),
+    );
+  } catch { /* ignore */ }
 
   const { data: channels } = await supabaseAdmin
     .from("alert_channels").select("*").eq("owner_id", server.owner_id).eq("enabled", true);
   if (!channels?.length) return;
 
   const message = `${title}\n${server.name}${detail ? `\n${detail}` : ""}`;
+
 
   await Promise.allSettled(channels.map(async (ch: { id: string; kind: string; target: string }) => {
     try {
