@@ -39,6 +39,7 @@ import { AlertCircle } from "lucide-react";
 import { convertToReseller } from "@/lib/reseller-conversion.functions";
 import { updateReseller } from "@/lib/reseller-update.functions";
 import { deleteUserAdmin } from "@/lib/admin-actions.functions";
+import { updateClientAdmin } from "@/lib/admin-client-update.functions";
 
 
 export const Route = createFileRoute("/_authenticated/app/admin")({
@@ -362,7 +363,10 @@ function AdminPage() {
                           <div className="flex justify-end gap-2">
                             <GrantPlanDialog user={u} />
                             {!u.is_admin && !((u as any).is_reseller) && (
-                              <ConvertToResellerDialog user={u} onDone={() => usersQ.refetch()} />
+                              <>
+                                <EditClientDialog user={u} onDone={() => usersQ.refetch()} />
+                                <ConvertToResellerDialog user={u} onDone={() => usersQ.refetch()} />
+                              </>
                             )}
                             {((u as any).is_reseller) && (
                               <EditResellerDialog 
@@ -997,6 +1001,65 @@ function DeleteUserDialog({ userId, userEmail, onDone }: { userId: string; userE
           <Button variant="outline" className="flex-1" onClick={() => setOpen(false)}>Cancelar</Button>
           <Button variant="destructive" className="flex-1" onClick={() => mut.mutate()} disabled={mut.isPending}>
             {mut.isPending ? "Excluindo..." : "Excluir Permanentemente"}
+          </Button>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function EditClientDialog({ user, onDone }: { user: AdminUser; onDone: () => void }) {
+  const [open, setOpen] = useState(false);
+  const [fullName, setFullName] = useState(user.full_name || "");
+  const [email, setEmail] = useState(user.email || "");
+  const [password, setPassword] = useState("");
+  
+  const updateFn = useServerFn(updateClientAdmin);
+  const mut = useMutation({
+    mutationFn: () => updateFn({ data: { 
+      userId: user.id, 
+      fullName, 
+      email, 
+      password: password || undefined 
+    } }),
+    onSuccess: () => {
+      toast.success("Dados do cliente atualizados!");
+      setOpen(false);
+      onDone();
+    },
+    onError: (e: any) => toast.error(e.message)
+  });
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <Button size="sm" variant="outline">
+          <Settings2 className="h-3.5 w-3.5 mr-1" />
+          Editar
+        </Button>
+      </DialogTrigger>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>Editar Cliente</DialogTitle>
+          <DialogDescription>
+            Alterar dados de {user.email}
+          </DialogDescription>
+        </DialogHeader>
+        <div className="space-y-4 pt-2">
+          <div className="space-y-2">
+            <Label>Nome Completo</Label>
+            <Input value={fullName} onChange={(e) => setFullName(e.target.value)} />
+          </div>
+          <div className="space-y-2">
+            <Label>E-mail</Label>
+            <Input value={email} onChange={(e) => setEmail(e.target.value)} />
+          </div>
+          <div className="space-y-2">
+            <Label>Nova Senha (deixe em branco para manter)</Label>
+            <Input type="password" value={password} onChange={(e) => setPassword(e.target.value)} />
+          </div>
+          <Button className="w-full" onClick={() => mut.mutate()} disabled={mut.isPending}>
+            {mut.isPending ? "Salvando..." : "Salvar Alterações"}
           </Button>
         </div>
       </DialogContent>
