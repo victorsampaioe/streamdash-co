@@ -2992,6 +2992,10 @@ export type Database = {
     }
     Functions: {
       activate_free_trial: { Args: never; Returns: Json }
+      admin_add_credits: {
+        Args: { _amount: number; _description?: string; _user_id: string }
+        Returns: undefined
+      }
       admin_approve_payout: { Args: { _id: string }; Returns: undefined }
       admin_grant_subscription: {
         Args: {
@@ -3045,6 +3049,20 @@ export type Database = {
         }[]
       }
       generate_referral_code: { Args: never; Returns: string }
+      get_admin_resellers: {
+        Args: never
+        Returns: {
+          client_count: number
+          created_at: string
+          credits: number
+          email: string
+          full_name: string
+          id: string
+          last_activity_at: string
+          phone: string
+          sub_reseller_count: number
+        }[]
+      }
       get_admin_stats: { Args: never; Returns: Json }
       get_admin_users: {
         Args: never
