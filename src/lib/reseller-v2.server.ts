@@ -8,12 +8,14 @@ export async function createResellerAccount(
   creatorId: string,
   email: string,
   fullName: string,
-  initialCredits: number = 0
+  initialCredits: number = 0,
+  months: number = 1,
+  isReseller: boolean = false
 ) {
   // 1. Validation
-  const isReseller = initialCredits >= 10;
+  const creditsToDeduct = isReseller ? initialCredits : months;
   
-  if (initialCredits > 0 && initialCredits < 10) {
+  if (isReseller && initialCredits < 10) {
     throw new Error("Mínimo obrigatório: 10 créditos para criar uma sub-revenda.");
   }
 
