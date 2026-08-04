@@ -89,6 +89,14 @@ function NewServer() {
             <p className="text-xs text-muted-foreground">Somente o host, sem <code>http://</code> ou porta.</p>
           </div>
           <div className="space-y-2">
+            <Label>Servidor (agrupamento) — opcional</Label>
+            <Input value={serverGroup} onChange={(e) => setServerGroup(e.target.value)} placeholder="AURA" />
+            <p className="text-xs text-muted-foreground">
+              Use o mesmo nome em todas as DNS do mesmo servidor para ativar o diagnóstico inteligente de correlação.
+            </p>
+          </div>
+
+          <div className="space-y-2">
             <Label>Descrição (opcional)</Label>
             <Textarea value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Detalhes internos, dono, contexto..." rows={3} />
           </div>
