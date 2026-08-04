@@ -92,11 +92,19 @@ function AdminPage() {
   // Check admin role explicitly before anything else
   const adminCheckQ = useQuery({
     queryKey: ["is-admin"],
+    staleTime: 1000 * 60 * 5, // 5 mins
     queryFn: async () => {
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return false;
+      if (!user) {
+        console.warn("Admin check: No user found");
+        return false;
+      }
       const { data, error } = await supabase.rpc("has_role", { _user_id: user.id, _role: "admin" });
-      if (error) throw error;
+      if (error) {
+        console.error("Admin role check error:", error);
+        throw error;
+      }
+      console.log("Admin check result for", user.email, ":", data);
       return !!data;
     },
   });
