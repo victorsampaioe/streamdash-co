@@ -141,7 +141,7 @@ function AuthPage() {
                 <p className="text-xs text-muted-foreground">
                   🔑 Com um código de indicação válido você ganha <strong>1 dia de teste grátis</strong>.
                   Sem código, a conta é criada normalmente, mas o acesso só é liberado
-                  <strong> após o pagamento</strong> do plano.
+                  <strong> após o pagamento</strong> do plano oficial do Stream Monitor.
                 </p>
 
                 <Button type="submit" disabled={loading} className="w-full">
