@@ -97,7 +97,18 @@ function ResellerDashboard() {
   const { data: network, refetch: refetchNetwork } = useQuery({ queryKey: ["reseller-network"], queryFn: () => getNetwork() });
   const { data: history } = useQuery({ queryKey: ["reseller-history"], queryFn: () => getHistory() });
   const { data: plans } = useQuery({ queryKey: ["reseller-plans"], queryFn: () => getPlans() });
-  const { data: subData, isAdmin } = useSubscription();
+  const { data: subData } = useSubscription();
+  
+  const adminCheckQ = useQuery({
+    queryKey: ["is-admin-simple"],
+    queryFn: async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return false;
+      const { data } = await supabase.rpc("has_role", { _user_id: user.id, _role: "admin" });
+      return !!data;
+    },
+  });
+  const isAdmin = adminCheckQ.data === true;
 
   const isAccountActive = subData?.isActive || subData?.isTrial || (stats?.credits !== undefined && stats.credits > 0);
 
