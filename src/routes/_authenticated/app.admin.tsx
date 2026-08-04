@@ -32,10 +32,12 @@ import { cn } from "@/lib/utils";
 import { broadcastTelegram } from "@/lib/telegram-broadcast.functions";
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { UserCog, History, PlusCircle } from "lucide-react";
+import { UserCog, History, PlusCircle, UserCheck, UserRoundCog, Settings2 } from "lucide-react";
 
 import { StorageReportCard } from "@/components/storage-report-card";
 import { AlertCircle } from "lucide-react";
+import { convertToReseller } from "@/lib/reseller-conversion.functions";
+import { updateReseller } from "@/lib/reseller-update.functions";
 
 
 export const Route = createFileRoute("/_authenticated/app/admin")({
@@ -164,12 +166,19 @@ function AdminPage() {
     retry: 1,
     queryFn: async () => {
       console.log("Fetching admin users...");
+      // Fetch profiles first to get is_reseller
+      const { data: profiles, error: pErr } = await supabase.from("profiles").select("id, is_reseller");
       const { data, error } = await supabase.rpc("get_admin_users");
       if (error) {
         console.error("Admin users error:", error);
         throw error;
       }
-      return (data ?? []) as AdminUser[];
+      const users = (data ?? []) as AdminUser[];
+      // Map is_reseller from profiles
+      return users.map(u => ({
+        ...u,
+        is_reseller: profiles?.find(p => p.id === u.id)?.is_reseller || false
+      }));
     },
   });
 
@@ -350,6 +359,9 @@ function AdminPage() {
                         <td className="p-3 text-right">
                           <div className="flex justify-end gap-2">
                             <GrantPlanDialog user={u} />
+                            {!u.is_admin && !((u as any).is_reseller) && (
+                              <ConvertToResellerDialog user={u} onDone={() => usersQ.refetch()} />
+                            )}
                             <Button size="sm" variant={u.is_admin ? "outline" : "default"} onClick={() => toggleAdmin.mutate({ userId: u.id, makeAdmin: !u.is_admin })}>
                               {u.is_admin ? "Remover admin" : "Tornar admin"}
                             </Button>
@@ -464,6 +476,7 @@ function ResellerManagementSection() {
 
                   <td className="p-3 text-right space-x-1">
                     <AdminAddCreditsDialog reseller={r} onDone={() => resellersQ.refetch()} />
+                    <EditResellerDialog reseller={r} onDone={() => resellersQ.refetch()} />
                     <ResellerDetailsDialog reseller={r} />
                   </td>
                 </tr>
@@ -808,3 +821,125 @@ function GrantPlanDialog({ user }: { user: AdminUser }) {
     </Dialog>
   );
 }
+
+function ConvertToResellerDialog({ user, onDone }: { user: AdminUser; onDone: () => void }) {
+  const [open, setOpen] = useState(false);
+  const [fullName, setFullName] = useState(user.full_name || "");
+  const [email, setEmail] = useState(user.email || "");
+  const [credits, setCredits] = useState("10");
+  
+  const convertFn = useServerFn(convertToReseller);
+  const mut = useMutation({
+    mutationFn: () => convertFn({ data: { 
+      userId: user.id, 
+      fullName, 
+      email, 
+      initialCredits: Number(credits) 
+    } }),
+    onSuccess: () => {
+      toast.success("Usuário convertido para revendedor!");
+      setOpen(false);
+      onDone();
+    },
+    onError: (e: any) => toast.error(e.message)
+  });
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <Button size="sm" variant="secondary" className="bg-success/20 hover:bg-success/30 text-success border-success/30">
+          <UserRoundCog className="h-3.5 w-3.5 mr-1" />
+          Tornar Revendedor
+        </Button>
+      </DialogTrigger>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>Converter para Revendedor</DialogTitle>
+          <DialogDescription>
+            Configurações para {user.email}
+          </DialogDescription>
+        </DialogHeader>
+        <div className="space-y-4 pt-2">
+          <div className="space-y-2">
+            <Label>Nome Completo</Label>
+            <Input value={fullName} onChange={(e) => setFullName(e.target.value)} />
+          </div>
+          <div className="space-y-2">
+            <Label>E-mail</Label>
+            <Input value={email} onChange={(e) => setEmail(e.target.value)} />
+          </div>
+          <div className="space-y-2">
+            <Label>Créditos Iniciais</Label>
+            <Input type="number" min={0} value={credits} onChange={(e) => setCredits(e.target.value)} />
+            <p className="text-[10px] text-muted-foreground">Mínimo 10 créditos para criar sub-revendas.</p>
+          </div>
+          <Button className="w-full" onClick={() => mut.mutate()} disabled={mut.isPending}>
+            {mut.isPending ? "Convertendo..." : "Confirmar Conversão"}
+          </Button>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function EditResellerDialog({ reseller, onDone }: { reseller: AdminReseller; onDone: () => void }) {
+  const [open, setOpen] = useState(false);
+  const [fullName, setFullName] = useState(reseller.full_name || "");
+  const [email, setEmail] = useState(reseller.email || "");
+  const [password, setPassword] = useState("");
+  
+  const updateFn = useServerFn(updateReseller);
+  const mut = useMutation({
+    mutationFn: () => updateFn({ data: { 
+      userId: reseller.id, 
+      fullName, 
+      email, 
+      password: password || undefined 
+    } }),
+    onSuccess: () => {
+      toast.success("Dados do revendedor atualizados!");
+      setOpen(false);
+      onDone();
+    },
+    onError: (e: any) => toast.error(e.message)
+  });
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <Button size="sm" variant="outline">
+          <Settings2 className="h-3.5 w-3.5 mr-1" />
+          Editar
+        </Button>
+      </DialogTrigger>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>Editar Revendedor</DialogTitle>
+          <DialogDescription>
+            Alterar dados de {reseller.email}
+          </DialogDescription>
+        </DialogHeader>
+        <div className="space-y-4 pt-2">
+          <div className="space-y-2">
+            <Label>Nome Completo</Label>
+            <Input value={fullName} onChange={(e) => setFullName(e.target.value)} />
+          </div>
+          <div className="space-y-2">
+            <Label>E-mail</Label>
+            <Input value={email} onChange={(e) => setEmail(e.target.value)} />
+          </div>
+          <div className="space-y-2">
+            <Label>Nova Senha (deixe em branco para manter)</Label>
+            <Input type="password" value={password} onChange={(e) => setPassword(e.target.value)} />
+          </div>
+          <Button className="w-full" onClick={() => mut.mutate()} disabled={mut.isPending}>
+            {mut.isPending ? "Salvando..." : "Salvar Alterações"}
+          </Button>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+// Re-add Label import if missing
+import { Label } from "@/components/ui/label";
