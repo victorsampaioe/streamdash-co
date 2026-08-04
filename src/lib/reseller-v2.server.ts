@@ -52,10 +52,10 @@ export async function createResellerAccount(
   });
 
   if (authErr) {
-    if (authErr.message.includes("already exists")) {
+    if (authErr.message.includes("already exists") || authErr.code === "email_exists") {
       throw new Error("Este e-mail já está cadastrado.");
     }
-    throw new Error(`Erro ao criar acesso: ${authErr.message}`);
+    throw new Error(`Falha no Auth: ${authErr.message}`);
   }
 
   const newUserId = authUser.user.id;
