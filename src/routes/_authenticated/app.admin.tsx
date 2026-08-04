@@ -485,9 +485,10 @@ function AdminAddCreditsDialog({ reseller, onDone }: { reseller: AdminReseller; 
   const add = useMutation({
     mutationFn: async (amt: number) => {
       const { error } = await supabase.rpc("admin_add_credits", {
-        _reseller_id: reseller.id,
+        _user_id: reseller.id,
         _amount: amt
       });
+
       if (error) throw error;
     },
     onSuccess: () => {
