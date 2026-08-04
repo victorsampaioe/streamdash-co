@@ -227,11 +227,12 @@ function ResellerDashboard() {
       </div>
 
       <Tabs defaultValue="rede" className="w-full">
-        <TabsList className="grid w-full grid-cols-4 max-w-lg">
+        <TabsList className="grid w-full grid-cols-5 max-w-xl">
           <TabsTrigger value="rede">Rede</TabsTrigger>
           <TabsTrigger value="clientes">Clientes</TabsTrigger>
           <TabsTrigger value="historico">Histórico</TabsTrigger>
           <TabsTrigger value="planos">Planos</TabsTrigger>
+          <TabsTrigger value="config">Config</TabsTrigger>
         </TabsList>
 
         <TabsContent value="rede" className="mt-4">
@@ -408,6 +409,46 @@ function ResellerDashboard() {
                   ))}
                 </div>
               )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+        <TabsContent value="config" className="mt-4">
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base font-semibold flex items-center gap-2">
+                <Settings className="h-4 w-4" /> Configurações de Revenda
+              </CardTitle>
+              <CardDescription>
+                Configure as informações que seus clientes verão ao tentar renovar o plano.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div className="space-y-2">
+                <Label htmlFor="whatsapp">Seu WhatsApp de Atendimento</Label>
+                <div className="flex gap-2">
+                  <Input 
+                    id="whatsapp"
+                    placeholder="Ex: 5511999999999"
+                    defaultValue={subData?.profile?.phone || ""}
+                    onBlur={async (e) => {
+                      const val = e.target.value;
+                      if (!val) return;
+                      const { error } = await supabase.from("profiles").update({ phone: val } as any).eq("id", subData?.profile?.full_name ? (await supabase.auth.getUser()).data.user?.id : "");
+                      if (error) toast.error("Erro ao atualizar WhatsApp");
+                      else {
+                        toast.success("WhatsApp atualizado!");
+                        qc.invalidateQueries({ queryKey: ["subscription", "me"] });
+                      }
+                    }}
+                  />
+                  <Button variant="outline" onClick={() => toast.info("O WhatsApp é salvo automaticamente ao sair do campo.")}>
+                    Salvar
+                  </Button>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Este número será usado para os botões de "Contatar Revendedor" nos painéis dos seus clientes. Use o formato com DDD e sem espaços.
+                </p>
+              </div>
             </CardContent>
           </Card>
         </TabsContent>
