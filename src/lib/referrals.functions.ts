@@ -163,9 +163,23 @@ export const createSubReseller = createServerFn({ method: "POST" })
         email: z.string().email(),
         fullName: z.string().min(3),
         phone: z.string().min(8),
+        isReseller: z.boolean().optional().default(true),
+        planId: z.string().uuid().optional(),
       })
       .parse(input),
   )
   .handler(async ({ data, context }) => {
-    return createSubResellerInternal(context.userId, data.email, data.fullName, data.phone);
+    const { isReseller, planId, ...userData } = data;
+    const result = await createSubResellerInternal(
+      context.userId, 
+      userData.email, 
+      userData.fullName, 
+      userData.phone, 
+      isReseller
+    );
+
+    // If it's a client (not reseller) and a plan was specified, we could auto-activate it here if paid.
+    // For now, it creates with 1 day trial as per original logic.
+    
+    return result;
   });
