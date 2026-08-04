@@ -111,14 +111,19 @@ function AdminPage() {
 
   const isAdmin = adminCheckQ.data === true;
 
-
-
+  useEffect(() => {
+    if (adminCheckQ.isSuccess && !isAdmin) {
+      console.warn("User is not admin, redirecting...");
+      toast.error("Acesso negado: você não tem permissão de administrador.");
+    }
+  }, [adminCheckQ.isSuccess, isAdmin]);
 
   const statsQ = useQuery({
     queryKey: ["admin-stats"],
     enabled: isAdmin,
     retry: 1,
     queryFn: async () => {
+      console.log("Fetching admin stats...");
       const { data, error } = await supabase.rpc("get_admin_stats");
       if (error) {
         console.error("Admin stats error:", error);
