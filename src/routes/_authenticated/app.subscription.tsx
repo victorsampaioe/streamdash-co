@@ -148,13 +148,33 @@ function SubscriptionPage() {
           }) : (
             <div className="md:col-span-2 p-12 text-center border border-dashed rounded-xl">
                <Package className="h-12 w-12 mx-auto text-muted-foreground/30 mb-4" />
-               <h3 className="text-lg font-semibold">Planos Personalizados</h3>
-               <p className="text-muted-foreground text-sm">
-                 Você faz parte de uma rede privada. Os planos de pagamento são gerenciados diretamente pelo seu revendedor.
-                 Entre em contato com ele para renovar sua conta.
-               </p>
-            </div>
-          )}
+                <h3 className="text-lg font-semibold">Planos do seu Revendedor</h3>
+                <p className="text-muted-foreground text-sm mb-6">
+                  {(!parentPlans || parentPlans.length === 0) 
+                    ? "Você faz parte de uma rede privada, mas seu revendedor ainda não configurou planos. Entre em contato com ele para renovar."
+                    : "Escolha um dos planos abaixo configurados pelo seu revendedor."}
+                </p>
+                {parentPlans && parentPlans.length > 0 && (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-left">
+                    {parentPlans.map((plan: any) => (
+                      <Card key={plan.id} className="p-6 relative border-2 border-muted hover:border-primary/30 transition-all">
+                        <div className="space-y-3">
+                          <h3 className="font-semibold">{plan.name}</h3>
+                          <div className="text-3xl font-bold">
+                            {formatBRL(plan.price_cents)}
+                            <span className="text-sm text-muted-foreground font-normal"> / {plan.duration_days} dias</span>
+                          </div>
+                          <Button className="w-full" variant="outline" onClick={() => toast.info("Para renovar este plano personalizado, entre em contato diretamente com seu revendedor.")}>
+                            <CreditCard className="h-4 w-4 mr-2" />
+                            Contatar Revendedor
+                          </Button>
+                        </div>
+                      </Card>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
         </div>
       </div>
 
