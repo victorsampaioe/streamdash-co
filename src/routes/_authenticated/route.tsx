@@ -51,7 +51,7 @@ function AuthedError({ error, reset }: { error: Error; reset: () => void }) {
             ? "A conexão caiu durante o carregamento. Estamos tentando de novo."
             : "Verifique sua conexão e tente novamente."}
         </p>
-        <p className="mt-2 break-words text-xs text-muted-foreground/70">{error?.message}</p>
+        <p className="mt-2 break-words text-xs font-mono text-muted-foreground/70 text-left max-h-48 overflow-auto bg-muted/50 p-2 rounded">{error?.stack || error?.message}</p>
 
         <div className="mt-6 flex flex-wrap justify-center gap-2">
           <button

@@ -19,9 +19,13 @@ export function StorageReportCard() {
   const q = useQuery({
     queryKey: ["storage-report"],
     staleTime: 10 * 60_000,
+    retry: 1,
     queryFn: async () => {
       const { data, error } = await supabase.rpc("get_storage_report");
-      if (error) throw error;
+      if (error) {
+        console.error("Storage report error:", error);
+        throw error;
+      }
       return (data ?? []) as Row[];
     },
   });

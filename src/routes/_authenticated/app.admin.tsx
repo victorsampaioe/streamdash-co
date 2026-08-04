@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
@@ -32,6 +32,7 @@ import { cn } from "@/lib/utils";
 import { broadcastTelegram } from "@/lib/telegram-broadcast.functions";
 import { adminListPayoutRequests, adminApprovePayout, adminMarkPayoutPaid, adminRejectPayout } from "@/lib/referrals.functions";
 import { StorageReportCard } from "@/components/storage-report-card";
+import { AlertCircle } from "lucide-react";
 
 
 export const Route = createFileRoute("/_authenticated/app/admin")({
@@ -83,24 +84,68 @@ type StatsRow = {
 type FilterKey = "all" | "paid" | "trial" | "expired" | "admin";
 
 function AdminPage() {
+  const navigate = useNavigate();
   const qc = useQueryClient();
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState<FilterKey>("all");
 
+  // Check admin role explicitly before anything else
+  const adminCheckQ = useQuery({
+    queryKey: ["is-admin"],
+    queryFn: async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return false;
+      const { data, error } = await supabase.rpc("has_role", { _user_id: user.id, _role: "admin" });
+      if (error) throw error;
+      return !!data;
+    },
+  });
+
+  if (adminCheckQ.isLoading) {
+    return <div className="p-8 text-center text-muted-foreground animate-pulse">Verificando permissões...</div>;
+  }
+
+  if (adminCheckQ.isError) {
+    return (
+      <div className="flex flex-col items-center justify-center p-12 text-center space-y-4">
+        <AlertCircle className="h-12 w-12 text-destructive" />
+        <h1 className="text-xl font-bold">Erro ao verificar permissões</h1>
+        <p className="text-muted-foreground max-w-sm">
+          {adminCheckQ.error instanceof Error ? adminCheckQ.error.message : "Não foi possível confirmar seu acesso administrativo."}
+        </p>
+        <Button onClick={() => adminCheckQ.refetch()}>Tentar novamente</Button>
+      </div>
+    );
+  }
+
+  if (adminCheckQ.data === false) {
+    navigate({ to: "/app" });
+    return null;
+  }
+
+
   const statsQ = useQuery({
     queryKey: ["admin-stats"],
+    retry: 1,
     queryFn: async () => {
       const { data, error } = await supabase.rpc("get_admin_stats");
-      if (error) throw error;
+      if (error) {
+        console.error("Admin stats error:", error);
+        throw error;
+      }
       return data as unknown as StatsRow;
     },
   });
 
   const usersQ = useQuery({
     queryKey: ["admin-users"],
+    retry: 1,
     queryFn: async () => {
       const { data, error } = await supabase.rpc("get_admin_users");
-      if (error) throw error;
+      if (error) {
+        console.error("Admin users error:", error);
+        throw error;
+      }
       return (data ?? []) as AdminUser[];
     },
   });
@@ -397,7 +442,11 @@ function PayoutsCard() {
 
   const q = useQuery({
     queryKey: ["admin-payouts"],
-    queryFn: () => listFn(),
+    retry: 1,
+    queryFn: async () => {
+      const data = await listFn();
+      return data;
+    },
   });
 
   const rows = (q.data ?? []) as PayoutReq[];
