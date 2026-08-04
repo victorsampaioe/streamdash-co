@@ -44,10 +44,11 @@ function SubscriptionPage() {
   const { data: parentProfile } = useQuery({
     queryKey: ["parent-profile", data?.parentId],
     queryFn: async () => {
+      if (!data?.parentId) return null;
       const { data: p } = await supabase
         .from("profiles")
         .select("whatsapp, phone")
-        .eq("id", data?.parentId)
+        .eq("id", data.parentId)
         .single();
       return p;
     },

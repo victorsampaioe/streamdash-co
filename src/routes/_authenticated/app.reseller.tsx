@@ -49,6 +49,7 @@ import { PixDialog } from "@/components/payments/pix-dialog";
 import { createPixPayment } from "@/lib/mercadopago.functions";
 import { CreateResellerDialog } from "@/components/reseller/create-reseller-dialog";
 import { useSubscription } from "@/hooks/use-subscription";
+import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/_authenticated/app/reseller")({
   head: () => ({
