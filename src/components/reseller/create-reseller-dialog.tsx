@@ -28,7 +28,7 @@ export function CreateResellerDialog({ open, onOpenChange, onDone, isReseller = 
     mutationFn: () => createFn({ data: { email, fullName, initialCredits: isReseller ? initialCredits : 0 } }),
     onSuccess: (data: any) => {
       setResult(data as { email: string; password: string });
-      toast.success(`${isReseller ? "Sub-revenda" : "Cliente"} criado com sucesso!`);
+      toast.success("Revenda criada com sucesso!");
       onDone();
     },
     onError: (e: any) => {
