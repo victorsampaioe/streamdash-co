@@ -1,17 +1,19 @@
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 
 /**
- * Modern Reseller Creation Engine
+ * Modern Reseller Creation Engine v2
  * Completely clean of referral logic, trial codes, or manual approvals.
  */
 export async function createResellerAccount(
   creatorId: string,
   email: string,
   fullName: string,
-  initialCredits: number = 10
+  initialCredits: number = 0
 ) {
   // 1. Validation
-  if (initialCredits < 10) {
+  const isReseller = initialCredits >= 10;
+  
+  if (initialCredits > 0 && initialCredits < 10) {
     throw new Error("Mínimo obrigatório: 10 créditos para criar uma sub-revenda.");
   }
 
@@ -45,7 +47,7 @@ export async function createResellerAccount(
     email_confirm: true,
     user_metadata: {
       full_name: fullName,
-      is_reseller: true
+      is_reseller: isReseller
     }
   });
 
@@ -65,10 +67,10 @@ export async function createResellerAccount(
       id: newUserId,
       email,
       full_name: fullName,
-      is_reseller: true,
+      is_reseller: isReseller,
       credits: initialCredits,
       parent_id: creatorId,
-      trial_used: true // Mark trial as used to prevent any lingering trial logic
+      trial_used: true
     } as any);
 
   if (profileErr) {
@@ -85,34 +87,36 @@ export async function createResellerAccount(
     .from("subscriptions")
     .upsert({
       user_id: newUserId,
-      plan: "reseller" as any,
+      plan: isReseller ? ("reseller" as any) : ("basic" as any),
       status: "active" as any,
       expires_at: expiry.toISOString()
     });
 
-  // 6. Deduct credits from creator (if not admin) and Log History
-  if (!isAdmin) {
+  // 6. Deduct credits from creator (if not admin and credits used) and Log History
+  if (!isAdmin && initialCredits > 0) {
     await supabaseAdmin
       .from("profiles")
       .update({ credits: (creator.credits || 0) - initialCredits } as any)
       .eq("id", creatorId);
   }
 
-  // History for Creator
-  await supabaseAdmin.from("reseller_credit_history").insert({
-    user_id: creatorId,
-    amount: -initialCredits,
-    type: 'use',
-    description: `Criação de sub-revenda: ${email}`
-  });
+  if (initialCredits > 0) {
+    // History for Creator
+    await supabaseAdmin.from("reseller_credit_history").insert({
+      user_id: creatorId,
+      amount: -initialCredits,
+      type: 'use',
+      description: `Criação de ${isReseller ? 'sub-revenda' : 'cliente'}: ${email}`
+    });
 
-  // History for New User
-  await supabaseAdmin.from("reseller_credit_history").insert({
-    user_id: newUserId,
-    amount: initialCredits,
-    type: 'purchase',
-    description: `Saldo inicial recebido do criador`
-  });
+    // History for New User
+    await supabaseAdmin.from("reseller_credit_history").insert({
+      user_id: newUserId,
+      amount: initialCredits,
+      type: 'purchase',
+      description: `Saldo inicial recebido do criador`
+    });
+  }
 
   return {
     id: newUserId,

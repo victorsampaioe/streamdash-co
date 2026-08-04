@@ -10,7 +10,7 @@ export const createResellerV2 = createServerFn({ method: "POST" })
       .object({
         email: z.string().email("E-mail inválido"),
         fullName: z.string().min(3, "Nome muito curto"),
-        initialCredits: z.number().min(10, "Mínimo 10 créditos"),
+        initialCredits: z.number().min(0).optional().default(0),
       })
       .parse(input),
   )
