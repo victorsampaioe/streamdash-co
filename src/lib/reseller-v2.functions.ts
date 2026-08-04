@@ -21,6 +21,8 @@ export const createResellerV2 = createServerFn({ method: "POST" })
       context.userId,
       data.email,
       data.fullName,
-      data.initialCredits
+      data.initialCredits,
+      data.months,
+      data.isReseller
     );
   });
