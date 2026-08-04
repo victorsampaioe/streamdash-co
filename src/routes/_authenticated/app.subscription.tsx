@@ -11,6 +11,8 @@ import { createPixPayment } from "@/lib/mercadopago.functions";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { PixDialog } from "@/components/payments/pix-dialog";
+import { getParentResellerPlans } from "@/lib/reseller.functions";
+import { useQuery } from "@tanstack/react-query";
 
 export const Route = createFileRoute("/_authenticated/app/subscription")({
   head: () => ({
