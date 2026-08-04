@@ -81,9 +81,13 @@ export async function createResellerAccount(
     throw new Error(`Erro ao configurar perfil: ${profileErr.message}`);
   }
 
-  // 5. Activate Subscription Immediately (1 year)
+  // 5. Activate Subscription Immediately
   const expiry = new Date();
-  expiry.setFullYear(expiry.getFullYear() + 1);
+  if (isReseller) {
+    expiry.setFullYear(expiry.getFullYear() + 1);
+  } else {
+    expiry.setMonth(expiry.getMonth() + months);
+  }
 
   await supabaseAdmin
     .from("subscriptions")
