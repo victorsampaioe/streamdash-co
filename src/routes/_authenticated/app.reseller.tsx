@@ -28,7 +28,8 @@ import {
   getResellerStats,
   getResellerPlans,
   saveResellerPlan,
-  deleteResellerPlan
+  deleteResellerPlan,
+  transferCredits
 } from "@/lib/reseller.functions";
 import { formatBRL, type PlanId } from "@/lib/payments";
 import { useState } from "react";
@@ -73,6 +74,7 @@ function ResellerDashboard() {
   const getPlans = useServerFn(getResellerPlans);
   const savePlan = useServerFn(saveResellerPlan);
   const deletePlan = useServerFn(deleteResellerPlan);
+  const transferCreditsFn = useServerFn(transferCredits);
 
   const { data: stats } = useQuery({ queryKey: ["reseller-stats"], queryFn: () => getStats() });
   const { data: network } = useQuery({ queryKey: ["reseller-network"], queryFn: () => getNetwork() });
@@ -88,6 +90,9 @@ function ResellerDashboard() {
   const [activePurchasePlan, setActivePurchasePlan] = useState<PlanId | null>(null);
   const [pix, setPix] = useState<any>(null);
   const [loading, setLoading] = useState(false);
+  const [transferDialogOpen, setTransferDialogOpen] = useState(false);
+  const [selectedRecipient, setSelectedRecipient] = useState<any>(null);
+  const [transferAmount, setTransferAmount] = useState("");
 
   const [editingPlan, setEditingPlan] = useState<any>(null);
   const [planForm, setPlanForm] = useState({ name: "", price: "", duration_days: "30" });
@@ -107,6 +112,19 @@ function ResellerDashboard() {
     onSuccess: () => {
       toast.success("Plano excluído!");
       qc.invalidateQueries({ queryKey: ["reseller-plans"] });
+    },
+    onError: (e: Error) => toast.error(e.message)
+  });
+
+  const transferMutation = useMutation({
+    mutationFn: (data: { recipientId: string; amount: number }) => transferCreditsFn({ data }),
+    onSuccess: () => {
+      toast.success("Créditos transferidos com sucesso!");
+      setTransferDialogOpen(false);
+      setTransferAmount("");
+      qc.invalidateQueries({ queryKey: ["reseller-stats"] });
+      qc.invalidateQueries({ queryKey: ["reseller-network"] });
+      qc.invalidateQueries({ queryKey: ["reseller-history"] });
     },
     onError: (e: Error) => toast.error(e.message)
   });
@@ -231,13 +249,23 @@ function ResellerDashboard() {
                           <div className="text-xs text-muted-foreground">{user.email}</div>
                         </div>
                       </div>
-                      <div className="flex items-center gap-4">
+                      <div className="flex items-center gap-2">
                         <div className="text-right hidden sm:block">
                           <div className="text-xs text-muted-foreground">Créditos</div>
                           <div className="font-semibold text-sm">{user.credits}</div>
                         </div>
+                        <Button 
+                          size="sm" 
+                          variant="ghost" 
+                          className="h-8 px-2 text-primary"
+                          onClick={() => {
+                            setSelectedRecipient(user);
+                            setTransferDialogOpen(true);
+                          }}
+                        >
+                          <Plus className="h-4 w-4 mr-1" /> Add
+                        </Button>
                         <Badge variant="outline" className="bg-success/10 text-success border-success/20">Ativo</Badge>
-                        <ChevronRight className="h-4 w-4 text-muted-foreground" />
                       </div>
                     </div>
                   ))}
