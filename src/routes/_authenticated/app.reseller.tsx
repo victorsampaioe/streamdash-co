@@ -257,33 +257,36 @@ function ResellerDashboard() {
               ) : (
                 <div className="space-y-4 mt-4">
                   {network.filter(u => u.is_reseller).map((user: any) => (
-                    <div key={user.id} className="flex items-center justify-between p-3 border rounded-lg hover:bg-muted/50 transition-colors">
+                    <div key={user.id} className="flex flex-col sm:flex-row sm:items-center justify-between p-4 border rounded-lg hover:bg-muted/50 transition-colors gap-4">
                       <div className="flex items-center gap-3">
-                        <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center font-bold text-primary">
+                        <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center font-bold text-primary shrink-0">
                           {user.full_name?.[0] || "?"}
                         </div>
-                        <div>
-                          <div className="font-medium text-sm">{user.full_name || "Usuário sem nome"}</div>
-                          <div className="text-xs text-muted-foreground">{user.email}</div>
+                        <div className="min-w-0">
+                          <div className="font-medium text-sm truncate">{user.full_name || "Usuário sem nome"}</div>
+                          <div className="text-xs text-muted-foreground truncate">{user.email}</div>
+                          <div className="text-[10px] text-muted-foreground mt-0.5">Membro desde: {new Date(user.created_at).toLocaleDateString("pt-BR")}</div>
                         </div>
                       </div>
-                      <div className="flex items-center gap-2">
-                        <div className="text-right hidden sm:block">
-                          <div className="text-xs text-muted-foreground">Créditos</div>
-                          <div className="font-semibold text-sm">{user.credits}</div>
+                      <div className="flex items-center justify-between sm:justify-end gap-4 border-t sm:border-0 pt-3 sm:pt-0">
+                        <div className="text-left sm:text-right">
+                          <div className="text-[10px] text-muted-foreground uppercase tracking-wider">Saldo</div>
+                          <div className="font-bold text-base font-mono">{user.credits} <span className="text-[10px] font-normal text-muted-foreground">créd.</span></div>
                         </div>
-                        <Button 
-                          size="sm" 
-                          variant="ghost" 
-                          className="h-8 px-2 text-primary"
-                          onClick={() => {
-                            setSelectedRecipient(user);
-                            setTransferDialogOpen(true);
-                          }}
-                        >
-                          <Plus className="h-4 w-4 mr-1" /> Add
-                        </Button>
-                        <Badge variant="outline" className="bg-success/10 text-success border-success/20">Ativo</Badge>
+                        <div className="flex items-center gap-2">
+                          <Button 
+                            size="sm" 
+                            variant="secondary" 
+                            className="h-8"
+                            onClick={() => {
+                              setSelectedRecipient(user);
+                              setTransferDialogOpen(true);
+                            }}
+                          >
+                            <Plus className="h-4 w-4 mr-1" /> Enviar
+                          </Button>
+                          <Badge variant="outline" className="bg-success/10 text-success border-success/20">Ativo</Badge>
+                        </div>
                       </div>
                     </div>
                   ))}
@@ -292,6 +295,7 @@ function ResellerDashboard() {
             </CardContent>
           </Card>
         </TabsContent>
+
 
         <TabsContent value="clientes" className="mt-4">
           <Card>
