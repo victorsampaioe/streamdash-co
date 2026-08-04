@@ -171,6 +171,23 @@ function ResellerDashboard() {
 
   return (
     <div className="space-y-6">
+      {stats?.credits === 0 && (
+        <Alert variant="destructive" className="bg-destructive/10 border-destructive/20 animate-in fade-in slide-in-from-top-4">
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div>
+              <span className="font-bold">⚠️ Você está sem créditos disponíveis.</span>
+              <p className="text-xs text-muted-foreground">
+                Seu painel continua ativo, porém você não poderá criar novos clientes ou revendedores enquanto não adicionar novos créditos.
+              </p>
+            </div>
+            <Button size="sm" onClick={() => setBuyDialogOpen(true)} className="shrink-0">
+              <Plus className="h-3.5 w-3.5 mr-1" /> Adicionar Créditos
+            </Button>
+          </AlertDescription>
+        </Alert>
+      )}
+
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold">Painel do Revendedor</h1>
