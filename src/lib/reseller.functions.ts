@@ -141,7 +141,7 @@ export const getResellerStats = createServerFn({ method: "GET" })
     const { data: myPlans } = await context.supabase
       .from("reseller_plans")
       .select("id")
-      .eq("user_id", context.userId);
+      .eq("reseller_id", context.userId);
 
     let revenue = 0;
     if (myPlans && myPlans.length > 0) {
