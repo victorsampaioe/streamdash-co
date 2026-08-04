@@ -257,7 +257,6 @@ function AdminPage() {
         </div>
       </div>
 
-      {/* KPI grid */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         <Kpi icon={Users} label="Usuários totais" value={s?.total_users} tone="primary" sub={s ? `+${s.new_users_7d} nos últimos 7 dias` : undefined} />
         <Kpi icon={BadgeCheck} label="Assinantes ativos" value={s?.paid_active} tone="success" sub={s ? `${s.monthly_subs} mensal · ${s.yearly_subs} anual` : undefined} />
@@ -265,7 +264,6 @@ function AdminPage() {
         <Kpi icon={XCircle} label="Expirados" value={s?.expired} tone="destructive" sub={s ? `${s.expiring_7d} vencem em 7 dias` : undefined} />
         <Kpi icon={CircleDollarSign} label="Receita 30 dias" value={s ? formatBRL(s.revenue_cents_30d) : undefined} tone="success" sub={s ? `${formatBRL(s.revenue_cents_7d)} nos últimos 7d` : undefined} />
         <Kpi icon={TrendingUp} label="Receita total" value={s ? formatBRL(s.revenue_cents_total) : undefined} tone="primary" sub={s ? `${s.payments_approved_total} pagamentos` : undefined} />
-        
         <Kpi icon={ServerCog} label="Servidores monitorados" value={s?.total_servers} />
       </div>
 
@@ -278,98 +276,200 @@ function AdminPage() {
 
         <TabsContent value="overview" className="space-y-6">
           <TelegramBroadcastCard />
-          <PayoutsCard />
           
-          {/* Users table */}
-          {/* MOVED: the users table logic is now inside this tab content */}
-
-
-
-
-      {/* Users table */}
-      <Card className="p-4 space-y-4">
-        <div className="flex flex-col sm:flex-row sm:flex-wrap gap-3 sm:items-center sm:justify-between">
-          <div className="flex items-center gap-2 min-w-0">
-            <Users className="h-4 w-4 text-muted-foreground shrink-0" />
-            <h2 className="font-semibold truncate">Usuários cadastrados</h2>
-            <Badge variant="outline" className="shrink-0">{filtered.length}</Badge>
-          </div>
-          <div className="w-full sm:w-auto">
-            <div className="relative w-full sm:w-72">
-              <Search className="h-3.5 w-3.5 absolute left-2.5 top-2.5 text-muted-foreground" />
-              <Input placeholder="Buscar por nome, e-mail, telefone..." value={search} onChange={(e) => setSearch(e.target.value)} className="pl-8 w-full" />
+          <Card className="p-4 space-y-4">
+            <div className="flex flex-col sm:flex-row sm:flex-wrap gap-3 sm:items-center sm:justify-between">
+              <div className="flex items-center gap-2 min-w-0">
+                <Users className="h-4 w-4 text-muted-foreground shrink-0" />
+                <h2 className="font-semibold truncate">Usuários cadastrados</h2>
+                <Badge variant="outline" className="shrink-0">{filtered.length}</Badge>
+              </div>
+              <div className="w-full sm:w-auto">
+                <div className="relative w-full sm:w-72">
+                  <Search className="h-3.5 w-3.5 absolute left-2.5 top-2.5 text-muted-foreground" />
+                  <Input placeholder="Buscar por nome, e-mail, telefone..." value={search} onChange={(e) => setSearch(e.target.value)} className="pl-8 w-full" />
+                </div>
+              </div>
             </div>
-          </div>
-        </div>
 
-        <div className="flex flex-wrap gap-1.5">
-          <FilterChip active={filter === "all"} onClick={() => setFilter("all")}>Todos</FilterChip>
-          <FilterChip active={filter === "paid"} onClick={() => setFilter("paid")} tone="success">Pagantes ativos</FilterChip>
-          <FilterChip active={filter === "trial"} onClick={() => setFilter("trial")} tone="warning">Em teste</FilterChip>
-          <FilterChip active={filter === "expired"} onClick={() => setFilter("expired")} tone="destructive">Expirados</FilterChip>
-          <FilterChip active={filter === "admin"} onClick={() => setFilter("admin")} tone="primary">Admins</FilterChip>
+            <div className="flex flex-wrap gap-1.5">
+              <FilterChip active={filter === "all"} onClick={() => setFilter("all")}>Todos</FilterChip>
+              <FilterChip active={filter === "paid"} onClick={() => setFilter("paid")} tone="success">Pagantes ativos</FilterChip>
+              <FilterChip active={filter === "trial"} onClick={() => setFilter("trial")} tone="warning">Em teste</FilterChip>
+              <FilterChip active={filter === "expired"} onClick={() => setFilter("expired")} tone="destructive">Expirados</FilterChip>
+              <FilterChip active={filter === "admin"} onClick={() => setFilter("admin")} tone="primary">Admins</FilterChip>
+            </div>
+
+            <div className="overflow-x-auto rounded-md border">
+              <table className="w-full text-sm">
+                <thead className="bg-muted/40 text-xs uppercase tracking-wider text-muted-foreground">
+                  <tr>
+                    <th className="text-left p-3 font-medium">Usuário</th>
+                    <th className="text-left p-3 font-medium">Plano</th>
+                    <th className="text-left p-3 font-medium">Status</th>
+                    <th className="text-left p-3 font-medium">Vencimento</th>
+                    <th className="text-right p-3 font-medium">Total pago</th>
+                    <th className="text-left p-3 font-medium">Cadastro</th>
+                    <th className="text-right p-3 font-medium">Ações</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {usersQ.isLoading && <tr><td colSpan={7} className="p-6 text-center text-muted-foreground">Carregando...</td></tr>}
+                  {!usersQ.isLoading && filtered.length === 0 && (
+                    <tr><td colSpan={7} className="p-6 text-center text-muted-foreground">Nenhum usuário encontrado.</td></tr>
+                  )}
+                  {filtered.map((u) => {
+                    const now = Date.now();
+                    const expTs = u.expires_at ? new Date(u.expires_at).getTime() : 0;
+                    const expired = expTs > 0 && expTs <= now;
+                    const expiringSoon = !expired && u.days_remaining !== null && u.days_remaining <= 7;
+                    return (
+                      <tr key={u.id} className="border-t border-border/60 hover:bg-muted/20">
+                        <td className="p-3">
+                          <div className="flex items-center gap-2">
+                            {u.is_admin && <Crown className="h-3.5 w-3.5 text-primary" />}
+                            <div>
+                              <div className="font-medium">{u.full_name ?? "—"}</div>
+                              <div className="text-[11px] font-mono text-muted-foreground">{u.email}</div>
+                            </div>
+                          </div>
+                        </td>
+                        <td className="p-3"><PlanBadge plan={u.plan} /></td>
+                        <td className="p-3"><StatusBadge status={u.status} expired={expired} /></td>
+                        <td className="p-3">
+                          <div className={cn("text-xs flex items-center gap-1", expired && "text-destructive", expiringSoon && "text-warning")}>
+                            <CalendarClock className="h-3 w-3" />
+                            {u.expires_at ? new Date(u.expires_at).toLocaleDateString("pt-BR") : "—"}
+                          </div>
+                          {u.days_remaining !== null && !expired && (
+                            <div className="text-[10px] text-muted-foreground">{u.days_remaining} dia(s)</div>
+                          )}
+                        </td>
+                        <td className="p-3 text-right font-mono text-xs">
+                          {u.total_paid_cents > 0 ? formatBRL(u.total_paid_cents) : <span className="text-muted-foreground">—</span>}
+                        </td>
+                        <td className="p-3 text-xs text-muted-foreground">{new Date(u.created_at).toLocaleDateString("pt-BR")}</td>
+                        <td className="p-3 text-right">
+                          <div className="flex justify-end gap-2">
+                            <GrantPlanDialog user={u} />
+                            <Button size="sm" variant={u.is_admin ? "outline" : "default"} onClick={() => toggleAdmin.mutate({ userId: u.id, makeAdmin: !u.is_admin })}>
+                              {u.is_admin ? "Remover admin" : "Tornar admin"}
+                            </Button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="resellers">
+          <ResellerManagementSection />
+        </TabsContent>
+
+        <TabsContent value="storage">
+          <StorageReportCard />
+        </TabsContent>
+      </Tabs>
+    </div>
+  );
+}
+
+type AdminReseller = {
+  id: string;
+  email: string | null;
+  full_name: string | null;
+  created_at: string;
+  is_admin: boolean;
+  credits: number;
+  sub_reseller_count: number;
+  last_activity: string | null;
+  is_active: boolean;
+};
+
+function ResellerManagementSection() {
+  const qc = useQueryClient();
+  const [search, setSearch] = useState("");
+
+  const resellersQ = useQuery({
+    queryKey: ["admin-resellers-list"],
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc("get_admin_resellers");
+      if (error) throw error;
+      return (data ?? []) as AdminReseller[];
+    },
+  });
+
+  const resellers = resellersQ.data ?? [];
+  const filtered = resellers.filter(r => 
+    r.email?.toLowerCase().includes(search.toLowerCase()) || 
+    r.full_name?.toLowerCase().includes(search.toLowerCase())
+  );
+
+  return (
+    <div className="space-y-4">
+      <Card className="p-4 space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div className="flex items-center gap-2">
+            <UserCog className="h-5 w-5 text-primary" />
+            <h2 className="font-semibold text-lg">Gestão de Revendedores</h2>
+            <Badge variant="outline">{filtered.length}</Badge>
+          </div>
+          <div className="relative w-full sm:w-72">
+            <Search className="h-3.5 w-3.5 absolute left-2.5 top-2.5 text-muted-foreground" />
+            <Input 
+              placeholder="Buscar revendedor..." 
+              value={search} 
+              onChange={(e) => setSearch(e.target.value)} 
+              className="pl-8" 
+            />
+          </div>
         </div>
 
         <div className="overflow-x-auto rounded-md border">
           <table className="w-full text-sm">
             <thead className="bg-muted/40 text-xs uppercase tracking-wider text-muted-foreground">
               <tr>
-                <th className="text-left p-3 font-medium">Usuário</th>
-                <th className="text-left p-3 font-medium">Plano</th>
+                <th className="text-left p-3 font-medium">Revendedor</th>
                 <th className="text-left p-3 font-medium">Status</th>
-                <th className="text-left p-3 font-medium">Vencimento</th>
-                <th className="text-right p-3 font-medium">Total pago</th>
-                <th className="text-left p-3 font-medium">Cadastro</th>
+                <th className="text-right p-3 font-medium">Créditos</th>
+                <th className="text-right p-3 font-medium">Sub-Revendas</th>
+                <th className="text-left p-3 font-medium">Última Atividade</th>
                 <th className="text-right p-3 font-medium">Ações</th>
               </tr>
             </thead>
             <tbody>
-              {usersQ.isLoading && <tr><td colSpan={7} className="p-6 text-center text-muted-foreground">Carregando...</td></tr>}
-              {!usersQ.isLoading && filtered.length === 0 && (
-                <tr><td colSpan={7} className="p-6 text-center text-muted-foreground">Nenhum usuário encontrado.</td></tr>
+              {resellersQ.isLoading && <tr><td colSpan={6} className="p-6 text-center text-muted-foreground">Carregando...</td></tr>}
+              {!resellersQ.isLoading && filtered.length === 0 && (
+                <tr><td colSpan={6} className="p-6 text-center text-muted-foreground">Nenhum revendedor encontrado.</td></tr>
               )}
-              {filtered.map((u) => {
-                const now = Date.now();
-                const expTs = u.expires_at ? new Date(u.expires_at).getTime() : 0;
-                const expired = expTs > 0 && expTs <= now;
-                const expiringSoon = !expired && u.days_remaining !== null && u.days_remaining <= 7;
-                return (
-                  <tr key={u.id} className="border-t border-border/60 hover:bg-muted/20">
-                    <td className="p-3">
-                      <div className="flex items-center gap-2">
-                        {u.is_admin && <Crown className="h-3.5 w-3.5 text-primary" />}
-                        <div>
-                          <div className="font-medium">{u.full_name ?? "—"}</div>
-                          <div className="text-[11px] font-mono text-muted-foreground">{u.email}</div>
-                        </div>
-                      </div>
-                    </td>
-                    <td className="p-3"><PlanBadge plan={u.plan} /></td>
-                    <td className="p-3"><StatusBadge status={u.status} expired={expired} /></td>
-                    <td className="p-3">
-                      <div className={cn("text-xs flex items-center gap-1", expired && "text-destructive", expiringSoon && "text-warning")}>
-                        <CalendarClock className="h-3 w-3" />
-                        {u.expires_at ? new Date(u.expires_at).toLocaleDateString("pt-BR") : "—"}
-                      </div>
-                      {u.days_remaining !== null && !expired && (
-                        <div className="text-[10px] text-muted-foreground">{u.days_remaining} dia(s)</div>
-                      )}
-                    </td>
-                    <td className="p-3 text-right font-mono text-xs">
-                      {u.total_paid_cents > 0 ? formatBRL(u.total_paid_cents) : <span className="text-muted-foreground">—</span>}
-                    </td>
-                    <td className="p-3 text-xs text-muted-foreground">{new Date(u.created_at).toLocaleDateString("pt-BR")}</td>
-                    <td className="p-3 text-right">
-                      <div className="flex justify-end gap-2">
-                        <GrantPlanDialog user={u} />
-                        <Button size="sm" variant={u.is_admin ? "outline" : "default"} onClick={() => toggleAdmin.mutate({ userId: u.id, makeAdmin: !u.is_admin })}>
-                          {u.is_admin ? "Remover admin" : "Tornar admin"}
-                        </Button>
-                      </div>
-                    </td>
-                  </tr>
-                );
-              })}
+              {filtered.map((r) => (
+                <tr key={r.id} className="border-t border-border/60 hover:bg-muted/20">
+                  <td className="p-3">
+                    <div className="font-medium">{r.full_name ?? "—"}</div>
+                    <div className="text-[11px] font-mono text-muted-foreground">{r.email}</div>
+                  </td>
+                  <td className="p-3">
+                    <Badge variant={r.is_active ? "default" : "secondary"} className={r.is_active ? "bg-success text-success-foreground" : ""}>
+                      {r.is_active ? "Ativo" : "Inativo"}
+                    </Badge>
+                  </td>
+                  <td className="p-3 text-right">
+                    <Badge variant="outline" className="font-mono">{r.credits}</Badge>
+                  </td>
+                  <td className="p-3 text-right font-mono">{r.sub_reseller_count}</td>
+                  <td className="p-3 text-xs text-muted-foreground">
+                    {r.last_activity ? new Date(r.last_activity).toLocaleDateString("pt-BR") : "—"}
+                  </td>
+                  <td className="p-3 text-right space-x-1">
+                    <AdminAddCreditsDialog reseller={r} onDone={() => resellersQ.refetch()} />
+                    <ResellerDetailsDialog reseller={r} />
+                  </td>
+                </tr>
+              ))}
             </tbody>
           </table>
         </div>
@@ -377,6 +477,166 @@ function AdminPage() {
     </div>
   );
 }
+
+function AdminAddCreditsDialog({ reseller, onDone }: { reseller: AdminReseller; onDone: () => void }) {
+  const [open, setOpen] = useState(false);
+  const [amount, setAmount] = useState("10");
+  
+  const add = useMutation({
+    mutationFn: async (amt: number) => {
+      const { error } = await supabase.rpc("admin_add_credits", {
+        _reseller_id: reseller.id,
+        _amount: amt
+      });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success("Créditos adicionados com sucesso!");
+      setOpen(false);
+      onDone();
+    },
+    onError: (e: Error) => toast.error(e.message)
+  });
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <Button size="sm" variant="outline"><PlusCircle className="h-3.5 w-3.5 mr-1" /> Créditos</Button>
+      </DialogTrigger>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>Adicionar Créditos</DialogTitle>
+          <DialogDescription>
+            Revendedor: {reseller.full_name ?? reseller.email}
+          </DialogDescription>
+        </DialogHeader>
+        <div className="space-y-4 pt-2">
+          <div className="rounded-md border p-3 bg-muted/30">
+            <div className="text-xs text-muted-foreground uppercase tracking-wider">Saldo Atual</div>
+            <div className="text-2xl font-bold">{reseller.credits} créditos</div>
+          </div>
+          <div className="space-y-2">
+            <label className="text-sm font-medium">Quantidade a adicionar</label>
+            <div className="flex gap-2">
+              {[10, 30, 40, 100].map(v => (
+                <Button key={v} type="button" variant="outline" size="sm" onClick={() => setAmount(String(v))}>
+                  +{v}
+                </Button>
+              ))}
+            </div>
+            <Input 
+              type="number" 
+              value={amount} 
+              onChange={(e) => setAmount(e.target.value)} 
+              placeholder="Ex: 50"
+            />
+          </div>
+          <Button 
+            className="w-full" 
+            onClick={() => add.mutate(Number(amount))}
+            disabled={add.isPending || !Number(amount) || Number(amount) <= 0}
+          >
+            {add.isPending ? "Adicionando..." : "Confirmar Adição"}
+          </Button>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function ResellerDetailsDialog({ reseller }: { reseller: AdminReseller }) {
+  const [open, setOpen] = useState(false);
+  
+  const historyQ = useQuery({
+    queryKey: ["admin-reseller-history", reseller.id],
+    enabled: open,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("credit_history")
+        .select("*")
+        .eq("user_id", reseller.id)
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+      return data;
+    }
+  });
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <Button size="sm" variant="outline"><History className="h-3.5 w-3.5 mr-1" /> Detalhes</Button>
+      </DialogTrigger>
+      <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <UserCog className="h-5 w-5 text-primary" />
+            Detalhes do Revendedor
+          </DialogTitle>
+          <DialogDescription>
+            Informações e histórico de {reseller.full_name ?? reseller.email}
+          </DialogDescription>
+        </DialogHeader>
+        
+        <div className="space-y-6 pt-2">
+          <div className="grid grid-cols-3 gap-4">
+            <div className="border rounded-md p-3">
+              <div className="text-[10px] text-muted-foreground uppercase">Saldo</div>
+              <div className="text-lg font-bold font-mono">{reseller.credits}</div>
+            </div>
+            <div className="border rounded-md p-3">
+              <div className="text-[10px] text-muted-foreground uppercase">Sub-Revendas</div>
+              <div className="text-lg font-bold font-mono">{reseller.sub_reseller_count}</div>
+            </div>
+            <div className="border rounded-md p-3">
+              <div className="text-[10px] text-muted-foreground uppercase">Membro desde</div>
+              <div className="text-lg font-bold">{new Date(reseller.created_at).toLocaleDateString("pt-BR")}</div>
+            </div>
+          </div>
+
+          <div className="space-y-3">
+            <h3 className="font-semibold flex items-center gap-2">
+              <History className="h-4 w-4 text-muted-foreground" />
+              Histórico de Créditos
+            </h3>
+            <div className="rounded-md border overflow-hidden">
+              <table className="w-full text-xs">
+                <thead className="bg-muted/40">
+                  <tr>
+                    <th className="text-left p-2">Data</th>
+                    <th className="text-left p-2">Tipo</th>
+                    <th className="text-right p-2">Valor</th>
+                    <th className="text-left p-2">Descrição</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y">
+                  {historyQ.isLoading && <tr><td colSpan={4} className="p-4 text-center">Carregando...</td></tr>}
+                  {!historyQ.isLoading && historyQ.data?.length === 0 && (
+                    <tr><td colSpan={4} className="p-4 text-center text-muted-foreground">Sem histórico registrado.</td></tr>
+                  )}
+                  {historyQ.data?.map((h: any) => (
+                    <tr key={h.id} className="hover:bg-muted/20">
+                      <td className="p-2 text-muted-foreground">{new Date(h.created_at).toLocaleString("pt-BR")}</td>
+                      <td className="p-2">
+                        <Badge variant="outline" className={h.type === "purchase" || h.type === "transfer_in" ? "text-success border-success/30" : "text-destructive border-destructive/30"}>
+                          {h.type === "purchase" ? "Compra" : h.type === "transfer_in" ? "Entrada" : "Saída"}
+                        </Badge>
+                      </td>
+                      <td className={cn("p-2 text-right font-mono font-medium", h.amount > 0 ? "text-success" : "text-destructive")}>
+                        {h.amount > 0 ? `+${h.amount}` : h.amount}
+                      </td>
+                      <td className="p-2 text-muted-foreground max-w-[200px] truncate">{h.description}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 
 function Kpi({ icon: Icon, label, value, sub, tone }: {
   icon: any; label: string; value: number | string | undefined; sub?: string;
