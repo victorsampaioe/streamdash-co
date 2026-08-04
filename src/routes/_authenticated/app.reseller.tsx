@@ -38,6 +38,11 @@ import {
   updateResellerClient, 
   deleteResellerClient 
 } from "@/lib/reseller-manage.functions";
+import {
+  getSubResellerDetails,
+  updateSubReseller,
+  getSubResellerClients
+} from "@/lib/reseller-network.functions";
 import { formatBRL, type PlanId } from "@/lib/payments";
 import { useState } from "react";
 import { 
