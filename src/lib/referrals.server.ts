@@ -28,9 +28,10 @@ export async function createSubResellerInternal(
   // A reseller must have at least 10 credits to create another reseller
   // But we allow admins to create resellers with any amount of credits (it will be deducted from their balance)
   const minCreditsRequired = isReseller ? initialCredits : 0;
+  const creatorCredits = creatorProfile.credits || 0;
   
-  if (!isAdmin && isReseller && (creatorProfile.credits || 0) < minCreditsRequired) {
-    throw new Error(`Saldo insuficiente. Você precisa de no mínimo ${minCreditsRequired} créditos.`);
+  if (!isAdmin && isReseller && creatorCredits < minCreditsRequired) {
+    throw new Error(`Saldo insuficiente. Você tem ${creatorCredits} créditos, mas precisa de no mínimo ${minCreditsRequired} para esta operação.`);
   }
 
   if (!isAdmin) {
