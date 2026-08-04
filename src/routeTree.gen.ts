@@ -25,6 +25,7 @@ import { Route as Char91DotmcpChar93ListToolsRouteImport } from './routes/[.mcp]
 import { Route as AuthenticatedAppIndexRouteImport } from './routes/_authenticated/app.index'
 import { Route as ApiPublicRadarRouteImport } from './routes/api/public/radar'
 import { Route as AuthenticatedAppSubscriptionRouteImport } from './routes/_authenticated/app.subscription'
+import { Route as AuthenticatedAppResellerRouteImport } from './routes/_authenticated/app.reseller'
 import { Route as AuthenticatedAppReferralsRouteImport } from './routes/_authenticated/app.referrals'
 import { Route as AuthenticatedAppRankingRouteImport } from './routes/_authenticated/app.ranking'
 import { Route as AuthenticatedAppRadarRouteImport } from './routes/_authenticated/app.radar'
@@ -141,6 +142,12 @@ const AuthenticatedAppSubscriptionRoute =
   AuthenticatedAppSubscriptionRouteImport.update({
     id: '/subscription',
     path: '/subscription',
+    getParentRoute: () => AuthenticatedAppRoute,
+  } as any)
+const AuthenticatedAppResellerRoute =
+  AuthenticatedAppResellerRouteImport.update({
+    id: '/reseller',
+    path: '/reseller',
     getParentRoute: () => AuthenticatedAppRoute,
   } as any)
 const AuthenticatedAppReferralsRoute =
@@ -368,6 +375,7 @@ export interface FileRoutesByFullPath {
   '/app/radar': typeof AuthenticatedAppRadarRoute
   '/app/ranking': typeof AuthenticatedAppRankingRoute
   '/app/referrals': typeof AuthenticatedAppReferralsRoute
+  '/app/reseller': typeof AuthenticatedAppResellerRoute
   '/app/subscription': typeof AuthenticatedAppSubscriptionRoute
   '/api/public/radar': typeof ApiPublicRadarRoute
   '/app/': typeof AuthenticatedAppIndexRoute
@@ -418,6 +426,7 @@ export interface FileRoutesByTo {
   '/app/radar': typeof AuthenticatedAppRadarRoute
   '/app/ranking': typeof AuthenticatedAppRankingRoute
   '/app/referrals': typeof AuthenticatedAppReferralsRoute
+  '/app/reseller': typeof AuthenticatedAppResellerRoute
   '/app/subscription': typeof AuthenticatedAppSubscriptionRoute
   '/api/public/radar': typeof ApiPublicRadarRoute
   '/app': typeof AuthenticatedAppIndexRoute
@@ -472,6 +481,7 @@ export interface FileRoutesById {
   '/_authenticated/app/radar': typeof AuthenticatedAppRadarRoute
   '/_authenticated/app/ranking': typeof AuthenticatedAppRankingRoute
   '/_authenticated/app/referrals': typeof AuthenticatedAppReferralsRoute
+  '/_authenticated/app/reseller': typeof AuthenticatedAppResellerRoute
   '/_authenticated/app/subscription': typeof AuthenticatedAppSubscriptionRoute
   '/api/public/radar': typeof ApiPublicRadarRoute
   '/_authenticated/app/': typeof AuthenticatedAppIndexRoute
@@ -526,6 +536,7 @@ export interface FileRouteTypes {
     | '/app/radar'
     | '/app/ranking'
     | '/app/referrals'
+    | '/app/reseller'
     | '/app/subscription'
     | '/api/public/radar'
     | '/app/'
@@ -576,6 +587,7 @@ export interface FileRouteTypes {
     | '/app/radar'
     | '/app/ranking'
     | '/app/referrals'
+    | '/app/reseller'
     | '/app/subscription'
     | '/api/public/radar'
     | '/app'
@@ -629,6 +641,7 @@ export interface FileRouteTypes {
     | '/_authenticated/app/radar'
     | '/_authenticated/app/ranking'
     | '/_authenticated/app/referrals'
+    | '/_authenticated/app/reseller'
     | '/_authenticated/app/subscription'
     | '/api/public/radar'
     | '/_authenticated/app/'
@@ -790,6 +803,13 @@ declare module '@tanstack/react-router' {
       path: '/subscription'
       fullPath: '/app/subscription'
       preLoaderRoute: typeof AuthenticatedAppSubscriptionRouteImport
+      parentRoute: typeof AuthenticatedAppRoute
+    }
+    '/_authenticated/app/reseller': {
+      id: '/_authenticated/app/reseller'
+      path: '/reseller'
+      fullPath: '/app/reseller'
+      preLoaderRoute: typeof AuthenticatedAppResellerRouteImport
       parentRoute: typeof AuthenticatedAppRoute
     }
     '/_authenticated/app/referrals': {
@@ -1081,6 +1101,7 @@ interface AuthenticatedAppRouteChildren {
   AuthenticatedAppRadarRoute: typeof AuthenticatedAppRadarRoute
   AuthenticatedAppRankingRoute: typeof AuthenticatedAppRankingRoute
   AuthenticatedAppReferralsRoute: typeof AuthenticatedAppReferralsRoute
+  AuthenticatedAppResellerRoute: typeof AuthenticatedAppResellerRoute
   AuthenticatedAppSubscriptionRoute: typeof AuthenticatedAppSubscriptionRoute
   AuthenticatedAppIndexRoute: typeof AuthenticatedAppIndexRoute
   AuthenticatedAppServersIdRoute: typeof AuthenticatedAppServersIdRoute
@@ -1104,6 +1125,7 @@ const AuthenticatedAppRouteChildren: AuthenticatedAppRouteChildren = {
   AuthenticatedAppRadarRoute: AuthenticatedAppRadarRoute,
   AuthenticatedAppRankingRoute: AuthenticatedAppRankingRoute,
   AuthenticatedAppReferralsRoute: AuthenticatedAppReferralsRoute,
+  AuthenticatedAppResellerRoute: AuthenticatedAppResellerRoute,
   AuthenticatedAppSubscriptionRoute: AuthenticatedAppSubscriptionRoute,
   AuthenticatedAppIndexRoute: AuthenticatedAppIndexRoute,
   AuthenticatedAppServersIdRoute: AuthenticatedAppServersIdRoute,
@@ -1156,13 +1178,3 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}

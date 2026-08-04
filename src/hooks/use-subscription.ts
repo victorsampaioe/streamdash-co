@@ -18,6 +18,7 @@ export type SubscriptionInfo = {
   isExpired: boolean;
   isTrial: boolean;
   isExpiringSoon: boolean; // <= 7 days
+  parentId: string | null;
 };
 
 const PLAN_LABEL: Record<Subscription["plan"], string> = {
@@ -42,7 +43,7 @@ export function useSubscription() {
     queryFn: async () => {
       const { data: userData } = await supabase.auth.getUser();
       if (!userData.user) {
-        return { subscription: null, daysRemaining: 0, isActive: false, isExpired: false, isTrial: false, isExpiringSoon: false };
+        return { subscription: null, daysRemaining: 0, isActive: false, isExpired: false, isTrial: false, isExpiringSoon: false, parentId: null };
       }
       const { data } = await supabase
         .from("subscriptions")
@@ -50,8 +51,14 @@ export function useSubscription() {
         .eq("user_id", userData.user.id)
         .maybeSingle();
 
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("parent_id")
+        .eq("id", userData.user.id)
+        .maybeSingle();
+
       if (!data) {
-        return { subscription: null, daysRemaining: 0, isActive: false, isExpired: true, isTrial: false, isExpiringSoon: false };
+        return { subscription: null, daysRemaining: 0, isActive: false, isExpired: true, isTrial: false, isExpiringSoon: false, parentId: profile?.parent_id || null };
       }
       const sub = data as Subscription;
       const now = Date.now();
@@ -67,6 +74,7 @@ export function useSubscription() {
         isExpired,
         isTrial: sub.status === "trial" && !isExpired,
         isExpiringSoon: isActive && daysRemaining <= 7,
+        parentId: profile?.parent_id || null,
       };
     },
     staleTime: 5_000,
