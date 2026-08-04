@@ -94,6 +94,8 @@ export async function createSubResellerInternal(
   }
 
   // 5. Create the subscription for the new user (1 day trial)
+  // If isReseller is true, it's a sub-reseller account.
+  // If isReseller is false, it's a client account.
   const trialExpiresAt = new Date();
   trialExpiresAt.setDate(trialExpiresAt.getDate() + 1);
 
