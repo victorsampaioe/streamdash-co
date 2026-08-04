@@ -165,12 +165,19 @@ function AdminPage() {
     retry: 1,
     queryFn: async () => {
       console.log("Fetching admin users...");
+      // Fetch profiles first to get is_reseller
+      const { data: profiles, error: pErr } = await supabase.from("profiles").select("id, is_reseller");
       const { data, error } = await supabase.rpc("get_admin_users");
       if (error) {
         console.error("Admin users error:", error);
         throw error;
       }
-      return (data ?? []) as AdminUser[];
+      const users = (data ?? []) as AdminUser[];
+      // Map is_reseller from profiles
+      return users.map(u => ({
+        ...u,
+        is_reseller: profiles?.find(p => p.id === u.id)?.is_reseller || false
+      }));
     },
   });
 
