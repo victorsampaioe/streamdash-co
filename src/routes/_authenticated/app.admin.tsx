@@ -30,7 +30,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, Dialog
 import { formatBRL } from "@/lib/payments";
 import { cn } from "@/lib/utils";
 import { broadcastTelegram } from "@/lib/telegram-broadcast.functions";
-import { adminListPayoutRequests, adminApprovePayout, adminMarkPayoutPaid, adminRejectPayout } from "@/lib/referrals.functions";
+
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { UserCog, History, PlusCircle } from "lucide-react";
 
