@@ -91,13 +91,13 @@ export const deleteResellerPlan = createServerFn({ method: "POST" })
 export const getResellerNetwork = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
-    const { data: subResellers, error } = await context.supabase
+    const { data: members, error } = await context.supabase
       .from("profiles")
-      .select("id, full_name, email, credits, created_at")
+      .select("id, full_name, email, credits, is_reseller, created_at")
       .eq("parent_id", context.userId);
 
     if (error) throw new Error(error.message);
-    return subResellers || [];
+    return members || [];
   });
 
 export const getCreditHistory = createServerFn({ method: "GET" })
@@ -122,13 +122,23 @@ export const getResellerStats = createServerFn({ method: "GET" })
       .eq("id", context.userId)
       .single();
 
+    // Active sub-resellers (those with is_reseller = true)
+    const { count: activeSubResellers } = await context.supabase
+      .from("profiles")
+      .select("*", { count: "exact", head: true })
+      .eq("parent_id", context.userId)
+      .eq("is_reseller", true);
+
+    // Active clients (those with is_reseller = false)
     const { count: activeClients } = await context.supabase
       .from("profiles")
       .select("*", { count: "exact", head: true })
-      .eq("parent_id", context.userId);
+      .eq("parent_id", context.userId)
+      .eq("is_reseller", false);
 
     return {
       credits: profile?.credits || 0,
+      activeSubResellers: activeSubResellers || 0,
       activeClients: activeClients || 0,
       revenue: 0,
     };
