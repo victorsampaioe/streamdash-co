@@ -1,13 +1,14 @@
 import { useState } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { UserPlus, Copy } from "lucide-react";
+import { UserPlus, Copy, AlertCircle } from "lucide-react";
 import { toast } from "sonner";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { createSubReseller } from "@/lib/referrals.functions";
+import { createResellerV2 } from "@/lib/reseller-v2.functions";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 interface CreateResellerDialogProps {
   open: boolean;
@@ -19,28 +20,20 @@ interface CreateResellerDialogProps {
 export function CreateResellerDialog({ open, onOpenChange, onDone, isReseller = true }: CreateResellerDialogProps) {
   const [email, setEmail] = useState("");
   const [fullName, setFullName] = useState("");
-  
-  const [initialCredits, setInitialCredits] = useState(10);
+  const [initialCredits, setInitialCredits] = useState(isReseller ? 10 : 0);
   const [result, setResult] = useState<{ email: string; password: string } | null>(null);
  
-  const createFn = useServerFn(createSubReseller);
+  const createFn = useServerFn(createResellerV2);
   const mut = useMutation({
-    mutationFn: () => createFn({ data: { email, fullName, phone: "", isReseller, initialCredits } }),
+    mutationFn: () => createFn({ data: { email, fullName, initialCredits: isReseller ? initialCredits : 0 } }),
     onSuccess: (data: any) => {
       setResult(data as { email: string; password: string });
-      toast.success("Sub-revenda criado com sucesso!");
+      toast.success(`${isReseller ? "Sub-revenda" : "Cliente"} criado com sucesso!`);
       onDone();
     },
-    onError: (e: Error) => {
-      const msg = e.message;
-      if (msg.includes("já está cadastrado")) {
-        toast.error("Este e-mail já está em uso por outro usuário.");
-      } else if (msg.includes("Saldo insuficiente")) {
-        toast.error(msg);
-      } else {
-        toast.error("Não foi possível concluir a operação. Verifique os dados e tente novamente.");
-        console.error("Erro na criação:", e);
-      }
+    onError: (e: any) => {
+      const errorMsg = e?.message || "Erro desconhecido ao realizar a operação.";
+      toast.error(errorMsg);
     },
   });
 
@@ -50,8 +43,7 @@ export function CreateResellerDialog({ open, onOpenChange, onDone, isReseller = 
       setResult(null);
       setEmail("");
       setFullName("");
-      
-      setInitialCredits(10);
+      setInitialCredits(isReseller ? 10 : 0);
     }, 200);
   }
 
@@ -65,8 +57,8 @@ export function CreateResellerDialog({ open, onOpenChange, onDone, isReseller = 
           </DialogTitle>
           <DialogDescription>
             {result 
-              ? `Envie as credenciais abaixo para o seu novo ${isReseller ? "sub-revendedor" : "cliente"}.`
-              : `Preencha os dados para criar a conta. ${isReseller ? `(Dedução de ${initialCredits} créditos)` : "(Não consome créditos)"}`}
+              ? `Envie as credenciais abaixo para o novo ${isReseller ? "sub-revendedor" : "cliente"}.`
+              : `A nova conta será ativada imediatamente com o saldo informado.`}
           </DialogDescription>
         </DialogHeader>
 
@@ -98,9 +90,12 @@ export function CreateResellerDialog({ open, onOpenChange, onDone, isReseller = 
                 </div>
               </div>
             </div>
-            <div className="text-xs text-muted-foreground">
-              ⚠️ O usuário deve alterar a senha assim que realizar o primeiro acesso.
-            </div>
+            <Alert variant="destructive" className="bg-destructive/10 border-destructive/20 py-2">
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription className="text-[10px]">
+                O usuário deve alterar a senha no primeiro acesso.
+              </AlertDescription>
+            </Alert>
             <Button className="w-full" onClick={close}>Concluído</Button>
           </div>
         ) : (
@@ -110,7 +105,7 @@ export function CreateResellerDialog({ open, onOpenChange, onDone, isReseller = 
               <Input 
                 value={fullName} 
                 onChange={(e) => setFullName(e.target.value)} 
-                placeholder="Ex: João Silva" 
+                placeholder={isReseller ? "Ex: Pedro Alvares" : "Ex: Maria Silva"} 
               />
             </div>
             <div className="space-y-2">
@@ -119,42 +114,35 @@ export function CreateResellerDialog({ open, onOpenChange, onDone, isReseller = 
                 type="email"
                 value={email} 
                 onChange={(e) => setEmail(e.target.value)} 
-                placeholder="Ex: joao@email.com" 
+                placeholder="Ex: usuario@email.com" 
               />
             </div>
 
             {isReseller && (
               <div className="space-y-2">
-                <Label>Créditos iniciais da sub-revenda</Label>
+                <Label>Créditos Iniciais</Label>
                 <Input 
                   type="number"
                   min={10}
                   value={initialCredits} 
                   onChange={(e) => setInitialCredits(parseInt(e.target.value) || 0)} 
-
-
                   placeholder="Mínimo 10 créditos"
                 />
                 <p className="text-[10px] text-muted-foreground">
-                  * Digite no mínimo 10 créditos para criar uma sub-revenda.
+                  * O valor será descontado do seu saldo atual.
                 </p>
               </div>
             )}
 
-            <div className="rounded-md border border-primary/30 bg-primary/5 p-3 text-xs text-muted-foreground">
-              🚀 A conta será criada com o saldo de créditos informado e o painel será ativado automaticamente.
+            <div className="rounded-md border border-primary/20 bg-primary/5 p-3 text-xs text-muted-foreground">
+              🚀 <strong>Ativação Automática:</strong> O painel será liberado imediatamente após a criação.
             </div>
+
             <DialogFooter className="gap-2 sm:gap-0">
               <Button variant="outline" onClick={close}>Cancelar</Button>
               <Button 
-                onClick={() => {
-                  if (isReseller && initialCredits < 10) {
-                    toast.error("Digite no mínimo 10 créditos para criar uma sub-revenda.");
-                    return;
-                  }
-                  mut.mutate();
-                }} 
-                disabled={mut.isPending || !email || !fullName}
+                onClick={() => mut.mutate()} 
+                disabled={mut.isPending || !email || !fullName || (isReseller && initialCredits < 10)}
               >
                 {mut.isPending ? "Criando..." : "Criar Agora"}
               </Button>
