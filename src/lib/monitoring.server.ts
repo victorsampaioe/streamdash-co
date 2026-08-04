@@ -16,12 +16,14 @@ type ServerRow = {
   owner_id: string;
   name: string;
   host: string;
+  server_group?: string | null;
   interval_seconds: number;
   failure_threshold: number;
   current_status: string;
   consecutive_failures: number;
   last_checked_at: string | null;
 };
+
 
 export async function runCheckForServer(serverId: string) {
   const { data: server, error } = await supabaseAdmin

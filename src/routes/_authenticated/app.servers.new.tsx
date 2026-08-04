@@ -21,9 +21,11 @@ export const Route = createFileRoute("/_authenticated/app/servers/new")({
 const schema = z.object({
   name: z.string().trim().min(1, "Informe um nome").max(80),
   host: z.string().trim().min(3, "Informe um domínio ou IP").max(255),
+  server_group: z.string().trim().max(80).optional(),
   description: z.string().trim().max(500).optional(),
   is_public: z.boolean(),
 });
+
 
 function slugify(s: string) {
   return s.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "").slice(0, 60);
