@@ -423,8 +423,12 @@ function PlanBadge({ plan }: { plan: AdminUser["plan"] }) {
     monthly: { label: "Mensal", cls: "border-primary/40 text-primary" },
     yearly: { label: "Anual", cls: "border-success/40 text-success" },
   } as const;
-  const m = map[plan];
-  return <Badge variant="outline" className={m.cls}>{m.label}</Badge>;
+  
+  // Guard against plan not being in map
+  const config = (map as any)[plan];
+  if (!config) return <span className="text-xs text-muted-foreground">—</span>;
+  
+  return <Badge variant="outline" className={cn("font-medium", config.cls)}>{config.label}</Badge>;
 }
 
 function StatusBadge({ status, expired }: { status: AdminUser["status"]; expired: boolean }) {
