@@ -418,15 +418,14 @@ function FilterChip({ active, onClick, tone, children }: { active: boolean; onCl
 
 function PlanBadge({ plan }: { plan: AdminUser["plan"] }) {
   if (!plan) return <span className="text-xs text-muted-foreground">—</span>;
-  const map = {
+  const map: Record<string, { label: string; cls: string }> = {
     trial: { label: "Teste", cls: "border-warning/40 text-warning" },
     monthly: { label: "Mensal", cls: "border-primary/40 text-primary" },
     yearly: { label: "Anual", cls: "border-success/40 text-success" },
-  } as const;
+  };
   
-  // Guard against plan not being in map
-  const config = (map as any)[plan];
-  if (!config) return <span className="text-xs text-muted-foreground">—</span>;
+  const config = map[plan as string];
+  if (!config) return <Badge variant="outline" className="font-medium">{plan}</Badge>;
   
   return <Badge variant="outline" className={cn("font-medium", config.cls)}>{config.label}</Badge>;
 }
@@ -439,8 +438,8 @@ function StatusBadge({ status, expired }: { status: AdminUser["status"]; expired
     active: <Badge className="bg-success text-success-foreground"><Activity className="h-3 w-3 mr-1" />Ativo</Badge>,
     expired: <Badge variant="destructive">Expirado</Badge>,
     cancelled: <Badge variant="outline">Cancelado</Badge>,
-  } as const;
-  return map[status];
+  };
+  return map[status as keyof typeof map] || <Badge variant="outline">{status}</Badge>;
 }
 
 function TelegramBroadcastCard() {
