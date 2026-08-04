@@ -13,9 +13,10 @@ interface CreateResellerDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onDone: () => void;
+  isReseller?: boolean;
 }
 
-export function CreateResellerDialog({ open, onOpenChange, onDone }: CreateResellerDialogProps) {
+export function CreateResellerDialog({ open, onOpenChange, onDone, isReseller = true }: CreateResellerDialogProps) {
   const [email, setEmail] = useState("");
   const [fullName, setFullName] = useState("");
   const [phone, setPhone] = useState("");
@@ -23,7 +24,7 @@ export function CreateResellerDialog({ open, onOpenChange, onDone }: CreateResel
 
   const createFn = useServerFn(createSubReseller);
   const mut = useMutation({
-    mutationFn: () => createFn({ data: { email, fullName, phone } }),
+    mutationFn: () => createFn({ data: { email, fullName, phone, isReseller } }),
     onSuccess: (data: any) => {
       setResult(data as { email: string; password: string });
       toast.success("Sub-revenda criado com sucesso!");
@@ -48,12 +49,12 @@ export function CreateResellerDialog({ open, onOpenChange, onDone }: CreateResel
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <UserPlus className="h-5 w-5 text-success" />
-            Criar Sub-Revenda
+            {isReseller ? "Criar Sub-Revenda" : "Criar Cliente Final"}
           </DialogTitle>
           <DialogDescription>
             {result 
-              ? "Envie as credenciais abaixo para o seu novo sub-revendedor."
-              : "Preencha os dados do seu sub-revendedor para criar a conta dele. (Consome 10 créditos)"}
+              ? `Envie as credenciais abaixo para o seu novo ${isReseller ? "sub-revendedor" : "cliente"}.`
+              : `Preencha os dados para criar a conta. ${isReseller ? "(Consome 10 créditos)" : "(Não consome créditos)"}`}
           </DialogDescription>
         </DialogHeader>
 

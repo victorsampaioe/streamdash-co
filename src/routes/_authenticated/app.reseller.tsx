@@ -91,6 +91,7 @@ function ResellerDashboard() {
   const [pix, setPix] = useState<any>(null);
   const [loading, setLoading] = useState(false);
   const [transferDialogOpen, setTransferDialogOpen] = useState(false);
+  const [clientDialogOpen, setClientDialogOpen] = useState(false);
   const [selectedRecipient, setSelectedRecipient] = useState<any>(null);
   const [transferAmount, setTransferAmount] = useState("");
 
@@ -227,32 +228,32 @@ function ResellerDashboard() {
 
       <Tabs defaultValue="rede" className="w-full">
         <TabsList className="grid w-full grid-cols-4 max-w-lg">
-          <TabsTrigger value="rede">Minha Rede</TabsTrigger>
-          <TabsTrigger value="clientes">Meus Clientes</TabsTrigger>
+          <TabsTrigger value="rede">Rede</TabsTrigger>
+          <TabsTrigger value="clientes">Clientes</TabsTrigger>
           <TabsTrigger value="historico">Histórico</TabsTrigger>
-          <TabsTrigger value="planos">Meus Planos</TabsTrigger>
+          <TabsTrigger value="planos">Planos</TabsTrigger>
         </TabsList>
 
         <TabsContent value="rede" className="mt-4">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <div className="space-y-1">
-                <CardTitle className="text-base font-semibold">Membros da Rede</CardTitle>
-                <CardDescription>Revendedores que você criou.</CardDescription>
+                <CardTitle className="text-base font-semibold">Minha Rede</CardTitle>
+                <CardDescription>Gerencie seus sub-revendedores (Consome 10 créditos).</CardDescription>
               </div>
               <Button size="sm" variant="outline" onClick={() => setResellerDialogOpen(true)}>
                 <Plus className="h-4 w-4 mr-2" /> Criar Revendedor
               </Button>
             </CardHeader>
             <CardContent>
-              {(!network || network.length === 0) ? (
+              {(!network || network.filter(u => u.is_reseller).length === 0) ? (
                 <div className="text-center py-12">
                   <Package className="h-12 w-12 text-muted-foreground/20 mx-auto mb-4" />
-                  <p className="text-muted-foreground text-sm">Sua rede ainda está vazia.</p>
+                  <p className="text-muted-foreground text-sm">Nenhum sub-revendedor encontrado.</p>
                 </div>
               ) : (
                 <div className="space-y-4 mt-4">
-                  {network.map((user: any) => (
+                  {network.filter(u => u.is_reseller).map((user: any) => (
                     <div key={user.id} className="flex items-center justify-between p-3 border rounded-lg hover:bg-muted/50 transition-colors">
                       <div className="flex items-center gap-3">
                         <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center font-bold text-primary">
@@ -280,6 +281,48 @@ function ResellerDashboard() {
                           <Plus className="h-4 w-4 mr-1" /> Add
                         </Button>
                         <Badge variant="outline" className="bg-success/10 text-success border-success/20">Ativo</Badge>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="clientes" className="mt-4">
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <div className="space-y-1">
+                <CardTitle className="text-base font-semibold">Meus Clientes</CardTitle>
+                <CardDescription>Clientes finais usando seus planos (Não consome créditos).</CardDescription>
+              </div>
+              <Button size="sm" variant="outline" onClick={() => setClientDialogOpen(true)}>
+                <Plus className="h-4 w-4 mr-2" /> Criar Cliente
+              </Button>
+            </CardHeader>
+            <CardContent>
+              {(!network || network.filter(u => !u.is_reseller).length === 0) ? (
+                <div className="text-center py-12">
+                  <Users className="h-12 w-12 text-muted-foreground/20 mx-auto mb-4" />
+                  <p className="text-muted-foreground text-sm">Nenhum cliente final encontrado.</p>
+                </div>
+              ) : (
+                <div className="space-y-4 mt-4">
+                  {network.filter(u => !u.is_reseller).map((user: any) => (
+                    <div key={user.id} className="flex items-center justify-between p-3 border rounded-lg hover:bg-muted/50 transition-colors">
+                      <div className="flex items-center gap-3">
+                        <div className="h-10 w-10 rounded-full bg-secondary/20 flex items-center justify-center font-bold text-secondary-foreground">
+                          {user.full_name?.[0] || "?"}
+                        </div>
+                        <div>
+                          <div className="font-medium text-sm">{user.full_name || "Cliente"}</div>
+                          <div className="text-xs text-muted-foreground">{user.email}</div>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Badge variant="outline" className="bg-primary/10 text-primary border-primary/20">Assinante</Badge>
+                        <ChevronRight className="h-4 w-4 text-muted-foreground" />
                       </div>
                     </div>
                   ))}
@@ -482,6 +525,17 @@ function ResellerDashboard() {
       <CreateResellerDialog
         open={resellerDialogOpen}
         onOpenChange={setResellerDialogOpen}
+        isReseller={true}
+        onDone={() => {
+          qc.invalidateQueries({ queryKey: ["reseller-stats"] });
+          qc.invalidateQueries({ queryKey: ["reseller-network"] });
+        }}
+      />
+
+      <CreateResellerDialog
+        open={clientDialogOpen}
+        onOpenChange={setClientDialogOpen}
+        isReseller={false}
         onDone={() => {
           qc.invalidateQueries({ queryKey: ["reseller-stats"] });
           qc.invalidateQueries({ queryKey: ["reseller-network"] });
