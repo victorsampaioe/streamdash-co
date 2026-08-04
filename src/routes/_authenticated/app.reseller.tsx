@@ -97,7 +97,7 @@ function ResellerDashboard() {
   const { data: network, refetch: refetchNetwork } = useQuery({ queryKey: ["reseller-network"], queryFn: () => getNetwork() });
   const { data: history } = useQuery({ queryKey: ["reseller-history"], queryFn: () => getHistory() });
   const { data: plans } = useQuery({ queryKey: ["reseller-plans"], queryFn: () => getPlans() });
-  const { data: subData } = useSubscription();
+  const { data: subData, isAdmin } = useSubscription();
 
   const isAccountActive = subData?.isActive || subData?.isTrial || (stats?.credits !== undefined && stats.credits > 0);
 
@@ -219,10 +219,10 @@ function ResellerDashboard() {
           </CardHeader>
           <CardContent>
             <div className={cn("text-3xl font-bold flex items-center gap-2", stats?.credits === 0 ? "text-destructive" : "")}>
-              {stats?.credits === 0 ? "🔴" : "🟢"} {stats?.credits ?? 0}
+              {isAdmin ? "∞" : (stats?.credits === 0 ? "🔴" : "🟢")} {isAdmin ? "" : (stats?.credits ?? 0)}
             </div>
             <p className="text-xs text-muted-foreground mt-1">
-              {stats?.credits === 0 ? "Saldo zerado — adicione créditos para revender" : "1 crédito = 1 mês de acesso p/ cliente"}
+              {isAdmin ? "Créditos ilimitados (Administrador)" : (stats?.credits === 0 ? "Saldo zerado — adicione créditos para revender" : "1 crédito = 1 mês de acesso p/ cliente")}
             </p>
           </CardContent>
         </Card>

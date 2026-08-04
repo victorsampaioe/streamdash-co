@@ -272,6 +272,7 @@ function AdminPage() {
         <Kpi icon={BadgeCheck} label="Assinantes ativos" value={s?.paid_active} tone="success" sub={s ? `${s.monthly_subs} mensal · ${s.yearly_subs} anual` : undefined} />
         <Kpi icon={Gift} label="Em teste grátis" value={s?.trial_active} tone="warning" />
         <Kpi icon={XCircle} label="Expirados" value={s?.expired} tone="destructive" sub={s ? `${s.expiring_7d} vencem em 7 dias` : undefined} />
+        <Kpi icon={Wallet} label="Créditos disponíveis" value="∞" tone="primary" sub="Créditos ilimitados" />
         <Kpi icon={CircleDollarSign} label="Receita 30 dias" value={s ? formatBRL(s.revenue_cents_30d) : undefined} tone="success" sub={s ? `${formatBRL(s.revenue_cents_7d)} nos últimos 7d` : undefined} />
         <Kpi icon={TrendingUp} label="Receita total" value={s ? formatBRL(s.revenue_cents_total) : undefined} tone="primary" sub={s ? `${s.payments_approved_total} pagamentos` : undefined} />
         <Kpi icon={ServerCog} label="Servidores monitorados" value={s?.total_servers} />
