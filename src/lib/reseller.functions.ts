@@ -136,11 +136,30 @@ export const getResellerStats = createServerFn({ method: "GET" })
       .eq("parent_id", context.userId)
       .eq("is_reseller", false);
 
+    // Revenue calculation: Sum of all payments for plans created by this reseller
+    // Note: We need to filter payments where the plan belongs to the reseller
+    const { data: myPlans } = await context.supabase
+      .from("reseller_plans")
+      .select("id")
+      .eq("user_id", context.userId);
+
+    let revenue = 0;
+    if (myPlans && myPlans.length > 0) {
+      const planIds = myPlans.map(p => p.id);
+      const { data: payments } = await context.supabase
+        .from("payments")
+        .select("amount_cents")
+        .eq("status", "approved")
+        .in("plan_id", planIds);
+      
+      revenue = payments?.reduce((sum, p) => sum + p.amount_cents, 0) || 0;
+    }
+
     return {
       credits: profile?.credits || 0,
       activeSubResellers: activeSubResellers || 0,
       activeClients: activeClients || 0,
-      revenue: 0,
+      revenue,
     };
   });
 
