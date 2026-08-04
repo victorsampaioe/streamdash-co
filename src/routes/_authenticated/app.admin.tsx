@@ -265,7 +265,7 @@ function AdminPage() {
         <Kpi icon={XCircle} label="Expirados" value={s?.expired} tone="destructive" sub={s ? `${s.expiring_7d} vencem em 7 dias` : undefined} />
         <Kpi icon={CircleDollarSign} label="Receita 30 dias" value={s ? formatBRL(s.revenue_cents_30d) : undefined} tone="success" sub={s ? `${formatBRL(s.revenue_cents_7d)} nos últimos 7d` : undefined} />
         <Kpi icon={TrendingUp} label="Receita total" value={s ? formatBRL(s.revenue_cents_total) : undefined} tone="primary" sub={s ? `${s.payments_approved_total} pagamentos` : undefined} />
-        <Kpi icon={UserPlus} label="Indicações" value={s?.total_referrals} sub={s ? `${s.converted_referrals} convertidas` : undefined} />
+        
         <Kpi icon={ServerCog} label="Servidores monitorados" value={s?.total_servers} />
       </div>
 
