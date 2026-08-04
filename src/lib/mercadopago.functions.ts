@@ -5,26 +5,41 @@ import { PLANS, effectivePriceCents, type PlanId } from "./payments";
 
 export const createPixPayment = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input) => z.object({ plan: z.enum(["monthly", "yearly"]) }).parse(input))
+  .inputValidator((input) => z.object({ plan: z.string() }).parse(input))
   .handler(async ({ data, context }) => {
-    const plan = PLANS.find((p) => p.id === (data.plan as PlanId));
-    if (!plan) throw new Error("Plano inválido");
+    let amountCents: number;
+    let description: string;
+    let planId = data.plan as PlanId;
+
+    const standardPlan = PLANS.find((p) => p.id === planId);
+    if (standardPlan) {
+      amountCents = effectivePriceCents(standardPlan);
+      description = `StreamMonitor — Plano ${standardPlan.name}`;
+    } else if (planId.startsWith("credits_")) {
+      const packs: Record<string, { price: number; label: string }> = {
+        credits_10: { price: 12000, label: "10 créditos" },
+        credits_30: { price: 30000, label: "30 créditos" },
+        credits_50: { price: 40000, label: "50 créditos" },
+      };
+      const pack = packs[planId];
+      if (!pack) throw new Error("Pacote de créditos inválido");
+      amountCents = pack.price;
+      description = `StreamMonitor — ${pack.label}`;
+    } else {
+      throw new Error("Plano inválido");
+    }
 
     const { supabase, userId, claims } = context;
     const expiresAt = new Date(Date.now() + 30 * 60 * 1000).toISOString(); // PIX 30min
 
-    // Referral rewards agora são pagas em PIX (R$10) para o indicador,
-    // não há mais desconto na compra do indicado.
-    const amountCents = effectivePriceCents(plan);
     const discountApplied = false;
 
-    // Reuse a still-valid charge. This makes retries instant and avoids
-    // creating multiple pending PIX payments for the same plan.
+    // Reuse a still-valid charge.
     const { data: existing } = await supabase
       .from("payments")
       .select("id, amount_cents, expires_at, pix_copy_paste, pix_qr_code")
       .eq("user_id", userId)
-      .eq("plan", plan.id)
+      .eq("plan", planId)
       .eq("status", "pending")
       .eq("amount_cents", amountCents)
       .gt("expires_at", new Date().toISOString())
@@ -62,7 +77,7 @@ export const createPixPayment = createServerFn({ method: "POST" })
         status: "pending",
         amount_cents: amountCents,
         currency: "BRL",
-        plan: plan.id,
+        plan: planId as any,
         expires_at: expiresAt,
       })
       .select()
@@ -90,7 +105,7 @@ export const createPixPayment = createServerFn({ method: "POST" })
     try {
       const charge = await createMpPixCharge({
         amountCents,
-        description: `StreamMonitor — Plano ${plan.name}${discountApplied ? " (desconto indicação)" : ""}`,
+        description: `${description}${discountApplied ? " (desconto indicação)" : ""}`,
         payerEmail,
         externalReference: payment.id,
         expiresAt,
@@ -129,7 +144,6 @@ export const createPixPayment = createServerFn({ method: "POST" })
     }
   });
 
-// Client-callable status poll — lets the UI check whether the PIX was paid.
 export const getPaymentStatus = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input) => z.object({ paymentId: z.string().uuid() }).parse(input))

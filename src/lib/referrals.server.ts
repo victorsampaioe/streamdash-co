@@ -6,8 +6,22 @@ export async function createSubResellerInternal(
   fullName: string,
   phone: string
 ) {
-  // 1. Verify creator has an active subscription
-  // Use public function to check activity
+  // 1. Verify creator has an active subscription and credits
+  const { data: creatorProfile, error: profileError } = await supabaseAdmin
+    .from("profiles")
+    .select("id, referral_code, credits")
+    .eq("id", creatorId)
+    .single();
+
+  if (profileError || !creatorProfile) {
+    throw new Error("Erro ao obter seu perfil.");
+  }
+
+  if ((creatorProfile.credits || 0) <= 0) {
+    throw new Error("Você não possui créditos suficientes para criar um revendedor. Compre créditos no Painel do Revendedor.");
+  }
+
+  // 1b. Verify creator has an active subscription
   const { data: creatorActive, error: activityError } = await supabaseAdmin.rpc("subscription_is_active", { _user_id: creatorId });
   
   if (activityError) {
@@ -18,14 +32,7 @@ export async function createSubResellerInternal(
     throw new Error("Você precisa ter uma assinatura ativa para criar sub-revendedores.");
   }
 
-  // 2. Get creator's referral code
-  const { data: creatorProfile, error: profileError } = await supabaseAdmin
-    .from("profiles")
-    .select("referral_code")
-    .eq("id", creatorId)
-    .single();
-
-  if (profileError || !creatorProfile?.referral_code) {
+  if (!creatorProfile.referral_code) {
     throw new Error("Erro ao obter seu código de indicação.");
   }
 
@@ -53,17 +60,33 @@ export async function createSubResellerInternal(
 
   const userId = newUser.user.id;
 
-  // The 'handle_new_user' trigger will have already created the profile and recorded the referral
-  // since we passed 'referral_code' in user_metadata.
-
-  // 4. Mark trial as used and ensure phone is set correctly
+  // 4. Mark trial as used, set parent_id and deduct credit
   await supabaseAdmin
     .from("profiles")
     .update({
       trial_used: true,
-      signup_bonus_days: 1
-    })
+      signup_bonus_days: 1,
+      parent_id: creatorId
+    } as any)
     .eq("id", userId);
+
+  // Deduct 1 credit from creator
+  await supabaseAdmin
+    .from("profiles")
+    .update({
+      credits: (creatorProfile.credits || 0) - 1
+    } as any)
+    .eq("id", creatorId);
+
+  // Log credit use
+  await supabaseAdmin
+    .from("credit_history")
+    .insert({
+      user_id: creatorId,
+      amount: -1,
+      type: 'use',
+      description: `Criação do revendedor ${email}`
+    });
 
   // 5. Create the subscription for the new user (1 day trial)
   const trialExpiresAt = new Date();
@@ -85,7 +108,7 @@ export async function createSubResellerInternal(
   // 6. Update referral status to trial_active
   await supabaseAdmin
     .from("referrals")
-    .update({ status: "trial_active" })
+    .update({ status: "trial_active" } as any)
     .eq("referred_id", userId);
 
   return { 

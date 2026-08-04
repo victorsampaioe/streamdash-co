@@ -591,6 +591,59 @@ export type Database = {
           },
         ]
       }
+      credit_history: {
+        Row: {
+          amount: number
+          created_at: string | null
+          description: string | null
+          id: string
+          type: string
+          user_id: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          type: string
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          type?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "credit_history_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      credit_pack_definitions: {
+        Row: {
+          credits_amount: number
+          plan_id: Database["public"]["Enums"]["plan_type"]
+          price_cents: number
+        }
+        Insert: {
+          credits_amount: number
+          plan_id: Database["public"]["Enums"]["plan_type"]
+          price_cents: number
+        }
+        Update: {
+          credits_amount?: number
+          plan_id?: Database["public"]["Enums"]["plan_type"]
+          price_cents?: number
+        }
+        Relationships: []
+      }
       dns_alerts: {
         Row: {
           acknowledged_at: string | null
@@ -2102,9 +2155,11 @@ export type Database = {
         Row: {
           avatar_url: string | null
           created_at: string
+          credits: number | null
           email: string | null
           full_name: string | null
           id: string
+          parent_id: string | null
           phone: string | null
           referral_code: string | null
           referred_by: string | null
@@ -2114,9 +2169,11 @@ export type Database = {
         Insert: {
           avatar_url?: string | null
           created_at?: string
+          credits?: number | null
           email?: string | null
           full_name?: string | null
           id: string
+          parent_id?: string | null
           phone?: string | null
           referral_code?: string | null
           referred_by?: string | null
@@ -2126,16 +2183,26 @@ export type Database = {
         Update: {
           avatar_url?: string | null
           created_at?: string
+          credits?: number | null
           email?: string | null
           full_name?: string | null
           id?: string
+          parent_id?: string | null
           phone?: string | null
           referral_code?: string | null
           referred_by?: string | null
           signup_bonus_days?: number
           trial_used?: boolean
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "profiles_parent_id_fkey"
+            columns: ["parent_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       ratings: {
         Row: {
@@ -2485,6 +2552,44 @@ export type Database = {
           whatsapp?: string | null
         }
         Relationships: []
+      }
+      reseller_plans: {
+        Row: {
+          created_at: string | null
+          duration_days: number
+          id: string
+          name: string
+          price_cents: number
+          reseller_id: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          duration_days: number
+          id?: string
+          name: string
+          price_cents: number
+          reseller_id: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          duration_days?: number
+          id?: string
+          name?: string
+          price_cents?: number
+          reseller_id?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reseller_plans_reseller_id_fkey"
+            columns: ["reseller_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       server_analysis: {
         Row: {
@@ -3183,6 +3288,10 @@ export type Database = {
         Args: { _id: string; _name: string; _owner: string }
         Returns: string
       }
+      process_credit_purchase: {
+        Args: { p_credits: number; p_payment_id: string; p_user_id: string }
+        Returns: undefined
+      }
       purge_content_checks: { Args: { _days?: number }; Returns: number }
       purge_old_metrics: { Args: { _dry_run?: boolean }; Returns: Json }
       region_consensus: {
@@ -3252,7 +3361,13 @@ export type Database = {
         | "rejected"
         | "cancelled"
         | "refunded"
-      plan_type: "trial" | "monthly" | "yearly"
+      plan_type:
+        | "trial"
+        | "monthly"
+        | "yearly"
+        | "credits_10"
+        | "credits_30"
+        | "credits_50"
       server_status: "up" | "degraded" | "down" | "unknown"
       subscription_status: "trial" | "active" | "expired" | "cancelled"
     }
@@ -3434,7 +3549,14 @@ export const Constants = {
         "cancelled",
         "refunded",
       ],
-      plan_type: ["trial", "monthly", "yearly"],
+      plan_type: [
+        "trial",
+        "monthly",
+        "yearly",
+        "credits_10",
+        "credits_30",
+        "credits_50",
+      ],
       server_status: ["up", "degraded", "down", "unknown"],
       subscription_status: ["trial", "active", "expired", "cancelled"],
     },

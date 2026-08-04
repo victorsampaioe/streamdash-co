@@ -1,7 +1,7 @@
 // Plan catalog — used by the subscription page and the (future) Mercado Pago PIX flow.
 // Prices are stored in cents to avoid floating-point issues.
 
-export type PlanId = "monthly" | "yearly";
+export type PlanId = "monthly" | "yearly" | "credits_10" | "credits_30" | "credits_50";
 
 export type PlanDefinition = {
   id: PlanId;

@@ -1,5 +1,5 @@
 import { Link, Outlet, useNavigate, useRouterState } from "@tanstack/react-router";
-import { Activity, LayoutDashboard, ServerIcon, Bell, Users, LogOut, Sun, Moon, Search, Plus, CreditCard, Gift, Radio, ShieldAlert, Trophy, Lock, Menu, Send, Bot, Sparkles, BookOpen, Globe } from "lucide-react";
+import { Activity, LayoutDashboard, ServerIcon, Bell, Users, LogOut, Sun, Moon, Search, Plus, CreditCard, Gift, Radio, ShieldAlert, Trophy, Lock, Menu, Send, Bot, Sparkles, BookOpen, Globe, ShoppingBag } from "lucide-react";
 import { SubscriptionBanner } from "@/components/subscription/subscription-banner";
 import { TelegramBanner } from "@/components/telegram-banner";
 import { WelcomeOnboarding } from "@/components/subscription/welcome-onboarding";
@@ -94,6 +94,7 @@ function useNavItems() {
     { to: "/app/conteudos", label: "Conteúdos Offline", icon: Radio },
     { to: "/app/ranking", label: "Ranking", icon: Trophy },
     { to: "/app/achievements", label: "Conquistas", icon: Trophy },
+    { to: "/app/reseller", label: "Painel Revendedor", icon: ShoppingBag },
     { to: "/app/pagina", label: "Minha Página", icon: Globe },
     
     { to: "/app/subscription", label: "Assinatura", icon: CreditCard },
