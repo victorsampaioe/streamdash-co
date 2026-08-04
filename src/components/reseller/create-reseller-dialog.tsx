@@ -53,7 +53,7 @@ export function CreateResellerDialog({ open, onOpenChange, onDone }: CreateResel
           <DialogDescription>
             {result 
               ? "Envie as credenciais abaixo para o seu novo sub-revendedor."
-              : "Preencha os dados do seu sub-revendedor para criar a conta dele. (Consome 1 crédito)"}
+              : "Preencha os dados do seu sub-revendedor para criar a conta dele. (Consome 10 créditos)"}
           </DialogDescription>
         </DialogHeader>
 

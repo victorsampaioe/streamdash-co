@@ -133,3 +133,20 @@ export const getResellerStats = createServerFn({ method: "GET" })
       revenue: 0,
     };
   });
+
+export const transferCredits = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input) => z.object({
+    recipientId: z.string().uuid(),
+    amount: z.number().int().positive()
+  }).parse(input))
+  .handler(async ({ data, context }) => {
+    const { error } = await context.supabase.rpc("transfer_credits", {
+      _sender_id: context.userId,
+      _recipient_id: data.recipientId,
+      _amount: data.amount
+    });
+
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });

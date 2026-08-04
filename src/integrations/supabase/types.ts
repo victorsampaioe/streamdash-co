@@ -3305,6 +3305,10 @@ export type Database = {
       rollup_metrics: { Args: { _hours?: number }; Returns: Json }
       rollup_regional: { Args: { _hours?: number }; Returns: Json }
       subscription_is_active: { Args: { _user_id: string }; Returns: boolean }
+      transfer_credits: {
+        Args: { _amount: number; _recipient_id: string; _sender_id: string }
+        Returns: undefined
+      }
     }
     Enums: {
       alert_kind: "email" | "discord" | "telegram" | "webhook"
