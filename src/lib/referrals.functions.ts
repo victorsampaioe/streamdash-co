@@ -10,7 +10,7 @@ export const createSubReseller = createServerFn({ method: "POST" })
       .object({
         email: z.string().email(),
         fullName: z.string().min(3),
-        phone: z.string().optional().default(""),
+        // Phone removed
         isReseller: z.boolean().optional().default(true),
         initialCredits: z.number().min(10).optional().default(10),
         planId: z.string().uuid().optional(),
@@ -18,12 +18,11 @@ export const createSubReseller = createServerFn({ method: "POST" })
       .parse(input),
   )
   .handler(async ({ data, context }) => {
-    const { isReseller, initialCredits, ...userData } = data;
+    const { isReseller, initialCredits, email, fullName } = data;
     const result = await createSubResellerInternal(
       context.userId, 
-      userData.email, 
-      userData.fullName, 
-      userData.phone, 
+      email, 
+      fullName, 
       isReseller,
       initialCredits
     );

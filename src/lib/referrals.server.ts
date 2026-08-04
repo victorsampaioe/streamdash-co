@@ -4,7 +4,6 @@ export async function createSubResellerInternal(
   creatorId: string,
   email: string,
   fullName: string,
-  phone: string,
   isReseller: boolean = true,
   initialCredits: number = 10
 ) {
@@ -51,7 +50,6 @@ export async function createSubResellerInternal(
     email_confirm: true,
     user_metadata: {
       full_name: fullName,
-      phone,
       is_reseller: isReseller
     }
   });
@@ -75,7 +73,8 @@ export async function createSubResellerInternal(
         trial_used: true,
         parent_id: creatorId,
         is_reseller: isReseller,
-        credits: isReseller ? initialCredits : 0
+        credits: isReseller ? initialCredits : 0,
+        full_name: fullName
       } as any)
       .eq("id", userId)
       .select();
@@ -87,12 +86,10 @@ export async function createSubResellerInternal(
     await new Promise(r => setTimeout(r, 200));
   }
 
-  if (!profileSet) {
     await supabaseAdmin.from("profiles").upsert({
       id: userId,
       email,
       full_name: fullName,
-      phone,
       parent_id: creatorId,
       is_reseller: isReseller,
       credits: isReseller ? initialCredits : 0,
