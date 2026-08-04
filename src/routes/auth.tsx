@@ -129,11 +129,6 @@ function AuthPage() {
                 <Field label="E-mail"><Input type="email" required value={email} onChange={(e) => setEmail(e.target.value)} /></Field>
                 <Field label="Senha"><Input type="password" required minLength={6} value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Mín. 6 caracteres" /></Field>
                 {/* Referral code field removed as per request */}
-                <p className="text-xs text-muted-foreground">
-                  🔑 Com um código de indicação válido (identificado automaticamente via link) você ganha <strong>1 dia de teste grátis</strong>.
-                  Caso contrário, a conta é criada normalmente, mas o acesso só é liberado
-                  <strong> após o pagamento</strong> do plano oficial do Stream Monitor.
-                </p>
 
                 <Button type="submit" disabled={loading} className="w-full">
                   {loading ? "Criando..." : "Criar conta"}
