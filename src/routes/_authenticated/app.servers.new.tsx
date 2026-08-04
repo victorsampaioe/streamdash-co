@@ -37,12 +37,13 @@ function NewServer() {
   const runAnalyze = useServerFn(analyzeServer);
   const [name, setName] = useState("");
   const [host, setHost] = useState("");
+  const [serverGroup, setServerGroup] = useState("");
   const [description, setDescription] = useState("");
   const [isPublic, setIsPublic] = useState(false);
 
   const create = useMutation({
     mutationFn: async () => {
-      const parsed = schema.parse({ name, host: host.replace(/^https?:\/\//i, "").replace(/\/.*$/, ""), description, is_public: isPublic });
+      const parsed = schema.parse({ name, host: host.replace(/^https?:\/\//i, "").replace(/\/.*$/, ""), server_group: serverGroup, description, is_public: isPublic });
       const { data: userRes } = await supabase.auth.getUser();
       if (!userRes.user) throw new Error("Não autenticado");
       const slug = isPublic ? `${slugify(parsed.name)}-${Math.random().toString(36).slice(2, 6)}` : null;
@@ -50,10 +51,12 @@ function NewServer() {
         owner_id: userRes.user.id,
         name: parsed.name,
         host: parsed.host,
+        server_group: parsed.server_group || null,
         description: parsed.description ?? null,
         is_public: parsed.is_public,
         public_slug: slug,
       }).select("id").single();
+
       if (error) throw error;
       return data.id as string;
     },
