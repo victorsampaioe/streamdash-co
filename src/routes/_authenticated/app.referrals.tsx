@@ -383,8 +383,8 @@ function CreateResellerDialog({ open, onOpenChange, onDone }: { open: boolean; o
   const createFn = useServerFn(createSubReseller);
   const mut = useMutation({
     mutationFn: () => createFn({ data: { email, fullName, phone } }),
-    onSuccess: (data) => {
-      setResult(data);
+    onSuccess: (data: any) => {
+      setResult(data as { email: string; password: string });
       toast.success("Sub-revenda criado com sucesso!");
       onDone();
     },
