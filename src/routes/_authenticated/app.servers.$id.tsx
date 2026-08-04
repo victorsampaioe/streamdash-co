@@ -278,6 +278,14 @@ function ServerDetail() {
             </Card>
             <Card className="p-5 space-y-4">
               <h3 className="font-medium text-sm">Configuração</h3>
+              <div className="space-y-1.5">
+                <Label className="text-xs">Servidor (agrupamento)</Label>
+                <Input defaultValue={server.server_group ?? ""} placeholder="AURA"
+                  onBlur={(e) => { const v = e.target.value.trim(); if (v !== (server.server_group ?? "")) updateConfig.mutate({ server_group: v || null }); }} />
+                <p className="text-[11px] text-muted-foreground">
+                  Use o mesmo nome nas demais DNS deste servidor para ativar a correlação inteligente.
+                </p>
+              </div>
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1.5">
                   <Label className="text-xs">Intervalo (s)</Label>
@@ -290,6 +298,7 @@ function ServerDetail() {
                     onBlur={(e) => { const v = Number(e.target.value); if (v !== server.failure_threshold) updateConfig.mutate({ failure_threshold: v }); }} />
                 </div>
               </div>
+
               <div className="flex items-center justify-between pt-2 border-t border-border/60">
                 <div>
                   <div className="text-sm font-medium">Página pública</div>
