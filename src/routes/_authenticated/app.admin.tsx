@@ -168,7 +168,7 @@ function AdminPage() {
     queryFn: async () => {
       console.log("Fetching admin users...");
       // Fetch profiles first to get is_reseller
-      const { data: profiles, error: pErr } = await supabase.from("profiles").select("id, is_reseller");
+      const { data: profiles, error: pErr } = await supabase.from("profiles").select("id, is_reseller, credits");
       const { data, error } = await supabase.rpc("get_admin_users");
       if (error) {
         console.error("Admin users error:", error);
@@ -178,7 +178,8 @@ function AdminPage() {
       // Map is_reseller from profiles
       return users.map(u => ({
         ...u,
-        is_reseller: profiles?.find(p => p.id === u.id)?.is_reseller || false
+        is_reseller: profiles?.find(p => p.id === u.id)?.is_reseller || false,
+        credits: profiles?.find(p => p.id === u.id)?.credits || 0
       }));
     },
   });
@@ -362,6 +363,21 @@ function AdminPage() {
                             <GrantPlanDialog user={u} />
                             {!u.is_admin && !((u as any).is_reseller) && (
                               <ConvertToResellerDialog user={u} onDone={() => usersQ.refetch()} />
+                            )}
+                            {((u as any).is_reseller) && (
+                              <EditResellerDialog 
+                                reseller={{
+                                  id: u.id,
+                                  email: u.email,
+                                  full_name: u.full_name,
+                                  created_at: u.created_at,
+                                  credits: (u as any).credits || 0,
+                                  sub_reseller_count: 0,
+                                  client_count: 0,
+                                  last_activity_at: null
+                                }} 
+                                onDone={() => usersQ.refetch()} 
+                              />
                             )}
                             <Button size="sm" variant={u.is_admin ? "outline" : "default"} onClick={() => toggleAdmin.mutate({ userId: u.id, makeAdmin: !u.is_admin })}>
                               {u.is_admin ? "Remover admin" : "Tornar admin"}
