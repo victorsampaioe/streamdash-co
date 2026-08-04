@@ -7,23 +7,15 @@ export async function createSubResellerInternal(
   phone: string
 ) {
   // 1. Verify creator has an active subscription
-  const { data: sub, error: subError } = await supabaseAdmin
-    .from("subscriptions")
-    .select("status, expires_at")
-    .eq("user_id", creatorId)
-    .single();
-
-  if (subError || !sub) {
-    throw new Error("Você precisa ter uma assinatura ativa para criar sub-revendedores.");
+  // Use public function to check activity
+  const { data: creatorActive, error: activityError } = await supabaseAdmin.rpc("subscription_is_active", { _user_id: creatorId });
+  
+  if (activityError) {
+    console.error("Error checking activity:", activityError);
   }
 
-  const isTrial = sub.status === "trial";
-  const isActive = sub.status === "active";
-  const now = new Date();
-  const expiresAt = new Date(sub.expires_at);
-
-  if (!((isTrial || isActive) && expiresAt > now)) {
-    throw new Error("Sua assinatura expirou. Renove para criar sub-revendedores.");
+  if (!creatorActive) {
+    throw new Error("Você precisa ter uma assinatura ativa para criar sub-revendedores.");
   }
 
   // 2. Get creator's referral code
@@ -61,21 +53,17 @@ export async function createSubResellerInternal(
 
   const userId = newUser.user.id;
 
-  // 4. Update the new user's profile with the trial and referrer
-  // The 'profiles' trigger might have already created the profile, so we use upsert or update
-  const { error: updateProfileError } = await supabaseAdmin
+  // The 'handle_new_user' trigger will have already created the profile and recorded the referral
+  // since we passed 'referral_code' in user_metadata.
+
+  // 4. Mark trial as used and ensure phone is set correctly
+  await supabaseAdmin
     .from("profiles")
     .update({
-      full_name: fullName,
-      phone,
-      referred_by: creatorId,
-      signup_bonus_days: 1 // 1 day trial as requested
+      trial_used: true,
+      signup_bonus_days: 1
     })
     .eq("id", userId);
-
-  if (updateProfileError) {
-    console.error("Error updating profile:", updateProfileError);
-  }
 
   // 5. Create the subscription for the new user (1 day trial)
   const trialExpiresAt = new Date();
@@ -85,8 +73,8 @@ export async function createSubResellerInternal(
     .from("subscriptions")
     .upsert({
       user_id: userId,
-      plan: "trial",
-      status: "trial",
+      plan: "trial" as any,
+      status: "trial" as any,
       expires_at: trialExpiresAt.toISOString()
     });
 
@@ -94,19 +82,11 @@ export async function createSubResellerInternal(
     console.error("Error creating subscription:", createSubError);
   }
 
-  // 6. Record the referral
-  const { error: referralError } = await supabaseAdmin
+  // 6. Update referral status to trial_active
+  await supabaseAdmin
     .from("referrals")
-    .insert({
-      referrer_id: creatorId,
-      referred_id: userId,
-      code_used: creatorProfile.referral_code,
-      status: "trial_active"
-    });
-
-  if (referralError) {
-    console.error("Error recording referral:", referralError);
-  }
+    .update({ status: "trial_active" })
+    .eq("referred_id", userId);
 
   return { 
     id: userId, 
