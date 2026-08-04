@@ -50,6 +50,7 @@ import { createPixPayment } from "@/lib/mercadopago.functions";
 import { CreateResellerDialog } from "@/components/reseller/create-reseller-dialog";
 import { useSubscription } from "@/hooks/use-subscription";
 
+
 export const Route = createFileRoute("/_authenticated/app/reseller")({
   head: () => ({
     meta: [
@@ -352,7 +353,7 @@ function ResellerDashboard() {
                         <div className="text-sm font-medium">{item.description || "Movimentação de crédito"}</div>
                         <div className="text-xs text-muted-foreground">{new Date(item.created_at).toLocaleDateString("pt-BR")}</div>
                       </div>
-                      <div className={cn(
+                      <div className={localCn(
                         "font-bold text-sm",
                         item.amount > 0 ? "text-success" : "text-destructive"
                       )}>
@@ -653,6 +654,6 @@ function ResellerDashboard() {
   }
 }
 
-function cn(...classes: any[]) {
+function localCn(...classes: any[]) {
   return classes.filter(Boolean).join(" ");
 }
