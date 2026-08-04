@@ -16,6 +16,20 @@ export const createPixPayment = createServerFn({ method: "POST" })
       amountCents = effectivePriceCents(standardPlan);
       description = `StreamMonitor — Plano ${standardPlan.name}`;
     } else if (planId.startsWith("credits_")) {
+      // BACKEND VALIDATION: Only active non-trial users can buy credits.
+      const { data: sub } = await context.supabase
+        .from("subscriptions")
+        .select("*")
+        .eq("user_id", context.userId)
+        .maybeSingle();
+
+      const now = new Date();
+      const isActive = sub && sub.status === "active" && new Date(sub.expires_at) > now;
+
+      if (!isActive) {
+        throw new Error("⚠️ Sua conta precisa estar ativa (plano oficial pago) para comprar créditos.");
+      }
+
       const packs: Record<string, { price: number; label: string }> = {
         credits_10: { price: 12000, label: "10 créditos" },
         credits_30: { price: 30000, label: "30 créditos" },
