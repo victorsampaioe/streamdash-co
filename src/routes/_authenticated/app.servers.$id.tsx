@@ -62,8 +62,9 @@ function ServerDetail() {
         supabase
           .from("servers")
           .select(
-            "id, name, description, category, current_status, last_latency_ms, last_checked_at, ssl_days_remaining, consecutive_failures, health_score, dns_health_score, interval_seconds, failure_threshold, is_public, public_slug, iptv_detected, iptv_mode, iptv_interval_minutes, iptv_sample_size, iptv_stream_tests, dns_enabled, kuma_enabled, created_at",
+            "id, name, description, category, server_group, current_status, last_latency_ms, last_checked_at, ssl_days_remaining, consecutive_failures, health_score, dns_health_score, interval_seconds, failure_threshold, is_public, public_slug, iptv_detected, iptv_mode, iptv_interval_minutes, iptv_sample_size, iptv_stream_tests, dns_enabled, kuma_enabled, created_at",
           )
+
           .eq("id", id)
           .maybeSingle(),
         supabase.from("servers").select("id").eq("id", id).not("iptv_username", "is", null).maybeSingle(),
@@ -124,13 +125,18 @@ function ServerDetail() {
   });
 
   const updateConfig = useMutation({
-    mutationFn: async (patch: { interval_seconds?: number; failure_threshold?: number }) => {
+    mutationFn: async (patch: { interval_seconds?: number; failure_threshold?: number; server_group?: string | null }) => {
       const { error } = await supabase.from("servers").update(patch).eq("id", id);
       if (error) throw error;
     },
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ["server", id] }); toast.success("Configuração salva"); },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["server", id] });
+      qc.invalidateQueries({ queryKey: ["correlation-overview", id] });
+      toast.success("Configuração salva");
+    },
     onError: (e: Error) => toast.error(e.message),
   });
+
 
   const del = useMutation({
     mutationFn: async () => {
