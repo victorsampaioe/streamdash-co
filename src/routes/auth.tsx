@@ -128,19 +128,10 @@ function AuthPage() {
                 <Field label="Telefone"><Input type="tel" required value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="(11) 99999-9999" /></Field>
                 <Field label="E-mail"><Input type="email" required value={email} onChange={(e) => setEmail(e.target.value)} /></Field>
                 <Field label="Senha"><Input type="password" required minLength={6} value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Mín. 6 caracteres" /></Field>
-                <Field label="Código de indicação (opcional)">
-                  <Input
-                    value={referralCode}
-                    onChange={(e) => setReferralCode(e.target.value.toUpperCase())}
-                    placeholder="Ex.: ABC12345"
-                    maxLength={12}
-                    readOnly={!!ref}
-                    className={ref ? "bg-muted/50 cursor-not-allowed" : ""}
-                  />
-                </Field>
+                {/* Referral code field removed as per request */}
                 <p className="text-xs text-muted-foreground">
-                  🔑 Com um código de indicação válido você ganha <strong>1 dia de teste grátis</strong>.
-                  Sem código, a conta é criada normalmente, mas o acesso só é liberado
+                  🔑 Com um código de indicação válido (identificado automaticamente via link) você ganha <strong>1 dia de teste grátis</strong>.
+                  Caso contrário, a conta é criada normalmente, mas o acesso só é liberado
                   <strong> após o pagamento</strong> do plano oficial do Stream Monitor.
                 </p>
 
