@@ -224,7 +224,7 @@ function ResellerDashboard() {
         )}>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium flex items-center justify-between">
-              Créditos Disponíveis
+              Créditos Disponíveis {isAdmin && " (∞)"}
               <Wallet className={cn("h-4 w-4", stats?.credits === 0 ? "text-destructive" : "text-primary")} />
             </CardTitle>
           </CardHeader>
@@ -335,7 +335,7 @@ function ResellerDashboard() {
                             "border-transparent",
                             user.credits > 0 ? "bg-success/10 text-success border-success/20" : "bg-destructive/10 text-destructive border-destructive/20"
                           )}>
-                            {user.credits > 0 ? "Ativo" : "Sem Saldo"}
+                            {isAdmin ? "Admin" : (user.credits > 0 ? "Ativo" : "Sem Saldo")}
                           </Badge>
                         </div>
                       </div>
