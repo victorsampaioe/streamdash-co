@@ -2166,6 +2166,7 @@ export type Database = {
           referred_by: string | null
           signup_bonus_days: number
           trial_used: boolean
+          whatsapp: string | null
         }
         Insert: {
           avatar_url?: string | null
@@ -2181,6 +2182,7 @@ export type Database = {
           referred_by?: string | null
           signup_bonus_days?: number
           trial_used?: boolean
+          whatsapp?: string | null
         }
         Update: {
           avatar_url?: string | null
@@ -2196,6 +2198,7 @@ export type Database = {
           referred_by?: string | null
           signup_bonus_days?: number
           trial_used?: boolean
+          whatsapp?: string | null
         }
         Relationships: [
           {
