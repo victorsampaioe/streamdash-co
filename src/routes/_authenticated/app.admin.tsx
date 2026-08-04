@@ -32,10 +32,11 @@ import { cn } from "@/lib/utils";
 import { broadcastTelegram } from "@/lib/telegram-broadcast.functions";
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { UserCog, History, PlusCircle } from "lucide-react";
+import { UserCog, History, PlusCircle, UserCheck } from "lucide-react";
 
 import { StorageReportCard } from "@/components/storage-report-card";
-import { AlertCircle } from "lucide-react";
+import { AlertCircle, UserRoundCog } from "lucide-react";
+import { convertToReseller } from "@/lib/reseller-conversion.functions";
 
 
 export const Route = createFileRoute("/_authenticated/app/admin")({
@@ -350,6 +351,9 @@ function AdminPage() {
                         <td className="p-3 text-right">
                           <div className="flex justify-end gap-2">
                             <GrantPlanDialog user={u} />
+                            {!u.is_admin && !((u as any).is_reseller) && (
+                              <ConvertToResellerDialog user={u} onDone={() => usersQ.refetch()} />
+                            )}
                             <Button size="sm" variant={u.is_admin ? "outline" : "default"} onClick={() => toggleAdmin.mutate({ userId: u.id, makeAdmin: !u.is_admin })}>
                               {u.is_admin ? "Remover admin" : "Tornar admin"}
                             </Button>
