@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
@@ -32,6 +32,7 @@ import { cn } from "@/lib/utils";
 import { broadcastTelegram } from "@/lib/telegram-broadcast.functions";
 import { adminListPayoutRequests, adminApprovePayout, adminMarkPayoutPaid, adminRejectPayout } from "@/lib/referrals.functions";
 import { StorageReportCard } from "@/components/storage-report-card";
+import { AlertCircle } from "lucide-react";
 
 
 export const Route = createFileRoute("/_authenticated/app/admin")({
@@ -82,8 +83,6 @@ type StatsRow = {
 
 type FilterKey = "all" | "paid" | "trial" | "expired" | "admin";
 
-import { useNavigate } from "@tanstack/react-router";
-
 function AdminPage() {
   const navigate = useNavigate();
   const qc = useQueryClient();
@@ -104,6 +103,19 @@ function AdminPage() {
 
   if (adminCheckQ.isLoading) {
     return <div className="p-8 text-center text-muted-foreground animate-pulse">Verificando permissões...</div>;
+  }
+
+  if (adminCheckQ.isError) {
+    return (
+      <div className="flex flex-col items-center justify-center p-12 text-center space-y-4">
+        <AlertCircle className="h-12 w-12 text-destructive" />
+        <h1 className="text-xl font-bold">Erro ao verificar permissões</h1>
+        <p className="text-muted-foreground max-w-sm">
+          {adminCheckQ.error instanceof Error ? adminCheckQ.error.message : "Não foi possível confirmar seu acesso administrativo."}
+        </p>
+        <Button onClick={() => adminCheckQ.refetch()}>Tentar novamente</Button>
+      </div>
+    );
   }
 
   if (adminCheckQ.data === false) {
