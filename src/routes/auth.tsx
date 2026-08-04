@@ -11,7 +11,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Activity } from "lucide-react";
 import { toast } from "sonner";
 
-const searchSchema = z.object({ redirect: z.string().optional(), ref: z.string().optional() }).partial();
+const searchSchema = z.object({ redirect: z.string().optional() }).partial();
 
 export const Route = createFileRoute("/auth")({
   validateSearch: searchSchema,
