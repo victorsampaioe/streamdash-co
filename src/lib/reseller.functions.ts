@@ -29,7 +29,7 @@ export const getParentResellerPlans = createServerFn({ method: "GET" })
       .from("profiles")
       .select("parent_id")
       .eq("id", context.userId)
-      .single();
+      .maybeSingle();
 
     if (!profile?.parent_id) return [];
 

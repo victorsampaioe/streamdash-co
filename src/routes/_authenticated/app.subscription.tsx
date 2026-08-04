@@ -164,7 +164,15 @@ function SubscriptionPage() {
                             {formatBRL(plan.price_cents)}
                             <span className="text-sm text-muted-foreground font-normal"> / {plan.duration_days} dias</span>
                           </div>
-                          <Button className="w-full" variant="outline" onClick={() => toast.info("Para renovar este plano personalizado, entre em contato diretamente com seu revendedor.")}>
+                          <Button 
+                            className="w-full" 
+                            variant="outline" 
+                            onClick={() => {
+                              const phone = data?.profile?.phone || "";
+                              const message = `Olá, gostaria de renovar meu plano "${plan.name}" (${plan.duration_days} dias) no valor de ${formatBRL(plan.price_cents)}.`;
+                              window.open(`https://wa.me/${phone.replace(/\D/g, '')}?text=${encodeURIComponent(message)}`, '_blank');
+                            }}
+                          >
                             <CreditCard className="h-4 w-4 mr-2" />
                             Contatar Revendedor
                           </Button>

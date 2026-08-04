@@ -128,7 +128,9 @@ export function CreateResellerDialog({ open, onOpenChange, onDone, isReseller = 
                   type="number"
                   min={10}
                   value={initialCredits} 
-                  onChange={(e) => setInitialCredits(Math.max(1, parseInt(e.target.value) || 0))} 
+                  onChange={(e) => setInitialCredits(parseInt(e.target.value) || 0)} 
+
+
                   placeholder="Mínimo 10 créditos"
                 />
                 <p className="text-[10px] text-muted-foreground">

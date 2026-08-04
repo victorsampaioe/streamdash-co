@@ -8,10 +8,10 @@ export async function createSubResellerInternal(
   isReseller: boolean = true,
   initialCredits: number = 10
 ) {
-  // 1. Verify creator has an active subscription and credits
+  // 1. Verify creator has credits and active subscription
   const { data: creatorProfile, error: profileError } = await supabaseAdmin
     .from("profiles")
-    .select("id, referral_code, credits")
+    .select("id, referral_code, credits, is_reseller")
     .eq("id", creatorId)
     .single();
 
@@ -19,19 +19,23 @@ export async function createSubResellerInternal(
     throw new Error("Erro ao obter seu perfil.");
   }
 
-  if (isReseller && (creatorProfile.credits || 0) < initialCredits) {
-    throw new Error(`Você não possui créditos suficientes (${initialCredits}) para criar uma nova revenda com este valor inicial. Adquira mais créditos para continuar.`);
+  // A reseller must have at least 10 credits to create another reseller
+  const minCredits = isReseller ? initialCredits : 0;
+  if (isReseller && (creatorProfile.credits || 0) < minCredits) {
+    throw new Error(`Você não possui créditos suficientes (${minCredits}) para criar uma nova revenda. Mínimo 10.`);
   }
 
-  // 1b. Verify creator has an active subscription
-  const { data: creatorActive, error: activityError } = await supabaseAdmin.rpc("subscription_is_active", { _user_id: creatorId });
-  
-  if (activityError) {
-    console.error("Error checking activity:", activityError);
-  }
+  // Verify creator has an active subscription or is admin
+  const { data: isAdmin } = await supabaseAdmin.rpc("has_role", {
+    _user_id: creatorId,
+    _role: "admin",
+  });
 
-  if (!creatorActive) {
-    throw new Error("Você precisa ter uma assinatura ativa para criar sub-revendedores.");
+  if (!isAdmin) {
+    const { data: creatorActive, error: activityError } = await supabaseAdmin.rpc("subscription_is_active", { _user_id: creatorId });
+    if (!creatorActive) {
+      throw new Error("Sua conta precisa estar ativa para criar revendedores ou clientes.");
+    }
   }
 
   if (!creatorProfile.referral_code) {
@@ -39,7 +43,6 @@ export async function createSubResellerInternal(
   }
 
   // 3. Create the new user in Auth
-  // We'll generate a random temporary password
   const tempPassword = Math.random().toString(36).slice(-12) + "!";
   
   const { data: newUser, error: authError } = await supabaseAdmin.auth.admin.createUser({
@@ -63,12 +66,12 @@ export async function createSubResellerInternal(
 
   const userId = newUser.user.id;
 
-  // 4. Mark trial as used, set parent_id, credits and role
+  // 4. Setup profile
   await supabaseAdmin
     .from("profiles")
     .update({
       trial_used: true,
-      signup_bonus_days: 1,
+      signup_bonus_days: 1, // 1 day trial as requested
       parent_id: creatorId,
       is_reseller: isReseller,
       credits: isReseller ? initialCredits : 0
@@ -97,19 +100,17 @@ export async function createSubResellerInternal(
         {
           user_id: userId,
           amount: initialCredits,
-          type: 'purchase', // or maybe 'transfer' type if we had it, using purchase for now to show as income
+          type: 'purchase',
           description: `Créditos iniciais recebidos de ${creatorProfile.referral_code}`
         }
       ]);
   }
 
-  // 5. Create the subscription for the new user (1 day trial)
-  // If isReseller is true, it's a sub-reseller account.
-  // If isReseller is false, it's a client account.
+  // 5. Create the subscription (1 day trial)
   const trialExpiresAt = new Date();
   trialExpiresAt.setDate(trialExpiresAt.getDate() + 1);
 
-  const { error: createSubError } = await supabaseAdmin
+  await supabaseAdmin
     .from("subscriptions")
     .upsert({
       user_id: userId,
@@ -117,16 +118,6 @@ export async function createSubResellerInternal(
       status: "trial" as any,
       expires_at: trialExpiresAt.toISOString()
     });
-
-  if (createSubError) {
-    console.error("Error creating subscription:", createSubError);
-  }
-
-  // 6. Update referral status to trial_active
-  await supabaseAdmin
-    .from("referrals")
-    .update({ status: "trial_active" } as any)
-    .eq("referred_id", userId);
 
   return { 
     id: userId, 
