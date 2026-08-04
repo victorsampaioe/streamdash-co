@@ -33,6 +33,12 @@ function SubscriptionPage() {
   const { data, isLoading, refetch } = useSubscription();
   const [openPlan, setOpenPlan] = useState<PlanId | null>(null);
   const [pix, setPix] = useState<any>(null);
+  const getParentPlans = useServerFn(getParentResellerPlans);
+  const { data: parentPlans } = useQuery({ 
+    queryKey: ["parent-plans", data?.parentId], 
+    queryFn: () => getParentPlans(),
+    enabled: !!data?.parentId
+  });
   const [paymentError, setPaymentError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const createPix = useServerFn(createPixPayment);
