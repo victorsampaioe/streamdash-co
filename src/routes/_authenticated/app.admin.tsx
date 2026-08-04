@@ -82,10 +82,35 @@ type StatsRow = {
 
 type FilterKey = "all" | "paid" | "trial" | "expired" | "admin";
 
+import { useNavigate } from "@tanstack/react-router";
+
 function AdminPage() {
+  const navigate = useNavigate();
   const qc = useQueryClient();
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState<FilterKey>("all");
+
+  // Check admin role explicitly before anything else
+  const adminCheckQ = useQuery({
+    queryKey: ["is-admin"],
+    queryFn: async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return false;
+      const { data, error } = await supabase.rpc("has_role", { _user_id: user.id, _role: "admin" });
+      if (error) throw error;
+      return !!data;
+    },
+  });
+
+  if (adminCheckQ.isLoading) {
+    return <div className="p-8 text-center text-muted-foreground animate-pulse">Verificando permissões...</div>;
+  }
+
+  if (adminCheckQ.data === false) {
+    navigate({ to: "/app" });
+    return null;
+  }
+
 
   const statsQ = useQuery({
     queryKey: ["admin-stats"],
