@@ -31,9 +31,9 @@ export const createPixPayment = createServerFn({ method: "POST" })
       }
 
       const packs: Record<string, { price: number; label: string }> = {
-        credits_10: { price: 12000, label: "10 créditos" },
-        credits_30: { price: 30000, label: "30 créditos" },
-        credits_50: { price: 40000, label: "50 créditos" },
+        credits_10: { price: 10000, label: "10 créditos" },
+        credits_30: { price: 27000, label: "30 créditos" },
+        credits_40: { price: 35000, label: "40 créditos" },
       };
       const pack = packs[planId];
       if (!pack) throw new Error("Pacote de créditos inválido");
