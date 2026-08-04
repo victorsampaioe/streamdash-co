@@ -108,6 +108,7 @@ function AdminPage() {
 
   const statsQ = useQuery({
     queryKey: ["admin-stats"],
+    enabled: isAdmin,
     retry: 1,
     queryFn: async () => {
       const { data, error } = await supabase.rpc("get_admin_stats");
