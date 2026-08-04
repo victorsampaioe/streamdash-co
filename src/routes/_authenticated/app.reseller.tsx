@@ -38,6 +38,11 @@ import {
   updateResellerClient, 
   deleteResellerClient 
 } from "@/lib/reseller-manage.functions";
+import {
+  getSubResellerDetails,
+  updateSubReseller,
+  getSubResellerClients
+} from "@/lib/reseller-network.functions";
 import { formatBRL, type PlanId } from "@/lib/payments";
 import { useState } from "react";
 import { 
@@ -89,7 +94,7 @@ function ResellerDashboard() {
   const getClientDetailsFn = useServerFn(getClientDetails);
 
   const { data: stats } = useQuery({ queryKey: ["reseller-stats"], queryFn: () => getStats() });
-  const { data: network } = useQuery({ queryKey: ["reseller-network"], queryFn: () => getNetwork() });
+  const { data: network, refetch: refetchNetwork } = useQuery({ queryKey: ["reseller-network"], queryFn: () => getNetwork() });
   const { data: history } = useQuery({ queryKey: ["reseller-history"], queryFn: () => getHistory() });
   const { data: plans } = useQuery({ queryKey: ["reseller-plans"], queryFn: () => getPlans() });
   const { data: subData } = useSubscription();
@@ -308,18 +313,19 @@ function ResellerDashboard() {
                           <div className="font-bold text-base font-mono">{user.credits} <span className="text-[10px] font-normal text-muted-foreground">créd.</span></div>
                         </div>
                         <div className="flex items-center gap-2">
-                          <Button 
-                            size="sm" 
-                            variant="secondary" 
-                            className="h-8"
-                            onClick={() => {
-                              setSelectedRecipient(user);
-                              setTransferDialogOpen(true);
+                          <ManageSubResellerDialog
+                            userId={user.id}
+                            onDone={() => {
+                              qc.invalidateQueries({ queryKey: ["reseller-network"] });
+                              qc.invalidateQueries({ queryKey: ["reseller-stats"] });
                             }}
-                          >
-                            <Plus className="h-4 w-4 mr-1" /> Enviar
-                          </Button>
-                          <Badge variant="outline" className="bg-success/10 text-success border-success/20">Ativo</Badge>
+                          />
+                          <Badge variant="outline" className={cn(
+                            "border-transparent",
+                            user.credits > 0 ? "bg-success/10 text-success border-success/20" : "bg-destructive/10 text-destructive border-destructive/20"
+                          )}>
+                            {user.credits > 0 ? "Ativo" : "Sem Saldo"}
+                          </Badge>
                         </div>
                       </div>
                     </div>
@@ -866,7 +872,199 @@ function ManageClientDialog({
   );
 }
 
+
+function ManageSubResellerDialog({ 
+  userId, 
+  onDone 
+}: { 
+  userId: string; 
+  onDone: () => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [details, setDetails] = useState<any>(null);
+  const [clients, setClients] = useState<any[]>([]);
+  const [form, setForm] = useState({
+    fullName: "",
+    email: "",
+    password: "",
+    status: "active" as "active" | "expired" | "trial" | "cancelled"
+  });
+  const [creditsToAdd, setCreditsToAdd] = useState("");
+  const [creditsToRemove, setCreditsToRemove] = useState("");
+
+  const getDetailsFn = useServerFn(getSubResellerDetails);
+  const updateFn = useServerFn(updateSubReseller);
+  const getClientsFn = useServerFn(getSubResellerClients);
+
+  const fetchAll = async () => {
+    setLoading(true);
+    try {
+      const [d, c] = await Promise.all([
+        getDetailsFn({ data: { userId } }),
+        getClientsFn({ data: { userId } })
+      ]);
+      setDetails(d);
+      setClients(c);
+      setForm({
+        fullName: d.full_name || "",
+        email: d.email || "",
+        password: "",
+        status: d.subscription?.status || "active"
+      });
+    } catch (e: any) {
+      toast.error(e.message);
+      setOpen(false);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const updateMut = useMutation({
+    mutationFn: (data: any) => updateFn({ data: { ...data, userId } }),
+    onSuccess: () => {
+      toast.success("Revendedor atualizado!");
+      onDone();
+      setOpen(false);
+    },
+    onError: (e: any) => toast.error(e.message)
+  });
+
+  const handleCredits = (type: 'add' | 'remove') => {
+    const amount = type === 'add' ? parseInt(creditsToAdd) : -parseInt(creditsToRemove);
+    if (isNaN(amount) || amount === 0) return;
+    
+    updateMut.mutate({ creditsChange: amount });
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={(v) => {
+      setOpen(v);
+      if (v) fetchAll();
+    }}>
+      <DialogTrigger asChild>
+        <Button size="sm" variant="ghost" className="h-8 w-8 p-0">
+          <Settings className="h-4 w-4" />
+        </Button>
+      </DialogTrigger>
+      <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>Gerenciar Sub-Revendedor</DialogTitle>
+          <DialogDescription>
+            Ações e configurações para {details?.full_name || "este revendedor"}.
+          </DialogDescription>
+        </DialogHeader>
+
+        {loading ? (
+          <div className="py-8 text-center text-muted-foreground animate-pulse">Carregando dados...</div>
+        ) : details && (
+          <Tabs defaultValue="edit" className="w-full">
+            <TabsList className="grid w-full grid-cols-4">
+              <TabsTrigger value="edit">✏️ Editar</TabsTrigger>
+              <TabsTrigger value="credits">💳 Créditos</TabsTrigger>
+              <TabsTrigger value="clients">👥 Clientes</TabsTrigger>
+              <TabsTrigger value="config">⚙️ Config</TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="edit" className="space-y-4 py-4">
+              <div className="space-y-2">
+                <Label>Nome Completo</Label>
+                <Input value={form.fullName} onChange={(e) => setForm({ ...form, fullName: e.target.value })} />
+              </div>
+              <div className="space-y-2">
+                <Label>E-mail</Label>
+                <Input value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} />
+              </div>
+              <Button className="w-full" onClick={() => updateMut.mutate({ fullName: form.fullName, email: form.email })} disabled={updateMut.isPending}>
+                Salvar Alterações
+              </Button>
+            </TabsContent>
+
+            <TabsContent value="credits" className="space-y-4 py-4">
+              <div className="bg-muted/50 p-4 rounded-lg flex items-center justify-between">
+                <div>
+                  <span className="text-xs text-muted-foreground block uppercase">Saldo Atual</span>
+                  <span className="text-2xl font-bold font-mono">{details.credits} <span className="text-sm font-normal text-muted-foreground">créditos</span></span>
+                </div>
+                <Wallet className="h-8 w-8 text-primary/20" />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Adicionar</Label>
+                  <div className="flex gap-2">
+                    <Input type="number" value={creditsToAdd} onChange={(e) => setCreditsToAdd(e.target.value)} placeholder="0" />
+                    <Button size="sm" onClick={() => handleCredits('add')} disabled={updateMut.isPending || !creditsToAdd}>OK</Button>
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label>Remover</Label>
+                  <div className="flex gap-2">
+                    <Input type="number" value={creditsToRemove} onChange={(e) => setCreditsToRemove(e.target.value)} placeholder="0" />
+                    <Button size="sm" variant="outline" onClick={() => handleCredits('remove')} disabled={updateMut.isPending || !creditsToRemove}>OK</Button>
+                  </div>
+                </div>
+              </div>
+              <p className="text-[10px] text-muted-foreground italic text-center">
+                * As movimentações serão registradas no histórico de ambos.
+              </p>
+            </TabsContent>
+
+            <TabsContent value="clients" className="space-y-4 py-4">
+              <div className="flex items-center justify-between mb-2">
+                <h3 className="text-sm font-semibold">Clientes deste Revendedor ({clients.length})</h3>
+              </div>
+              {clients.length === 0 ? (
+                <p className="text-xs text-muted-foreground py-4 text-center border rounded-lg border-dashed">Nenhum cliente cadastrado por este revendedor.</p>
+              ) : (
+                <div className="space-y-2 max-h-[250px] overflow-y-auto pr-1 custom-scrollbar">
+                  {clients.map((c: any) => (
+                    <div key={c.id} className="flex items-center justify-between p-2 border rounded-md text-xs">
+                      <div>
+                        <p className="font-medium">{c.full_name}</p>
+                        <p className="text-muted-foreground">{c.email}</p>
+                      </div>
+                      <Badge variant="outline" className="text-[9px]">Cliente</Badge>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </TabsContent>
+
+            <TabsContent value="config" className="space-y-4 py-4">
+              <div className="space-y-2">
+                <Label>Alterar Senha</Label>
+                <Input type="password" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} placeholder="Nova senha" />
+                <Button size="sm" variant="secondary" className="w-full" onClick={() => updateMut.mutate({ password: form.password })} disabled={!form.password || updateMut.isPending}>
+                  Redefinir Senha
+                </Button>
+              </div>
+              
+              <div className="space-y-2 pt-4 border-t">
+                <Label>Status da Conta</Label>
+                <div className="flex gap-2">
+                  <select 
+                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                    value={form.status}
+                    onChange={(e) => setForm({ ...form, status: e.target.value as any })}
+                  >
+                    <option value="active">Ativa</option>
+                    <option value="expired">Expirada</option>
+                    <option value="cancelled">Cancelada</option>
+                  </select>
+                  <Button onClick={() => updateMut.mutate({ status: form.status })} disabled={updateMut.isPending}>Aplicar</Button>
+                </div>
+              </div>
+            </TabsContent>
+          </Tabs>
+        )}
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 function localCn(...classes: any[]) {
   return classes.filter(Boolean).join(" ");
 }
+
 
