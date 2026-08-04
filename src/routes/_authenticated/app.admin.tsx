@@ -101,31 +101,14 @@ function AdminPage() {
     },
   });
 
-  if (adminCheckQ.isLoading) {
-    return <div className="p-8 text-center text-muted-foreground animate-pulse">Verificando permissões...</div>;
-  }
+  const isAdmin = adminCheckQ.data === true;
 
-  if (adminCheckQ.isError) {
-    return (
-      <div className="flex flex-col items-center justify-center p-12 text-center space-y-4">
-        <AlertCircle className="h-12 w-12 text-destructive" />
-        <h1 className="text-xl font-bold">Erro ao verificar permissões</h1>
-        <p className="text-muted-foreground max-w-sm">
-          {adminCheckQ.error instanceof Error ? adminCheckQ.error.message : "Não foi possível confirmar seu acesso administrativo."}
-        </p>
-        <Button onClick={() => adminCheckQ.refetch()}>Tentar novamente</Button>
-      </div>
-    );
-  }
 
-  if (adminCheckQ.data === false) {
-    navigate({ to: "/app" });
-    return null;
-  }
 
 
   const statsQ = useQuery({
     queryKey: ["admin-stats"],
+    enabled: isAdmin,
     retry: 1,
     queryFn: async () => {
       const { data, error } = await supabase.rpc("get_admin_stats");
@@ -139,6 +122,7 @@ function AdminPage() {
 
   const usersQ = useQuery({
     queryKey: ["admin-users"],
+    enabled: isAdmin,
     retry: 1,
     queryFn: async () => {
       const { data, error } = await supabase.rpc("get_admin_users");
@@ -185,6 +169,36 @@ function AdminPage() {
       return true;
     });
   }, [users, filter, search]);
+
+  if (adminCheckQ.isLoading) {
+    return <div className="p-8 text-center text-muted-foreground animate-pulse">Verificando permissões...</div>;
+  }
+
+  if (adminCheckQ.isError) {
+    return (
+      <div className="flex flex-col items-center justify-center p-12 text-center space-y-4">
+        <AlertCircle className="h-12 w-12 text-destructive" />
+        <h1 className="text-xl font-bold">Erro ao verificar permissões</h1>
+        <p className="text-muted-foreground max-w-sm">
+          {adminCheckQ.error instanceof Error ? adminCheckQ.error.message : "Não foi possível confirmar seu acesso administrativo."}
+        </p>
+        <Button onClick={() => adminCheckQ.refetch()}>Tentar novamente</Button>
+      </div>
+    );
+  }
+
+  if (!isAdmin) {
+    return (
+      <div className="flex flex-col items-center justify-center p-12 text-center space-y-4">
+        <AlertCircle className="h-12 w-12 text-muted-foreground" />
+        <h1 className="text-xl font-bold">Acesso restrito</h1>
+        <p className="text-muted-foreground">Esta área é exclusiva para administradores.</p>
+        <Button onClick={() => navigate({ to: "/app" })}>Voltar ao painel</Button>
+      </div>
+    );
+  }
+
+
 
   return (
     <div className="space-y-6">
