@@ -16,13 +16,13 @@ export async function createSubResellerInternal(
     .single();
 
   if (profileError || !creatorProfile) {
-    throw new Error("Erro ao obter seu perfil.");
+    throw new Error("Erro ao obter seu perfil. Verifique sua conta.");
   }
 
   // A reseller must have at least 10 credits to create another reseller
   const minCredits = isReseller ? initialCredits : 0;
   if (isReseller && (creatorProfile.credits || 0) < minCredits) {
-    throw new Error(`Você não possui créditos suficientes (${minCredits}) para criar uma nova revenda. Mínimo 10.`);
+    throw new Error(`Saldo insuficiente. Você precisa de no mínimo ${minCredits} créditos.`);
   }
 
   // Verify creator has an active subscription or is admin
@@ -32,14 +32,25 @@ export async function createSubResellerInternal(
   });
 
   if (!isAdmin) {
-    const { data: creatorActive, error: activityError } = await supabaseAdmin.rpc("subscription_is_active", { _user_id: creatorId });
+    const { data: creatorActive } = await supabaseAdmin.rpc("subscription_is_active", { _user_id: creatorId });
     if (!creatorActive) {
       throw new Error("Sua conta precisa estar ativa para criar revendedores ou clientes.");
     }
   }
 
   if (!creatorProfile.referral_code) {
-    throw new Error("Erro ao obter seu código de indicação.");
+    throw new Error("Seu código de indicação não foi encontrado. Contate o suporte.");
+  }
+
+  // 2. Pre-check for existing phone (Auth API doesn't always provide clear unique constraint errors)
+  const { data: existingPhone } = await supabaseAdmin
+    .from("profiles")
+    .select("id")
+    .eq("phone", phone)
+    .maybeSingle();
+  
+  if (existingPhone) {
+    throw new Error("Este número de telefone já está sendo utilizado.");
   }
 
   // 3. Create the new user in Auth
@@ -59,33 +70,70 @@ export async function createSubResellerInternal(
 
   if (authError) {
     if (authError.message.includes("already exists")) {
-      throw new Error("Este e-mail já está cadastrado.");
+      throw new Error("Este e-mail já está cadastrado no sistema.");
     }
-    throw new Error(`Erro ao criar usuário: ${authError.message}`);
+    if (authError.message.includes("phone")) {
+      throw new Error("Este número de telefone já está em uso.");
+    }
+    console.error("[createSubReseller] authError:", authError);
+    throw new Error(`Não foi possível criar o acesso: ${authError.message}`);
   }
 
   const userId = newUser.user.id;
 
-  // 4. Setup profile
-  await supabaseAdmin
-    .from("profiles")
-    .update({
+  // 4. Setup profile - Use a retry loop to ensure the trigger has finished creating the profile
+  let profileSet = false;
+  for (let i = 0; i < 5; i++) {
+    const { data, error } = await supabaseAdmin
+      .from("profiles")
+      .update({
+        trial_used: true,
+        signup_bonus_days: 1, 
+        parent_id: creatorId,
+        is_reseller: isReseller,
+        credits: isReseller ? initialCredits : 0
+      } as any)
+      .eq("id", userId)
+      .select();
+
+    if (!error && data && data.length > 0) {
+      profileSet = true;
+      break;
+    }
+    // Wait 200ms before retry
+    await new Promise(r => setTimeout(r, 200));
+  }
+
+  if (!profileSet) {
+    console.error("[createSubReseller] Failed to update profile after creation for user:", userId);
+    // Fallback: manually insert if trigger failed (unlikely but safe)
+    await supabaseAdmin.from("profiles").upsert({
+      id: userId,
+      email,
+      full_name: fullName,
+      phone,
+      referral_code: `TEMP-${Math.random().toString(36).slice(-6)}`,
+      referred_by: creatorId,
       trial_used: true,
-      signup_bonus_days: 1, // 1 day trial as requested
+      signup_bonus_days: 1,
       parent_id: creatorId,
       is_reseller: isReseller,
       credits: isReseller ? initialCredits : 0
-    } as any)
-    .eq("id", userId);
+    } as any);
+  }
 
   // Deduct credits from creator if creating a reseller
   if (isReseller) {
-    await supabaseAdmin
+    const { error: deductError } = await supabaseAdmin
       .from("profiles")
       .update({
         credits: (creatorProfile.credits || 0) - initialCredits
       } as any)
       .eq("id", creatorId);
+    
+    if (deductError) {
+      console.error("[createSubReseller] Failed to deduct credits:", deductError);
+    }
  
     // Log credit use
     await supabaseAdmin
