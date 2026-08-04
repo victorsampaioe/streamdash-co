@@ -383,12 +383,12 @@ type AdminReseller = {
   email: string | null;
   full_name: string | null;
   created_at: string;
-  is_admin: boolean;
   credits: number;
   sub_reseller_count: number;
-  last_activity: string | null;
-  is_active: boolean;
+  client_count: number;
+  last_activity_at: string | null;
 };
+
 
 function ResellerManagementSection() {
   const qc = useQueryClient();
