@@ -632,6 +632,68 @@ export type Database = {
           },
         ]
       }
+      dns_correlation_events: {
+        Row: {
+          confidence: number
+          created_at: string
+          failed_host: string | null
+          group_key: string
+          id: string
+          offline_count: number
+          online_count: number
+          owner_id: string
+          recovered_at: string | null
+          recovery_seconds: number | null
+          related: Json
+          server_id: string
+          summary: string | null
+          total_count: number
+          verdict: string
+        }
+        Insert: {
+          confidence?: number
+          created_at?: string
+          failed_host?: string | null
+          group_key: string
+          id?: string
+          offline_count?: number
+          online_count?: number
+          owner_id: string
+          recovered_at?: string | null
+          recovery_seconds?: number | null
+          related?: Json
+          server_id: string
+          summary?: string | null
+          total_count?: number
+          verdict: string
+        }
+        Update: {
+          confidence?: number
+          created_at?: string
+          failed_host?: string | null
+          group_key?: string
+          id?: string
+          offline_count?: number
+          online_count?: number
+          owner_id?: string
+          recovered_at?: string | null
+          recovery_seconds?: number | null
+          related?: Json
+          server_id?: string
+          summary?: string | null
+          total_count?: number
+          verdict?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "dns_correlation_events_server_id_fkey"
+            columns: ["server_id"]
+            isOneToOne: false
+            referencedRelation: "servers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       dns_ip_history: {
         Row: {
           changed_at: string
@@ -2540,6 +2602,7 @@ export type Database = {
           public_display_name: string | null
           public_dns_label: string | null
           public_slug: string | null
+          server_group: string | null
           show_on_reseller_page: boolean
           ssl_days_remaining: number | null
           updated_at: string
@@ -2588,6 +2651,7 @@ export type Database = {
           public_display_name?: string | null
           public_dns_label?: string | null
           public_slug?: string | null
+          server_group?: string | null
           show_on_reseller_page?: boolean
           ssl_days_remaining?: number | null
           updated_at?: string
@@ -2636,6 +2700,7 @@ export type Database = {
           public_display_name?: string | null
           public_dns_label?: string | null
           public_slug?: string | null
+          server_group?: string | null
           show_on_reseller_page?: boolean
           ssl_days_remaining?: number | null
           updated_at?: string
@@ -2887,6 +2952,7 @@ export type Database = {
           total_paid_cents: number
         }[]
       }
+      get_correlation_overview: { Args: { _server_id: string }; Returns: Json }
       get_iptv_ranking: {
         Args: { _limit?: number }
         Returns: {

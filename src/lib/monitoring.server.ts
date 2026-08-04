@@ -16,12 +16,14 @@ type ServerRow = {
   owner_id: string;
   name: string;
   host: string;
+  server_group?: string | null;
   interval_seconds: number;
   failure_threshold: number;
   current_status: string;
   consecutive_failures: number;
   last_checked_at: string | null;
 };
+
 
 export async function runCheckForServer(serverId: string) {
   const { data: server, error } = await supabaseAdmin
@@ -256,22 +258,32 @@ async function performCheck(server: ServerRow) {
       reason,
     }).select("id").single();
     if (inc) {
-      await sendAlerts(
-        server,
-        "down",
-        `${server.name} está OFFLINE (confirmado — ${confirmNote})\nMotivo: ${reason}`,
-        inc.id,
-      );
+      // DNS Correlation Intelligence: camada extra de diagnóstico (não altera o monitoramento).
+      let message = `${server.name} está OFFLINE (confirmado — ${confirmNote})\nMotivo: ${reason}`;
+      try {
+        const { analyzeCorrelation, recordCorrelationEvent, correlationMessage } = await import("./correlation.server");
+        const corr = await analyzeCorrelation(server as any);
+        await recordCorrelationEvent(server as any, corr);
+        message = correlationMessage(server, corr, reason, confirmNote);
+      } catch { /* correlação nunca deve bloquear o alerta */ }
+      await sendAlerts(server, "down", message, inc.id);
     }
   } else if (upConfirmed && openIncident) {
     await supabaseAdmin.from("incidents").update({ ended_at: new Date().toISOString() }).eq("id", openIncident.id);
+    let recovery = "";
+    try {
+      const { closeCorrelationEvent } = await import("./correlation.server");
+      const secs = await closeCorrelationEvent(server.id);
+      if (secs != null) recovery = `\nTempo até a recuperação: ${secs < 60 ? `${secs}s` : `${Math.round(secs / 60)}min`}`;
+    } catch { /* ignore */ }
     await sendAlerts(
       server,
       "up",
-      `${server.name} normalizado — estabilidade confirmada em ~1min (${final.latency}ms)`,
+      `${server.name} normalizado — estabilidade confirmada em ~1min (${final.latency}ms)${recovery}`,
       openIncident.id,
     );
   }
+
 
   return {
     status: displayStatus,

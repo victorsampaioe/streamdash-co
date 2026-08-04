@@ -27,6 +27,8 @@ import { MonitorBadge } from "@/components/monitor-badge";
 import { IptvPanel } from "@/components/iptv/iptv-panel";
 import { KumaPanel } from "@/components/kuma/kuma-panel";
 import { DnsPanel } from "@/components/dns/dns-panel";
+import { CorrelationPanel } from "@/components/dns/correlation-panel";
+
 
 
 export const Route = createFileRoute("/_authenticated/app/servers/$id")({
@@ -60,8 +62,9 @@ function ServerDetail() {
         supabase
           .from("servers")
           .select(
-            "id, name, description, category, current_status, last_latency_ms, last_checked_at, ssl_days_remaining, consecutive_failures, health_score, dns_health_score, interval_seconds, failure_threshold, is_public, public_slug, iptv_detected, iptv_mode, iptv_interval_minutes, iptv_sample_size, iptv_stream_tests, dns_enabled, kuma_enabled, created_at",
+            "id, name, description, category, server_group, current_status, last_latency_ms, last_checked_at, ssl_days_remaining, consecutive_failures, health_score, dns_health_score, interval_seconds, failure_threshold, is_public, public_slug, iptv_detected, iptv_mode, iptv_interval_minutes, iptv_sample_size, iptv_stream_tests, dns_enabled, kuma_enabled, created_at",
           )
+
           .eq("id", id)
           .maybeSingle(),
         supabase.from("servers").select("id").eq("id", id).not("iptv_username", "is", null).maybeSingle(),
@@ -122,13 +125,18 @@ function ServerDetail() {
   });
 
   const updateConfig = useMutation({
-    mutationFn: async (patch: { interval_seconds?: number; failure_threshold?: number }) => {
+    mutationFn: async (patch: { interval_seconds?: number; failure_threshold?: number; server_group?: string | null }) => {
       const { error } = await supabase.from("servers").update(patch).eq("id", id);
       if (error) throw error;
     },
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ["server", id] }); toast.success("Configuração salva"); },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["server", id] });
+      qc.invalidateQueries({ queryKey: ["correlation-overview", id] });
+      toast.success("Configuração salva");
+    },
     onError: (e: Error) => toast.error(e.message),
   });
+
 
   const del = useMutation({
     mutationFn: async () => {
@@ -202,9 +210,11 @@ function ServerDetail() {
           <TabsTrigger value="badge">Selo</TabsTrigger>
         </TabsList>
 
-        <TabsContent value="dns" className="mt-6">
+        <TabsContent value="dns" className="mt-6 space-y-5">
+          <CorrelationPanel serverId={id} />
           <DnsPanel serverId={id} />
         </TabsContent>
+
 
         <TabsContent value="kuma" className="mt-6">
           <KumaPanel serverId={id} />
@@ -229,7 +239,10 @@ function ServerDetail() {
             <UptimeSparkline checks={[...checks].slice(0, 40).reverse()} />
           </Card>
 
+          <CorrelationPanel serverId={id} />
+
           <GlobalCheckMap serverId={id} />
+
 
           <Card className="p-5">
             <h3 className="font-medium text-sm mb-4">Latência (últimas 200 verificações)</h3>
@@ -265,6 +278,14 @@ function ServerDetail() {
             </Card>
             <Card className="p-5 space-y-4">
               <h3 className="font-medium text-sm">Configuração</h3>
+              <div className="space-y-1.5">
+                <Label className="text-xs">Servidor (agrupamento)</Label>
+                <Input defaultValue={server.server_group ?? ""} placeholder="AURA"
+                  onBlur={(e) => { const v = e.target.value.trim(); if (v !== (server.server_group ?? "")) updateConfig.mutate({ server_group: v || null }); }} />
+                <p className="text-[11px] text-muted-foreground">
+                  Use o mesmo nome nas demais DNS deste servidor para ativar a correlação inteligente.
+                </p>
+              </div>
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1.5">
                   <Label className="text-xs">Intervalo (s)</Label>
@@ -277,6 +298,7 @@ function ServerDetail() {
                     onBlur={(e) => { const v = Number(e.target.value); if (v !== server.failure_threshold) updateConfig.mutate({ failure_threshold: v }); }} />
                 </div>
               </div>
+
               <div className="flex items-center justify-between pt-2 border-t border-border/60">
                 <div>
                   <div className="text-sm font-medium">Página pública</div>

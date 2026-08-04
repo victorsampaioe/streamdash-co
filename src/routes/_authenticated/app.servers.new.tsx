@@ -21,9 +21,11 @@ export const Route = createFileRoute("/_authenticated/app/servers/new")({
 const schema = z.object({
   name: z.string().trim().min(1, "Informe um nome").max(80),
   host: z.string().trim().min(3, "Informe um domínio ou IP").max(255),
+  server_group: z.string().trim().max(80).optional(),
   description: z.string().trim().max(500).optional(),
   is_public: z.boolean(),
 });
+
 
 function slugify(s: string) {
   return s.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "").slice(0, 60);
@@ -35,12 +37,13 @@ function NewServer() {
   const runAnalyze = useServerFn(analyzeServer);
   const [name, setName] = useState("");
   const [host, setHost] = useState("");
+  const [serverGroup, setServerGroup] = useState("");
   const [description, setDescription] = useState("");
   const [isPublic, setIsPublic] = useState(false);
 
   const create = useMutation({
     mutationFn: async () => {
-      const parsed = schema.parse({ name, host: host.replace(/^https?:\/\//i, "").replace(/\/.*$/, ""), description, is_public: isPublic });
+      const parsed = schema.parse({ name, host: host.replace(/^https?:\/\//i, "").replace(/\/.*$/, ""), server_group: serverGroup, description, is_public: isPublic });
       const { data: userRes } = await supabase.auth.getUser();
       if (!userRes.user) throw new Error("Não autenticado");
       const slug = isPublic ? `${slugify(parsed.name)}-${Math.random().toString(36).slice(2, 6)}` : null;
@@ -48,10 +51,12 @@ function NewServer() {
         owner_id: userRes.user.id,
         name: parsed.name,
         host: parsed.host,
+        server_group: parsed.server_group || null,
         description: parsed.description ?? null,
         is_public: parsed.is_public,
         public_slug: slug,
       }).select("id").single();
+
       if (error) throw error;
       return data.id as string;
     },
@@ -83,6 +88,14 @@ function NewServer() {
             <Input value={host} onChange={(e) => setHost(e.target.value)} placeholder="api.exemplo.com" required className="font-mono" />
             <p className="text-xs text-muted-foreground">Somente o host, sem <code>http://</code> ou porta.</p>
           </div>
+          <div className="space-y-2">
+            <Label>Servidor (agrupamento) — opcional</Label>
+            <Input value={serverGroup} onChange={(e) => setServerGroup(e.target.value)} placeholder="AURA" />
+            <p className="text-xs text-muted-foreground">
+              Use o mesmo nome em todas as DNS do mesmo servidor para ativar o diagnóstico inteligente de correlação.
+            </p>
+          </div>
+
           <div className="space-y-2">
             <Label>Descrição (opcional)</Label>
             <Textarea value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Detalhes internos, dono, contexto..." rows={3} />
