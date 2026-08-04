@@ -473,6 +473,46 @@ function ResellerDashboard() {
           qc.invalidateQueries({ queryKey: ["reseller-network"] });
         }}
       />
+      <Dialog open={transferDialogOpen} onOpenChange={setTransferDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Transferir Créditos</DialogTitle>
+            <DialogDescription>
+              Envie créditos da sua carteira para {selectedRecipient?.full_name || "este revendedor"}.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label>Quantidade de créditos</Label>
+              <Input 
+                type="number" 
+                placeholder="Ex: 10" 
+                value={transferAmount}
+                onChange={(e) => setTransferAmount(e.target.value)}
+              />
+              <p className="text-xs text-muted-foreground">
+                Seu saldo: {stats?.credits ?? 0} créditos
+              </p>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setTransferDialogOpen(false)}>Cancelar</Button>
+            <Button 
+              disabled={transferMutation.isPending || !transferAmount || parseInt(transferAmount) <= 0}
+              onClick={() => {
+                if (window.confirm(`Enviar ${transferAmount} créditos para ${selectedRecipient?.full_name}?`)) {
+                  transferMutation.mutate({
+                    recipientId: selectedRecipient.id,
+                    amount: parseInt(transferAmount)
+                  });
+                }
+              }}
+            >
+              {transferMutation.isPending ? "Enviando..." : "Confirmar Envio"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 
