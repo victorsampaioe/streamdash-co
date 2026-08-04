@@ -53,31 +53,22 @@ function AuthPage() {
 
   async function handleSignUp(e: React.FormEvent) {
     e.preventDefault();
-    const code = referralCode.trim().toUpperCase();
     setLoading(true);
-    if (code) {
-      const { data: valid, error: codeError } = await supabase.rpc("is_valid_referral_code" as never, { _code: code } as never);
-      if (codeError || !valid) {
-        setLoading(false);
-        return toast.error("Código de indicação inválido. Deixe o campo em branco para criar a conta sem teste grátis.");
-      }
-    }
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
       options: {
         emailRedirectTo: `${window.location.origin}/app`,
-        data: { full_name: name, phone, referral_code: code },
+        data: { full_name: name, phone },
       },
     });
 
     setLoading(false);
     if (error) return toast.error(error.message);
-    // Aguarda a notificação antes de navegar para não cancelar o request
     try {
-      await notifyAdminSignup({ data: { email, name, phone, referralCode: code } });
-    } catch { /* não bloquear o cadastro se falhar */ }
-    // If email confirmation is required, session is null → send to verify screen.
+      await notifyAdminSignup({ data: { email, name, phone, referralCode: "" } });
+    } catch { /* ignore */ }
+    
     if (!data.session) {
       toast.success("Conta criada! Verifique seu e-mail para continuar.");
       navigate({ to: "/verify-email", search: { email } });
