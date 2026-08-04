@@ -812,3 +812,66 @@ function GrantPlanDialog({ user }: { user: AdminUser }) {
     </Dialog>
   );
 }
+
+function ConvertToResellerDialog({ user, onDone }: { user: AdminUser; onDone: () => void }) {
+  const [open, setOpen] = useState(false);
+  const [fullName, setFullName] = useState(user.full_name || "");
+  const [email, setEmail] = useState(user.email || "");
+  const [credits, setCredits] = useState("10");
+  
+  const convertFn = useServerFn(convertToReseller);
+  const mut = useMutation({
+    mutationFn: () => convertFn({ data: { 
+      userId: user.id, 
+      fullName, 
+      email, 
+      initialCredits: Number(credits) 
+    } }),
+    onSuccess: () => {
+      toast.success("Usuário convertido para revendedor!");
+      setOpen(false);
+      onDone();
+    },
+    onError: (e: any) => toast.error(e.message)
+  });
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <Button size="sm" variant="secondary" className="bg-success/20 hover:bg-success/30 text-success border-success/30">
+          <UserRoundCog className="h-3.5 w-3.5 mr-1" />
+          Tornar Revendedor
+        </Button>
+      </DialogTrigger>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>Converter para Revendedor</DialogTitle>
+          <DialogDescription>
+            Configurações para {user.email}
+          </DialogDescription>
+        </DialogHeader>
+        <div className="space-y-4 pt-2">
+          <div className="space-y-2">
+            <Label>Nome Completo</Label>
+            <Input value={fullName} onChange={(e) => setFullName(e.target.value)} />
+          </div>
+          <div className="space-y-2">
+            <Label>E-mail</Label>
+            <Input value={email} onChange={(e) => setEmail(e.target.value)} />
+          </div>
+          <div className="space-y-2">
+            <Label>Créditos Iniciais</Label>
+            <Input type="number" min={0} value={credits} onChange={(e) => setCredits(e.target.value)} />
+            <p className="text-[10px] text-muted-foreground">Mínimo 10 créditos para criar sub-revendas.</p>
+          </div>
+          <Button className="w-full" onClick={() => mut.mutate()} disabled={mut.isPending}>
+            {mut.isPending ? "Convertendo..." : "Confirmar Conversão"}
+          </Button>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+// Re-add Label import if missing
+import { Label } from "@/components/ui/label";
