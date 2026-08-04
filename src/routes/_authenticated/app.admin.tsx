@@ -111,6 +111,16 @@ function AdminPage() {
 
   const isAdmin = adminCheckQ.data === true;
 
+  // Debug logs
+  useEffect(() => {
+    if (adminCheckQ.isSuccess) {
+      console.log("Admin verification finished:", adminCheckQ.data);
+    }
+    if (adminCheckQ.isError) {
+      console.error("Admin verification failed:", adminCheckQ.error);
+    }
+  }, [adminCheckQ.isSuccess, adminCheckQ.isError, adminCheckQ.data, adminCheckQ.error]);
+
   useEffect(() => {
     if (adminCheckQ.isSuccess && !isAdmin) {
       console.warn("User is not admin, redirecting...");
