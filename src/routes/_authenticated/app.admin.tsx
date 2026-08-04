@@ -453,10 +453,9 @@ function ResellerManagementSection() {
                     <div className="text-[11px] font-mono text-muted-foreground">{r.email}</div>
                   </td>
                   <td className="p-3">
-                    <Badge variant={r.is_active ? "default" : "secondary"} className={r.is_active ? "bg-success text-success-foreground" : ""}>
-                      {r.is_active ? "Ativo" : "Inativo"}
-                    </Badge>
+                    <Badge variant="default" className="bg-success text-success-foreground">Ativo</Badge>
                   </td>
+
                   <td className="p-3 text-right">
                     <Badge variant="outline" className="font-mono">{r.credits}</Badge>
                   </td>
