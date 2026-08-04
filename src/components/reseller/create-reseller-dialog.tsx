@@ -68,7 +68,7 @@ export function CreateResellerDialog({ open, onOpenChange, onDone, isReseller = 
           <DialogDescription>
             {result 
               ? `Envie as credenciais abaixo para o seu novo ${isReseller ? "sub-revendedor" : "cliente"}.`
-              : `Preencha os dados para criar a conta. ${isReseller ? `(Consome ${initialCredits} créditos)` : "(Não consome créditos)"}`}
+              : `Preencha os dados para criar a conta. ${isReseller ? `(Dedução de ${initialCredits} créditos)` : "(Não consome créditos)"}`}
           </DialogDescription>
         </DialogHeader>
 
