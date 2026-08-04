@@ -22,11 +22,20 @@ export function CreateResellerDialog({ open, onOpenChange, onDone, isReseller = 
   const [email, setEmail] = useState("");
   const [fullName, setFullName] = useState("");
   const [initialCredits, setInitialCredits] = useState(isReseller ? 10 : 0);
+  const [months, setMonths] = useState("1");
   const [result, setResult] = useState<{ email: string; password: string } | null>(null);
  
   const createFn = useServerFn(createResellerV2);
   const mut = useMutation({
-    mutationFn: () => createFn({ data: { email, fullName, initialCredits: isReseller ? initialCredits : 0 } }),
+    mutationFn: () => createFn({ 
+      data: { 
+        email, 
+        fullName, 
+        initialCredits: isReseller ? initialCredits : 0,
+        months: isReseller ? 0 : parseInt(months),
+        isReseller
+      } 
+    }),
     onSuccess: (data: any) => {
       setResult(data as { email: string; password: string });
       toast.success("Revenda criada com sucesso!");
@@ -45,6 +54,7 @@ export function CreateResellerDialog({ open, onOpenChange, onDone, isReseller = 
       setEmail("");
       setFullName("");
       setInitialCredits(isReseller ? 10 : 0);
+      setMonths("1");
     }, 200);
   }
 
@@ -119,7 +129,7 @@ export function CreateResellerDialog({ open, onOpenChange, onDone, isReseller = 
               />
             </div>
 
-            {isReseller && (
+            {isReseller ? (
               <div className="space-y-2">
                 <Label>Créditos Iniciais</Label>
                 <Input 
@@ -130,7 +140,25 @@ export function CreateResellerDialog({ open, onOpenChange, onDone, isReseller = 
                   placeholder="Mínimo 10 créditos"
                 />
                 <p className="text-[10px] text-muted-foreground">
-                  * O valor será descontado do seu saldo atual.
+                  * O valor será descontado do seu saldo atual. (Mínimo 10 para sub-revenda)
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                <Label>Plano de Acesso</Label>
+                <Select value={months} onValueChange={setMonths}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione o período" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="1">1 Mês (1 crédito)</SelectItem>
+                    <SelectItem value="3">3 Meses (3 créditos)</SelectItem>
+                    <SelectItem value="6">6 Meses (6 créditos)</SelectItem>
+                    <SelectItem value="12">12 Meses (12 créditos)</SelectItem>
+                  </SelectContent>
+                </Select>
+                <p className="text-[10px] text-muted-foreground">
+                  * O consumo de créditos é de 1 por mês de acesso.
                 </p>
               </div>
             )}

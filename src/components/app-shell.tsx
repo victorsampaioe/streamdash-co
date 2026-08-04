@@ -141,8 +141,10 @@ function Sidebar() {
         <Activity className="h-5 w-5 text-primary" />
         <span className="font-bold tracking-tight">stream<span className="text-primary">monitor</span></span>
       </div>
-      <NavList />
-      <div className="p-3 border-t border-sidebar-border space-y-1">
+      <div className="flex-1 overflow-y-auto custom-scrollbar">
+        <NavList />
+      </div>
+      <div className="p-3 border-t border-sidebar-border mt-auto space-y-1">
         <TelegramLink />
         <SignOutButton />
       </div>
@@ -172,15 +174,17 @@ function MobileNav() {
           <Menu className="h-5 w-5" />
         </Button>
       </SheetTrigger>
-      <SheetContent side="left" className="w-72 p-0 bg-sidebar text-sidebar-foreground flex flex-col">
+      <SheetContent side="left" className="w-72 p-0 bg-sidebar text-sidebar-foreground flex flex-col h-full overflow-hidden">
         <SheetHeader className="p-5 border-b border-sidebar-border">
           <SheetTitle className="flex items-center gap-2 text-left">
             <Activity className="h-5 w-5 text-primary" />
             <span className="font-bold tracking-tight">stream<span className="text-primary">monitor</span></span>
           </SheetTitle>
         </SheetHeader>
-        <NavList onNavigate={() => setOpen(false)} />
-        <div className="p-3 border-t border-sidebar-border space-y-1">
+        <div className="flex-1 overflow-y-auto custom-scrollbar">
+          <NavList onNavigate={() => setOpen(false)} />
+        </div>
+        <div className="p-3 border-t border-sidebar-border mt-auto space-y-1">
           <TelegramLink />
           <SignOutButton />
         </div>
