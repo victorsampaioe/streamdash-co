@@ -6,7 +6,7 @@ const planSchema = z.object({
   name: z.string().min(2),
   price: z.number().min(0),
   duration_days: z.number().int().min(1),
-  features: z.array(z.string()),
+  features: z.array(z.string()).optional(),
 });
 
 export const getResellerPlans = createServerFn({ method: "GET" })
@@ -16,7 +16,7 @@ export const getResellerPlans = createServerFn({ method: "GET" })
       .from("reseller_plans")
       .select("*")
       .eq("reseller_id", context.userId)
-      .order("price", { ascending: true });
+      .order("price_cents", { ascending: true });
     
     if (error) throw new Error(error.message);
     return data;
@@ -37,7 +37,7 @@ export const getParentResellerPlans = createServerFn({ method: "GET" })
       .from("reseller_plans")
       .select("*")
       .eq("reseller_id", profile.parent_id)
-      .order("price", { ascending: true });
+      .order("price_cents", { ascending: true });
     
     if (error) throw new Error(error.message);
     return data;
@@ -51,17 +51,25 @@ export const saveResellerPlan = createServerFn({ method: "POST" })
   }).parse(input))
   .handler(async ({ data, context }) => {
     const { id, plan } = data;
+    // Map price to price_cents
+    const payload = {
+      name: plan.name,
+      price_cents: Math.round(plan.price * 100),
+      duration_days: plan.duration_days,
+      updated_at: new Date().toISOString()
+    };
+
     if (id) {
       const { error } = await context.supabase
         .from("reseller_plans")
-        .update({ ...plan, updated_at: new Date().toISOString() })
+        .update(payload)
         .eq("id", id)
         .eq("reseller_id", context.userId);
       if (error) throw new Error(error.message);
     } else {
       const { error } = await context.supabase
         .from("reseller_plans")
-        .insert({ ...plan, reseller_id: context.userId });
+        .insert({ ...payload, reseller_id: context.userId });
       if (error) throw new Error(error.message);
     }
     return { ok: true };
