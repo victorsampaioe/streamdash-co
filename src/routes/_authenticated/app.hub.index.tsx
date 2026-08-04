@@ -59,7 +59,7 @@ function HubIndex() {
             ))}
           </SelectContent>
         </Select>
-        <Link to="/app/hub/new">
+        <Link to="/app/hub/new" search={{ kind: "offer" }}>
           <Button><Plus className="h-4 w-4 mr-1" /> Anunciar</Button>
         </Link>
       </div>
@@ -69,7 +69,7 @@ function HubIndex() {
       ) : data.length === 0 ? (
         <Card className="p-10 text-center border-dashed">
           <p className="text-muted-foreground">Nenhum anúncio ainda. Seja o primeiro a anunciar!</p>
-          <Link to="/app/hub/new"><Button className="mt-4"><Plus className="h-4 w-4 mr-1" /> Criar anúncio</Button></Link>
+          <Link to="/app/hub/new" search={{ kind: "offer" }}><Button className="mt-4"><Plus className="h-4 w-4 mr-1" /> Criar anúncio</Button></Link>
         </Card>
       ) : (
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
