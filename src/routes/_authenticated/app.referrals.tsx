@@ -163,8 +163,9 @@ function ReferralsPage() {
               Criar Painel para Sub-Revenda
             </h2>
             <p className="text-sm text-muted-foreground">
-              Crie a conta para o seu sub-revenda com <strong>1 dia de teste</strong>.
-              Ele já entra vinculado ao seu código e você ganha <strong>R$ 10</strong> se ele assinar.
+              Como revendedor, além de divulgar seu código, você pode criar o painel diretamente para seus indicados.
+              A conta terá <strong>1 dia de teste</strong> e já entra vinculada ao seu código para você ganhar os <strong>R$ 10</strong> na assinatura.
+              (Requisito: seu painel deve estar ativo).
             </p>
           </div>
           <Button size="lg" className="bg-success hover:bg-success/90 text-success-foreground" onClick={() => setResellerDialogOpen(true)}>
