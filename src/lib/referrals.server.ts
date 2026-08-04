@@ -4,7 +4,8 @@ export async function createSubResellerInternal(
   creatorId: string,
   email: string,
   fullName: string,
-  phone: string
+  phone: string,
+  isReseller: boolean = true
 ) {
   // 1. Verify creator has an active subscription and credits
   const { data: creatorProfile, error: profileError } = await supabaseAdmin
@@ -17,7 +18,7 @@ export async function createSubResellerInternal(
     throw new Error("Erro ao obter seu perfil.");
   }
 
-  if ((creatorProfile.credits || 0) < 10) {
+  if (isReseller && (creatorProfile.credits || 0) < 10) {
     throw new Error("Você não possui créditos suficientes para criar uma nova revenda. Adquira mais créditos para continuar.");
   }
 
@@ -47,7 +48,8 @@ export async function createSubResellerInternal(
     user_metadata: {
       full_name: fullName,
       phone,
-      referral_code: creatorProfile.referral_code
+      referral_code: creatorProfile.referral_code,
+      is_reseller: isReseller
     }
   });
 
@@ -66,27 +68,30 @@ export async function createSubResellerInternal(
     .update({
       trial_used: true,
       signup_bonus_days: 1,
-      parent_id: creatorId
+      parent_id: creatorId,
+      is_reseller: isReseller
     } as any)
     .eq("id", userId);
 
-  // Deduct 10 credits from creator
-  await supabaseAdmin
-    .from("profiles")
-    .update({
-      credits: (creatorProfile.credits || 0) - 10
-    } as any)
-    .eq("id", creatorId);
+  // Deduct 10 credits from creator if creating a reseller
+  if (isReseller) {
+    await supabaseAdmin
+      .from("profiles")
+      .update({
+        credits: (creatorProfile.credits || 0) - 10
+      } as any)
+      .eq("id", creatorId);
 
-  // Log credit use
-  await supabaseAdmin
-    .from("credit_history")
-    .insert({
-      user_id: creatorId,
-      amount: -10,
-      type: 'use',
-      description: `Criação do revendedor ${email}`
-    });
+    // Log credit use
+    await supabaseAdmin
+      .from("credit_history")
+      .insert({
+        user_id: creatorId,
+        amount: -10,
+        type: 'use',
+        description: `Criação do revendedor ${email}`
+      });
+  }
 
   // 5. Create the subscription for the new user (1 day trial)
   const trialExpiresAt = new Date();

@@ -2159,6 +2159,7 @@ export type Database = {
           email: string | null
           full_name: string | null
           id: string
+          is_reseller: boolean | null
           parent_id: string | null
           phone: string | null
           referral_code: string | null
@@ -2173,6 +2174,7 @@ export type Database = {
           email?: string | null
           full_name?: string | null
           id: string
+          is_reseller?: boolean | null
           parent_id?: string | null
           phone?: string | null
           referral_code?: string | null
@@ -2187,6 +2189,7 @@ export type Database = {
           email?: string | null
           full_name?: string | null
           id?: string
+          is_reseller?: boolean | null
           parent_id?: string | null
           phone?: string | null
           referral_code?: string | null
