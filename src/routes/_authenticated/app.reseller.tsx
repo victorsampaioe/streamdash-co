@@ -98,6 +98,17 @@ function ResellerDashboard() {
   const { data: history } = useQuery({ queryKey: ["reseller-history"], queryFn: () => getHistory() });
   const { data: plans } = useQuery({ queryKey: ["reseller-plans"], queryFn: () => getPlans() });
   const { data: subData } = useSubscription();
+  
+  const adminCheckQ = useQuery({
+    queryKey: ["is-admin-simple"],
+    queryFn: async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return false;
+      const { data } = await supabase.rpc("has_role", { _user_id: user.id, _role: "admin" });
+      return !!data;
+    },
+  });
+  const isAdmin = adminCheckQ.data === true;
 
   const isAccountActive = subData?.isActive || subData?.isTrial || (stats?.credits !== undefined && stats.credits > 0);
 
@@ -213,16 +224,16 @@ function ResellerDashboard() {
         )}>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium flex items-center justify-between">
-              Créditos Disponíveis
+              Créditos Disponíveis {isAdmin && " (∞)"}
               <Wallet className={cn("h-4 w-4", stats?.credits === 0 ? "text-destructive" : "text-primary")} />
             </CardTitle>
           </CardHeader>
           <CardContent>
             <div className={cn("text-3xl font-bold flex items-center gap-2", stats?.credits === 0 ? "text-destructive" : "")}>
-              {stats?.credits === 0 ? "🔴" : "🟢"} {stats?.credits ?? 0}
+              {isAdmin ? "∞" : (stats?.credits === 0 ? "🔴" : "🟢")} {isAdmin ? "" : (stats?.credits ?? 0)}
             </div>
             <p className="text-xs text-muted-foreground mt-1">
-              {stats?.credits === 0 ? "Saldo zerado — adicione créditos para revender" : "1 crédito = 1 mês de acesso p/ cliente"}
+              {isAdmin ? "Créditos ilimitados (Administrador)" : (stats?.credits === 0 ? "Saldo zerado — adicione créditos para revender" : "1 crédito = 1 mês de acesso p/ cliente")}
             </p>
           </CardContent>
         </Card>
@@ -324,7 +335,7 @@ function ResellerDashboard() {
                             "border-transparent",
                             user.credits > 0 ? "bg-success/10 text-success border-success/20" : "bg-destructive/10 text-destructive border-destructive/20"
                           )}>
-                            {user.credits > 0 ? "Ativo" : "Sem Saldo"}
+                            {isAdmin ? "Admin" : (user.credits > 0 ? "Ativo" : "Sem Saldo")}
                           </Badge>
                         </div>
                       </div>

@@ -38,6 +38,8 @@ export const updateReseller = createServerFn({ method: "POST" })
     if (data.email) profileUpdate.email = data.email;
     
     if (data.creditsChange !== undefined && data.creditsChange !== 0) {
+      // If adding credits, verify target is not admin (admins don't need credits, but we can set them for display)
+      // The requirement says admin has infinite, but for consistency we let admin set credits to resellers.
       profileUpdate.credits = (profile.credits || 0) + data.creditsChange;
       if (profileUpdate.credits < 0) profileUpdate.credits = 0;
     }

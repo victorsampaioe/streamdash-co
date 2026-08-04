@@ -93,10 +93,18 @@ export const updateSubReseller = createServerFn({ method: "POST" })
       
       profileUpdate.credits = newTargetCredits;
       
-      // Deduct from creator
-      await supabaseAdmin.from("profiles")
-        .update({ credits: (creator.credits || 0) - data.creditsChange } as any)
-        .eq("id", context.userId);
+      // Admin check
+      const { data: isAdmin } = await supabaseAdmin.rpc("has_role", {
+        _user_id: context.userId,
+        _role: "admin",
+      });
+
+      if (!isAdmin) {
+        // Deduct from creator
+        await supabaseAdmin.from("profiles")
+          .update({ credits: (creator.credits || 0) - data.creditsChange } as any)
+          .eq("id", context.userId);
+      }
 
       // Log History for both
       await supabaseAdmin.from("reseller_credit_history").insert([
