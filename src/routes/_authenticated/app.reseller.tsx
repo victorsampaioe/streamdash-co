@@ -31,9 +31,6 @@ import {
   saveResellerPlan,
   deleteResellerPlan,
   transferCredits,
-  getResellerPlans,
-  saveResellerPlan,
-  deleteResellerPlan,
 } from "@/lib/reseller.functions";
 import { 
   getClientDetails, 
@@ -48,7 +45,8 @@ import {
   DialogHeader, 
   DialogTitle, 
   DialogDescription,
-  DialogFooter
+  DialogFooter,
+  DialogTrigger
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
