@@ -19,17 +19,19 @@ export async function createSubResellerInternal(
     throw new Error("Erro ao obter seu perfil. Verifique sua conta.");
   }
 
-  // A reseller must have at least 10 credits to create another reseller
-  const minCredits = isReseller ? initialCredits : 0;
-  if (isReseller && (creatorProfile.credits || 0) < minCredits) {
-    throw new Error(`Saldo insuficiente. Você precisa de no mínimo ${minCredits} créditos.`);
-  }
-
   // Verify creator has an active subscription or is admin
   const { data: isAdmin } = await supabaseAdmin.rpc("has_role", {
     _user_id: creatorId,
     _role: "admin",
   });
+
+  // A reseller must have at least 10 credits to create another reseller
+  // But we allow admins to create resellers with any amount of credits (it will be deducted from their balance)
+  const minCreditsRequired = isReseller ? initialCredits : 0;
+  
+  if (!isAdmin && isReseller && (creatorProfile.credits || 0) < minCreditsRequired) {
+    throw new Error(`Saldo insuficiente. Você precisa de no mínimo ${minCreditsRequired} créditos.`);
+  }
 
   if (!isAdmin) {
     const { data: creatorActive } = await supabaseAdmin.rpc("subscription_is_active", { _user_id: creatorId });
