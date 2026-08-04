@@ -269,11 +269,20 @@ function AdminPage() {
         <Kpi icon={ServerCog} label="Servidores monitorados" value={s?.total_servers} />
       </div>
 
-      <TelegramBroadcastCard />
+      <Tabs defaultValue="overview" className="space-y-6">
+        <TabsList>
+          <TabsTrigger value="overview">Visão Geral</TabsTrigger>
+          <TabsTrigger value="resellers">Gerenciar Revendedores</TabsTrigger>
+          <TabsTrigger value="storage">Armazenamento</TabsTrigger>
+        </TabsList>
 
-      <PayoutsCard />
+        <TabsContent value="overview" className="space-y-6">
+          <TelegramBroadcastCard />
+          <PayoutsCard />
+          
+          {/* Users table */}
+          {/* MOVED: the users table logic is now inside this tab content */}
 
-      <StorageReportCard />
 
 
 
