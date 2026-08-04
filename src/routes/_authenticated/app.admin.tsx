@@ -1,5 +1,5 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { supabase } from "@/integrations/supabase/client";
@@ -92,25 +92,38 @@ function AdminPage() {
   // Check admin role explicitly before anything else
   const adminCheckQ = useQuery({
     queryKey: ["is-admin"],
+    staleTime: 1000 * 60 * 5, // 5 mins
     queryFn: async () => {
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return false;
+      if (!user) {
+        console.warn("Admin check: No user found");
+        return false;
+      }
       const { data, error } = await supabase.rpc("has_role", { _user_id: user.id, _role: "admin" });
-      if (error) throw error;
+      if (error) {
+        console.error("Admin role check error:", error);
+        throw error;
+      }
+      console.log("Admin check result for", user.email, ":", data);
       return !!data;
     },
   });
 
   const isAdmin = adminCheckQ.data === true;
 
-
-
+  useEffect(() => {
+    if (adminCheckQ.isSuccess && !isAdmin) {
+      console.warn("User is not admin, redirecting...");
+      toast.error("Acesso negado: você não tem permissão de administrador.");
+    }
+  }, [adminCheckQ.isSuccess, isAdmin]);
 
   const statsQ = useQuery({
     queryKey: ["admin-stats"],
     enabled: isAdmin,
     retry: 1,
     queryFn: async () => {
+      console.log("Fetching admin stats...");
       const { data, error } = await supabase.rpc("get_admin_stats");
       if (error) {
         console.error("Admin stats error:", error);
@@ -125,6 +138,7 @@ function AdminPage() {
     enabled: isAdmin,
     retry: 1,
     queryFn: async () => {
+      console.log("Fetching admin users...");
       const { data, error } = await supabase.rpc("get_admin_users");
       if (error) {
         console.error("Admin users error:", error);
@@ -193,6 +207,12 @@ function AdminPage() {
         <AlertCircle className="h-12 w-12 text-muted-foreground" />
         <h1 className="text-xl font-bold">Acesso restrito</h1>
         <p className="text-muted-foreground">Esta área é exclusiva para administradores.</p>
+        <div className="bg-muted p-3 rounded-md text-xs font-mono max-w-sm overflow-auto text-left">
+          Status: {adminCheckQ.status}<br/>
+          Data: {JSON.stringify(adminCheckQ.data)}<br/>
+          IsAdminVar: {isAdmin ? "true" : "false"}<br/>
+          User: {adminCheckQ.data === false ? "Não encontrado ou não admin" : "Verificando..."}
+        </div>
         <Button onClick={() => navigate({ to: "/app" })}>Voltar ao painel</Button>
       </div>
     );
