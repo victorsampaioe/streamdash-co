@@ -170,6 +170,36 @@ function AdminPage() {
     });
   }, [users, filter, search]);
 
+  if (adminCheckQ.isLoading) {
+    return <div className="p-8 text-center text-muted-foreground animate-pulse">Verificando permissões...</div>;
+  }
+
+  if (adminCheckQ.isError) {
+    return (
+      <div className="flex flex-col items-center justify-center p-12 text-center space-y-4">
+        <AlertCircle className="h-12 w-12 text-destructive" />
+        <h1 className="text-xl font-bold">Erro ao verificar permissões</h1>
+        <p className="text-muted-foreground max-w-sm">
+          {adminCheckQ.error instanceof Error ? adminCheckQ.error.message : "Não foi possível confirmar seu acesso administrativo."}
+        </p>
+        <Button onClick={() => adminCheckQ.refetch()}>Tentar novamente</Button>
+      </div>
+    );
+  }
+
+  if (!isAdmin) {
+    return (
+      <div className="flex flex-col items-center justify-center p-12 text-center space-y-4">
+        <AlertCircle className="h-12 w-12 text-muted-foreground" />
+        <h1 className="text-xl font-bold">Acesso restrito</h1>
+        <p className="text-muted-foreground">Esta área é exclusiva para administradores.</p>
+        <Button onClick={() => navigate({ to: "/app" })}>Voltar ao painel</Button>
+      </div>
+    );
+  }
+
+
+
   return (
     <div className="space-y-6">
       <div className="flex items-center gap-2">
