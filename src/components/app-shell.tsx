@@ -99,7 +99,7 @@ function useNavItems() {
     
     { to: "/app/subscription", label: "Assinatura", icon: CreditCard },
     { to: "/app/ai-integration", label: "Integração IA", icon: Bot },
-    { to: "/app/referrals", label: "Indicações", icon: Gift },
+    
     { to: "/app/ajuda", label: "Central de Ajuda", icon: BookOpen },
   ];
   if (isAdmin) {
