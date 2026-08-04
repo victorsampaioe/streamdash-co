@@ -20,7 +20,6 @@ import { cn } from "@/lib/utils";
 // so the user can always renew and see their status.
 const ALWAYS_OPEN_PATHS = [
   "/app/subscription",
-  "/app/referrals",
   "/app/ai-integration",
 ];
 

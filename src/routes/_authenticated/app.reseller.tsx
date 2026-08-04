@@ -242,7 +242,7 @@ function ResellerDashboard() {
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <div className="space-y-1">
                 <CardTitle className="text-base font-semibold">Minha Rede</CardTitle>
-                <CardDescription>Gerencie seus sub-revendedores (Consome 10 créditos).</CardDescription>
+                <CardDescription>Gerencie seus sub-revendedores (Mínimo 10 créditos).</CardDescription>
               </div>
               <Button size="sm" variant="outline" onClick={() => setResellerDialogOpen(true)}>
                 <Plus className="h-4 w-4 mr-2" /> Criar Revendedor

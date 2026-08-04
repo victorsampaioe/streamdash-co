@@ -68,7 +68,7 @@ export function CreateResellerDialog({ open, onOpenChange, onDone, isReseller = 
           <DialogDescription>
             {result 
               ? `Envie as credenciais abaixo para o seu novo ${isReseller ? "sub-revendedor" : "cliente"}.`
-              : `Preencha os dados para criar a conta. ${isReseller ? `(Consome ${initialCredits} créditos)` : "(Não consome créditos)"}`}
+              : `Preencha os dados para criar a conta. ${isReseller ? `(Dedução de ${initialCredits} créditos)` : "(Não consome créditos)"}`}
           </DialogDescription>
         </DialogHeader>
 
@@ -151,8 +151,8 @@ export function CreateResellerDialog({ open, onOpenChange, onDone, isReseller = 
               </div>
             )}
 
-            <div className="rounded-md border border-warning/30 bg-warning/5 p-3 text-xs text-warning-foreground">
-              🚀 A conta será criada com <strong>1 dia de teste</strong> grátis e vinculada ao seu código de indicação.
+            <div className="rounded-md border border-primary/30 bg-primary/5 p-3 text-xs text-muted-foreground">
+              🚀 A conta será criada com o saldo de créditos informado e vinculada à sua rede.
             </div>
             <DialogFooter className="gap-2 sm:gap-0">
               <Button variant="outline" onClick={close}>Cancelar</Button>

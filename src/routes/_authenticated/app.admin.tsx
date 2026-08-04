@@ -94,8 +94,6 @@ type StatsRow = {
   revenue_cents_30d: number;
   revenue_cents_7d: number;
   total_servers: number;
-  total_referrals: number;
-  converted_referrals: number;
 };
 
 type FilterKey = "all" | "paid" | "trial" | "expired" | "admin";
