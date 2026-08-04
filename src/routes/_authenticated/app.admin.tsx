@@ -439,8 +439,8 @@ function StatusBadge({ status, expired }: { status: AdminUser["status"]; expired
     active: <Badge className="bg-success text-success-foreground"><Activity className="h-3 w-3 mr-1" />Ativo</Badge>,
     expired: <Badge variant="destructive">Expirado</Badge>,
     cancelled: <Badge variant="outline">Cancelado</Badge>,
-  } as const;
-  return map[status];
+  };
+  return map[status as keyof typeof map] || <Badge variant="outline">{status}</Badge>;
 }
 
 function TelegramBroadcastCard() {
