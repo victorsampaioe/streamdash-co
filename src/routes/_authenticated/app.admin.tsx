@@ -32,12 +32,13 @@ import { cn } from "@/lib/utils";
 import { broadcastTelegram } from "@/lib/telegram-broadcast.functions";
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { UserCog, History, PlusCircle, UserCheck, UserRoundCog, Settings2 } from "lucide-react";
+import { UserCog, History, PlusCircle, UserCheck, UserRoundCog, Settings2, Trash2 } from "lucide-react";
 
 import { StorageReportCard } from "@/components/storage-report-card";
 import { AlertCircle } from "lucide-react";
 import { convertToReseller } from "@/lib/reseller-conversion.functions";
 import { updateReseller } from "@/lib/reseller-update.functions";
+import { deleteUserAdmin } from "@/lib/admin-actions.functions";
 
 
 export const Route = createFileRoute("/_authenticated/app/admin")({
@@ -167,7 +168,7 @@ function AdminPage() {
     queryFn: async () => {
       console.log("Fetching admin users...");
       // Fetch profiles first to get is_reseller
-      const { data: profiles, error: pErr } = await supabase.from("profiles").select("id, is_reseller");
+      const { data: profiles, error: pErr } = await supabase.from("profiles").select("id, is_reseller, credits");
       const { data, error } = await supabase.rpc("get_admin_users");
       if (error) {
         console.error("Admin users error:", error);
@@ -177,7 +178,8 @@ function AdminPage() {
       // Map is_reseller from profiles
       return users.map(u => ({
         ...u,
-        is_reseller: profiles?.find(p => p.id === u.id)?.is_reseller || false
+        is_reseller: profiles?.find(p => p.id === u.id)?.is_reseller || false,
+        credits: profiles?.find(p => p.id === u.id)?.credits || 0
       }));
     },
   });
@@ -362,9 +364,27 @@ function AdminPage() {
                             {!u.is_admin && !((u as any).is_reseller) && (
                               <ConvertToResellerDialog user={u} onDone={() => usersQ.refetch()} />
                             )}
+                            {((u as any).is_reseller) && (
+                              <EditResellerDialog 
+                                reseller={{
+                                  id: u.id,
+                                  email: u.email,
+                                  full_name: u.full_name,
+                                  created_at: u.created_at,
+                                  credits: (u as any).credits || 0,
+                                  sub_reseller_count: 0,
+                                  client_count: 0,
+                                  last_activity_at: null
+                                }} 
+                                onDone={() => usersQ.refetch()} 
+                              />
+                            )}
                             <Button size="sm" variant={u.is_admin ? "outline" : "default"} onClick={() => toggleAdmin.mutate({ userId: u.id, makeAdmin: !u.is_admin })}>
                               {u.is_admin ? "Remover admin" : "Tornar admin"}
                             </Button>
+                            {!u.is_admin && (
+                              <DeleteUserDialog userId={u.id} userEmail={u.email || ""} onDone={() => usersQ.refetch()} />
+                            )}
                           </div>
                         </td>
                       </tr>
@@ -478,6 +498,7 @@ function ResellerManagementSection() {
                     <AdminAddCreditsDialog reseller={r} onDone={() => resellersQ.refetch()} />
                     <EditResellerDialog reseller={r} onDone={() => resellersQ.refetch()} />
                     <ResellerDetailsDialog reseller={r} />
+                    <DeleteUserDialog userId={r.id} userEmail={r.email || ""} onDone={() => resellersQ.refetch()} />
                   </td>
                 </tr>
               ))}
@@ -934,6 +955,48 @@ function EditResellerDialog({ reseller, onDone }: { reseller: AdminReseller; onD
           </div>
           <Button className="w-full" onClick={() => mut.mutate()} disabled={mut.isPending}>
             {mut.isPending ? "Salvando..." : "Salvar Alterações"}
+          </Button>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function DeleteUserDialog({ userId, userEmail, onDone }: { userId: string; userEmail: string; onDone: () => void }) {
+  const [open, setOpen] = useState(false);
+  const deleteFn = useServerFn(deleteUserAdmin);
+  const mut = useMutation({
+    mutationFn: () => deleteFn({ data: { userId } }),
+    onSuccess: () => {
+      toast.success("Usuário excluído com sucesso!");
+      setOpen(false);
+      onDone();
+    },
+    onError: (e: any) => toast.error(e.message)
+  });
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <Button size="sm" variant="ghost" className="text-destructive hover:text-destructive hover:bg-destructive/10">
+          <Trash2 className="h-3.5 w-3.5" />
+        </Button>
+      </DialogTrigger>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2 text-destructive">
+            <Trash2 className="h-5 w-5" />
+            Excluir Usuário
+          </DialogTitle>
+          <DialogDescription>
+            Tem certeza que deseja excluir permanentemente o usuário <strong>{userEmail}</strong>? 
+            Esta ação não pode ser desfeita e removerá todos os dados vinculados (assinaturas, créditos, etc).
+          </DialogDescription>
+        </DialogHeader>
+        <div className="flex gap-3 pt-4">
+          <Button variant="outline" className="flex-1" onClick={() => setOpen(false)}>Cancelar</Button>
+          <Button variant="destructive" className="flex-1" onClick={() => mut.mutate()} disabled={mut.isPending}>
+            {mut.isPending ? "Excluindo..." : "Excluir Permanentemente"}
           </Button>
         </div>
       </DialogContent>
