@@ -32,10 +32,10 @@ import { cn } from "@/lib/utils";
 import { broadcastTelegram } from "@/lib/telegram-broadcast.functions";
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { UserCog, History, PlusCircle, UserCheck } from "lucide-react";
+import { UserCog, History, PlusCircle, UserCheck, UserRoundCog, Settings2 } from "lucide-react";
 
 import { StorageReportCard } from "@/components/storage-report-card";
-import { AlertCircle, UserRoundCog } from "lucide-react";
+import { AlertCircle } from "lucide-react";
 import { convertToReseller } from "@/lib/reseller-conversion.functions";
 
 
@@ -475,6 +475,7 @@ function ResellerManagementSection() {
 
                   <td className="p-3 text-right space-x-1">
                     <AdminAddCreditsDialog reseller={r} onDone={() => resellersQ.refetch()} />
+                    <EditResellerDialog reseller={r} onDone={() => resellersQ.refetch()} />
                     <ResellerDetailsDialog reseller={r} />
                   </td>
                 </tr>
