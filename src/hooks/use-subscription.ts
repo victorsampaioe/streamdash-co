@@ -77,7 +77,7 @@ export function useSubscription() {
       const prof = profile ? {
         phone: profile.phone,
         full_name: profile.full_name,
-        is_reseller: profile.is_reseller,
+        is_reseller: !!profile.is_reseller,
         credits: profile.credits || 0
       } : null;
 
@@ -89,7 +89,7 @@ export function useSubscription() {
           isExpired: true, 
           isTrial: false, 
           isExpiringSoon: false, 
-          parentId: prof?.parent_id || null,
+          parentId: profile?.parent_id || null,
           profile: prof
         };
       }
@@ -109,7 +109,7 @@ export function useSubscription() {
         isExpired,
         isTrial: sub.status === "trial" && !isExpired,
         isExpiringSoon: isActive && daysRemaining <= 7,
-        parentId: prof?.parent_id || null,
+        parentId: profile?.parent_id || null,
         profile: prof
       };
     },
