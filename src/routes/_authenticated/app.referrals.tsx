@@ -235,6 +235,15 @@ function ReferralsPage() {
         }}
       />
 
+      <CreateResellerDialog
+        open={resellerDialogOpen}
+        onOpenChange={setResellerDialogOpen}
+        onDone={() => {
+          qc.invalidateQueries({ queryKey: ["referral-summary"] });
+          qc.invalidateQueries({ queryKey: ["my-referrals"] });
+        }}
+      />
+
       {/* Referrals list */}
       <Card className="p-6">
         <h2 className="font-semibold mb-4 flex items-center gap-2"><Users className="h-4 w-4 text-muted-foreground" /> Histórico de indicações</h2>
