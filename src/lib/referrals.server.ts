@@ -137,14 +137,17 @@ export async function createSubResellerInternal(
       ]);
   }
 
-  // 5. Create the subscription (inactive for reseller, no trial)
+  // 5. Create the subscription (active for resellers/clients by default now)
+  const oneYearFromNow = new Date();
+  oneYearFromNow.setFullYear(oneYearFromNow.getFullYear() + 1);
+
   await supabaseAdmin
     .from("subscriptions")
     .upsert({
       user_id: userId,
-      plan: "free" as any,
-      status: "inactive" as any,
-      expires_at: new Date().toISOString() // Required field
+      plan: isReseller ? ("reseller" as any) : ("basic" as any),
+      status: "active" as any,
+      expires_at: oneYearFromNow.toISOString()
     });
 
   return { 

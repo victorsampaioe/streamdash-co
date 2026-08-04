@@ -152,7 +152,7 @@ export function CreateResellerDialog({ open, onOpenChange, onDone, isReseller = 
             )}
 
             <div className="rounded-md border border-primary/30 bg-primary/5 p-3 text-xs text-muted-foreground">
-              🚀 A conta será criada com o saldo de créditos informado e vinculada à sua rede.
+              🚀 A conta será criada com o saldo de créditos informado e o painel será ativado automaticamente.
             </div>
             <DialogFooter className="gap-2 sm:gap-0">
               <Button variant="outline" onClick={close}>Cancelar</Button>
