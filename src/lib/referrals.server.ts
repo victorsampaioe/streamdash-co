@@ -40,16 +40,7 @@ export async function createSubResellerInternal(
     }
   }
 
-  // 2. Pre-check for existing phone
-  const { data: existingPhone } = await supabaseAdmin
-    .from("profiles")
-    .select("id")
-    .eq("phone", phone)
-    .maybeSingle();
-  
-  if (existingPhone) {
-    throw new Error("Este número de telefone já está sendo utilizado.");
-  }
+  // 2. Phone check removed
 
   // 3. Create the new user in Auth
   const tempPassword = Math.random().toString(36).slice(-12) + "!";
