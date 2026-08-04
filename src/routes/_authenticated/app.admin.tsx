@@ -462,8 +462,9 @@ function ResellerManagementSection() {
                   </td>
                   <td className="p-3 text-right font-mono">{r.sub_reseller_count}</td>
                   <td className="p-3 text-xs text-muted-foreground">
-                    {r.last_activity ? new Date(r.last_activity).toLocaleDateString("pt-BR") : "—"}
+                    {r.last_activity_at ? new Date(r.last_activity_at).toLocaleDateString("pt-BR") : "—"}
                   </td>
+
                   <td className="p-3 text-right space-x-1">
                     <AdminAddCreditsDialog reseller={r} onDone={() => resellersQ.refetch()} />
                     <ResellerDetailsDialog reseller={r} />
