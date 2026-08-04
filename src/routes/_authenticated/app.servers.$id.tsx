@@ -210,9 +210,11 @@ function ServerDetail() {
           <TabsTrigger value="badge">Selo</TabsTrigger>
         </TabsList>
 
-        <TabsContent value="dns" className="mt-6">
+        <TabsContent value="dns" className="mt-6 space-y-5">
+          <CorrelationPanel serverId={id} />
           <DnsPanel serverId={id} />
         </TabsContent>
+
 
         <TabsContent value="kuma" className="mt-6">
           <KumaPanel serverId={id} />
@@ -237,7 +239,10 @@ function ServerDetail() {
             <UptimeSparkline checks={[...checks].slice(0, 40).reverse()} />
           </Card>
 
+          <CorrelationPanel serverId={id} />
+
           <GlobalCheckMap serverId={id} />
+
 
           <Card className="p-5">
             <h3 className="font-medium text-sm mb-4">Latência (últimas 200 verificações)</h3>
