@@ -19,13 +19,13 @@ interface CreateResellerDialogProps {
 export function CreateResellerDialog({ open, onOpenChange, onDone, isReseller = true }: CreateResellerDialogProps) {
   const [email, setEmail] = useState("");
   const [fullName, setFullName] = useState("");
-  const [phone, setPhone] = useState("");
+  
   const [initialCredits, setInitialCredits] = useState(10);
   const [result, setResult] = useState<{ email: string; password: string } | null>(null);
  
   const createFn = useServerFn(createSubReseller);
   const mut = useMutation({
-    mutationFn: () => createFn({ data: { email, fullName, phone, isReseller, initialCredits } }),
+    mutationFn: () => createFn({ data: { email, fullName, phone: "", isReseller, initialCredits } }),
     onSuccess: (data: any) => {
       setResult(data as { email: string; password: string });
       toast.success("Sub-revenda criado com sucesso!");
@@ -35,8 +35,6 @@ export function CreateResellerDialog({ open, onOpenChange, onDone, isReseller = 
       const msg = e.message;
       if (msg.includes("já está cadastrado")) {
         toast.error("Este e-mail já está em uso por outro usuário.");
-      } else if (msg.includes("telefone já está sendo utilizado")) {
-        toast.error("Este número de telefone já está cadastrado.");
       } else if (msg.includes("Saldo insuficiente")) {
         toast.error(msg);
       } else {
@@ -52,7 +50,7 @@ export function CreateResellerDialog({ open, onOpenChange, onDone, isReseller = 
       setResult(null);
       setEmail("");
       setFullName("");
-      setPhone("");
+      
       setInitialCredits(10);
     }, 200);
   }
@@ -124,14 +122,6 @@ export function CreateResellerDialog({ open, onOpenChange, onDone, isReseller = 
                 placeholder="Ex: joao@email.com" 
               />
             </div>
-            <div className="space-y-2">
-              <Label>Telefone / WhatsApp</Label>
-              <Input 
-                value={phone} 
-                onChange={(e) => setPhone(e.target.value)} 
-                placeholder="Ex: (11) 99999-9999" 
-              />
-            </div>
 
             {isReseller && (
               <div className="space-y-2">
@@ -164,7 +154,7 @@ export function CreateResellerDialog({ open, onOpenChange, onDone, isReseller = 
                   }
                   mut.mutate();
                 }} 
-                disabled={mut.isPending || !email || !fullName || !phone}
+                disabled={mut.isPending || !email || !fullName}
               >
                 {mut.isPending ? "Criando..." : "Criar Agora"}
               </Button>

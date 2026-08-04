@@ -10,7 +10,7 @@ export const createSubReseller = createServerFn({ method: "POST" })
       .object({
         email: z.string().email(),
         fullName: z.string().min(3),
-        phone: z.string().min(8),
+        phone: z.string().optional().default(""),
         isReseller: z.boolean().optional().default(true),
         initialCredits: z.number().min(10).optional().default(10),
         planId: z.string().uuid().optional(),
