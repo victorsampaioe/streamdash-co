@@ -1,6 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { createSubResellerInternal } from "./referrals.server";
 
 export type ReferralSummary = {
   total_referrals: number;
@@ -152,4 +153,19 @@ export const adminRejectPayout = createServerFn({ method: "POST" })
       await notifyPayoutUser(pr.user_id, `⚠️ <b>Sua solicitação de PIX foi recusada</b>${data.note ? `\nMotivo: ${data.note}` : ""}\n\nO saldo foi devolvido e você pode solicitar novamente.`);
     }
     return { ok: true };
+  });
+
+export const createSubReseller = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input) =>
+    z
+      .object({
+        email: z.string().email(),
+        fullName: z.string().min(3),
+        phone: z.string().min(8),
+      })
+      .parse(input),
+  )
+  .handler(async ({ data, context }) => {
+    return createSubResellerInternal(context.userId, data.email, data.fullName, data.phone);
   });
