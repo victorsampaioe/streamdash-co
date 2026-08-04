@@ -138,6 +138,7 @@ function AdminPage() {
     enabled: isAdmin,
     retry: 1,
     queryFn: async () => {
+      console.log("Fetching admin users...");
       const { data, error } = await supabase.rpc("get_admin_users");
       if (error) {
         console.error("Admin users error:", error);
