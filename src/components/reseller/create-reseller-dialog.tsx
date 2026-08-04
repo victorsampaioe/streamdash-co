@@ -20,11 +20,12 @@ export function CreateResellerDialog({ open, onOpenChange, onDone, isReseller = 
   const [email, setEmail] = useState("");
   const [fullName, setFullName] = useState("");
   const [phone, setPhone] = useState("");
+  const [initialCredits, setInitialCredits] = useState(10);
   const [result, setResult] = useState<{ email: string; password: string } | null>(null);
-
+ 
   const createFn = useServerFn(createSubReseller);
   const mut = useMutation({
-    mutationFn: () => createFn({ data: { email, fullName, phone, isReseller } }),
+    mutationFn: () => createFn({ data: { email, fullName, phone, isReseller, initialCredits } }),
     onSuccess: (data: any) => {
       setResult(data as { email: string; password: string });
       toast.success("Sub-revenda criado com sucesso!");
@@ -40,6 +41,7 @@ export function CreateResellerDialog({ open, onOpenChange, onDone, isReseller = 
       setEmail("");
       setFullName("");
       setPhone("");
+      setInitialCredits(10);
     }, 200);
   }
 
@@ -54,7 +56,7 @@ export function CreateResellerDialog({ open, onOpenChange, onDone, isReseller = 
           <DialogDescription>
             {result 
               ? `Envie as credenciais abaixo para o seu novo ${isReseller ? "sub-revendedor" : "cliente"}.`
-              : `Preencha os dados para criar a conta. ${isReseller ? "(Consome 10 créditos)" : "(Não consome créditos)"}`}
+              : `Preencha os dados para criar a conta. ${isReseller ? `(Consome ${initialCredits} créditos)` : "(Não consome créditos)"}`}
           </DialogDescription>
         </DialogHeader>
 
@@ -118,13 +120,36 @@ export function CreateResellerDialog({ open, onOpenChange, onDone, isReseller = 
                 placeholder="Ex: (11) 99999-9999" 
               />
             </div>
+
+            {isReseller && (
+              <div className="space-y-2">
+                <Label>Créditos iniciais da sub-revenda</Label>
+                <Input 
+                  type="number"
+                  min={10}
+                  value={initialCredits} 
+                  onChange={(e) => setInitialCredits(Math.max(1, parseInt(e.target.value) || 0))} 
+                  placeholder="Mínimo 10 créditos"
+                />
+                <p className="text-[10px] text-muted-foreground">
+                  * Digite no mínimo 10 créditos para criar uma sub-revenda.
+                </p>
+              </div>
+            )}
+
             <div className="rounded-md border border-warning/30 bg-warning/5 p-3 text-xs text-warning-foreground">
               🚀 A conta será criada com <strong>1 dia de teste</strong> grátis e vinculada ao seu código de indicação.
             </div>
             <DialogFooter className="gap-2 sm:gap-0">
               <Button variant="outline" onClick={close}>Cancelar</Button>
               <Button 
-                onClick={() => mut.mutate()} 
+                onClick={() => {
+                  if (isReseller && initialCredits < 10) {
+                    toast.error("Digite no mínimo 10 créditos para criar uma sub-revenda.");
+                    return;
+                  }
+                  mut.mutate();
+                }} 
                 disabled={mut.isPending || !email || !fullName || !phone}
               >
                 {mut.isPending ? "Criando..." : "Criar Agora"}

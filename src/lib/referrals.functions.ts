@@ -164,18 +164,20 @@ export const createSubReseller = createServerFn({ method: "POST" })
         fullName: z.string().min(3),
         phone: z.string().min(8),
         isReseller: z.boolean().optional().default(true),
+        initialCredits: z.number().min(10).optional().default(10),
         planId: z.string().uuid().optional(),
       })
       .parse(input),
   )
   .handler(async ({ data, context }) => {
-    const { isReseller, planId, ...userData } = data;
+    const { isReseller, planId, initialCredits, ...userData } = data;
     const result = await createSubResellerInternal(
       context.userId, 
       userData.email, 
       userData.fullName, 
       userData.phone, 
-      isReseller
+      isReseller,
+      initialCredits
     );
 
     // If it's a client (not reseller) and a plan was specified, we could auto-activate it here if paid.
