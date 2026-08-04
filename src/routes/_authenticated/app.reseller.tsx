@@ -188,33 +188,47 @@ function ResellerDashboard() {
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium flex items-center justify-between">
-              Minha Rede (Ativos)
+              Rede (Revendedores)
               <Users className="h-4 w-4 text-muted-foreground" />
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold">{stats?.activeClients ?? 0}</div>
-            <p className="text-xs text-muted-foreground mt-1">Total de revendedores e clientes</p>
+            <div className="text-3xl font-bold">{stats?.activeSubResellers ?? 0}</div>
+            <p className="text-xs text-muted-foreground mt-1">Sub-revendedores ativos</p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium flex items-center justify-between">
-              Receita Total
+              Meus Clientes
+              <Package className="h-4 w-4 text-primary" />
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-3xl font-bold">{stats?.activeClients ?? 0}</div>
+            <p className="text-xs text-muted-foreground mt-1">Clientes finais ativos</p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium flex items-center justify-between">
+              Receita Gerada
               <TrendingUp className="h-4 w-4 text-success" />
             </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-3xl font-bold">{formatBRL(stats?.revenue ?? 0)}</div>
-            <p className="text-xs text-muted-foreground mt-1">Total acumulado em vendas</p>
+            <p className="text-xs text-muted-foreground mt-1">Total de vendas diretas</p>
           </CardContent>
         </Card>
       </div>
 
       <Tabs defaultValue="rede" className="w-full">
-        <TabsList className="grid w-full grid-cols-3 max-w-md">
+        <TabsList className="grid w-full grid-cols-4 max-w-lg">
           <TabsTrigger value="rede">Minha Rede</TabsTrigger>
+          <TabsTrigger value="clientes">Meus Clientes</TabsTrigger>
           <TabsTrigger value="historico">Histórico</TabsTrigger>
           <TabsTrigger value="planos">Meus Planos</TabsTrigger>
         </TabsList>
