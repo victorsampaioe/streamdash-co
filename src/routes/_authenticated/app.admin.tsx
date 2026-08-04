@@ -89,18 +89,26 @@ function AdminPage() {
 
   const statsQ = useQuery({
     queryKey: ["admin-stats"],
+    retry: 1,
     queryFn: async () => {
       const { data, error } = await supabase.rpc("get_admin_stats");
-      if (error) throw error;
+      if (error) {
+        console.error("Admin stats error:", error);
+        throw error;
+      }
       return data as unknown as StatsRow;
     },
   });
 
   const usersQ = useQuery({
     queryKey: ["admin-users"],
+    retry: 1,
     queryFn: async () => {
       const { data, error } = await supabase.rpc("get_admin_users");
-      if (error) throw error;
+      if (error) {
+        console.error("Admin users error:", error);
+        throw error;
+      }
       return (data ?? []) as AdminUser[];
     },
   });
@@ -397,7 +405,11 @@ function PayoutsCard() {
 
   const q = useQuery({
     queryKey: ["admin-payouts"],
-    queryFn: () => listFn(),
+    retry: 1,
+    queryFn: async () => {
+      const data = await listFn();
+      return data;
+    },
   });
 
   const rows = (q.data ?? []) as PayoutReq[];
