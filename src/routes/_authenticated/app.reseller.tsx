@@ -10,17 +10,35 @@ import {
   TrendingUp, 
   ChevronRight,
   Package,
-  ArrowUpRight,
-  CreditCard
+  CreditCard,
+  Settings,
+  Trash2,
+  Edit2
 } from "lucide-react";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { getResellerNetwork, getCreditHistory, getResellerStats } from "@/lib/reseller.functions";
+import { 
+  getResellerNetwork, 
+  getCreditHistory, 
+  getResellerStats,
+  getResellerPlans,
+  saveResellerPlan,
+  deleteResellerPlan
+} from "@/lib/reseller.functions";
 import { formatBRL, type PlanId } from "@/lib/payments";
 import { useState } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { 
+  Dialog, 
+  DialogContent, 
+  DialogHeader, 
+  DialogTitle, 
+  DialogDescription,
+  DialogFooter
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { PixDialog } from "@/components/payments/pix-dialog";
 import { createPixPayment } from "@/lib/mercadopago.functions";
@@ -48,16 +66,71 @@ function ResellerDashboard() {
   const getNetwork = useServerFn(getResellerNetwork);
   const getHistory = useServerFn(getCreditHistory);
   const createPix = useServerFn(createPixPayment);
+  const getPlans = useServerFn(getResellerPlans);
+  const savePlan = useServerFn(saveResellerPlan);
+  const deletePlan = useServerFn(deleteResellerPlan);
 
   const { data: stats } = useQuery({ queryKey: ["reseller-stats"], queryFn: () => getStats() });
   const { data: network } = useQuery({ queryKey: ["reseller-network"], queryFn: () => getNetwork() });
   const { data: history } = useQuery({ queryKey: ["reseller-history"], queryFn: () => getHistory() });
+  const { data: plans } = useQuery({ queryKey: ["reseller-plans"], queryFn: () => getPlans() });
 
   const [buyDialogOpen, setBuyDialogOpen] = useState(false);
   const [resellerDialogOpen, setResellerDialogOpen] = useState(false);
+  const [planDialogOpen, setPlanDialogOpen] = useState(false);
   const [activePurchasePlan, setActivePurchasePlan] = useState<PlanId | null>(null);
   const [pix, setPix] = useState<any>(null);
   const [loading, setLoading] = useState(false);
+
+  const [editingPlan, setEditingPlan] = useState<any>(null);
+  const [planForm, setPlanForm] = useState({ name: "", price: "", duration_days: "30" });
+
+  const saveMutation = useMutation({
+    mutationFn: (data: { id?: string; plan: any }) => savePlan({ data }),
+    onSuccess: () => {
+      toast.success("Plano salvo!");
+      setPlanDialogOpen(false);
+      qc.invalidateQueries({ queryKey: ["reseller-plans"] });
+    },
+    onError: (e: Error) => toast.error(e.message)
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: (id: string) => deletePlan({ data: { id } }),
+    onSuccess: () => {
+      toast.success("Plano excluído!");
+      qc.invalidateQueries({ queryKey: ["reseller-plans"] });
+    },
+    onError: (e: Error) => toast.error(e.message)
+  });
+
+  const handleEditPlan = (plan: any) => {
+    setEditingPlan(plan);
+    setPlanForm({ 
+      name: plan.name, 
+      price: (plan.price_cents / 100).toString(), 
+      duration_days: plan.duration_days.toString() 
+    });
+    setPlanDialogOpen(true);
+  };
+
+  const handleCreatePlan = () => {
+    setEditingPlan(null);
+    setPlanForm({ name: "", price: "", duration_days: "30" });
+    setPlanDialogOpen(true);
+  };
+
+  const handleSavePlan = () => {
+    saveMutation.mutate({
+      id: editingPlan?.id,
+      plan: {
+        name: planForm.name,
+        price: parseFloat(planForm.price),
+        duration_days: parseInt(planForm.duration_days),
+        features: []
+      }
+    });
+  };
 
   return (
     <div className="space-y-6">
@@ -201,14 +274,41 @@ function ResellerDashboard() {
 
         <TabsContent value="planos" className="mt-4">
           <Card>
-            <CardHeader>
-              <CardTitle className="text-base font-semibold">Configuração de Planos</CardTitle>
-              <CardDescription>Defina os valores que seus clientes verão em seus painéis.</CardDescription>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <div className="space-y-1">
+                <CardTitle className="text-base font-semibold">Configuração de Planos</CardTitle>
+                <CardDescription>Defina os valores que seus clientes verão em seus painéis.</CardDescription>
+              </div>
+              <Button size="sm" variant="outline" onClick={handleCreatePlan}>
+                <Plus className="h-4 w-4 mr-2" /> Novo Plano
+              </Button>
             </CardHeader>
             <CardContent>
-              <div className="bg-muted/30 border border-dashed rounded-lg p-8 text-center">
-                <p className="text-sm text-muted-foreground">Em breve: crie seus próprios planos e receba diretamente.</p>
-              </div>
+              {(!plans || plans.length === 0) ? (
+                <div className="bg-muted/30 border border-dashed rounded-lg p-8 text-center">
+                  <p className="text-sm text-muted-foreground">Nenhum plano configurado. Crie seu primeiro plano para seus clientes.</p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mt-4">
+                  {plans.map((plan: any) => (
+                    <Card key={plan.id} className="border-2 border-muted hover:border-primary/30 transition-all">
+                      <CardHeader className="pb-2">
+                        <CardTitle className="text-lg">{plan.name}</CardTitle>
+                        <div className="text-2xl font-bold">{formatBRL(plan.price_cents)}</div>
+                        <Badge variant="secondary">{plan.duration_days} dias</Badge>
+                      </CardHeader>
+                      <CardFooter className="flex gap-2 pt-4">
+                        <Button variant="outline" size="sm" className="flex-1" onClick={() => handleEditPlan(plan)}>
+                          <Edit2 className="h-4 w-4 mr-2" /> Editar
+                        </Button>
+                        <Button variant="destructive" size="sm" onClick={() => deleteMutation.mutate(plan.id)}>
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </CardFooter>
+                    </Card>
+                  ))}
+                </div>
+              )}
             </CardContent>
           </Card>
         </TabsContent>
@@ -264,6 +364,51 @@ function ResellerDashboard() {
               </CardContent>
             </Card>
           )}
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={planDialogOpen} onOpenChange={setPlanDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{editingPlan ? "Editar Plano" : "Novo Plano"}</DialogTitle>
+            <DialogDescription>
+              Configure o nome, preço e duração do plano para seus clientes.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div className="space-y-2">
+              <Label>Nome do Plano</Label>
+              <Input 
+                value={planForm.name} 
+                onChange={(e) => setPlanForm({ ...planForm, name: e.target.value })} 
+                placeholder="Ex: Plano Mensal" 
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Preço (BRL)</Label>
+              <Input 
+                type="number"
+                value={planForm.price} 
+                onChange={(e) => setPlanForm({ ...planForm, price: e.target.value })} 
+                placeholder="Ex: 35.00" 
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Duração (Dias)</Label>
+              <Input 
+                type="number"
+                value={planForm.duration_days} 
+                onChange={(e) => setPlanForm({ ...planForm, duration_days: e.target.value })} 
+                placeholder="Ex: 30" 
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setPlanDialogOpen(false)}>Cancelar</Button>
+            <Button onClick={handleSavePlan} disabled={saveMutation.isPending}>
+              {saveMutation.isPending ? "Salvando..." : "Salvar Plano"}
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
 
