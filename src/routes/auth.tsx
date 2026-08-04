@@ -33,7 +33,7 @@ function AuthPage() {
   const [password, setPassword] = useState("");
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
-  const [referralCode, setReferralCode] = useState(ref ?? "");
+  const [referralCode, setReferralCode] = useState("");
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => {
