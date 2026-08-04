@@ -13,7 +13,9 @@ import {
   CreditCard,
   Settings,
   Trash2,
-  Edit2
+  Edit2,
+  AlertCircle,
+  CheckCircle2
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
