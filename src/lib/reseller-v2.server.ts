@@ -99,29 +99,31 @@ export async function createResellerAccount(
     });
 
   // 6. Deduct credits from creator (if not admin and credits used) and Log History
-  if (!isAdmin && initialCredits > 0) {
+  if (!isAdmin && creditsToDeduct > 0) {
     await supabaseAdmin
       .from("profiles")
-      .update({ credits: (creator.credits || 0) - initialCredits } as any)
+      .update({ credits: (creator.credits || 0) - creditsToDeduct } as any)
       .eq("id", creatorId);
   }
 
-  if (initialCredits > 0) {
+  if (creditsToDeduct > 0) {
     // History for Creator
     await supabaseAdmin.from("reseller_credit_history").insert({
       user_id: creatorId,
-      amount: -initialCredits,
+      amount: -creditsToDeduct,
       type: 'use',
-      description: `Criação de ${isReseller ? 'sub-revenda' : 'cliente'}: ${email}`
+      description: `Criação de ${isReseller ? 'sub-revenda' : 'cliente'}: ${email} (${isReseller ? initialCredits + ' créditos' : months + ' mês/meses'})`
     });
 
-    // History for New User
-    await supabaseAdmin.from("reseller_credit_history").insert({
-      user_id: newUserId,
-      amount: initialCredits,
-      type: 'purchase',
-      description: `Saldo inicial recebido do criador`
-    });
+    // History for New User (only if it's a reseller receiving credits)
+    if (isReseller) {
+      await supabaseAdmin.from("reseller_credit_history").insert({
+        user_id: newUserId,
+        amount: initialCredits,
+        type: 'purchase',
+        description: `Saldo inicial recebido do criador`
+      });
+    }
   }
 
   return {
