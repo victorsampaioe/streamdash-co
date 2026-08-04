@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { Copy, Gift, Share2, Users, CheckCircle2, Clock, Wallet, Sparkles, Send, DollarSign } from "lucide-react";
+import { Copy, Gift, Share2, Users, CheckCircle2, Clock, Wallet, Sparkles, Send, DollarSign, UserPlus, Key } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -12,7 +12,7 @@ import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
-import { getMyReferralSummary, requestPayout } from "@/lib/referrals.functions";
+import { getMyReferralSummary, requestPayout, createSubReseller } from "@/lib/referrals.functions";
 import { formatBRL } from "@/lib/payments";
 
 export const Route = createFileRoute("/_authenticated/app/referrals")({
@@ -130,6 +130,7 @@ function ReferralsPage() {
   }
 
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [resellerDialogOpen, setResellerDialogOpen] = useState(false);
 
   return (
     <div className="space-y-6 max-w-5xl">
@@ -150,6 +151,26 @@ function ReferralsPage() {
             </p>
             <p className="text-sm font-medium">Quanto mais indicar, mais você ganha! 🚀</p>
           </div>
+        </div>
+      </Card>
+
+      {/* New: Create Reseller Panel */}
+      <Card className="p-6 border-success/30 bg-success/5">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="space-y-1">
+            <h2 className="font-semibold flex items-center gap-2">
+              <UserPlus className="h-5 w-5 text-success" />
+              Criar Painel para Sub-Revenda
+            </h2>
+            <p className="text-sm text-muted-foreground">
+              Crie a conta para o seu sub-revenda com <strong>1 dia de teste</strong>.
+              Ele já entra vinculado ao seu código e você ganha <strong>R$ 10</strong> se ele assinar.
+            </p>
+          </div>
+          <Button variant="success" size="lg" onClick={() => setResellerDialogOpen(true)}>
+            <UserPlus className="h-4 w-4 mr-2" />
+            Criar Sub-Revenda
+          </Button>
         </div>
       </Card>
 

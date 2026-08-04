@@ -154,3 +154,18 @@ export const adminRejectPayout = createServerFn({ method: "POST" })
     }
     return { ok: true };
   });
+
+export const createSubReseller = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input) =>
+    z
+      .object({
+        email: z.string().email(),
+        fullName: z.string().min(3),
+        phone: z.string().min(8),
+      })
+      .parse(input),
+  )
+  .handler(async ({ data, context }) => {
+    return createSubResellerInternal(context.userId, data.email, data.fullName, data.phone);
+  });
