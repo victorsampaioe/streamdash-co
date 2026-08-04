@@ -434,13 +434,16 @@ function ResellerDashboard() {
                     onBlur={async (e) => {
                       const val = e.target.value;
                       if (!val) return;
-                      const { error } = await supabase.from("profiles").update({ phone: val } as any).eq("id", subData?.profile?.full_name ? (await supabase.auth.getUser()).data.user?.id : "");
+                      const { data: { user } } = await supabase.auth.getUser();
+                      if (!user) return;
+                      const { error } = await supabase.from("profiles").update({ phone: val } as any).eq("id", user.id);
                       if (error) toast.error("Erro ao atualizar WhatsApp");
                       else {
                         toast.success("WhatsApp atualizado!");
                         qc.invalidateQueries({ queryKey: ["subscription", "me"] });
                       }
                     }}
+
                   />
                   <Button variant="outline" onClick={() => toast.info("O WhatsApp é salvo automaticamente ao sair do campo.")}>
                     Salvar
