@@ -1,66 +1,127 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
-import { supabase } from "@/integrations/supabase/client";
+import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
-// This file must only contain imports, types, and server functions.
-// Logic belongs inside handlers.
+const planSchema = z.object({
+  name: z.string().min(2),
+  price: z.number().min(0),
+  duration_days: z.number().int().min(1),
+  features: z.array(z.string()),
+});
+
+export const getResellerPlans = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const { data, error } = await context.supabase
+      .from("reseller_plans")
+      .select("*")
+      .eq("reseller_id", context.userId)
+      .order("price", { ascending: true });
+    
+    if (error) throw new Error(error.message);
+    return data;
+  });
+
+export const getParentResellerPlans = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const { data: profile } = await context.supabase
+      .from("profiles")
+      .select("parent_id")
+      .eq("id", context.userId)
+      .single();
+
+    if (!profile?.parent_id) return [];
+
+    const { data, error } = await context.supabase
+      .from("reseller_plans")
+      .select("*")
+      .eq("reseller_id", profile.parent_id)
+      .order("price", { ascending: true });
+    
+    if (error) throw new Error(error.message);
+    return data;
+  });
+
+export const saveResellerPlan = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input) => z.object({
+    id: z.string().uuid().optional(),
+    plan: planSchema
+  }).parse(input))
+  .handler(async ({ data, context }) => {
+    const { id, plan } = data;
+    if (id) {
+      const { error } = await context.supabase
+        .from("reseller_plans")
+        .update({ ...plan, updated_at: new Date().toISOString() })
+        .eq("id", id)
+        .eq("reseller_id", context.userId);
+      if (error) throw new Error(error.message);
+    } else {
+      const { error } = await context.supabase
+        .from("reseller_plans")
+        .insert({ ...plan, reseller_id: context.userId });
+      if (error) throw new Error(error.message);
+    }
+    return { ok: true };
+  });
+
+export const deleteResellerPlan = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input) => z.object({ id: z.string().uuid() }).parse(input))
+  .handler(async ({ data, context }) => {
+    const { error } = await context.supabase
+      .from("reseller_plans")
+      .delete()
+      .eq("id", data.id)
+      .eq("reseller_id", context.userId);
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
 
 export const getResellerNetwork = createServerFn({ method: "GET" })
-  .handler(async () => {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) throw new Error("Unauthorized");
-
-    // Fetch sub-resellers (direct children)
-    const { data: subResellers, error } = await supabase
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const { data: subResellers, error } = await context.supabase
       .from("profiles")
       .select("id, full_name, email, credits, created_at")
-      .eq("parent_id", user.id);
+      .eq("parent_id", context.userId);
 
-    if (error) throw error;
-
-    // Fetch clients (not resellers themselves, but users managed by this reseller)
-    // For now, we distinguish clients as users without 'admin' or 'reseller' roles who have this user as parent
-    // But since everyone is technically a 'user', we'll just fetch all children for now.
-    
+    if (error) throw new Error(error.message);
     return subResellers || [];
   });
 
 export const getCreditHistory = createServerFn({ method: "GET" })
-  .handler(async () => {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) throw new Error("Unauthorized");
-
-    const { data, error } = await supabase
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const { data, error } = await context.supabase
       .from("credit_history")
       .select("*")
-      .eq("user_id", user.id)
+      .eq("user_id", context.userId)
       .order("created_at", { ascending: false });
 
-    if (error) throw error;
+    if (error) throw new Error(error.message);
     return data || [];
   });
 
 export const getResellerStats = createServerFn({ method: "GET" })
-  .handler(async () => {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) throw new Error("Unauthorized");
-
-    // Get my profile for credits
-    const { data: profile } = await supabase
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const { data: profile } = await context.supabase
       .from("profiles")
       .select("credits")
-      .eq("id", user.id)
+      .eq("id", context.userId)
       .single();
 
-    // Get count of active children
-    const { count: activeClients } = await supabase
+    const { count: activeClients } = await context.supabase
       .from("profiles")
       .select("*", { count: "exact", head: true })
-      .eq("parent_id", user.id);
+      .eq("parent_id", context.userId);
 
     return {
       credits: profile?.credits || 0,
       activeClients: activeClients || 0,
-      revenue: 0, // Placeholder for future revenue tracking
+      revenue: 0,
     };
   });
