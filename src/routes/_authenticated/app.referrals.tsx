@@ -167,7 +167,7 @@ function ReferralsPage() {
               Ele já entra vinculado ao seu código e você ganha <strong>R$ 10</strong> se ele assinar.
             </p>
           </div>
-          <Button variant="success" size="lg" onClick={() => setResellerDialogOpen(true)}>
+          <Button size="lg" className="bg-success hover:bg-success/90 text-success-foreground" onClick={() => setResellerDialogOpen(true)}>
             <UserPlus className="h-4 w-4 mr-2" />
             Criar Sub-Revenda
           </Button>
