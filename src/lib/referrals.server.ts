@@ -143,7 +143,8 @@ export async function createSubResellerInternal(
     .upsert({
       user_id: userId,
       plan: "free" as any,
-      status: "inactive" as any
+      status: "inactive" as any,
+      expires_at: new Date().toISOString() // Required field
     });
 
   return { 
