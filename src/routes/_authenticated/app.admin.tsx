@@ -207,6 +207,12 @@ function AdminPage() {
         <AlertCircle className="h-12 w-12 text-muted-foreground" />
         <h1 className="text-xl font-bold">Acesso restrito</h1>
         <p className="text-muted-foreground">Esta área é exclusiva para administradores.</p>
+        <div className="bg-muted p-3 rounded-md text-xs font-mono max-w-sm overflow-auto text-left">
+          Status: {adminCheckQ.status}<br/>
+          Data: {JSON.stringify(adminCheckQ.data)}<br/>
+          IsAdminVar: {isAdmin ? "true" : "false"}<br/>
+          User: {adminCheckQ.data === false ? "Não encontrado ou não admin" : "Verificando..."}
+        </div>
         <Button onClick={() => navigate({ to: "/app" })}>Voltar ao painel</Button>
       </div>
     );
