@@ -86,6 +86,7 @@ export async function createSubResellerInternal(
     await new Promise(r => setTimeout(r, 200));
   }
 
+  if (!profileSet) {
     await supabaseAdmin.from("profiles").upsert({
       id: userId,
       email,
