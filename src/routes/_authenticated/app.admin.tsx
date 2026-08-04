@@ -122,6 +122,7 @@ function AdminPage() {
 
   const usersQ = useQuery({
     queryKey: ["admin-users"],
+    enabled: isAdmin,
     retry: 1,
     queryFn: async () => {
       const { data, error } = await supabase.rpc("get_admin_users");
