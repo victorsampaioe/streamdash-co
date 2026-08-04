@@ -1,4 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { cn } from "@/lib/utils";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { 
@@ -46,7 +47,6 @@ import { PixDialog } from "@/components/payments/pix-dialog";
 import { createPixPayment } from "@/lib/mercadopago.functions";
 import { CreateResellerDialog } from "@/components/reseller/create-reseller-dialog";
 import { useSubscription } from "@/hooks/use-subscription";
-import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/_authenticated/app/reseller")({
   head: () => ({
