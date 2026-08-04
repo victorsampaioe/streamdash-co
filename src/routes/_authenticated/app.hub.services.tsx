@@ -38,7 +38,7 @@ function ServicesPage() {
           <Search className="h-4 w-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
           <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Buscar serviços..." className="pl-9" />
         </div>
-        <Link to="/app/hub/new"><Button><Plus className="h-4 w-4 mr-1" /> Oferecer serviço</Button></Link>
+        <Link to="/app/hub/new" search={{ kind: "offer" }}><Button><Plus className="h-4 w-4 mr-1" /> Oferecer serviço</Button></Link>
       </div>
 
       {isLoading ? <p className="text-sm text-muted-foreground">Carregando...</p> :

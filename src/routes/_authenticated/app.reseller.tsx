@@ -30,8 +30,13 @@ import {
   getResellerPlans,
   saveResellerPlan,
   deleteResellerPlan,
-  transferCredits
+  transferCredits,
 } from "@/lib/reseller.functions";
+import { 
+  getClientDetails, 
+  updateResellerClient, 
+  deleteResellerClient 
+} from "@/lib/reseller-manage.functions";
 import { formatBRL, type PlanId } from "@/lib/payments";
 import { useState } from "react";
 import { 
@@ -40,7 +45,8 @@ import {
   DialogHeader, 
   DialogTitle, 
   DialogDescription,
-  DialogFooter
+  DialogFooter,
+  DialogTrigger
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -77,6 +83,9 @@ function ResellerDashboard() {
   const savePlan = useServerFn(saveResellerPlan);
   const deletePlan = useServerFn(deleteResellerPlan);
   const transferCreditsFn = useServerFn(transferCredits);
+  const updateClientFn = useServerFn(updateResellerClient);
+  const deleteClientFn = useServerFn(deleteResellerClient);
+  const getClientDetailsFn = useServerFn(getClientDetails);
 
   const { data: stats } = useQuery({ queryKey: ["reseller-stats"], queryFn: () => getStats() });
   const { data: network } = useQuery({ queryKey: ["reseller-network"], queryFn: () => getNetwork() });
@@ -319,17 +328,23 @@ function ResellerDashboard() {
                   {network.filter(u => !u.is_reseller).map((user: any) => (
                     <div key={user.id} className="flex items-center justify-between p-3 border rounded-lg hover:bg-muted/50 transition-colors">
                       <div className="flex items-center gap-3">
-                        <div className="h-10 w-10 rounded-full bg-secondary/20 flex items-center justify-center font-bold text-secondary-foreground">
+                        <div className="h-10 w-10 rounded-full bg-secondary/20 flex items-center justify-center font-bold text-secondary-foreground shrink-0">
                           {user.full_name?.[0] || "?"}
                         </div>
-                        <div>
-                          <div className="font-medium text-sm">{user.full_name || "Cliente"}</div>
-                          <div className="text-xs text-muted-foreground">{user.email}</div>
+                        <div className="min-w-0">
+                          <div className="font-medium text-sm truncate">{user.full_name || "Cliente"}</div>
+                          <div className="text-xs text-muted-foreground truncate">{user.email}</div>
                         </div>
                       </div>
-                      <div className="flex items-center gap-2">
-                        <Badge variant="outline" className="bg-primary/10 text-primary border-primary/20">Assinante</Badge>
-                        <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                      <div className="flex items-center gap-2 shrink-0">
+                        <Badge variant="outline" className="bg-primary/10 text-primary border-primary/20 hidden sm:inline-flex">Assinante</Badge>
+                        <ManageClientDialog 
+                          userId={user.id} 
+                          onDone={() => qc.invalidateQueries({ queryKey: ["reseller-network"] })}
+                          onUpdate={updateClientFn}
+                          onDelete={deleteClientFn}
+                          onGetDetails={getClientDetailsFn}
+                        />
                       </div>
                     </div>
                   ))}
@@ -658,6 +673,175 @@ function ResellerDashboard() {
   }
 }
 
+function ManageClientDialog({ 
+  userId, 
+  onDone, 
+  onUpdate, 
+  onDelete, 
+  onGetDetails 
+}: { 
+  userId: string; 
+  onDone: () => void;
+  onUpdate: any;
+  onDelete: any;
+  onGetDetails: any;
+}) {
+  const [open, setOpen] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [details, setDetails] = useState<any>(null);
+  const [form, setForm] = useState({
+    fullName: "",
+    email: "",
+    password: "",
+    plan: "basic",
+    status: "active"
+  });
+
+  const fetchDetails = async () => {
+    setLoading(true);
+    try {
+      const data = await onGetDetails({ data: { userId } });
+      setDetails(data);
+      setForm({
+        fullName: data.full_name || "",
+        email: data.email || "",
+        password: "",
+        plan: data.subscription?.plan || "basic",
+        status: data.subscription?.status || "active"
+      });
+    } catch (e: any) {
+      toast.error(e.message);
+      setOpen(false);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const updateMut = useMutation({
+    mutationFn: (data: any) => onUpdate({ data: { ...data, userId } }),
+    onSuccess: () => {
+      toast.success("Cliente atualizado!");
+      onDone();
+      setOpen(false);
+    },
+    onError: (e: any) => toast.error(e.message)
+  });
+
+  const deleteMut = useMutation({
+    mutationFn: () => onDelete({ data: { userId } }),
+    onSuccess: () => {
+      toast.success("Cliente excluído!");
+      onDone();
+      setOpen(false);
+    },
+    onError: (e: any) => toast.error(e.message)
+  });
+
+  return (
+    <Dialog open={open} onOpenChange={(v) => {
+      setOpen(v);
+      if (v) fetchDetails();
+    }}>
+      <DialogTrigger asChild>
+        <Button size="sm" variant="ghost">
+          <Settings className="h-4 w-4" />
+        </Button>
+      </DialogTrigger>
+      <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>Gerenciar Cliente</DialogTitle>
+          <DialogDescription>
+            Visualize e edite as informações do seu cliente final.
+          </DialogDescription>
+        </DialogHeader>
+
+        {loading ? (
+          <div className="py-8 text-center text-muted-foreground animate-pulse">Carregando detalhes...</div>
+        ) : details && (
+          <div className="space-y-4 py-2">
+            <div className="grid grid-cols-2 gap-2 text-[10px] bg-muted/50 p-3 rounded-lg">
+              <div>
+                <span className="text-muted-foreground block uppercase">Criado em</span>
+                <span className="font-medium">{new Date(details.created_at).toLocaleDateString("pt-BR")}</span>
+              </div>
+              <div>
+                <span className="text-muted-foreground block uppercase">Vencimento</span>
+                <span className="font-medium">
+                  {details.subscription?.expires_at 
+                    ? new Date(details.subscription.expires_at).toLocaleDateString("pt-BR") 
+                    : "Sem data"}
+                </span>
+              </div>
+            </div>
+
+            <div className="space-y-4 pt-2">
+              <div className="space-y-2">
+                <Label>Nome Completo</Label>
+                <Input value={form.fullName} onChange={(e) => setForm({ ...form, fullName: e.target.value })} />
+              </div>
+              <div className="space-y-2">
+                <Label>E-mail</Label>
+                <Input value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} />
+              </div>
+              <div className="space-y-2">
+                <Label>Nova Senha (deixe em branco para manter)</Label>
+                <Input type="password" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Plano</Label>
+                  <select 
+                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                    value={form.plan}
+                    onChange={(e) => setForm({ ...form, plan: e.target.value as any })}
+                  >
+                    <option value="trial">Teste</option>
+                    <option value="basic">Básico</option>
+                    <option value="monthly">Mensal</option>
+                    <option value="yearly">Anual</option>
+                  </select>
+                </div>
+                <div className="space-y-2">
+                  <Label>Status</Label>
+                  <select 
+                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                    value={form.status}
+                    onChange={(e) => setForm({ ...form, status: e.target.value as any })}
+                  >
+                    <option value="active">Ativo</option>
+                    <option value="expired">Expirado</option>
+                    <option value="trial">Em Teste</option>
+                    <option value="cancelled">Cancelado</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex flex-col gap-2 pt-4 border-t">
+              <Button onClick={() => updateMut.mutate(form)} disabled={updateMut.isPending}>
+                {updateMut.isPending ? "Salvando..." : "Salvar Alterações"}
+              </Button>
+              <Button 
+                variant="destructive" 
+                onClick={() => {
+                  if (window.confirm("Tem certeza que deseja excluir este cliente permanentemente?")) {
+                    deleteMut.mutate();
+                  }
+                }}
+                disabled={deleteMut.isPending}
+              >
+                {deleteMut.isPending ? "Excluindo..." : "Excluir Cliente"}
+              </Button>
+            </div>
+          </div>
+        )}
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 function localCn(...classes: any[]) {
   return classes.filter(Boolean).join(" ");
 }
+
