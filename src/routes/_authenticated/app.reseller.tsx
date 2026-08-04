@@ -389,13 +389,20 @@ function ResellerDashboard() {
                         <div className="text-2xl font-bold">{formatBRL(plan.price_cents)}</div>
                         <Badge variant="secondary">{plan.duration_days} dias</Badge>
                       </CardHeader>
-                      <CardFooter className="flex gap-2 pt-4">
-                        <Button variant="outline" size="sm" className="flex-1" onClick={() => handleEditPlan(plan)}>
-                          <Edit2 className="h-4 w-4 mr-2" /> Editar
-                        </Button>
-                        <Button variant="destructive" size="sm" onClick={() => deleteMutation.mutate(plan.id)}>
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
+                      <CardFooter className="flex flex-col gap-2 pt-4">
+                        <div className="flex w-full gap-2">
+                          <Button variant="outline" size="sm" className="flex-1" onClick={() => handleEditPlan(plan)}>
+                            <Edit2 className="h-4 w-4 mr-2" /> Editar
+                          </Button>
+                          <Button variant="destructive" size="sm" onClick={() => deleteMutation.mutate(plan.id)}>
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                        {subData?.profile?.phone && (
+                          <div className="w-full text-[10px] text-center text-muted-foreground p-1 bg-muted/50 rounded">
+                            Pagamento via WhatsApp: {subData.profile.phone}
+                          </div>
+                        )}
                       </CardFooter>
                     </Card>
                   ))}
