@@ -78,6 +78,9 @@ function ResellerDashboard() {
   const { data: network } = useQuery({ queryKey: ["reseller-network"], queryFn: () => getNetwork() });
   const { data: history } = useQuery({ queryKey: ["reseller-history"], queryFn: () => getHistory() });
   const { data: plans } = useQuery({ queryKey: ["reseller-plans"], queryFn: () => getPlans() });
+  const { data: subData } = useSubscription();
+
+  const isAccountActive = subData?.isActive && !subData?.isTrial && !subData?.isExpired;
 
   const [buyDialogOpen, setBuyDialogOpen] = useState(false);
   const [resellerDialogOpen, setResellerDialogOpen] = useState(false);
@@ -343,13 +346,31 @@ function ResellerDashboard() {
                 </DialogDescription>
               </CardHeader>
               <CardContent className="space-y-4">
+                {isAccountActive ? (
+                  <div className="bg-success/10 border border-success/20 p-3 rounded-lg flex items-center gap-2 text-success text-sm mb-4">
+                    <CheckCircle2 className="h-4 w-4" />
+                    <span>✅ Conta ativa - Você pode comprar créditos e criar sua rede</span>
+                  </div>
+                ) : (
+                  <div className="bg-destructive/10 border border-destructive/20 p-4 rounded-lg space-y-2 mb-4">
+                    <div className="flex items-center gap-2 text-destructive font-semibold">
+                      <AlertCircle className="h-5 w-5" />
+                      <span>⚠️ Sua conta precisa estar ativa para comprar créditos.</span>
+                    </div>
+                    <p className="text-sm text-muted-foreground ml-7">
+                      Assine um plano para liberar essa função.
+                    </p>
+                  </div>
+                )}
+
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                   {CREDIT_PACKS.map((pack) => (
                     <Button
                       key={pack.amount}
                       variant="outline"
-                      className="h-auto py-4 flex flex-col gap-1 border-2 hover:border-primary hover:bg-primary/5 transition-all"
+                      className="h-auto py-4 flex flex-col gap-1 border-2 hover:border-primary hover:bg-primary/5 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                       onClick={() => handleBuyCredits(pack)}
+                      disabled={!isAccountActive}
                     >
                       <div className="font-bold text-lg">{pack.amount} Créditos</div>
                       <div className="text-primary font-semibold">{formatBRL(pack.price)}</div>
