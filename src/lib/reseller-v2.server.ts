@@ -37,8 +37,8 @@ export async function createResellerAccount(
   });
 
   // Verify credits if not admin
-  if (!isAdmin && (creator.credits || 0) < initialCredits) {
-    throw new Error(`Saldo insuficiente. Você tem ${creator.credits || 0} créditos, mas precisa de ${initialCredits}.`);
+  if (!isAdmin && (creator.credits || 0) < creditsToDeduct) {
+    throw new Error("Você não possui créditos suficientes para criar este cliente. Adicione créditos para continuar.");
   }
 
   // 3. Create Auth User
