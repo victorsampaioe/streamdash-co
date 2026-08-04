@@ -912,6 +912,8 @@ function EditResellerDialog({ reseller, onDone }: { reseller: AdminReseller; onD
   const [fullName, setFullName] = useState(reseller.full_name || "");
   const [email, setEmail] = useState(reseller.email || "");
   const [password, setPassword] = useState("");
+  const [creditsChange, setCreditsChange] = useState("0");
+  const [status, setStatus] = useState<"active" | "expired" | "trial" | "cancelled">("active");
   
   const updateFn = useServerFn(updateReseller);
   const mut = useMutation({
@@ -919,7 +921,9 @@ function EditResellerDialog({ reseller, onDone }: { reseller: AdminReseller; onD
       userId: reseller.id, 
       fullName, 
       email, 
-      password: password || undefined 
+      password: password || undefined,
+      status,
+      creditsChange: Number(creditsChange)
     } }),
     onSuccess: () => {
       toast.success("Dados do revendedor atualizados!");
@@ -957,6 +961,38 @@ function EditResellerDialog({ reseller, onDone }: { reseller: AdminReseller; onD
             <Label>Nova Senha (deixe em branco para manter)</Label>
             <Input type="password" value={password} onChange={(e) => setPassword(e.target.value)} />
           </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label>Status da Conta</Label>
+              <select 
+                className="w-full h-9 rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                value={status}
+                onChange={(e) => setStatus(e.target.value as any)}
+              >
+                <option value="active">Ativo</option>
+                <option value="expired">Expirado</option>
+                <option value="trial">Em Teste</option>
+                <option value="cancelled">Cancelado</option>
+              </select>
+            </div>
+            <div className="space-y-2">
+              <Label>Ajuste de Créditos</Label>
+              <Input 
+                type="number" 
+                value={creditsChange} 
+                onChange={(e) => setCreditsChange(e.target.value)} 
+                placeholder="Ex: 10 ou -5"
+              />
+              <p className="text-[10px] text-muted-foreground">Positivo adiciona, negativo remove.</p>
+            </div>
+          </div>
+
+          <div className="rounded-md border p-3 bg-muted/30">
+            <div className="text-xs text-muted-foreground uppercase tracking-wider">Saldo Atual</div>
+            <div className="text-lg font-bold">{reseller.credits} créditos</div>
+          </div>
+
           <Button className="w-full" onClick={() => mut.mutate()} disabled={mut.isPending}>
             {mut.isPending ? "Salvando..." : "Salvar Alterações"}
           </Button>
