@@ -34,7 +34,10 @@ export async function createSubResellerInternal(
   if (!isAdmin) {
     const { data: creatorActive } = await supabaseAdmin.rpc("subscription_is_active", { _user_id: creatorId });
     if (!creatorActive) {
-      throw new Error("Sua conta precisa estar ativa para criar revendedores ou clientes.");
+      // Check if creator is a reseller (resellers might not need an active "official" subscription if they have credits)
+      if (!creatorProfile.is_reseller) {
+        throw new Error("Sua conta precisa estar ativa para criar revendedores ou clientes.");
+      }
     }
   }
 

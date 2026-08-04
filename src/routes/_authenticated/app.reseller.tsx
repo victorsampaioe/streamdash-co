@@ -84,7 +84,7 @@ function ResellerDashboard() {
   const { data: plans } = useQuery({ queryKey: ["reseller-plans"], queryFn: () => getPlans() });
   const { data: subData } = useSubscription();
 
-  const isAccountActive = subData?.isActive && !subData?.isTrial && !subData?.isExpired;
+  const isAccountActive = subData?.isActive || subData?.isTrial || (stats?.credits !== undefined && stats.credits > 0);
 
   const [buyDialogOpen, setBuyDialogOpen] = useState(false);
   const [resellerDialogOpen, setResellerDialogOpen] = useState(false);

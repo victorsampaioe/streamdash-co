@@ -1,4 +1,4 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, useNavigate, redirect } from "@tanstack/react-router";
 import { useMemo, useState, useEffect } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
@@ -36,6 +36,20 @@ import { AlertCircle } from "lucide-react";
 
 
 export const Route = createFileRoute("/_authenticated/app/admin")({
+  beforeLoad: async ({ context }) => {
+    const { supabase } = await import("@/integrations/supabase/client");
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) throw redirect({ to: "/auth" });
+    
+    const { data: isAdmin, error } = await supabase.rpc("has_role", { 
+      _user_id: user.id, 
+      _role: "admin" 
+    });
+    
+    if (error || !isAdmin) {
+      throw redirect({ to: "/app" });
+    }
+  },
   head: () => ({
     meta: [
       { title: "Painel Admin — StreamMonitor" },
@@ -110,6 +124,16 @@ function AdminPage() {
   });
 
   const isAdmin = adminCheckQ.data === true;
+
+  // Debug logs
+  useEffect(() => {
+    if (adminCheckQ.isSuccess) {
+      console.log("Admin verification finished:", adminCheckQ.data);
+    }
+    if (adminCheckQ.isError) {
+      console.error("Admin verification failed:", adminCheckQ.error);
+    }
+  }, [adminCheckQ.isSuccess, adminCheckQ.isError, adminCheckQ.data, adminCheckQ.error]);
 
   useEffect(() => {
     if (adminCheckQ.isSuccess && !isAdmin) {
