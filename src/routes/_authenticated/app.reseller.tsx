@@ -675,9 +675,6 @@ function ResellerDashboard() {
   }
 }
 
-  }
-}
-
 function ManageClientDialog({ 
   userId, 
   onDone, 
