@@ -3,7 +3,6 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { supabase } from "@/integrations/supabase/client";
 import { 
-
   Users, 
   Wallet, 
   ShoppingBag, 
@@ -23,6 +22,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter }
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { 
   getResellerNetwork, 
   getCreditHistory, 
@@ -201,16 +201,23 @@ function ResellerDashboard() {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <Card className="bg-gradient-to-br from-primary/10 to-transparent border-primary/20">
+        <Card className={cn(
+          "bg-gradient-to-br border-primary/20",
+          stats?.credits === 0 ? "from-destructive/10 to-transparent border-destructive/30" : "from-primary/10 to-transparent border-primary/20"
+        )}>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium flex items-center justify-between">
               Créditos Disponíveis
-              <Wallet className="h-4 w-4 text-primary" />
+              <Wallet className={cn("h-4 w-4", stats?.credits === 0 ? "text-destructive" : "text-primary")} />
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold">{stats?.credits ?? 0}</div>
-            <p className="text-xs text-muted-foreground mt-1">1 crédito = 1 novo revendedor</p>
+            <div className={cn("text-3xl font-bold flex items-center gap-2", stats?.credits === 0 ? "text-destructive" : "")}>
+              {stats?.credits === 0 ? "🔴" : "🟢"} {stats?.credits ?? 0}
+            </div>
+            <p className="text-xs text-muted-foreground mt-1">
+              {stats?.credits === 0 ? "Saldo zerado — adicione créditos para revender" : "1 crédito = 1 mês de acesso p/ cliente"}
+            </p>
           </CardContent>
         </Card>
 
