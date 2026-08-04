@@ -99,7 +99,20 @@ export function CorrelationPanel({ serverId }: { serverId: string }) {
         <Metric label="Offline" value={overview.offline} cls="text-destructive" />
       </div>
 
-      <p className="text-sm text-muted-foreground">{ui.text}</p>
+      <div>
+        <p className="text-sm text-muted-foreground">{ui.text}</p>
+        <p className="text-xs text-muted-foreground mt-1">
+          Confiança do diagnóstico:{" "}
+          <strong className="text-foreground">
+            {Math.max(30, Math.min(99, Math.round(
+              (Math.max(overview.offline, overview.online) / Math.max(1, overview.total)) *
+              (overview.total >= 3 ? 100 : overview.total === 2 ? 90 : 60),
+            )))}%
+          </strong>
+          {overview.offline > 0 && ` · ${overview.offline} DNS do mesmo servidor offline`}
+        </p>
+      </div>
+
 
       <ul className="space-y-1.5">
         {overview.dns.map((d) => (
