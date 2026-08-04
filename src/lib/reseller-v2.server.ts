@@ -8,12 +8,14 @@ export async function createResellerAccount(
   creatorId: string,
   email: string,
   fullName: string,
-  initialCredits: number = 0
+  initialCredits: number = 0,
+  months: number = 1,
+  isReseller: boolean = false
 ) {
   // 1. Validation
-  const isReseller = initialCredits >= 10;
+  const creditsToDeduct = isReseller ? initialCredits : months;
   
-  if (initialCredits > 0 && initialCredits < 10) {
+  if (isReseller && initialCredits < 10) {
     throw new Error("Mínimo obrigatório: 10 créditos para criar uma sub-revenda.");
   }
 
@@ -35,8 +37,8 @@ export async function createResellerAccount(
   });
 
   // Verify credits if not admin
-  if (!isAdmin && (creator.credits || 0) < initialCredits) {
-    throw new Error(`Saldo insuficiente. Você tem ${creator.credits || 0} créditos, mas precisa de ${initialCredits}.`);
+  if (!isAdmin && (creator.credits || 0) < creditsToDeduct) {
+    throw new Error("Você não possui créditos suficientes para criar este cliente. Adicione créditos para continuar.");
   }
 
   // 3. Create Auth User
@@ -79,9 +81,13 @@ export async function createResellerAccount(
     throw new Error(`Erro ao configurar perfil: ${profileErr.message}`);
   }
 
-  // 5. Activate Subscription Immediately (1 year)
+  // 5. Activate Subscription Immediately
   const expiry = new Date();
-  expiry.setFullYear(expiry.getFullYear() + 1);
+  if (isReseller) {
+    expiry.setFullYear(expiry.getFullYear() + 1);
+  } else {
+    expiry.setMonth(expiry.getMonth() + months);
+  }
 
   await supabaseAdmin
     .from("subscriptions")
@@ -93,29 +99,31 @@ export async function createResellerAccount(
     });
 
   // 6. Deduct credits from creator (if not admin and credits used) and Log History
-  if (!isAdmin && initialCredits > 0) {
+  if (!isAdmin && creditsToDeduct > 0) {
     await supabaseAdmin
       .from("profiles")
-      .update({ credits: (creator.credits || 0) - initialCredits } as any)
+      .update({ credits: (creator.credits || 0) - creditsToDeduct } as any)
       .eq("id", creatorId);
   }
 
-  if (initialCredits > 0) {
+  if (creditsToDeduct > 0) {
     // History for Creator
     await supabaseAdmin.from("reseller_credit_history").insert({
       user_id: creatorId,
-      amount: -initialCredits,
+      amount: -creditsToDeduct,
       type: 'use',
-      description: `Criação de ${isReseller ? 'sub-revenda' : 'cliente'}: ${email}`
+      description: `Criação de ${isReseller ? 'sub-revenda' : 'cliente'}: ${email} (${isReseller ? initialCredits + ' créditos' : months + ' mês/meses'})`
     });
 
-    // History for New User
-    await supabaseAdmin.from("reseller_credit_history").insert({
-      user_id: newUserId,
-      amount: initialCredits,
-      type: 'purchase',
-      description: `Saldo inicial recebido do criador`
-    });
+    // History for New User (only if it's a reseller receiving credits)
+    if (isReseller) {
+      await supabaseAdmin.from("reseller_credit_history").insert({
+        user_id: newUserId,
+        amount: initialCredits,
+        type: 'purchase',
+        description: `Saldo inicial recebido do criador`
+      });
+    }
   }
 
   return {

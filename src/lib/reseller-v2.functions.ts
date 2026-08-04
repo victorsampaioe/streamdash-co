@@ -11,6 +11,8 @@ export const createResellerV2 = createServerFn({ method: "POST" })
         email: z.string().email("E-mail inválido"),
         fullName: z.string().min(3, "Nome muito curto"),
         initialCredits: z.number().min(0).optional().default(0),
+        months: z.number().min(1).optional().default(1),
+        isReseller: z.boolean().optional().default(false),
       })
       .parse(input),
   )
@@ -19,6 +21,8 @@ export const createResellerV2 = createServerFn({ method: "POST" })
       context.userId,
       data.email,
       data.fullName,
-      data.initialCredits
+      data.initialCredits,
+      data.months,
+      data.isReseller
     );
   });
