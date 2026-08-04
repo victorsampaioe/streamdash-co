@@ -39,6 +39,19 @@ function SubscriptionPage() {
     queryFn: () => getParentPlans(),
     enabled: !!data?.parentId
   });
+
+  const { data: parentProfile } = useQuery({
+    queryKey: ["parent-profile", data?.parentId],
+    queryFn: async () => {
+      const { data: p } = await supabase
+        .from("profiles")
+        .select("whatsapp, phone")
+        .eq("id", data?.parentId)
+        .single();
+      return p;
+    },
+    enabled: !!data?.parentId
+  });
   const [paymentError, setPaymentError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const createPix = useServerFn(createPixPayment);
@@ -168,9 +181,9 @@ function SubscriptionPage() {
                             className="w-full" 
                             variant="outline" 
                             onClick={() => {
-                              const phone = data?.profile?.phone || "";
+                              const resellerPhone = parentProfile?.whatsapp || parentProfile?.phone || "";
                               const message = `Olá, gostaria de renovar meu plano "${plan.name}" (${plan.duration_days} dias) no valor de ${formatBRL(plan.price_cents)}.`;
-                              window.open(`https://wa.me/${phone.replace(/\D/g, '')}?text=${encodeURIComponent(message)}`, '_blank');
+                              window.open(`https://wa.me/${resellerPhone.replace(/\D/g, '')}?text=${encodeURIComponent(message)}`, '_blank');
                             }}
                           >
                             <CreditCard className="h-4 w-4 mr-2" />

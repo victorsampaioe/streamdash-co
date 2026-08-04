@@ -31,7 +31,19 @@ export function CreateResellerDialog({ open, onOpenChange, onDone, isReseller = 
       toast.success("Sub-revenda criado com sucesso!");
       onDone();
     },
-    onError: (e: Error) => toast.error(e.message),
+    onError: (e: Error) => {
+      const msg = e.message;
+      if (msg.includes("já está cadastrado")) {
+        toast.error("Este e-mail já está em uso por outro usuário.");
+      } else if (msg.includes("telefone já está sendo utilizado")) {
+        toast.error("Este número de telefone já está cadastrado.");
+      } else if (msg.includes("Saldo insuficiente")) {
+        toast.error(msg);
+      } else {
+        toast.error("Não foi possível concluir a operação. Verifique os dados e tente novamente.");
+        console.error("Erro na criação:", e);
+      }
+    },
   });
 
   function close() {
