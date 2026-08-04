@@ -17,8 +17,8 @@ export async function createSubResellerInternal(
     throw new Error("Erro ao obter seu perfil.");
   }
 
-  if ((creatorProfile.credits || 0) <= 0) {
-    throw new Error("Você não possui créditos suficientes para criar um revendedor. Compre créditos no Painel do Revendedor.");
+  if ((creatorProfile.credits || 0) < 10) {
+    throw new Error("Você não possui créditos suficientes para criar uma nova revenda. Adquira mais créditos para continuar.");
   }
 
   // 1b. Verify creator has an active subscription
@@ -70,11 +70,11 @@ export async function createSubResellerInternal(
     } as any)
     .eq("id", userId);
 
-  // Deduct 1 credit from creator
+  // Deduct 10 credits from creator
   await supabaseAdmin
     .from("profiles")
     .update({
-      credits: (creatorProfile.credits || 0) - 1
+      credits: (creatorProfile.credits || 0) - 10
     } as any)
     .eq("id", creatorId);
 
@@ -83,7 +83,7 @@ export async function createSubResellerInternal(
     .from("credit_history")
     .insert({
       user_id: creatorId,
-      amount: -1,
+      amount: -10,
       type: 'use',
       description: `Criação do revendedor ${email}`
     });
