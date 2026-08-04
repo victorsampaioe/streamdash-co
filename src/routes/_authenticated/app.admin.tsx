@@ -36,6 +36,20 @@ import { AlertCircle } from "lucide-react";
 
 
 export const Route = createFileRoute("/_authenticated/app/admin")({
+  beforeLoad: async ({ context }) => {
+    const { supabase } = await import("@/integrations/supabase/client");
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) throw redirect({ to: "/auth" });
+    
+    const { data: isAdmin, error } = await supabase.rpc("has_role", { 
+      _user_id: user.id, 
+      _role: "admin" 
+    });
+    
+    if (error || !isAdmin) {
+      throw redirect({ to: "/app" });
+    }
+  },
   head: () => ({
     meta: [
       { title: "Painel Admin — StreamMonitor" },
