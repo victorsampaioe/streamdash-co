@@ -74,28 +74,41 @@ Se for apenas uma pergunta ou conversa, responda no chat em português, sem alte
 Nunca insira o texto enviado como conteúdo dentro do site ou da página.
 TEXTO DO USUÁRIO:
 
-Você apenas atualizou as instruções do webhook. Preciso saber o resultado da auditoria.
+"Entendi que as instruções foram atualizadas, porém preciso do resultado da execução dos testes.
 
-Execute os testes completos do fluxo de revendedor e informe:
+A atualização da instrução não confirma que o sistema foi testado.
 
-Quais testes foram realizados?
+Faça a auditoria completa do painel de revendedor e me informe:
+
+O que foi testado?
+Qual foi o resultado de cada teste?
 Quais erros foram encontrados?
-Quais arquivos/tabelas foram corrigidos?
-Quais alterações foram aplicadas?
-O que ainda está pendente?
+O que foi corrigido?
+Quais arquivos ou tabelas foram alterados?
 
-Validar obrigatoriamente:
+Validar:
 
-Login do admin;
-Login de revendedor;
-Login de sub-revendedor;
-Exibição do painel de revendedor no menu;
-Criação de cliente teste de 1 dia;
-Criação de sub-revendedor com mínimo de 10 créditos;
-Desconto correto de créditos;
-Configuração de planos;
-Configuração de Pix;
-Separação entre admin, revendedor e sub-revendedor;
-Clientes pertencendo ao dono correto;
-Nenhum dado puxando do admin quando for revendedor.
+Login Admin:
+aparece painel de revendedor?
+consegue gerenciar revendedores?
+Login Revendedor:
+aparece painel completo?
+consegue criar cliente teste de 1 dia?
+consegue configurar planos?
+consegue configurar Pix?
+consegue criar sub-revendedor?
+Login Sub-revendedor:
+recebe painel?
+consegue gerenciar clientes?
+usa suas próprias configurações?
+Créditos:
+criação de revendedor exige mínimo 10 créditos?
+desconta corretamente?
+saldo atualiza?
+Separação:
+revendedor não usa dados do admin;
+sub-revendedor não usa dados do pai;
+clientes ficam vinculados ao dono correto.
+
+Quero o relatório dos testes e problemas encontrados, não apenas alteração de instruções."
 */
