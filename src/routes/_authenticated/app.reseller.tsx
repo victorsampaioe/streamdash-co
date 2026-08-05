@@ -110,7 +110,7 @@ function ResellerDashboard() {
   });
   const isAdmin = adminCheckQ.data === true;
 
-  const isAccountActive = (subData?.isActive || subData?.isTrial) && (stats?.credits !== undefined && stats.credits > 0);
+  const isAccountActive = isAdmin || (stats?.credits !== undefined && stats.credits > 0);
 
   const [buyDialogOpen, setBuyDialogOpen] = useState(false);
   const [resellerDialogOpen, setResellerDialogOpen] = useState(false);

@@ -109,17 +109,21 @@ function Dashboard() {
 
   const firstName = (profile?.full_name || profile?.email || "").split(/[\s@]/)[0] || "";
 
-    const { data: sub } = useSubscription();
+  const { data: sub } = useSubscription();
+  const isReseller = sub?.profile?.is_reseller;
+  const credits = sub?.profile?.credits ?? 0;
+  const isExpired = sub?.isExpired;
+
   return (
     <div className="space-y-6">
-      {sub?.profile?.is_reseller && sub?.profile?.credits === 0 && (
+      {isReseller && credits === 0 && (
         <Alert variant="destructive" className="bg-destructive/10 border-destructive/20 mb-6">
           <AlertCircle className="h-4 w-4" />
           <AlertDescription className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div>
               <span className="font-bold">⚠️ Seus créditos acabaram</span>
               <p className="text-xs text-muted-foreground">
-                Seu painel está disponível para adicionar novos créditos, porém seus monitoramentos estão pausados até a recarga.
+                Seu painel continua acessível para recarga, mas seus monitoramentos próprios estão pausados e você não pode criar novos clientes/revendas até adicionar créditos.
               </p>
             </div>
             <Link to="/app/reseller">
@@ -127,6 +131,37 @@ function Dashboard() {
                 <CreditCard className="h-3.5 w-3.5 mr-1" /> Adicionar Créditos
               </Button>
             </Link>
+          </AlertDescription>
+        </Alert>
+      )}
+
+      {!isReseller && isExpired && (
+        <Alert variant="destructive" className="bg-destructive/10 border-destructive/20 mb-6">
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div>
+              <span className="font-bold">⚠️ Seu plano venceu</span>
+              <p className="text-xs text-muted-foreground">
+                Renove para continuar utilizando o serviço e reativar seus monitoramentos.
+              </p>
+            </div>
+            <Link to="/app/subscription">
+              <Button size="sm" className="shrink-0">
+                <ArrowRight className="h-3.5 w-3.5 mr-1" /> Renovar Agora
+              </Button>
+            </Link>
+          </AlertDescription>
+        </Alert>
+      )}
+
+      {!isReseller && !isExpired && credits === 0 && (
+        <Alert variant="destructive" className="bg-destructive/10 border-destructive/20 mb-6">
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription>
+            <span className="font-bold">⚠️ Sem créditos disponíveis</span>
+            <p className="text-xs text-muted-foreground">
+              Seu plano está ativo, mas você não possui créditos (meses) para o monitoramento rodar. Adicione créditos para normalizar.
+            </p>
           </AlertDescription>
         </Alert>
       )}
