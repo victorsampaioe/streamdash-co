@@ -3485,6 +3485,10 @@ export type Database = {
         Args: { _amount: number; _recipient_id: string; _sender_id: string }
         Returns: undefined
       }
+      transfer_credits_v2: {
+        Args: { _amount: number; _recipient_id: string; _sender_id: string }
+        Returns: undefined
+      }
     }
     Enums: {
       alert_kind: "email" | "discord" | "telegram" | "webhook"
