@@ -3591,6 +3591,7 @@ export type Database = {
         | "credits_40"
         | "reseller"
         | "basic"
+        | "quarterly"
       server_status: "up" | "degraded" | "down" | "unknown"
       subscription_status: "trial" | "active" | "expired" | "cancelled"
     }
@@ -3782,6 +3783,7 @@ export const Constants = {
         "credits_40",
         "reseller",
         "basic",
+        "quarterly",
       ],
       server_status: ["up", "degraded", "down", "unknown"],
       subscription_status: ["trial", "active", "expired", "cancelled"],
