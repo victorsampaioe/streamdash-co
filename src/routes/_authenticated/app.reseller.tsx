@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { supabase } from "@/integrations/supabase/client";
@@ -22,6 +22,8 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter }
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { cn } from "@/lib/utils";
 import { 
@@ -98,6 +100,7 @@ function ResellerDashboard() {
   const { data: history } = useQuery({ queryKey: ["reseller-history"], queryFn: () => getHistory() });
   const { data: plans } = useQuery({ queryKey: ["reseller-plans"], queryFn: () => getPlans() });
   const { data: subData } = useSubscription();
+  const navigate = useNavigate();
   
   const adminCheckQ = useQuery({
     queryKey: ["is-admin-simple"],
@@ -124,7 +127,8 @@ function ResellerDashboard() {
   const [transferAmount, setTransferAmount] = useState("");
 
   const [editingPlan, setEditingPlan] = useState<any>(null);
-  const [planForm, setPlanForm] = useState({ name: "", price: "", duration_days: "30" });
+  const [planForm, setPlanForm] = useState({ name: "", price: "", duration_days: "30", kind: "plan", credits_amount: "10" });
+
 
   const saveMutation = useMutation({
     mutationFn: (data: { id?: string; plan: any }) => savePlan({ data }),
@@ -160,17 +164,19 @@ function ResellerDashboard() {
 
   const handleEditPlan = (plan: any) => {
     setEditingPlan(plan);
-    setPlanForm({ 
-      name: plan.name, 
-      price: (plan.price_cents / 100).toString(), 
-      duration_days: plan.duration_days.toString() 
+    setPlanForm({
+      name: plan.name,
+      price: (plan.price_cents / 100).toString(),
+      duration_days: plan.duration_days.toString(),
+      kind: plan.kind ?? "plan",
+      credits_amount: (plan.credits_amount ?? 10).toString(),
     });
     setPlanDialogOpen(true);
   };
 
-  const handleCreatePlan = () => {
+  const handleCreatePlan = (kind: "plan" | "credits" = "plan") => {
     setEditingPlan(null);
-    setPlanForm({ name: "", price: "", duration_days: "30" });
+    setPlanForm({ name: "", price: "", duration_days: kind === "credits" ? "0" : "30", kind, credits_amount: "10" });
     setPlanDialogOpen(true);
   };
 
@@ -180,10 +186,22 @@ function ResellerDashboard() {
       plan: {
         name: planForm.name,
         price: parseFloat(planForm.price),
-        duration_days: parseInt(planForm.duration_days),
+        duration_days: planForm.kind === "credits" ? 1 : parseInt(planForm.duration_days),
+        kind: planForm.kind,
+        credits_amount: planForm.kind === "credits" ? parseInt(planForm.credits_amount) || 0 : null,
         features: []
       }
     });
+  };
+
+
+  const openBuyCredits = () => {
+    // Resellers inside another reseller's tree never see Admin PIX — they negotiate with their parent.
+    if (subData?.parentId) {
+      navigate({ to: "/app/subscription" });
+      return;
+    }
+    setBuyDialogOpen(true);
   };
 
   return (
@@ -198,7 +216,7 @@ function ResellerDashboard() {
                 Seu painel continua acessível para recarga, mas seus monitoramentos próprios estão pausados e você não pode criar novos clientes/revendas até adicionar créditos.
               </p>
             </div>
-            <Button size="sm" onClick={() => setBuyDialogOpen(true)} className="shrink-0">
+            <Button size="sm" onClick={openBuyCredits} className="shrink-0">
               <CreditCard className="h-3.5 w-3.5 mr-1" /> Adicionar Créditos
             </Button>
           </AlertDescription>
@@ -211,7 +229,7 @@ function ResellerDashboard() {
           <p className="text-muted-foreground text-sm">Gerencie seus créditos, rede e clientes.</p>
         </div>
         <div className="flex items-center gap-2">
-          <Button onClick={() => setBuyDialogOpen(true)} className="bg-primary hover:bg-primary/90">
+          <Button onClick={openBuyCredits} className="bg-primary hover:bg-primary/90">
             <ShoppingBag className="h-4 w-4 mr-2" /> Comprar Créditos
           </Button>
         </div>
@@ -428,53 +446,64 @@ function ResellerDashboard() {
           </Card>
         </TabsContent>
 
-        <TabsContent value="planos" className="mt-4">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <div className="space-y-1">
-                <CardTitle className="text-base font-semibold">Configuração de Planos</CardTitle>
-                <CardDescription>Defina os valores que seus clientes verão em seus painéis.</CardDescription>
-              </div>
-              <Button size="sm" variant="outline" onClick={handleCreatePlan}>
-                <Plus className="h-4 w-4 mr-2" /> Novo Plano
-              </Button>
-            </CardHeader>
-            <CardContent>
-              {(!plans || plans.length === 0) ? (
-                <div className="bg-muted/30 border border-dashed rounded-lg p-8 text-center">
-                  <p className="text-sm text-muted-foreground">Nenhum plano configurado. Crie seu primeiro plano para seus clientes.</p>
-                </div>
-              ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mt-4">
-                  {plans.map((plan: any) => (
-                    <Card key={plan.id} className="border-2 border-muted hover:border-primary/30 transition-all">
-                      <CardHeader className="pb-2">
-                        <CardTitle className="text-lg">{plan.name}</CardTitle>
-                        <div className="text-2xl font-bold">{formatBRL(plan.price_cents)}</div>
-                        <Badge variant="secondary">{plan.duration_days} dias</Badge>
-                      </CardHeader>
-                      <CardFooter className="flex flex-col gap-2 pt-4">
-                        <div className="flex w-full gap-2">
-                          <Button variant="outline" size="sm" className="flex-1" onClick={() => handleEditPlan(plan)}>
-                            <Edit2 className="h-4 w-4 mr-2" /> Editar
-                          </Button>
-                          <Button variant="destructive" size="sm" onClick={() => deleteMutation.mutate(plan.id)}>
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
-                        {subData?.profile?.phone && (
-                          <div className="w-full text-[10px] text-center text-muted-foreground p-1 bg-muted/50 rounded">
-                            Pagamento via WhatsApp: {subData.profile.phone}
-                          </div>
-                        )}
-                      </CardFooter>
-                    </Card>
-                  ))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
+        <TabsContent value="planos" className="mt-4 space-y-4">
+          {([
+            { kind: "plan" as const, title: "Planos para Clientes", desc: "Mensal, Trimestral, Semestral ou Anual — valores que seus clientes verão no painel deles.", empty: "Nenhum plano configurado. Crie seus planos (mensal, trimestral, semestral, anual)." },
+            { kind: "credits" as const, title: "Pacotes para Revenda", desc: "Pacotes de créditos (10, 30, 40) que seus sub-revendedores verão no painel deles.", empty: "Nenhum pacote de créditos configurado." },
+          ]).map((section) => {
+            const list = (plans || []).filter((p: any) => (p.kind ?? "plan") === section.kind);
+            return (
+              <Card key={section.kind}>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 gap-3">
+                  <div className="space-y-1">
+                    <CardTitle className="text-base font-semibold">{section.title}</CardTitle>
+                    <CardDescription>{section.desc}</CardDescription>
+                  </div>
+                  <Button size="sm" variant="outline" className="shrink-0" onClick={() => handleCreatePlan(section.kind)}>
+                    <Plus className="h-4 w-4 mr-2" /> Novo
+                  </Button>
+                </CardHeader>
+                <CardContent>
+                  {list.length === 0 ? (
+                    <div className="bg-muted/30 border border-dashed rounded-lg p-8 text-center">
+                      <p className="text-sm text-muted-foreground">{section.empty}</p>
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mt-4">
+                      {list.map((plan: any) => (
+                        <Card key={plan.id} className="border-2 border-muted hover:border-primary/30 transition-all">
+                          <CardHeader className="pb-2">
+                            <CardTitle className="text-lg">{plan.name}</CardTitle>
+                            <div className="text-2xl font-bold">{formatBRL(plan.price_cents)}</div>
+                            <Badge variant="secondary">
+                              {section.kind === "credits" ? `${plan.credits_amount ?? 0} créditos` : `${plan.duration_days} dias`}
+                            </Badge>
+                          </CardHeader>
+                          <CardFooter className="flex flex-col gap-2 pt-4">
+                            <div className="flex w-full gap-2">
+                              <Button variant="outline" size="sm" className="flex-1" onClick={() => handleEditPlan(plan)}>
+                                <Edit2 className="h-4 w-4 mr-2" /> Editar
+                              </Button>
+                              <Button variant="destructive" size="sm" onClick={() => deleteMutation.mutate(plan.id)}>
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </div>
+                            {(subData?.profile?.phone) && (
+                              <div className="w-full text-[10px] text-center text-muted-foreground p-1 bg-muted/50 rounded">
+                                Negociação via WhatsApp: {subData.profile.phone}
+                              </div>
+                            )}
+                          </CardFooter>
+                        </Card>
+                      ))}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            );
+          })}
         </TabsContent>
+
         <TabsContent value="config" className="mt-4">
           <Card>
             <CardHeader>
@@ -594,18 +623,22 @@ function ResellerDashboard() {
       <Dialog open={planDialogOpen} onOpenChange={setPlanDialogOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>{editingPlan ? "Editar Plano" : "Novo Plano"}</DialogTitle>
+            <DialogTitle>
+              {editingPlan ? "Editar" : "Novo"} {planForm.kind === "credits" ? "Pacote de Créditos" : "Plano de Cliente"}
+            </DialogTitle>
             <DialogDescription>
-              Configure o nome, preço e duração do plano para seus clientes.
+              {planForm.kind === "credits"
+                ? "Defina o nome, preço e quantidade de créditos do pacote para seus sub-revendedores."
+                : "Configure o nome, preço e duração do plano para seus clientes."}
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-2">
             <div className="space-y-2">
-              <Label>Nome do Plano</Label>
+              <Label>Nome</Label>
               <Input 
                 value={planForm.name} 
                 onChange={(e) => setPlanForm({ ...planForm, name: e.target.value })} 
-                placeholder="Ex: Plano Mensal" 
+                placeholder={planForm.kind === "credits" ? "Ex: 10 créditos" : "Ex: Plano Mensal"} 
               />
             </div>
             <div className="space-y-2">
@@ -617,16 +650,32 @@ function ResellerDashboard() {
                 placeholder="Ex: 35.00" 
               />
             </div>
-            <div className="space-y-2">
-              <Label>Duração (Dias)</Label>
-              <Input 
-                type="number"
-                value={planForm.duration_days} 
-                onChange={(e) => setPlanForm({ ...planForm, duration_days: e.target.value })} 
-                placeholder="Ex: 30" 
-              />
-            </div>
+            {planForm.kind === "credits" ? (
+              <div className="space-y-2">
+                <Label>Quantidade de Créditos</Label>
+                <Input
+                  type="number"
+                  value={planForm.credits_amount}
+                  onChange={(e) => setPlanForm({ ...planForm, credits_amount: e.target.value })}
+                  placeholder="Ex: 10"
+                />
+              </div>
+            ) : (
+              <div className="space-y-2">
+                <Label>Duração</Label>
+                <Select value={planForm.duration_days} onValueChange={(v) => setPlanForm({ ...planForm, duration_days: v })}>
+                  <SelectTrigger><SelectValue placeholder="Selecione a duração" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="30">Mensal (30 dias)</SelectItem>
+                    <SelectItem value="90">Trimestral (90 dias)</SelectItem>
+                    <SelectItem value="180">Semestral (180 dias)</SelectItem>
+                    <SelectItem value="365">Anual (365 dias)</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
           </div>
+
           <DialogFooter>
             <Button variant="outline" onClick={() => setPlanDialogOpen(false)}>Cancelar</Button>
             <Button onClick={handleSavePlan} disabled={saveMutation.isPending}>

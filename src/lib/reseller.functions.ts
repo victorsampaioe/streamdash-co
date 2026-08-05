@@ -6,8 +6,11 @@ const planSchema = z.object({
   name: z.string().min(2),
   price: z.number().min(0),
   duration_days: z.number().int().min(1),
+  kind: z.enum(["plan", "credits"]).optional().default("plan"),
+  credits_amount: z.number().int().min(0).nullable().optional(),
   features: z.array(z.string()).optional(),
 });
+
 
 export const getResellerPlans = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
@@ -56,8 +59,11 @@ export const saveResellerPlan = createServerFn({ method: "POST" })
       name: plan.name,
       price_cents: Math.round(plan.price * 100),
       duration_days: plan.duration_days,
+      kind: plan.kind ?? "plan",
+      credits_amount: plan.kind === "credits" ? (plan.credits_amount ?? 0) : null,
       updated_at: new Date().toISOString()
     };
+
 
     if (id) {
       const { error } = await context.supabase

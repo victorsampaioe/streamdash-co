@@ -107,6 +107,8 @@ function useNavItems() {
   if (isReseller) {
     items.push({ to: "/app/reseller", label: "Painel Revendedor", icon: ShoppingBag });
     items.push({ to: "/app/pagina", label: "Minha Página", icon: Globe });
+    items.push({ to: "/app/subscription", label: "Comprar Créditos", icon: CreditCard });
+
   } else {
     items.push({ to: "/app/subscription", label: "Minha Assinatura", icon: CreditCard });
   }
