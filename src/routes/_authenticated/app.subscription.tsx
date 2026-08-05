@@ -40,9 +40,9 @@ function SubscriptionPage() {
   const [pix, setPix] = useState<any>(null);
   const getParentPlans = useServerFn(getParentResellerPlans);
   const { data: parentPlans } = useQuery({ 
-    queryKey: ["parent-plans", data?.parentId], 
+    queryKey: ["parent-plans", data?.parentId || "admin"], 
     queryFn: () => getParentPlans(),
-    enabled: !!data?.parentId
+    enabled: !!data
   });
 
   const [paymentError, setPaymentError] = useState<string | null>(null);
@@ -151,7 +151,7 @@ function SubscriptionPage() {
             {data?.isExpired ? "Renovar Assinatura" : "Fazer upgrade"}
           </h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {!data?.parentId ? PLANS.map((plan) => {
+          {!data?.parentId && !isReseller ? PLANS.map((plan) => {
             const isPromo = plan.id === "monthly" ? isMonthlyPromoActive() : plan.id === "yearly" ? isYearlyPromoActive() : false;
             const promoLabel = plan.id === "monthly" ? "🔥 Só hoje" : "🔥 Só hoje";
             const price = effectivePriceCents(plan);
@@ -184,7 +184,7 @@ function SubscriptionPage() {
               </div>
             </Card>
             );
-          }) : (
+          }) : data?.parentId ? (
             <div className="md:col-span-2 p-12 text-center border border-dashed rounded-xl">
                <Package className="h-12 w-12 mx-auto text-muted-foreground/30 mb-4" />
                 <h3 className="text-lg font-semibold">Planos do seu Revendedor</h3>
@@ -222,7 +222,7 @@ function SubscriptionPage() {
                   </Button>
                 )}
               </div>
-            )}
+            ) : null}
           </div>
         </div>
       )}
