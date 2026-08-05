@@ -112,14 +112,14 @@ function Dashboard() {
     const { data: sub } = useSubscription();
   return (
     <div className="space-y-6">
-      {(sub?.profile?.is_reseller && sub?.profile?.credits === 0) ? (
+      {sub?.profile?.is_reseller && sub?.profile?.credits === 0 && (
         <Alert variant="destructive" className="bg-destructive/10 border-destructive/20 mb-6">
           <AlertCircle className="h-4 w-4" />
           <AlertDescription className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div>
               <span className="font-bold">⚠️ Seus créditos acabaram</span>
               <p className="text-xs text-muted-foreground">
-                Seu painel está disponível para adicionar novos créditos, porém seus monitoramentos e recursos estão pausados até a recarga.
+                Seu painel está disponível para adicionar novos créditos, porém seus monitoramentos estão pausados até a recarga.
               </p>
             </div>
             <Link to="/app/reseller">
@@ -129,24 +129,7 @@ function Dashboard() {
             </Link>
           </AlertDescription>
         </Alert>
-      ) : sub?.isExpired ? (
-        <Alert variant="destructive" className="bg-destructive/10 border-destructive/20 mb-6">
-          <AlertCircle className="h-4 w-4" />
-          <AlertDescription className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-            <div>
-              <span className="font-bold">⚠️ Seu plano venceu</span>
-              <p className="text-xs text-muted-foreground">
-                Renove para continuar utilizando o serviço e reativar seus monitoramentos.
-              </p>
-            </div>
-            <Link to="/app/subscription">
-              <Button size="sm" className="shrink-0">
-                <CreditCard className="h-3.5 w-3.5 mr-1" /> Renovar Plano
-              </Button>
-            </Link>
-          </AlertDescription>
-        </Alert>
-      ) : null}
+      )}
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">

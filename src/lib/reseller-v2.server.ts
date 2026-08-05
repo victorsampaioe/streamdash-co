@@ -90,7 +90,7 @@ export async function createResellerAccount(
   // 5. Activate Subscription Immediately
   const expiry = new Date();
   if (isReseller) {
-    expiry.setFullYear(expiry.getFullYear() + 99); // Vitalício para revendedores
+    expiry.setFullYear(expiry.getFullYear() + 1);
   } else {
     expiry.setMonth(expiry.getMonth() + months);
   }

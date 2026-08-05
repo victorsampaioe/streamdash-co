@@ -110,7 +110,7 @@ function ResellerDashboard() {
   });
   const isAdmin = adminCheckQ.data === true;
 
-  const isAccountActive = subData?.isActive && (stats?.credits !== undefined && (isAdmin || stats.credits > 0));
+  const isAccountActive = (subData?.isActive || subData?.isTrial) && (stats?.credits !== undefined && stats.credits > 0);
 
   const [buyDialogOpen, setBuyDialogOpen] = useState(false);
   const [resellerDialogOpen, setResellerDialogOpen] = useState(false);
@@ -195,7 +195,7 @@ function ResellerDashboard() {
             <div>
               <span className="font-bold">⚠️ Seus créditos acabaram</span>
               <p className="text-xs text-muted-foreground">
-                Seu painel está disponível para adicionar novos créditos, porém seus monitoramentos e recursos estão pausados até a recarga.
+                Seu painel está disponível para adicionar novos créditos, porém seus monitoramentos estão pausados até a recarga.
               </p>
             </div>
             <Button size="sm" onClick={() => setBuyDialogOpen(true)} className="shrink-0">
@@ -229,11 +229,11 @@ function ResellerDashboard() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className={cn("text-3xl font-bold flex items-center gap-2", stats?.credits === 0 && !isAdmin ? "text-destructive" : "")}>
+            <div className={cn("text-3xl font-bold flex items-center gap-2", stats?.credits === 0 ? "text-destructive" : "")}>
               {isAdmin ? "∞" : (stats?.credits === 0 ? "🔴" : "🟢")} {isAdmin ? "" : (stats?.credits ?? 0)}
             </div>
             <p className="text-xs text-muted-foreground mt-1">
-              {isAdmin ? "Seu saldo é ilimitado (Administrador)" : (stats?.credits === 0 ? "Saldo zerado — adicione créditos para revender" : "Créditos = uso dos recursos e criação de clientes/revendedores")}
+              {isAdmin ? "Créditos ilimitados (Administrador)" : (stats?.credits === 0 ? "Saldo zerado — adicione créditos para revender" : "1 crédito = 1 mês de acesso p/ cliente")}
             </p>
           </CardContent>
         </Card>

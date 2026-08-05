@@ -3,7 +3,7 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { isServiceActive } from "./service-status.server";
 
 export const SUBSCRIPTION_REQUIRED_MESSAGE =
-  "Seu plano venceu. Renove para continuar utilizando o serviço.";
+  "Serviço pausado. Sua assinatura expirou ou seu saldo de créditos zerou. Regularize para reativar o monitoramento.";
 
 /**
  * Server-side gate: the caller must be authenticated AND have an active
