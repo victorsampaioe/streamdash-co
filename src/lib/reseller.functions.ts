@@ -34,16 +34,27 @@ export const getParentResellerPlans = createServerFn({ method: "GET" })
       .eq("id", context.userId)
       .maybeSingle();
 
-    if (!profile?.parent_id) return [];
+    if (!profile?.parent_id) return { plans: [], parent: null };
 
-    const { data, error } = await context.supabase
-      .from("reseller_plans")
-      .select("*")
-      .eq("reseller_id", profile.parent_id)
-      .order("price_cents", { ascending: true });
+    const [plansRes, parentRes] = await Promise.all([
+      context.supabase
+        .from("reseller_plans")
+        .select("*")
+        .eq("reseller_id", profile.parent_id)
+        .order("price_cents", { ascending: true }),
+      context.supabase
+        .from("profiles")
+        .select("whatsapp, phone, full_name")
+        .eq("id", profile.parent_id)
+        .maybeSingle()
+    ]);
     
-    if (error) throw new Error(error.message);
-    return data;
+    if (plansRes.error) throw new Error(plansRes.error.message);
+    
+    return { 
+      plans: plansRes.data || [], 
+      parent: parentRes.data 
+    };
   });
 
 export const saveResellerPlan = createServerFn({ method: "POST" })
