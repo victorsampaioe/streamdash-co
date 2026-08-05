@@ -325,14 +325,9 @@ function SubscriptionPage() {
               </Card>
             ))}
           </div>
-          {!isReseller && (
-            <div className="mt-4 p-4 bg-purple-50 border border-purple-100 rounded-lg">
-              <p className="text-sm text-purple-800 leading-relaxed">
-                <b>Nota:</b> Ao adquirir créditos, sua conta será automaticamente convertida para <b>Revendedor</b>. 
-                Você deixará de pagar mensalidades e o sistema funcionará enquanto houver saldo positivo.
-              </p>
-            </div>
-          )}
+        </div>
+      )}
+
         </div>
       )}
 
