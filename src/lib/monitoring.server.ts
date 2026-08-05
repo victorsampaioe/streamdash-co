@@ -81,13 +81,13 @@ export async function runDueChecks() {
       const credits = profile?.credits || 0;
 
       if (isReseller) {
-        // Reseller rule: only depends on credits
+        // Reseller rule: only depends on credits for operational monitoring
         if (credits > 0) activeOwners.add(ownerId);
       } else {
         // Client rule: depends on subscription
         const isSubscriptionActive = sub && 
           (sub.status === "active" || sub.status === "trial") && 
-          sub.expires_at > nowIso;
+          new Date(sub.expires_at).getTime() > Date.now();
         
         if (isSubscriptionActive) {
           activeOwners.add(ownerId);

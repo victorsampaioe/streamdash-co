@@ -142,7 +142,7 @@ function Dashboard() {
             <div>
               <span className="font-bold">⚠️ Seu plano venceu</span>
               <p className="text-xs text-muted-foreground">
-                Renove para continuar utilizando o serviço e reativar seus monitoramentos.
+                Sua assinatura expirou. Renove para continuar utilizando o serviço e reativar seus monitoramentos.
               </p>
             </div>
             <Link to="/app/subscription">

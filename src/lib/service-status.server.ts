@@ -17,7 +17,8 @@ export async function isServiceActive(userId: string): Promise<boolean> {
   const isReseller = !!profile?.is_reseller;
   const credits = profile?.credits || 0;
 
-  // RULE: Reseller ONLY depends on credits > 0.
+  // RULE: Reseller ONLY depends on credits > 0 for operational services.
+  // They can always access the panel.
   if (isReseller) {
     return credits > 0;
   }
