@@ -164,7 +164,7 @@ function ServerDetail() {
 
   function exportCsv() {
     if (!subInfo?.isActive) {
-      toast.error("Assinatura inativa. Renove seu plano via PIX para exportar relatórios.");
+      toast.error("Seu plano venceu. Renove para continuar utilizando o serviço.");
       return;
     }
     const header = "checked_at,status,http_status,latency_ms,ssl_days_remaining,error\n";

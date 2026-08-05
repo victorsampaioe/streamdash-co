@@ -33,6 +33,7 @@ import { broadcastTelegram } from "@/lib/telegram-broadcast.functions";
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { UserCog, History, PlusCircle, UserCheck, UserRoundCog, Settings2, Trash2 } from "lucide-react";
+import { Label } from "@/components/ui/label";
 
 import { StorageReportCard } from "@/components/storage-report-card";
 import { AlertCircle } from "lucide-react";
@@ -272,7 +273,7 @@ function AdminPage() {
         <Kpi icon={BadgeCheck} label="Assinantes ativos" value={s?.paid_active} tone="success" sub={s ? `${s.monthly_subs} mensal · ${s.yearly_subs} anual` : undefined} />
         <Kpi icon={Gift} label="Em teste grátis" value={s?.trial_active} tone="warning" />
         <Kpi icon={XCircle} label="Expirados" value={s?.expired} tone="destructive" sub={s ? `${s.expiring_7d} vencem em 7 dias` : undefined} />
-        <Kpi icon={Wallet} label="Créditos disponíveis" value="∞" tone="primary" sub="Créditos ilimitados" />
+        <Kpi icon={Wallet} label="Créditos disponíveis" value="∞" tone="primary" sub="Seu saldo é ilimitado" />
         <Kpi icon={CircleDollarSign} label="Receita 30 dias" value={s ? formatBRL(s.revenue_cents_30d) : undefined} tone="success" sub={s ? `${formatBRL(s.revenue_cents_7d)} nos últimos 7d` : undefined} />
         <Kpi icon={TrendingUp} label="Receita total" value={s ? formatBRL(s.revenue_cents_total) : undefined} tone="primary" sub={s ? `${s.payments_approved_total} pagamentos` : undefined} />
         <Kpi icon={ServerCog} label="Servidores monitorados" value={s?.total_servers} />
@@ -445,9 +446,10 @@ function ResellerManagementSection() {
   );
 
   return (
-    <div className="space-y-4">
-      <Card className="p-4 space-y-4">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+    <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+      <div className="lg:col-span-3 space-y-4">
+        <Card className="p-4 space-y-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div className="flex items-center gap-2">
             <UserCog className="h-5 w-5 text-primary" />
             <h2 className="font-semibold text-lg">Gestão de Revendedores</h2>
@@ -511,6 +513,46 @@ function ResellerManagementSection() {
           </table>
         </div>
       </Card>
+      </div>
+
+      <div className="space-y-6">
+        <Card className="p-5 bg-primary/5 border-primary/20">
+          <div className="flex items-center gap-2 mb-4">
+            <ShieldCheck className="h-5 w-5 text-primary" />
+            <h2 className="font-bold">Regras de Créditos</h2>
+          </div>
+          <div className="space-y-4 text-sm">
+            <section className="space-y-2">
+              <h3 className="font-semibold flex items-center gap-1.5 text-primary">
+                <Users className="h-4 w-4" /> Cliente Final
+              </h3>
+              <ul className="space-y-1 text-muted-foreground leading-relaxed list-inside list-disc">
+                <li><strong>Plano:</strong> Define validade e acesso ao painel.</li>
+                <li><strong>Créditos:</strong> Controla o período (1 crédito = 1 mês).</li>
+                <li><strong>Vencido:</strong> Acesso ao painel ✅ | Serviços ❌</li>
+
+              </ul>
+            </section>
+
+            <section className="space-y-2">
+              <h3 className="font-semibold flex items-center gap-1.5 text-primary">
+                <Wallet className="h-4 w-4" /> Revendedor
+              </h3>
+              <ul className="space-y-1 text-muted-foreground leading-relaxed list-inside list-disc">
+                <li><strong>Assinatura:</strong> Define se ele tem acesso ao sistema.</li>
+                <li><strong>Saldo 0:</strong> Acesso painel ✅ | Serviços ❌ | Criar ❌</li>
+                <li><strong>Requisitos:</strong> Mínimo 10 créditos para criar sub-revenda.</li>
+              </ul>
+            </section>
+
+            <div className="pt-2 border-t border-primary/10">
+              <p className="text-[11px] text-muted-foreground italic">
+                * Reativação automática ao renovar ou recarregar saldo.
+              </p>
+            </div>
+          </div>
+        </Card>
+      </div>
     </div>
   );
 }
@@ -1104,5 +1146,3 @@ function EditClientDialog({ user, onDone }: { user: AdminUser; onDone: () => voi
   );
 }
 
-// Re-add Label import if missing
-import { Label } from "@/components/ui/label";
