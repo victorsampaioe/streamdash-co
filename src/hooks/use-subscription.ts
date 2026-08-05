@@ -61,7 +61,7 @@ export function useSubscription() {
         };
       }
 
-      const [{ data: subData }, { data: profile }] = await Promise.all([
+      const [{ data: subData, error: subscriptionError }, { data: profile, error: profileError }] = await Promise.all([
         supabase
           .from("subscriptions")
           .select("*")
@@ -74,6 +74,9 @@ export function useSubscription() {
           .maybeSingle()
       ]);
 
+      if (subscriptionError) throw subscriptionError;
+      if (profileError) throw profileError;
+
       const prof = profile ? {
         phone: profile.phone,
         full_name: profile.full_name,
@@ -81,12 +84,16 @@ export function useSubscription() {
         credits: profile.credits || 0
       } : null;
 
+      const isReseller = !!profile?.is_reseller;
+
       if (!subData) {
         return { 
           subscription: null, 
           daysRemaining: 0, 
-          isActive: false, 
-          isExpired: true, 
+          // Revendedores e sub-revendedores dependem somente de créditos.
+          // Eles mantêm acesso ao painel mesmo sem uma assinatura registrada.
+          isActive: isReseller,
+          isExpired: !isReseller,
           isTrial: false, 
           isExpiringSoon: false, 
           parentId: profile?.parent_id || null,
@@ -101,9 +108,6 @@ export function useSubscription() {
       const daysRemaining = Math.max(0, Math.ceil((exp - now) / msPerDay));
       const isExpired = exp <= now || sub.status === "expired" || sub.status === "cancelled";
       
-      const isReseller = !!profile?.is_reseller;
-      const credits = profile?.credits || 0;
-
       // RULE: Reseller can ALWAYS access the panel (to manage and buy credits).
       // Operational blocks (monitoring/creation) are handled by credits > 0.
       // RULE: Client is active if sub is not expired.
