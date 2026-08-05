@@ -22,7 +22,13 @@ export const PLANS: PlanDefinition[] = [
     perks: ["Monitoramento ilimitado", "Alertas em tempo real", "Suporte por e-mail"],
   },
   {
-    id: "yearly",
+    id: "quarterly",
+    name: "Trimestral",
+    priceCents: 9000,
+    durationDays: 92,
+    perks: ["Tudo do Mensal", "Economia de ~14%", "Suporte por e-mail"],
+  },
+  {
     name: "Anual",
     priceCents: 29900,
     durationDays: 365,
