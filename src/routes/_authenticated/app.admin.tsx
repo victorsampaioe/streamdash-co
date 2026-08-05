@@ -539,25 +539,25 @@ function ResellerManagementSection() {
                   <td className="p-3">
                     {r.owner_id ? (
                       <div className="flex flex-col">
-                        <span className="text-xs font-medium text-primary">
+                        <span className="text-[11px] font-medium text-primary leading-tight">
                           {resellers.find(p => p.id === r.owner_id)?.full_name || "Dono desconhecido"}
                         </span>
-                        <span className="text-[10px] text-muted-foreground">
-                          {r.parent_id === r.owner_id ? "Direto" : "Sub-Rede"}
+                        <span className="text-[9px] text-muted-foreground leading-tight">
+                          {r.parent_id === r.owner_id ? "Venda Direta" : "Sub-Rede"}
                         </span>
                       </div>
                     ) : (
-                      <Badge variant="outline" className="text-[10px]">Admin</Badge>
+                      <Badge variant="outline" className="text-[10px] py-0 h-4">Admin Global</Badge>
                     )}
                   </td>
-                  <td className="p-3">
-                    <Badge variant="default" className="bg-success text-success-foreground">Ativo</Badge>
+                  <td className="p-3 text-center">
+                    <Badge variant="default" className="bg-success text-success-foreground text-[10px] py-0 h-4">Ativo</Badge>
                   </td>
-
 
                   <td className="p-3 text-right">
-                    <Badge variant="outline" className="font-mono">{r.credits}</Badge>
+                    <Badge variant="outline" className="font-mono text-[11px]">{r.credits}</Badge>
                   </td>
+
                   <td className="p-3 text-right font-mono">{r.sub_reseller_count}</td>
                   <td className="p-3 text-xs text-muted-foreground">
                     {r.last_activity_at ? new Date(r.last_activity_at).toLocaleDateString("pt-BR") : "—"}
