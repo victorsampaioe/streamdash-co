@@ -34,7 +34,16 @@ export const getParentResellerPlans = createServerFn({ method: "GET" })
       .eq("id", context.userId)
       .maybeSingle();
 
-    if (!profile?.parent_id) return { plans: [], parent: null };
+    // If no parent_id, they are a direct customer of the Admin
+    if (!profile?.parent_id) {
+      const { data: admin } = await context.supabase
+        .from("profiles")
+        .select("whatsapp, phone, full_name")
+        .eq("email", "osmarmoreirasantosjunior@gmail.com")
+        .maybeSingle();
+      
+      return { plans: [], parent: admin };
+    }
 
     const [plansRes, parentRes] = await Promise.all([
       context.supabase
