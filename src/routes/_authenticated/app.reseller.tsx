@@ -110,7 +110,7 @@ function ResellerDashboard() {
   });
   const isAdmin = adminCheckQ.data === true;
 
-  const isAccountActive = (subData?.isActive || subData?.isTrial) && (stats?.credits !== undefined && stats.credits > 0);
+  const isAccountActive = isAdmin || (stats?.credits !== undefined && stats.credits > 0);
 
   const [buyDialogOpen, setBuyDialogOpen] = useState(false);
   const [resellerDialogOpen, setResellerDialogOpen] = useState(false);
@@ -195,7 +195,7 @@ function ResellerDashboard() {
             <div>
               <span className="font-bold">⚠️ Seus créditos acabaram</span>
               <p className="text-xs text-muted-foreground">
-                Seu painel está disponível para adicionar novos créditos, porém seus monitoramentos estão pausados até a recarga.
+                Seu painel continua acessível para recarga, mas seus monitoramentos próprios estão pausados e você não pode criar novos clientes/revendas até adicionar créditos.
               </p>
             </div>
             <Button size="sm" onClick={() => setBuyDialogOpen(true)} className="shrink-0">

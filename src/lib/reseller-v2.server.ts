@@ -90,7 +90,8 @@ export async function createResellerAccount(
   // 5. Activate Subscription Immediately
   const expiry = new Date();
   if (isReseller) {
-    expiry.setFullYear(expiry.getFullYear() + 1);
+    // Resellers don't depend on client-plan expiry, set to far future for consistency.
+    expiry.setFullYear(expiry.getFullYear() + 10);
   } else {
     expiry.setMonth(expiry.getMonth() + months);
   }

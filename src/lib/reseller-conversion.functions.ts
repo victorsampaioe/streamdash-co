@@ -21,7 +21,7 @@ export const convertToReseller = createServerFn({ method: "POST" })
     });
     if (!isAdmin) throw new Error("Unauthorized");
 
-    // Convert
+    // 1. Convert account type and set credits
     const { error } = await supabaseAdmin.from("profiles").update({
       is_reseller: true,
       credits: data.initialCredits,
@@ -31,11 +31,16 @@ export const convertToReseller = createServerFn({ method: "POST" })
 
     if (error) throw error;
 
-    // Update Subscription
+    // 2. Adjust Subscription for Reseller (Resellers don't depend on client-plan expiry, 
+    // but we set it to a far future 'active' state for UI consistency while following reseller rules).
+    const farFuture = new Date();
+    farFuture.setFullYear(farFuture.getFullYear() + 10);
+
     await supabaseAdmin.from("subscriptions").upsert({
       user_id: data.userId,
-      plan: "monthly", // Use monthly as a proxy for active paid plan if 'reseller' isn't in enum
-      status: "active"
+      plan: "reseller" as any,
+      status: "active",
+      expires_at: farFuture.toISOString()
     } as any);
 
     return { success: true };
