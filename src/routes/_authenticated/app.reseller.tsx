@@ -611,18 +611,22 @@ function ResellerDashboard() {
       <Dialog open={planDialogOpen} onOpenChange={setPlanDialogOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>{editingPlan ? "Editar Plano" : "Novo Plano"}</DialogTitle>
+            <DialogTitle>
+              {editingPlan ? "Editar" : "Novo"} {planForm.kind === "credits" ? "Pacote de Créditos" : "Plano de Cliente"}
+            </DialogTitle>
             <DialogDescription>
-              Configure o nome, preço e duração do plano para seus clientes.
+              {planForm.kind === "credits"
+                ? "Defina o nome, preço e quantidade de créditos do pacote para seus sub-revendedores."
+                : "Configure o nome, preço e duração do plano para seus clientes."}
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-2">
             <div className="space-y-2">
-              <Label>Nome do Plano</Label>
+              <Label>Nome</Label>
               <Input 
                 value={planForm.name} 
                 onChange={(e) => setPlanForm({ ...planForm, name: e.target.value })} 
-                placeholder="Ex: Plano Mensal" 
+                placeholder={planForm.kind === "credits" ? "Ex: 10 créditos" : "Ex: Plano Mensal"} 
               />
             </div>
             <div className="space-y-2">
@@ -634,16 +638,32 @@ function ResellerDashboard() {
                 placeholder="Ex: 35.00" 
               />
             </div>
-            <div className="space-y-2">
-              <Label>Duração (Dias)</Label>
-              <Input 
-                type="number"
-                value={planForm.duration_days} 
-                onChange={(e) => setPlanForm({ ...planForm, duration_days: e.target.value })} 
-                placeholder="Ex: 30" 
-              />
-            </div>
+            {planForm.kind === "credits" ? (
+              <div className="space-y-2">
+                <Label>Quantidade de Créditos</Label>
+                <Input
+                  type="number"
+                  value={planForm.credits_amount}
+                  onChange={(e) => setPlanForm({ ...planForm, credits_amount: e.target.value })}
+                  placeholder="Ex: 10"
+                />
+              </div>
+            ) : (
+              <div className="space-y-2">
+                <Label>Duração</Label>
+                <Select value={planForm.duration_days} onValueChange={(v) => setPlanForm({ ...planForm, duration_days: v })}>
+                  <SelectTrigger><SelectValue placeholder="Selecione a duração" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="30">Mensal (30 dias)</SelectItem>
+                    <SelectItem value="90">Trimestral (90 dias)</SelectItem>
+                    <SelectItem value="180">Semestral (180 dias)</SelectItem>
+                    <SelectItem value="365">Anual (365 dias)</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
           </div>
+
           <DialogFooter>
             <Button variant="outline" onClick={() => setPlanDialogOpen(false)}>Cancelar</Button>
             <Button onClick={handleSavePlan} disabled={saveMutation.isPending}>
