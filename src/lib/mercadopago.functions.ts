@@ -16,30 +16,7 @@ export const createPixPayment = createServerFn({ method: "POST" })
       amountCents = effectivePriceCents(standardPlan);
       description = `StreamMonitor — Plano ${standardPlan.name}`;
     } else if (planId.startsWith("credits_")) {
-      // BACKEND VALIDATION: Only active users (Client or Reseller) can buy credits.
-      const { data: profile } = await context.supabase
-        .from("profiles")
-        .select("is_reseller, credits")
-        .eq("id", context.userId)
-        .maybeSingle();
-
-      const { data: sub } = await context.supabase
-        .from("subscriptions")
-        .select("*")
-        .eq("user_id", context.userId)
-        .maybeSingle();
-
-      const now = new Date();
-      const isReseller = !!profile?.is_reseller;
-      const isSubActive = sub && sub.status === "active" && new Date(sub.expires_at) > now;
-
-      // Rule: Reseller needs credits > 0 OR Client needs active subscription
-      const canBuy = isReseller || isSubActive;
-
-      if (!canBuy) {
-        throw new Error("⚠️ Sua conta precisa estar ativa para comprar créditos.");
-      }
-
+      // REMOVED BLOCK: Any user (even inactive/expired) can buy credits to activate their account
       const packs: Record<string, { price: number; label: string }> = {
         credits_10: { price: 10000, label: "10 créditos" },
         credits_30: { price: 27000, label: "30 créditos" },
