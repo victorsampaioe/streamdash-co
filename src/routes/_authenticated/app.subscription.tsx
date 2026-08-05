@@ -32,6 +32,13 @@ export const Route = createFileRoute("/_authenticated/app/subscription")({
 
 function SubscriptionPage() {
   const { data, isLoading, refetch } = useSubscription();
+  const navigate = useNavigate();
+
+  // Redirect resellers away from plans page
+  if (data?.profile?.is_reseller) {
+    navigate({ to: "/app", replace: true });
+    return null;
+  }
   const [openPlan, setOpenPlan] = useState<PlanId | null>(null);
   const [pix, setPix] = useState<any>(null);
   const getParentPlans = useServerFn(getParentResellerPlans);
@@ -57,7 +64,6 @@ function SubscriptionPage() {
   const [paymentError, setPaymentError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const createPix = useServerFn(createPixPayment);
-  const navigate = useNavigate();
 
   const sub = data?.subscription;
 
