@@ -74,122 +74,115 @@ Se for apenas uma pergunta ou conversa, responda no chat em português, sem alte
 Nunca insira o texto enviado como conteúdo dentro do site ou da página.
 TEXTO DO USUÁRIO:
 
-MIGRAÇÃO E ORGANIZAÇÃO DOS CLIENTES EXISTENTES
+Sincronizar e migrar revendedores existentes para a nova estrutura
 
-Antes de apagar qualquer estrutura antiga, fazer uma análise completa dos dados atuais.
+A conta:
 
-Não excluir clientes existentes.
+areaplay0106@gmail.com
 
-Já existem muitos clientes cadastrados e todos precisam continuar funcionando normalmente.
+já é um revendedor existente e precisa ser migrada para a nova arquitetura.
 
-Fazer uma migração organizada:
+Atualmente:
 
-1. Mapear todos os usuários atuais
+consegue entrar no painel;
+possui 1 crédito;
+porém não está recebendo/acessando o painel completo de revendedor;
+o sistema está tratando como cliente ou conta comum.
 
-Identificar:
+Fazer uma sincronização de todas as contas existentes que já possuem perfil de revendedor.
 
-clientes ativos;
-clientes vencidos;
-revendedores existentes;
-contas de teste;
-assinaturas;
-datas de vencimento;
-planos atuais;
-histórico de pagamento.
-2. Reorganizar cada cliente
+Regras da migração:
 
-Cada cliente precisa receber corretamente:
+Identificar todos os usuários atuais que são revendedores e atualizar para:
 
-owner_id
-created_by
-reseller_id
-account_type
+role = reseller
 
-Exemplo:
+ou:
 
-Cliente criado diretamente pelo sistema:
+role = sub_reseller
 
-Cliente
-↓
-Admin
+conforme sua origem.
 
-Cliente criado por revendedor:
+Para cada revendedor existente:
 
-Cliente
-↓
-Revendedor responsável
+Criar/atualizar:
 
-Cliente criado por sub-revendedor:
+Perfil de revendedor
+reseller_profile
 
-Cliente
-↓
-Sub-revendedor responsável
-3. Não alterar dados importantes
+user_id
 
-Manter:
+role
 
-login;
-senha;
-e-mail;
-telefone;
-plano atual;
-validade;
-status da conta;
-histórico.
+parent_reseller_id
 
-O cliente não pode perceber a migração.
-
-4. Criar uma regra de identificação
-
-Durante a migração:
-
-Se o cliente não tiver dono identificado:
-
-Definir:
-
-owner_id = ADMIN
-
-Assim nenhum cliente fica perdido.
-
-5. Migrar assinaturas
-
-Todos os planos atuais precisam ser convertidos para a nova estrutura.
-
-Exemplo:
-
-Antes:
-
-subscription antiga
-
-Depois:
-
-customer_subscription
-
-customer_id
-owner_reseller_id
-plan
-expiration_date
 status
-6. Criar relatório antes da mudança
 
-Antes de aplicar:
+created_at
+Carteira de créditos
 
-Mostrar:
+Migrar os créditos atuais:
 
-quantidade de clientes encontrados;
-quantidade de revendedores;
-quantidade de assinaturas ativas;
-lista de possíveis erros.
-7. Aplicar a mudança por partes
+Exemplo:
 
-Primeiro: Clientes diretos (Admin).
-Segundo: Revendedores.
-Terceiro: Clientes dos revendedores.
-Quarto: Sub-revendedores.
-Quinto: Clientes dos sub-revendedores.
-Regra final:
+areaplay0106@gmail.com
 
-A nova estrutura deve começar limpa, mas mantendo todo o histórico e clientes atuais.
+Saldo atual:
 
-Não apagar dados importantes. Fazer uma migração segura.
+1 crédito
+
+Deve ficar:
+
+reseller_wallet
+
+reseller_id
+credits = 1
+
+Não perder créditos.
+
+Hierarquia
+
+Verificar quem criou esse revendedor.
+
+Exemplo:
+
+Admin
+ |
+ └── interconect2023@gmail.com
+          |
+          └── areaplay0106@gmail.com
+
+Então:
+
+parent_reseller_id =
+interconect2023@gmail.com
+Permissões
+
+Se a conta for revendedor:
+
+Liberar:
+
+painel de revendedor;
+criação de clientes;
+criação de sub-revenda (caso permitido);
+configuração de planos;
+configuração de Pix;
+gerenciamento de créditos.
+Auditoria obrigatória antes:
+
+Criar relatório:
+
+quantos revendedores existem;
+quais foram encontrados;
+quais serão migrados;
+qual será o pai de cada um;
+saldo de créditos atual.
+
+Importante:
+
+Não criar novos usuários.
+
+Não apagar contas existentes.
+
+Apenas sincronizar os dados atuais para a nova estrutura.
 */
