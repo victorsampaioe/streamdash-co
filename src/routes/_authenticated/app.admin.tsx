@@ -322,7 +322,8 @@ function AdminPage() {
                 <thead className="bg-muted/40 text-xs uppercase tracking-wider text-muted-foreground">
                   <tr>
                     <th className="text-left p-3 font-medium">Usuário</th>
-                    <th className="text-left p-3 font-medium">Plano</th>
+                    <th className="text-left p-3 font-medium">Tipo de Conta</th>
+                    <th className="text-left p-3 font-medium">Plano / Créditos</th>
                     <th className="text-left p-3 font-medium">Status</th>
                     <th className="text-left p-3 font-medium">Vencimento</th>
                     <th className="text-right p-3 font-medium">Total pago</th>
