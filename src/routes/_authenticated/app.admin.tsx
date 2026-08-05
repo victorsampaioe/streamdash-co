@@ -386,6 +386,8 @@ function AdminPage() {
                                   client_count: 0,
                                   last_activity_at: null
                                 }} 
+                                isAdminUser={u.is_admin}
+                                onToggleAdmin={(id, val) => toggleAdmin.mutate({ userId: id, makeAdmin: val })}
                                 onDone={() => {
                                   usersQ.refetch();
                                 }} 
@@ -915,7 +917,7 @@ function ConvertToResellerDialog({ user, onDone }: { user: AdminUser; onDone: ()
   );
 }
 
-function EditResellerDialog({ reseller, onDone }: { reseller: AdminReseller; onDone: () => void }) {
+function EditResellerDialog({ reseller, onDone, isAdminUser, onToggleAdmin }: { reseller: AdminReseller; onDone: () => void; isAdminUser?: boolean; onToggleAdmin?: (userId: string, makeAdmin: boolean) => void }) {
   const [open, setOpen] = useState(false);
   const [fullName, setFullName] = useState(reseller.full_name || "");
   const [email, setEmail] = useState(reseller.email || "");
@@ -1004,14 +1006,20 @@ function EditResellerDialog({ reseller, onDone }: { reseller: AdminReseller; onD
               />
               <p className="text-[10px] text-muted-foreground">Positivo adiciona, negativo remove.</p>
             </div>
-            <div className="space-y-2">
-              <Label>Tipo de Conta</Label>
-              <div className="flex gap-2">
-                <Badge variant={reseller.is_admin ? "default" : "outline"} className="cursor-pointer" onClick={() => toggleAdmin.mutate({ userId: reseller.id, makeAdmin: !reseller.is_admin })}>
-                  {reseller.is_admin ? "Admin" : "Revendedor"}
-                </Badge>
+            {onToggleAdmin && (
+              <div className="space-y-2">
+                <Label>Tipo de Conta</Label>
+                <div className="flex gap-2">
+                  <Badge 
+                    variant={isAdminUser ? "default" : "outline"} 
+                    className="cursor-pointer" 
+                    onClick={() => onToggleAdmin(reseller.id, !isAdminUser)}
+                  >
+                    {isAdminUser ? "Admin" : "Revendedor"}
+                  </Badge>
+                </div>
               </div>
-            </div>
+            )}
           </div>
 
           <div className="rounded-md border p-3 bg-muted/30">
