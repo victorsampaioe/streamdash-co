@@ -195,7 +195,7 @@ function ResellerDashboard() {
             <div>
               <span className="font-bold">⚠️ Seus créditos acabaram</span>
               <p className="text-xs text-muted-foreground">
-                Seu painel está disponível para adicionar novos créditos, porém seus monitoramentos estão pausados até a recarga.
+                Seu painel continua acessível para recarga, mas seus monitoramentos próprios estão pausados e você não pode criar novos clientes/revendas até adicionar créditos.
               </p>
             </div>
             <Button size="sm" onClick={() => setBuyDialogOpen(true)} className="shrink-0">
