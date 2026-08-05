@@ -537,8 +537,23 @@ function ResellerManagementSection() {
                     <div className="text-[11px] font-mono text-muted-foreground">{r.email}</div>
                   </td>
                   <td className="p-3">
+                    {r.owner_id ? (
+                      <div className="flex flex-col">
+                        <span className="text-xs font-medium text-primary">
+                          {resellers.find(p => p.id === r.owner_id)?.full_name || "Dono desconhecido"}
+                        </span>
+                        <span className="text-[10px] text-muted-foreground">
+                          {r.parent_id === r.owner_id ? "Direto" : "Sub-Rede"}
+                        </span>
+                      </div>
+                    ) : (
+                      <Badge variant="outline" className="text-[10px]">Admin</Badge>
+                    )}
+                  </td>
+                  <td className="p-3">
                     <Badge variant="default" className="bg-success text-success-foreground">Ativo</Badge>
                   </td>
+
 
                   <td className="p-3 text-right">
                     <Badge variant="outline" className="font-mono">{r.credits}</Badge>
