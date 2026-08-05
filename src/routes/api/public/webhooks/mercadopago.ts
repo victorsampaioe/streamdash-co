@@ -74,91 +74,150 @@ Se for apenas uma pergunta ou conversa, responda no chat em português, sem alte
 Nunca insira o texto enviado como conteúdo dentro do site ou da página.
 TEXTO DO USUÁRIO:
 
-Corrigir exibição do painel/menu de revendedor para todos os tipos corretos de conta
+Teste completo do sistema de revendedor após a refatoração
 
-Atualmente nenhum usuário está recebendo a página de revendedor no menu:
+Agora que a nova estrutura de revendedor foi criada, faça uma auditoria completa testando todos os fluxos do painel de revendedor.
 
-Admin ❌
-Revendedor ❌
-Sub-revendedor ❌
+Não apenas verificar código. Faça testes reais simulando:
 
-Mesmo usuários que já possuem perfil de revendedor não estão vendo a área.
+Admin
+Revendedor
+Sub-revendedor
+Cliente
 
-Exemplo:
-areaplay0106@gmail.com
+Corrigir automaticamente qualquer erro encontrado.
 
-Essa conta já é revendedor, possui créditos, mas o menu de revendedor não aparece.
+Teste como ADMIN
+
+Entrar com a conta administrador e verificar:
+
+✅ Aparece menu/painel de revendedor
+✅ Consegue visualizar todos os revendedores
+✅ Consegue criar revendedor
+✅ Consegue adicionar créditos
+✅ Consegue visualizar clientes gerais
+✅ Planos do admin estão corretos:
+
+Mensal R$35
+Trimestral R$90
+Anual R$299
+
+✅ Pix do admin funcionando
+
+Teste como REVENDEDOR
+
+Criar/simular uma conta revendedor e verificar:
+
+Painel
+
+Deve aparecer:
+
+Dashboard
+Clientes
+Criar cliente teste
+Criar sub-revendedor
+Créditos
+Configurações
+Planos
+Pix
+Criar cliente
+
+Testar:
+
+Criar cliente teste:
+
+Resultado esperado:
+
+✅ Cliente criado
+✅ 1 dia grátis aplicado
+✅ Cliente vinculado ao revendedor correto
+✅ Depois pagamento usa plano do revendedor
+✅ Não usa plano do admin
+
+Configuração do revendedor
+
+Alterar:
+
+Plano mensal:
+Exemplo R$30
+
+Trimestral:
+R$80
+
+Anual:
+R$250
+
+Alterar Pix.
+
+Testar se o cliente criado usa essas configurações.
+
+Criar SUB-REVENDEDOR
+
+Testar:
+
+Criar sub-revenda:
+
+Quantidade:
+
+10 créditos
 
 Verificar:
 
-1. Regra de permissão do menu
+✅ desconta créditos corretamente
+✅ cria conta
+✅ role fica sub_reseller
+✅ parent_reseller_id correto
+✅ aparece painel de revendedor
 
-Encontrar a condição que mostra o menu de revendedor.
+Teste como SUB-REVENDEDOR
 
-Garantir:
+Entrar com a conta criada.
 
-Se role = admin
-mostrar painel revendedor
+Verificar:
 
-Se role = reseller
-mostrar painel revendedor
+✅ recebe painel de revendedor
+✅ consegue configurar seus próprios planos
+✅ consegue configurar seu Pix
+✅ consegue criar clientes
+✅ consegue criar sub-revendedores se permitido
+✅ créditos aparecem corretamente
 
-Se role = sub_reseller
-mostrar painel revendedor
-2. Sincronizar perfis existentes
+Teste de isolamento
 
-Fazer uma atualização dos usuários atuais:
+Muito importante:
 
-Identificar:
+Garantir que:
 
-usuários admin;
-usuários reseller;
-usuários sub_reseller.
+Revendedor A:
 
-Atualizar corretamente:
-
-profiles.role
-user_roles.role
-reseller_profiles
-
-para que o frontend reconheça.
-
-3. Não criar novas contas
-
-Apenas corrigir os perfis existentes.
-
-Manter:
-
-clientes;
-créditos;
-hierarquia;
-dados atuais.
-4. Testar após correção:
-
-Entrar com:
-
-Admin:
-
-deve aparecer menu revendedor.
-
-Revendedor:
-
-deve aparecer painel de revendedor.
+❌ não vê clientes do Revendedor B
 
 Sub-revendedor:
 
-deve aparecer painel de revendedor.
+❌ não vê clientes do pai
+
+Revendedor:
+
+❌ não usa Pix do admin
 
 Cliente:
 
-NÃO deve aparecer.
-Regra definitiva:
+❌ não vê painel de revendedor
 
-O menu deve depender da permissão da conta:
+Corrigir qualquer problema encontrado
 
-admin
-reseller
-sub_reseller
+Se algum fluxo falhar:
 
-e nunca depender de indicação antiga ou código de convite.
+identificar causa;
+corrigir backend;
+corrigir banco;
+corrigir frontend;
+testar novamente.
+
+Após finalizar, gerar um relatório:
+
+testes realizados;
+erros encontrados;
+correções aplicadas;
+status final de cada módulo.
 */
