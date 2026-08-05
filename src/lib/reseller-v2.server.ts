@@ -41,11 +41,6 @@ export async function createResellerAccount(
     throw new Error("Mínimo obrigatório: 10 créditos para criar uma sub-revenda.");
   }
 
-  if (creatorErr || !creator) {
-    throw new Error("Erro ao validar conta do criador.");
-  }
-
-  // Admin check already done above
 
   // Verify credits if not admin
   if (!isAdmin && (creator.credits || 0) < creditsToDeduct) {
