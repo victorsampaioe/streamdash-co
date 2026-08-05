@@ -100,7 +100,15 @@ export function useSubscription() {
       const msPerDay = 24 * 60 * 60 * 1000;
       const daysRemaining = Math.max(0, Math.ceil((exp - now) / msPerDay));
       const isExpired = exp <= now || sub.status === "expired" || sub.status === "cancelled";
-      const isActive = !isExpired && (sub.status === "trial" || sub.status === "active");
+      
+      const isReseller = !!profile?.is_reseller;
+      const credits = profile?.credits || 0;
+
+      // Rule: Reseller is active if they have credits.
+      // Client is active if sub is not expired AND they have credits.
+      const isActive = isReseller 
+        ? credits > 0 
+        : (!isExpired && (sub.status === "trial" || sub.status === "active") && credits > 0);
       
       return {
         subscription: sub,
