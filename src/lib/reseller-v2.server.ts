@@ -15,36 +15,34 @@ export async function createResellerAccount(
   // 1. Validation
   const creditsToDeduct = isReseller ? initialCredits : months;
   
-  // 1.1. Admin check (moved up for validation)
+  // 1.1. Admin check
   const { data: isAdmin } = await supabaseAdmin.rpc("has_role", {
     _user_id: creatorId,
     _role: "admin",
   });
 
-  // 1.2. Check Creator
-  const { data: creator, error: creatorErr } = await supabaseAdmin
-    .from("profiles")
-    .select("id, credits, is_reseller")
-    .eq("id", creatorId)
-    .single();
+  // 1.2. Check Creator Wallet
+  const { data: wallet, error: walletErr } = await supabaseAdmin
+    .from("reseller_wallet")
+    .select("credits")
+    .eq("reseller_id", creatorId)
+    .maybeSingle();
 
-  if (creatorErr || !creator) {
-    throw new Error("Erro ao validar conta do criador.");
-  }
+  if (walletErr) throw new Error("Erro ao validar saldo do criador.");
 
-  // 1.3. Bloqueio se o criador estiver com saldo zero (e não for admin)
-  if (!isAdmin && (creator.credits || 0) <= 0) {
-    throw new Error("Seu saldo de créditos acabou. Recarregue para criar novos clientes ou revendedores.");
-  }
+  const currentCredits = wallet?.credits || 0;
 
-  if (isReseller && initialCredits < 10 && !isAdmin) {
-    throw new Error("Mínimo obrigatório: 10 créditos para criar uma sub-revenda.");
-  }
-
-
-  // Verify credits if not admin
-  if (!isAdmin && (creator.credits || 0) < creditsToDeduct) {
-    throw new Error("Você não possui créditos suficientes para criar este cliente. Adicione créditos para continuar.");
+  // 1.3. Bloqueio se o criador estiver com saldo insuficiente (e não for admin)
+  if (!isAdmin) {
+    if (currentCredits <= 0) {
+      throw new Error("Seu saldo de créditos acabou. Recarregue para criar novos clientes ou revendedores.");
+    }
+    if (currentCredits < creditsToDeduct) {
+      throw new Error(`Você não possui créditos suficientes (${currentCredits}) para deduzir ${creditsToDeduct}.`);
+    }
+    if (isReseller && initialCredits < 10) {
+      throw new Error("Mínimo obrigatório: 10 créditos para criar uma sub-revenda.");
+    }
   }
 
   // 3. Create Auth User
@@ -68,29 +66,41 @@ export async function createResellerAccount(
 
   const newUserId = authUser.user.id;
 
-  // 4. Update/Upsert Profile (Force clean slate)
-  const { error: profileErr } = await supabaseAdmin
+  // 4. Update Profile
+  await supabaseAdmin
     .from("profiles")
     .upsert({
       id: newUserId,
       email,
       full_name: fullName,
       is_reseller: isReseller,
-      credits: initialCredits,
       parent_id: creatorId,
       trial_used: true
-    } as any);
+    });
 
-  if (profileErr) {
-    // Cleanup auth user if profile fails
-    await supabaseAdmin.auth.admin.deleteUser(newUserId);
-    throw new Error(`Erro ao configurar perfil: ${profileErr.message}`);
-  }
+  // 5. Update Hierarchy Tree
+  const { data: creatorTree } = await supabaseAdmin
+    .from("reseller_tree")
+    .select("owner_id")
+    .eq("user_id", creatorId)
+    .maybeSingle();
 
-  // 5. Activate Subscription Immediately
+  await supabaseAdmin
+    .from("reseller_tree")
+    .upsert({
+      user_id: newUserId,
+      parent_reseller_id: creatorId,
+      owner_id: creatorTree?.owner_id || creatorId
+    });
+
+  // 6. Initialize Wallet for new user
+  await supabaseAdmin
+    .from("reseller_wallet")
+    .upsert({ reseller_id: newUserId, credits: isReseller ? initialCredits : 0 });
+
+  // 7. Activate Subscription
   const expiry = new Date();
   if (isReseller) {
-    // Resellers don't depend on client-plan expiry, set to far future for consistency.
     expiry.setFullYear(expiry.getFullYear() + 10);
   } else {
     expiry.setMonth(expiry.getMonth() + months);
@@ -100,17 +110,17 @@ export async function createResellerAccount(
     .from("subscriptions")
     .upsert({
       user_id: newUserId,
-      plan: isReseller ? ("reseller" as any) : ("basic" as any),
-      status: "active" as any,
+      plan: isReseller ? "reseller" : "basic",
+      status: "active",
       expires_at: expiry.toISOString()
     });
 
-  // 6. Deduct credits from creator (if not admin and credits used) and Log History
+  // 8. Deduct credits from creator and Log History
   if (!isAdmin && creditsToDeduct > 0) {
     await supabaseAdmin
-      .from("profiles")
-      .update({ credits: (creator.credits || 0) - creditsToDeduct } as any)
-      .eq("id", creatorId);
+      .from("reseller_wallet")
+      .update({ credits: currentCredits - creditsToDeduct })
+      .eq("reseller_id", creatorId);
   }
 
   if (creditsToDeduct > 0) {
@@ -122,8 +132,8 @@ export async function createResellerAccount(
       description: `Criação de ${isReseller ? 'sub-revenda' : 'cliente'}: ${email} (${isReseller ? initialCredits + ' créditos' : months + ' mês/meses'})`
     });
 
-    // History for New User (only if it's a reseller receiving credits)
-    if (isReseller) {
+    // History for New User (if reseller)
+    if (isReseller && initialCredits > 0) {
       await supabaseAdmin.from("reseller_credit_history").insert({
         user_id: newUserId,
         amount: initialCredits,
