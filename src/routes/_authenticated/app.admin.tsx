@@ -552,6 +552,8 @@ function ResellerManagementSection() {
         </Card>
       </div>
     </div>
+  );
+}
 
 function AdminAddCreditsDialog({ reseller, onDone }: { reseller: AdminReseller; onDone: () => void }) {
   const [open, setOpen] = useState(false);
