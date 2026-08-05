@@ -445,9 +445,10 @@ function ResellerManagementSection() {
   );
 
   return (
-    <div className="space-y-4">
-      <Card className="p-4 space-y-4">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+    <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+      <div className="lg:col-span-3 space-y-4">
+        <Card className="p-4 space-y-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div className="flex items-center gap-2">
             <UserCog className="h-5 w-5 text-primary" />
             <h2 className="font-semibold text-lg">Gestão de Revendedores</h2>
@@ -511,9 +512,46 @@ function ResellerManagementSection() {
           </table>
         </div>
       </Card>
+      </div>
+
+      <div className="space-y-6">
+        <Card className="p-5 bg-primary/5 border-primary/20">
+          <div className="flex items-center gap-2 mb-4">
+            <ShieldCheck className="h-5 w-5 text-primary" />
+            <h2 className="font-bold">Regras de Créditos</h2>
+          </div>
+          <div className="space-y-4 text-sm">
+            <section className="space-y-2">
+              <h3 className="font-semibold flex items-center gap-1.5 text-primary">
+                <Users className="h-4 w-4" /> Cliente Final
+              </h3>
+              <ul className="space-y-1 text-muted-foreground leading-relaxed list-inside list-disc">
+                <li><strong>Plano:</strong> Define validade e acesso ao painel.</li>
+                <li><strong>Créditos:</strong> 1 crédito = 1 mês de acesso.</li>
+                <li><strong>Vencido:</strong> Acesso ao painel ✅ | Serviços ❌</li>
+              </ul>
+            </section>
+
+            <section className="space-y-2">
+              <h3 className="font-semibold flex items-center gap-1.5 text-primary">
+                <Wallet className="h-4 w-4" /> Revendedor
+              </h3>
+              <ul className="space-y-1 text-muted-foreground leading-relaxed list-inside list-disc">
+                <li><strong>Assinatura:</strong> Acesso vitalício ao painel.</li>
+                <li><strong>Saldo 0:</strong> Acesso painel ✅ | Serviços ❌ | Criar ❌</li>
+                <li><strong>Requisitos:</strong> Mínimo 10 créditos para criar sub-revenda.</li>
+              </ul>
+            </section>
+
+            <div className="pt-2 border-t border-primary/10">
+              <p className="text-[11px] text-muted-foreground italic">
+                * Reativação automática ao renovar ou recarregar saldo.
+              </p>
+            </div>
+          </div>
+        </Card>
+      </div>
     </div>
-  );
-}
 
 function AdminAddCreditsDialog({ reseller, onDone }: { reseller: AdminReseller; onDone: () => void }) {
   const [open, setOpen] = useState(false);
