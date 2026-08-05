@@ -79,7 +79,7 @@ export function useSubscription() {
           .maybeSingle(),
         supabase
           .from("profiles")
-          .select("phone, full_name, is_reseller, role")
+          .select("phone, full_name, is_reseller")
           .eq("id", userData.user.id)
           .maybeSingle(),
         supabase
@@ -105,7 +105,7 @@ export function useSubscription() {
         full_name: profile.full_name,
         is_reseller: isReseller,
         credits: credits,
-        role: profile.role
+        role: null // Set role null since we won't read it here
       } : null;
 
       const parentId = tree?.parent_reseller_id || null;
