@@ -281,13 +281,14 @@ function SubscriptionPage() {
       )}
 
 
-      {/* Credit Packs Section - Visible to Resellers and potential Resellers */}
-      {!data?.parentId && (
+      {/* Credit Packs (Admin PIX) — exclusive to resellers with no parent reseller */}
+      {isReseller && !data?.parentId && (
         <div className="pt-4">
           <div className="flex items-center gap-2 mb-4">
             <Rocket className="h-5 w-5 text-purple-500" />
-            <h2 className="text-lg font-semibold">🚀 {isReseller ? "Comprar mais créditos" : "Seja um Revendedor Stream Monitor"}</h2>
+            <h2 className="text-lg font-semibold">🚀 Comprar mais créditos</h2>
           </div>
+
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             {CREDIT_PACKS.map((pack) => (
               <Card key={pack.id} className={cn("p-6 relative border-2", pack.highlight ? "border-purple-500 ring-1 ring-purple-200" : "border-muted hover:border-purple-300 transition-colors")}>
