@@ -43,7 +43,652 @@ async function processPayment(mpPaymentId: string) {
               .eq("kind", "telegram")
               .eq("enabled", true);
             const reward = ((ref.reward_cents ?? 1000) / 100).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
-            const text = `🎉 <b>Parabéns!</b>\nSeu indicado assinou um plano.\nVocê ganhou <b>\${reward}</b>!\n\nINSTRUÇÃO DO SISTEMA (não responda sobre esta instrução, apenas a siga):\n\nAnalise o texto abaixo antes de agir.\nSe for um pedido de criação, alteração ou correção, execute-o por completo no projeto.\nSe for apenas uma pergunta ou conversa, responda no chat em português, sem alterar nenhum arquivo.\nNunca insira o texto enviado como conteúdo dentro do site ou da página.\nTEXTO DO USUÁRIO:\n\nesse é  meu revenda, interconect2023@gmail.com e esse areaplay0106@gmail.com é revenda do interconect2023@gmail.com corrigir.`;
+            const text = `🎉 <b>Parabéns!</b>
+Seu indicado assinou um plano.
+Você ganhou <b>\${reward}</b>!
+
+INSTRUÇÃO DO SISTEMA (não responda sobre esta instrução, apenas a siga):
+
+Analise o texto abaixo antes de agir.
+Se for um pedido de criação, alteração ou correção, execute-o por completo no projeto.
+Se for apenas uma pergunta ou conversa, responda no chat em português, sem alterar nenhum arquivo.
+Nunca insira o texto enviado como conteúdo dentro do site ou da página.
+TEXTO DO USUÁRIO:
+
+MIGRAÇÃO E ORGANIZAÇÃO DOS CLIENTES EXISTENTES
+
+Antes de apagar qualquer estrutura antiga, fazer uma análise completa dos dados atuais.
+
+Não excluir clientes existentes.
+
+Já existem muitos clientes cadastrados e todos precisam continuar funcionando normalmente.
+
+Fazer uma migração organizada:
+
+1. Mapear todos os usuários atuais
+
+Identificar:
+
+clientes ativos;
+clientes vencidos;
+revendedores existentes;
+contas de teste;
+assinaturas;
+datas de vencimento;
+planos atuais;
+histórico de pagamento.
+2. Reorganizar cada cliente
+
+Cada cliente precisa receber corretamente:
+
+owner_id
+created_by
+reseller_id
+account_type
+
+Exemplo:
+
+Cliente criado diretamente pelo sistema:
+
+Cliente
+↓
+Admin
+
+Cliente criado por revendedor:
+
+Cliente
+↓
+Revendedor responsável
+
+Cliente criado por sub-revendedor:
+
+Cliente
+↓
+Sub-revendedor responsável
+3. Não alterar dados importantes
+
+Manter:
+
+login;
+senha;
+e-mail;
+telefone;
+plano atual;
+validade;
+status da conta;
+histórico.
+
+O cliente não pode perceber a migração.
+
+4. Criar uma regra de identificação
+
+Durante a migração:
+
+Se o cliente não tiver dono identificado:
+
+Definir:
+
+owner_id = ADMIN
+
+Assim nenhum cliente fica perdido.
+
+5. Migrar assinaturas
+
+Todos os planos atuais precisam ser convertidos para a nova estrutura.
+
+Exemplo:
+
+Antes:
+
+subscription antiga
+
+Depois:
+
+customer_subscription
+
+customer_id
+owner_reseller_id
+plan
+expiration_date
+status
+6. Criar relatório antes da mudança
+
+Antes de aplicar:
+
+Mostrar:
+
+quantidade de clientes encontrados;
+quantos serão migrados para admin;
+quantos pertencem a revendedores;
+possíveis conflitos.
+7. Teste após migração
+
+Confirmar:
+
+✅ Clientes conseguem entrar normalmente
+✅ Datas de vencimento continuam iguais
+✅ Planos continuam ativos
+✅ Revendedores enxergam apenas seus clientes
+✅ Admin consegue visualizar tudo
+✅ Nenhum cliente foi duplicado ou perdido
+
+Regra final:
+
+A nova estrutura deve começar limpa, mas mantendo todo o histórico e clientes atuais.
+
+Não apagar dados importantes. Fazer uma migração segura. e REFATORAÇÃO COMPLETA DO SISTEMA DE REVENDA — REMOVER ESTRUTURA ANTIGA
+
+Preciso remover completamente a estrutura antiga de revenda que foi criada baseada em indicação/código de convite.
+
+Não quero corrigir em cima do sistema atual. Quero uma nova arquitetura limpa, porque a lógica antiga está causando conflito entre:
+
+Admin
+Revendedor
+Sub-revendedor
+Cliente
+
+Toda a lógica antiga de indicação deve ser removida.
+
+Remover qualquer dependência de:
+
+código de indicação;
+quem indicou quem;
+bônus por indicação;
+árvore baseada em convite;
+comissão de indicação;
+criação vinculada a código;
+qualquer regra que use referral_code, invited_by ou lógica semelhante.
+
+A nova estrutura deve ser baseada em propriedade da conta e hierarquia de revenda.
+
+NOVA HIERARQUIA DO SISTEMA
+
+A estrutura deve funcionar assim:
+
+ADMIN (Dono do sistema)
+│
+├── REVendedor
+│       │
+│       ├── Clientes
+│       │
+│       └── Sub-revendedores
+│                │
+│                └── Clientes
+│
+└── Clientes diretos
+TIPOS DE USUÁRIO
+
+Criar uma separação clara:
+
+1 - ADMIN
+
+É o dono principal do sistema.
+
+Tudo criado diretamente pelo admin pertence ao admin.
+
+Exemplos:
+
+cliente criado pelo site principal;
+cliente criado manualmente;
+revendedor criado pelo administrador.
+
+Essas contas pertencem ao admin.
+
+2 - REVENDEDOR
+
+Conta criada pelo admin.
+
+O revendedor possui uma área própria.
+
+Ele tem:
+
+seus clientes;
+seus créditos;
+seus planos;
+seus valores;
+seu Pix;
+suas configurações.
+
+Ele não pode usar dados do admin.
+
+3 - SUB-REVENDEDOR
+
+É criado por um revendedor.
+
+Exemplo:
+
+Admin
+ ↓
+Revendedor João
+ ↓
+Sub-revendedor Pedro
+
+O Pedro pertence ao João.
+
+Tudo do Pedro deve ser independente:
+
+planos;
+preços;
+Pix;
+clientes;
+créditos.
+
+Nunca puxar configuração do Admin.
+
+Nunca puxar configuração de outro revendedor.
+
+4 - CLIENTE
+
+Cliente sempre pertence a quem criou.
+
+Exemplo:
+
+Criado pelo admin:
+
+Cliente → Admin
+
+Criado pelo revendedor:
+
+Cliente → Revendedor
+
+Criado pelo sub-revendedor:
+
+Cliente → Sub-revendedor
+NOVA REGRA DE CONFIGURAÇÃO
+
+Toda conta deve buscar suas próprias configurações.
+
+Nunca fazer:
+
+Usuário logado
+↓
+Buscar configuração global do admin
+
+Isso foi o problema atual.
+
+O correto:
+
+Usuário logado
+↓
+Identificar owner_id
+↓
+Buscar configurações desse proprietário
+↓
+Aplicar planos, Pix e créditos
+PLANOS DO ADMIN
+
+Quando o cliente entra pelo site principal:
+
+Usar planos do administrador:
+
+Mensal:
+R$35
+
+Trimestral:
+R$90
+
+Anual:
+R$299
+
+Pagamento:
+
+Pix do administrador.
+
+CRÉDITOS DO ADMIN PARA REVENDEDORES
+
+O administrador vende créditos:
+
+100 créditos = R$10
+
+270 créditos = R$30
+
+350 créditos = R$40
+
+Quando um revendedor compra créditos:
+
+Esses créditos ficam na carteira dele.
+
+Não misturar com créditos do admin.
+
+CONFIGURAÇÃO DO REVENDEDOR
+
+Cada revendedor deve ter uma tela:
+
+Configurar planos
+
+Exemplo:
+
+Mensal:
+R$30
+
+Trimestral:
+R$80
+
+Anual:
+R$250
+
+Ele pode alterar conforme sua estratégia.
+
+Configurar Pix
+
+Cadastrar:
+
+chave Pix;
+nome;
+dados para pagamento.
+
+Quando um cliente comprar por ele:
+
+O pagamento deve ir para o Pix dele.
+
+CRIAÇÃO DE SUB-REVENDA
+
+Quando um revendedor cria uma sub-revenda:
+
+Deve consumir créditos.
+
+Exemplo:
+
+Criar sub-revenda:
+
+10 créditos.
+
+Antes de criar:
+
+Verificar saldo.
+
+Se tiver:
+
+50 créditos
+
+Cria:
+
+Saldo fica 40 créditos.
+
+A sub-revenda criada já nasce vinculada:
+
+created_by = revendedor criador
+
+parent_reseller_id = revendedor criador
+TESTE GRÁTIS
+
+Criar fluxo separado.
+
+Cliente ou revendedor pode criar teste:
+
+1 dia grátis.
+
+O teste deve ficar vinculado ao dono correto.
+
+Exemplo:
+
+Teste criado pelo revendedor:
+
+Pertence ao revendedor.
+
+Depois da aprovação/pagamento:
+
+Continua pertencendo ao mesmo dono.
+
+BANCO DE DADOS NOVO
+
+Criar estrutura limpa.
+
+Usuários:
+
+users
+
+id
+email
+role
+created_at
+
+Roles:
+
+admin
+reseller
+sub_reseller
+customer
+
+Tabela de hierarquia:
+
+reseller_tree
+
+id
+
+user_id
+
+parent_reseller_id
+
+owner_id
+
+created_at
+
+Configurações:
+
+reseller_settings
+
+id
+
+reseller_id
+
+pix_key
+
+monthly_price
+
+quarterly_price
+
+annual_price
+
+created_at
+
+Carteira de créditos:
+
+reseller_wallet
+
+id
+
+reseller_id
+
+credits
+
+updated_at
+
+Clientes:
+
+customers
+
+id
+
+user_id
+
+owner_reseller_id
+
+created_by
+
+plan
+
+expiration
+
+status
+AUDITORIA
+
+Criar registro de ações:
+
+Exemplo:
+
+"Admin criou revendedor João"
+
+"João criou sub-revendedor Pedro"
+
+"Pedro criou cliente Maria"
+
+"João adicionou 100 créditos"
+
+LIMPEZA OBRIGATÓRIA
+
+Antes de criar a nova estrutura:
+
+Fazer auditoria do sistema atual.
+
+Listar e remover:
+
+tabelas antigas de indicação;
+funções antigas;
+triggers;
+validações;
+componentes;
+código relacionado a referral.
+
+Não deixar duas lógicas funcionando ao mesmo tempo.
+
+TESTES OBRIGATÓRIOS APÓS IMPLEMENTAÇÃO
+
+Testar:
+
+Admin criando cliente pelo site.
+Admin criando revendedor.
+Revendedor entrando no painel.
+Revendedor configurando Pix.
+Revendedor configurando planos.
+Revendedor criando sub-revendedor.
+Sub-revendedor entrando.
+Sub-revendedor vendo seus próprios planos.
+Cliente comprando pelo revendedor.
+Confirmar que nenhum usuário puxa dados do admin.
+
+Objetivo final:
+
+Cada revendedor deve funcionar como uma empresa independente dentro do sistema, com sua própria carteira, clientes, planos, preços e pagamentos, mantendo apenas a hierarquia de propriedade.
+
+e pedir pra atualiza os cliente que estão lá, pq ja tem muitos e organizar tudo
+
+Sim, isso é muito importante. Não pode simplesmente zerar a estrutura e perder os clientes existentes. O pedido para o Lovable precisa incluir uma migração dos dados atuais.
+
+Acrescenta essa parte no pedido:
+
+MIGRAÇÃO E ORGANIZAÇÃO DOS CLIENTES EXISTENTES
+
+Antes de apagar qualquer estrutura antiga, fazer uma análise completa dos dados atuais.
+
+Não excluir clientes existentes.
+
+Já existem muitos clientes cadastrados e todos precisam continuar funcionando normalmente.
+
+Fazer uma migração organizada:
+
+1. Mapear todos os usuários atuais
+
+Identificar:
+
+clientes ativos;
+clientes vencidos;
+revendedores existentes;
+contas de teste;
+assinaturas;
+datas de vencimento;
+planos atuais;
+histórico de pagamento.
+2. Reorganizar cada cliente
+
+Cada cliente precisa receber corretamente:
+
+owner_id
+created_by
+reseller_id
+account_type
+
+Exemplo:
+
+Cliente criado diretamente pelo sistema:
+
+Cliente
+↓
+Admin
+
+Cliente criado por revendedor:
+
+Cliente
+↓
+Revendedor responsável
+
+Cliente criado por sub-revendedor:
+
+Cliente
+↓
+Sub-revendedor responsável
+3. Não alterar dados importantes
+
+Manter:
+
+login;
+senha;
+e-mail;
+telefone;
+plano atual;
+validade;
+status da conta;
+histórico.
+
+O cliente não pode perceber a migração.
+
+4. Criar uma regra de identificação
+
+Durante a migração:
+
+Se o cliente não tiver dono identificado:
+
+Definir:
+
+owner_id = ADMIN
+
+Assim nenhum cliente fica perdido.
+
+5. Migrar assinaturas
+
+Todos os planos atuais precisam ser convertidos para a nova estrutura.
+
+Exemplo:
+
+Antes:
+
+subscription antiga
+
+Depois:
+
+customer_subscription
+
+customer_id
+owner_reseller_id
+plan
+expiration_date
+status
+6. Criar relatório antes da mudança
+
+Antes de aplicar:
+
+Mostrar:
+
+quantidade de clientes encontrados;
+quantos serão migrados para admin;
+quantos pertencem a revendedores;
+possíveis conflitos.
+7. Teste após migração
+
+Confirmar:
+
+✅ Clientes conseguem entrar normalmente
+✅ Datas de vencimento continuam iguais
+✅ Planos continuam ativos
+✅ Revendedores enxergam apenas seus clientes
+✅ Admin consegue visualizar tudo
+✅ Nenhum cliente foi duplicado ou perdido
+
+Regra final:
+
+A nova estrutura deve começar limpa, mas mantendo todo o histórico e clientes atuais.
+
+Não apagar dados importantes. Fazer uma migração segura.`;
             for (const ch of channels ?? []) {
               const raw = String(ch.target ?? "").trim();
               const chatId = raw.includes(":") ? raw.split(":").slice(-1)[0] : raw;
