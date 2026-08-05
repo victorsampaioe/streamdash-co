@@ -64,6 +64,19 @@ function SubscriptionPage() {
 
   const sub = data?.subscription;
 
+  const clientPlans = ((parentPlans as any[]) || []).filter((p) => (p.kind ?? "plan") === "plan");
+  const creditPlans = ((parentPlans as any[]) || []).filter((p) => p.kind === "credits");
+
+  const openParentWhatsapp = useCallback((message: string) => {
+    const phone = (parentProfile?.whatsapp || parentProfile?.phone || "").replace(/\D/g, "");
+    if (!phone) {
+      toast.error("Seu revendedor ainda não cadastrou um WhatsApp de contato.");
+      return;
+    }
+    window.open(`https://wa.me/${phone}?text=${encodeURIComponent(message)}`, "_blank");
+  }, [parentProfile]);
+
+
   const handlePaid = useCallback(async () => {
     await refetch();
     toast.success("Pagamento confirmado! Saldo atualizado e recursos liberados.");
