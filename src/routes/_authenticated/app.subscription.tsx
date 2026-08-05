@@ -40,7 +40,7 @@ function SubscriptionPage() {
   const [pix, setPix] = useState<any>(null);
   const getParentPlans = useServerFn(getParentResellerPlans);
   const { data: parentPlans } = useQuery({ 
-    queryKey: ["parent-plans", data?.parentId || "admin"], 
+    queryKey: ["parent-plans", data?.parentId || data?.ownerId || "admin"], 
     queryFn: () => getParentPlans(),
     enabled: !!data
   });

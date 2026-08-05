@@ -3233,6 +3233,27 @@ export type Database = {
           total_paid_cents: number
         }[]
       }
+      get_admin_users_v2: {
+        Args: never
+        Returns: {
+          created_at: string
+          credits: number
+          days_remaining: number
+          email: string
+          expires_at: string
+          full_name: string
+          id: string
+          is_admin: boolean
+          is_reseller: boolean
+          last_payment_at: string
+          owner_id: string
+          parent_id: string
+          phone: string
+          plan: Database["public"]["Enums"]["plan_type"]
+          status: Database["public"]["Enums"]["subscription_status"]
+          total_paid_cents: number
+        }[]
+      }
       get_correlation_overview: { Args: { _server_id: string }; Returns: Json }
       get_iptv_ranking: {
         Args: { _limit?: number }
