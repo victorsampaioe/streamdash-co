@@ -3488,7 +3488,7 @@ export type Database = {
     }
     Enums: {
       alert_kind: "email" | "discord" | "telegram" | "webhook"
-      app_role: "admin" | "user"
+      app_role: "admin" | "user" | "reseller" | "sub_reseller" | "customer"
       content_kind: "live" | "movie" | "series" | "episode"
       content_status:
         | "unknown"
@@ -3681,7 +3681,7 @@ export const Constants = {
   public: {
     Enums: {
       alert_kind: ["email", "discord", "telegram", "webhook"],
-      app_role: ["admin", "user"],
+      app_role: ["admin", "user", "reseller", "sub_reseller", "customer"],
       content_kind: ["live", "movie", "series", "episode"],
       content_status: [
         "unknown",
