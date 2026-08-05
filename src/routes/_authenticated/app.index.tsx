@@ -119,7 +119,7 @@ function Dashboard() {
             <div>
               <span className="font-bold">⚠️ Seus créditos acabaram</span>
               <p className="text-xs text-muted-foreground">
-                Seu painel está disponível para adicionar novos créditos, porém seus monitoramentos estão pausados até a recarga.
+                Seu painel está disponível para adicionar novos créditos, porém seus monitoramentos e recursos estão pausados até a recarga.
               </p>
             </div>
             <Link to="/app/reseller">

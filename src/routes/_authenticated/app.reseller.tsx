@@ -195,7 +195,7 @@ function ResellerDashboard() {
             <div>
               <span className="font-bold">⚠️ Seus créditos acabaram</span>
               <p className="text-xs text-muted-foreground">
-                Seu painel está disponível para adicionar novos créditos, porém seus monitoramentos estão pausados até a recarga.
+                Seu painel está disponível para adicionar novos créditos, porém seus monitoramentos e recursos estão pausados até a recarga.
               </p>
             </div>
             <Button size="sm" onClick={() => setBuyDialogOpen(true)} className="shrink-0">
@@ -233,7 +233,7 @@ function ResellerDashboard() {
               {isAdmin ? "∞" : (stats?.credits === 0 ? "🔴" : "🟢")} {isAdmin ? "" : (stats?.credits ?? 0)}
             </div>
             <p className="text-xs text-muted-foreground mt-1">
-              {isAdmin ? "Créditos ilimitados (Administrador)" : (stats?.credits === 0 ? "Saldo zerado — adicione créditos para revender" : "1 crédito = 1 mês de acesso p/ cliente")}
+              {isAdmin ? "Créditos ilimitados (Administrador)" : (stats?.credits === 0 ? "Saldo zerado — adicione créditos para revender" : "Créditos = uso dos recursos e criação de clientes/revendedores")}
             </p>
           </CardContent>
         </Card>

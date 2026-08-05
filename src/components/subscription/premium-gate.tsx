@@ -27,7 +27,7 @@ export function PremiumGate({ children, title = "Recurso premium" }: { children:
       <div>
         <h3 className="font-semibold text-lg">{title}</h3>
         <p className="text-sm text-muted-foreground mt-1">
-          Sua assinatura expirou. Renove para desbloquear este recurso.
+          Seu plano venceu. Renove para continuar utilizando o serviço.
         </p>
       </div>
       <Link to="/app/subscription">
