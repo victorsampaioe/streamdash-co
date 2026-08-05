@@ -50,22 +50,21 @@ export const createTestClient = createServerFn({ method: "POST" })
     const newUserId = authData.user.id;
 
     // Set role and profile
-    await supabaseAdmin.from("user_roles").insert({ user_id: newUserId, role: "user" });
+    await supabaseAdmin.from("user_roles").insert({ user_id: newUserId, role: "user" as any });
     
     await supabaseAdmin.from("profiles").update({
       full_name: data.fullName,
       whatsapp: data.whatsapp,
       phone: data.whatsapp,
       parent_id: userId,
-      plan: "trial",
-      status: "active",
+      plan: "trial" as any,
+      status: "active" as any,
       trial_ends_at: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString() // 1 day trial
-    }).eq("id", newUserId);
+    } as any).eq("id", newUserId);
 
     // Record history
     await supabaseAdmin.from("reseller_credit_history").insert({
-      reseller_id: userId,
-      target_id: newUserId,
+      user_id: userId,
       amount: 0,
       type: "client_creation",
       description: `Criou cliente teste ${data.fullName} - 1 dia`
@@ -110,30 +109,30 @@ export const createSubReseller = createServerFn({ method: "POST" })
     const newUserId = authData.user.id;
 
     // Set role and profile
-    await supabaseAdmin.from("user_roles").insert({ user_id: newUserId, role: "sub_reseller" });
+    await supabaseAdmin.from("user_roles").insert({ user_id: newUserId, role: "sub_reseller" as any });
     
     await supabaseAdmin.from("profiles").update({
       full_name: data.fullName,
       whatsapp: data.whatsapp,
       phone: data.whatsapp,
       parent_id: userId,
-      plan: "reseller",
-      status: "active",
+      plan: "reseller" as any,
+      status: "active" as any,
       credits: data.initialCredits
-    }).eq("id", newUserId);
+    } as any).eq("id", newUserId);
 
     // Deduct credits if not admin
     if (!isAdmin) {
-      await supabaseAdmin.rpc("deduct_credits", {
-        p_user_id: userId,
+      await supabaseAdmin.rpc("transfer_credits_v2", {
+        p_from_id: userId,
+        p_to_id: newUserId,
         p_amount: data.initialCredits
       });
     }
 
     // Record history
     await supabaseAdmin.from("reseller_credit_history").insert({
-      reseller_id: userId,
-      target_id: newUserId,
+      user_id: userId,
       amount: data.initialCredits,
       type: "reseller_creation",
       description: `Criou sub-revendedor ${data.fullName} - ${data.initialCredits} créditos usados`
