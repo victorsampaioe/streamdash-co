@@ -104,11 +104,11 @@ export function useSubscription() {
       const isReseller = !!profile?.is_reseller;
       const credits = profile?.credits || 0;
 
-      // Rule: Reseller is active if they have credits.
-      // Client is active if sub is not expired AND they have credits.
+      // RULE: Reseller is active if credits > 0.
+      // RULE: Client is active if sub is not expired.
       const isActive = isReseller 
         ? credits > 0 
-        : (!isExpired && (sub.status === "trial" || sub.status === "active") && credits > 0);
+        : (!isExpired && (sub.status === "trial" || sub.status === "active"));
       
       return {
         subscription: sub,
