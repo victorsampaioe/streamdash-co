@@ -17,8 +17,9 @@ const createSubResellerSchema = z.object({
 
 export const createTestClient = createServerFn({ method: "POST" })
   .inputValidator((data) => createClientSchema.parse(data))
-  .handler(async ({ data, context }) => {
-    const { supabase, userId } = context;
+  .handler(async (args) => {
+    const { data, context } = args;
+    const { supabase, userId } = context as any;
     if (!userId) throw new Error("Não autorizado");
 
     // Verify if creator is active
@@ -75,8 +76,9 @@ export const createTestClient = createServerFn({ method: "POST" })
 
 export const createSubReseller = createServerFn({ method: "POST" })
   .inputValidator((data) => createSubResellerSchema.parse(data))
-  .handler(async ({ data, context }) => {
-    const { supabase, userId } = context;
+  .handler(async (args) => {
+    const { data, context } = args;
+    const { supabase, userId } = context as any;
     if (!userId) throw new Error("Não autorizado");
 
     // Verify creator credits and status
@@ -124,9 +126,9 @@ export const createSubReseller = createServerFn({ method: "POST" })
     // Deduct credits if not admin
     if (!isAdmin) {
       await supabaseAdmin.rpc("transfer_credits_v2", {
-        p_from_id: userId,
-        p_to_id: newUserId,
-        p_amount: data.initialCredits
+        _sender_id: userId,
+        _recipient_id: newUserId,
+        _amount: data.initialCredits
       });
     }
 
