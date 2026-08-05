@@ -110,7 +110,7 @@ function ResellerDashboard() {
   });
   const isAdmin = adminCheckQ.data === true;
 
-  const isAccountActive = subData?.isActive && (stats?.credits !== undefined && stats.credits > 0);
+  const isAccountActive = subData?.isActive && (stats?.credits !== undefined && (isAdmin || stats.credits > 0));
 
   const [buyDialogOpen, setBuyDialogOpen] = useState(false);
   const [resellerDialogOpen, setResellerDialogOpen] = useState(false);
@@ -229,7 +229,7 @@ function ResellerDashboard() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className={cn("text-3xl font-bold flex items-center gap-2", stats?.credits === 0 ? "text-destructive" : "")}>
+            <div className={cn("text-3xl font-bold flex items-center gap-2", stats?.credits === 0 && !isAdmin ? "text-destructive" : "")}>
               {isAdmin ? "∞" : (stats?.credits === 0 ? "🔴" : "🟢")} {isAdmin ? "" : (stats?.credits ?? 0)}
             </div>
             <p className="text-xs text-muted-foreground mt-1">
