@@ -16,7 +16,13 @@ export const createPixPayment = createServerFn({ method: "POST" })
       amountCents = effectivePriceCents(standardPlan);
       description = `StreamMonitor — Plano ${standardPlan.name}`;
     } else if (planId.startsWith("credits_")) {
-      // BACKEND VALIDATION: Only active non-trial users can buy credits.
+      // BACKEND VALIDATION: Only active users (Client or Reseller) can buy credits.
+      const { data: profile } = await context.supabase
+        .from("profiles")
+        .select("is_reseller, credits")
+        .eq("id", context.userId)
+        .maybeSingle();
+
       const { data: sub } = await context.supabase
         .from("subscriptions")
         .select("*")
@@ -24,10 +30,14 @@ export const createPixPayment = createServerFn({ method: "POST" })
         .maybeSingle();
 
       const now = new Date();
-      const isActive = sub && sub.status === "active" && new Date(sub.expires_at) > now;
+      const isReseller = !!profile?.is_reseller;
+      const isSubActive = sub && sub.status === "active" && new Date(sub.expires_at) > now;
 
-      if (!isActive) {
-        throw new Error("⚠️ Sua conta precisa estar ativa (plano oficial pago) para comprar créditos.");
+      // Rule: Reseller needs credits > 0 OR Client needs active subscription
+      const canBuy = isReseller || isSubActive;
+
+      if (!canBuy) {
+        throw new Error("⚠️ Sua conta precisa estar ativa para comprar créditos.");
       }
 
       const packs: Record<string, { price: number; label: string }> = {
