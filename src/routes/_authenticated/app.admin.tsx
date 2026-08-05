@@ -311,10 +311,10 @@ function AdminPage() {
 
             <div className="flex flex-wrap gap-1.5">
               <FilterChip active={filter === "all"} onClick={() => setFilter("all")}>Todos</FilterChip>
-              <FilterChip active={filter === "paid"} onClick={() => setFilter("paid")} tone="success">Pagantes ativos</FilterChip>
-              <FilterChip active={filter === "trial"} onClick={() => setFilter("trial")} tone="warning">Em teste</FilterChip>
-              <FilterChip active={filter === "expired"} onClick={() => setFilter("expired")} tone="destructive">Expirados</FilterChip>
+              <FilterChip active={filter === "reseller"} onClick={() => setFilter("reseller")} tone="primary" icon="🟣">Revendedores</FilterChip>
+              <FilterChip active={filter === "client"} onClick={() => setFilter("client")} tone="success" icon="🔵">Clientes</FilterChip>
               <FilterChip active={filter === "admin"} onClick={() => setFilter("admin")} tone="primary">Admins</FilterChip>
+              <FilterChip active={filter === "expired"} onClick={() => setFilter("expired")} tone="destructive">Expirados</FilterChip>
             </div>
 
             <div className="overflow-x-auto rounded-md border">
