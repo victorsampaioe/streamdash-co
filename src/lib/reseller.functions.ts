@@ -186,7 +186,7 @@ export const getCreditHistory = createServerFn({ method: "GET" })
     const { data, error } = await context.supabase
       .from("reseller_credit_history")
       .select("*")
-      .eq("reseller_id", context.userId)
+      .eq("user_id", context.userId)
       .order("created_at", { ascending: false });
 
     if (error) throw new Error(error.message);
