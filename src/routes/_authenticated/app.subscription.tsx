@@ -222,7 +222,7 @@ function SubscriptionPage() {
                   </Button>
                 )}
               </div>
-            )}
+            ) : null}
           </div>
         </div>
       )}
