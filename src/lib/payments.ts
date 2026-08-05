@@ -7,7 +7,8 @@ export type PlanDefinition = {
   id: PlanId;
   name: string;
   priceCents: number;
-  durationDays: number;
+  durationDays?: number;
+  credits?: number;
   highlight?: boolean;
   perks: string[];
 };
@@ -27,6 +28,31 @@ export const PLANS: PlanDefinition[] = [
     durationDays: 365,
     highlight: true,
     perks: ["Tudo do Mensal", "Economia de ~29%", "Suporte prioritário"],
+  },
+];
+
+export const CREDIT_PACKS: PlanDefinition[] = [
+  {
+    id: "credits_10",
+    name: "10 créditos",
+    priceCents: 10000,
+    credits: 10,
+    perks: ["Painel de Revendedor ativado", "Créditos vitalícios", "Suporte VIP"],
+  },
+  {
+    id: "credits_30",
+    name: "30 créditos",
+    priceCents: 27000,
+    credits: 30,
+    perks: ["Tudo do pacote anterior", "Desconto por volume", "Suporte VIP"],
+  },
+  {
+    id: "credits_40",
+    name: "40 créditos",
+    priceCents: 35000,
+    credits: 40,
+    highlight: true,
+    perks: ["Melhor custo-benefício", "Créditos vitalícios", "Suporte VIP"],
   },
 ];
 

@@ -1,13 +1,13 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { supabase } from "@/integrations/supabase/client";
-import { CalendarDays, CheckCircle2, Clock, CreditCard, Zap, Package } from "lucide-react";
+import { CalendarDays, CheckCircle2, Clock, CreditCard, Zap, Package, Rocket, Coins } from "lucide-react";
 import { useCallback, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useSubscription, planLabel, statusLabel } from "@/hooks/use-subscription";
-import { PLANS, formatBRL, effectivePriceCents, isYearlyPromoActive, isMonthlyPromoActive, type PlanId } from "@/lib/payments";
+import { PLANS, CREDIT_PACKS, formatBRL, effectivePriceCents, isYearlyPromoActive, isMonthlyPromoActive, type PlanId } from "@/lib/payments";
 import { createPixPayment } from "@/lib/mercadopago.functions";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -34,11 +34,8 @@ function SubscriptionPage() {
   const { data, isLoading, refetch } = useSubscription();
   const navigate = useNavigate();
 
-  // Redirect resellers away from plans page
-  if (data?.profile?.is_reseller) {
-    navigate({ to: "/app", replace: true });
-    return null;
-  }
+  // Resellers are allowed to see this page to buy more credits, but it will be filtered below
+  const isReseller = data?.profile?.is_reseller;
   const [openPlan, setOpenPlan] = useState<PlanId | null>(null);
   const [pix, setPix] = useState<any>(null);
   const getParentPlans = useServerFn(getParentResellerPlans);
@@ -69,7 +66,7 @@ function SubscriptionPage() {
 
   const handlePaid = useCallback(async () => {
     await refetch();
-    toast.success("Pagamento confirmado! Assinatura ativada e recursos liberados.");
+    toast.success("Pagamento confirmado! Saldo atualizado e recursos liberados.");
     setOpenPlan(null);
     setPix(null);
     navigate({ to: "/app" });
@@ -110,29 +107,48 @@ function SubscriptionPage() {
           <div className="flex items-start justify-between gap-4 flex-wrap">
             <div className="space-y-3">
               <div className="flex items-center gap-2">
-                <Zap className="h-5 w-5 text-primary" />
-                <h2 className="text-lg font-semibold">Plano {sub ? planLabel(sub.plan) : "—"}</h2>
-                {sub && (
+                {isReseller ? (
+                  <Rocket className="h-5 w-5 text-purple-500" />
+                ) : (
+                  <Zap className="h-5 w-5 text-primary" />
+                )}
+                <h2 className="text-lg font-semibold">
+                  {isReseller ? "Conta de Revendedor" : sub ? `Plano ${planLabel(sub.plan)}` : "Plano —"}
+                </h2>
+                {isReseller ? (
+                  <Badge className="bg-purple-500 hover:bg-purple-600">Revendedor Ativo</Badge>
+                ) : sub && (
                   <Badge variant={data?.isExpired ? "destructive" : data?.isExpiringSoon ? "outline" : "default"}>
                     {statusLabel(sub.status)}
                   </Badge>
                 )}
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-sm">
-                <Metric icon={Clock} label="Dias restantes" value={sub ? `${data?.daysRemaining ?? 0} dia(s)` : "—"} highlight={data?.isExpiringSoon} danger={data?.isExpired} />
-                <Metric icon={CalendarDays} label="Vencimento" value={sub ? new Date(sub.expires_at).toLocaleDateString("pt-BR") : "—"} />
-                <Metric icon={CheckCircle2} label="Cadastrado em" value={sub ? new Date(sub.started_at).toLocaleDateString("pt-BR") : "—"} />
+                {isReseller ? (
+                  <>
+                    <Metric icon={Coins} label="Créditos disponíveis" value={`${data?.profile?.credits ?? 0} crédito(s)`} highlight={(data?.profile?.credits ?? 0) === 0} danger={(data?.profile?.credits ?? 0) < 0} />
+                    <Metric icon={CheckCircle2} label="Tipo de conta" value="Revendedor" />
+                    <Metric icon={Clock} label="Status operacional" value={(data?.profile?.credits ?? 0) > 0 ? "Ativo" : "Pausado (Sem créditos)"} danger={(data?.profile?.credits ?? 0) === 0} />
+                  </>
+                ) : (
+                  <>
+                    <Metric icon={Clock} label="Dias restantes" value={sub ? `${data?.daysRemaining ?? 0} dia(s)` : "—"} highlight={data?.isExpiringSoon} danger={data?.isExpired} />
+                    <Metric icon={CalendarDays} label="Vencimento" value={sub ? new Date(sub.expires_at).toLocaleDateString("pt-BR") : "—"} />
+                    <Metric icon={CheckCircle2} label="Cadastrado em" value={sub ? new Date(sub.started_at).toLocaleDateString("pt-BR") : "—"} />
+                  </>
+                )}
               </div>
             </div>
           </div>
         </Card>
       )}
 
-      <div>
-        <h2 className="text-lg font-semibold mb-3">
-          {data?.isExpired ? "Renovar Assinatura" : "Fazer upgrade"}
-        </h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      {!isReseller && (
+        <div>
+          <h2 className="text-lg font-semibold mb-3">
+            {data?.isExpired ? "Renovar Assinatura" : "Fazer upgrade"}
+          </h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {!data?.parentId ? PLANS.map((plan) => {
             const isPromo = plan.id === "monthly" ? isMonthlyPromoActive() : plan.id === "yearly" ? isYearlyPromoActive() : false;
             const promoLabel = plan.id === "monthly" ? "🔥 Só hoje" : "🔥 Só hoje";
@@ -204,8 +220,63 @@ function SubscriptionPage() {
                 )}
               </div>
             )}
+          </div>
         </div>
-      </div>
+      )}
+
+      {/* Credit Packs Section - Visible to Resellers and potential Resellers */}
+      {!data?.parentId && (
+        <div className="pt-4">
+          <div className="flex items-center gap-2 mb-4">
+            <Rocket className="h-5 w-5 text-purple-500" />
+            <h2 className="text-lg font-semibold">🚀 {isReseller ? "Comprar mais créditos" : "Seja um Revendedor Stream Monitor"}</h2>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {CREDIT_PACKS.map((pack) => (
+              <Card key={pack.id} className={cn("p-6 relative border-2", pack.highlight ? "border-purple-500 ring-1 ring-purple-200" : "border-muted hover:border-purple-300 transition-colors")}>
+                {pack.highlight && (
+                  <Badge className="absolute -top-2 right-4 bg-purple-500">Melhor oferta</Badge>
+                )}
+                <div className="space-y-4">
+                  <div>
+                    <h3 className="font-bold text-xl">{pack.name}</h3>
+                    <div className="text-3xl font-extrabold mt-1">
+                      {formatBRL(pack.priceCents)}
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-1">Pagamento único via PIX</p>
+                  </div>
+                  
+                  <ul className="space-y-2 text-sm text-muted-foreground">
+                    {pack.perks.map((p) => (
+                      <li key={p} className="flex items-center gap-2">
+                        <CheckCircle2 className="h-4 w-4 text-purple-500" />
+                        {p}
+                      </li>
+                    ))}
+                  </ul>
+
+                  <Button 
+                    className={cn("w-full gap-2", pack.highlight ? "bg-purple-600 hover:bg-purple-700" : "")} 
+                    onClick={() => handleRenew(pack.id)}
+                    disabled={loading}
+                  >
+                    <CreditCard className="h-4 w-4" />
+                    Comprar com PIX
+                  </Button>
+                </div>
+              </Card>
+            ))}
+          </div>
+          {!isReseller && (
+            <div className="mt-4 p-4 bg-purple-50 border border-purple-100 rounded-lg">
+              <p className="text-sm text-purple-800 leading-relaxed">
+                <b>Nota:</b> Ao adquirir créditos, sua conta será automaticamente convertida para <b>Revendedor</b>. 
+                Você deixará de pagar mensalidades e o sistema funcionará enquanto houver saldo positivo.
+              </p>
+            </div>
+          )}
+        </div>
+      )}
 
       <PixDialog
         openPlan={openPlan}
