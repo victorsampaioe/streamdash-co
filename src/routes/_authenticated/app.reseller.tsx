@@ -233,7 +233,7 @@ function ResellerDashboard() {
               {isAdmin ? "∞" : (stats?.credits === 0 ? "🔴" : "🟢")} {isAdmin ? "" : (stats?.credits ?? 0)}
             </div>
             <p className="text-xs text-muted-foreground mt-1">
-              {isAdmin ? "Créditos ilimitados (Administrador)" : (stats?.credits === 0 ? "Saldo zerado — adicione créditos para revender" : "Créditos = uso dos recursos e criação de clientes/revendedores")}
+              {isAdmin ? "Seu saldo é ilimitado (Administrador)" : (stats?.credits === 0 ? "Saldo zerado — adicione créditos para revender" : "Créditos = uso dos recursos e criação de clientes/revendedores")}
             </p>
           </CardContent>
         </Card>
