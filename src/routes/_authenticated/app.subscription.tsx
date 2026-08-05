@@ -1,6 +1,6 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { supabase } from "@/integrations/supabase/client";
-import { CalendarDays, CheckCircle2, Clock, CreditCard, Zap, Package, Rocket, Coins } from "lucide-react";
+import { CalendarDays, CheckCircle2, Clock, CreditCard, Zap, Package, Rocket, Coins, MessageCircle } from "lucide-react";
 import { useCallback, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { Button } from "@/components/ui/button";
