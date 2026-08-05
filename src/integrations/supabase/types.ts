@@ -2630,6 +2630,125 @@ export type Database = {
           },
         ]
       }
+      reseller_settings: {
+        Row: {
+          annual_price_cents: number | null
+          created_at: string
+          id: string
+          monthly_price_cents: number | null
+          pix_key: string | null
+          pix_name: string | null
+          quarterly_price_cents: number | null
+          reseller_id: string
+          updated_at: string
+        }
+        Insert: {
+          annual_price_cents?: number | null
+          created_at?: string
+          id?: string
+          monthly_price_cents?: number | null
+          pix_key?: string | null
+          pix_name?: string | null
+          quarterly_price_cents?: number | null
+          reseller_id: string
+          updated_at?: string
+        }
+        Update: {
+          annual_price_cents?: number | null
+          created_at?: string
+          id?: string
+          monthly_price_cents?: number | null
+          pix_key?: string | null
+          pix_name?: string | null
+          quarterly_price_cents?: number | null
+          reseller_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reseller_settings_reseller_id_fkey"
+            columns: ["reseller_id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      reseller_tree: {
+        Row: {
+          created_at: string
+          id: string
+          owner_id: string
+          parent_reseller_id: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          owner_id: string
+          parent_reseller_id?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          owner_id?: string
+          parent_reseller_id?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reseller_tree_owner_id_fkey"
+            columns: ["owner_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reseller_tree_parent_reseller_id_fkey"
+            columns: ["parent_reseller_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reseller_tree_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      reseller_wallet: {
+        Row: {
+          credits: number
+          id: string
+          reseller_id: string
+          updated_at: string
+        }
+        Insert: {
+          credits?: number
+          id?: string
+          reseller_id: string
+          updated_at?: string
+        }
+        Update: {
+          credits?: number
+          id?: string
+          reseller_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reseller_wallet_reseller_id_fkey"
+            columns: ["reseller_id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       server_analysis: {
         Row: {
           analyzed_at: string
