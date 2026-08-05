@@ -3215,6 +3215,21 @@ export type Database = {
           sub_reseller_count: number
         }[]
       }
+      get_admin_resellers_v2: {
+        Args: never
+        Returns: {
+          client_count: number
+          created_at: string
+          credits: number
+          email: string
+          full_name: string
+          id: string
+          last_activity_at: string
+          owner_id: string
+          parent_id: string
+          sub_reseller_count: number
+        }[]
+      }
       get_admin_stats: { Args: never; Returns: Json }
       get_admin_users: {
         Args: never
