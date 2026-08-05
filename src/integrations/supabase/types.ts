@@ -2589,8 +2589,10 @@ export type Database = {
       reseller_plans: {
         Row: {
           created_at: string | null
+          credits_amount: number | null
           duration_days: number
           id: string
+          kind: string
           name: string
           price_cents: number
           reseller_id: string
@@ -2598,8 +2600,10 @@ export type Database = {
         }
         Insert: {
           created_at?: string | null
+          credits_amount?: number | null
           duration_days: number
           id?: string
+          kind?: string
           name: string
           price_cents: number
           reseller_id: string
@@ -2607,8 +2611,10 @@ export type Database = {
         }
         Update: {
           created_at?: string | null
+          credits_amount?: number | null
           duration_days?: number
           id?: string
+          kind?: string
           name?: string
           price_cents?: number
           reseller_id?: string
@@ -3424,6 +3430,8 @@ export type Database = {
         | "credits_30"
         | "credits_50"
         | "credits_40"
+        | "reseller"
+        | "basic"
       server_status: "up" | "degraded" | "down" | "unknown"
       subscription_status: "trial" | "active" | "expired" | "cancelled"
     }
@@ -3613,6 +3621,8 @@ export const Constants = {
         "credits_30",
         "credits_50",
         "credits_40",
+        "reseller",
+        "basic",
       ],
       server_status: ["up", "degraded", "down", "unknown"],
       subscription_status: ["trial", "active", "expired", "cancelled"],
