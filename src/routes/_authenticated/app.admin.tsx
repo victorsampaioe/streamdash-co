@@ -916,6 +916,16 @@ function EditResellerDialog({ reseller, onDone }: { reseller: AdminReseller; onD
   const [creditsChange, setCreditsChange] = useState("0");
   const [status, setStatus] = useState<"active" | "expired" | "trial" | "cancelled">("active");
   
+  // Update state when reseller changes or dialog opens
+  useEffect(() => {
+    if (open) {
+      setFullName(reseller.full_name || "");
+      setEmail(reseller.email || "");
+      setPassword("");
+      setCreditsChange("0");
+    }
+  }, [open, reseller]);
+
   const updateFn = useServerFn(updateReseller);
   const mut = useMutation({
     mutationFn: () => updateFn({ data: { 
@@ -1050,6 +1060,15 @@ function EditClientDialog({ user, onDone }: { user: AdminUser; onDone: () => voi
   const [fullName, setFullName] = useState(user.full_name || "");
   const [email, setEmail] = useState(user.email || "");
   const [password, setPassword] = useState("");
+
+  // Update state when user changes or dialog opens
+  useEffect(() => {
+    if (open) {
+      setFullName(user.full_name || "");
+      setEmail(user.email || "");
+      setPassword("");
+    }
+  }, [open, user]);
   
   const updateFn = useServerFn(updateClientAdmin);
   const mut = useMutation({
