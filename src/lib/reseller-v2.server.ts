@@ -15,17 +15,13 @@ export async function createResellerAccount(
   // 1. Validation
   const creditsToDeduct = isReseller ? initialCredits : months;
   
-  // Admin check (moved up for validation)
+  // 1.1. Admin check (moved up for validation)
   const { data: isAdmin } = await supabaseAdmin.rpc("has_role", {
     _user_id: creatorId,
     _role: "admin",
   });
 
-  if (isReseller && initialCredits < 10 && !isAdmin) {
-    throw new Error("Mínimo obrigatório: 10 créditos para criar uma sub-revenda.");
-  }
-
-  // 2. Check Creator
+  // 1.2. Check Creator
   const { data: creator, error: creatorErr } = await supabaseAdmin
     .from("profiles")
     .select("id, credits, is_reseller")
@@ -36,7 +32,15 @@ export async function createResellerAccount(
     throw new Error("Erro ao validar conta do criador.");
   }
 
-  // Admin check already done above
+  // 1.3. Bloqueio se o criador estiver com saldo zero (e não for admin)
+  if (!isAdmin && (creator.credits || 0) <= 0) {
+    throw new Error("Seu saldo de créditos acabou. Recarregue para criar novos clientes ou revendedores.");
+  }
+
+  if (isReseller && initialCredits < 10 && !isAdmin) {
+    throw new Error("Mínimo obrigatório: 10 créditos para criar uma sub-revenda.");
+  }
+
 
   // Verify credits if not admin
   if (!isAdmin && (creator.credits || 0) < creditsToDeduct) {

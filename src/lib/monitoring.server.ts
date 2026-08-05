@@ -40,18 +40,34 @@ export async function runDueChecks() {
   const { data: servers, error } = await supabaseAdmin.from("servers").select("*");
   if (error) throw error;
 
-  // Only monitor servers of users with an active subscription.
-  // When trial/subscription expires, monitoring pauses until they renew via PIX.
+  // Only monitor servers of users with an active subscription AND credits if they are resellers.
+  // When trial/subscription expires OR reseller runs out of credits, monitoring pauses until they renew.
   const ownerIds = Array.from(new Set((servers ?? []).map((s: any) => s.owner_id)));
   const activeOwners = new Set<string>();
   if (ownerIds.length) {
-    const { data: subs } = await supabaseAdmin
-      .from("subscriptions")
-      .select("user_id, status, expires_at")
-      .in("user_id", ownerIds);
+    const [{ data: subs }, { data: profiles }] = await Promise.all([
+      supabaseAdmin
+        .from("subscriptions")
+        .select("user_id, status, expires_at")
+        .in("user_id", ownerIds),
+      supabaseAdmin
+        .from("profiles")
+        .select("id, credits, is_reseller")
+        .in("id", ownerIds)
+    ]);
+
     const nowIso = new Date().toISOString();
+    const profileMap = new Map(profiles?.map(p => [p.id, p]));
+
     for (const s of subs ?? []) {
-      if ((s.status === "active" || s.status === "trial") && s.expires_at > nowIso) {
+      const profile = profileMap.get(s.user_id);
+      const isSubscriptionActive = (s.status === "active" || s.status === "trial") && s.expires_at > nowIso;
+      
+      // Regra: se for revenda, precisa de créditos > 0. Se for cliente comum (não revenda), apenas assinatura ativa.
+      // Admins (identificados por is_reseller false no profile mas com role admin) passam pela sub ativa.
+      const hasCredits = profile?.is_reseller ? ((profile.credits ?? 0) > 0) : true;
+
+      if (isSubscriptionActive && hasCredits) {
         activeOwners.add(s.user_id);
       }
     }

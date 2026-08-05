@@ -8,7 +8,9 @@ import { Button } from "@/components/ui/button";
 import { StatusDot } from "@/components/status-dot";
 import { UptimeSparkline } from "@/components/uptime-sparkline";
 import { SearchInput } from "@/components/app-shell";
-import { ArrowRight, Plus, ServerIcon, Bell, HeartPulse, Tv } from "lucide-react";
+import { ArrowRight, Plus, ServerIcon, Bell, HeartPulse, Tv, AlertCircle, CreditCard } from "lucide-react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { useSubscription } from "@/hooks/use-subscription";
 
 export const Route = createFileRoute("/_authenticated/app/")({
   component: Dashboard,
@@ -107,8 +109,27 @@ function Dashboard() {
 
   const firstName = (profile?.full_name || profile?.email || "").split(/[\s@]/)[0] || "";
 
+    const { data: sub } = useSubscription();
   return (
     <div className="space-y-6">
+      {sub?.profile?.is_reseller && sub?.profile?.credits === 0 && (
+        <Alert variant="destructive" className="bg-destructive/10 border-destructive/20 mb-6">
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div>
+              <span className="font-bold">⚠️ Seus créditos acabaram</span>
+              <p className="text-xs text-muted-foreground">
+                Seu painel está disponível para adicionar novos créditos, porém seus monitoramentos estão pausados até a recarga.
+              </p>
+            </div>
+            <Link to="/app/reseller">
+              <Button size="sm" className="shrink-0">
+                <CreditCard className="h-3.5 w-3.5 mr-1" /> Adicionar Créditos
+              </Button>
+            </Link>
+          </AlertDescription>
+        </Alert>
+      )}
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">
