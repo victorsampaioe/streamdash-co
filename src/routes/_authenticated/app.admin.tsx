@@ -409,16 +409,19 @@ function AdminPage() {
                             )}
                             {((u as any).is_reseller) && (
                               <EditResellerDialog 
-                                reseller={{
+                                 reseller={{
                                   id: u.id,
                                   email: u.email,
                                   full_name: u.full_name,
                                   created_at: u.created_at,
-                                  credits: (u as any).credits || 0,
+                                  credits: u.credits || 0,
+                                  parent_id: u.parent_id,
+                                  owner_id: u.owner_id,
                                   sub_reseller_count: 0,
                                   client_count: 0,
                                   last_activity_at: null
                                 }} 
+
                                 isAdminUser={u.is_admin}
                                 onToggleAdmin={(id, val) => toggleAdmin.mutate({ userId: id, makeAdmin: val })}
                                 onDone={() => {
