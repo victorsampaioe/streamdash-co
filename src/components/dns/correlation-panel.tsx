@@ -129,8 +129,8 @@ export function CorrelationPanel({ serverId }: { serverId: string }) {
       </ul>
 
       {overview.total === 1 && (
-        <p className="text-xs text-muted-foreground border-t border-border/40 pt-3">
-          Dica: informe o mesmo <strong>Servidor (agrupamento)</strong> nas outras DNS deste painel para ativar a correlação inteligente.
+        <p className="text-xs text-muted-foreground border-t border-border/40 pt-3 italic">
+          O diagnóstico inteligente usa o nome do servidor para correlacionar falhas entre diferentes hosts.
         </p>
       )}
 
