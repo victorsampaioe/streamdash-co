@@ -65,7 +65,7 @@ export async function runDueChecks() {
       
       // Regra: se for revenda, precisa de créditos > 0. Se for cliente comum (não revenda), apenas assinatura ativa.
       // Admins (identificados por is_reseller false no profile mas com role admin) passam pela sub ativa.
-      const hasCredits = profile?.is_reseller ? (profile.credits > 0) : true;
+      const hasCredits = profile?.is_reseller ? ((profile.credits ?? 0) > 0) : true;
 
       if (isSubscriptionActive && hasCredits) {
         activeOwners.add(s.user_id);
