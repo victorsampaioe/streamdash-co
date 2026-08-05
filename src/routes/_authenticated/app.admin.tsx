@@ -352,15 +352,41 @@ function AdminPage() {
                             </div>
                           </div>
                         </td>
-                        <td className="p-3"><PlanBadge plan={u.plan} /></td>
+                        <td className="p-3">
+                          {(u as any).is_reseller ? (
+                            <Badge variant="outline" className="bg-purple-500/10 text-purple-500 border-purple-500/20">
+                              🟣 Revendedor
+                            </Badge>
+                          ) : (
+                            <Badge variant="outline" className="bg-blue-500/10 text-blue-500 border-blue-500/20">
+                              🔵 Cliente
+                            </Badge>
+                          )}
+                        </td>
+                        <td className="p-3">
+                          {(u as any).is_reseller ? (
+                            <div className="flex items-center gap-1.5 font-medium text-purple-500">
+                              <Wallet className="h-3.5 w-3.5" />
+                              {(u as any).credits || 0} créditos
+                            </div>
+                          ) : (
+                            <PlanBadge plan={u.plan} />
+                          )}
+                        </td>
                         <td className="p-3"><StatusBadge status={u.status} expired={expired} /></td>
                         <td className="p-3">
-                          <div className={cn("text-xs flex items-center gap-1", expired && "text-destructive", expiringSoon && "text-warning")}>
-                            <CalendarClock className="h-3 w-3" />
-                            {u.expires_at ? new Date(u.expires_at).toLocaleDateString("pt-BR") : "—"}
-                          </div>
-                          {u.days_remaining !== null && !expired && (
-                            <div className="text-[10px] text-muted-foreground">{u.days_remaining} dia(s)</div>
+                          {(u as any).is_reseller ? (
+                            <span className="text-xs text-muted-foreground">—</span>
+                          ) : (
+                            <>
+                              <div className={cn("text-xs flex items-center gap-1", expired && "text-destructive", expiringSoon && "text-warning")}>
+                                <CalendarClock className="h-3 w-3" />
+                                {u.expires_at ? new Date(u.expires_at).toLocaleDateString("pt-BR") : "—"}
+                              </div>
+                              {u.days_remaining !== null && !expired && (
+                                <div className="text-[10px] text-muted-foreground">{u.days_remaining} dia(s)</div>
+                              )}
+                            </>
                           )}
                         </td>
                         <td className="p-3 text-right font-mono text-xs">
