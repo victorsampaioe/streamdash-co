@@ -1,13 +1,13 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { supabase } from "@/integrations/supabase/client";
-import { CalendarDays, CheckCircle2, Clock, CreditCard, Zap, Package } from "lucide-react";
+import { CalendarDays, CheckCircle2, Clock, CreditCard, Zap, Package, Rocket, Coins } from "lucide-react";
 import { useCallback, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useSubscription, planLabel, statusLabel } from "@/hooks/use-subscription";
-import { PLANS, formatBRL, effectivePriceCents, isYearlyPromoActive, isMonthlyPromoActive, type PlanId } from "@/lib/payments";
+import { PLANS, CREDIT_PACKS, formatBRL, effectivePriceCents, isYearlyPromoActive, isMonthlyPromoActive, type PlanId } from "@/lib/payments";
 import { createPixPayment } from "@/lib/mercadopago.functions";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
