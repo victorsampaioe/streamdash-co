@@ -527,7 +527,7 @@ function ResellerDashboard() {
                       if (!val) return;
                       const { data: { user } } = await supabase.auth.getUser();
                       if (!user) return;
-                      const { error } = await supabase.from("profiles").update({ phone: val } as any).eq("id", user.id);
+                      const { error } = await supabase.from("profiles").update({ phone: val, whatsapp: val } as any).eq("id", user.id);
                       if (error) toast.error("Erro ao atualizar WhatsApp");
                       else {
                         toast.success("WhatsApp atualizado!");
