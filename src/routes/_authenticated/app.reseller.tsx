@@ -297,9 +297,10 @@ function ResellerDashboard() {
       </div>
 
       <Tabs defaultValue="rede" className="w-full">
-        <TabsList className="grid w-full grid-cols-5 max-w-xl">
+        <TabsList className="grid w-full grid-cols-6 max-w-2xl">
           <TabsTrigger value="rede">Rede</TabsTrigger>
           <TabsTrigger value="clientes">Clientes</TabsTrigger>
+          <TabsTrigger value="criações">Criações</TabsTrigger>
           <TabsTrigger value="historico">Histórico</TabsTrigger>
           <TabsTrigger value="planos">Planos</TabsTrigger>
           <TabsTrigger value="config">Config</TabsTrigger>
