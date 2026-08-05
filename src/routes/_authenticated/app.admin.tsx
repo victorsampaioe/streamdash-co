@@ -73,8 +73,12 @@ type AdminUser = {
   phone: string | null;
   created_at: string;
   is_admin: boolean;
-  plan: "trial" | "monthly" | "yearly" | null;
-  status: "trial" | "active" | "expired" | "cancelled" | null;
+  is_reseller: boolean;
+  credits: number;
+  parent_id: string | null;
+  owner_id: string | null;
+  plan: "trial" | "monthly" | "yearly" | "reseller" | "basic" | null;
+  status: "trial" | "active" | "expired" | "cancelled" | "approved" | null;
   expires_at: string | null;
   days_remaining: number | null;
   total_paid_cents: number;
