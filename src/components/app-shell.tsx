@@ -79,6 +79,10 @@ export function AppOutletShell() {
 
 function useNavItems() {
   const { data: subData } = useSubscription();
+  
+  // Use profile role or falls back to subscription logic
+  const userRole = subData?.profile?.role || (subData?.profile?.is_reseller ? 'reseller' : 'user');
+  
   const { data: isAdmin } = useQuery({
     queryKey: ["is-admin"],
     queryFn: async () => {
@@ -89,7 +93,7 @@ function useNavItems() {
     },
   });
 
-  const isReseller = !!subData?.profile?.is_reseller;
+  const isResellerOrAdmin = isAdmin || userRole === 'reseller' || userRole === 'sub_reseller' || !!subData?.profile?.is_reseller;
 
   const items = [
     { to: "/app", label: "Dashboard", icon: LayoutDashboard, exact: true },
@@ -104,11 +108,10 @@ function useNavItems() {
     { to: "/app/achievements", label: "Conquistas", icon: Trophy },
   ];
 
-  if (isReseller) {
+  if (isResellerOrAdmin) {
     items.push({ to: "/app/reseller", label: "Painel Revendedor", icon: ShoppingBag });
     items.push({ to: "/app/pagina", label: "Minha Página", icon: Globe });
     items.push({ to: "/app/subscription", label: "Comprar Créditos", icon: CreditCard });
-
   } else {
     items.push({ to: "/app/subscription", label: "Minha Assinatura", icon: CreditCard });
   }
