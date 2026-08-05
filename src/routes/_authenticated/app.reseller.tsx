@@ -434,53 +434,64 @@ function ResellerDashboard() {
           </Card>
         </TabsContent>
 
-        <TabsContent value="planos" className="mt-4">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <div className="space-y-1">
-                <CardTitle className="text-base font-semibold">Configuração de Planos</CardTitle>
-                <CardDescription>Defina os valores que seus clientes verão em seus painéis.</CardDescription>
-              </div>
-              <Button size="sm" variant="outline" onClick={handleCreatePlan}>
-                <Plus className="h-4 w-4 mr-2" /> Novo Plano
-              </Button>
-            </CardHeader>
-            <CardContent>
-              {(!plans || plans.length === 0) ? (
-                <div className="bg-muted/30 border border-dashed rounded-lg p-8 text-center">
-                  <p className="text-sm text-muted-foreground">Nenhum plano configurado. Crie seu primeiro plano para seus clientes.</p>
-                </div>
-              ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mt-4">
-                  {plans.map((plan: any) => (
-                    <Card key={plan.id} className="border-2 border-muted hover:border-primary/30 transition-all">
-                      <CardHeader className="pb-2">
-                        <CardTitle className="text-lg">{plan.name}</CardTitle>
-                        <div className="text-2xl font-bold">{formatBRL(plan.price_cents)}</div>
-                        <Badge variant="secondary">{plan.duration_days} dias</Badge>
-                      </CardHeader>
-                      <CardFooter className="flex flex-col gap-2 pt-4">
-                        <div className="flex w-full gap-2">
-                          <Button variant="outline" size="sm" className="flex-1" onClick={() => handleEditPlan(plan)}>
-                            <Edit2 className="h-4 w-4 mr-2" /> Editar
-                          </Button>
-                          <Button variant="destructive" size="sm" onClick={() => deleteMutation.mutate(plan.id)}>
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
-                        {subData?.profile?.phone && (
-                          <div className="w-full text-[10px] text-center text-muted-foreground p-1 bg-muted/50 rounded">
-                            Pagamento via WhatsApp: {subData.profile.phone}
-                          </div>
-                        )}
-                      </CardFooter>
-                    </Card>
-                  ))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
+        <TabsContent value="planos" className="mt-4 space-y-4">
+          {([
+            { kind: "plan" as const, title: "Planos para Clientes", desc: "Mensal, Trimestral, Semestral ou Anual — valores que seus clientes verão no painel deles.", empty: "Nenhum plano configurado. Crie seus planos (mensal, trimestral, semestral, anual)." },
+            { kind: "credits" as const, title: "Pacotes para Revenda", desc: "Pacotes de créditos (10, 30, 40) que seus sub-revendedores verão no painel deles.", empty: "Nenhum pacote de créditos configurado." },
+          ]).map((section) => {
+            const list = (plans || []).filter((p: any) => (p.kind ?? "plan") === section.kind);
+            return (
+              <Card key={section.kind}>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 gap-3">
+                  <div className="space-y-1">
+                    <CardTitle className="text-base font-semibold">{section.title}</CardTitle>
+                    <CardDescription>{section.desc}</CardDescription>
+                  </div>
+                  <Button size="sm" variant="outline" className="shrink-0" onClick={() => handleCreatePlan(section.kind)}>
+                    <Plus className="h-4 w-4 mr-2" /> Novo
+                  </Button>
+                </CardHeader>
+                <CardContent>
+                  {list.length === 0 ? (
+                    <div className="bg-muted/30 border border-dashed rounded-lg p-8 text-center">
+                      <p className="text-sm text-muted-foreground">{section.empty}</p>
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mt-4">
+                      {list.map((plan: any) => (
+                        <Card key={plan.id} className="border-2 border-muted hover:border-primary/30 transition-all">
+                          <CardHeader className="pb-2">
+                            <CardTitle className="text-lg">{plan.name}</CardTitle>
+                            <div className="text-2xl font-bold">{formatBRL(plan.price_cents)}</div>
+                            <Badge variant="secondary">
+                              {section.kind === "credits" ? `${plan.credits_amount ?? 0} créditos` : `${plan.duration_days} dias`}
+                            </Badge>
+                          </CardHeader>
+                          <CardFooter className="flex flex-col gap-2 pt-4">
+                            <div className="flex w-full gap-2">
+                              <Button variant="outline" size="sm" className="flex-1" onClick={() => handleEditPlan(plan)}>
+                                <Edit2 className="h-4 w-4 mr-2" /> Editar
+                              </Button>
+                              <Button variant="destructive" size="sm" onClick={() => deleteMutation.mutate(plan.id)}>
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </div>
+                            {(subData?.profile?.phone) && (
+                              <div className="w-full text-[10px] text-center text-muted-foreground p-1 bg-muted/50 rounded">
+                                Negociação via WhatsApp: {subData.profile.phone}
+                              </div>
+                            )}
+                          </CardFooter>
+                        </Card>
+                      ))}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            );
+          })}
         </TabsContent>
+
         <TabsContent value="config" className="mt-4">
           <Card>
             <CardHeader>
