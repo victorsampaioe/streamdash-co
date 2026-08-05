@@ -108,7 +108,7 @@ function useNavItems() {
     items.push({ to: "/app/reseller", label: "Painel Revendedor", icon: ShoppingBag });
     items.push({ to: "/app/pagina", label: "Minha Página", icon: Globe });
   } else {
-    items.push({ to: "/app/subscription", label: "Assinatura", icon: CreditCard });
+    items.push({ to: "/app/subscription", label: "Minha Assinatura", icon: CreditCard });
   }
   
   items.push({ to: "/app/ai-integration", label: "Integração IA", icon: Bot });
