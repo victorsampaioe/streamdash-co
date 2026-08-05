@@ -213,6 +213,8 @@ function AdminPage() {
       if (filter === "trial" && !(u.status === "trial" && u.expires_at && new Date(u.expires_at).getTime() > now)) return false;
       if (filter === "expired" && !(u.expires_at && new Date(u.expires_at).getTime() <= now)) return false;
       if (filter === "admin" && !u.is_admin) return false;
+      if (filter === "reseller" && !(u as any).is_reseller) return false;
+      if (filter === "client" && (u as any).is_reseller) return false;
       if (search) {
         const q = search.toLowerCase();
         if (!(u.email?.toLowerCase().includes(q) || u.full_name?.toLowerCase().includes(q) || u.phone?.toLowerCase().includes(q))) return false;
