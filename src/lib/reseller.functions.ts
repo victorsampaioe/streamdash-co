@@ -59,8 +59,11 @@ export const saveResellerPlan = createServerFn({ method: "POST" })
       name: plan.name,
       price_cents: Math.round(plan.price * 100),
       duration_days: plan.duration_days,
+      kind: plan.kind ?? "plan",
+      credits_amount: plan.kind === "credits" ? (plan.credits_amount ?? 0) : null,
       updated_at: new Date().toISOString()
     };
+
 
     if (id) {
       const { error } = await context.supabase
