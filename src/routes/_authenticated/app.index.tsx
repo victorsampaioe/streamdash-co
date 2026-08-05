@@ -154,17 +154,6 @@ function Dashboard() {
         </Alert>
       )}
 
-      {!isReseller && !isExpired && credits === 0 && (
-        <Alert variant="destructive" className="bg-destructive/10 border-destructive/20 mb-6">
-          <AlertCircle className="h-4 w-4" />
-          <AlertDescription>
-            <span className="font-bold">⚠️ Sem créditos disponíveis</span>
-            <p className="text-xs text-muted-foreground">
-              Seu plano está ativo, mas você não possui créditos (meses) para o monitoramento rodar. Adicione créditos para normalizar.
-            </p>
-          </AlertDescription>
-        </Alert>
-      )}
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">
