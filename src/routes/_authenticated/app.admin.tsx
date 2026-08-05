@@ -461,6 +461,8 @@ type AdminReseller = {
   full_name: string | null;
   created_at: string;
   credits: number;
+  parent_id: string | null;
+  owner_id: string | null;
   sub_reseller_count: number;
   client_count: number;
   last_activity_at: string | null;
@@ -474,7 +476,7 @@ function ResellerManagementSection() {
   const resellersQ = useQuery({
     queryKey: ["admin-resellers-list"],
     queryFn: async () => {
-      const { data, error } = await supabase.rpc("get_admin_resellers");
+      const { data, error } = await supabase.rpc("get_admin_resellers_v2");
       if (error) throw error;
       return (data ?? []) as AdminReseller[];
     },
