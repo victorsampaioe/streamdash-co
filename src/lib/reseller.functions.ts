@@ -94,6 +94,7 @@ export const saveResellerSettings = createServerFn({ method: "POST" })
     pix_key: z.string().optional(),
     pix_name: z.string().optional(),
     monthly_price: z.number().optional(),
+    quarterly_price: z.number().optional(),
     annual_price: z.number().optional(),
   }).parse(input))
   .handler(async ({ data, context }) => {
@@ -101,6 +102,7 @@ export const saveResellerSettings = createServerFn({ method: "POST" })
       pix_key: data.pix_key,
       pix_name: data.pix_name,
       monthly_price_cents: data.monthly_price ? Math.round(data.monthly_price * 100) : undefined,
+      quarterly_price_cents: data.quarterly_price ? Math.round(data.quarterly_price * 100) : undefined,
       annual_price_cents: data.annual_price ? Math.round(data.annual_price * 100) : undefined,
       updated_at: new Date().toISOString()
     };
