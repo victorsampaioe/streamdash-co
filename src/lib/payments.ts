@@ -29,6 +29,7 @@ export const PLANS: PlanDefinition[] = [
     perks: ["Tudo do Mensal", "Economia de ~14%", "Suporte por e-mail"],
   },
   {
+    id: "yearly",
     name: "Anual",
     priceCents: 29900,
     durationDays: 365,
