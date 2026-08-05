@@ -40,12 +40,15 @@ export async function runDueChecks() {
   const { data: servers, error } = await supabaseAdmin.from("servers").select("*");
   if (error) throw error;
 
-  // Only monitor servers of users with an active subscription AND credits if they are resellers.
-  // When trial/subscription expires OR reseller runs out of credits, monitoring pauses until they renew.
+  // Only monitor servers of users with active status.
+  // Client: Active subscription AND credits > 0.
+  // Reseller: credits > 0.
+  // Admins: Always.
   const ownerIds = Array.from(new Set((servers ?? []).map((s: any) => s.owner_id)));
   const activeOwners = new Set<string>();
+
   if (ownerIds.length) {
-    const [{ data: subs }, { data: profiles }] = await Promise.all([
+    const [{ data: subs }, { data: profiles }, { data: roles }] = await Promise.all([
       supabaseAdmin
         .from("subscriptions")
         .select("user_id, status, expires_at")
@@ -53,22 +56,42 @@ export async function runDueChecks() {
       supabaseAdmin
         .from("profiles")
         .select("id, credits, is_reseller")
-        .in("id", ownerIds)
+        .in("id", ownerIds),
+      supabaseAdmin
+        .from("user_roles")
+        .select("user_id")
+        .eq("role", "admin")
+        .in("user_id", ownerIds)
     ]);
 
     const nowIso = new Date().toISOString();
     const profileMap = new Map(profiles?.map(p => [p.id, p]));
+    const subMap = new Map(subs?.map(s => [s.user_id, s]));
+    const adminSet = new Set(roles?.map(r => r.user_id));
 
-    for (const s of subs ?? []) {
-      const profile = profileMap.get(s.user_id);
-      const isSubscriptionActive = (s.status === "active" || s.status === "trial") && s.expires_at > nowIso;
-      
-      // Regra: se for revenda, precisa de créditos > 0. Se for cliente comum (não revenda), apenas assinatura ativa.
-      // Admins (identificados por is_reseller false no profile mas com role admin) passam pela sub ativa.
-      const hasCredits = profile?.is_reseller ? ((profile.credits ?? 0) > 0) : true;
+    for (const ownerId of ownerIds) {
+      if (adminSet.has(ownerId)) {
+        activeOwners.add(ownerId);
+        continue;
+      }
 
-      if (isSubscriptionActive && hasCredits) {
-        activeOwners.add(s.user_id);
+      const profile = profileMap.get(ownerId);
+      const sub = subMap.get(ownerId);
+      const isReseller = !!profile?.is_reseller;
+      const credits = profile?.credits || 0;
+
+      if (isReseller) {
+        // Reseller rule: only depends on credits
+        if (credits > 0) activeOwners.add(ownerId);
+      } else {
+        // Client rule: depends on BOTH plan and credits
+        const isSubscriptionActive = sub && 
+          (sub.status === "active" || sub.status === "trial") && 
+          sub.expires_at > nowIso;
+        
+        if (isSubscriptionActive && credits > 0) {
+          activeOwners.add(ownerId);
+        }
       }
     }
   }
