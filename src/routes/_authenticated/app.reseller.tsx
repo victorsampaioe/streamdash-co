@@ -124,7 +124,8 @@ function ResellerDashboard() {
   const [transferAmount, setTransferAmount] = useState("");
 
   const [editingPlan, setEditingPlan] = useState<any>(null);
-  const [planForm, setPlanForm] = useState({ name: "", price: "", duration_days: "30" });
+  const [planForm, setPlanForm] = useState({ name: "", price: "", duration_days: "30", kind: "plan", credits_amount: "10" });
+
 
   const saveMutation = useMutation({
     mutationFn: (data: { id?: string; plan: any }) => savePlan({ data }),
