@@ -298,7 +298,13 @@ function AdminPage() {
               <div className="w-full sm:w-auto">
                 <div className="relative w-full sm:w-72">
                   <Search className="h-3.5 w-3.5 absolute left-2.5 top-2.5 text-muted-foreground" />
-                  <Input placeholder="Buscar por nome, e-mail, telefone..." value={search} onChange={(e) => setSearch(e.target.value)} className="pl-8 w-full" />
+                  <Input 
+                    placeholder="Buscar por nome, e-mail, telefone..." 
+                    value={search} 
+                    onChange={(e) => setSearch(e.target.value)} 
+                    className="pl-8 w-full" 
+                    id="admin-user-search"
+                  />
                 </div>
               </div>
             </div>
@@ -365,7 +371,14 @@ function AdminPage() {
                             <GrantPlanDialog user={u} />
                             {!u.is_admin && !((u as any).is_reseller) && (
                               <>
-                                <EditClientDialog user={u} onDone={() => usersQ.refetch()} />
+                                <EditClientDialog 
+                                  user={u} 
+                                  isAdminUser={u.is_admin}
+                                  onToggleAdmin={(id, val) => toggleAdmin.mutate({ userId: id, makeAdmin: val })}
+                                  onDone={() => {
+                                    usersQ.refetch();
+                                  }} 
+                                />
                                 <ConvertToResellerDialog user={u} onDone={() => usersQ.refetch()} />
                               </>
                             )}
@@ -381,7 +394,11 @@ function AdminPage() {
                                   client_count: 0,
                                   last_activity_at: null
                                 }} 
-                                onDone={() => usersQ.refetch()} 
+                                isAdminUser={u.is_admin}
+                                onToggleAdmin={(id, val) => toggleAdmin.mutate({ userId: id, makeAdmin: val })}
+                                onDone={() => {
+                                  usersQ.refetch();
+                                }} 
                               />
                             )}
                             <Button size="sm" variant={u.is_admin ? "outline" : "default"} onClick={() => toggleAdmin.mutate({ userId: u.id, makeAdmin: !u.is_admin })}>
@@ -853,6 +870,15 @@ function ConvertToResellerDialog({ user, onDone }: { user: AdminUser; onDone: ()
   const [fullName, setFullName] = useState(user.full_name || "");
   const [email, setEmail] = useState(user.email || "");
   const [credits, setCredits] = useState("10");
+
+  // Reset state when dialog opens or user changes
+  useEffect(() => {
+    if (open) {
+      setFullName(user.full_name || "");
+      setEmail(user.email || "");
+      setCredits("10");
+    }
+  }, [open, user]);
   
   const convertFn = useServerFn(convertToReseller);
   const mut = useMutation({
@@ -908,7 +934,7 @@ function ConvertToResellerDialog({ user, onDone }: { user: AdminUser; onDone: ()
   );
 }
 
-function EditResellerDialog({ reseller, onDone }: { reseller: AdminReseller; onDone: () => void }) {
+function EditResellerDialog({ reseller, onDone, isAdminUser, onToggleAdmin }: { reseller: AdminReseller; onDone: () => void; isAdminUser?: boolean; onToggleAdmin?: (userId: string, makeAdmin: boolean) => void }) {
   const [open, setOpen] = useState(false);
   const [fullName, setFullName] = useState(reseller.full_name || "");
   const [email, setEmail] = useState(reseller.email || "");
@@ -916,6 +942,16 @@ function EditResellerDialog({ reseller, onDone }: { reseller: AdminReseller; onD
   const [creditsChange, setCreditsChange] = useState("0");
   const [status, setStatus] = useState<"active" | "expired" | "trial" | "cancelled">("active");
   
+  // Update state when reseller changes or dialog opens
+  useEffect(() => {
+    if (open) {
+      setFullName(reseller.full_name || "");
+      setEmail(reseller.email || "");
+      setPassword("");
+      setCreditsChange("0");
+    }
+  }, [open, reseller]);
+
   const updateFn = useServerFn(updateReseller);
   const mut = useMutation({
     mutationFn: () => updateFn({ data: { 
@@ -988,6 +1024,22 @@ function EditResellerDialog({ reseller, onDone }: { reseller: AdminReseller; onD
               <p className="text-[10px] text-muted-foreground">Positivo adiciona, negativo remove.</p>
             </div>
           </div>
+          
+          {onToggleAdmin && (
+            <div className="rounded-md border p-3 bg-muted/30 flex items-center justify-between">
+              <div>
+                <div className="text-xs text-muted-foreground uppercase tracking-wider">Tipo de Conta</div>
+                <div className="text-sm font-medium">{isAdminUser ? "Administrador" : "Revendedor / Cliente"}</div>
+              </div>
+              <Button 
+                size="sm" 
+                variant={isAdminUser ? "destructive" : "default"}
+                onClick={() => onToggleAdmin(reseller.id, !isAdminUser)}
+              >
+                {isAdminUser ? "Remover Admin" : "Tornar Admin"}
+              </Button>
+            </div>
+          )}
 
           <div className="rounded-md border p-3 bg-muted/30">
             <div className="text-xs text-muted-foreground uppercase tracking-wider">Saldo Atual</div>
@@ -1045,11 +1097,20 @@ function DeleteUserDialog({ userId, userEmail, onDone }: { userId: string; userE
   );
 }
 
-function EditClientDialog({ user, onDone }: { user: AdminUser; onDone: () => void }) {
+function EditClientDialog({ user, onDone, isAdminUser, onToggleAdmin }: { user: AdminUser; onDone: () => void; isAdminUser?: boolean; onToggleAdmin?: (userId: string, makeAdmin: boolean) => void }) {
   const [open, setOpen] = useState(false);
   const [fullName, setFullName] = useState(user.full_name || "");
   const [email, setEmail] = useState(user.email || "");
   const [password, setPassword] = useState("");
+
+  // Update state when user changes or dialog opens
+  useEffect(() => {
+    if (open) {
+      setFullName(user.full_name || "");
+      setEmail(user.email || "");
+      setPassword("");
+    }
+  }, [open, user]);
   
   const updateFn = useServerFn(updateClientAdmin);
   const mut = useMutation({
@@ -1095,6 +1156,23 @@ function EditClientDialog({ user, onDone }: { user: AdminUser; onDone: () => voi
             <Label>Nova Senha (deixe em branco para manter)</Label>
             <Input type="password" value={password} onChange={(e) => setPassword(e.target.value)} />
           </div>
+
+          {onToggleAdmin && (
+            <div className="rounded-md border p-3 bg-muted/30 flex items-center justify-between">
+              <div>
+                <div className="text-xs text-muted-foreground uppercase tracking-wider">Tipo de Conta</div>
+                <div className="text-sm font-medium">{isAdminUser ? "Administrador" : "Cliente"}</div>
+              </div>
+              <Button 
+                size="sm" 
+                variant={isAdminUser ? "destructive" : "default"}
+                onClick={() => onToggleAdmin(user.id, !isAdminUser)}
+              >
+                {isAdminUser ? "Remover Admin" : "Tornar Admin"}
+              </Button>
+            </div>
+          )}
+
           <Button className="w-full" onClick={() => mut.mutate()} disabled={mut.isPending}>
             {mut.isPending ? "Salvando..." : "Salvar Alterações"}
           </Button>
