@@ -32,6 +32,10 @@ export async function createSubResellerInternal(
     throw new Error(`Saldo insuficiente. Você tem ${creatorCredits} créditos, mas precisa de no mínimo ${minCreditsRequired} para esta operação.`);
   }
 
+  if (!isAdmin && creatorCredits <= 0) {
+    throw new Error("Seu saldo de créditos acabou. Recarregue para realizar esta operação.");
+  }
+
   if (!isAdmin) {
     const { data: creatorActive } = await supabaseAdmin.rpc("subscription_is_active", { _user_id: creatorId });
     if (!creatorActive && !creatorProfile.is_reseller) {

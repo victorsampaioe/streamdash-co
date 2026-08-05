@@ -15,6 +15,11 @@ export async function createResellerAccount(
   // 1. Validation
   const creditsToDeduct = isReseller ? initialCredits : months;
   
+  // 1.5. Bloqueio se o criador estiver com saldo zero (e não for admin)
+  if (!isAdmin && (creator.credits || 0) <= 0) {
+    throw new Error("Seu saldo de créditos acabou. Recarregue para criar novos clientes ou revendedores.");
+  }
+  
   // Admin check (moved up for validation)
   const { data: isAdmin } = await supabaseAdmin.rpc("has_role", {
     _user_id: creatorId,

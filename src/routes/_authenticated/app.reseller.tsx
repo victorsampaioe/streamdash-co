@@ -110,7 +110,7 @@ function ResellerDashboard() {
   });
   const isAdmin = adminCheckQ.data === true;
 
-  const isAccountActive = subData?.isActive || subData?.isTrial || (stats?.credits !== undefined && stats.credits > 0);
+  const isAccountActive = (subData?.isActive || subData?.isTrial) && (stats?.credits !== undefined && stats.credits > 0);
 
   const [buyDialogOpen, setBuyDialogOpen] = useState(false);
   const [resellerDialogOpen, setResellerDialogOpen] = useState(false);
@@ -188,18 +188,18 @@ function ResellerDashboard() {
 
   return (
     <div className="space-y-6">
-      {stats?.credits === 0 && (
+      {stats?.credits === 0 && !isAdmin && (
         <Alert variant="destructive" className="bg-destructive/10 border-destructive/20 animate-in fade-in slide-in-from-top-4">
           <AlertCircle className="h-4 w-4" />
           <AlertDescription className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div>
-              <span className="font-bold">⚠️ Você está sem créditos disponíveis.</span>
+              <span className="font-bold">⚠️ Seus créditos acabaram</span>
               <p className="text-xs text-muted-foreground">
-                Seu painel continua ativo, porém você não poderá criar novos clientes ou revendedores enquanto não adicionar novos créditos.
+                Seu painel está disponível para adicionar novos créditos, porém seus monitoramentos estão pausados até a recarga.
               </p>
             </div>
             <Button size="sm" onClick={() => setBuyDialogOpen(true)} className="shrink-0">
-              <Plus className="h-3.5 w-3.5 mr-1" /> Adicionar Créditos
+              <CreditCard className="h-3.5 w-3.5 mr-1" /> Adicionar Créditos
             </Button>
           </AlertDescription>
         </Alert>
