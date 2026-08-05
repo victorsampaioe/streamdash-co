@@ -25,6 +25,7 @@ export type SubscriptionInfo = {
     full_name: string | null;
     is_reseller: boolean;
     credits: number;
+    role: string | null;
   } | null;
 };
 
@@ -103,7 +104,8 @@ export function useSubscription() {
         phone: profile.phone,
         full_name: profile.full_name,
         is_reseller: isReseller,
-        credits: credits
+        credits: credits,
+        role: null // Set role null since we won't read it here
       } : null;
 
       const parentId = tree?.parent_reseller_id || null;

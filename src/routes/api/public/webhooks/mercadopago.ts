@@ -74,115 +74,91 @@ Se for apenas uma pergunta ou conversa, responda no chat em português, sem alte
 Nunca insira o texto enviado como conteúdo dentro do site ou da página.
 TEXTO DO USUÁRIO:
 
-Sincronizar e migrar revendedores existentes para a nova estrutura
+Corrigir exibição do painel/menu de revendedor para todos os tipos corretos de conta
 
-A conta:
+Atualmente nenhum usuário está recebendo a página de revendedor no menu:
 
-areaplay0106@gmail.com
+Admin ❌
+Revendedor ❌
+Sub-revendedor ❌
 
-já é um revendedor existente e precisa ser migrada para a nova arquitetura.
-
-Atualmente:
-
-consegue entrar no painel;
-possui 1 crédito;
-porém não está recebendo/acessando o painel completo de revendedor;
-o sistema está tratando como cliente ou conta comum.
-
-Fazer uma sincronização de todas as contas existentes que já possuem perfil de revendedor.
-
-Regras da migração:
-
-Identificar todos os usuários atuais que são revendedores e atualizar para:
-
-role = reseller
-
-ou:
-
-role = sub_reseller
-
-conforme sua origem.
-
-Para cada revendedor existente:
-
-Criar/atualizar:
-
-Perfil de revendedor
-reseller_profile
-
-user_id
-
-role
-
-parent_reseller_id
-
-status
-
-created_at
-Carteira de créditos
-
-Migrar os créditos atuais:
+Mesmo usuários que já possuem perfil de revendedor não estão vendo a área.
 
 Exemplo:
-
 areaplay0106@gmail.com
 
-Saldo atual:
+Essa conta já é revendedor, possui créditos, mas o menu de revendedor não aparece.
 
-1 crédito
+Verificar:
 
-Deve ficar:
+1. Regra de permissão do menu
 
-reseller_wallet
+Encontrar a condição que mostra o menu de revendedor.
 
-reseller_id
-credits = 1
+Garantir:
 
-Não perder créditos.
+Se role = admin
+mostrar painel revendedor
 
-Hierarquia
+Se role = reseller
+mostrar painel revendedor
 
-Verificar quem criou esse revendedor.
+Se role = sub_reseller
+mostrar painel revendedor
+2. Sincronizar perfis existentes
 
-Exemplo:
+Fazer uma atualização dos usuários atuais:
 
-Admin
- |
- └── interconect2023@gmail.com
-          |
-          └── areaplay0106@gmail.com
+Identificar:
 
-Então:
+usuários admin;
+usuários reseller;
+usuários sub_reseller.
 
-parent_reseller_id =
-interconect2023@gmail.com
-Permissões
+Atualizar corretamente:
 
-Se a conta for revendedor:
+profiles.role
+user_roles.role
+reseller_profiles
 
-Liberar:
+para que o frontend reconheça.
 
-painel de revendedor;
-criação de clientes;
-criação de sub-revenda (caso permitido);
-configuração de planos;
-configuração de Pix;
-gerenciamento de créditos.
-Auditoria obrigatória antes:
+3. Não criar novas contas
 
-Criar relatório:
+Apenas corrigir os perfis existentes.
 
-quantos revendedores existem;
-quais foram encontrados;
-quais serão migrados;
-qual será o pai de cada um;
-saldo de créditos atual.
+Manter:
 
-Importante:
+clientes;
+créditos;
+hierarquia;
+dados atuais.
+4. Testar após correção:
 
-Não criar novos usuários.
+Entrar com:
 
-Não apagar contas existentes.
+Admin:
 
-Apenas sincronizar os dados atuais para a nova estrutura.
+deve aparecer menu revendedor.
+
+Revendedor:
+
+deve aparecer painel de revendedor.
+
+Sub-revendedor:
+
+deve aparecer painel de revendedor.
+
+Cliente:
+
+NÃO deve aparecer.
+Regra definitiva:
+
+O menu deve depender da permissão da conta:
+
+admin
+reseller
+sub_reseller
+
+e nunca depender de indicação antiga ou código de convite.
 */

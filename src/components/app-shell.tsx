@@ -79,17 +79,20 @@ export function AppOutletShell() {
 
 function useNavItems() {
   const { data: subData } = useSubscription();
-  const { data: isAdmin } = useQuery({
-    queryKey: ["is-admin"],
+  
+  const { data: userRoles } = useQuery({
+    queryKey: ["user-roles"],
     queryFn: async () => {
       const { data: user } = await supabase.auth.getUser();
-      if (!user.user) return false;
-      const { data } = await supabase.from("user_roles").select("role").eq("user_id", user.user.id).eq("role", "admin").maybeSingle();
-      return !!data;
+      if (!user.user) return [];
+      const { data } = await supabase.from("user_roles").select("role").eq("user_id", user.user.id);
+      return data?.map(r => r.role) || [];
     },
   });
 
-  const isReseller = !!subData?.profile?.is_reseller;
+  const isAdmin = userRoles?.includes('admin');
+  const isResellerRole = userRoles?.includes('reseller') || userRoles?.includes('sub_reseller');
+  const isResellerOrAdmin = isAdmin || isResellerRole || !!subData?.profile?.is_reseller;
 
   const items = [
     { to: "/app", label: "Dashboard", icon: LayoutDashboard, exact: true },
@@ -104,11 +107,10 @@ function useNavItems() {
     { to: "/app/achievements", label: "Conquistas", icon: Trophy },
   ];
 
-  if (isReseller) {
+  if (isResellerOrAdmin) {
     items.push({ to: "/app/reseller", label: "Painel Revendedor", icon: ShoppingBag });
     items.push({ to: "/app/pagina", label: "Minha Página", icon: Globe });
     items.push({ to: "/app/subscription", label: "Comprar Créditos", icon: CreditCard });
-
   } else {
     items.push({ to: "/app/subscription", label: "Minha Assinatura", icon: CreditCard });
   }
