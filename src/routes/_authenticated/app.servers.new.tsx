@@ -37,13 +37,13 @@ function NewServer() {
   const runAnalyze = useServerFn(analyzeServer);
   const [name, setName] = useState("");
   const [host, setHost] = useState("");
-  const [serverGroup, setServerGroup] = useState("");
+  
   const [description, setDescription] = useState("");
   const [isPublic, setIsPublic] = useState(false);
 
   const create = useMutation({
     mutationFn: async () => {
-      const parsed = schema.parse({ name, host: host.replace(/^https?:\/\//i, "").replace(/\/.*$/, ""), server_group: serverGroup, description, is_public: isPublic });
+      const parsed = schema.parse({ name, host: host.replace(/^https?:\/\//i, "").replace(/\/.*$/, ""), server_group: name, description, is_public: isPublic });
       const { data: userRes } = await supabase.auth.getUser();
       if (!userRes.user) throw new Error("Não autenticado");
       const slug = isPublic ? `${slugify(parsed.name)}-${Math.random().toString(36).slice(2, 6)}` : null;
@@ -87,13 +87,6 @@ function NewServer() {
             <Label>Domínio ou IP (DNS)</Label>
             <Input value={host} onChange={(e) => setHost(e.target.value)} placeholder="api.exemplo.com" required className="font-mono" />
             <p className="text-xs text-muted-foreground">Somente o host, sem <code>http://</code> ou porta.</p>
-          </div>
-          <div className="space-y-2">
-            <Label>Servidor (agrupamento) — opcional</Label>
-            <Input value={serverGroup} onChange={(e) => setServerGroup(e.target.value)} placeholder="AURA" />
-            <p className="text-xs text-muted-foreground">
-              Use o mesmo nome em todas as DNS do mesmo servidor para ativar o diagnóstico inteligente de correlação.
-            </p>
           </div>
 
           <div className="space-y-2">
