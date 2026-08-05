@@ -16,7 +16,9 @@ import {
   Trash2,
   Edit2,
   AlertCircle,
-  CheckCircle2
+  CheckCircle2,
+  Sparkles,
+  UserPlus
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -297,9 +299,10 @@ function ResellerDashboard() {
       </div>
 
       <Tabs defaultValue="rede" className="w-full">
-        <TabsList className="grid w-full grid-cols-5 max-w-xl">
+        <TabsList className="grid w-full grid-cols-6 max-w-2xl">
           <TabsTrigger value="rede">Rede</TabsTrigger>
           <TabsTrigger value="clientes">Clientes</TabsTrigger>
+          <TabsTrigger value="criações">Criações</TabsTrigger>
           <TabsTrigger value="historico">Histórico</TabsTrigger>
           <TabsTrigger value="planos">Planos</TabsTrigger>
           <TabsTrigger value="config">Config</TabsTrigger>
@@ -365,6 +368,56 @@ function ResellerDashboard() {
           </Card>
         </TabsContent>
 
+
+        <TabsContent value="criações" className="mt-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <Card className="hover:border-primary/50 transition-colors border-2">
+              <CardHeader>
+                <div className="h-12 w-12 rounded-lg bg-success/10 flex items-center justify-center mb-2">
+                  <Sparkles className="h-6 w-6 text-success" />
+                </div>
+                <CardTitle>Criar Cliente Teste</CardTitle>
+                <CardDescription>
+                  Gera um acesso automático de 24 horas para um novo cliente.
+                  Não consome seus créditos.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <ul className="text-sm space-y-2 text-muted-foreground mb-6">
+                  <li className="flex items-center gap-2">✅ Validade de 1 dia grátis</li>
+                  <li className="flex items-center gap-2">✅ Vinculado à sua carteira</li>
+                  <li className="flex items-center gap-2">✅ Conversão para plano paga depois</li>
+                </ul>
+                <Button className="w-full bg-success hover:bg-success/90" onClick={() => setClientDialogOpen(true)}>
+                  <Plus className="h-4 w-4 mr-2" /> Novo Cliente Teste
+                </Button>
+              </CardContent>
+            </Card>
+
+            <Card className="hover:border-primary/50 transition-colors border-2">
+              <CardHeader>
+                <div className="h-12 w-12 rounded-lg bg-primary/10 flex items-center justify-center mb-2">
+                  <UserPlus className="h-6 w-6 text-primary" />
+                </div>
+                <CardTitle>Criar Sub-Revendedor</CardTitle>
+                <CardDescription>
+                  Cria um novo painel de revendedor independente na sua rede.
+                  Consome créditos do seu saldo.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <ul className="text-sm space-y-2 text-muted-foreground mb-6">
+                  <li className="flex items-center gap-2">✅ Mínimo 10 créditos para ativar</li>
+                  <li className="flex items-center gap-2">✅ Painel administrativo próprio</li>
+                  <li className="flex items-center gap-2">✅ Herda suas configurações de suporte</li>
+                </ul>
+                <Button className="w-full" onClick={() => setResellerDialogOpen(true)}>
+                  <Plus className="h-4 w-4 mr-2" /> Novo Sub-Revendedor
+                </Button>
+              </CardContent>
+            </Card>
+          </div>
+        </TabsContent>
 
         <TabsContent value="clientes" className="mt-4">
           <Card>

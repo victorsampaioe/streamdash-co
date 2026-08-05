@@ -1,28 +1,15 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
-import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
-import { createResellerAccount } from "./reseller-v2.server";
+import { supabaseAdmin } from "@/integrations/supabase/client.server";
+
+/** 
+ * This file is being replaced by reseller-v3.functions.ts logic for the dashboard.
+ * We keep it for backward compatibility or direct imports if needed, 
+ * but redirecting new logic to V3 schema.
+ */
 
 export const createResellerV2 = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
-  .inputValidator((input) =>
-    z
-      .object({
-        email: z.string().email("E-mail inválido"),
-        fullName: z.string().min(3, "Nome muito curto"),
-        initialCredits: z.number().min(0).optional().default(0),
-        months: z.number().min(1).optional().default(1),
-        isReseller: z.boolean().optional().default(false),
-      })
-      .parse(input),
-  )
+  .inputValidator((data) => z.any().parse(data))
   .handler(async ({ data, context }) => {
-    return await createResellerAccount(
-      context.userId,
-      data.email,
-      data.fullName,
-      data.initialCredits,
-      data.months,
-      data.isReseller
-    );
+     throw new Error("Utilize createTestClient ou createSubReseller de reseller-v3.functions.ts");
   });
