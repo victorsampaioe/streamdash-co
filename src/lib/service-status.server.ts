@@ -17,15 +17,15 @@ export async function isServiceActive(userId: string): Promise<boolean> {
   const isReseller = !!profile?.is_reseller;
   const credits = profile?.credits || 0;
 
-  // New Rule: Reseller ONLY depends on credits for service.
+  // RULE: Reseller ONLY depends on credits > 0.
   if (isReseller) {
     return credits > 0;
   }
 
-  // Client depends on BOTH subscription and credits.
+  // RULE: Client ONLY depends on active subscription.
   const isSubActive = !!sub && 
     (sub.status === "active" || sub.status === "trial") && 
     new Date(sub.expires_at).getTime() > Date.now();
 
-  return isSubActive && credits > 0;
+  return isSubActive;
 }

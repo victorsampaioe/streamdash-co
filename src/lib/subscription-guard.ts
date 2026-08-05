@@ -3,7 +3,7 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { isServiceActive } from "./service-status.server";
 
 export const SUBSCRIPTION_REQUIRED_MESSAGE =
-  "Acesso pausado. Verifique seu saldo de créditos (Revendedor) ou validade da assinatura (Cliente) para continuar.";
+  "Acesso pausado. Verifique a validade da sua assinatura (Cliente) ou seu saldo de créditos (Revendedor) para continuar.";
 
 /**
  * Server-side gate: the caller must be authenticated AND have an active
