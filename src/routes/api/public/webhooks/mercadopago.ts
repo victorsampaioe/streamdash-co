@@ -74,150 +74,28 @@ Se for apenas uma pergunta ou conversa, responda no chat em português, sem alte
 Nunca insira o texto enviado como conteúdo dentro do site ou da página.
 TEXTO DO USUÁRIO:
 
-Teste completo do sistema de revendedor após a refatoração
+Você apenas atualizou as instruções do webhook. Preciso saber o resultado da auditoria.
 
-Agora que a nova estrutura de revendedor foi criada, faça uma auditoria completa testando todos os fluxos do painel de revendedor.
+Execute os testes completos do fluxo de revendedor e informe:
 
-Não apenas verificar código. Faça testes reais simulando:
+Quais testes foram realizados?
+Quais erros foram encontrados?
+Quais arquivos/tabelas foram corrigidos?
+Quais alterações foram aplicadas?
+O que ainda está pendente?
 
-Admin
-Revendedor
-Sub-revendedor
-Cliente
+Validar obrigatoriamente:
 
-Corrigir automaticamente qualquer erro encontrado.
-
-Teste como ADMIN
-
-Entrar com a conta administrador e verificar:
-
-✅ Aparece menu/painel de revendedor
-✅ Consegue visualizar todos os revendedores
-✅ Consegue criar revendedor
-✅ Consegue adicionar créditos
-✅ Consegue visualizar clientes gerais
-✅ Planos do admin estão corretos:
-
-Mensal R$35
-Trimestral R$90
-Anual R$299
-
-✅ Pix do admin funcionando
-
-Teste como REVENDEDOR
-
-Criar/simular uma conta revendedor e verificar:
-
-Painel
-
-Deve aparecer:
-
-Dashboard
-Clientes
-Criar cliente teste
-Criar sub-revendedor
-Créditos
-Configurações
-Planos
-Pix
-Criar cliente
-
-Testar:
-
-Criar cliente teste:
-
-Resultado esperado:
-
-✅ Cliente criado
-✅ 1 dia grátis aplicado
-✅ Cliente vinculado ao revendedor correto
-✅ Depois pagamento usa plano do revendedor
-✅ Não usa plano do admin
-
-Configuração do revendedor
-
-Alterar:
-
-Plano mensal:
-Exemplo R$30
-
-Trimestral:
-R$80
-
-Anual:
-R$250
-
-Alterar Pix.
-
-Testar se o cliente criado usa essas configurações.
-
-Criar SUB-REVENDEDOR
-
-Testar:
-
-Criar sub-revenda:
-
-Quantidade:
-
-10 créditos
-
-Verificar:
-
-✅ desconta créditos corretamente
-✅ cria conta
-✅ role fica sub_reseller
-✅ parent_reseller_id correto
-✅ aparece painel de revendedor
-
-Teste como SUB-REVENDEDOR
-
-Entrar com a conta criada.
-
-Verificar:
-
-✅ recebe painel de revendedor
-✅ consegue configurar seus próprios planos
-✅ consegue configurar seu Pix
-✅ consegue criar clientes
-✅ consegue criar sub-revendedores se permitido
-✅ créditos aparecem corretamente
-
-Teste de isolamento
-
-Muito importante:
-
-Garantir que:
-
-Revendedor A:
-
-❌ não vê clientes do Revendedor B
-
-Sub-revendedor:
-
-❌ não vê clientes do pai
-
-Revendedor:
-
-❌ não usa Pix do admin
-
-Cliente:
-
-❌ não vê painel de revendedor
-
-Corrigir qualquer problema encontrado
-
-Se algum fluxo falhar:
-
-identificar causa;
-corrigir backend;
-corrigir banco;
-corrigir frontend;
-testar novamente.
-
-Após finalizar, gerar um relatório:
-
-testes realizados;
-erros encontrados;
-correções aplicadas;
-status final de cada módulo.
+Login do admin;
+Login de revendedor;
+Login de sub-revendedor;
+Exibição do painel de revendedor no menu;
+Criação de cliente teste de 1 dia;
+Criação de sub-revendedor com mínimo de 10 créditos;
+Desconto correto de créditos;
+Configuração de planos;
+Configuração de Pix;
+Separação entre admin, revendedor e sub-revendedor;
+Clientes pertencendo ao dono correto;
+Nenhum dado puxando do admin quando for revendedor.
 */
