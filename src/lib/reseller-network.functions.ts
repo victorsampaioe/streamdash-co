@@ -15,7 +15,7 @@ export const getSubResellerDetails = createServerFn({ method: "GET" })
     // Check if user is a member of the reseller's network and is a reseller
     const { data: profile, error } = await context.supabase
       .from("profiles")
-      .select("id, full_name, email, is_reseller, created_at, parent_id, credits")
+      .select("id, full_name, email, is_reseller, created_at, parent_id, credits, whatsapp, phone")
       .eq("id", data.userId)
       .eq("parent_id", context.userId)
       .eq("is_reseller", true)
@@ -51,7 +51,8 @@ export const updateSubReseller = createServerFn({ method: "POST" })
     email: z.string().email().optional(),
     password: z.string().min(6).optional(),
     status: z.enum(["active", "expired", "trial", "cancelled"]).optional(),
-    creditsChange: z.number().optional() // Relative change
+    creditsChange: z.number().optional(), // Relative change
+    phone: z.string().optional()
   }).parse(input))
   .handler(async ({ data, context }) => {
     // 1. Verify Ownership & Creator Status
@@ -84,6 +85,10 @@ export const updateSubReseller = createServerFn({ method: "POST" })
     const profileUpdate: any = {};
     if (data.fullName) profileUpdate.full_name = data.fullName;
     if (data.email) profileUpdate.email = data.email;
+    if (data.phone) {
+      profileUpdate.phone = data.phone;
+      profileUpdate.whatsapp = data.phone;
+    }
     
     if (data.creditsChange !== undefined && data.creditsChange !== 0) {
       // We don't use RPC here to have better control over logs and errors in this specific context

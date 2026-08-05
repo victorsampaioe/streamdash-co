@@ -527,7 +527,7 @@ function ResellerDashboard() {
                       if (!val) return;
                       const { data: { user } } = await supabase.auth.getUser();
                       if (!user) return;
-                      const { error } = await supabase.from("profiles").update({ phone: val } as any).eq("id", user.id);
+                      const { error } = await supabase.from("profiles").update({ phone: val, whatsapp: val } as any).eq("id", user.id);
                       if (error) toast.error("Erro ao atualizar WhatsApp");
                       else {
                         toast.success("WhatsApp atualizado!");
@@ -948,7 +948,8 @@ function ManageSubResellerDialog({
     fullName: "",
     email: "",
     password: "",
-    status: "active" as "active" | "expired" | "trial" | "cancelled"
+    status: "active" as "active" | "expired" | "trial" | "cancelled",
+    phone: ""
   });
   const [creditsToAdd, setCreditsToAdd] = useState("");
   const [creditsToRemove, setCreditsToRemove] = useState("");
@@ -970,7 +971,8 @@ function ManageSubResellerDialog({
         fullName: d.full_name || "",
         email: d.email || "",
         password: "",
-        status: d.subscription?.status || "active"
+        status: d.subscription?.status || "active",
+        phone: d.phone || d.whatsapp || ""
       });
     } catch (e: any) {
       toast.error(e.message);
@@ -1035,7 +1037,11 @@ function ManageSubResellerDialog({
                 <Label>E-mail</Label>
                 <Input value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} />
               </div>
-              <Button className="w-full" onClick={() => updateMut.mutate({ fullName: form.fullName, email: form.email })} disabled={updateMut.isPending}>
+              <div className="space-y-2">
+                <Label>WhatsApp / Telefone</Label>
+                <Input value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} placeholder="Ex: 5511999999999" />
+              </div>
+              <Button className="w-full" onClick={() => updateMut.mutate({ fullName: form.fullName, email: form.email, phone: form.phone })} disabled={updateMut.isPending}>
                 Salvar Alterações
               </Button>
             </TabsContent>

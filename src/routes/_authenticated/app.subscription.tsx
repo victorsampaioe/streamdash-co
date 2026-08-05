@@ -45,36 +45,25 @@ function SubscriptionPage() {
     enabled: !!data?.parentId
   });
 
-  const { data: parentProfile } = useQuery({
-    queryKey: ["parent-profile", data?.parentId],
-    queryFn: async () => {
-      if (!data?.parentId) return null;
-      const { data: p } = await supabase
-        .from("profiles")
-        .select("whatsapp, phone")
-        .eq("id", data.parentId)
-        .single();
-      return p;
-    },
-    enabled: !!data?.parentId
-  });
   const [paymentError, setPaymentError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const createPix = useServerFn(createPixPayment);
 
   const sub = data?.subscription;
+  const parentPlansData = parentPlans?.plans || [];
+  const parentProfileData = parentPlans?.parent || null;
 
-  const clientPlans = ((parentPlans as any[]) || []).filter((p) => (p.kind ?? "plan") === "plan");
-  const creditPlans = ((parentPlans as any[]) || []).filter((p) => p.kind === "credits");
+  const clientPlans = parentPlansData.filter((p) => (p.kind ?? "plan") === "plan");
+  const creditPlans = parentPlansData.filter((p) => p.kind === "credits");
 
   const openParentWhatsapp = useCallback((message: string) => {
-    const phone = (parentProfile?.whatsapp || parentProfile?.phone || "").replace(/\D/g, "");
+    const phone = (parentProfileData?.whatsapp || parentProfileData?.phone || "").replace(/\D/g, "");
     if (!phone) {
       toast.error("Seu revendedor ainda não cadastrou um WhatsApp de contato.");
       return;
     }
     window.open(`https://wa.me/${phone}?text=${encodeURIComponent(message)}`, "_blank");
-  }, [parentProfile]);
+  }, [parentProfileData]);
 
 
   const handlePaid = useCallback(async () => {
