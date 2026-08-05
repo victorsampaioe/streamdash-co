@@ -2630,6 +2630,125 @@ export type Database = {
           },
         ]
       }
+      reseller_settings: {
+        Row: {
+          annual_price_cents: number | null
+          created_at: string
+          id: string
+          monthly_price_cents: number | null
+          pix_key: string | null
+          pix_name: string | null
+          quarterly_price_cents: number | null
+          reseller_id: string
+          updated_at: string
+        }
+        Insert: {
+          annual_price_cents?: number | null
+          created_at?: string
+          id?: string
+          monthly_price_cents?: number | null
+          pix_key?: string | null
+          pix_name?: string | null
+          quarterly_price_cents?: number | null
+          reseller_id: string
+          updated_at?: string
+        }
+        Update: {
+          annual_price_cents?: number | null
+          created_at?: string
+          id?: string
+          monthly_price_cents?: number | null
+          pix_key?: string | null
+          pix_name?: string | null
+          quarterly_price_cents?: number | null
+          reseller_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reseller_settings_reseller_id_fkey"
+            columns: ["reseller_id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      reseller_tree: {
+        Row: {
+          created_at: string
+          id: string
+          owner_id: string
+          parent_reseller_id: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          owner_id: string
+          parent_reseller_id?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          owner_id?: string
+          parent_reseller_id?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reseller_tree_owner_id_fkey"
+            columns: ["owner_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reseller_tree_parent_reseller_id_fkey"
+            columns: ["parent_reseller_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reseller_tree_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      reseller_wallet: {
+        Row: {
+          credits: number
+          id: string
+          reseller_id: string
+          updated_at: string
+        }
+        Insert: {
+          credits?: number
+          id?: string
+          reseller_id: string
+          updated_at?: string
+        }
+        Update: {
+          credits?: number
+          id?: string
+          reseller_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reseller_wallet_reseller_id_fkey"
+            columns: ["reseller_id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       server_analysis: {
         Row: {
           analyzed_at: string
@@ -3096,6 +3215,21 @@ export type Database = {
           sub_reseller_count: number
         }[]
       }
+      get_admin_resellers_v2: {
+        Args: never
+        Returns: {
+          client_count: number
+          created_at: string
+          credits: number
+          email: string
+          full_name: string
+          id: string
+          last_activity_at: string
+          owner_id: string
+          parent_id: string
+          sub_reseller_count: number
+        }[]
+      }
       get_admin_stats: { Args: never; Returns: Json }
       get_admin_users: {
         Args: never
@@ -3108,6 +3242,27 @@ export type Database = {
           id: string
           is_admin: boolean
           last_payment_at: string
+          phone: string
+          plan: Database["public"]["Enums"]["plan_type"]
+          status: Database["public"]["Enums"]["subscription_status"]
+          total_paid_cents: number
+        }[]
+      }
+      get_admin_users_v2: {
+        Args: never
+        Returns: {
+          created_at: string
+          credits: number
+          days_remaining: number
+          email: string
+          expires_at: string
+          full_name: string
+          id: string
+          is_admin: boolean
+          is_reseller: boolean
+          last_payment_at: string
+          owner_id: string
+          parent_id: string
           phone: string
           plan: Database["public"]["Enums"]["plan_type"]
           status: Database["public"]["Enums"]["subscription_status"]
@@ -3366,10 +3521,14 @@ export type Database = {
         Args: { _amount: number; _recipient_id: string; _sender_id: string }
         Returns: undefined
       }
+      transfer_credits_v2: {
+        Args: { _amount: number; _recipient_id: string; _sender_id: string }
+        Returns: undefined
+      }
     }
     Enums: {
       alert_kind: "email" | "discord" | "telegram" | "webhook"
-      app_role: "admin" | "user"
+      app_role: "admin" | "user" | "reseller" | "sub_reseller" | "customer"
       content_kind: "live" | "movie" | "series" | "episode"
       content_status:
         | "unknown"
@@ -3562,7 +3721,7 @@ export const Constants = {
   public: {
     Enums: {
       alert_kind: ["email", "discord", "telegram", "webhook"],
-      app_role: ["admin", "user"],
+      app_role: ["admin", "user", "reseller", "sub_reseller", "customer"],
       content_kind: ["live", "movie", "series", "episode"],
       content_status: [
         "unknown",

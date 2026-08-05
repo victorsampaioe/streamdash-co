@@ -73,8 +73,12 @@ type AdminUser = {
   phone: string | null;
   created_at: string;
   is_admin: boolean;
-  plan: "trial" | "monthly" | "yearly" | null;
-  status: "trial" | "active" | "expired" | "cancelled" | null;
+  is_reseller: boolean;
+  credits: number;
+  parent_id: string | null;
+  owner_id: string | null;
+  plan: "trial" | "monthly" | "yearly" | "reseller" | "basic" | null;
+  status: "trial" | "active" | "expired" | "cancelled" | "approved" | null;
   expires_at: string | null;
   days_remaining: number | null;
   total_paid_cents: number;
@@ -168,20 +172,12 @@ function AdminPage() {
     retry: 1,
     queryFn: async () => {
       console.log("Fetching admin users...");
-      // Fetch profiles first to get is_reseller
-      const { data: profiles, error: pErr } = await supabase.from("profiles").select("id, is_reseller, credits");
-      const { data, error } = await supabase.rpc("get_admin_users");
+      const { data, error } = await supabase.rpc("get_admin_users_v2");
       if (error) {
         console.error("Admin users error:", error);
         throw error;
       }
-      const users = (data ?? []) as AdminUser[];
-      // Map is_reseller from profiles
-      return users.map(u => ({
-        ...u,
-        is_reseller: profiles?.find(p => p.id === u.id)?.is_reseller || false,
-        credits: profiles?.find(p => p.id === u.id)?.credits || 0
-      }));
+      return (data ?? []) as any[];
     },
   });
 
@@ -413,16 +409,19 @@ function AdminPage() {
                             )}
                             {((u as any).is_reseller) && (
                               <EditResellerDialog 
-                                reseller={{
+                                 reseller={{
                                   id: u.id,
                                   email: u.email,
                                   full_name: u.full_name,
                                   created_at: u.created_at,
-                                  credits: (u as any).credits || 0,
+                                  credits: u.credits || 0,
+                                  parent_id: u.parent_id,
+                                  owner_id: u.owner_id,
                                   sub_reseller_count: 0,
                                   client_count: 0,
                                   last_activity_at: null
                                 }} 
+
                                 isAdminUser={u.is_admin}
                                 onToggleAdmin={(id, val) => toggleAdmin.mutate({ userId: id, makeAdmin: val })}
                                 onDone={() => {
@@ -465,6 +464,8 @@ type AdminReseller = {
   full_name: string | null;
   created_at: string;
   credits: number;
+  parent_id: string | null;
+  owner_id: string | null;
   sub_reseller_count: number;
   client_count: number;
   last_activity_at: string | null;
@@ -478,7 +479,7 @@ function ResellerManagementSection() {
   const resellersQ = useQuery({
     queryKey: ["admin-resellers-list"],
     queryFn: async () => {
-      const { data, error } = await supabase.rpc("get_admin_resellers");
+      const { data, error } = await supabase.rpc("get_admin_resellers_v2");
       if (error) throw error;
       return (data ?? []) as AdminReseller[];
     },
@@ -515,10 +516,12 @@ function ResellerManagementSection() {
             <thead className="bg-muted/40 text-xs uppercase tracking-wider text-muted-foreground">
               <tr>
                 <th className="text-left p-3 font-medium">Revendedor</th>
+                <th className="text-left p-3 font-medium">Pertence a</th>
                 <th className="text-left p-3 font-medium">Status</th>
                 <th className="text-right p-3 font-medium">Créditos</th>
                 <th className="text-right p-3 font-medium">Sub-Revendas</th>
                 <th className="text-left p-3 font-medium">Última Atividade</th>
+
                 <th className="text-right p-3 font-medium">Ações</th>
               </tr>
             </thead>
@@ -534,12 +537,27 @@ function ResellerManagementSection() {
                     <div className="text-[11px] font-mono text-muted-foreground">{r.email}</div>
                   </td>
                   <td className="p-3">
-                    <Badge variant="default" className="bg-success text-success-foreground">Ativo</Badge>
+                    {r.owner_id ? (
+                      <div className="flex flex-col">
+                        <span className="text-[11px] font-medium text-primary leading-tight">
+                          {resellers.find(p => p.id === r.owner_id)?.full_name || "Dono desconhecido"}
+                        </span>
+                        <span className="text-[9px] text-muted-foreground leading-tight">
+                          {r.parent_id === r.owner_id ? "Venda Direta" : "Sub-Rede"}
+                        </span>
+                      </div>
+                    ) : (
+                      <Badge variant="outline" className="text-[10px] py-0 h-4">Admin Global</Badge>
+                    )}
+                  </td>
+                  <td className="p-3 text-center">
+                    <Badge variant="default" className="bg-success text-success-foreground text-[10px] py-0 h-4">Ativo</Badge>
                   </td>
 
                   <td className="p-3 text-right">
-                    <Badge variant="outline" className="font-mono">{r.credits}</Badge>
+                    <Badge variant="outline" className="font-mono text-[11px]">{r.credits}</Badge>
                   </td>
+
                   <td className="p-3 text-right font-mono">{r.sub_reseller_count}</td>
                   <td className="p-3 text-xs text-muted-foreground">
                     {r.last_activity_at ? new Date(r.last_activity_at).toLocaleDateString("pt-BR") : "—"}

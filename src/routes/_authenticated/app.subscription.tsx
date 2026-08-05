@@ -40,7 +40,7 @@ function SubscriptionPage() {
   const [pix, setPix] = useState<any>(null);
   const getParentPlans = useServerFn(getParentResellerPlans);
   const { data: parentPlans } = useQuery({ 
-    queryKey: ["parent-plans", data?.parentId || "admin"], 
+    queryKey: ["parent-plans", data?.parentId || data?.ownerId || "admin"], 
     queryFn: () => getParentPlans(),
     enabled: !!data
   });
@@ -55,6 +55,9 @@ function SubscriptionPage() {
 
   const clientPlans = parentPlansData.filter((p) => (p.kind ?? "plan") === "plan");
   const creditPlans = parentPlansData.filter((p) => p.kind === "credits");
+
+  const parentName = parentProfileData?.full_name || "Seu Revendedor";
+
 
   const openParentWhatsapp = useCallback((message: string) => {
     const phone = (parentProfileData?.whatsapp || parentProfileData?.phone || "").replace(/\D/g, "");
@@ -187,7 +190,7 @@ function SubscriptionPage() {
           }) : data?.parentId ? (
             <div className="md:col-span-2 p-12 text-center border border-dashed rounded-xl">
                <Package className="h-12 w-12 mx-auto text-muted-foreground/30 mb-4" />
-                <h3 className="text-lg font-semibold">Planos do seu Revendedor</h3>
+                <h3 className="text-lg font-semibold">Planos de {parentName}</h3>
                 <p className="text-muted-foreground text-sm mb-6">
                   {clientPlans.length === 0
                     ? "Você faz parte de uma rede privada, mas seu revendedor ainda não configurou planos. Fale com ele pelo WhatsApp para contratar ou renovar."
@@ -232,7 +235,7 @@ function SubscriptionPage() {
         <div className="pt-4">
           <div className="flex items-center gap-2 mb-4">
             <Rocket className="h-5 w-5 text-purple-500" />
-            <h2 className="text-lg font-semibold">Comprar créditos com seu revendedor</h2>
+            <h2 className="text-lg font-semibold">Comprar créditos com {parentName}</h2>
           </div>
           {creditPlans.length > 0 ? (
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
