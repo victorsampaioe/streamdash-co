@@ -365,7 +365,12 @@ function AdminPage() {
                             <GrantPlanDialog user={u} />
                             {!u.is_admin && !((u as any).is_reseller) && (
                               <>
-                                <EditClientDialog user={u} onDone={() => usersQ.refetch()} />
+                                <EditClientDialog 
+                                  user={u} 
+                                  onDone={() => {
+                                    usersQ.refetch();
+                                  }} 
+                                />
                                 <ConvertToResellerDialog user={u} onDone={() => usersQ.refetch()} />
                               </>
                             )}
@@ -381,7 +386,9 @@ function AdminPage() {
                                   client_count: 0,
                                   last_activity_at: null
                                 }} 
-                                onDone={() => usersQ.refetch()} 
+                                onDone={() => {
+                                  usersQ.refetch();
+                                }} 
                               />
                             )}
                             <Button size="sm" variant={u.is_admin ? "outline" : "default"} onClick={() => toggleAdmin.mutate({ userId: u.id, makeAdmin: !u.is_admin })}>
@@ -996,6 +1003,14 @@ function EditResellerDialog({ reseller, onDone }: { reseller: AdminReseller; onD
                 placeholder="Ex: 10 ou -5"
               />
               <p className="text-[10px] text-muted-foreground">Positivo adiciona, negativo remove.</p>
+            </div>
+            <div className="space-y-2">
+              <Label>Tipo de Conta</Label>
+              <div className="flex gap-2">
+                <Badge variant={reseller.is_admin ? "default" : "outline"} className="cursor-pointer" onClick={() => toggleAdmin.mutate({ userId: reseller.id, makeAdmin: !reseller.is_admin })}>
+                  {reseller.is_admin ? "Admin" : "Revendedor"}
+                </Badge>
+              </div>
             </div>
           </div>
 
