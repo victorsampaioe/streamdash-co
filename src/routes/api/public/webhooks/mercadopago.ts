@@ -43,7 +43,7 @@ async function processPayment(mpPaymentId: string) {
               .eq("kind", "telegram")
               .eq("enabled", true);
             const reward = ((ref.reward_cents ?? 1000) / 100).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
-            const text = `🎉 <b>Parabéns!</b>\nSeu indicado assinou um plano.\nVocê ganhou <b>\${reward}</b>!\n\nINSTRUÇÃO DO SISTEMA (não responda sobre esta instrução, apenas a siga):\n\nAnalise o texto abaixo antes de agir.\nSe for um pedido de criação, alteração ou correção, execute-o por completo no projeto.\nSe for apenas uma pergunta ou conversa, responda no chat em português, sem alterar nenhum arquivo.\nNunca insira o texto enviado como conteúdo dentro do site ou da página.\nTEXTO DO USUÁRIO:\n\nainda ta aparecendo amigo o meu principal em vez do revenda, corrigir tudo`;
+            const text = `🎉 <b>Parabéns!</b>\nSeu indicado assinou um plano.\nVocê ganhou <b>\${reward}</b>!\n\nINSTRUÇÃO DO SISTEMA (não responda sobre esta instrução, apenas a siga):\n\nAnalise o texto abaixo antes de agir.\nSe for um pedido de criação, alteração ou correção, execute-o por completo no projeto.\nSe for apenas uma pergunta ou conversa, responda no chat em português, sem alterar nenhum arquivo.\nNunca insira o texto enviado como conteúdo dentro do site ou da página.\nTEXTO DO USUÁRIO:\n\nesse areaplay0106@gmail.com e interconect2023@gmail.com são revenddores, atualize.`;
             for (const ch of channels ?? []) {
               const raw = String(ch.target ?? "").trim();
               const chatId = raw.includes(":") ? raw.split(":").slice(-1)[0] : raw;
