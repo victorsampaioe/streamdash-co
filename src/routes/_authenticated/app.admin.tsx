@@ -100,7 +100,7 @@ type StatsRow = {
   total_servers: number;
 };
 
-type FilterKey = "all" | "paid" | "trial" | "expired" | "admin";
+type FilterKey = "all" | "paid" | "trial" | "expired" | "admin" | "reseller" | "client";
 
 function AdminPage() {
   const navigate = useNavigate();
@@ -213,6 +213,8 @@ function AdminPage() {
       if (filter === "trial" && !(u.status === "trial" && u.expires_at && new Date(u.expires_at).getTime() > now)) return false;
       if (filter === "expired" && !(u.expires_at && new Date(u.expires_at).getTime() <= now)) return false;
       if (filter === "admin" && !u.is_admin) return false;
+      if (filter === "reseller" && !(u as any).is_reseller) return false;
+      if (filter === "client" && (u as any).is_reseller) return false;
       if (search) {
         const q = search.toLowerCase();
         if (!(u.email?.toLowerCase().includes(q) || u.full_name?.toLowerCase().includes(q) || u.phone?.toLowerCase().includes(q))) return false;
@@ -311,10 +313,10 @@ function AdminPage() {
 
             <div className="flex flex-wrap gap-1.5">
               <FilterChip active={filter === "all"} onClick={() => setFilter("all")}>Todos</FilterChip>
-              <FilterChip active={filter === "paid"} onClick={() => setFilter("paid")} tone="success">Pagantes ativos</FilterChip>
-              <FilterChip active={filter === "trial"} onClick={() => setFilter("trial")} tone="warning">Em teste</FilterChip>
-              <FilterChip active={filter === "expired"} onClick={() => setFilter("expired")} tone="destructive">Expirados</FilterChip>
+              <FilterChip active={filter === "reseller"} onClick={() => setFilter("reseller")} tone="primary">🟣 Revendedores</FilterChip>
+              <FilterChip active={filter === "client"} onClick={() => setFilter("client")} tone="success">🔵 Clientes</FilterChip>
               <FilterChip active={filter === "admin"} onClick={() => setFilter("admin")} tone="primary">Admins</FilterChip>
+              <FilterChip active={filter === "expired"} onClick={() => setFilter("expired")} tone="destructive">Expirados</FilterChip>
             </div>
 
             <div className="overflow-x-auto rounded-md border">
@@ -322,7 +324,8 @@ function AdminPage() {
                 <thead className="bg-muted/40 text-xs uppercase tracking-wider text-muted-foreground">
                   <tr>
                     <th className="text-left p-3 font-medium">Usuário</th>
-                    <th className="text-left p-3 font-medium">Plano</th>
+                    <th className="text-left p-3 font-medium">Tipo de Conta</th>
+                    <th className="text-left p-3 font-medium">Plano / Créditos</th>
                     <th className="text-left p-3 font-medium">Status</th>
                     <th className="text-left p-3 font-medium">Vencimento</th>
                     <th className="text-right p-3 font-medium">Total pago</th>
@@ -351,15 +354,41 @@ function AdminPage() {
                             </div>
                           </div>
                         </td>
-                        <td className="p-3"><PlanBadge plan={u.plan} /></td>
+                        <td className="p-3">
+                          {(u as any).is_reseller ? (
+                            <Badge variant="outline" className="bg-purple-500/10 text-purple-500 border-purple-500/20">
+                              🟣 Revendedor
+                            </Badge>
+                          ) : (
+                            <Badge variant="outline" className="bg-blue-500/10 text-blue-500 border-blue-500/20">
+                              🔵 Cliente
+                            </Badge>
+                          )}
+                        </td>
+                        <td className="p-3">
+                          {(u as any).is_reseller ? (
+                            <div className="flex items-center gap-1.5 font-medium text-purple-500">
+                              <Wallet className="h-3.5 w-3.5" />
+                              {(u as any).credits || 0} créditos
+                            </div>
+                          ) : (
+                            <PlanBadge plan={u.plan} />
+                          )}
+                        </td>
                         <td className="p-3"><StatusBadge status={u.status} expired={expired} /></td>
                         <td className="p-3">
-                          <div className={cn("text-xs flex items-center gap-1", expired && "text-destructive", expiringSoon && "text-warning")}>
-                            <CalendarClock className="h-3 w-3" />
-                            {u.expires_at ? new Date(u.expires_at).toLocaleDateString("pt-BR") : "—"}
-                          </div>
-                          {u.days_remaining !== null && !expired && (
-                            <div className="text-[10px] text-muted-foreground">{u.days_remaining} dia(s)</div>
+                          {(u as any).is_reseller ? (
+                            <span className="text-xs text-muted-foreground">—</span>
+                          ) : (
+                            <>
+                              <div className={cn("text-xs flex items-center gap-1", expired && "text-destructive", expiringSoon && "text-warning")}>
+                                <CalendarClock className="h-3 w-3" />
+                                {u.expires_at ? new Date(u.expires_at).toLocaleDateString("pt-BR") : "—"}
+                              </div>
+                              {u.days_remaining !== null && !expired && (
+                                <div className="text-[10px] text-muted-foreground">{u.days_remaining} dia(s)</div>
+                              )}
+                            </>
                           )}
                         </td>
                         <td className="p-3 text-right font-mono text-xs">
