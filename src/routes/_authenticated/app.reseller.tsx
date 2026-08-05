@@ -16,7 +16,9 @@ import {
   Trash2,
   Edit2,
   AlertCircle,
-  CheckCircle2
+  CheckCircle2,
+  Sparkles,
+  UserPlus
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
