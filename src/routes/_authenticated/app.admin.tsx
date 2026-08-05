@@ -516,10 +516,12 @@ function ResellerManagementSection() {
             <thead className="bg-muted/40 text-xs uppercase tracking-wider text-muted-foreground">
               <tr>
                 <th className="text-left p-3 font-medium">Revendedor</th>
+                <th className="text-left p-3 font-medium">Pertence a</th>
                 <th className="text-left p-3 font-medium">Status</th>
                 <th className="text-right p-3 font-medium">Créditos</th>
                 <th className="text-right p-3 font-medium">Sub-Revendas</th>
                 <th className="text-left p-3 font-medium">Última Atividade</th>
+
                 <th className="text-right p-3 font-medium">Ações</th>
               </tr>
             </thead>
