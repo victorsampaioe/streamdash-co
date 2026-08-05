@@ -1144,5 +1144,3 @@ function EditClientDialog({ user, onDone }: { user: AdminUser; onDone: () => voi
   );
 }
 
-// Re-add Label import if missing
-import { Label } from "@/components/ui/label";
