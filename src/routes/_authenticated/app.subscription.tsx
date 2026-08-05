@@ -328,8 +328,6 @@ function SubscriptionPage() {
         </div>
       )}
 
-        </div>
-      )}
 
       <PixDialog
         openPlan={openPlan}
