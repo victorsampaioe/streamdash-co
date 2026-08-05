@@ -367,6 +367,8 @@ function AdminPage() {
                               <>
                                 <EditClientDialog 
                                   user={u} 
+                                  isAdminUser={u.is_admin}
+                                  onToggleAdmin={(id, val) => toggleAdmin.mutate({ userId: id, makeAdmin: val })}
                                   onDone={() => {
                                     usersQ.refetch();
                                   }} 
@@ -1006,21 +1008,23 @@ function EditResellerDialog({ reseller, onDone, isAdminUser, onToggleAdmin }: { 
               />
               <p className="text-[10px] text-muted-foreground">Positivo adiciona, negativo remove.</p>
             </div>
-            {onToggleAdmin && (
-              <div className="space-y-2">
-                <Label>Tipo de Conta</Label>
-                <div className="flex gap-2">
-                  <Badge 
-                    variant={isAdminUser ? "default" : "outline"} 
-                    className="cursor-pointer" 
-                    onClick={() => onToggleAdmin(reseller.id, !isAdminUser)}
-                  >
-                    {isAdminUser ? "Admin" : "Revendedor"}
-                  </Badge>
-                </div>
-              </div>
-            )}
           </div>
+          
+          {onToggleAdmin && (
+            <div className="rounded-md border p-3 bg-muted/30 flex items-center justify-between">
+              <div>
+                <div className="text-xs text-muted-foreground uppercase tracking-wider">Tipo de Conta</div>
+                <div className="text-sm font-medium">{isAdminUser ? "Administrador" : "Revendedor / Cliente"}</div>
+              </div>
+              <Button 
+                size="sm" 
+                variant={isAdminUser ? "destructive" : "default"}
+                onClick={() => onToggleAdmin(reseller.id, !isAdminUser)}
+              >
+                {isAdminUser ? "Remover Admin" : "Tornar Admin"}
+              </Button>
+            </div>
+          )}
 
           <div className="rounded-md border p-3 bg-muted/30">
             <div className="text-xs text-muted-foreground uppercase tracking-wider">Saldo Atual</div>
@@ -1078,7 +1082,7 @@ function DeleteUserDialog({ userId, userEmail, onDone }: { userId: string; userE
   );
 }
 
-function EditClientDialog({ user, onDone }: { user: AdminUser; onDone: () => void }) {
+function EditClientDialog({ user, onDone, isAdminUser, onToggleAdmin }: { user: AdminUser; onDone: () => void; isAdminUser?: boolean; onToggleAdmin?: (userId: string, makeAdmin: boolean) => void }) {
   const [open, setOpen] = useState(false);
   const [fullName, setFullName] = useState(user.full_name || "");
   const [email, setEmail] = useState(user.email || "");
@@ -1137,6 +1141,23 @@ function EditClientDialog({ user, onDone }: { user: AdminUser; onDone: () => voi
             <Label>Nova Senha (deixe em branco para manter)</Label>
             <Input type="password" value={password} onChange={(e) => setPassword(e.target.value)} />
           </div>
+
+          {onToggleAdmin && (
+            <div className="rounded-md border p-3 bg-muted/30 flex items-center justify-between">
+              <div>
+                <div className="text-xs text-muted-foreground uppercase tracking-wider">Tipo de Conta</div>
+                <div className="text-sm font-medium">{isAdminUser ? "Administrador" : "Cliente"}</div>
+              </div>
+              <Button 
+                size="sm" 
+                variant={isAdminUser ? "destructive" : "default"}
+                onClick={() => onToggleAdmin(user.id, !isAdminUser)}
+              >
+                {isAdminUser ? "Remover Admin" : "Tornar Admin"}
+              </Button>
+            </div>
+          )}
+
           <Button className="w-full" onClick={() => mut.mutate()} disabled={mut.isPending}>
             {mut.isPending ? "Salvando..." : "Salvar Alterações"}
           </Button>
