@@ -43,8 +43,13 @@ function GatedOutlet() {
   const pathname = useRouterState({ select: (r) => r.location.pathname });
   const { data, isLoading, isError } = useSubscription();
   const allowed = ALWAYS_OPEN_PATHS.some((p) => pathname === p || pathname.startsWith(p + "/"));
+  
   // On a failed status check, never block the user — just let the app render.
   if (isLoading || isError || data?.isActive || allowed) return <Outlet />;
+  
+  // Resellers are handled by isActive: true in useSubscription, 
+  // so if we are here, it's a Client.
+
   // Primeiro acesso: nunca teve assinatura nem teste → tela de boas-vindas.
   if (!data?.subscription) return <WelcomeOnboarding />;
   return (
@@ -73,6 +78,7 @@ export function AppOutletShell() {
 
 
 function useNavItems() {
+  const { data: subData } = useSubscription();
   const { data: isAdmin } = useQuery({
     queryKey: ["is-admin"],
     queryFn: async () => {
@@ -82,6 +88,9 @@ function useNavItems() {
       return !!data;
     },
   });
+
+  const isReseller = !!subData?.profile?.is_reseller;
+
   const items = [
     { to: "/app", label: "Dashboard", icon: LayoutDashboard, exact: true },
     { to: "/app/servers", label: "Servidores", icon: ServerIcon },
@@ -93,16 +102,19 @@ function useNavItems() {
     { to: "/app/conteudos", label: "Conteúdos Offline", icon: Radio },
     { to: "/app/ranking", label: "Ranking", icon: Trophy },
     { to: "/app/achievements", label: "Conquistas", icon: Trophy },
-    { to: "/app/reseller", label: "Painel Revendedor", icon: ShoppingBag },
-    { to: "/app/pagina", label: "Minha Página", icon: Globe },
-    
-    { to: "/app/subscription", label: "Assinatura", icon: CreditCard },
-    { to: "/app/ai-integration", label: "Integração IA", icon: Bot },
-    
-    { to: "/app/ajuda", label: "Central de Ajuda", icon: BookOpen },
   ];
+
+  if (isReseller) {
+    items.push({ to: "/app/reseller", label: "Painel Revendedor", icon: ShoppingBag });
+    items.push({ to: "/app/pagina", label: "Minha Página", icon: Globe });
+  } else {
+    items.push({ to: "/app/subscription", label: "Assinatura", icon: CreditCard });
+  }
+  
+  items.push({ to: "/app/ai-integration", label: "Integração IA", icon: Bot });
+  items.push({ to: "/app/ajuda", label: "Central de Ajuda", icon: BookOpen });
+
   if (isAdmin) {
-    
     items.push({ to: "/app/admin", label: "Admin", icon: Users });
   }
   return items;

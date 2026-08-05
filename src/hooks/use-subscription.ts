@@ -104,10 +104,11 @@ export function useSubscription() {
       const isReseller = !!profile?.is_reseller;
       const credits = profile?.credits || 0;
 
-      // RULE: Reseller is active if credits > 0.
+      // RULE: Reseller can ALWAYS access the panel (to manage and buy credits).
+      // Operational blocks (monitoring/creation) are handled by credits > 0.
       // RULE: Client is active if sub is not expired.
       const isActive = isReseller 
-        ? credits > 0 
+        ? true 
         : (!isExpired && (sub.status === "trial" || sub.status === "active"));
       
       return {

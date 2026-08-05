@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
  */
 export function SubscriptionBanner() {
   const { data } = useSubscription();
-  if (!data || !data.subscription) return null;
+  if (!data || !data.subscription || data.profile?.is_reseller) return null;
 
   if (data.isExpired) {
     return (
