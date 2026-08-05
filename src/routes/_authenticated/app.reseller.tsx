@@ -195,7 +195,7 @@ function ResellerDashboard() {
   };
 
 
-  const handleBuyCredits = () => {
+  const openBuyCredits = () => {
     // Resellers inside another reseller's tree never see Admin PIX — they negotiate with their parent.
     if (subData?.parentId) {
       navigate({ to: "/app/subscription" });
@@ -216,7 +216,7 @@ function ResellerDashboard() {
                 Seu painel continua acessível para recarga, mas seus monitoramentos próprios estão pausados e você não pode criar novos clientes/revendas até adicionar créditos.
               </p>
             </div>
-            <Button size="sm" onClick={handleBuyCredits} className="shrink-0">
+            <Button size="sm" onClick={openBuyCredits} className="shrink-0">
               <CreditCard className="h-3.5 w-3.5 mr-1" /> Adicionar Créditos
             </Button>
           </AlertDescription>
@@ -229,7 +229,7 @@ function ResellerDashboard() {
           <p className="text-muted-foreground text-sm">Gerencie seus créditos, rede e clientes.</p>
         </div>
         <div className="flex items-center gap-2">
-          <Button onClick={handleBuyCredits} className="bg-primary hover:bg-primary/90">
+          <Button onClick={openBuyCredits} className="bg-primary hover:bg-primary/90">
             <ShoppingBag className="h-4 w-4 mr-2" /> Comprar Créditos
           </Button>
         </div>
