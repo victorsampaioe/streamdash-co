@@ -298,7 +298,13 @@ function AdminPage() {
               <div className="w-full sm:w-auto">
                 <div className="relative w-full sm:w-72">
                   <Search className="h-3.5 w-3.5 absolute left-2.5 top-2.5 text-muted-foreground" />
-                  <Input placeholder="Buscar por nome, e-mail, telefone..." value={search} onChange={(e) => setSearch(e.target.value)} className="pl-8 w-full" />
+                  <Input 
+                    placeholder="Buscar por nome, e-mail, telefone..." 
+                    value={search} 
+                    onChange={(e) => setSearch(e.target.value)} 
+                    className="pl-8 w-full" 
+                    id="admin-user-search"
+                  />
                 </div>
               </div>
             </div>
@@ -864,6 +870,15 @@ function ConvertToResellerDialog({ user, onDone }: { user: AdminUser; onDone: ()
   const [fullName, setFullName] = useState(user.full_name || "");
   const [email, setEmail] = useState(user.email || "");
   const [credits, setCredits] = useState("10");
+
+  // Reset state when dialog opens or user changes
+  useEffect(() => {
+    if (open) {
+      setFullName(user.full_name || "");
+      setEmail(user.email || "");
+      setCredits("10");
+    }
+  }, [open, user]);
   
   const convertFn = useServerFn(convertToReseller);
   const mut = useMutation({
