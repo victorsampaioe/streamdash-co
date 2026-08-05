@@ -43,7 +43,7 @@ async function processPayment(mpPaymentId: string) {
               .eq("kind", "telegram")
               .eq("enabled", true);
             const reward = ((ref.reward_cents ?? 1000) / 100).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
-            const text = `🎉 <b>Parabéns!</b>\nSeu indicado assinou um plano.\nVocê ganhou <b>${reward}</b> — solicite via PIX no painel:\n👉 https://streammonitor.site/app/referrals`;
+            const text = `🎉 <b>Parabéns!</b>\nSeu indicado assinou um plano.\nVocê ganhou <b>\${reward}</b>!\n\nCorrigir solicitação de PIX no painel Admin\n\nFoi identificado que o painel Admin ainda está mostrando opção de solicitação de PIX.\n\nEssa função não deve existir para o administrador e não está liberada.`;
             for (const ch of channels ?? []) {
               const raw = String(ch.target ?? "").trim();
               const chatId = raw.includes(":") ? raw.split(":").slice(-1)[0] : raw;
