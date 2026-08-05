@@ -187,13 +187,13 @@ function SubscriptionPage() {
                <Package className="h-12 w-12 mx-auto text-muted-foreground/30 mb-4" />
                 <h3 className="text-lg font-semibold">Planos do seu Revendedor</h3>
                 <p className="text-muted-foreground text-sm mb-6">
-                  {(!parentPlans || parentPlans.length === 0) 
-                    ? "Você faz parte de uma rede privada, mas seu revendedor ainda não configurou planos. Entre em contato com ele para renovar."
-                    : "Escolha um dos planos abaixo configurados pelo seu revendedor."}
+                  {clientPlans.length === 0
+                    ? "Você faz parte de uma rede privada, mas seu revendedor ainda não configurou planos. Fale com ele pelo WhatsApp para contratar ou renovar."
+                    : "Escolha um dos planos abaixo configurados pelo seu revendedor. A negociação é feita diretamente com ele pelo WhatsApp."}
                 </p>
-                {parentPlans && parentPlans.length > 0 && (
+                {clientPlans.length > 0 ? (
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-left">
-                    {parentPlans.map((plan: any) => (
+                    {clientPlans.map((plan: any) => (
                       <Card key={plan.id} className="p-6 relative border-2 border-muted hover:border-primary/30 transition-all">
                         <div className="space-y-3">
                           <h3 className="font-semibold">{plan.name}</h3>
@@ -204,25 +204,69 @@ function SubscriptionPage() {
                           <Button 
                             className="w-full" 
                             variant="outline" 
-                            onClick={() => {
-                              const resellerPhone = parentProfile?.whatsapp || parentProfile?.phone || "";
-                              const message = `Olá, gostaria de renovar meu plano "${plan.name}" (${plan.duration_days} dias) no valor de ${formatBRL(plan.price_cents)}.`;
-                              window.open(`https://wa.me/${resellerPhone.replace(/\D/g, '')}?text=${encodeURIComponent(message)}`, '_blank');
-                            }}
+                            onClick={() => openParentWhatsapp(`Olá, gostaria de contratar/renovar o plano "${plan.name}" (${plan.duration_days} dias) no valor de ${formatBRL(plan.price_cents)}.`)}
                           >
-                            <CreditCard className="h-4 w-4 mr-2" />
-                            Contatar Revendedor
+                            <MessageCircle className="h-4 w-4 mr-2" />
+                            Contratar via WhatsApp
                           </Button>
                         </div>
                       </Card>
                     ))}
                   </div>
+                ) : (
+                  <Button onClick={() => openParentWhatsapp("Olá, gostaria de contratar/renovar meu acesso ao StreamMonitor.")}>
+                    <MessageCircle className="h-4 w-4 mr-2" />
+                    Falar com meu revendedor
+                  </Button>
                 )}
               </div>
             )}
           </div>
         </div>
       )}
+
+      {/* Reseller inside a tree: buys credits from the parent reseller via WhatsApp (never Admin PIX) */}
+      {isReseller && data?.parentId && (
+        <div className="pt-4">
+          <div className="flex items-center gap-2 mb-4">
+            <Rocket className="h-5 w-5 text-purple-500" />
+            <h2 className="text-lg font-semibold">Comprar créditos com seu revendedor</h2>
+          </div>
+          {creditPlans.length > 0 ? (
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {creditPlans.map((pack: any) => (
+                <Card key={pack.id} className="p-6 border-2 border-muted hover:border-purple-300 transition-colors">
+                  <div className="space-y-4">
+                    <div>
+                      <h3 className="font-bold text-xl">{pack.name}</h3>
+                      <div className="text-3xl font-extrabold mt-1">{formatBRL(pack.price_cents)}</div>
+                      <p className="text-xs text-muted-foreground mt-1">{pack.credits_amount ?? 0} crédito(s)</p>
+                    </div>
+                    <Button
+                      className="w-full gap-2"
+                      onClick={() => openParentWhatsapp(`Olá, gostaria de comprar o pacote "${pack.name}" (${pack.credits_amount ?? 0} créditos) no valor de ${formatBRL(pack.price_cents)}.`)}
+                    >
+                      <MessageCircle className="h-4 w-4" />
+                      Comprar via WhatsApp
+                    </Button>
+                  </div>
+                </Card>
+              ))}
+            </div>
+          ) : (
+            <Card className="p-8 text-center border-dashed">
+              <p className="text-sm text-muted-foreground mb-4">
+                Seu revendedor ainda não configurou pacotes de créditos. Fale com ele pelo WhatsApp para recarregar seu saldo.
+              </p>
+              <Button onClick={() => openParentWhatsapp("Olá, gostaria de comprar créditos para minha revenda.")}>
+                <MessageCircle className="h-4 w-4 mr-2" />
+                Falar com meu revendedor
+              </Button>
+            </Card>
+          )}
+        </div>
+      )}
+
 
       {/* Credit Packs Section - Visible to Resellers and potential Resellers */}
       {!data?.parentId && (
