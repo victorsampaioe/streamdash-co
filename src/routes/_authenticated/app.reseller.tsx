@@ -193,7 +193,7 @@ function ResellerDashboard() {
           <AlertCircle className="h-4 w-4" />
           <AlertDescription className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div>
-              <span className="font-bold">⚠️ Seus créditos acabaram</span>
+               <span className="font-bold">⚠️ Seus créditos acabaram</span>
               <p className="text-xs text-muted-foreground">
                 Seu painel continua acessível para recarga, mas seus monitoramentos próprios estão pausados e você não pode criar novos clientes/revendas até adicionar créditos.
               </p>
