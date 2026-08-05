@@ -41,7 +41,7 @@ export async function runDueChecks() {
   if (error) throw error;
 
   // Only monitor servers of users with active status.
-  // Client: Active subscription AND credits > 0.
+  // Client: Active subscription.
   // Reseller: credits > 0.
   // Admins: Always.
   const ownerIds = Array.from(new Set((servers ?? []).map((s: any) => s.owner_id)));
@@ -84,12 +84,12 @@ export async function runDueChecks() {
         // Reseller rule: only depends on credits
         if (credits > 0) activeOwners.add(ownerId);
       } else {
-        // Client rule: depends on BOTH plan and credits
+        // Client rule: depends on subscription
         const isSubscriptionActive = sub && 
           (sub.status === "active" || sub.status === "trial") && 
           sub.expires_at > nowIso;
         
-        if (isSubscriptionActive && credits > 0) {
+        if (isSubscriptionActive) {
           activeOwners.add(ownerId);
         }
       }
