@@ -161,17 +161,19 @@ function ResellerDashboard() {
 
   const handleEditPlan = (plan: any) => {
     setEditingPlan(plan);
-    setPlanForm({ 
-      name: plan.name, 
-      price: (plan.price_cents / 100).toString(), 
-      duration_days: plan.duration_days.toString() 
+    setPlanForm({
+      name: plan.name,
+      price: (plan.price_cents / 100).toString(),
+      duration_days: plan.duration_days.toString(),
+      kind: plan.kind ?? "plan",
+      credits_amount: (plan.credits_amount ?? 10).toString(),
     });
     setPlanDialogOpen(true);
   };
 
-  const handleCreatePlan = () => {
+  const handleCreatePlan = (kind: "plan" | "credits" = "plan") => {
     setEditingPlan(null);
-    setPlanForm({ name: "", price: "", duration_days: "30" });
+    setPlanForm({ name: "", price: "", duration_days: kind === "credits" ? "0" : "30", kind, credits_amount: "10" });
     setPlanDialogOpen(true);
   };
 
@@ -181,11 +183,14 @@ function ResellerDashboard() {
       plan: {
         name: planForm.name,
         price: parseFloat(planForm.price),
-        duration_days: parseInt(planForm.duration_days),
+        duration_days: planForm.kind === "credits" ? 1 : parseInt(planForm.duration_days),
+        kind: planForm.kind,
+        credits_amount: planForm.kind === "credits" ? parseInt(planForm.credits_amount) || 0 : null,
         features: []
       }
     });
   };
+
 
   return (
     <div className="space-y-6">
