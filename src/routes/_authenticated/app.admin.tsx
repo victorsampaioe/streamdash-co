@@ -100,7 +100,7 @@ type StatsRow = {
   total_servers: number;
 };
 
-type FilterKey = "all" | "paid" | "trial" | "expired" | "admin";
+type FilterKey = "all" | "paid" | "trial" | "expired" | "admin" | "reseller" | "client";
 
 function AdminPage() {
   const navigate = useNavigate();
