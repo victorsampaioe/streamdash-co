@@ -33,6 +33,7 @@ import { broadcastTelegram } from "@/lib/telegram-broadcast.functions";
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { UserCog, History, PlusCircle, UserCheck, UserRoundCog, Settings2, Trash2 } from "lucide-react";
+import { Label } from "@/components/ui/label";
 
 import { StorageReportCard } from "@/components/storage-report-card";
 import { AlertCircle } from "lucide-react";
