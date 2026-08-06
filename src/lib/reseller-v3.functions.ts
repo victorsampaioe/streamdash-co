@@ -58,8 +58,14 @@ export const createTestClient = createServerFn({ method: "POST" })
       throw new Error("Apenas revendedores podem criar clientes.");
     }
 
+    const cfg = PLANS[data.plan ?? "trial"];
+    const cost = creator.isAdmin ? 0 : cfg.credits;
+    if (cost > 0 && creator.credits < cost) {
+      throw new Error(`Saldo insuficiente. Plano ${cfg.label} custa ${cost} crédito(s) e você tem ${creator.credits}.`);
+    }
+
     const email = data.email || `cliente_${Math.random().toString(36).substring(2, 9)}@streammonitor.site`;
-    const password = randomPassword();
+    const password = data.password || randomPassword();
 
     const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
       email,
@@ -70,26 +76,30 @@ export const createTestClient = createServerFn({ method: "POST" })
     if (authError) throw new Error(`Erro ao criar acesso: ${authError.message}`);
     const newUserId = authData.user.id;
 
-    const expires = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
+    const expires = new Date(Date.now() + cfg.days * 24 * 60 * 60 * 1000).toISOString();
+
+    const profilePatch: Record<string, unknown> = {
+      full_name: data.fullName,
+      parent_id: userId,
+      is_reseller: false,
+    };
+    if (data.whatsapp) {
+      profilePatch.whatsapp = data.whatsapp;
+      profilePatch.phone = data.whatsapp;
+    }
 
     const { error: profileError } = await supabaseAdmin
       .from("profiles")
-      .update({
-        full_name: data.fullName,
-        whatsapp: data.whatsapp,
-        phone: data.whatsapp,
-        parent_id: userId,
-        is_reseller: false,
-      } as any)
+      .update(profilePatch as any)
       .eq("id", newUserId);
     if (profileError) throw new Error(profileError.message);
 
-    // 1-day trial subscription (clients depend only on subscription)
+    // Clients depend only on the subscription window
     const { error: subError } = await supabaseAdmin.from("subscriptions").upsert(
       {
         user_id: newUserId,
-        plan: "trial",
-        status: "trial",
+        plan: cfg.plan,
+        status: cfg.status,
         started_at: new Date().toISOString(),
         expires_at: expires,
       } as any,
@@ -104,15 +114,24 @@ export const createTestClient = createServerFn({ method: "POST" })
     );
     if (treeError) throw new Error(treeError.message);
 
+    if (cost > 0) {
+      const { error: walletError } = await supabaseAdmin
+        .from("reseller_wallet")
+        .update({ credits: creator.credits - cost, updated_at: new Date().toISOString() } as any)
+        .eq("reseller_id", userId);
+      if (walletError) throw new Error(walletError.message);
+    }
+
     await supabaseAdmin.from("reseller_credit_history").insert({
       user_id: userId,
-      amount: 0,
+      amount: -cost,
       type: "client_creation",
-      description: `Criou cliente teste ${data.fullName} — 1 dia grátis`,
+      description: `Criou cliente ${data.fullName} — plano ${cfg.label} (${cfg.days} dias)`,
     });
 
-    return { success: true, email, password, expiresAt: expires };
+    return { success: true, email, password, expiresAt: expires, plan: cfg.label, creditsUsed: cost };
   });
+
 
 export const createSubReseller = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
