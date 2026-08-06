@@ -236,7 +236,7 @@ function SubscriptionPage() {
       )}
 
       {/* Reseller inside a tree: buys credits from the parent reseller via WhatsApp (never Admin PIX) */}
-      {!isLoading && isReseller && data?.parentId && !parentIsAdmin && (
+      {!isLoading && data?.parentId && !parentIsAdmin && (
         <div className="pt-4">
           <div className="flex items-center gap-2 mb-4">
             <Rocket className="h-5 w-5 text-purple-500" />
