@@ -96,15 +96,16 @@ export function CreateResellerDialog({ open, onOpenChange, onDone, isReseller = 
             ) : (
               <Sparkles className="h-5 w-5 text-success" />
             )}
-            {isReseller ? "Criar Sub-Revendedor" : "Criar Cliente (Teste 1 Dia)"}
+            {isReseller ? "Criar Sub-Revendedor" : "Criar Cliente"}
           </DialogTitle>
           <DialogDescription>
             {result 
               ? `Envie as credenciais abaixo para o novo ${isReseller ? "sub-revendedor" : "cliente"}.`
               : isReseller 
                 ? "Cria um novo painel de revendedor com saldo inicial (Mínimo 10 créditos)."
-                : "Cria um acesso temporário de 24h para o cliente testar o sistema."}
+                : "Escolha o plano de ativação do cliente. 1 crédito = 1 mês (o teste é grátis)."}
           </DialogDescription>
+
         </DialogHeader>
 
         {result ? (
