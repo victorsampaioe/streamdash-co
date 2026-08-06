@@ -7,6 +7,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+
 import { createTestClient, createSubReseller } from "@/lib/reseller-v3.functions";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 
@@ -17,13 +19,25 @@ interface CreateResellerDialogProps {
   isReseller?: boolean;
 }
 
+const CLIENT_PLANS = [
+  { value: "trial", label: "Teste (1 dia)", credits: 0 },
+  { value: "monthly", label: "Mensal (30 dias)", credits: 1 },
+  { value: "quarterly", label: "Trimestral (90 dias)", credits: 3 },
+  { value: "semiannual", label: "Semestral (180 dias)", credits: 6 },
+  { value: "annual", label: "Anual (365 dias)", credits: 12 },
+] as const;
+
+type ClientPlan = (typeof CLIENT_PLANS)[number]["value"];
+
 export function CreateResellerDialog({ open, onOpenChange, onDone, isReseller = true }: CreateResellerDialogProps) {
   const [email, setEmail] = useState("");
   const [fullName, setFullName] = useState("");
   const [whatsapp, setWhatsapp] = useState("");
+  const [password, setPassword] = useState("");
+  const [plan, setPlan] = useState<ClientPlan>("trial");
   const [initialCredits, setInitialCredits] = useState(10);
   const [result, setResult] = useState<{ email: string; password: string } | null>(null);
- 
+
   const createClientFn = useServerFn(createTestClient);
   const createSubResellerFn = useServerFn(createSubReseller);
 
@@ -34,7 +48,7 @@ export function CreateResellerDialog({ open, onOpenChange, onDone, isReseller = 
           data: { 
             email, 
             fullName, 
-            whatsapp,
+            whatsapp: whatsapp || undefined,
             initialCredits: Math.max(10, initialCredits)
           } 
         });
@@ -43,14 +57,16 @@ export function CreateResellerDialog({ open, onOpenChange, onDone, isReseller = 
           data: { 
             email: email || undefined, 
             fullName, 
-            whatsapp 
+            whatsapp: whatsapp || undefined,
+            password: password || undefined,
+            plan,
           } 
         });
       }
     },
     onSuccess: (data: any) => {
       setResult(data as { email: string; password: string });
-      toast.success(isReseller ? "Sub-revenda criada com sucesso!" : "Cliente teste criado com sucesso!");
+      toast.success(isReseller ? "Sub-revenda criada com sucesso!" : "Cliente criado com sucesso!");
       onDone();
     },
     onError: (e: any) => {
@@ -65,9 +81,12 @@ export function CreateResellerDialog({ open, onOpenChange, onDone, isReseller = 
       setEmail("");
       setFullName("");
       setWhatsapp("");
+      setPassword("");
+      setPlan("trial");
       setInitialCredits(10);
     }, 200);
   }
+
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -79,15 +98,16 @@ export function CreateResellerDialog({ open, onOpenChange, onDone, isReseller = 
             ) : (
               <Sparkles className="h-5 w-5 text-success" />
             )}
-            {isReseller ? "Criar Sub-Revendedor" : "Criar Cliente (Teste 1 Dia)"}
+            {isReseller ? "Criar Sub-Revendedor" : "Criar Cliente"}
           </DialogTitle>
           <DialogDescription>
             {result 
               ? `Envie as credenciais abaixo para o novo ${isReseller ? "sub-revendedor" : "cliente"}.`
               : isReseller 
                 ? "Cria um novo painel de revendedor com saldo inicial (Mínimo 10 créditos)."
-                : "Cria um acesso temporário de 24h para o cliente testar o sistema."}
+                : "Escolha o plano de ativação do cliente. 1 crédito = 1 mês (o teste é grátis)."}
           </DialogDescription>
+
         </DialogHeader>
 
         {result ? (
@@ -138,7 +158,7 @@ export function CreateResellerDialog({ open, onOpenChange, onDone, isReseller = 
             </div>
             
             <div className="space-y-2">
-              <Label>WhatsApp</Label>
+              <Label>WhatsApp (Opcional)</Label>
               <Input 
                 value={whatsapp} 
                 onChange={(e) => setWhatsapp(e.target.value)} 
@@ -156,6 +176,38 @@ export function CreateResellerDialog({ open, onOpenChange, onDone, isReseller = 
               />
             </div>
 
+            {!isReseller && (
+              <>
+                <div className="space-y-2">
+                  <Label>Senha (Opcional)</Label>
+                  <Input
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    placeholder="Deixe em branco para gerar automaticamente"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Plano de Ativação</Label>
+                  <Select value={plan} onValueChange={(v) => setPlan(v as ClientPlan)}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione o plano" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {CLIENT_PLANS.map((p) => (
+                        <SelectItem key={p.value} value={p.value}>
+                          {p.label} — {p.credits === 0 ? "grátis" : `${p.credits} crédito(s)`}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <p className="text-[10px] text-muted-foreground">
+                    1 crédito = 1 mês de acesso. O teste de 1 dia não consome créditos.
+                  </p>
+                </div>
+              </>
+            )}
+
             {isReseller && (
               <div className="space-y-2">
                 <Label>Créditos Iniciais</Label>
@@ -172,21 +224,16 @@ export function CreateResellerDialog({ open, onOpenChange, onDone, isReseller = 
               </div>
             )}
 
-            {!isReseller && (
-              <div className="rounded-md border border-success/20 bg-success/5 p-3 text-xs text-muted-foreground">
-                ✨ <strong>Teste Automático:</strong> O cliente receberá 24h de acesso gratuito vinculado à sua conta.
-              </div>
-            )}
-
             <DialogFooter className="gap-2 sm:gap-0">
               <Button variant="outline" onClick={close}>Cancelar</Button>
               <Button 
                 onClick={() => mut.mutate()} 
-                disabled={mut.isPending || !fullName || !whatsapp || (isReseller && (!email || initialCredits < 10))}
+                disabled={mut.isPending || !fullName || (isReseller && (!email || initialCredits < 10))}
               >
-                {mut.isPending ? "Criando..." : isReseller ? "Criar Sub-Revendedor" : "Criar Cliente Teste"}
+                {mut.isPending ? "Criando..." : isReseller ? "Criar Sub-Revendedor" : "Criar Cliente"}
               </Button>
             </DialogFooter>
+
           </div>
         )}
       </DialogContent>
