@@ -3287,6 +3287,7 @@ export type Database = {
         }[]
       }
       get_iptv_server_rank: { Args: { _server_id: string }; Returns: Json }
+      get_my_parent_id: { Args: never; Returns: string }
       get_public_checks: {
         Args: { _limit?: number; _slug: string }
         Returns: {
@@ -3591,6 +3592,7 @@ export type Database = {
         | "credits_40"
         | "reseller"
         | "basic"
+        | "quarterly"
       server_status: "up" | "degraded" | "down" | "unknown"
       subscription_status: "trial" | "active" | "expired" | "cancelled"
     }
@@ -3782,6 +3784,7 @@ export const Constants = {
         "credits_40",
         "reseller",
         "basic",
+        "quarterly",
       ],
       server_status: ["up", "degraded", "down", "unknown"],
       subscription_status: ["trial", "active", "expired", "cancelled"],

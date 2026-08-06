@@ -42,10 +42,22 @@ export function AppShell({ children }: { children: ReactNode }) {
 function GatedOutlet() {
   const pathname = useRouterState({ select: (r) => r.location.pathname });
   const { data, isLoading, isError } = useSubscription();
+  const { data: userRoles, isLoading: rolesLoading } = useQuery({
+    queryKey: ["user-roles"],
+    queryFn: async () => {
+      const { data: user } = await supabase.auth.getUser();
+      if (!user.user) return [];
+      const { data } = await supabase.from("user_roles").select("role").eq("user_id", user.user.id);
+      return data?.map((r) => r.role as string) || [];
+    },
+  });
   const allowed = ALWAYS_OPEN_PATHS.some((p) => pathname === p || pathname.startsWith(p + "/"));
-  
+
+  // Admin e revendedores nunca dependem de assinatura.
+  const privileged = !!userRoles?.some((r) => r === "admin" || r === "reseller" || r === "sub_reseller");
+
   // On a failed status check, never block the user — just let the app render.
-  if (isLoading || isError || data?.isActive || allowed) return <Outlet />;
+  if (isLoading || rolesLoading || isError || privileged || data?.isActive || allowed) return <Outlet />;
   
   // Resellers are handled by isActive: true in useSubscription, 
   // so if we are here, it's a Client.
