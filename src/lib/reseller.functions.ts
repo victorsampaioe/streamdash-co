@@ -62,11 +62,10 @@ export const getParentResellerPlans = createServerFn({ method: "GET" })
         .eq("id", targetResellerId)
         .maybeSingle(),
       context.supabase
-        .from("reseller_settings")
-        .select("*")
-        .eq("reseller_id", targetResellerId)
+        .rpc("get_parent_reseller_pricing", { _reseller_id: targetResellerId })
         .maybeSingle()
     ]);
+
     
     if (plansRes.error) throw new Error(plansRes.error.message);
     
