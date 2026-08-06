@@ -3288,6 +3288,15 @@ export type Database = {
       }
       get_iptv_server_rank: { Args: { _server_id: string }; Returns: Json }
       get_my_parent_id: { Args: never; Returns: string }
+      get_parent_reseller_pricing: {
+        Args: { _reseller_id: string }
+        Returns: {
+          annual_price_cents: number
+          monthly_price_cents: number
+          quarterly_price_cents: number
+          reseller_id: string
+        }[]
+      }
       get_public_checks: {
         Args: { _limit?: number; _slug: string }
         Returns: {
