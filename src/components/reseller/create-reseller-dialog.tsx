@@ -17,13 +17,25 @@ interface CreateResellerDialogProps {
   isReseller?: boolean;
 }
 
+const CLIENT_PLANS = [
+  { value: "trial", label: "Teste (1 dia)", credits: 0 },
+  { value: "monthly", label: "Mensal (30 dias)", credits: 1 },
+  { value: "quarterly", label: "Trimestral (90 dias)", credits: 3 },
+  { value: "semiannual", label: "Semestral (180 dias)", credits: 6 },
+  { value: "annual", label: "Anual (365 dias)", credits: 12 },
+] as const;
+
+type ClientPlan = (typeof CLIENT_PLANS)[number]["value"];
+
 export function CreateResellerDialog({ open, onOpenChange, onDone, isReseller = true }: CreateResellerDialogProps) {
   const [email, setEmail] = useState("");
   const [fullName, setFullName] = useState("");
   const [whatsapp, setWhatsapp] = useState("");
+  const [password, setPassword] = useState("");
+  const [plan, setPlan] = useState<ClientPlan>("trial");
   const [initialCredits, setInitialCredits] = useState(10);
   const [result, setResult] = useState<{ email: string; password: string } | null>(null);
- 
+
   const createClientFn = useServerFn(createTestClient);
   const createSubResellerFn = useServerFn(createSubReseller);
 
@@ -34,7 +46,7 @@ export function CreateResellerDialog({ open, onOpenChange, onDone, isReseller = 
           data: { 
             email, 
             fullName, 
-            whatsapp,
+            whatsapp: whatsapp || undefined,
             initialCredits: Math.max(10, initialCredits)
           } 
         });
@@ -43,14 +55,16 @@ export function CreateResellerDialog({ open, onOpenChange, onDone, isReseller = 
           data: { 
             email: email || undefined, 
             fullName, 
-            whatsapp 
+            whatsapp: whatsapp || undefined,
+            password: password || undefined,
+            plan,
           } 
         });
       }
     },
     onSuccess: (data: any) => {
       setResult(data as { email: string; password: string });
-      toast.success(isReseller ? "Sub-revenda criada com sucesso!" : "Cliente teste criado com sucesso!");
+      toast.success(isReseller ? "Sub-revenda criada com sucesso!" : "Cliente criado com sucesso!");
       onDone();
     },
     onError: (e: any) => {
@@ -65,9 +79,12 @@ export function CreateResellerDialog({ open, onOpenChange, onDone, isReseller = 
       setEmail("");
       setFullName("");
       setWhatsapp("");
+      setPassword("");
+      setPlan("trial");
       setInitialCredits(10);
     }, 200);
   }
+
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
