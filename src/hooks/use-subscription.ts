@@ -70,7 +70,10 @@ export function useSubscription() {
         { data: subData, error: subError }, 
         { data: profile, error: profileError },
         { data: tree },
-        { data: wallet }
+        { data: wallet },
+        { data: roleRows, error: rolesError },
+        { data: hasResellerRole },
+        { data: hasSubResellerRole }
       ] = await Promise.all([
         supabase
           .from("subscriptions")
@@ -91,21 +94,32 @@ export function useSubscription() {
           .from("reseller_wallet")
           .select("credits")
           .eq("reseller_id", userData.user.id)
-          .maybeSingle()
+          .maybeSingle(),
+        supabase
+          .from("user_roles")
+          .select("role")
+          .eq("user_id", userData.user.id),
+        supabase.rpc("has_role", { _user_id: userData.user.id, _role: "reseller" }),
+        supabase.rpc("has_role", { _user_id: userData.user.id, _role: "sub_reseller" })
       ]);
 
       if (subError) console.error("Sub error:", subError);
       if (profileError) console.error("Profile error:", profileError);
+      if (rolesError) console.error("Roles error:", rolesError);
 
       const credits = wallet?.credits || 0;
-      const isReseller = !!profile?.is_reseller;
+      const roles = roleRows?.map((row) => String(row.role)) ?? [];
+      const resellerRole = roles.find((role) => role === "reseller" || role === "sub_reseller");
+      // Roles are authoritative. The RPC fallback avoids an RLS-filtered role query,
+      // while the profile/wallet checks preserve compatibility with legacy accounts.
+      const isReseller = !!resellerRole || !!hasResellerRole || !!hasSubResellerRole || !!profile?.is_reseller || !!wallet;
 
       const prof = profile ? {
         phone: profile.phone,
         full_name: profile.full_name,
         is_reseller: isReseller,
         credits: credits,
-        role: null // Set role null since we won't read it here
+        role: resellerRole ?? (hasSubResellerRole ? "sub_reseller" : hasResellerRole ? "reseller" : roles[0] ?? null)
       } : null;
 
       const parentId = tree?.parent_reseller_id || null;
