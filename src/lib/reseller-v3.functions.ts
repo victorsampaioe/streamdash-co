@@ -164,17 +164,22 @@ export const createSubReseller = createServerFn({ method: "POST" })
       .from("user_roles")
       .upsert({ user_id: newUserId, role: "sub_reseller" as any }, { onConflict: "user_id,role" });
 
+    const subProfilePatch: Record<string, unknown> = {
+      full_name: data.fullName,
+      parent_id: userId,
+      is_reseller: true,
+    };
+    if (data.whatsapp) {
+      subProfilePatch.whatsapp = data.whatsapp;
+      subProfilePatch.phone = data.whatsapp;
+    }
+
     const { error: profileError } = await supabaseAdmin
       .from("profiles")
-      .update({
-        full_name: data.fullName,
-        whatsapp: data.whatsapp,
-        phone: data.whatsapp,
-        parent_id: userId,
-        is_reseller: true,
-      } as any)
+      .update(subProfilePatch as any)
       .eq("id", newUserId);
     if (profileError) throw new Error(profileError.message);
+
 
     // Resellers do not depend on subscription — keep a consistent "reseller" row
     const farFuture = new Date();
