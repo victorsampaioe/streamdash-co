@@ -365,52 +365,9 @@ function ResellerDashboard() {
         </TabsContent>
 
         <TabsContent value="clientes" className="mt-4">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <div className="space-y-1">
-                <CardTitle className="text-base font-semibold">Meus Clientes</CardTitle>
-                <CardDescription>Clientes finais usando seus planos (Não consome créditos).</CardDescription>
-              </div>
-              <Button size="sm" variant="outline" onClick={() => setClientDialogOpen(true)}>
-                <Plus className="h-4 w-4 mr-2" /> Criar Cliente
-              </Button>
-            </CardHeader>
-            <CardContent>
-              {(!network || network.filter(u => !u.is_reseller).length === 0) ? (
-                <div className="text-center py-12">
-                  <Users className="h-12 w-12 text-muted-foreground/20 mx-auto mb-4" />
-                  <p className="text-muted-foreground text-sm">Nenhum cliente final encontrado.</p>
-                </div>
-              ) : (
-                <div className="space-y-4 mt-4">
-                  {network.filter(u => !u.is_reseller).map((user: any) => (
-                    <div key={user.id} className="flex items-center justify-between p-3 border rounded-lg hover:bg-muted/50 transition-colors">
-                      <div className="flex items-center gap-3">
-                        <div className="h-10 w-10 rounded-full bg-secondary/20 flex items-center justify-center font-bold text-secondary-foreground shrink-0">
-                          {user.full_name?.[0] || "?"}
-                        </div>
-                        <div className="min-w-0">
-                          <div className="font-medium text-sm truncate">{user.full_name || "Cliente"}</div>
-                          <div className="text-xs text-muted-foreground truncate">{user.email}</div>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-2 shrink-0">
-                        <Badge variant="outline" className="bg-primary/10 text-primary border-primary/20 hidden sm:inline-flex">Assinante</Badge>
-                        <ManageClientDialog 
-                          userId={user.id} 
-                          onDone={() => qc.invalidateQueries({ queryKey: ["reseller-network"] })}
-                          onUpdate={updateClientFn}
-                          onDelete={deleteClientFn}
-                          onGetDetails={getClientDetailsFn}
-                        />
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
+          <AccountsManager kind="client" onCreate={() => setClientDialogOpen(true)} />
         </TabsContent>
+
 
         <TabsContent value="historico" className="mt-4">
           <Card>
