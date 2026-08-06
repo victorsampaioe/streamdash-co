@@ -156,7 +156,7 @@ export function CreateResellerDialog({ open, onOpenChange, onDone, isReseller = 
             </div>
             
             <div className="space-y-2">
-              <Label>WhatsApp</Label>
+              <Label>WhatsApp (Opcional)</Label>
               <Input 
                 value={whatsapp} 
                 onChange={(e) => setWhatsapp(e.target.value)} 
@@ -174,6 +174,38 @@ export function CreateResellerDialog({ open, onOpenChange, onDone, isReseller = 
               />
             </div>
 
+            {!isReseller && (
+              <>
+                <div className="space-y-2">
+                  <Label>Senha (Opcional)</Label>
+                  <Input
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    placeholder="Deixe em branco para gerar automaticamente"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Plano de Ativação</Label>
+                  <Select value={plan} onValueChange={(v) => setPlan(v as ClientPlan)}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione o plano" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {CLIENT_PLANS.map((p) => (
+                        <SelectItem key={p.value} value={p.value}>
+                          {p.label} — {p.credits === 0 ? "grátis" : `${p.credits} crédito(s)`}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <p className="text-[10px] text-muted-foreground">
+                    1 crédito = 1 mês de acesso. O teste de 1 dia não consome créditos.
+                  </p>
+                </div>
+              </>
+            )}
+
             {isReseller && (
               <div className="space-y-2">
                 <Label>Créditos Iniciais</Label>
@@ -190,21 +222,16 @@ export function CreateResellerDialog({ open, onOpenChange, onDone, isReseller = 
               </div>
             )}
 
-            {!isReseller && (
-              <div className="rounded-md border border-success/20 bg-success/5 p-3 text-xs text-muted-foreground">
-                ✨ <strong>Teste Automático:</strong> O cliente receberá 24h de acesso gratuito vinculado à sua conta.
-              </div>
-            )}
-
             <DialogFooter className="gap-2 sm:gap-0">
               <Button variant="outline" onClick={close}>Cancelar</Button>
               <Button 
                 onClick={() => mut.mutate()} 
-                disabled={mut.isPending || !fullName || !whatsapp || (isReseller && (!email || initialCredits < 10))}
+                disabled={mut.isPending || !fullName || (isReseller && (!email || initialCredits < 10))}
               >
-                {mut.isPending ? "Criando..." : isReseller ? "Criar Sub-Revendedor" : "Criar Cliente Teste"}
+                {mut.isPending ? "Criando..." : isReseller ? "Criar Sub-Revendedor" : "Criar Cliente"}
               </Button>
             </DialogFooter>
+
           </div>
         )}
       </DialogContent>
