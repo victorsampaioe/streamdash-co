@@ -376,22 +376,22 @@ function ResellerDashboard() {
                 <div className="h-12 w-12 rounded-lg bg-success/10 flex items-center justify-center mb-2">
                   <Sparkles className="h-6 w-6 text-success" />
                 </div>
-                <CardTitle>Criar Cliente Teste</CardTitle>
+                <CardTitle>Criar Cliente</CardTitle>
                 <CardDescription>
-                  Gera um acesso automático de 24 horas para um novo cliente.
-                  Não consome seus créditos.
+                  Cria um cliente já ativado no plano escolhido (teste, mensal, trimestral, semestral ou anual).
                 </CardDescription>
               </CardHeader>
               <CardContent>
                 <ul className="text-sm space-y-2 text-muted-foreground mb-6">
-                  <li className="flex items-center gap-2">✅ Validade de 1 dia grátis</li>
-                  <li className="flex items-center gap-2">✅ Vinculado à sua carteira</li>
-                  <li className="flex items-center gap-2">✅ Conversão para plano paga depois</li>
+                  <li className="flex items-center gap-2">✅ Teste de 1 dia grátis</li>
+                  <li className="flex items-center gap-2">✅ 1 crédito = 1 mês de acesso</li>
+                  <li className="flex items-center gap-2">✅ Vinculado à sua rede</li>
                 </ul>
                 <Button className="w-full bg-success hover:bg-success/90" onClick={() => setClientDialogOpen(true)}>
-                  <Plus className="h-4 w-4 mr-2" /> Novo Cliente Teste
+                  <Plus className="h-4 w-4 mr-2" /> Novo Cliente
                 </Button>
               </CardContent>
+
             </Card>
 
             <Card className="hover:border-primary/50 transition-colors border-2">
