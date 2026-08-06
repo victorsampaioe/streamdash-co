@@ -157,7 +157,7 @@ function SubscriptionPage() {
             {data?.isExpired ? "Renovar Assinatura" : "Fazer upgrade"}
           </h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {!data?.parentId && !isReseller ? PLANS.map((plan) => {
+          {useAdminPix && !isReseller ? PLANS.map((plan) => {
             const isPromo = plan.id === "monthly" ? isMonthlyPromoActive() : plan.id === "yearly" ? isYearlyPromoActive() : false;
             const promoLabel = plan.id === "monthly" ? "🔥 Só hoje" : "🔥 Só hoje";
             const price = effectivePriceCents(plan);
