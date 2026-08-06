@@ -52,6 +52,9 @@ function SubscriptionPage() {
   const sub = data?.subscription;
   const parentPlansData = parentPlans?.plans || [];
   const parentProfileData = parentPlans?.parent || null;
+  // Clients/resellers directly under the Admin account use the platform plans + Admin PIX
+  const parentIsAdmin = !!(parentPlans as any)?.parentIsAdmin;
+  const useAdminPix = !data?.parentId || parentIsAdmin;
 
   const clientPlans = parentPlansData.filter((p) => (p.kind ?? "plan") === "plan");
   const creditPlans = parentPlansData.filter((p) => p.kind === "credits");
