@@ -117,7 +117,8 @@ function ResellerDashboard() {
   });
   const isAdmin = adminCheckQ.data === true;
 
-  const isAccountActive = isAdmin || (stats?.credits !== undefined && stats.credits > 0);
+  // Comprar créditos não depende do saldo atual nem da assinatura:
+  // créditos são a moeda da revenda e devem poder ser recarregados com saldo zerado.
 
   const [buyDialogOpen, setBuyDialogOpen] = useState(false);
   const [resellerDialogOpen, setResellerDialogOpen] = useState(false);
@@ -527,41 +528,28 @@ function ResellerDashboard() {
               <CardHeader>
                 <DialogTitle>Comprar Créditos</DialogTitle>
                 <DialogDescription>
-                  Cada crédito permite que você crie 1 novo revendedor em sua rede.
+                  Créditos são usados para criar clientes e sub-revendedores. Não têm relação com a
+                  assinatura do sistema.
                 </DialogDescription>
               </CardHeader>
               <CardContent className="space-y-4">
-                {isAccountActive ? (
-                  <div className="bg-success/10 border border-success/20 p-3 rounded-lg flex items-center gap-2 text-success text-sm mb-4">
-                    <CheckCircle2 className="h-4 w-4" />
-                    <span>✅ Conta ativa - Você pode comprar créditos e criar sua rede</span>
-                  </div>
-                ) : (
-                  <div className="bg-destructive/10 border border-destructive/20 p-4 rounded-lg space-y-2 mb-4">
-                    <div className="flex items-center gap-2 text-destructive font-semibold">
-                      <AlertCircle className="h-5 w-5" />
-                      <span>⚠️ Sua conta precisa estar ativa para comprar créditos.</span>
-                    </div>
-                    <p className="text-sm text-muted-foreground ml-7">
-                      Assine um plano para liberar essa função.
-                    </p>
-                  </div>
-                )}
+                <div className="bg-muted/50 border p-3 rounded-lg text-sm text-muted-foreground">
+                  Saldo atual: <strong className="text-foreground">{isAdmin ? "∞" : (stats?.credits ?? 0)}</strong> crédito(s).
+                  Após o pagamento aprovado, os créditos entram automaticamente na sua carteira.
+                </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                   {CREDIT_PACKS.map((pack) => (
-                    <Button
-                      key={pack.amount}
-                      variant="outline"
-                      className="h-auto py-4 flex flex-col gap-1 border-2 hover:border-primary hover:bg-primary/5 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-                      onClick={() => handleBuyCredits(pack)}
-                      disabled={!isAccountActive}
-                    >
-                      <div className="font-bold text-lg">{pack.amount} Créditos</div>
+                    <div key={pack.amount} className="rounded-lg border-2 p-4 flex flex-col gap-2 text-center hover:border-primary/50 transition-all">
+                      <div className="font-bold text-lg">{pack.amount} créditos</div>
                       <div className="text-primary font-semibold">{formatBRL(pack.price)}</div>
-                    </Button>
+                      <Button size="sm" className="mt-1 w-full" onClick={() => handleBuyCredits(pack)}>
+                        <CreditCard className="h-3.5 w-3.5 mr-1" /> Comprar
+                      </Button>
+                    </div>
                   ))}
                 </div>
+
                 <div className="bg-muted p-4 rounded-lg flex gap-3 items-start">
                   <div className="bg-primary/20 p-2 rounded-full shrink-0">
                     <CreditCard className="h-4 w-4 text-primary" />
