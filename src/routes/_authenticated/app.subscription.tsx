@@ -279,7 +279,7 @@ function SubscriptionPage() {
 
 
       {/* Credit Packs (Admin PIX) — exclusive to resellers with no parent reseller */}
-      {!isLoading && isReseller && useAdminPix && (
+      {!isLoading && useAdminPix && (
         <div className="pt-4">
           <div className="flex items-center gap-2 mb-4">
             <Rocket className="h-5 w-5 text-purple-500" />
