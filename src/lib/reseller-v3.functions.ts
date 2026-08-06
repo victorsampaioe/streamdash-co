@@ -201,6 +201,29 @@ export const createSubReseller = createServerFn({ method: "POST" })
     );
     if (treeError) throw new Error(treeError.message);
 
+    // Wallet + commercial settings inherited from the parent reseller
+    await supabaseAdmin
+      .from("reseller_wallet")
+      .upsert({ reseller_id: newUserId, credits: 0 } as any, { onConflict: "reseller_id", ignoreDuplicates: true });
+
+    const { data: parentSettings } = await supabaseAdmin
+      .from("reseller_settings")
+      .select("monthly_price_cents, quarterly_price_cents, annual_price_cents")
+      .eq("reseller_id", userId)
+      .maybeSingle();
+
+    await supabaseAdmin.from("reseller_settings").upsert(
+      {
+        reseller_id: newUserId,
+        monthly_price_cents: parentSettings?.monthly_price_cents ?? 3500,
+        quarterly_price_cents: parentSettings?.quarterly_price_cents ?? 9000,
+        annual_price_cents: parentSettings?.annual_price_cents ?? 29900,
+      } as any,
+      { onConflict: "reseller_id", ignoreDuplicates: true }
+    );
+
+
+
     // Single source of truth for credits: the wallet (deducts sender, credits recipient)
     const { error: creditError } = await supabaseAdmin.rpc("transfer_credits_v2", {
       _sender_id: userId,
