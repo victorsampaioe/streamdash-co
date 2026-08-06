@@ -64,6 +64,8 @@ import { toast } from "sonner";
 import { PixDialog } from "@/components/payments/pix-dialog";
 import { createPixPayment } from "@/lib/mercadopago.functions";
 import { CreateResellerDialog } from "@/components/reseller/create-reseller-dialog";
+import { AccountsManager } from "@/components/reseller/accounts-manager";
+
 import { useSubscription } from "@/hooks/use-subscription";
 
 
@@ -309,64 +311,9 @@ function ResellerDashboard() {
         </TabsList>
 
         <TabsContent value="rede" className="mt-4">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <div className="space-y-1">
-                <CardTitle className="text-base font-semibold">Minha Rede</CardTitle>
-                <CardDescription>Gerencie seus sub-revendedores (Mínimo 10 créditos).</CardDescription>
-              </div>
-              <Button size="sm" variant="outline" onClick={() => setResellerDialogOpen(true)}>
-                <Plus className="h-4 w-4 mr-2" /> Criar Revendedor
-              </Button>
-            </CardHeader>
-            <CardContent>
-              {(!network || network.filter(u => u.is_reseller).length === 0) ? (
-                <div className="text-center py-12">
-                  <Package className="h-12 w-12 text-muted-foreground/20 mx-auto mb-4" />
-                  <p className="text-muted-foreground text-sm">Nenhum sub-revendedor encontrado.</p>
-                </div>
-              ) : (
-                <div className="space-y-4 mt-4">
-                  {network.filter(u => u.is_reseller).map((user: any) => (
-                    <div key={user.id} className="flex flex-col sm:flex-row sm:items-center justify-between p-4 border rounded-lg hover:bg-muted/50 transition-colors gap-4">
-                      <div className="flex items-center gap-3">
-                        <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center font-bold text-primary shrink-0">
-                          {user.full_name?.[0] || "?"}
-                        </div>
-                        <div className="min-w-0">
-                          <div className="font-medium text-sm truncate">{user.full_name || "Usuário sem nome"}</div>
-                          <div className="text-xs text-muted-foreground truncate">{user.email}</div>
-                          <div className="text-[10px] text-muted-foreground mt-0.5">Membro desde: {new Date(user.created_at).toLocaleDateString("pt-BR")}</div>
-                        </div>
-                      </div>
-                      <div className="flex items-center justify-between sm:justify-end gap-4 border-t sm:border-0 pt-3 sm:pt-0">
-                        <div className="text-left sm:text-right">
-                          <div className="text-[10px] text-muted-foreground uppercase tracking-wider">Saldo</div>
-                          <div className="font-bold text-base font-mono">{user.credits} <span className="text-[10px] font-normal text-muted-foreground">créd.</span></div>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <ManageSubResellerDialog
-                            userId={user.id}
-                            onDone={() => {
-                              qc.invalidateQueries({ queryKey: ["reseller-network"] });
-                              qc.invalidateQueries({ queryKey: ["reseller-stats"] });
-                            }}
-                          />
-                          <Badge variant="outline" className={cn(
-                            "border-transparent",
-                            user.credits > 0 ? "bg-success/10 text-success border-success/20" : "bg-destructive/10 text-destructive border-destructive/20"
-                          )}>
-                            {isAdmin ? "Admin" : (user.credits > 0 ? "Ativo" : "Sem Saldo")}
-                          </Badge>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
+          <AccountsManager kind="reseller" onCreate={() => setResellerDialogOpen(true)} />
         </TabsContent>
+
 
 
         <TabsContent value="criações" className="mt-4">
@@ -420,52 +367,9 @@ function ResellerDashboard() {
         </TabsContent>
 
         <TabsContent value="clientes" className="mt-4">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <div className="space-y-1">
-                <CardTitle className="text-base font-semibold">Meus Clientes</CardTitle>
-                <CardDescription>Clientes finais usando seus planos (Não consome créditos).</CardDescription>
-              </div>
-              <Button size="sm" variant="outline" onClick={() => setClientDialogOpen(true)}>
-                <Plus className="h-4 w-4 mr-2" /> Criar Cliente
-              </Button>
-            </CardHeader>
-            <CardContent>
-              {(!network || network.filter(u => !u.is_reseller).length === 0) ? (
-                <div className="text-center py-12">
-                  <Users className="h-12 w-12 text-muted-foreground/20 mx-auto mb-4" />
-                  <p className="text-muted-foreground text-sm">Nenhum cliente final encontrado.</p>
-                </div>
-              ) : (
-                <div className="space-y-4 mt-4">
-                  {network.filter(u => !u.is_reseller).map((user: any) => (
-                    <div key={user.id} className="flex items-center justify-between p-3 border rounded-lg hover:bg-muted/50 transition-colors">
-                      <div className="flex items-center gap-3">
-                        <div className="h-10 w-10 rounded-full bg-secondary/20 flex items-center justify-center font-bold text-secondary-foreground shrink-0">
-                          {user.full_name?.[0] || "?"}
-                        </div>
-                        <div className="min-w-0">
-                          <div className="font-medium text-sm truncate">{user.full_name || "Cliente"}</div>
-                          <div className="text-xs text-muted-foreground truncate">{user.email}</div>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-2 shrink-0">
-                        <Badge variant="outline" className="bg-primary/10 text-primary border-primary/20 hidden sm:inline-flex">Assinante</Badge>
-                        <ManageClientDialog 
-                          userId={user.id} 
-                          onDone={() => qc.invalidateQueries({ queryKey: ["reseller-network"] })}
-                          onUpdate={updateClientFn}
-                          onDelete={deleteClientFn}
-                          onGetDetails={getClientDetailsFn}
-                        />
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
+          <AccountsManager kind="client" onCreate={() => setClientDialogOpen(true)} />
         </TabsContent>
+
 
         <TabsContent value="historico" className="mt-4">
           <Card>
@@ -745,6 +649,7 @@ function ResellerDashboard() {
         onDone={() => {
           qc.invalidateQueries({ queryKey: ["reseller-stats"] });
           qc.invalidateQueries({ queryKey: ["reseller-network"] });
+          qc.invalidateQueries({ queryKey: ["my-accounts"] });
         }}
       />
 
@@ -755,7 +660,9 @@ function ResellerDashboard() {
         onDone={() => {
           qc.invalidateQueries({ queryKey: ["reseller-stats"] });
           qc.invalidateQueries({ queryKey: ["reseller-network"] });
+          qc.invalidateQueries({ queryKey: ["my-accounts"] });
         }}
+
       />
       <Dialog open={transferDialogOpen} onOpenChange={setTransferDialogOpen}>
         <DialogContent>
