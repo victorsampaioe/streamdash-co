@@ -52,6 +52,9 @@ function SubscriptionPage() {
   const sub = data?.subscription;
   const parentPlansData = parentPlans?.plans || [];
   const parentProfileData = parentPlans?.parent || null;
+  // Clients/resellers directly under the Admin account use the platform plans + Admin PIX
+  const parentIsAdmin = !!(parentPlans as any)?.parentIsAdmin;
+  const useAdminPix = !data?.parentId || parentIsAdmin;
 
   const clientPlans = parentPlansData.filter((p) => (p.kind ?? "plan") === "plan");
   const creditPlans = parentPlansData.filter((p) => p.kind === "credits");
@@ -154,7 +157,7 @@ function SubscriptionPage() {
             {data?.isExpired ? "Renovar Assinatura" : "Fazer upgrade"}
           </h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {!data?.parentId && !isReseller ? PLANS.map((plan) => {
+          {useAdminPix && !isReseller ? PLANS.map((plan) => {
             const isPromo = plan.id === "monthly" ? isMonthlyPromoActive() : plan.id === "yearly" ? isYearlyPromoActive() : false;
             const promoLabel = plan.id === "monthly" ? "🔥 Só hoje" : "🔥 Só hoje";
             const price = effectivePriceCents(plan);
@@ -231,7 +234,7 @@ function SubscriptionPage() {
       )}
 
       {/* Reseller inside a tree: buys credits from the parent reseller via WhatsApp (never Admin PIX) */}
-      {isReseller && data?.parentId && (
+      {isReseller && data?.parentId && !parentIsAdmin && (
         <div className="pt-4">
           <div className="flex items-center gap-2 mb-4">
             <Rocket className="h-5 w-5 text-purple-500" />
@@ -274,7 +277,7 @@ function SubscriptionPage() {
 
 
       {/* Credit Packs (Admin PIX) — exclusive to resellers with no parent reseller */}
-      {isReseller && !data?.parentId && (
+      {isReseller && useAdminPix && (
         <div className="pt-4">
           <div className="flex items-center gap-2 mb-4">
             <Rocket className="h-5 w-5 text-purple-500" />

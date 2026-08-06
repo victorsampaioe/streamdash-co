@@ -59,7 +59,7 @@ export const getParentResellerPlans = createServerFn({ method: "GET" })
       return { plans: [], parent: admin };
     }
 
-    const [plansRes, parentRes, settingsRes] = await Promise.all([
+    const [plansRes, parentRes, settingsRes, adminRes] = await Promise.all([
       context.supabase
         .from("reseller_plans")
         .select("*")
@@ -72,7 +72,8 @@ export const getParentResellerPlans = createServerFn({ method: "GET" })
         .maybeSingle(),
       context.supabase
         .rpc("get_parent_reseller_pricing", { _reseller_id: targetResellerId })
-        .maybeSingle()
+        .maybeSingle(),
+      context.supabase.rpc("has_role", { _user_id: targetResellerId, _role: "admin" }),
     ]);
 
     
@@ -92,7 +93,9 @@ export const getParentResellerPlans = createServerFn({ method: "GET" })
     return { 
       plans, 
       parent: parentRes.data,
-      settings: settingsRes.data
+      settings: settingsRes.data,
+      // Accounts under the Admin (main owner account) use the platform plans + Admin PIX
+      parentIsAdmin: !!adminRes.data,
     };
   });
 
