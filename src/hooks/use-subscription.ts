@@ -71,7 +71,9 @@ export function useSubscription() {
         { data: profile, error: profileError },
         { data: tree },
         { data: wallet },
-        { data: roleRows, error: rolesError }
+        { data: roleRows, error: rolesError },
+        { data: hasResellerRole },
+        { data: hasSubResellerRole }
       ] = await Promise.all([
         supabase
           .from("subscriptions")
@@ -96,7 +98,9 @@ export function useSubscription() {
         supabase
           .from("user_roles")
           .select("role")
-          .eq("user_id", userData.user.id)
+          .eq("user_id", userData.user.id),
+        supabase.rpc("has_role", { _user_id: userData.user.id, _role: "reseller" }),
+        supabase.rpc("has_role", { _user_id: userData.user.id, _role: "sub_reseller" })
       ]);
 
       if (subError) console.error("Sub error:", subError);
@@ -106,16 +110,16 @@ export function useSubscription() {
       const credits = wallet?.credits || 0;
       const roles = roleRows?.map((row) => String(row.role)) ?? [];
       const resellerRole = roles.find((role) => role === "reseller" || role === "sub_reseller");
-      // Roles are authoritative. Keep the profile flag only as backwards-compatible
-      // support for legacy reseller accounts that have not been migrated yet.
-      const isReseller = !!resellerRole || !!profile?.is_reseller;
+      // Roles are authoritative. The RPC fallback avoids an RLS-filtered role query,
+      // while the profile/wallet checks preserve compatibility with legacy accounts.
+      const isReseller = !!resellerRole || !!hasResellerRole || !!hasSubResellerRole || !!profile?.is_reseller || !!wallet;
 
       const prof = profile ? {
         phone: profile.phone,
         full_name: profile.full_name,
         is_reseller: isReseller,
         credits: credits,
-        role: resellerRole ?? roles[0] ?? null
+        role: resellerRole ?? (hasSubResellerRole ? "sub_reseller" : hasResellerRole ? "reseller" : roles[0] ?? null)
       } : null;
 
       const parentId = tree?.parent_reseller_id || null;

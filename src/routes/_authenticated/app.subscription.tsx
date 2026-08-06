@@ -35,7 +35,9 @@ function SubscriptionPage() {
   const navigate = useNavigate();
 
   // Resellers are allowed to see this page to buy more credits, but it will be filtered below
-  const isReseller = data?.profile?.is_reseller;
+  const isReseller = data?.profile?.is_reseller === true
+    || data?.profile?.role === "reseller"
+    || data?.profile?.role === "sub_reseller";
   const [openPlan, setOpenPlan] = useState<PlanId | null>(null);
   const [pix, setPix] = useState<any>(null);
   const getParentPlans = useServerFn(getParentResellerPlans);
@@ -151,7 +153,7 @@ function SubscriptionPage() {
         </Card>
       )}
 
-      {!isReseller && (
+      {!isLoading && !isReseller && (
         <div>
           <h2 className="text-lg font-semibold mb-3">
             {data?.isExpired ? "Renovar Assinatura" : "Fazer upgrade"}
@@ -234,7 +236,7 @@ function SubscriptionPage() {
       )}
 
       {/* Reseller inside a tree: buys credits from the parent reseller via WhatsApp (never Admin PIX) */}
-      {isReseller && data?.parentId && !parentIsAdmin && (
+      {!isLoading && isReseller && data?.parentId && !parentIsAdmin && (
         <div className="pt-4">
           <div className="flex items-center gap-2 mb-4">
             <Rocket className="h-5 w-5 text-purple-500" />
@@ -277,7 +279,7 @@ function SubscriptionPage() {
 
 
       {/* Credit Packs (Admin PIX) — exclusive to resellers with no parent reseller */}
-      {isReseller && useAdminPix && (
+      {!isLoading && isReseller && useAdminPix && (
         <div className="pt-4">
           <div className="flex items-center gap-2 mb-4">
             <Rocket className="h-5 w-5 text-purple-500" />
