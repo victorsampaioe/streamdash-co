@@ -153,13 +153,13 @@ function SubscriptionPage() {
         </Card>
       )}
 
-      {!isLoading && !isReseller && (
+      {!isLoading && (
         <div>
           <h2 className="text-lg font-semibold mb-3">
-            {data?.isExpired ? "Renovar Assinatura" : "Fazer upgrade"}
+            {data?.isExpired ? "Renovar Assinatura" : "Planos de Cliente"}
           </h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {useAdminPix && !isReseller ? PLANS.map((plan) => {
+          {useAdminPix ? PLANS.map((plan) => {
             const isPromo = plan.id === "monthly" ? isMonthlyPromoActive() : plan.id === "yearly" ? isYearlyPromoActive() : false;
             const promoLabel = plan.id === "monthly" ? "🔥 Só hoje" : "🔥 Só hoje";
             const price = effectivePriceCents(plan);
