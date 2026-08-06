@@ -2,22 +2,33 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
+const PLANS = {
+  trial: { days: 1, credits: 0, plan: "trial", status: "trial", label: "Teste 1 dia" },
+  monthly: { days: 30, credits: 1, plan: "monthly", status: "active", label: "Mensal" },
+  quarterly: { days: 90, credits: 3, plan: "quarterly", status: "active", label: "Trimestral" },
+  semiannual: { days: 180, credits: 6, plan: "semiannual", status: "active", label: "Semestral" },
+  annual: { days: 365, credits: 12, plan: "yearly", status: "active", label: "Anual" },
+} as const;
+
 const createClientSchema = z.object({
   fullName: z.string().min(2),
-  whatsapp: z.string().min(8),
+  whatsapp: z.string().optional().or(z.literal("")),
   email: z.string().email().optional().or(z.literal("")),
+  password: z.string().min(6).optional().or(z.literal("")),
+  plan: z.enum(["trial", "monthly", "quarterly", "semiannual", "annual"]).default("trial"),
 });
 
 const createSubResellerSchema = z.object({
   fullName: z.string().min(2),
   email: z.string().email(),
-  whatsapp: z.string().min(8),
+  whatsapp: z.string().optional().or(z.literal("")),
   initialCredits: z.number().min(10, "Mínimo 10 créditos"),
 });
 
 function randomPassword() {
   return `Stream@${Math.random().toString(36).substring(2, 8)}!`;
 }
+
 
 /** Reads the creator's real state from the tables that actually hold it. */
 async function loadCreator(supabase: any, userId: string) {
