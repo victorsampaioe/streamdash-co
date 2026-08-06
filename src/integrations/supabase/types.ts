@@ -2160,6 +2160,7 @@ export type Database = {
           full_name: string | null
           id: string
           is_reseller: boolean | null
+          owner_account_id: string | null
           parent_id: string | null
           phone: string | null
           referral_code: string | null
@@ -2176,6 +2177,7 @@ export type Database = {
           full_name?: string | null
           id: string
           is_reseller?: boolean | null
+          owner_account_id?: string | null
           parent_id?: string | null
           phone?: string | null
           referral_code?: string | null
@@ -2192,6 +2194,7 @@ export type Database = {
           full_name?: string | null
           id?: string
           is_reseller?: boolean | null
+          owner_account_id?: string | null
           parent_id?: string | null
           phone?: string | null
           referral_code?: string | null
@@ -2201,6 +2204,13 @@ export type Database = {
           whatsapp?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "profiles_owner_account_id_fkey"
+            columns: ["owner_account_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "profiles_parent_id_fkey"
             columns: ["parent_id"]
@@ -3288,6 +3298,7 @@ export type Database = {
       }
       get_iptv_server_rank: { Args: { _server_id: string }; Returns: Json }
       get_my_parent_id: { Args: never; Returns: string }
+      get_owner_account_id: { Args: { _user_id: string }; Returns: string }
       get_parent_reseller_pricing: {
         Args: { _reseller_id: string }
         Returns: {

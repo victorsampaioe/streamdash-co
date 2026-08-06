@@ -32,17 +32,25 @@ function randomPassword() {
 
 /** Reads the creator's real state from the tables that actually hold it. */
 async function loadCreator(supabase: any, userId: string) {
-  const [{ data: isAdmin }, { data: profile }, { data: wallet }, { data: tree }] = await Promise.all([
+  const [{ data: isAdmin }, { data: ownerAccount }] = await Promise.all([
     supabase.rpc("has_role", { _user_id: userId, _role: "admin" }),
-    supabase.from("profiles").select("is_reseller, full_name").eq("id", userId).maybeSingle(),
-    supabase.from("reseller_wallet").select("credits").eq("reseller_id", userId).maybeSingle(),
-    supabase.from("reseller_tree").select("owner_id").eq("user_id", userId).maybeSingle(),
+    supabase.rpc("get_owner_account_id", { _user_id: userId }),
+  ]);
+
+  // Linked admin accounts act as the main admin account (shared clients/settings/credits)
+  const accountId = (isAdmin && (ownerAccount as string | null)) || userId;
+
+  const [{ data: profile }, { data: wallet }, { data: tree }] = await Promise.all([
+    supabase.from("profiles").select("is_reseller, full_name").eq("id", accountId).maybeSingle(),
+    supabase.from("reseller_wallet").select("credits").eq("reseller_id", accountId).maybeSingle(),
+    supabase.from("reseller_tree").select("owner_id").eq("user_id", accountId).maybeSingle(),
   ]);
   return {
+    accountId,
     isAdmin: !!isAdmin,
     isReseller: !!profile?.is_reseller,
     credits: wallet?.credits ?? 0,
-    ownerId: (tree?.owner_id as string | null) ?? userId,
+    ownerId: (tree?.owner_id as string | null) ?? accountId,
   };
 }
 
@@ -80,7 +88,7 @@ export const createTestClient = createServerFn({ method: "POST" })
 
     const profilePatch: Record<string, unknown> = {
       full_name: data.fullName,
-      parent_id: userId,
+      parent_id: creator.accountId,
       is_reseller: false,
     };
     if (data.whatsapp) {
@@ -109,7 +117,7 @@ export const createTestClient = createServerFn({ method: "POST" })
 
     // Hierarchy: client belongs to its creator, owner is the top of the tree
     const { error: treeError } = await supabaseAdmin.from("reseller_tree").upsert(
-      { user_id: newUserId, parent_reseller_id: userId, owner_id: creator.ownerId } as any,
+      { user_id: newUserId, parent_reseller_id: creator.accountId, owner_id: creator.ownerId } as any,
       { onConflict: "user_id" }
     );
     if (treeError) throw new Error(treeError.message);
@@ -118,12 +126,12 @@ export const createTestClient = createServerFn({ method: "POST" })
       const { error: walletError } = await supabaseAdmin
         .from("reseller_wallet")
         .update({ credits: creator.credits - cost, updated_at: new Date().toISOString() } as any)
-        .eq("reseller_id", userId);
+        .eq("reseller_id", creator.accountId);
       if (walletError) throw new Error(walletError.message);
     }
 
     await supabaseAdmin.from("reseller_credit_history").insert({
-      user_id: userId,
+      user_id: creator.accountId,
       amount: -cost,
       type: "client_creation",
       description: `Criou cliente ${data.fullName} — plano ${cfg.label} (${cfg.days} dias)`,
@@ -166,7 +174,7 @@ export const createSubReseller = createServerFn({ method: "POST" })
 
     const subProfilePatch: Record<string, unknown> = {
       full_name: data.fullName,
-      parent_id: userId,
+      parent_id: creator.accountId,
       is_reseller: true,
     };
     if (data.whatsapp) {
@@ -196,7 +204,7 @@ export const createSubReseller = createServerFn({ method: "POST" })
     );
 
     const { error: treeError } = await supabaseAdmin.from("reseller_tree").upsert(
-      { user_id: newUserId, parent_reseller_id: userId, owner_id: creator.ownerId } as any,
+      { user_id: newUserId, parent_reseller_id: creator.accountId, owner_id: creator.ownerId } as any,
       { onConflict: "user_id" }
     );
     if (treeError) throw new Error(treeError.message);
@@ -209,7 +217,7 @@ export const createSubReseller = createServerFn({ method: "POST" })
     const { data: parentSettings } = await supabaseAdmin
       .from("reseller_settings")
       .select("monthly_price_cents, quarterly_price_cents, annual_price_cents")
-      .eq("reseller_id", userId)
+      .eq("reseller_id", creator.accountId)
       .maybeSingle();
 
     await supabaseAdmin.from("reseller_settings").upsert(
@@ -226,14 +234,14 @@ export const createSubReseller = createServerFn({ method: "POST" })
 
     // Single source of truth for credits: the wallet (deducts sender, credits recipient)
     const { error: creditError } = await supabaseAdmin.rpc("transfer_credits_v2", {
-      _sender_id: userId,
+      _sender_id: creator.accountId,
       _recipient_id: newUserId,
       _amount: data.initialCredits,
     });
     if (creditError) throw new Error(creditError.message);
 
     await supabaseAdmin.from("reseller_credit_history").insert({
-      user_id: userId,
+      user_id: creator.accountId,
       amount: -data.initialCredits,
       type: "reseller_creation",
       description: `Criou sub-revendedor ${data.fullName} — ${data.initialCredits} créditos`,

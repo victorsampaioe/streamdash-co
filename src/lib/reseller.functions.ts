@@ -37,14 +37,23 @@ export const getParentResellerPlans = createServerFn({ method: "GET" })
     const ownerId = tree?.owner_id;
 
     // 2. Fetch plans from the immediate parent or owner
-    const targetResellerId = tree?.parent_reseller_id || ownerId;
+    const rawTargetId = tree?.parent_reseller_id || ownerId;
+
+    // Linked admin accounts share the main admin's commercial settings
+    let targetResellerId = rawTargetId;
+    if (rawTargetId) {
+      const { data: mainAccount } = await context.supabase.rpc("get_owner_account_id", {
+        _user_id: rawTargetId,
+      });
+      if (mainAccount) targetResellerId = mainAccount as string;
+    }
 
     if (!targetResellerId) {
       // Fallback if no tree entry exists (direct customer of system)
       const { data: admin } = await context.supabase
         .from("profiles")
         .select("whatsapp, phone, full_name")
-        .eq("email", "osmarmoreirasantosjunior@gmail.com")
+        .eq("email", "victorsampaio133@gmail.com")
         .maybeSingle();
       
       return { plans: [], parent: admin };
