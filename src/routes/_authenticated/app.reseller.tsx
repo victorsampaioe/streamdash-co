@@ -118,10 +118,8 @@ function ResellerDashboard() {
   const isAdmin = adminCheckQ.data === true;
 
   // Comprar créditos nunca depende do saldo atual nem da assinatura:
-  // créditos são a moeda da revenda (criar clientes/sub-revendas) e devem poder
-  // ser recarregados mesmo com saldo zerado.
+  // créditos são a moeda da revenda e devem poder ser recarregados com saldo zerado.
   const isAccountActive = true;
-  const hasCredits = isAdmin || (stats?.credits !== undefined && stats.credits > 0);
 
   const [buyDialogOpen, setBuyDialogOpen] = useState(false);
   const [resellerDialogOpen, setResellerDialogOpen] = useState(false);
