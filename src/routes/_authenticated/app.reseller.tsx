@@ -649,6 +649,7 @@ function ResellerDashboard() {
         onDone={() => {
           qc.invalidateQueries({ queryKey: ["reseller-stats"] });
           qc.invalidateQueries({ queryKey: ["reseller-network"] });
+          qc.invalidateQueries({ queryKey: ["my-accounts"] });
         }}
       />
 
@@ -659,7 +660,9 @@ function ResellerDashboard() {
         onDone={() => {
           qc.invalidateQueries({ queryKey: ["reseller-stats"] });
           qc.invalidateQueries({ queryKey: ["reseller-network"] });
+          qc.invalidateQueries({ queryKey: ["my-accounts"] });
         }}
+
       />
       <Dialog open={transferDialogOpen} onOpenChange={setTransferDialogOpen}>
         <DialogContent>
