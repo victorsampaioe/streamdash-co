@@ -64,6 +64,8 @@ import { toast } from "sonner";
 import { PixDialog } from "@/components/payments/pix-dialog";
 import { createPixPayment } from "@/lib/mercadopago.functions";
 import { CreateResellerDialog } from "@/components/reseller/create-reseller-dialog";
+import { AccountsManager } from "@/components/reseller/accounts-manager";
+
 import { useSubscription } from "@/hooks/use-subscription";
 
 
