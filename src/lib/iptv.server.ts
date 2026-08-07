@@ -441,14 +441,26 @@ async function confirmReachability(
 }
 
 
-export async function probeXtream(host: string, username: string, password: string): Promise<XtreamResult> {
+export type ProbeOptions = {
+  /** "counts" = consulta leve (só categorias); "full" = relê o catálogo inteiro. */
+  catalogMode?: "counts" | "full";
+};
+
+export async function probeXtream(
+  host: string,
+  username: string,
+  password: string,
+  opts: ProbeOptions = {},
+): Promise<XtreamResult> {
   const clean = host.replace(/^https?:\/\//, "").replace(/\/+$/, "");
   const auth = `username=${encodeURIComponent(username)}&password=${encodeURIComponent(password)}`;
+  const catalogMode = opts.catalogMode ?? "full";
   const out: XtreamResult = {
     api_ms: null, login_ok: false, json_valid: false,
     reachable: false, login_checked: false,
     http_status: null, body_snippet: null, diagnostics: null,
     attempts: [], succeeded_step: null, fallback_notice: null, access_verdict: null,
+    protection_suspected: false, catalog_cached: catalogMode === "counts",
     account: null, content: { live_ok: false, vod_ok: false, series_ok: false },
     channels: null, movies: null, series: null, categories: null,
     sampleLive: [], sampleVod: [], sampleSeries: [],
@@ -456,13 +468,16 @@ export async function probeXtream(host: string, username: string, password: stri
     error: null,
   };
 
-  // 1) Validação escalonada: UA padrão → UA alternativo → confirmação alternativa.
-  // Uma falha no passo 1 NUNCA marca o servidor como offline por si só.
+  // 1) Validação progressiva: UA padrão → UA alternativo → confirmação alternativa.
+  // Há uma pausa crescente entre os passos para não parecer varredura automática,
+  // e uma falha no passo 1 NUNCA marca o servidor como offline por si só.
   const t0 = Date.now();
   let info: any = null;
   let okDiag: PlayerApiDiagnostics | null = null;
   let b = `http://${clean}`;
   let lastErr: PlayerApiError | null = null;
+  let protectionHits = 0;
+  let networkHits = 0;
 
   const steps: { step: number; label: string; ua: string; path: string }[] = [
     { step: 1, label: "Player API (User-Agent padrão)", ua: UA_PLAYER, path: "player_api.php" },
@@ -472,6 +487,8 @@ export async function probeXtream(host: string, username: string, password: stri
 
   for (const s of steps) {
     let stepDone = false;
+    const wait = STEP_BACKOFF_MS[s.step - 1] ?? 0;
+    if (wait) await sleep(wait + Math.floor(Math.random() * 400));
     for (const candidate of [`http://${clean}`, `https://${clean}`]) {
       const url = `${candidate}/${s.path}?${auth}`;
       try {
@@ -484,6 +501,7 @@ export async function probeXtream(host: string, username: string, password: stri
         out.attempts.push({
           step: s.step, label: s.label, user_agent: s.ua, base: candidate,
           ok: true, http_status: r.diag.http_status, elapsed_ms: r.diag.elapsed_ms, error: null,
+          kind: null,
         });
         stepDone = true;
         break;
@@ -497,10 +515,16 @@ export async function probeXtream(host: string, username: string, password: stri
               user_agent: s.ua, request_headers: null, response_headers: null, egress_ip: null,
               stage: "network", message: "❌ Sem resposta do servidor.",
             });
+        const kind = classifyRefusal(lastErr.status, lastErr.diag?.stage ?? null);
+        if (kind === "protection") protectionHits++;
+        if (kind === "network") networkHits++;
         out.attempts.push({
           step: s.step, label: s.label, user_agent: s.ua, base: candidate,
           ok: false, http_status: lastErr.status, elapsed_ms: lastErr.diag?.elapsed_ms ?? null,
-          error: String(lastErr.message).slice(0, 240),
+          error: kind === "protection"
+            ? `🛡️ Consulta recusada (proteção contra consultas automáticas) — ${String(lastErr.message).slice(0, 180)}`
+            : String(lastErr.message).slice(0, 240),
+          kind,
         });
         // Se o servidor respondeu (status HTTP conhecido), não vale tentar outro esquema.
         if (lastErr.status !== null) break;
@@ -512,10 +536,11 @@ export async function probeXtream(host: string, username: string, password: stri
   out.api_ms = Date.now() - t0;
 
   if (out.succeeded_step && out.succeeded_step > 1) {
+    out.protection_suspected = true;
     out.fallback_notice =
       out.succeeded_step === 2
-        ? "⚠️ Primeira tentativa bloqueada/limitada pelo servidor, mas o acesso foi confirmado com User-Agent alternativo."
-        : "⚠️ As duas primeiras tentativas foram bloqueadas; o acesso foi confirmado pelo método alternativo de confirmação.";
+        ? "🛡️ A primeira consulta foi recusada pela proteção contra consultas automáticas do painel; o acesso foi confirmado com User-Agent alternativo."
+        : "🛡️ As duas primeiras consultas foram recusadas pela proteção anti-automação; o acesso foi confirmado pelo método alternativo.";
   }
 
   if (lastErr || info === null) {
@@ -523,10 +548,11 @@ export async function probeXtream(host: string, username: string, password: stri
     // (porta aberta / playlist respondendo) antes de sugerir "offline".
     const reach = await confirmReachability(clean, auth);
     out.attempts.push({
-      step: 3, label: "Confirmação de acessibilidade (get.php / porta HTTP)",
+      step: 4, label: "Confirmação de acessibilidade (get.php / porta HTTP)",
       user_agent: UA_VLC, base: `http://${clean}`,
       ok: reach.ok, http_status: reach.status, elapsed_ms: reach.ms,
       error: reach.ok ? null : reach.error,
+      kind: reach.ok ? null : "network",
     });
 
     out.error = lastErr?.message ?? "❌ Sem resposta do servidor.";
@@ -536,11 +562,15 @@ export async function probeXtream(host: string, username: string, password: stri
     out.reachable = lastErr?.status != null || reach.ok;
     // Falha de transporte/servidor: login NÃO foi verificado.
     out.login_checked = false;
-    out.access_verdict = out.reachable
-      ? "🟡 Servidor acessível, mas a Player API recusou as consultas automáticas (possível bloqueio de IP/região ou proteção anti-bot). Não classificado como offline."
-      : "🔴 Servidor não respondeu em nenhuma das tentativas.";
+    out.protection_suspected = protectionHits > 0 || (reach.ok && networkHits === 0) || (reach.ok && protectionHits === 0 && out.reachable);
+    out.access_verdict = out.protection_suspected && out.reachable
+      ? "🛡️ Servidor no ar, porém a Player API está recusando consultas automáticas (proteção anti-bot, limite de requisições ou bloqueio de IP/região). Isso NÃO é queda do servidor."
+      : out.reachable
+        ? "🟡 Servidor acessível, mas a Player API não respondeu de forma válida. Nova confirmação será feita antes de qualquer alerta."
+        : "🔴 Servidor não respondeu em nenhuma das tentativas (indício real de indisponibilidade).";
     return out;
   }
+
 
 
   // 2) JSON válido → só agora avaliamos usuário/senha
