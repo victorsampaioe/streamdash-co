@@ -93,6 +93,40 @@ export function IptvPanel({ serverId, server }: { serverId: string; server: any 
   const last = syncs[0];
   const prev = syncs[1];
 
+  /* Diagnóstico da validação escalonada gravado em iptv_syncs.diagnostics */
+  type Attempt = {
+    step: number; label: string; ok: boolean;
+    http_status: number | null; elapsed_ms: number | null; error: string | null;
+  };
+  const diagBag = (last?.diagnostics ?? null) as
+    | { attempts?: Attempt[]; fallback_notice?: string | null; access_verdict?: string | null }
+    | null;
+  const validationAttempts: Attempt[] = Array.isArray(diagBag?.attempts) ? diagBag!.attempts! : [];
+  const validationNotice = diagBag?.fallback_notice ?? null;
+  const validationVerdict = diagBag?.access_verdict ?? null;
+
+  /* Comparação entre regiões: se uma região falha e outra funciona, é bloqueio de IP/região */
+  const { data: regionChecks = [] } = useQuery({
+    queryKey: ["iptv-region-checks", serverId],
+    enabled: validationAttempts.some((a) => !a.ok),
+    queryFn: async () =>
+      (await supabase.from("region_checks").select("region_code,status,checked_at")
+        .eq("server_id", serverId).order("checked_at", { ascending: false }).limit(60)).data ?? [],
+  });
+  const regionHint = (() => {
+    const seen = new Map<string, string>();
+    for (const r of regionChecks as { region_code: string; status: string }[]) {
+      if (!seen.has(r.region_code)) seen.set(r.region_code, r.status);
+    }
+    const up = [...seen.entries()].filter(([, s]) => s === "up").map(([c]) => c);
+    const bad = [...seen.entries()].filter(([, s]) => s !== "up").map(([c]) => c);
+    if (up.length && bad.length) {
+      return `⚠️ Possível bloqueio de IP/região ou proteção contra consultas automáticas — falhou em ${bad.join(", ")} e funcionou em ${up.join(", ")}.`;
+    }
+    return null;
+  })();
+
+
   const { data: streams = [] } = useQuery({
     queryKey: ["iptv-streams", serverId, last?.id],
     enabled: !!last?.id,
