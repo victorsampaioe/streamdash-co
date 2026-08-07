@@ -33,7 +33,8 @@ export const Route = createFileRoute("/api/public/regions/targets")({
 
         const { data: servers } = await supabaseAdmin
           .from("servers")
-          .select("id, host, owner_id, iptv_username, iptv_password, iptv_detected");
+          .select("id, host, owner_id, iptv_username, iptv_password, iptv_detected")
+          .eq("monitoring_paused", false);
 
         // Só entrega alvos de contas ativas (assinatura válida ou créditos).
         const { getActiveOwnerIds } = await import("@/lib/service-status.server");

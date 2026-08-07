@@ -91,7 +91,7 @@ function ServersList() {
                   <Link to="/app/servers/$id" params={{ id: s.id }} className="hover:text-primary">{s.name}</Link>
                 </td>
                 <td className="p-3">
-                  {paused ? (
+                  {paused || (s as any).monitoring_paused ? (
                     <div className="flex items-center gap-2 text-muted-foreground">
                       <span className="h-2.5 w-2.5 rounded-full bg-muted-foreground/50 inline-block" />
                       <span className="text-xs">Pausado por assinatura expirada</span>

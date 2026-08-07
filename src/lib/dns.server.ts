@@ -387,9 +387,12 @@ export async function runDnsCheck(serverId: string): Promise<{ ok: boolean; scor
     .from("servers").select("id, host, owner_id").eq("id", serverId).maybeSingle();
   if (!srv) throw new Error("Servidor não encontrado");
 
-  const { getActiveOwnerIds, MONITORING_PAUSED_MESSAGE } = await import("./service-status.server");
+  const { getActiveOwnerIds, MONITORING_PAUSED_MESSAGE, syncServersPauseState } = await import("./service-status.server");
   const allowed = await getActiveOwnerIds([(srv as any).owner_id]);
-  if (!allowed.has((srv as any).owner_id)) throw new Error(MONITORING_PAUSED_MESSAGE);
+  if (!allowed.has((srv as any).owner_id)) {
+    await syncServersPauseState([(srv as any).owner_id]).catch(() => null);
+    throw new Error(MONITORING_PAUSED_MESSAGE);
+  }
 
   const since = new Date(Date.now() - 24 * 3600_000).toISOString();
   const { count: recentChanges } = await supabaseAdmin
@@ -503,6 +506,7 @@ export async function runDueDnsChecks(limit = 25): Promise<{ checked: number; er
     .from("servers")
     .select("id, owner_id, host, dns_interval_minutes, last_dns_check_at")
     .eq("dns_enabled", true)
+    .eq("monitoring_paused", false)
     .order("last_dns_check_at", { ascending: true, nullsFirst: true })
     .limit(limit * 4);
 

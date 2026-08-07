@@ -33,16 +33,19 @@ export async function runCheckForServer(serverId: string) {
     .maybeSingle();
   if (error || !server) throw new Error("Servidor não encontrado");
 
-  const { getActiveOwnerIds, MONITORING_PAUSED_MESSAGE } = await import("./service-status.server");
+  const { getActiveOwnerIds, MONITORING_PAUSED_MESSAGE, syncServersPauseState } = await import("./service-status.server");
   const active = await getActiveOwnerIds([(server as any).owner_id]);
-  if (!active.has((server as any).owner_id)) throw new Error(MONITORING_PAUSED_MESSAGE);
+  if (!active.has((server as any).owner_id)) {
+    await syncServersPauseState([(server as any).owner_id]).catch(() => null);
+    throw new Error(MONITORING_PAUSED_MESSAGE);
+  }
 
   return await performCheck(server as ServerRow);
 }
 
 export async function runDueChecks() {
   const now = Date.now();
-  const { data: servers, error } = await supabaseAdmin.from("servers").select("*");
+  const { data: servers, error } = await supabaseAdmin.from("servers").select("*").eq("monitoring_paused", false);
   if (error) throw error;
 
   // Só monitora servidores de contas ativas:

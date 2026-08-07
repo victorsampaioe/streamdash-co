@@ -17,6 +17,10 @@ async function run() {
   const { reconcilePendingPayments } = await import("@/lib/mercadopago.server");
   const { migratePlaintextCredentials } = await import("@/lib/iptv-credentials.server");
   const { runDueContentScans } = await import("@/lib/content-monitor.server");
+  const { syncServersPauseState } = await import("@/lib/service-status.server");
+  // Primeiro sincroniza o estado de pausa: contas expiradas ficam marcadas
+  // como pausadas e contas reativadas voltam sozinhas para o monitoramento.
+  const pauseSync = await syncServersPauseState().catch(() => ({ paused: 0, resumed: 0 }));
   const [checks, expired, iptv, kuma, kumaProv, dns, payments, contents] = await Promise.all([
     runDueChecks(),
     notifyNewlyExpiredSubscriptions().catch(() => ({ notified: 0 })),
@@ -43,6 +47,8 @@ async function run() {
     credentialsEncrypted: encrypted.migrated,
     contentServersScanned: contents.servers,
     contentsTested: contents.tested,
+    serversPaused: pauseSync.paused,
+    serversResumed: pauseSync.resumed,
   };
 }
 
