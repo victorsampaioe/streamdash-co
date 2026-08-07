@@ -909,7 +909,16 @@ export async function runIptvSync(serverId: string, opts: { mode?: "smart" | "fu
     await supabaseAdmin.from("servers").update({ iptv_detected: detected }).eq("id", serverId);
   }
 
-  const x = await probeXtream(server.host, username, password);
+  // Cache de catálogo: só relemos as listas completas quando o TTL expirou
+  // (ou em modo full/forçado). No resto das execuções usamos consultas menores.
+  const catalogSyncedAt = (srv as { catalog_synced_at?: string | null }).catalog_synced_at ?? null;
+  const catalogFresh =
+    !!catalogSyncedAt && Date.now() - new Date(catalogSyncedAt).getTime() < CATALOG_TTL_MS;
+  const catalogMode: "counts" | "full" =
+    opts.force || mode === "full" || !catalogFresh ? "full" : "counts";
+
+  const x = await probeXtream(server.host, username, password, { catalogMode });
+
 
   // Contabiliza tentativas apenas quando o login foi de fato verificado
   // (falhas de rede/servidor não contam como senha errada).
