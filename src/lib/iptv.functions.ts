@@ -27,6 +27,39 @@ export const detectIptvNow = createServerFn({ method: "POST" })
     return { kind: res.kind };
   });
 
+/**
+ * Etapa 1 — valida apenas o login Xtream (DNS + usuário + senha).
+ * Não consulta catálogo: confirma resposta do servidor, credenciais e status
+ * da conta (ativa/expirada), como faz um app IPTV ao entrar.
+ */
+export const validateIptvLogin = createServerFn({ method: "POST" })
+  .middleware([requireActiveSubscription])
+  .inputValidator((d: { serverId: string }) => z.object({ serverId: z.string().uuid() }).parse(d))
+  .handler(async ({ data, context }) => {
+    const { data: srv } = await context.supabase
+      .from("servers")
+      .select("id, host")
+      .eq("id", data.serverId)
+      .maybeSingle();
+    if (!srv) throw new Error("Servidor não encontrado");
+
+    const { getIptvCredentials, checkLoginGuard, guardMessage, registerLoginResult } = await import(
+      "./iptv-credentials.server"
+    );
+    const creds = await getIptvCredentials(srv.id);
+    if (!creds.username || !creds.password) {
+      throw new Error("Configure usuário e senha Xtream antes de validar o login.");
+    }
+    const guard = await checkLoginGuard(srv.id);
+    if (!guard.allowed) throw new Error(guardMessage(guard));
+
+    const { validateXtreamLogin } = await import("./iptv.server");
+    const res = await validateXtreamLogin(srv.host, creds.username, creds.password);
+    if (res.login_checked) await registerLoginResult(srv.id, res.login_ok, res.error);
+    return res;
+  });
+
+
 export const runIptvSyncNow = createServerFn({ method: "POST" })
   .middleware([requireActiveSubscription])
   .inputValidator((d: { serverId: string; mode?: "smart" | "full" }) =>
