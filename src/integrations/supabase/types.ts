@@ -3483,6 +3483,15 @@ export type Database = {
           verified: boolean
         }[]
       }
+      hub_profiles_moderation_unchanged: {
+        Args: {
+          _banned: boolean
+          _id: string
+          _verification_status: Database["public"]["Enums"]["hub_verification_status"]
+          _verified_at: string
+        }
+        Returns: boolean
+      }
       hub_recompute_rating: { Args: { _user: string }; Returns: undefined }
       hub_start_conversation: { Args: { _listing_id: string }; Returns: string }
       iptv_find_title: {
@@ -3562,6 +3571,10 @@ export type Database = {
         }[]
       }
       is_valid_referral_code: { Args: { _code: string }; Returns: boolean }
+      listings_moderation_unchanged: {
+        Args: { _flagged: boolean; _highlight: boolean; _id: string }
+        Returns: boolean
+      }
       mask_server_id: { Args: { _id: string; _owner: string }; Returns: string }
       mask_server_name: {
         Args: { _id: string; _name: string; _owner: string }
@@ -3570,6 +3583,18 @@ export type Database = {
       process_credit_purchase: {
         Args: { p_credits: number; p_payment_id: string; p_user_id: string }
         Returns: undefined
+      }
+      profiles_privileged_unchanged: {
+        Args: {
+          _credits: number
+          _id: string
+          _is_reseller: boolean
+          _owner_account_id: string
+          _parent_id: string
+          _signup_bonus_days: number
+          _trial_used: boolean
+        }
+        Returns: boolean
       }
       purge_content_checks: { Args: { _days?: number }; Returns: number }
       purge_old_metrics: { Args: { _dry_run?: boolean }; Returns: Json }
