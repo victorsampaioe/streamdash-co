@@ -113,3 +113,44 @@ Endpoints do Core:
 - `POST /api/public/cron/check` e `/api/public/cron/digest` — ciclos agendados.
 
 Se o Core ficar indisponível, o painel executa localmente como fallback.
+
+## Banco de dados: sempre o Supabase original do Lovable
+
+O Core na AWS **não** usa banco próprio. Ele conecta no mesmo Postgres do
+projeto Lovable. No `.env` da VPS use exatamente:
+
+```
+SUPABASE_URL=https://yiwyfiaqehhmngqngxvx.supabase.co
+SUPABASE_PUBLISHABLE_KEY=<chave publicável do projeto>
+SUPABASE_SERVICE_ROLE_KEY=<chave de serviço do projeto>   # obrigatória
+VITE_SUPABASE_URL=$SUPABASE_URL
+VITE_SUPABASE_PUBLISHABLE_KEY=$SUPABASE_PUBLISHABLE_KEY
+VITE_SUPABASE_PROJECT_ID=yiwyfiaqehhmngqngxvx
+IS_CORE=true
+CRON_SECRET=<mesmo valor do painel>
+```
+
+O motor de monitoramento (`servers`, `checks`, `dns_snapshots`, `iptv_*`,
+`content_*`, `expiry_notices`, RPCs como `get_admin_stats`, `rollup_metrics`,
+`purge_old_metrics`) roda com a chave de serviço, que ignora RLS — por isso
+`SUPABASE_SERVICE_ROLE_KEY` é obrigatória. Sem ela os ciclos falhavam com
+**HTTP 500**.
+
+### Diagnóstico rápido na VPS
+
+```bash
+curl -s "http://127.0.0.1:3000/api/public/health?deep=1" | jq
+```
+
+Retorna quais variáveis faltam, se o banco responde e se as RPCs do
+monitoramento estão acessíveis (nunca imprime o valor das chaves).
+
+### Ciclo do scheduler
+
+```bash
+curl -s -X POST http://127.0.0.1:3000/api/public/cron/check \
+  -H "x-cron-secret: $CRON_SECRET" | jq
+```
+
+Agora o endpoint nunca devolve 500: cada etapa é isolada e as falhas voltam
+no campo `errors`, então o scheduler Docker não entra em loop de erro.
