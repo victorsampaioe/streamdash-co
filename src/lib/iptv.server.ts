@@ -1265,7 +1265,8 @@ export async function runDueIptvSyncs() {
   const { data: servers } = await supabaseAdmin
     .from("servers")
     .select("id, owner_id, iptv_mode, iptv_interval_minutes, last_iptv_sync_at, iptv_username, iptv_password")
-    .neq("iptv_mode", "basic");
+    .neq("iptv_mode", "basic")
+    .eq("monitoring_paused", false);
   if (!servers?.length) return { synced: 0, errors: 0 };
 
   const { getActiveOwnerIds } = await import("./service-status.server");

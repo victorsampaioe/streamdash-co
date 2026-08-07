@@ -42,7 +42,7 @@ export async function runCheckForServer(serverId: string) {
 
 export async function runDueChecks() {
   const now = Date.now();
-  const { data: servers, error } = await supabaseAdmin.from("servers").select("*");
+  const { data: servers, error } = await supabaseAdmin.from("servers").select("*").eq("monitoring_paused", false);
   if (error) throw error;
 
   // Só monitora servidores de contas ativas:

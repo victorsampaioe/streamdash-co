@@ -503,6 +503,7 @@ export async function runDueDnsChecks(limit = 25): Promise<{ checked: number; er
     .from("servers")
     .select("id, owner_id, host, dns_interval_minutes, last_dns_check_at")
     .eq("dns_enabled", true)
+    .eq("monitoring_paused", false)
     .order("last_dns_check_at", { ascending: true, nullsFirst: true })
     .limit(limit * 4);
 

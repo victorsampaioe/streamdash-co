@@ -851,7 +851,8 @@ export async function runDueContentScans() {
   const { data: servers } = await supabaseAdmin
     .from("servers")
     .select("id, owner_id")
-    .not("iptv_username", "is", null);
+    .not("iptv_username", "is", null)
+    .eq("monitoring_paused", false);
   if (!servers?.length) return { servers: 0, tested: 0 };
 
   const { getActiveOwnerIds } = await import("./service-status.server");
