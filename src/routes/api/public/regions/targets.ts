@@ -31,21 +31,13 @@ export const Route = createFileRoute("/api/public/regions/targets")({
 
         const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
-        // Only monitor servers owned by users with active subscription/trial.
-        const nowIso = new Date().toISOString();
-        const { data: subs } = await supabaseAdmin
-          .from("subscriptions")
-          .select("user_id, status, expires_at");
-        const activeOwners = new Set<string>();
-        for (const s of subs ?? []) {
-          if ((s.status === "active" || s.status === "trial") && s.expires_at > nowIso) {
-            activeOwners.add(s.user_id);
-          }
-        }
-
         const { data: servers } = await supabaseAdmin
           .from("servers")
           .select("id, host, owner_id, iptv_username, iptv_password, iptv_detected");
+
+        // Só entrega alvos de contas ativas (assinatura válida ou créditos).
+        const { getActiveOwnerIds } = await import("@/lib/service-status.server");
+        const activeOwners = await getActiveOwnerIds((servers ?? []).map((s) => s.owner_id));
         const targets = (servers ?? [])
           .filter((s) => activeOwners.has(s.owner_id))
           .map((s) => (agent

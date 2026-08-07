@@ -303,14 +303,8 @@ export async function sendDigests(kind: DigestKind): Promise<{ sent: number; ski
   }
 
   const userIds = Array.from(byUser.keys());
-  const { data: subs } = await supabaseAdmin
-    .from("subscriptions").select("user_id, status, expires_at").in("user_id", userIds);
-  const nowIso = new Date().toISOString();
-  const active = new Set(
-    (subs ?? [])
-      .filter((s) => (s.status === "active" || s.status === "trial") && s.expires_at > nowIso)
-      .map((s) => s.user_id),
-  );
+  const { getActiveOwnerIds } = await import("./service-status.server");
+  const active = await getActiveOwnerIds(userIds);
 
   let sent = 0, skipped = 0;
   for (const userId of byUser.keys()) {

@@ -933,6 +933,14 @@ import type { AlertCandidate } from "./alert-state.server";
 export async function runIptvSync(serverId: string, opts: { mode?: "smart" | "full"; force?: boolean } = {}) {
   const { data: srv } = await supabaseAdmin.from("servers").select("*").eq("id", serverId).maybeSingle();
   if (!srv) throw new Error("Servidor não encontrado");
+
+  // Nenhuma consulta Xtream/Player API para contas expiradas ou sem créditos.
+  {
+    const { getActiveOwnerIds, MONITORING_PAUSED_MESSAGE } = await import("./service-status.server");
+    const allowed = await getActiveOwnerIds([(srv as any).owner_id]);
+    if (!allowed.has((srv as any).owner_id)) throw new Error(MONITORING_PAUSED_MESSAGE);
+  }
+
   const server = srv as unknown as ServerRow;
   const mode = opts.mode ?? (server.iptv_mode === "basic" ? "smart" : server.iptv_mode);
 
@@ -1260,11 +1268,8 @@ export async function runDueIptvSyncs() {
     .neq("iptv_mode", "basic");
   if (!servers?.length) return { synced: 0, errors: 0 };
 
-  const ownerIds = Array.from(new Set(servers.map((s) => s.owner_id)));
-  const { data: subs } = await supabaseAdmin
-    .from("subscriptions").select("user_id, status, expires_at").in("user_id", ownerIds);
-  const nowIso = new Date().toISOString();
-  const active = new Set((subs ?? []).filter((s) => (s.status === "active" || s.status === "trial") && s.expires_at > nowIso).map((s) => s.user_id));
+  const { getActiveOwnerIds } = await import("./service-status.server");
+  const active = await getActiveOwnerIds(servers.map((s) => s.owner_id));
 
   const due = servers.filter((s) => {
     if (!active.has(s.owner_id)) return false;

@@ -854,14 +854,8 @@ export async function runDueContentScans() {
     .not("iptv_username", "is", null);
   if (!servers?.length) return { servers: 0, tested: 0 };
 
-  const owners = Array.from(new Set(servers.map((s) => s.owner_id)));
-  const { data: subs } = await supabaseAdmin
-    .from("subscriptions").select("user_id, status, expires_at").in("user_id", owners);
-  const nowIso = new Date().toISOString();
-  const active = new Set(
-    (subs ?? []).filter((s) => (s.status === "active" || s.status === "trial") && s.expires_at > nowIso)
-      .map((s) => s.user_id),
-  );
+  const { getActiveOwnerIds } = await import("./service-status.server");
+  const active = await getActiveOwnerIds(servers.map((s) => s.owner_id));
 
   const eligible = servers.filter((s) => active.has(s.owner_id));
   let tested = 0, count = 0, throttled = 0;
