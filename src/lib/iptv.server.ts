@@ -729,6 +729,35 @@ export async function probeXtream(
   return out;
 }
 
+/**
+ * Etapa 1 — autenticação inicial (DNS + usuário + senha).
+ * Valida SOMENTE o login: resposta do servidor, credenciais válidas e status
+ * da conta (ativa/expirada). Nenhuma consulta de catálogo é feita aqui.
+ */
+export async function validateXtreamLogin(host: string, username: string, password: string) {
+  const x = await probeXtream(host, username, password, { catalogMode: "auth" });
+  return {
+    reachable: x.reachable,
+    login_checked: x.login_checked,
+    login_ok: x.login_ok,
+    account: x.account,
+    account_active: x.account
+      ? x.account.status !== "Disabled" &&
+        x.account.status !== "Banned" &&
+        (x.account.days_to_expire == null || x.account.days_to_expire > 0)
+      : null,
+    protection_suspected: x.protection_suspected,
+    access_verdict: x.access_verdict,
+    fallback_notice: x.fallback_notice,
+    attempts: x.attempts,
+    succeeded_step: x.succeeded_step,
+    api_ms: x.api_ms,
+    error: x.error,
+  };
+}
+
+
+
 
 /* ------------------------------------------------------------------ */
 /* M3U integrity (modo completo)                                       */
