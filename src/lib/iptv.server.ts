@@ -442,9 +442,14 @@ async function confirmReachability(
 
 
 export type ProbeOptions = {
-  /** "counts" = consulta leve (só categorias); "full" = relê o catálogo inteiro. */
-  catalogMode?: "counts" | "full";
+  /**
+   * "auth"   = Etapa 1: valida apenas o login (nenhuma consulta de catálogo);
+   * "counts" = Etapa 3: consulta leve (categorias + amostra);
+   * "full"   = catálogo completo (primeira vez ou cache expirado).
+   */
+  catalogMode?: "auth" | "counts" | "full";
 };
+
 
 export async function probeXtream(
   host: string,
@@ -460,7 +465,7 @@ export async function probeXtream(
     reachable: false, login_checked: false,
     http_status: null, body_snippet: null, diagnostics: null,
     attempts: [], succeeded_step: null, fallback_notice: null, access_verdict: null,
-    protection_suspected: false, catalog_cached: catalogMode === "counts",
+    protection_suspected: false, catalog_cached: catalogMode !== "full",
     account: null, content: { live_ok: false, vod_ok: false, series_ok: false },
     channels: null, movies: null, series: null, categories: null,
     sampleLive: [], sampleVod: [], sampleSeries: [],
@@ -626,17 +631,28 @@ export async function probeXtream(
     return out;
   }
 
+  // Etapa 1 concluída: login aprovado. No modo "auth" paramos aqui — nenhuma
+  // consulta de catálogo é feita, exatamente como um app IPTV faz ao entrar.
+  if (catalogMode === "auth") {
+    out.access_verdict =
+      (out.access_verdict ?? "") + " Login validado — catálogo não consultado nesta etapa.";
+    return out;
+  }
+
   const arr = (r: PromiseSettledResult<{ data: unknown }>): any[] =>
     r.status === "fulfilled" && Array.isArray(r.value.data) ? (r.value.data as any[]) : [];
 
-  // 4) Somente após login válido: consultas de conteúdo.
-  // Sempre começamos pelas listas de categorias (respostas pequenas). O catálogo
-  // completo só é relido quando o cache expirou — reduz carga e chance de bloqueio.
+  // Etapa 2 — somente após o acesso confirmado: informações do servidor,
+  // categorias e depois o conteúdo. Uma pequena pausa imita o comportamento
+  // de um cliente IPTV real (login → navegação) e evita bloqueios automáticos.
+  await sleep(700 + Math.floor(Math.random() * 500));
+
   const [catsLive, catsVod, catsSeries] = await Promise.allSettled([
     getJson(`${b}/player_api.php?${auth}&action=get_live_categories`),
     getJson(`${b}/player_api.php?${auth}&action=get_vod_categories`),
     getJson(`${b}/player_api.php?${auth}&action=get_series_categories`),
   ]);
+
   const catCount = arr(catsLive).length + arr(catsVod).length + arr(catsSeries).length;
   out.categories = catCount || null;
 
@@ -664,11 +680,21 @@ export async function probeXtream(
     return out;
   }
 
-  const [live, vod, series] = await Promise.allSettled([
-    getJson(`${b}/player_api.php?${auth}&action=get_live_streams`, M3U_TIMEOUT_MS),
-    getJson(`${b}/player_api.php?${auth}&action=get_vod_streams`, M3U_TIMEOUT_MS),
-    getJson(`${b}/player_api.php?${auth}&action=get_series`, M3U_TIMEOUT_MS),
-  ]);
+  // Catálogo completo: sequencial (canais → filmes → séries) com pausas curtas,
+  // igual à navegação de um app IPTV. Evita rajadas paralelas que disparam WAF.
+  const settle = async (url: string) => {
+    try {
+      return { status: "fulfilled" as const, value: await getJson(url, M3U_TIMEOUT_MS) };
+    } catch (e) {
+      return { status: "rejected" as const, reason: e };
+    }
+  };
+  const live = await settle(`${b}/player_api.php?${auth}&action=get_live_streams`);
+  await sleep(500 + Math.floor(Math.random() * 400));
+  const vod = await settle(`${b}/player_api.php?${auth}&action=get_vod_streams`);
+  await sleep(500 + Math.floor(Math.random() * 400));
+  const series = await settle(`${b}/player_api.php?${auth}&action=get_series`);
+
 
   const liveList = arr(live);
   const vodList = arr(vod);
@@ -702,6 +728,35 @@ export async function probeXtream(
 
   return out;
 }
+
+/**
+ * Etapa 1 — autenticação inicial (DNS + usuário + senha).
+ * Valida SOMENTE o login: resposta do servidor, credenciais válidas e status
+ * da conta (ativa/expirada). Nenhuma consulta de catálogo é feita aqui.
+ */
+export async function validateXtreamLogin(host: string, username: string, password: string) {
+  const x = await probeXtream(host, username, password, { catalogMode: "auth" });
+  return {
+    reachable: x.reachable,
+    login_checked: x.login_checked,
+    login_ok: x.login_ok,
+    account: x.account,
+    account_active: x.account
+      ? x.account.status !== "Disabled" &&
+        x.account.status !== "Banned" &&
+        (x.account.days_to_expire == null || x.account.days_to_expire > 0)
+      : null,
+    protection_suspected: x.protection_suspected,
+    access_verdict: x.access_verdict,
+    fallback_notice: x.fallback_notice,
+    attempts: x.attempts,
+    succeeded_step: x.succeeded_step,
+    api_ms: x.api_ms,
+    error: x.error,
+  };
+}
+
+
 
 
 /* ------------------------------------------------------------------ */
