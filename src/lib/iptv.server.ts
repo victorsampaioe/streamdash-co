@@ -1020,9 +1020,11 @@ export async function runIptvSync(serverId: string, opts: { mode?: "smart" | "fu
     api_ms: x.api_ms,
     login_ok: x.login_ok,
     json_valid: x.json_valid,
-    channels: x.channels,
-    movies: x.movies,
-    series: x.series,
+    // Em consulta leve (cache válido) reaproveitamos os totais do último sync.
+    channels: x.channels ?? (x.catalog_cached ? (lastSync?.channels ?? null) : null),
+    movies: x.movies ?? (x.catalog_cached ? (lastSync?.movies ?? null) : null),
+    series: x.series ?? (x.catalog_cached ? (lastSync?.series ?? null) : null),
+
     categories: x.categories,
     m3u_channels: m3u?.m3u_channels ?? null,
     m3u_groups: m3u?.m3u_groups ?? null,
