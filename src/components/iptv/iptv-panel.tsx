@@ -97,13 +97,23 @@ export function IptvPanel({ serverId, server }: { serverId: string; server: any 
   type Attempt = {
     step: number; label: string; ok: boolean;
     http_status: number | null; elapsed_ms: number | null; error: string | null;
+    kind?: "protection" | "network" | "server" | null;
   };
   const diagBag = (last?.diagnostics ?? null) as
-    | { attempts?: Attempt[]; fallback_notice?: string | null; access_verdict?: string | null }
+    | {
+        attempts?: Attempt[];
+        fallback_notice?: string | null;
+        access_verdict?: string | null;
+        protection_suspected?: boolean | null;
+        catalog_cached?: boolean | null;
+      }
     | null;
   const validationAttempts: Attempt[] = Array.isArray(diagBag?.attempts) ? diagBag!.attempts! : [];
   const validationNotice = diagBag?.fallback_notice ?? null;
   const validationVerdict = diagBag?.access_verdict ?? null;
+  const protectionSuspected = Boolean(diagBag?.protection_suspected);
+  const catalogCached = Boolean(diagBag?.catalog_cached);
+
 
   /* Comparação entre regiões: se uma região falha e outra funciona, é bloqueio de IP/região */
   const { data: regionChecks = [] } = useQuery({
