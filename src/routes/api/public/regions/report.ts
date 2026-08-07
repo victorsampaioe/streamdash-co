@@ -51,6 +51,22 @@ export const Route = createFileRoute("/api/public/regions/report")({
           return new Response("Region not allowed for this agent", { status: 403 });
         }
 
+        // Descarta relatórios de servidores cujo dono está expirado/sem créditos.
+        {
+          const ids = [...new Set(items.map((i) => i.server_id))];
+          const { data: owners } = await supabaseAdmin
+            .from("servers").select("id, owner_id").in("id", ids);
+          const { getActiveOwnerIds } = await import("@/lib/service-status.server");
+          const activeOwners = await getActiveOwnerIds((owners ?? []).map((o) => o.owner_id));
+          const allowedServers = new Set(
+            (owners ?? []).filter((o) => activeOwners.has(o.owner_id)).map((o) => o.id),
+          );
+          items = items.filter((i) => allowedServers.has(i.server_id));
+          if (!items.length) {
+            return Response.json({ ok: true, inserted: 0, paused: ids.length });
+          }
+        }
+
         // Previous status per (server, region) to detect transitions.
         const serverIds = [...new Set(items.map((i) => i.server_id))];
         const { data: prevRows } = await supabaseAdmin
