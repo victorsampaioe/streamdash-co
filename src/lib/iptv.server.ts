@@ -1030,8 +1030,16 @@ export async function runIptvSync(serverId: string, opts: { mode?: "smart" | "fu
     pushAlert({ kind: "api_slow", severity: "warning", title: "⚠ Player API lenta", detail: `${x.api_ms}ms`, confirmations: 2 });
   }
   if (!x.json_valid) {
-    pushAlert({ kind: "api_down", severity: "critical", title: "🚨 Player API indisponível", detail: x.error });
+    // Se o host respondeu em alguma tentativa, é bloqueio/limitação — não "servidor offline".
+    const blocked = x.reachable;
+    pushAlert({
+      kind: "api_down",
+      severity: blocked ? "warning" : "critical",
+      title: blocked ? "⚠ Player API recusando consultas automáticas" : "🚨 Player API indisponível",
+      detail: x.access_verdict ?? x.error,
+    });
   }
+
   // get.php é apenas playlist: nunca gera alerta de login inválido.
   if (m3u && m3u.playlist_ok === false) {
     pushAlert({ kind: "playlist_broken", severity: "warning", title: "⚠ Playlist M3U com problema", detail: m3u.error });
