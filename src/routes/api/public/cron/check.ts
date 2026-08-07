@@ -8,18 +8,53 @@ function isAuthorized(request: Request): boolean {
   return false;
 }
 
+/** Garante que a instância tem o banco original do Lovable configurado. */
+function missingEnv(): string[] {
+  return [
+    ...(!process.env.SUPABASE_URL ? ["SUPABASE_URL"] : []),
+    ...(!process.env.SUPABASE_SERVICE_ROLE_KEY ? ["SUPABASE_SERVICE_ROLE_KEY"] : []),
+  ];
+}
+
+async function safe<T>(label: string, fn: () => Promise<T>, fallback: T, errors: string[]): Promise<T> {
+  try {
+    return await fn();
+  } catch (e: any) {
+    errors.push(`${label}: ${e?.message ?? "unknown"}`);
+    return fallback;
+  }
+}
+
 async function run() {
+  const errors: string[] = [];
+
   // O scheduler roda no Core AWS: se este processo for apenas o painel,
-  // encaminha o ciclo para core.streammonitor.site.
+  // encaminha o ciclo para core.streammonitor.site. Se o Core falhar,
+  // segue localmente (nunca devolve 500 para o scheduler).
   const { useCore, coreApiUrl } = await import("@/lib/core-api.server");
   if (useCore()) {
-    const res = await fetch(`${coreApiUrl()}/api/public/cron/check`, {
-      method: "POST",
-      headers: { "x-cron-secret": process.env.CRON_SECRET ?? "" },
-    });
-    if (res.ok) return { forwardedToCore: true, ...(await res.json()) };
-    console.warn("[cron] Core indisponível, executando localmente:", res.status);
+    try {
+      const res = await fetch(`${coreApiUrl()}/api/public/cron/check`, {
+        method: "POST",
+        headers: { "x-cron-secret": process.env.CRON_SECRET ?? "" },
+      });
+      if (res.ok) return { forwardedToCore: true, ...(await res.json()) };
+      errors.push(`core: HTTP ${res.status}`);
+    } catch (e: any) {
+      errors.push(`core: ${e?.message ?? "fetch failed"}`);
+    }
+    console.warn("[cron] Core indisponível, executando localmente:", errors.at(-1));
   }
+
+  const missing = missingEnv();
+  if (missing.length) {
+    return {
+      ok: false,
+      skipped: true,
+      error: `Configuração do banco incompleta nesta instância: ${missing.join(", ")}. Preencha o .env da VPS com o Supabase do projeto Lovable.`,
+    };
+  }
+
   const { runDueChecks } = await import("@/lib/monitoring.server");
   const { notifyNewlyExpiredSubscriptions, notifyExpiredAccessUsers } = await import("@/lib/admin-telegram.server");
   const { runDueIptvSyncs } = await import("@/lib/iptv.server");
@@ -29,24 +64,27 @@ async function run() {
   const { migratePlaintextCredentials } = await import("@/lib/iptv-credentials.server");
   const { runDueContentScans } = await import("@/lib/content-monitor.server");
   const { syncServersPauseState } = await import("@/lib/service-status.server");
+
   // Primeiro sincroniza o estado de pausa: contas expiradas ficam marcadas
   // como pausadas e contas reativadas voltam sozinhas para o monitoramento.
-  const pauseSync = await syncServersPauseState().catch(() => ({ paused: 0, resumed: 0 }));
+  const pauseSync = await safe("pauseSync", syncServersPauseState, { paused: 0, resumed: 0 }, errors);
   const [checks, expired, iptv, kuma, kumaProv, dns, payments, contents] = await Promise.all([
-    runDueChecks(),
-    notifyNewlyExpiredSubscriptions().catch(() => ({ notified: 0 })),
-    runDueIptvSyncs().catch(() => ({ synced: 0, errors: 0 })),
-    syncKumaStatuses().catch(() => ({ synced: 0 })),
-    provisionPendingServers().catch(() => ({ provisioned: 0 })),
-    runDueDnsChecks().catch(() => ({ checked: 0, errors: 0 })),
-    reconcilePendingPayments().catch(() => ({ checked: 0, approved: 0 })),
-    runDueContentScans().catch(() => ({ servers: 0, tested: 0 })),
+    safe("checks", runDueChecks, {} as any, errors),
+    safe("expired", notifyNewlyExpiredSubscriptions, { notified: 0 }, errors),
+    safe("iptv", runDueIptvSyncs, { synced: 0, errors: 0 }, errors),
+    safe("kuma", syncKumaStatuses, { synced: 0 }, errors),
+    safe("kumaProvision", provisionPendingServers, { provisioned: 0 } as any, errors),
+    safe("dns", runDueDnsChecks, { checked: 0, errors: 0 }, errors),
+    safe("payments", reconcilePendingPayments, { checked: 0, approved: 0 }, errors),
+    safe("contents", runDueContentScans, { servers: 0, tested: 0 }, errors),
   ]);
   // Aviso único no Telegram para contas com acesso encerrado.
-  const expiryNotice = await notifyExpiredAccessUsers().catch(() => ({ sent: 0, skipped: 0 }));
+  const expiryNotice = await safe("expiryNotice", notifyExpiredAccessUsers, { sent: 0, skipped: 0 }, errors);
   // Rede de segurança: criptografa credenciais Xtream legadas em texto puro.
-  const encrypted = await migratePlaintextCredentials(50).catch(() => ({ migrated: 0 }));
+  const encrypted = await safe("encrypt", () => migratePlaintextCredentials(50), { migrated: 0 }, errors);
+
   return {
+    ok: errors.length === 0,
     ...checks,
     expiredNotified: expired.notified,
     expiryNoticesSent: expiryNotice.sent,
@@ -63,10 +101,9 @@ async function run() {
     contentsTested: contents.tested,
     serversPaused: pauseSync.paused,
     serversResumed: pauseSync.resumed,
+    ...(errors.length ? { errors } : {}),
   };
 }
-
-
 
 export const Route = createFileRoute("/api/public/cron/check")({
   server: {
@@ -74,12 +111,12 @@ export const Route = createFileRoute("/api/public/cron/check")({
       POST: async ({ request }) => {
         if (!isAuthorized(request)) return new Response("Forbidden", { status: 403 });
         try { return Response.json(await run()); }
-        catch (e: any) { return new Response(`Error: ${e?.message ?? "unknown"}`, { status: 500 }); }
+        catch (e: any) { return Response.json({ ok: false, error: e?.message ?? "unknown" }, { status: 200 }); }
       },
       GET: async ({ request }) => {
         if (!isAuthorized(request)) return new Response("Forbidden", { status: 403 });
         try { return Response.json(await run()); }
-        catch (e: any) { return new Response(`Error: ${e?.message ?? "unknown"}`, { status: 500 }); }
+        catch (e: any) { return Response.json({ ok: false, error: e?.message ?? "unknown" }, { status: 200 }); }
       },
     },
   },
