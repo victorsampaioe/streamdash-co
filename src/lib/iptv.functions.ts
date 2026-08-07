@@ -16,7 +16,12 @@ export const detectIptvNow = createServerFn({ method: "POST" })
     const { getIptvCredentials } = await import("./iptv-credentials.server");
     const creds = await getIptvCredentials(srv.id);
     const { detectIptvKind } = await import("./iptv.server");
-    const res = await detectIptvKind(srv.host, creds.username, creds.password);
+    const { runOnCore } = await import("./core-api.server");
+    const res = await runOnCore<Awaited<ReturnType<typeof detectIptvKind>>>(
+      "iptv-detect",
+      { host: srv.host, username: creds.username, password: creds.password },
+      () => detectIptvKind(srv.host, creds.username, creds.password),
+    );
 
     const { error } = await context.supabase
       .from("servers")
@@ -54,7 +59,12 @@ export const validateIptvLogin = createServerFn({ method: "POST" })
     if (!guard.allowed) throw new Error(guardMessage(guard));
 
     const { validateXtreamLogin } = await import("./iptv.server");
-    const res = await validateXtreamLogin(srv.host, creds.username, creds.password);
+    const { runOnCore } = await import("./core-api.server");
+    const res = await runOnCore<Awaited<ReturnType<typeof validateXtreamLogin>>>(
+      "iptv-validate",
+      { host: srv.host, username: creds.username, password: creds.password },
+      () => validateXtreamLogin(srv.host, creds.username, creds.password),
+    );
     if (res.login_checked) await registerLoginResult(srv.id, res.login_ok, res.error);
     return res;
   });
@@ -74,7 +84,12 @@ export const runIptvSyncNow = createServerFn({ method: "POST" })
     if (!srv) throw new Error("Servidor não encontrado");
 
     const { runIptvSync } = await import("./iptv.server");
-    const result = await runIptvSync(data.serverId, { mode: data.mode ?? "smart", force: true });
+    const { runOnCore } = await import("./core-api.server");
+    const result = await runOnCore<Awaited<ReturnType<typeof runIptvSync>>>(
+      "iptv-sync",
+      { serverId: data.serverId, mode: data.mode ?? "smart" },
+      () => runIptvSync(data.serverId, { mode: data.mode ?? "smart", force: true }),
+    );
     return result;
   });
 
@@ -110,7 +125,12 @@ export const testPlayerApiUserAgents = createServerFn({ method: "POST" })
     if (!guard.allowed) throw new Error(guardMessage(guard));
 
     const { comparePlayerApiUserAgents } = await import("./iptv.server");
-    return await comparePlayerApiUserAgents(srv.host, creds.username, creds.password);
+    const { runOnCore } = await import("./core-api.server");
+    return await runOnCore<Awaited<ReturnType<typeof comparePlayerApiUserAgents>>>(
+      "iptv-ua-test",
+      { host: srv.host, username: creds.username, password: creds.password },
+      () => comparePlayerApiUserAgents(srv.host, creds.username, creds.password),
+    );
   });
 
 /** Salva credenciais Xtream sempre criptografadas (nunca em texto puro). */

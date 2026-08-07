@@ -13,5 +13,8 @@ export const broadcastTelegram = createServerFn({ method: "POST" })
     if (!isAdmin) throw new Error("Apenas administradores");
 
     const { broadcastToTelegramSubscribers } = await import("./telegram-broadcast.server");
-    return await broadcastToTelegramSubscribers(data.message);
+    const { runOnCore } = await import("./core-api.server");
+    return await runOnCore("telegram-broadcast", { message: data.message }, () =>
+      broadcastToTelegramSubscribers(data.message),
+    );
   });

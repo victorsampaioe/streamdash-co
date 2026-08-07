@@ -15,7 +15,8 @@ export const runCheckNow = createServerFn({ method: "POST" })
       .eq("id", data.serverId)
       .maybeSingle();
     if (error || !srv) throw new Error("Servidor não encontrado ou sem permissão");
-    return await runCheckForServer(data.serverId);
+    const { runOnCore } = await import("./core-api.server");
+    return await runOnCore("check", { serverId: data.serverId }, () => runCheckForServer(data.serverId));
   });
 
 // Public cron entry — protected by CRON_SECRET
@@ -23,5 +24,6 @@ export const cronRunChecks = createServerFn({ method: "POST" })
   .inputValidator((d: { secret: string }) => z.object({ secret: z.string() }).parse(d))
   .handler(async ({ data }) => {
     if (data.secret !== process.env.CRON_SECRET) throw new Error("Forbidden");
-    return await runDueChecks();
+    const { runOnCore } = await import("./core-api.server");
+    return await runOnCore("cron-check", {}, () => runDueChecks());
   });
