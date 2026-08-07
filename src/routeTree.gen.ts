@@ -24,6 +24,7 @@ import { Route as Char91DotwellKnownChar93OauthProtectedResourceRouteImport } fr
 import { Route as Char91DotmcpChar93ListToolsRouteImport } from './routes/[.mcp]/list-tools'
 import { Route as AuthenticatedAppIndexRouteImport } from './routes/_authenticated/app.index'
 import { Route as ApiPublicRadarRouteImport } from './routes/api/public/radar'
+import { Route as ApiPublicHealthRouteImport } from './routes/api/public/health'
 import { Route as AuthenticatedAppSubscriptionRouteImport } from './routes/_authenticated/app.subscription'
 import { Route as AuthenticatedAppResellerRouteImport } from './routes/_authenticated/app.reseller'
 import { Route as AuthenticatedAppRankingRouteImport } from './routes/_authenticated/app.ranking'
@@ -135,6 +136,11 @@ const AuthenticatedAppIndexRoute = AuthenticatedAppIndexRouteImport.update({
 const ApiPublicRadarRoute = ApiPublicRadarRouteImport.update({
   id: '/api/public/radar',
   path: '/api/public/radar',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiPublicHealthRoute = ApiPublicHealthRouteImport.update({
+  id: '/api/public/health',
+  path: '/api/public/health',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AuthenticatedAppSubscriptionRoute =
@@ -369,6 +375,7 @@ export interface FileRoutesByFullPath {
   '/app/ranking': typeof AuthenticatedAppRankingRoute
   '/app/reseller': typeof AuthenticatedAppResellerRoute
   '/app/subscription': typeof AuthenticatedAppSubscriptionRoute
+  '/api/public/health': typeof ApiPublicHealthRoute
   '/api/public/radar': typeof ApiPublicRadarRoute
   '/app/': typeof AuthenticatedAppIndexRoute
   '/app/hub/demand': typeof AuthenticatedAppHubDemandRoute
@@ -419,6 +426,7 @@ export interface FileRoutesByTo {
   '/app/ranking': typeof AuthenticatedAppRankingRoute
   '/app/reseller': typeof AuthenticatedAppResellerRoute
   '/app/subscription': typeof AuthenticatedAppSubscriptionRoute
+  '/api/public/health': typeof ApiPublicHealthRoute
   '/api/public/radar': typeof ApiPublicRadarRoute
   '/app': typeof AuthenticatedAppIndexRoute
   '/app/hub/demand': typeof AuthenticatedAppHubDemandRoute
@@ -473,6 +481,7 @@ export interface FileRoutesById {
   '/_authenticated/app/ranking': typeof AuthenticatedAppRankingRoute
   '/_authenticated/app/reseller': typeof AuthenticatedAppResellerRoute
   '/_authenticated/app/subscription': typeof AuthenticatedAppSubscriptionRoute
+  '/api/public/health': typeof ApiPublicHealthRoute
   '/api/public/radar': typeof ApiPublicRadarRoute
   '/_authenticated/app/': typeof AuthenticatedAppIndexRoute
   '/_authenticated/app/hub/demand': typeof AuthenticatedAppHubDemandRoute
@@ -527,6 +536,7 @@ export interface FileRouteTypes {
     | '/app/ranking'
     | '/app/reseller'
     | '/app/subscription'
+    | '/api/public/health'
     | '/api/public/radar'
     | '/app/'
     | '/app/hub/demand'
@@ -577,6 +587,7 @@ export interface FileRouteTypes {
     | '/app/ranking'
     | '/app/reseller'
     | '/app/subscription'
+    | '/api/public/health'
     | '/api/public/radar'
     | '/app'
     | '/app/hub/demand'
@@ -630,6 +641,7 @@ export interface FileRouteTypes {
     | '/_authenticated/app/ranking'
     | '/_authenticated/app/reseller'
     | '/_authenticated/app/subscription'
+    | '/api/public/health'
     | '/api/public/radar'
     | '/_authenticated/app/'
     | '/_authenticated/app/hub/demand'
@@ -669,6 +681,7 @@ export interface RootRouteChildren {
   StatusSlugRoute: typeof StatusSlugRoute
   DotlovableOauthConsentRoute: typeof DotlovableOauthConsentRoute
   Char91DotmcpChar93InvokeToolToolRoute: typeof Char91DotmcpChar93InvokeToolToolRoute
+  ApiPublicHealthRoute: typeof ApiPublicHealthRoute
   ApiPublicRadarRoute: typeof ApiPublicRadarRoute
   ApiPublicCronCheckRoute: typeof ApiPublicCronCheckRoute
   ApiPublicCronDigestRoute: typeof ApiPublicCronDigestRoute
@@ -783,6 +796,13 @@ declare module '@tanstack/react-router' {
       path: '/api/public/radar'
       fullPath: '/api/public/radar'
       preLoaderRoute: typeof ApiPublicRadarRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/health': {
+      id: '/api/public/health'
+      path: '/api/public/health'
+      fullPath: '/api/public/health'
+      preLoaderRoute: typeof ApiPublicHealthRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_authenticated/app/subscription': {
@@ -1145,6 +1165,7 @@ const rootRouteChildren: RootRouteChildren = {
   StatusSlugRoute: StatusSlugRoute,
   DotlovableOauthConsentRoute: DotlovableOauthConsentRoute,
   Char91DotmcpChar93InvokeToolToolRoute: Char91DotmcpChar93InvokeToolToolRoute,
+  ApiPublicHealthRoute: ApiPublicHealthRoute,
   ApiPublicRadarRoute: ApiPublicRadarRoute,
   ApiPublicCronCheckRoute: ApiPublicCronCheckRoute,
   ApiPublicCronDigestRoute: ApiPublicCronDigestRoute,

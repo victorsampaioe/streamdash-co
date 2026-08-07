@@ -1,0 +1,98 @@
+# Stream Monitor — produção (AWS EC2 Ubuntu 24.04 ARM64 + Caddy → localhost:3000)
+# Subir:  docker compose up -d --build
+# Logs:   docker compose logs -f app
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        VITE_SUPABASE_URL: ${VITE_SUPABASE_URL}
+        VITE_SUPABASE_PUBLISHABLE_KEY: ${VITE_SUPABASE_PUBLISHABLE_KEY}
+        VITE_SUPABASE_PROJECT_ID: ${VITE_SUPABASE_PROJECT_ID}
+    image: streammonitor/core:latest
+    container_name: streammonitor-app
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      NODE_ENV: production
+      HOST: 0.0.0.0
+      PORT: 3000
+    # Somente o Caddy (host) acessa: exposto apenas em 127.0.0.1
+    ports:
+      - "127.0.0.1:3000:3000"
+    # Resolução de DNS previsível para as verificações de DNS/IPTV
+    dns:
+      - 1.1.1.1
+      - 8.8.8.8
+    ulimits:
+      nofile:
+        soft: 65535
+        hard: 65535
+    deploy:
+      resources:
+        limits:
+          memory: 1g
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "5"
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://127.0.0.1:3000/api/public/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+
+  # Agendador: dispara o motor de monitoramento pela própria VPS (IP da AWS EC2)
+  scheduler:
+    image: curlimages/curl:8.11.1
+    container_name: streammonitor-scheduler
+    restart: unless-stopped
+    depends_on:
+      app:
+        condition: service_healthy
+    environment:
+      CRON_SECRET: ${CRON_SECRET}
+      CRON_INTERVAL_SECONDS: ${CRON_INTERVAL_SECONDS:-30}
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        while true; do
+          curl -fsS -m 120 -X POST http://app:3000/api/public/cron/check \
+            -H "x-cron-secret: $${CRON_SECRET}" >/dev/null \
+            || echo "$(date -u +%FT%TZ) ciclo de monitoramento falhou";
+          sleep $${CRON_INTERVAL_SECONDS};
+        done
+    logging:
+      driver: json-file
+      options:
+        max-size: "5m"
+        max-file: "3"
+
+  # Resumo inteligente no Telegram (08:00 e 20:00) — roda de hora em hora
+  digest:
+    image: curlimages/curl:8.11.1
+    container_name: streammonitor-digest
+    restart: unless-stopped
+    depends_on:
+      app:
+        condition: service_healthy
+    environment:
+      CRON_SECRET: ${CRON_SECRET}
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        while true; do
+          curl -fsS -m 120 -X POST http://app:3000/api/public/cron/digest \
+            -H "x-cron-secret: $${CRON_SECRET}" >/dev/null \
+            || echo "$(date -u +%FT%TZ) digest falhou";
+          sleep 3600;
+        done
+    logging:
+      driver: json-file
+      options:
+        max-size: "5m"
+        max-file: "3"
