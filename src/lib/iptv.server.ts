@@ -631,17 +631,28 @@ export async function probeXtream(
     return out;
   }
 
+  // Etapa 1 concluída: login aprovado. No modo "auth" paramos aqui — nenhuma
+  // consulta de catálogo é feita, exatamente como um app IPTV faz ao entrar.
+  if (catalogMode === "auth") {
+    out.access_verdict =
+      (out.access_verdict ?? "") + " Login validado — catálogo não consultado nesta etapa.";
+    return out;
+  }
+
   const arr = (r: PromiseSettledResult<{ data: unknown }>): any[] =>
     r.status === "fulfilled" && Array.isArray(r.value.data) ? (r.value.data as any[]) : [];
 
-  // 4) Somente após login válido: consultas de conteúdo.
-  // Sempre começamos pelas listas de categorias (respostas pequenas). O catálogo
-  // completo só é relido quando o cache expirou — reduz carga e chance de bloqueio.
+  // Etapa 2 — somente após o acesso confirmado: informações do servidor,
+  // categorias e depois o conteúdo. Uma pequena pausa imita o comportamento
+  // de um cliente IPTV real (login → navegação) e evita bloqueios automáticos.
+  await sleep(700 + Math.floor(Math.random() * 500));
+
   const [catsLive, catsVod, catsSeries] = await Promise.allSettled([
     getJson(`${b}/player_api.php?${auth}&action=get_live_categories`),
     getJson(`${b}/player_api.php?${auth}&action=get_vod_categories`),
     getJson(`${b}/player_api.php?${auth}&action=get_series_categories`),
   ]);
+
   const catCount = arr(catsLive).length + arr(catsVod).length + arr(catsSeries).length;
   out.categories = catCount || null;
 
