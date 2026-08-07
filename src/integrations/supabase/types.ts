@@ -901,6 +901,27 @@ export type Database = {
           },
         ]
       }
+      expiry_notices: {
+        Row: {
+          id: string
+          kind: string
+          sent_at: string
+          user_id: string
+        }
+        Insert: {
+          id?: string
+          kind?: string
+          sent_at?: string
+          user_id: string
+        }
+        Update: {
+          id?: string
+          kind?: string
+          sent_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       hub_profiles: {
         Row: {
           banned: boolean
