@@ -680,11 +680,21 @@ export async function probeXtream(
     return out;
   }
 
-  const [live, vod, series] = await Promise.allSettled([
-    getJson(`${b}/player_api.php?${auth}&action=get_live_streams`, M3U_TIMEOUT_MS),
-    getJson(`${b}/player_api.php?${auth}&action=get_vod_streams`, M3U_TIMEOUT_MS),
-    getJson(`${b}/player_api.php?${auth}&action=get_series`, M3U_TIMEOUT_MS),
-  ]);
+  // Catálogo completo: sequencial (canais → filmes → séries) com pausas curtas,
+  // igual à navegação de um app IPTV. Evita rajadas paralelas que disparam WAF.
+  const settle = async (url: string) => {
+    try {
+      return { status: "fulfilled" as const, value: await getJson(url, M3U_TIMEOUT_MS) };
+    } catch (e) {
+      return { status: "rejected" as const, reason: e };
+    }
+  };
+  const live = await settle(`${b}/player_api.php?${auth}&action=get_live_streams`);
+  await sleep(500 + Math.floor(Math.random() * 400));
+  const vod = await settle(`${b}/player_api.php?${auth}&action=get_vod_streams`);
+  await sleep(500 + Math.floor(Math.random() * 400));
+  const series = await settle(`${b}/player_api.php?${auth}&action=get_series`);
+
 
   const liveList = arr(live);
   const vodList = arr(vod);
