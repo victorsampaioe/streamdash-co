@@ -2870,8 +2870,11 @@ export type Database = {
           last_dns_check_at: string | null
           last_iptv_sync_at: string | null
           last_latency_ms: number | null
+          monitoring_paused: boolean
           name: string
           owner_id: string
+          paused_at: string | null
+          paused_reason: string | null
           public_display_name: string | null
           public_dns_label: string | null
           public_slug: string | null
@@ -2919,8 +2922,11 @@ export type Database = {
           last_dns_check_at?: string | null
           last_iptv_sync_at?: string | null
           last_latency_ms?: number | null
+          monitoring_paused?: boolean
           name: string
           owner_id: string
+          paused_at?: string | null
+          paused_reason?: string | null
           public_display_name?: string | null
           public_dns_label?: string | null
           public_slug?: string | null
@@ -2968,8 +2974,11 @@ export type Database = {
           last_dns_check_at?: string | null
           last_iptv_sync_at?: string | null
           last_latency_ms?: number | null
+          monitoring_paused?: boolean
           name?: string
           owner_id?: string
+          paused_at?: string | null
+          paused_reason?: string | null
           public_display_name?: string | null
           public_dns_label?: string | null
           public_slug?: string | null
