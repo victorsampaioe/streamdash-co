@@ -936,9 +936,12 @@ export async function runIptvSync(serverId: string, opts: { mode?: "smart" | "fu
 
   // Nenhuma consulta Xtream/Player API para contas expiradas ou sem créditos.
   {
-    const { getActiveOwnerIds, MONITORING_PAUSED_MESSAGE } = await import("./service-status.server");
+    const { getActiveOwnerIds, MONITORING_PAUSED_MESSAGE, syncServersPauseState } = await import("./service-status.server");
     const allowed = await getActiveOwnerIds([(srv as any).owner_id]);
-    if (!allowed.has((srv as any).owner_id)) throw new Error(MONITORING_PAUSED_MESSAGE);
+    if (!allowed.has((srv as any).owner_id)) {
+      await syncServersPauseState([(srv as any).owner_id]).catch(() => null);
+      throw new Error(MONITORING_PAUSED_MESSAGE);
+    }
   }
 
   const server = srv as unknown as ServerRow;
