@@ -10,7 +10,7 @@ function isAuthorized(request: Request): boolean {
 
 async function run() {
   const { runDueChecks } = await import("@/lib/monitoring.server");
-  const { notifyNewlyExpiredSubscriptions } = await import("@/lib/admin-telegram.server");
+  const { notifyNewlyExpiredSubscriptions, notifyExpiredAccessUsers } = await import("@/lib/admin-telegram.server");
   const { runDueIptvSyncs } = await import("@/lib/iptv.server");
   const { syncKumaStatuses, provisionPendingServers } = await import("@/lib/kuma.server");
   const { runDueDnsChecks } = await import("@/lib/dns.server");
@@ -31,11 +31,14 @@ async function run() {
     reconcilePendingPayments().catch(() => ({ checked: 0, approved: 0 })),
     runDueContentScans().catch(() => ({ servers: 0, tested: 0 })),
   ]);
+  // Aviso único no Telegram para contas com acesso encerrado.
+  const expiryNotice = await notifyExpiredAccessUsers().catch(() => ({ sent: 0, skipped: 0 }));
   // Rede de segurança: criptografa credenciais Xtream legadas em texto puro.
   const encrypted = await migratePlaintextCredentials(50).catch(() => ({ migrated: 0 }));
   return {
     ...checks,
     expiredNotified: expired.notified,
+    expiryNoticesSent: expiryNotice.sent,
     iptvSynced: iptv.synced,
     iptvErrors: iptv.errors,
     kumaSynced: kuma.synced,
