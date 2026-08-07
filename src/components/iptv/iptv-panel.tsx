@@ -40,6 +40,20 @@ export function IptvPanel({ serverId, server }: { serverId: string; server: any 
   const hasCreds = Boolean(server?.has_iptv_creds);
   const [creds, setCreds] = useState({ u: "", p: "" });
   const [uaResult, setUaResult] = useState<any>(null);
+  const validateLogin = useServerFn(validateIptvLogin);
+  const [loginResult, setLoginResult] = useState<any>(null);
+
+  const doLogin = useMutation({
+    mutationFn: async () => await validateLogin({ data: { serverId } }),
+    onSuccess: (r: any) => {
+      setLoginResult(r);
+      refetchGuard();
+      if (r?.login_ok) toast.success("Login Xtream validado");
+      else toast.warning(r?.error ?? "Login não confirmado");
+    },
+    onError: (e: any) => toast.error(e?.message ?? "Falha ao validar login"),
+  });
+
 
   const doUaTest = useMutation({
     mutationFn: async () => await uaTest({ data: { serverId } }),
