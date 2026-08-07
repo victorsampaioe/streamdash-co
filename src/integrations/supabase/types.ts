@@ -3241,6 +3241,22 @@ export type Database = {
         }[]
       }
       generate_referral_code: { Args: never; Returns: string }
+      get_admin_paused_owners: {
+        Args: never
+        Returns: {
+          account_type: string
+          credits: number
+          email: string
+          expires_at: string
+          full_name: string
+          last_paused_at: string
+          owner_id: string
+          paused_reason: string
+          paused_servers: number
+          subscription_status: string
+          total_servers: number
+        }[]
+      }
       get_admin_resellers: {
         Args: never
         Returns: {
