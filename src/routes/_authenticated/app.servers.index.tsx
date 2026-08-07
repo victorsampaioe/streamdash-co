@@ -87,7 +87,16 @@ function ServersList() {
                 <td className="p-3 font-medium">
                   <Link to="/app/servers/$id" params={{ id: s.id }} className="hover:text-primary">{s.name}</Link>
                 </td>
-                <td className="p-3"><div className="flex items-center gap-2"><StatusDot status={s.current_status} /><StatusLabel status={s.current_status} /></div></td>
+                <td className="p-3">
+                  {paused ? (
+                    <div className="flex items-center gap-2 text-muted-foreground">
+                      <span className="h-2.5 w-2.5 rounded-full bg-muted-foreground/50 inline-block" />
+                      <span className="text-xs">Pausado por assinatura expirada</span>
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-2"><StatusDot status={s.current_status} /><StatusLabel status={s.current_status} /></div>
+                  )}
+                </td>
                 <td className="p-3 font-mono text-xs">{s.last_latency_ms ?? "—"} ms</td>
                 <td className="p-3 font-mono text-xs">{s.ssl_days_remaining != null ? `${s.ssl_days_remaining}d` : "—"}</td>
                 <td className="p-3 text-right">
