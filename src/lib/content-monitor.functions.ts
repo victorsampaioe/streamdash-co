@@ -30,15 +30,21 @@ export const scanServerContents = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     await assertOwnership(context, data.serverId);
     const { runContentScan } = await import("./content-monitor.server");
+    const { runOnCore } = await import("./core-api.server");
     const safe = data.safe ?? true;
-    return await runContentScan(data.serverId, {
+    const options = {
       batch: data.batch ?? (safe ? 40 : 60),
       concurrency: data.concurrency ?? (safe ? 5 : 20),
       manual: true,
       safe,
       ignoreCooldown: true,
       userId: context.userId,
-    });
+    };
+    return await runOnCore<Awaited<ReturnType<typeof runContentScan>>>(
+      "content-scan",
+      { serverId: data.serverId, options },
+      () => runContentScan(data.serverId, options),
+    );
   });
 
 export const turboScanServer = createServerFn({ method: "POST" })

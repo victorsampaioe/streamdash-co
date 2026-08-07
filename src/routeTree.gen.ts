@@ -50,6 +50,7 @@ import { Route as ApiPublicRegionsTargetsRouteImport } from './routes/api/public
 import { Route as ApiPublicRegionsReportRouteImport } from './routes/api/public/regions/report'
 import { Route as ApiPublicCronDigestRouteImport } from './routes/api/public/cron/digest'
 import { Route as ApiPublicCronCheckRouteImport } from './routes/api/public/cron/check'
+import { Route as ApiPublicCoreTaskRouteImport } from './routes/api/public/core/task'
 import { Route as AuthenticatedAppServersNewRouteImport } from './routes/_authenticated/app.servers.new'
 import { Route as AuthenticatedAppServersIdRouteImport } from './routes/_authenticated/app.servers.$id'
 import { Route as AuthenticatedAppHubVerificationRouteImport } from './routes/_authenticated/app.hub.verification'
@@ -281,6 +282,11 @@ const ApiPublicCronCheckRoute = ApiPublicCronCheckRouteImport.update({
   path: '/api/public/cron/check',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicCoreTaskRoute = ApiPublicCoreTaskRouteImport.update({
+  id: '/api/public/core/task',
+  path: '/api/public/core/task',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AuthenticatedAppServersNewRoute =
   AuthenticatedAppServersNewRouteImport.update({
     id: '/servers/new',
@@ -386,6 +392,7 @@ export interface FileRoutesByFullPath {
   '/app/hub/verification': typeof AuthenticatedAppHubVerificationRoute
   '/app/servers/$id': typeof AuthenticatedAppServersIdRoute
   '/app/servers/new': typeof AuthenticatedAppServersNewRoute
+  '/api/public/core/task': typeof ApiPublicCoreTaskRoute
   '/api/public/cron/check': typeof ApiPublicCronCheckRoute
   '/api/public/cron/digest': typeof ApiPublicCronDigestRoute
   '/api/public/regions/report': typeof ApiPublicRegionsReportRoute
@@ -437,6 +444,7 @@ export interface FileRoutesByTo {
   '/app/hub/verification': typeof AuthenticatedAppHubVerificationRoute
   '/app/servers/$id': typeof AuthenticatedAppServersIdRoute
   '/app/servers/new': typeof AuthenticatedAppServersNewRoute
+  '/api/public/core/task': typeof ApiPublicCoreTaskRoute
   '/api/public/cron/check': typeof ApiPublicCronCheckRoute
   '/api/public/cron/digest': typeof ApiPublicCronDigestRoute
   '/api/public/regions/report': typeof ApiPublicRegionsReportRoute
@@ -492,6 +500,7 @@ export interface FileRoutesById {
   '/_authenticated/app/hub/verification': typeof AuthenticatedAppHubVerificationRoute
   '/_authenticated/app/servers/$id': typeof AuthenticatedAppServersIdRoute
   '/_authenticated/app/servers/new': typeof AuthenticatedAppServersNewRoute
+  '/api/public/core/task': typeof ApiPublicCoreTaskRoute
   '/api/public/cron/check': typeof ApiPublicCronCheckRoute
   '/api/public/cron/digest': typeof ApiPublicCronDigestRoute
   '/api/public/regions/report': typeof ApiPublicRegionsReportRoute
@@ -547,6 +556,7 @@ export interface FileRouteTypes {
     | '/app/hub/verification'
     | '/app/servers/$id'
     | '/app/servers/new'
+    | '/api/public/core/task'
     | '/api/public/cron/check'
     | '/api/public/cron/digest'
     | '/api/public/regions/report'
@@ -598,6 +608,7 @@ export interface FileRouteTypes {
     | '/app/hub/verification'
     | '/app/servers/$id'
     | '/app/servers/new'
+    | '/api/public/core/task'
     | '/api/public/cron/check'
     | '/api/public/cron/digest'
     | '/api/public/regions/report'
@@ -652,6 +663,7 @@ export interface FileRouteTypes {
     | '/_authenticated/app/hub/verification'
     | '/_authenticated/app/servers/$id'
     | '/_authenticated/app/servers/new'
+    | '/api/public/core/task'
     | '/api/public/cron/check'
     | '/api/public/cron/digest'
     | '/api/public/regions/report'
@@ -683,6 +695,7 @@ export interface RootRouteChildren {
   Char91DotmcpChar93InvokeToolToolRoute: typeof Char91DotmcpChar93InvokeToolToolRoute
   ApiPublicHealthRoute: typeof ApiPublicHealthRoute
   ApiPublicRadarRoute: typeof ApiPublicRadarRoute
+  ApiPublicCoreTaskRoute: typeof ApiPublicCoreTaskRoute
   ApiPublicCronCheckRoute: typeof ApiPublicCronCheckRoute
   ApiPublicCronDigestRoute: typeof ApiPublicCronDigestRoute
   ApiPublicRegionsReportRoute: typeof ApiPublicRegionsReportRoute
@@ -980,6 +993,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicCronCheckRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/core/task': {
+      id: '/api/public/core/task'
+      path: '/api/public/core/task'
+      fullPath: '/api/public/core/task'
+      preLoaderRoute: typeof ApiPublicCoreTaskRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/_authenticated/app/servers/new': {
       id: '/_authenticated/app/servers/new'
       path: '/servers/new'
@@ -1167,6 +1187,7 @@ const rootRouteChildren: RootRouteChildren = {
   Char91DotmcpChar93InvokeToolToolRoute: Char91DotmcpChar93InvokeToolToolRoute,
   ApiPublicHealthRoute: ApiPublicHealthRoute,
   ApiPublicRadarRoute: ApiPublicRadarRoute,
+  ApiPublicCoreTaskRoute: ApiPublicCoreTaskRoute,
   ApiPublicCronCheckRoute: ApiPublicCronCheckRoute,
   ApiPublicCronDigestRoute: ApiPublicCronDigestRoute,
   ApiPublicRegionsReportRoute: ApiPublicRegionsReportRoute,

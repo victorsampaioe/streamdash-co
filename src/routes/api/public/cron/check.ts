@@ -9,6 +9,17 @@ function isAuthorized(request: Request): boolean {
 }
 
 async function run() {
+  // O scheduler roda no Core AWS: se este processo for apenas o painel,
+  // encaminha o ciclo para core.streammonitor.site.
+  const { useCore, coreApiUrl } = await import("@/lib/core-api.server");
+  if (useCore()) {
+    const res = await fetch(`${coreApiUrl()}/api/public/cron/check`, {
+      method: "POST",
+      headers: { "x-cron-secret": process.env.CRON_SECRET ?? "" },
+    });
+    if (res.ok) return { forwardedToCore: true, ...(await res.json()) };
+    console.warn("[cron] Core indisponível, executando localmente:", res.status);
+  }
   const { runDueChecks } = await import("@/lib/monitoring.server");
   const { notifyNewlyExpiredSubscriptions, notifyExpiredAccessUsers } = await import("@/lib/admin-telegram.server");
   const { runDueIptvSyncs } = await import("@/lib/iptv.server");

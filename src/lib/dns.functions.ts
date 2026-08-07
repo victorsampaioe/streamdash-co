@@ -14,7 +14,8 @@ export const runDnsCheckNow = createServerFn({ method: "POST" })
     if (!srv) throw new Error("Servidor não encontrado ou sem permissão");
 
     const { runDnsCheck } = await import("./dns.server");
-    return await runDnsCheck(data.serverId);
+    const { runOnCore } = await import("./core-api.server");
+    return await runOnCore("dns", { serverId: data.serverId }, () => runDnsCheck(data.serverId));
   });
 
 export const acknowledgeDnsAlert = createServerFn({ method: "POST" })
