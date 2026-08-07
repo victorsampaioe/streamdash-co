@@ -442,9 +442,14 @@ async function confirmReachability(
 
 
 export type ProbeOptions = {
-  /** "counts" = consulta leve (só categorias); "full" = relê o catálogo inteiro. */
-  catalogMode?: "counts" | "full";
+  /**
+   * "auth"   = Etapa 1: valida apenas o login (nenhuma consulta de catálogo);
+   * "counts" = Etapa 3: consulta leve (categorias + amostra);
+   * "full"   = catálogo completo (primeira vez ou cache expirado).
+   */
+  catalogMode?: "auth" | "counts" | "full";
 };
+
 
 export async function probeXtream(
   host: string,
