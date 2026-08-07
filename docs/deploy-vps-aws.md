@@ -91,3 +91,25 @@ sudo ufw enable
 ```
 
 A porta 3000 **não** deve ser aberta externamente.
+
+## Core AWS (motor de monitoramento)
+
+O painel Lovable agora funciona apenas como frontend. Todas as verificações
+(DNS, HTTP, IPTV, conteúdos), os alertas do Telegram e o scheduler são
+executados pelo Core em `https://core.streammonitor.site`.
+
+Variáveis:
+
+- Painel (Lovable): `VITE_CORE_API_URL=https://core.streammonitor.site` e
+  `CORE_API_URL=https://core.streammonitor.site` + `CRON_SECRET` (o mesmo da VPS).
+- VPS (Core): `IS_CORE=true` (ou `PUBLIC_BASE_URL=https://core.streammonitor.site`),
+  para o Core não chamar a si mesmo.
+
+Endpoints do Core:
+
+- `POST /api/public/core/task` — tarefas delegadas pelo painel
+  (`check`, `dns`, `iptv-detect`, `iptv-validate`, `iptv-sync`, `iptv-ua-test`,
+  `content-scan`, `telegram-broadcast`), autenticado por `x-cron-secret`.
+- `POST /api/public/cron/check` e `/api/public/cron/digest` — ciclos agendados.
+
+Se o Core ficar indisponível, o painel executa localmente como fallback.
