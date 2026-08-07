@@ -383,8 +383,13 @@ type PrevSnapshot = {
 };
 
 export async function runDnsCheck(serverId: string): Promise<{ ok: boolean; score: number; status: string; alerts: number }> {
-  const { data: srv } = await supabaseAdmin.from("servers").select("id, host").eq("id", serverId).maybeSingle();
+  const { data: srv } = await supabaseAdmin
+    .from("servers").select("id, host, owner_id").eq("id", serverId).maybeSingle();
   if (!srv) throw new Error("Servidor não encontrado");
+
+  const { getActiveOwnerIds, MONITORING_PAUSED_MESSAGE } = await import("./service-status.server");
+  const allowed = await getActiveOwnerIds([(srv as any).owner_id]);
+  if (!allowed.has((srv as any).owner_id)) throw new Error(MONITORING_PAUSED_MESSAGE);
 
   const since = new Date(Date.now() - 24 * 3600_000).toISOString();
   const { count: recentChanges } = await supabaseAdmin
@@ -493,13 +498,19 @@ export async function runDnsCheck(serverId: string): Promise<{ ok: boolean; scor
   return { ok: true, score: report.health_score, status: report.status, alerts: alerts.length };
 }
 
-export async function runDueDnsChecks(limit = 25): Promise<{ checked: number; errors: number }> {
-  const { data: servers } = await supabaseAdmin
+export async function runDueDnsChecks(limit = 25): Promise<{ checked: number; errors: number; paused?: number }> {
+  const { data: all } = await supabaseAdmin
     .from("servers")
-    .select("id, host, dns_interval_minutes, last_dns_check_at")
+    .select("id, owner_id, host, dns_interval_minutes, last_dns_check_at")
     .eq("dns_enabled", true)
     .order("last_dns_check_at", { ascending: true, nullsFirst: true })
-    .limit(limit);
+    .limit(limit * 4);
+
+  // Ignora completamente DNS de contas expiradas / sem créditos.
+  const { getActiveOwnerIds } = await import("./service-status.server");
+  const activeOwners = await getActiveOwnerIds((all ?? []).map((s: any) => s.owner_id));
+  const servers = (all ?? []).filter((s: any) => activeOwners.has(s.owner_id)).slice(0, limit);
+  const paused = (all ?? []).length - (all ?? []).filter((s: any) => activeOwners.has(s.owner_id)).length;
 
   let checked = 0;
   let errors = 0;
@@ -515,5 +526,5 @@ export async function runDueDnsChecks(limit = 25): Promise<{ checked: number; er
       errors++;
     }
   }
-  return { checked, errors };
+  return { checked, errors, paused };
 }
