@@ -180,6 +180,18 @@ export type XtreamAccount = {
   server_url: string | null;
 };
 
+/** Registro de cada tentativa da validação escalonada (UA padrão → alternativo → confirmação). */
+export type ValidationAttempt = {
+  step: number;
+  label: string;
+  user_agent: string | null;
+  base: string;
+  ok: boolean;
+  http_status: number | null;
+  elapsed_ms: number | null;
+  error: string | null;
+};
+
 type XtreamResult = {
   api_ms: number | null;
   login_ok: boolean;
@@ -189,6 +201,14 @@ type XtreamResult = {
   http_status: number | null;
   body_snippet: string | null;
   diagnostics: PlayerApiDiagnostics | null;
+  /** Diagnóstico da validação escalonada. */
+  attempts: ValidationAttempt[];
+  /** Passo que teve sucesso (null = nenhum). */
+  succeeded_step: number | null;
+  /** Aviso quando a 1ª tentativa falhou mas o servidor respondeu depois. */
+  fallback_notice: string | null;
+  /** Veredito final legível (nunca "offline" só porque o passo 1 falhou). */
+  access_verdict: string | null;
   account: XtreamAccount | null;
   content: { live_ok: boolean; vod_ok: boolean; series_ok: boolean };
   channels: number | null;
@@ -206,6 +226,7 @@ type XtreamResult = {
   };
   error: string | null;
 };
+
 
 
 /** Remove credenciais da URL antes de registrar em logs. */
