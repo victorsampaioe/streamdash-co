@@ -949,7 +949,14 @@ export async function runIptvSync(serverId: string, opts: { mode?: "smart" | "fu
     error: x.error ?? (m3u?.error ? `Playlist M3U: ${m3u.error}` : null),
 
     login_checked: x.login_checked,
-    diagnostics: sanitizeDiagnostics(x.diagnostics) as never,
+    diagnostics: {
+      ...(sanitizeDiagnostics(x.diagnostics) ?? {}),
+      attempts: x.attempts,
+      succeeded_step: x.succeeded_step,
+      fallback_notice: x.fallback_notice,
+      access_verdict: x.access_verdict,
+    } as never,
+
 
   }).select("id").maybeSingle();
 
