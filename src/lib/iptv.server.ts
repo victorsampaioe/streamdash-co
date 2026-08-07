@@ -375,6 +375,41 @@ async function getJson(
   throw new Error("unreachable");
 }
 
+/**
+ * Último recurso: confirma se o host está realmente acessível (playlist ou
+ * porta HTTP respondendo), mesmo quando a Player API recusa consultas.
+ */
+async function confirmReachability(
+  clean: string,
+  auth: string,
+): Promise<{ ok: boolean; status: number | null; ms: number | null; error: string | null }> {
+  const targets = [
+    `http://${clean}/get.php?${auth}&type=m3u_plus&output=ts`,
+    `http://${clean}/`,
+  ];
+  let last: { status: number | null; ms: number | null; error: string | null } = {
+    status: null, ms: null, error: "sem resposta",
+  };
+  for (const url of targets) {
+    const t = Date.now();
+    try {
+      const res = await timedFetch(url, API_TIMEOUT_MS, {
+        headers: { ...playerHeaders(UA_VLC), Range: "bytes=0-2048" },
+      });
+      const ms = Date.now() - t;
+      if (res.status < 500) return { ok: true, status: res.status, ms, error: null };
+      last = { status: res.status, ms, error: `HTTP ${res.status}` };
+    } catch (e: unknown) {
+      last = {
+        status: null,
+        ms: Date.now() - t,
+        error: String((e as Error)?.message ?? e).slice(0, 160),
+      };
+    }
+  }
+  return { ok: false, ...last };
+}
+
 
 export async function probeXtream(host: string, username: string, password: string): Promise<XtreamResult> {
   const clean = host.replace(/^https?:\/\//, "").replace(/\/+$/, "");
