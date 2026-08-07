@@ -519,7 +519,11 @@ export async function probeXtream(host: string, username: string, password: stri
   out.http_status = okDiag?.http_status ?? 200;
   out.body_snippet = okDiag?.body_snippet ?? null;
   out.diagnostics = okDiag;
+  out.access_verdict = "🟢 Servidor acessível" + (out.succeeded_step && out.succeeded_step > 1
+    ? ` (confirmado na tentativa ${out.succeeded_step}).`
+    : ".");
   out.login_checked = typeof info === "object" && info !== null && "user_info" in info;
+
 
   if (!out.login_checked) {
     out.error = "❌ Resposta JSON sem 'user_info' — login não pôde ser verificado (URL Xtream incorreta?).";
