@@ -1048,7 +1048,10 @@ export async function runIptvSync(serverId: string, opts: { mode?: "smart" | "fu
       succeeded_step: x.succeeded_step,
       fallback_notice: x.fallback_notice,
       access_verdict: x.access_verdict,
+      protection_suspected: x.protection_suspected,
+      catalog_cached: x.catalog_cached,
     } as never,
+
 
 
   }).select("id").maybeSingle();
