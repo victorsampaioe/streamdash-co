@@ -58,12 +58,14 @@ export const validateIptvLogin = createServerFn({ method: "POST" })
     const guard = await checkLoginGuard(srv.id);
     if (!guard.allowed) throw new Error(guardMessage(guard));
 
+    const user = creds.username;
+    const pass = creds.password;
     const { validateXtreamLogin } = await import("./iptv.server");
     const { runOnCore } = await import("./core-api.server");
     const res = await runOnCore<Awaited<ReturnType<typeof validateXtreamLogin>>>(
       "iptv-validate",
-      { host: srv.host, username: creds.username, password: creds.password },
-      () => validateXtreamLogin(srv.host, creds.username, creds.password),
+      { host: srv.host, username: user, password: pass },
+      () => validateXtreamLogin(srv.host, user, pass),
     );
     if (res.login_checked) await registerLoginResult(srv.id, res.login_ok, res.error);
     return res;
@@ -124,12 +126,14 @@ export const testPlayerApiUserAgents = createServerFn({ method: "POST" })
     const guard = await checkLoginGuard(srv.id);
     if (!guard.allowed) throw new Error(guardMessage(guard));
 
+    const user = creds.username;
+    const pass = creds.password;
     const { comparePlayerApiUserAgents } = await import("./iptv.server");
     const { runOnCore } = await import("./core-api.server");
     return await runOnCore<Awaited<ReturnType<typeof comparePlayerApiUserAgents>>>(
       "iptv-ua-test",
-      { host: srv.host, username: creds.username, password: creds.password },
-      () => comparePlayerApiUserAgents(srv.host, creds.username, creds.password),
+      { host: srv.host, username: user, password: pass },
+      () => comparePlayerApiUserAgents(srv.host, user, pass),
     );
   });
 
