@@ -32,6 +32,7 @@ import { cn } from "@/lib/utils";
 import { broadcastTelegram } from "@/lib/telegram-broadcast.functions";
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { PausedServersPanel } from "@/components/admin/paused-servers-panel";
 import { UserCog, History, PlusCircle, UserCheck, UserRoundCog, Settings2, Trash2 } from "lucide-react";
 
 import { StorageReportCard } from "@/components/storage-report-card";
@@ -102,6 +103,11 @@ type StatsRow = {
   revenue_cents_30d: number;
   revenue_cents_7d: number;
   total_servers: number;
+  servers_online: number;
+  servers_warning: number;
+  servers_offline: number;
+  servers_paused: number;
+  paused_owners: number;
 };
 
 type FilterKey = "all" | "paid" | "trial" | "expired" | "admin" | "reseller" | "client";
@@ -276,12 +282,29 @@ function AdminPage() {
         <Kpi icon={ServerCog} label="Servidores monitorados" value={s?.total_servers} />
       </div>
 
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <Kpi icon={ServerCog} label="🟢 Online" value={s?.servers_online} tone="success" />
+        <Kpi icon={ServerCog} label="🟡 Atenção" value={s?.servers_warning} tone="warning" />
+        <Kpi icon={ServerCog} label="🔴 Offline" value={s?.servers_offline} tone="destructive" />
+        <Kpi
+          icon={ServerCog}
+          label="⚪ DNS Pausados"
+          value={s?.servers_paused}
+          sub={s ? `${s.paused_owners} contas expiradas/sem créditos` : undefined}
+        />
+      </div>
+
       <Tabs defaultValue="overview" className="space-y-6">
         <TabsList>
           <TabsTrigger value="overview">Visão Geral</TabsTrigger>
           <TabsTrigger value="resellers">Gerenciar Revendedores</TabsTrigger>
+          <TabsTrigger value="paused">DNS Pausados</TabsTrigger>
           <TabsTrigger value="storage">Armazenamento</TabsTrigger>
         </TabsList>
+
+        <TabsContent value="paused" className="space-y-6">
+          <PausedServersPanel />
+        </TabsContent>
 
         <TabsContent value="overview" className="space-y-6">
           <TelegramBroadcastCard />
