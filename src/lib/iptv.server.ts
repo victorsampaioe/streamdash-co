@@ -49,6 +49,29 @@ export const UA_BROWSER =
 /** Terceiro método: cliente clássico aceito por quase todo painel Xtream. */
 export const UA_VLC = "VLC/3.0.20 LibVLC/3.0.20";
 
+/** Catálogo completo é pesado: só relemos a lista inteira a cada 6h. */
+const CATALOG_TTL_MS = 6 * 3600_000;
+/** Pausa progressiva entre tentativas para não parecer varredura automática. */
+const STEP_BACKOFF_MS = [0, 900, 2200];
+
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
+/**
+ * Classifica a recusa: proteção contra consultas automáticas (anti-bot,
+ * rate-limit, WAF) x indisponibilidade real do servidor.
+ */
+export function classifyRefusal(
+  status: number | null,
+  stage: string | null,
+): "protection" | "network" | "server" {
+  if (status === 401 || status === 403 || status === 406 || status === 429) return "protection";
+  if (status === 503 && stage === "http") return "protection";
+  if (stage === "content-type" || stage === "empty" || stage === "parse") return "protection";
+  if (status == null) return "network";
+  return "server";
+}
+
+
 
 function playerHeaders(ua: string): Record<string, string> {
   return {
