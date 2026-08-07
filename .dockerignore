@@ -1,0 +1,14 @@
+node_modules
+.output
+.nitro
+.vinxi
+dist
+.git
+.github
+.lovable
+.env
+.env.*
+!.env.example
+*.log
+tmp
+coverage
