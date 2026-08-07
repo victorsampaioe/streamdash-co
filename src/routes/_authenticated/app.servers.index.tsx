@@ -10,6 +10,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { StatusDot, StatusLabel } from "@/components/status-dot";
 import { SearchInput } from "@/components/app-shell";
+import { useSubscription } from "@/hooks/use-subscription";
 import { Plus, ServerIcon, Trash2, ExternalLink, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import {
