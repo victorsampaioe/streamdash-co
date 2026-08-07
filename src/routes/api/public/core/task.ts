@@ -75,6 +75,15 @@ async function execute(input: z.infer<typeof Body>) {
 export const Route = createFileRoute("/api/public/core/task")({
   server: {
     handlers: {
+      // Diagnóstico de deploy: confirma que esta rota existe no build atual.
+      GET: async () =>
+        Response.json({
+          ok: true,
+          route: "/api/public/core/task",
+          isCore: process.env.IS_CORE === "true",
+          hasSecret: Boolean(process.env.CRON_SECRET),
+          methods: ["GET", "POST"],
+        }),
       POST: async ({ request }) => {
         if (!authorized(request)) return new Response("Forbidden", { status: 403 });
         let input: z.infer<typeof Body>;
