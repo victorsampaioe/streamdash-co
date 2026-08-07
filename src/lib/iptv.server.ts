@@ -46,6 +46,9 @@ export const UA_PLAYER =
   "IPTVSmartersPlayer/3.1.5 (Linux; Android 11) ExoPlayerLib/2.18.1";
 export const UA_BROWSER =
   "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36";
+/** Terceiro método: cliente clássico aceito por quase todo painel Xtream. */
+export const UA_VLC = "VLC/3.0.20 LibVLC/3.0.20";
+
 
 function playerHeaders(ua: string): Record<string, string> {
   return {
