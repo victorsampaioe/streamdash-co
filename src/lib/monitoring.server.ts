@@ -32,6 +32,11 @@ export async function runCheckForServer(serverId: string) {
     .eq("id", serverId)
     .maybeSingle();
   if (error || !server) throw new Error("Servidor não encontrado");
+
+  const { getActiveOwnerIds, MONITORING_PAUSED_MESSAGE } = await import("./service-status.server");
+  const active = await getActiveOwnerIds([(server as any).owner_id]);
+  if (!active.has((server as any).owner_id)) throw new Error(MONITORING_PAUSED_MESSAGE);
+
   return await performCheck(server as ServerRow);
 }
 
@@ -40,61 +45,12 @@ export async function runDueChecks() {
   const { data: servers, error } = await supabaseAdmin.from("servers").select("*");
   if (error) throw error;
 
-  // Only monitor servers of users with active status.
-  // Client: Active subscription.
-  // Reseller: credits > 0.
-  // Admins: Always.
-  const ownerIds = Array.from(new Set((servers ?? []).map((s: any) => s.owner_id)));
-  const activeOwners = new Set<string>();
+  // Só monitora servidores de contas ativas:
+  // Cliente -> assinatura válida | Revendedor -> créditos > 0 | Admin -> sempre.
+  const { getActiveOwnerIds } = await import("./service-status.server");
+  const activeOwners = await getActiveOwnerIds((servers ?? []).map((s: any) => s.owner_id));
 
-  if (ownerIds.length) {
-    const [{ data: subs }, { data: profiles }, { data: roles }] = await Promise.all([
-      supabaseAdmin
-        .from("subscriptions")
-        .select("user_id, status, expires_at")
-        .in("user_id", ownerIds),
-      supabaseAdmin
-        .from("profiles")
-        .select("id, credits, is_reseller")
-        .in("id", ownerIds),
-      supabaseAdmin
-        .from("user_roles")
-        .select("user_id")
-        .eq("role", "admin")
-        .in("user_id", ownerIds)
-    ]);
-
-    const nowIso = new Date().toISOString();
-    const profileMap = new Map(profiles?.map(p => [p.id, p]));
-    const subMap = new Map(subs?.map(s => [s.user_id, s]));
-    const adminSet = new Set(roles?.map(r => r.user_id));
-
-    for (const ownerId of ownerIds) {
-      if (adminSet.has(ownerId)) {
-        activeOwners.add(ownerId);
-        continue;
-      }
-
-      const profile = profileMap.get(ownerId);
-      const sub = subMap.get(ownerId);
-      const isReseller = !!profile?.is_reseller;
-      const credits = profile?.credits || 0;
-
-      if (isReseller) {
-        // Reseller rule: only depends on credits for operational monitoring
-        if (credits > 0) activeOwners.add(ownerId);
-      } else {
-        // Client rule: depends on subscription
-        const isSubscriptionActive = sub && 
-          (sub.status === "active" || sub.status === "trial") && 
-          new Date(sub.expires_at).getTime() > Date.now();
-        
-        if (isSubscriptionActive) {
-          activeOwners.add(ownerId);
-        }
-      }
-    }
-  }
+  const paused = (servers ?? []).filter((s: any) => !activeOwners.has(s.owner_id));
 
   const due = (servers ?? []).filter((s: any) => {
     if (!activeOwners.has(s.owner_id)) return false;
@@ -106,6 +62,7 @@ export async function runDueChecks() {
     checked: results.length,
     ok: results.filter((r) => r.status === "fulfilled").length,
     errors: results.filter((r) => r.status === "rejected").length,
+    pausedBySubscription: paused.length,
   };
 }
 
