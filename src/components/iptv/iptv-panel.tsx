@@ -300,6 +300,47 @@ export function IptvPanel({ serverId, server }: { serverId: string; server: any 
         <Mini label="Última sync" value={last ? new Date(last.synced_at).toLocaleString() : "—"} />
       </div>
 
+      {/* Diagnóstico da validação escalonada (tentativa 1 → 2 → 3) */}
+      {validationAttempts.length > 0 && (
+        <Card className="p-5 space-y-3">
+          <h3 className="font-medium text-sm">Diagnóstico da validação (DNS + usuário + senha)</h3>
+          <div className="space-y-2">
+            {validationAttempts.map((a, i) => (
+              <div
+                key={`${a.step}-${i}`}
+                className="flex items-center justify-between gap-3 rounded-lg border border-border/60 p-2.5 text-xs"
+              >
+                <span className="flex-1 min-w-0">
+                  <span className="font-medium">Tentativa {a.step}:</span>{" "}
+                  <span className="text-muted-foreground">{a.label}</span>
+                  {a.error && <span className="block text-muted-foreground truncate">{a.error}</span>}
+                </span>
+                <span className="font-mono text-muted-foreground shrink-0">
+                  {a.elapsed_ms != null ? `${a.elapsed_ms}ms` : "—"}
+                  {a.http_status != null ? ` · HTTP ${a.http_status}` : ""}
+                </span>
+                <Badge variant={a.ok ? "outline" : "destructive"} className="text-[10px] uppercase shrink-0">
+                  {a.ok ? "sucesso" : "falhou"}
+                </Badge>
+              </div>
+            ))}
+          </div>
+          {validationNotice && (
+            <div className="rounded-lg border border-warning/40 bg-warning/10 p-3 text-xs">{validationNotice}</div>
+          )}
+          {validationVerdict && (
+            <div className="rounded-lg border border-border/60 bg-muted/40 p-3 text-xs">
+              <span className="font-medium">Resultado final: </span>{validationVerdict}
+            </div>
+          )}
+          {regionHint && (
+            <div className="rounded-lg border border-warning/40 bg-warning/10 p-3 text-xs">{regionHint}</div>
+          )}
+        </Card>
+      )}
+
+
+
       {/* Teste comparativo de User-Agent (investigar HTTP 403) */}
       <Card className="p-5 space-y-4">
         <div className="flex items-start justify-between gap-3 flex-wrap">
