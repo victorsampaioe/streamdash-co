@@ -259,6 +259,9 @@ export function IptvPanel({ serverId, server }: { serverId: string; server: any 
             <Button size="sm" variant="outline" onClick={() => doDetect.mutate()} disabled={doDetect.isPending}>
               <Radar className={`h-4 w-4 mr-1 ${doDetect.isPending ? "animate-spin" : ""}`} />Detectar
             </Button>
+            <Button size="sm" variant="outline" onClick={() => doLogin.mutate()} disabled={doLogin.isPending}>
+              <Lock className={`h-4 w-4 mr-1 ${doLogin.isPending ? "animate-pulse" : ""}`} />Validar login
+            </Button>
             <Button size="sm" variant="outline" onClick={() => doSync.mutate("smart")} disabled={doSync.isPending}>
               <RefreshCw className={`h-4 w-4 mr-1 ${doSync.isPending ? "animate-spin" : ""}`} />Sincronizar
             </Button>
@@ -268,6 +271,37 @@ export function IptvPanel({ serverId, server }: { serverId: string; server: any 
           </div>
         </div>
       </Card>
+
+      {/* Etapa 1 — validação de login (sem consultar catálogo) */}
+      {loginResult && (
+        <Card className="p-5 space-y-2">
+          <div className="flex items-center gap-2">
+            <Lock className="h-4 w-4 text-muted-foreground" />
+            <span className="text-sm font-semibold">Etapa 1 — Autenticação Xtream</span>
+            <Badge variant={loginResult.login_ok ? "default" : "destructive"}>
+              {loginResult.login_ok ? "Login aprovado" : loginResult.login_checked ? "Login recusado" : "Não verificado"}
+            </Badge>
+            {loginResult.protection_suspected && (
+              <Badge variant="outline">🛡️ Proteção anti-automação</Badge>
+            )}
+          </div>
+          <p className="text-xs text-muted-foreground">
+            {loginResult.access_verdict ?? loginResult.error ?? "—"}
+          </p>
+          {loginResult.account && (
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs pt-1">
+              <div><div className="text-muted-foreground">Status da conta</div><div className="font-medium">{loginResult.account.status ?? "—"}</div></div>
+              <div><div className="text-muted-foreground">Expira em</div><div className="font-medium">{loginResult.account.days_to_expire != null ? `${loginResult.account.days_to_expire} dia(s)` : "—"}</div></div>
+              <div><div className="text-muted-foreground">Conexões</div><div className="font-medium">{loginResult.account.active_connections ?? "—"}/{loginResult.account.max_connections ?? "—"}</div></div>
+              <div><div className="text-muted-foreground">Tempo de resposta</div><div className="font-medium">{loginResult.api_ms != null ? `${loginResult.api_ms} ms` : "—"}</div></div>
+            </div>
+          )}
+          <p className="text-[11px] text-muted-foreground">
+            Nesta etapa o catálogo não é consultado. Canais, filmes e séries só são sincronizados depois do login aprovado.
+          </p>
+        </Card>
+      )}
+
 
       {/* Posição no Ranking IPTV Inteligente */}
       {rank?.position != null && (
