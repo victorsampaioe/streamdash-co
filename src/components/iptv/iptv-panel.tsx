@@ -93,6 +93,40 @@ export function IptvPanel({ serverId, server }: { serverId: string; server: any 
   const last = syncs[0];
   const prev = syncs[1];
 
+  /* Diagnóstico da validação escalonada gravado em iptv_syncs.diagnostics */
+  type Attempt = {
+    step: number; label: string; ok: boolean;
+    http_status: number | null; elapsed_ms: number | null; error: string | null;
+  };
+  const diagBag = (last?.diagnostics ?? null) as
+    | { attempts?: Attempt[]; fallback_notice?: string | null; access_verdict?: string | null }
+    | null;
+  const validationAttempts: Attempt[] = Array.isArray(diagBag?.attempts) ? diagBag!.attempts! : [];
+  const validationNotice = diagBag?.fallback_notice ?? null;
+  const validationVerdict = diagBag?.access_verdict ?? null;
+
+  /* Comparação entre regiões: se uma região falha e outra funciona, é bloqueio de IP/região */
+  const { data: regionChecks = [] } = useQuery({
+    queryKey: ["iptv-region-checks", serverId],
+    enabled: validationAttempts.some((a) => !a.ok),
+    queryFn: async () =>
+      (await supabase.from("region_checks").select("region_code,status,checked_at")
+        .eq("server_id", serverId).order("checked_at", { ascending: false }).limit(60)).data ?? [],
+  });
+  const regionHint = (() => {
+    const seen = new Map<string, string>();
+    for (const r of regionChecks as { region_code: string; status: string }[]) {
+      if (!seen.has(r.region_code)) seen.set(r.region_code, r.status);
+    }
+    const up = [...seen.entries()].filter(([, s]) => s === "up").map(([c]) => c);
+    const bad = [...seen.entries()].filter(([, s]) => s !== "up").map(([c]) => c);
+    if (up.length && bad.length) {
+      return `⚠️ Possível bloqueio de IP/região ou proteção contra consultas automáticas — falhou em ${bad.join(", ")} e funcionou em ${up.join(", ")}.`;
+    }
+    return null;
+  })();
+
+
   const { data: streams = [] } = useQuery({
     queryKey: ["iptv-streams", serverId, last?.id],
     enabled: !!last?.id,
@@ -299,6 +333,47 @@ export function IptvPanel({ serverId, server }: { serverId: string; server: any 
         <Mini label="JSON válido" value={last ? (last.json_valid ? "Sim" : "Não") : "—"} tone={last?.json_valid ? "ok" : last ? "bad" : "muted"} />
         <Mini label="Última sync" value={last ? new Date(last.synced_at).toLocaleString() : "—"} />
       </div>
+
+      {/* Diagnóstico da validação escalonada (tentativa 1 → 2 → 3) */}
+      {validationAttempts.length > 0 && (
+        <Card className="p-5 space-y-3">
+          <h3 className="font-medium text-sm">Diagnóstico da validação (DNS + usuário + senha)</h3>
+          <div className="space-y-2">
+            {validationAttempts.map((a, i) => (
+              <div
+                key={`${a.step}-${i}`}
+                className="flex items-center justify-between gap-3 rounded-lg border border-border/60 p-2.5 text-xs"
+              >
+                <span className="flex-1 min-w-0">
+                  <span className="font-medium">Tentativa {a.step}:</span>{" "}
+                  <span className="text-muted-foreground">{a.label}</span>
+                  {a.error && <span className="block text-muted-foreground truncate">{a.error}</span>}
+                </span>
+                <span className="font-mono text-muted-foreground shrink-0">
+                  {a.elapsed_ms != null ? `${a.elapsed_ms}ms` : "—"}
+                  {a.http_status != null ? ` · HTTP ${a.http_status}` : ""}
+                </span>
+                <Badge variant={a.ok ? "outline" : "destructive"} className="text-[10px] uppercase shrink-0">
+                  {a.ok ? "sucesso" : "falhou"}
+                </Badge>
+              </div>
+            ))}
+          </div>
+          {validationNotice && (
+            <div className="rounded-lg border border-warning/40 bg-warning/10 p-3 text-xs">{validationNotice}</div>
+          )}
+          {validationVerdict && (
+            <div className="rounded-lg border border-border/60 bg-muted/40 p-3 text-xs">
+              <span className="font-medium">Resultado final: </span>{validationVerdict}
+            </div>
+          )}
+          {regionHint && (
+            <div className="rounded-lg border border-warning/40 bg-warning/10 p-3 text-xs">{regionHint}</div>
+          )}
+        </Card>
+      )}
+
+
 
       {/* Teste comparativo de User-Agent (investigar HTTP 403) */}
       <Card className="p-5 space-y-4">
