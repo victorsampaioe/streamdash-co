@@ -90,3 +90,62 @@ export async function notifyNewlyExpiredSubscriptions(): Promise<{ notified: num
 function escape(s: string) {
   return String(s).replace(/[<>&]/g, (c) => ({ "<": "&lt;", ">": "&gt;", "&": "&amp;" }[c]!));
 }
+
+/**
+ * Aviso único no Telegram para contas com acesso encerrado
+ * (teste ou assinatura expirada, revendedor sem créditos).
+ * Registra em `expiry_notices` para nunca repetir o aviso.
+ */
+export const EXPIRED_ACCESS_MESSAGE =
+  "⚠️ <b>Seu acesso expirou</b>\n\n" +
+  "Olá! Identificamos que seu período de teste/assinatura do Stream Monitor foi encerrado.\n\n" +
+  "Seu monitoramento foi pausado automaticamente.\n\n" +
+  "Seus DNS continuam salvos e serão reativados assim que sua assinatura for renovada.\n\n" +
+  "🚀 Renove agora para continuar utilizando todos os recursos do sistema:\n" +
+  "👉 https://streammonitor.site/app/subscription";
+
+export async function notifyExpiredAccessUsers(): Promise<{ sent: number; skipped: number }> {
+  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+  const { getActiveOwnerIds } = await import("./service-status.server");
+
+  // Somente usuários que têm canal de Telegram habilitado
+  const { data: channels } = await supabaseAdmin
+    .from("alert_channels")
+    .select("owner_id")
+    .eq("kind", "telegram")
+    .eq("enabled", true);
+  const candidates = Array.from(new Set((channels ?? []).map((c: any) => c.owner_id as string)));
+  if (!candidates.length) return { sent: 0, skipped: 0 };
+
+  // Remove quem já recebeu o aviso
+  const { data: already } = await supabaseAdmin
+    .from("expiry_notices")
+    .select("user_id")
+    .eq("kind", "expired_access")
+    .in("user_id", candidates);
+  const notified = new Set((already ?? []).map((r: any) => r.user_id as string));
+
+  const active = await getActiveOwnerIds(candidates);
+  const targets = candidates.filter((id) => !notified.has(id) && !active.has(id));
+
+  let sent = 0;
+  for (const userId of targets) {
+    await notifyUserTelegram(userId, EXPIRED_ACCESS_MESSAGE);
+    const { error } = await supabaseAdmin
+      .from("expiry_notices")
+      .insert({ user_id: userId, kind: "expired_access" });
+    if (!error) sent++;
+  }
+
+  // Contas que voltaram a ficar ativas podem receber o aviso novamente no futuro
+  const reactivated = candidates.filter((id) => active.has(id) && notified.has(id));
+  if (reactivated.length) {
+    await supabaseAdmin
+      .from("expiry_notices")
+      .delete()
+      .eq("kind", "expired_access")
+      .in("user_id", reactivated);
+  }
+
+  return { sent, skipped: targets.length - sent };
+}
