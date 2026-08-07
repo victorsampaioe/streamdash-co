@@ -1164,7 +1164,9 @@ export async function comparePlayerApiUserAgents(
   const probes = [
     await run("Player IPTV (padrão)", UA_PLAYER),
     await run("Navegador (Mozilla/5.0)", UA_BROWSER),
+    await run("VLC (confirmação alternativa)", UA_VLC),
   ];
+
 
   const [player, browser] = probes;
   let verdict: string;
