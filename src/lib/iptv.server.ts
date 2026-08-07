@@ -626,19 +626,49 @@ export async function probeXtream(
     return out;
   }
 
-  // 4) Somente após login válido: testar conteúdos (Live, VOD, Séries)
-  const [live, vod, series, catsLive, catsVod, catsSeries] = await Promise.allSettled([
-    getJson(`${b}/player_api.php?${auth}&action=get_live_streams`, M3U_TIMEOUT_MS),
-    getJson(`${b}/player_api.php?${auth}&action=get_vod_streams`, M3U_TIMEOUT_MS),
-    getJson(`${b}/player_api.php?${auth}&action=get_series`, M3U_TIMEOUT_MS),
+  const arr = (r: PromiseSettledResult<{ data: unknown }>): any[] =>
+    r.status === "fulfilled" && Array.isArray(r.value.data) ? (r.value.data as any[]) : [];
+
+  // 4) Somente após login válido: consultas de conteúdo.
+  // Sempre começamos pelas listas de categorias (respostas pequenas). O catálogo
+  // completo só é relido quando o cache expirou — reduz carga e chance de bloqueio.
+  const [catsLive, catsVod, catsSeries] = await Promise.allSettled([
     getJson(`${b}/player_api.php?${auth}&action=get_live_categories`),
     getJson(`${b}/player_api.php?${auth}&action=get_vod_categories`),
     getJson(`${b}/player_api.php?${auth}&action=get_series_categories`),
   ]);
+  const catCount = arr(catsLive).length + arr(catsVod).length + arr(catsSeries).length;
+  out.categories = catCount || null;
 
-  const arr = (r: PromiseSettledResult<{ data: unknown }>): any[] =>
-    r.status === "fulfilled" && Array.isArray(r.value.data) ? (r.value.data as any[]) : [];
+  const pick = <T,>(list: T[], n: number): T[] => {
+    if (list.length <= n) return list;
+    const step = Math.floor(list.length / n);
+    return Array.from({ length: n }, (_, i) => list[i * step]);
+  };
 
+  if (catalogMode === "counts") {
+    // Consulta leve: apenas uma categoria de canais para amostragem de stream.
+    const firstCat = arr(catsLive)[0]?.category_id;
+    const sample = firstCat
+      ? await Promise.allSettled([
+          getJson(`${b}/player_api.php?${auth}&action=get_live_streams&category_id=${encodeURIComponent(String(firstCat))}`),
+        ])
+      : [];
+    const smallLive = sample.length ? arr(sample[0] as PromiseSettledResult<{ data: unknown }>) : [];
+    out.content = {
+      live_ok: arr(catsLive).length > 0 || smallLive.length > 0,
+      vod_ok: arr(catsVod).length > 0,
+      series_ok: arr(catsSeries).length > 0,
+    };
+    out.sampleLive = pick(smallLive, 1).map((x) => ({ id: x?.stream_id, name: x?.name ?? "" }));
+    return out;
+  }
+
+  const [live, vod, series] = await Promise.allSettled([
+    getJson(`${b}/player_api.php?${auth}&action=get_live_streams`, M3U_TIMEOUT_MS),
+    getJson(`${b}/player_api.php?${auth}&action=get_vod_streams`, M3U_TIMEOUT_MS),
+    getJson(`${b}/player_api.php?${auth}&action=get_series`, M3U_TIMEOUT_MS),
+  ]);
 
   const liveList = arr(live);
   const vodList = arr(vod);
@@ -653,15 +683,6 @@ export async function probeXtream(
   out.channels = liveList.length || null;
   out.movies = vodList.length || null;
   out.series = seriesList.length || null;
-  const catCount = arr(catsLive).length + arr(catsVod).length + arr(catsSeries).length;
-  out.categories = catCount || null;
-
-
-  const pick = <T,>(list: T[], n: number): T[] => {
-    if (list.length <= n) return list;
-    const step = Math.floor(list.length / n);
-    return Array.from({ length: n }, (_, i) => list[i * step]);
-  };
 
   out.sampleLive = pick(liveList, 3).map((x) => ({ id: x?.stream_id, name: x?.name ?? "" }));
   out.sampleVod = pick(vodList, 2).map((x) => ({ id: x?.stream_id, name: x?.name ?? "", ext: x?.container_extension ?? "mp4" }));
@@ -681,6 +702,7 @@ export async function probeXtream(
 
   return out;
 }
+
 
 /* ------------------------------------------------------------------ */
 /* M3U integrity (modo completo)                                       */
