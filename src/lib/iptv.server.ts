@@ -216,6 +216,8 @@ export type ValidationAttempt = {
   http_status: number | null;
   elapsed_ms: number | null;
   error: string | null;
+  /** Natureza da recusa: proteção anti-bot, rede ou erro real do servidor. */
+  kind?: "protection" | "network" | "server" | null;
 };
 
 type XtreamResult = {
@@ -235,6 +237,11 @@ type XtreamResult = {
   fallback_notice: string | null;
   /** Veredito final legível (nunca "offline" só porque o passo 1 falhou). */
   access_verdict: string | null;
+  /** true = recusa típica de proteção contra consultas automáticas (não é queda). */
+  protection_suspected: boolean;
+  /** true = catálogo não foi relido nesta execução (cache válido). */
+  catalog_cached: boolean;
+
   account: XtreamAccount | null;
   content: { live_ok: boolean; vod_ok: boolean; series_ok: boolean };
   channels: number | null;
