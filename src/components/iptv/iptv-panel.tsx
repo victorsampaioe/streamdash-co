@@ -344,10 +344,20 @@ export function IptvPanel({ serverId, server }: { serverId: string; server: any 
         <Mini label="Última sync" value={last ? new Date(last.synced_at).toLocaleString() : "—"} />
       </div>
 
-      {/* Diagnóstico da validação escalonada (tentativa 1 → 2 → 3) */}
+      {/* Diagnóstico da validação progressiva (tentativa 1 → 2 → 3) */}
       {validationAttempts.length > 0 && (
         <Card className="p-5 space-y-3">
-          <h3 className="font-medium text-sm">Diagnóstico da validação (DNS + usuário + senha)</h3>
+          <div className="flex flex-wrap items-center gap-2">
+            <h3 className="font-medium text-sm">Diagnóstico da validação (DNS + usuário + senha)</h3>
+            {protectionSuspected && (
+              <Badge variant="outline" className="text-[10px] uppercase border-warning/50 text-warning">
+                proteção anti-automação
+              </Badge>
+            )}
+            {catalogCached && (
+              <Badge variant="outline" className="text-[10px] uppercase">consulta leve (cache)</Badge>
+            )}
+          </div>
           <div className="space-y-2">
             {validationAttempts.map((a, i) => (
               <div
@@ -363,8 +373,11 @@ export function IptvPanel({ serverId, server }: { serverId: string; server: any 
                   {a.elapsed_ms != null ? `${a.elapsed_ms}ms` : "—"}
                   {a.http_status != null ? ` · HTTP ${a.http_status}` : ""}
                 </span>
-                <Badge variant={a.ok ? "outline" : "destructive"} className="text-[10px] uppercase shrink-0">
-                  {a.ok ? "sucesso" : "falhou"}
+                <Badge
+                  variant={a.ok ? "outline" : a.kind === "protection" ? "secondary" : "destructive"}
+                  className="text-[10px] uppercase shrink-0"
+                >
+                  {a.ok ? "sucesso" : a.kind === "protection" ? "recusada" : "falhou"}
                 </Badge>
               </div>
             ))}
@@ -377,11 +390,18 @@ export function IptvPanel({ serverId, server }: { serverId: string; server: any 
               <span className="font-medium">Resultado final: </span>{validationVerdict}
             </div>
           )}
+          {protectionSuspected && (
+            <p className="text-[11px] text-muted-foreground">
+              Recusas da Player API são tratadas como proteção contra consultas automáticas, não como queda.
+              O alerta só é enviado após 3 verificações seguidas com o mesmo comportamento.
+            </p>
+          )}
           {regionHint && (
             <div className="rounded-lg border border-warning/40 bg-warning/10 p-3 text-xs">{regionHint}</div>
           )}
         </Card>
       )}
+
 
 
 
