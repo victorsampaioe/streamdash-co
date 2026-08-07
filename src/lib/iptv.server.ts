@@ -380,6 +380,7 @@ export async function probeXtream(host: string, username: string, password: stri
     api_ms: null, login_ok: false, json_valid: false,
     reachable: false, login_checked: false,
     http_status: null, body_snippet: null, diagnostics: null,
+    attempts: [], succeeded_step: null, fallback_notice: null, access_verdict: null,
     account: null, content: { live_ok: false, vod_ok: false, series_ok: false },
     channels: null, movies: null, series: null, categories: null,
     sampleLive: [], sampleVod: [], sampleSeries: [],
@@ -387,49 +388,92 @@ export async function probeXtream(host: string, username: string, password: stri
     error: null,
   };
 
-
-  // 1) URL responde? tenta http e, se falhar, https (mesma ordem de diagnóstico)
+  // 1) Validação escalonada: UA padrão → UA alternativo → confirmação alternativa.
+  // Uma falha no passo 1 NUNCA marca o servidor como offline por si só.
   const t0 = Date.now();
   let info: any = null;
   let okDiag: PlayerApiDiagnostics | null = null;
   let b = `http://${clean}`;
   let lastErr: PlayerApiError | null = null;
 
-  for (const candidate of [`http://${clean}`, `https://${clean}`]) {
-    try {
-      const r = await getJson(`${candidate}/player_api.php?${auth}`);
-      info = r.data;
-      okDiag = r.diag;
-      b = candidate;
-      lastErr = null;
-      break;
-    } catch (e: unknown) {
-      lastErr = e instanceof PlayerApiError
-        ? e
-        : new PlayerApiError({
-            url: safeUrl(`${candidate}/player_api.php?${auth}`),
-            final_url: null, redirected: false, http_status: null, status_text: null,
-            elapsed_ms: 0, content_type: null, size_bytes: null, body_snippet: null,
-            user_agent: UA_PLAYER, request_headers: null, response_headers: null, egress_ip: null,
-            stage: "network", message: "❌ Sem resposta do servidor.",
-          });
-      // Se o servidor respondeu (status HTTP conhecido), não vale tentar outro esquema.
-      if (lastErr.status !== null) break;
+  const steps: { step: number; label: string; ua: string; path: string }[] = [
+    { step: 1, label: "Player API (User-Agent padrão)", ua: UA_PLAYER, path: "player_api.php" },
+    { step: 2, label: "Player API (User-Agent alternativo)", ua: UA_BROWSER, path: "player_api.php" },
+    { step: 3, label: "Confirmação alternativa (VLC + panel_api)", ua: UA_VLC, path: "panel_api.php" },
+  ];
+
+  for (const s of steps) {
+    let stepDone = false;
+    for (const candidate of [`http://${clean}`, `https://${clean}`]) {
+      const url = `${candidate}/${s.path}?${auth}`;
+      try {
+        const r = await getJson(url, API_TIMEOUT_MS, s.ua);
+        info = r.data;
+        okDiag = r.diag;
+        b = candidate;
+        lastErr = null;
+        out.succeeded_step = s.step;
+        out.attempts.push({
+          step: s.step, label: s.label, user_agent: s.ua, base: candidate,
+          ok: true, http_status: r.diag.http_status, elapsed_ms: r.diag.elapsed_ms, error: null,
+        });
+        stepDone = true;
+        break;
+      } catch (e: unknown) {
+        lastErr = e instanceof PlayerApiError
+          ? e
+          : new PlayerApiError({
+              url: safeUrl(url),
+              final_url: null, redirected: false, http_status: null, status_text: null,
+              elapsed_ms: 0, content_type: null, size_bytes: null, body_snippet: null,
+              user_agent: s.ua, request_headers: null, response_headers: null, egress_ip: null,
+              stage: "network", message: "❌ Sem resposta do servidor.",
+            });
+        out.attempts.push({
+          step: s.step, label: s.label, user_agent: s.ua, base: candidate,
+          ok: false, http_status: lastErr.status, elapsed_ms: lastErr.diag?.elapsed_ms ?? null,
+          error: String(lastErr.message).slice(0, 240),
+        });
+        // Se o servidor respondeu (status HTTP conhecido), não vale tentar outro esquema.
+        if (lastErr.status !== null) break;
+      }
     }
+    if (stepDone) break;
   }
 
   out.api_ms = Date.now() - t0;
 
+  if (out.succeeded_step && out.succeeded_step > 1) {
+    out.fallback_notice =
+      out.succeeded_step === 2
+        ? "⚠️ Primeira tentativa bloqueada/limitada pelo servidor, mas o acesso foi confirmado com User-Agent alternativo."
+        : "⚠️ As duas primeiras tentativas foram bloqueadas; o acesso foi confirmado pelo método alternativo de confirmação.";
+  }
+
   if (lastErr || info === null) {
+    // Nenhum passo trouxe JSON. Confirma se o host está ao menos acessível
+    // (porta aberta / playlist respondendo) antes de sugerir "offline".
+    const reach = await confirmReachability(clean, auth);
+    out.attempts.push({
+      step: 3, label: "Confirmação de acessibilidade (get.php / porta HTTP)",
+      user_agent: UA_VLC, base: `http://${clean}`,
+      ok: reach.ok, http_status: reach.status, elapsed_ms: reach.ms,
+      error: reach.ok ? null : reach.error,
+    });
+
     out.error = lastErr?.message ?? "❌ Sem resposta do servidor.";
     out.http_status = lastErr?.status ?? null;
     out.body_snippet = lastErr?.snippet ?? null;
     out.diagnostics = lastErr?.diag ?? null;
-    out.reachable = lastErr?.status != null;
+    out.reachable = lastErr?.status != null || reach.ok;
     // Falha de transporte/servidor: login NÃO foi verificado.
     out.login_checked = false;
+    out.access_verdict = out.reachable
+      ? "🟡 Servidor acessível, mas a Player API recusou as consultas automáticas (possível bloqueio de IP/região ou proteção anti-bot). Não classificado como offline."
+      : "🔴 Servidor não respondeu em nenhuma das tentativas.";
     return out;
   }
+
 
   // 2) JSON válido → só agora avaliamos usuário/senha
   out.reachable = true;
