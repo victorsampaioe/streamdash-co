@@ -22,9 +22,21 @@ export const Route = createFileRoute("/_authenticated/app/servers/")({
   component: ServersList,
 });
 
+type StatusFilter = "all" | "active" | "up" | "warning" | "down" | "paused";
+
+const FILTERS: { key: StatusFilter; label: string }[] = [
+  { key: "all", label: "Todos" },
+  { key: "active", label: "Ativos" },
+  { key: "up", label: "🟢 Online" },
+  { key: "warning", label: "🟡 Atenção" },
+  { key: "down", label: "🔴 Offline" },
+  { key: "paused", label: "⚪ Pausados" },
+];
+
 function ServersList() {
   const [q, setQ] = useState("");
   const [target, setTarget] = useState<{ id: string; name: string } | null>(null);
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
   const { data: sub } = useSubscription();
   const paused = sub ? !sub.isActive : false;
   const qc = useQueryClient();
@@ -35,7 +47,7 @@ function ServersList() {
         await supabase
           .from("servers")
           .select(
-            "id, name, description, category, current_status, last_latency_ms, last_checked_at, ssl_days_remaining, health_score, dns_health_score, is_public, public_slug, created_at",
+            "id, name, description, category, current_status, last_latency_ms, last_checked_at, ssl_days_remaining, health_score, dns_health_score, is_public, public_slug, created_at, monitoring_paused, paused_reason",
           )
           .order("created_at", { ascending: false })
       ).data ?? [],
@@ -51,7 +63,27 @@ function ServersList() {
     onError: (e: Error) => toast.error(e.message ?? "Falha ao remover"),
   });
 
-  const filtered = servers.filter((s) => !q || `${s.name} ${s.description ?? ""}`.toLowerCase().includes(q.toLowerCase()));
+  const isPaused = (s: any) => paused || s.monitoring_paused === true;
+  const matchFilter = (s: any) => {
+    switch (statusFilter) {
+      case "paused": return isPaused(s);
+      case "active": return !isPaused(s);
+      case "up": return !isPaused(s) && s.current_status === "up";
+      case "warning": return !isPaused(s) && (s.current_status === "degraded" || s.current_status === "unknown");
+      case "down": return !isPaused(s) && s.current_status === "down";
+      default: return true;
+    }
+  };
+  const searched = servers.filter((s) => !q || `${s.name} ${s.description ?? ""}`.toLowerCase().includes(q.toLowerCase()));
+  const filtered = searched.filter(matchFilter);
+  const counts = {
+    all: searched.length,
+    active: searched.filter((s: any) => !isPaused(s)).length,
+    up: searched.filter((s: any) => !isPaused(s) && s.current_status === "up").length,
+    warning: searched.filter((s: any) => !isPaused(s) && (s.current_status === "degraded" || s.current_status === "unknown")).length,
+    down: searched.filter((s: any) => !isPaused(s) && s.current_status === "down").length,
+    paused: searched.filter((s: any) => isPaused(s)).length,
+  };
 
   return (
     <div className="space-y-6">
@@ -64,6 +96,20 @@ function ServersList() {
           <div className="flex-1 sm:flex-initial"><SearchInput value={q} onChange={setQ} /></div>
           <Link to="/app/servers/new"><Button className="shrink-0"><Plus className="h-4 w-4 sm:mr-1" /><span className="hidden sm:inline">Novo</span></Button></Link>
         </div>
+      </div>
+
+      <div className="flex flex-wrap gap-2">
+        {FILTERS.map((f) => (
+          <Button
+            key={f.key}
+            size="sm"
+            variant={statusFilter === f.key ? "default" : "outline"}
+            onClick={() => setStatusFilter(f.key)}
+          >
+            {f.label}
+            <span className="ml-1.5 text-xs opacity-70">{counts[f.key]}</span>
+          </Button>
+        ))}
       </div>
 
       <Card className="overflow-hidden">
@@ -91,10 +137,15 @@ function ServersList() {
                   <Link to="/app/servers/$id" params={{ id: s.id }} className="hover:text-primary">{s.name}</Link>
                 </td>
                 <td className="p-3">
-                  {paused || (s as any).monitoring_paused ? (
+                  {isPaused(s) ? (
                     <div className="flex items-center gap-2 text-muted-foreground">
-                      <span className="h-2.5 w-2.5 rounded-full bg-muted-foreground/50 inline-block" />
-                      <span className="text-xs">Pausado por assinatura expirada</span>
+                      <span className="h-2.5 w-2.5 rounded-full bg-muted-foreground/50 inline-block shrink-0" />
+                      <div className="leading-tight">
+                        <span className="text-xs font-medium">⚪ Pausado</span>
+                        <p className="text-[11px] text-muted-foreground">
+                          Motivo: {(s as any).paused_reason === "no_credits" ? "Revendedor sem créditos" : "Assinatura expirada"}
+                        </p>
+                      </div>
                     </div>
                   ) : (
                     <div className="flex items-center gap-2"><StatusDot status={s.current_status} /><StatusLabel status={s.current_status} /></div>
