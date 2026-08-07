@@ -465,7 +465,7 @@ export async function probeXtream(
     reachable: false, login_checked: false,
     http_status: null, body_snippet: null, diagnostics: null,
     attempts: [], succeeded_step: null, fallback_notice: null, access_verdict: null,
-    protection_suspected: false, catalog_cached: catalogMode === "counts",
+    protection_suspected: false, catalog_cached: catalogMode !== "full",
     account: null, content: { live_ok: false, vod_ok: false, series_ok: false },
     channels: null, movies: null, series: null, categories: null,
     sampleLive: [], sampleVod: [], sampleSeries: [],
