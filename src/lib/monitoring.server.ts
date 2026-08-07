@@ -60,7 +60,11 @@ export async function runDueChecks() {
     if (!s.last_checked_at) return true;
     return now - new Date(s.last_checked_at).getTime() >= s.interval_seconds * 1000;
   });
-  const results = await Promise.allSettled(due.map((s: any) => performCheck(s as ServerRow)));
+  // Fila com limite de concorrência + jitter: evita rajadas simultâneas que
+  // provocam bloqueio de IP nos servidores monitorados e mantém o uso de
+  // memória/soquetes estável na VPS 24/7.
+  const { runPool } = await import("./pool");
+  const results = await runPool(due as any[], (s: any) => performCheck(s as ServerRow));
   return {
     checked: results.length,
     ok: results.filter((r) => r.status === "fulfilled").length,
