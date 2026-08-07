@@ -25,8 +25,8 @@ export const Route = createFileRoute("/_authenticated/app/servers/")({
 function ServersList() {
   const [q, setQ] = useState("");
   const [target, setTarget] = useState<{ id: string; name: string } | null>(null);
-  const { isActive } = useSubscription();
-  const paused = !isActive;
+  const { data: sub } = useSubscription();
+  const paused = sub ? !sub.isActive : false;
   const qc = useQueryClient();
   const { data: servers = [] } = useQuery({
     queryKey: ["servers"],
