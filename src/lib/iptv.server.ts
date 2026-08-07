@@ -1113,9 +1113,12 @@ export async function runIptvSync(serverId: string, opts: { mode?: "smart" | "fu
     }
   };
 
-  drop(lastSync?.channels, x.channels, "canais", "channels_drop");
-  drop(lastSync?.movies, x.movies, "filmes", "movies_drop");
-  drop(lastSync?.series, x.series, "séries", "series_drop");
+  // Em consulta leve (cache) os totais não são recalculados: não comparar.
+  if (!x.catalog_cached) {
+    drop(lastSync?.channels, x.channels, "canais", "channels_drop");
+    drop(lastSync?.movies, x.movies, "filmes", "movies_drop");
+    drop(lastSync?.series, x.series, "séries", "series_drop");
+  }
   drop(lastSync?.categories, x.categories, "categorias", "categories_drop");
 
   if (x.login_checked && !x.login_ok) {
@@ -1126,15 +1129,22 @@ export async function runIptvSync(serverId: string, opts: { mode?: "smart" | "fu
     pushAlert({ kind: "api_slow", severity: "warning", title: "⚠ Player API lenta", detail: `${x.api_ms}ms`, confirmations: 2 });
   }
   if (!x.json_valid) {
-    // Se o host respondeu em alguma tentativa, é bloqueio/limitação — não "servidor offline".
-    const blocked = x.reachable;
+    // Recusa da Player API com o host no ar = proteção contra consultas
+    // automáticas. Nunca vira "offline" e exige 3 confirmações seguidas.
+    const protection = x.protection_suspected && x.reachable;
     pushAlert({
       kind: "api_down",
-      severity: blocked ? "warning" : "critical",
-      title: blocked ? "⚠ Player API recusando consultas automáticas" : "🚨 Player API indisponível",
+      severity: protection ? "warning" : x.reachable ? "warning" : "critical",
+      title: protection
+        ? "🛡️ Player API com proteção contra consultas automáticas"
+        : x.reachable
+          ? "⚠ Player API sem resposta válida (servidor no ar)"
+          : "🚨 Servidor IPTV sem resposta",
       detail: x.access_verdict ?? x.error,
+      confirmations: protection ? 3 : x.reachable ? 2 : 2,
     });
   }
+
 
   // get.php é apenas playlist: nunca gera alerta de login inválido.
   if (m3u && m3u.playlist_ok === false) {
