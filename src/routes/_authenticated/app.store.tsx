@@ -16,7 +16,7 @@ import { formatBRL } from "@/lib/payments";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogTrigger } from "@/components/ui/dialog";
 import { useState } from "react";
 import { toast } from "sonner";
-import geminiBanner from "@/assets/gemini-banner.png.asset.json";
+import geminiBanner from "@/assets/gemini-pro-18m.png.asset.json";
 
 
 
