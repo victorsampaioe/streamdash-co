@@ -47,21 +47,27 @@ function StorePage() {
     queryFn: async () => {
       // The store uses the primary administrator's PIX configuration.
       // We look for the first created profile as that's typically the main admin.
-      const { data: profile, error } = await supabase
+      const { data, error } = await supabase
         .from("profiles")
-        .select("pix_key, pix_name, pix_city")
+        .select("*") // Selecting all to avoid missing column errors if names are different
         .order("created_at", { ascending: true })
         .limit(1)
         .single();
       
-      if (error || !profile?.pix_key) return null;
-      return { 
-        key: profile.pix_key, 
-        name: profile.pix_name, 
-        city: profile.pix_city 
-      };
+      if (error || !data) return null;
+      
+      // Map potential column names based on observed schema
+      const profile = data as any;
+      const key = profile.pix_key || profile.pix_copy_paste || "";
+      const name = profile.pix_name || profile.full_name || "";
+      const city = profile.pix_city || "SAO PAULO";
+
+      if (!key) return null;
+
+      return { key, name, city };
     },
   });
+
 
   return (
     <div className="space-y-8 animate-in fade-in duration-500">
