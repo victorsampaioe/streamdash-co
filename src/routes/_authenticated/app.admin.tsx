@@ -841,7 +841,7 @@ function StatusBadge({ status, expired }: { status: AdminUser["status"]; expired
 
 function TelegramBroadcastCard() {
   const [message, setMessage] = useState("✅ StreamMonitor está online! Todas as suas monitorações estão sendo executadas normalmente.");
-  const PROMO_MSG = "🔥 <b>PROMOÇÃO RELÂMPAGO — SÓ HOJE!</b>\n\nPlano <b>MENSAL</b> por apenas <b>R$ 25,00</b> (de R$ 35,00).\n\n⏰ Amanhã volta ao valor normal.\n\n👉 Assine agora pelo PIX: https://streammonitor.site/app/subscription";
+  const PROMO_MSG = "🔥 <b>UMA HOJE PROMOÇÃO PARA HOJE MEUS REVENDA ADMIN</b>\n\nValor de <b>R$ 35,00</b> por apenas <b>R$ 25,00</b> válido só hoje!\n\n👉 Assine agora pelo PIX: https://streammonitor.site/app/subscription";
   const send = useServerFn(broadcastTelegram);
   const mut = useMutation({
     mutationFn: async (msg: string) => await send({ data: { message: msg } }),
