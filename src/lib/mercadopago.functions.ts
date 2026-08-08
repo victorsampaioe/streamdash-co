@@ -100,11 +100,13 @@ export const createPixPayment = createServerFn({ method: "POST" })
         store_product_id: storeProductId || null,
         payment_type: paymentType as any,
         expires_at: expiresAt,
-
       })
       .select()
       .single();
-    if (error) throw new Error(error.message);
+    if (error) {
+      console.error("[mercadopago] Failed to insert payment row:", error);
+      throw new Error(`Erro ao salvar pagamento no banco: ${error.message}`);
+    }
 
     // 2) Try to create real MP PIX charge
     const { getMpToken, createMpPixCharge } = await import("./mercadopago.server");
