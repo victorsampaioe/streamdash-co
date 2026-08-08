@@ -98,7 +98,7 @@ export const createPixPayment = createServerFn({ method: "POST" })
         currency: "BRL",
         plan: (planId || null) as any,
         store_product_id: storeProductId || null,
-        payment_type: paymentType,
+        payment_type: paymentType as any,
         expires_at: expiresAt,
 
       })
