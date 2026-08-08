@@ -6,15 +6,15 @@ import { PLANS, effectivePriceCents, type PlanId } from "./payments";
 export const createPixPayment = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input) => z.object({ 
-    plan: z.string().optional(), 
-    storeProductId: z.string().optional(),
-    paymentType: z.enum(["subscription", "store"]).optional()
+    plan: z.string().optional().nullable(), 
+    storeProductId: z.string().optional().nullable(),
+    paymentType: z.enum(["subscription", "store"]).optional().nullable()
   }).parse(input))
   .handler(async ({ data, context }) => {
     let amountCents: number;
     let description: string;
-    let planId = data.plan as PlanId | undefined;
-    let storeProductId = data.storeProductId;
+    let planId = (data.plan || undefined) as PlanId | undefined;
+    let storeProductId = data.storeProductId || undefined;
     let paymentType = data.paymentType || (storeProductId ? "store" : "subscription");
 
 
@@ -87,24 +87,34 @@ export const createPixPayment = createServerFn({ method: "POST" })
     }
 
     // 1) Create pending payment row
+    const insertData: any = {
+      user_id: userId,
+      provider: "mercadopago",
+      method: "pix",
+      status: "pending",
+      amount_cents: amountCents,
+      currency: "BRL",
+      store_product_id: storeProductId || null,
+      payment_type: paymentType as any,
+      expires_at: expiresAt,
+    };
+    
+    // Only include plan if it's not a store product
+    if (!storeProductId && planId) {
+      insertData.plan = planId;
+    } else {
+      insertData.plan = null;
+    }
+
     const { data: payment, error } = await supabase
       .from("payments")
-      .insert({
-        user_id: userId,
-        provider: "mercadopago",
-        method: "pix",
-        status: "pending",
-        amount_cents: amountCents,
-        currency: "BRL",
-        plan: (planId || null) as any,
-        store_product_id: storeProductId || null,
-        payment_type: paymentType as any,
-        expires_at: expiresAt,
-
-      })
+      .insert(insertData)
       .select()
       .single();
-    if (error) throw new Error(error.message);
+    if (error) {
+      console.error("[mercadopago] Failed to insert payment row:", error);
+      throw new Error(`Erro ao salvar pagamento no banco: ${error.message}`);
+    }
 
     // 2) Try to create real MP PIX charge
     const { getMpToken, createMpPixCharge } = await import("./mercadopago.server");
@@ -125,6 +135,15 @@ export const createPixPayment = createServerFn({ method: "POST" })
     const payerEmail = (claims?.email as string | undefined) || `user-${userId}@streammonitor.site`;
 
     try {
+      console.log("[mercadopago] creating charge with params:", {
+        amountCents,
+        description,
+        payerEmail,
+        externalReference: payment.id,
+        expiresAt,
+        notificationUrl
+      });
+
       const charge = await createMpPixCharge({
         amountCents,
         description: `${description}${discountApplied ? " (desconto indicação)" : ""}`,
@@ -134,10 +153,13 @@ export const createPixPayment = createServerFn({ method: "POST" })
         notificationUrl,
       });
 
+      console.log("[mercadopago] charge created successfully:", charge.id);
+
       const td = charge.point_of_interaction?.transaction_data;
       const pixCopyPaste = typeof td?.qr_code === "string" ? td.qr_code.trim() : "";
       if (!pixCopyPaste) {
-        throw new Error("O Mercado Pago não retornou um código PIX válido. Tente gerar uma nova cobrança.");
+        console.error("[mercadopago] missing qr_code in response", charge);
+        throw new Error("O Mercado Pago não retornou um código PIX válido. Resposta: " + JSON.stringify(charge));
       }
       const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
       await supabaseAdmin
@@ -161,8 +183,8 @@ export const createPixPayment = createServerFn({ method: "POST" })
         discountApplied,
       };
     } catch (e) {
-      console.error("[mercadopago] createPixPayment failed:", e);
-      throw new Error(e instanceof Error ? e.message : "Falha ao gerar cobrança PIX");
+      console.error("[mercadopago] createPixPayment internal error:", e);
+      throw new Error(e instanceof Error ? `Erro MP: ${e.message}` : "Falha ao gerar cobrança PIX");
     }
   });
 

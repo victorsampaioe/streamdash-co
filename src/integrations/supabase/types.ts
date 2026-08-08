@@ -2060,7 +2060,7 @@ export type Database = {
           pix_copy_paste: string | null
           pix_qr_code: string | null
           pix_qr_code_base64: string | null
-          plan: string
+          plan: string | null
           provider: string
           provider_payment_id: string | null
           raw_payload: Json | null
@@ -2082,7 +2082,7 @@ export type Database = {
           pix_copy_paste?: string | null
           pix_qr_code?: string | null
           pix_qr_code_base64?: string | null
-          plan: string
+          plan?: string | null
           provider?: string
           provider_payment_id?: string | null
           raw_payload?: Json | null
@@ -2104,7 +2104,7 @@ export type Database = {
           pix_copy_paste?: string | null
           pix_qr_code?: string | null
           pix_qr_code_base64?: string | null
-          plan?: string
+          plan?: string | null
           provider?: string
           provider_payment_id?: string | null
           raw_payload?: Json | null
