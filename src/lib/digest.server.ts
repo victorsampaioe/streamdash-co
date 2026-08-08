@@ -115,7 +115,7 @@ export async function buildDigestForUser(userId: string, since: Date): Promise<B
     .limit(4000);
 
   const perServer = new Map<string, Record<string, { count: number; names: string[] }>>();
-  for (const c of changes ?? []) {
+  for (const c of (changes ?? [])) {
     const bucket = perServer.get(c.server_id) ?? {};
     const entry = bucket[c.kind] ?? { count: 0, names: [] };
     entry.count++;
@@ -123,6 +123,7 @@ export async function buildDigestForUser(userId: string, since: Date): Promise<B
     bucket[c.kind] = entry;
     perServer.set(c.server_id, bucket);
   }
+
   const totalNews = (changes ?? []).length;
   const topServerId = Array.from(perServer.entries())
     .map(([sid, b]) => [sid, Object.values(b).reduce((a, e) => a + e.count, 0)] as const)

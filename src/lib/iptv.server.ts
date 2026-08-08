@@ -475,6 +475,22 @@ export async function probeXtream(
     error: null,
   };
 
+  const clean = host.replace(/^https?:\/\//, "").replace(/\/+$/, "");
+  const auth = `username=${encodeURIComponent(username)}&password=${encodeURIComponent(password)}`;
+  const catalogMode = opts.catalogMode ?? "full";
+  const out: XtreamResult = {
+    api_ms: null, login_ok: false, json_valid: false,
+    reachable: false, login_checked: false,
+    http_status: null, body_snippet: null, diagnostics: null,
+    attempts: [], succeeded_step: null, fallback_notice: null, access_verdict: null,
+    protection_suspected: false, catalog_cached: catalogMode !== "full",
+    account: null, content: { live_ok: false, vod_ok: false, series_ok: false },
+    channels: null, movies: null, series: null, categories: null,
+    sampleLive: [], sampleVod: [], sampleSeries: [],
+    catalog: { live: [], vod: [], series: [] },
+    error: null,
+  };
+
   // 1) Validação progressiva: UA padrão → UA alternativo → confirmação alternativa.
   // Há uma pausa crescente entre os passos para não parecer varredura automática,
   // e uma falha no passo 1 NUNCA marca o servidor como offline por si só.
