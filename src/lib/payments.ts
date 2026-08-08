@@ -66,7 +66,7 @@ export const CREDIT_PACKS: PlanDefinition[] = [
 // Promoção relâmpago do plano Mensal (válida só hoje, até 23:59 no horário de Brasília).
 export const MONTHLY_PROMO = {
   priceCents: 2500,
-  endsAt: "2026-08-04T02:59:59.000Z", // 03/08/2026 23:59:59 BRT
+  endsAt: "2026-08-09T02:59:59.000Z", // 08/08/2026 23:59:59 BRT
   label: "Só hoje",
 };
 
