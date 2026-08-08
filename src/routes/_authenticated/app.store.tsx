@@ -42,34 +42,26 @@ function StorePage() {
     },
   });
 
-  const { data: adminSettings } = useQuery({
+  const { data: pixSettings } = useQuery({
     queryKey: ["admin-pix-settings"],
     queryFn: async () => {
-      // Fetch the main admin's profile to get their specific PIX settings
-      const { data: adminProfiles, error } = await supabase
+      // The store uses the primary administrator's PIX configuration.
+      // We look for the first created profile as that's typically the main admin.
+      const { data: profile, error } = await supabase
         .from("profiles")
         .select("pix_key, pix_name, pix_city")
-        .eq("owner_account_id", "admin") // Assuming there's a marker or we fetch the top-level admin
-        .limit(1);
-
-      if (error || !adminProfiles?.length) {
-        // Fallback: search for any admin profile
-        const { data: anyAdmin } = await supabase.rpc("has_role", { _role: "admin" }) as any;
-        // In this specific system, the owner is usually the one with the primary MP credentials
-        // We'll fetch the profile of the main user (hardcoded to your request preference for the admin)
-        const { data: mainAdmin } = await supabase
-          .from("profiles")
-          .select("pix_key, pix_name, pix_city")
-          .order("created_at", { ascending: true })
-          .limit(1)
-          .single();
-        
-        return mainAdmin;
-      }
-      return adminProfiles[0];
+        .order("created_at", { ascending: true })
+        .limit(1)
+        .single();
+      
+      if (error || !profile?.pix_key) return null;
+      return { 
+        key: profile.pix_key, 
+        name: profile.pix_name, 
+        city: profile.pix_city 
+      };
     },
   });
-
 
   return (
     <div className="space-y-8 animate-in fade-in duration-500">
@@ -109,6 +101,7 @@ function StorePage() {
 }
 
 function ProductCard({ product, pixSettings }: { product: any; pixSettings: any }) {
+
   const [open, setOpen] = useState(false);
   const image = (product.name.includes("Gemini") && geminiBanner) ? geminiBanner.url : product.image_url;
 
