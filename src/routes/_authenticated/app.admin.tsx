@@ -1264,10 +1264,6 @@ function EditClientDialog({ user, onDone, isAdminUser, onToggleAdmin }: { user: 
 
 function StoreManagementSection() {
   const qc = useQueryClient();
-  const [isEditingPix, setIsEditingPix] = useState(false);
-  const [pixKey, setPixKey] = useState("");
-  const [pixName, setPixName] = useState("");
-  const [pixCity, setPixCity] = useState("");
 
   const productsQ = useQuery({
     queryKey: ["admin-store-products"],
@@ -1278,99 +1274,30 @@ function StoreManagementSection() {
     },
   });
 
-  const pixSettingsQ = useQuery({
-    queryKey: ["admin-store-settings", "global_pix"],
-    queryFn: async () => {
-      const { data, error } = await supabase.from("store_settings").select("value").eq("key", "global_pix").single();
-      if (error) return null;
-      const val = data.value as any;
-      setPixKey(val.key || "");
-      setPixName(val.name || "");
-      setPixCity(val.city || "");
-      return val;
-    },
-  });
-
-  const updatePix = useMutation({
-    mutationFn: async () => {
-      const { error } = await supabase.from("store_settings").upsert({
-        key: "global_pix",
-        value: { key: pixKey, name: pixName, city: pixCity }
-      });
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      toast.success("PIX da loja atualizado!");
-      setIsEditingPix(false);
-      qc.invalidateQueries({ queryKey: ["admin-store-settings"] });
-    },
-    onError: (e: any) => toast.error(e.message)
-  });
-
   return (
     <div className="space-y-6">
       <Card className="p-6">
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-2">
             <StoreIcon className="h-5 w-5 text-primary" />
-            <h2 className="text-xl font-bold">Configurações da Loja</h2>
+            <h2 className="text-xl font-bold">Gestão de Produtos (Loja)</h2>
           </div>
           <ProductDialog onDone={() => productsQ.refetch()} />
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-          <Card className="p-4 bg-muted/20 border-primary/10">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="font-semibold flex items-center gap-2">
-                <Wallet className="h-4 w-4 text-primary" /> PIX Global da Loja
-              </h3>
-              {!isEditingPix ? (
-                <Button variant="ghost" size="sm" onClick={() => setIsEditingPix(true)}>Editar</Button>
-              ) : (
-                <div className="flex gap-2">
-                  <Button variant="ghost" size="sm" onClick={() => setIsEditingPix(false)}>Cancelar</Button>
-                  <Button size="sm" onClick={() => updatePix.mutate()}>Salvar</Button>
-                </div>
-              )}
-            </div>
-            
-            <div className="space-y-3">
-              <div>
-                <Label className="text-[10px] uppercase text-muted-foreground">Chave PIX</Label>
-                {isEditingPix ? (
-                  <Input value={pixKey} onChange={e => setPixKey(e.target.value)} placeholder="E-mail, CPF ou Aleatória" className="h-8 text-sm" />
-                ) : (
-                  <div className="text-sm font-mono break-all">{pixSettingsQ.data?.key || "Não configurado"}</div>
-                )}
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <Label className="text-[10px] uppercase text-muted-foreground">Nome Titular</Label>
-                  {isEditingPix ? (
-                    <Input value={pixName} onChange={e => setPixName(e.target.value)} placeholder="Nome completo" className="h-8 text-sm" />
-                  ) : (
-                    <div className="text-sm">{pixSettingsQ.data?.name || "—"}</div>
-                  )}
-                </div>
-                <div>
-                  <Label className="text-[10px] uppercase text-muted-foreground">Cidade</Label>
-                  {isEditingPix ? (
-                    <Input value={pixCity} onChange={e => setPixCity(e.target.value)} placeholder="SAO PAULO" className="h-8 text-sm" />
-                  ) : (
-                    <div className="text-sm">{pixSettingsQ.data?.city || "—"}</div>
-                  )}
-                </div>
-              </div>
-            </div>
-          </Card>
-
-          <Card className="p-4 bg-primary/5 border-primary/20 flex flex-col justify-center items-center text-center space-y-2">
-            <StoreIcon className="h-8 w-8 text-primary opacity-50" />
-            <p className="text-sm text-muted-foreground max-w-[200px]">
-              O PIX configurado aqui é usado para todos os produtos da loja.
+        <div className="bg-primary/5 border border-primary/20 rounded-lg p-4 mb-8 flex items-start gap-4">
+          <div className="p-2 bg-primary/10 rounded-full">
+            <Wallet className="h-5 w-5 text-primary" />
+          </div>
+          <div>
+            <h3 className="font-semibold text-primary">PIX Centralizado</h3>
+            <p className="text-sm text-muted-foreground max-w-2xl">
+              A Loja Stream Monitor utiliza automaticamente o PIX configurado no seu perfil administrativo principal. 
+              Para alterar a chave de recebimento da loja, atualize seu PIX nas configurações gerais do painel.
             </p>
-          </Card>
+          </div>
         </div>
+
 
         <div className="overflow-x-auto rounded-md border">
           <table className="w-full text-sm">
