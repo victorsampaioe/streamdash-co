@@ -1508,6 +1508,6 @@ function DeleteProductButton({ productId, onDone }: { productId: string; onDone:
   );
 }
 
-// Re-add Label import if missing
 import { Label } from "@/components/ui/label";
+
 
