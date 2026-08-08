@@ -94,7 +94,7 @@ function StorePage() {
 
 function ProductCard({ product, pixSettings }: { product: any; pixSettings: any }) {
   const [open, setOpen] = useState(false);
-  const image = product.name.includes("Gemini") ? geminiBanner.url : product.image_url;
+  const image = (product.name.includes("Gemini") && geminiBanner) ? geminiBanner.url : product.image_url;
 
   return (
     <Card className="flex flex-col overflow-hidden border-primary/10 bg-card/50 hover:bg-card hover:border-primary/30 transition-all duration-300 group shadow-lg hover:shadow-primary/5">
