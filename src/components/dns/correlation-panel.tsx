@@ -29,20 +29,20 @@ type EventRow = {
 
 const VERDICT_UI: Record<string, { label: string; cls: string; icon: React.ReactNode; text: string }> = {
   healthy: {
-    label: "Tudo estável", cls: "text-success border-success/40 bg-success/10",
-    icon: <CheckCircle2 className="h-4 w-4" />, text: "Todas as DNS vinculadas a este servidor estão respondendo.",
+    label: "Monitoramento Normal", cls: "text-success border-success/40 bg-success/10",
+    icon: <CheckCircle2 className="h-4 w-4" />, text: "Sistema operando dentro da normalidade.",
   },
   isolated: {
-    label: "Falha isolada", cls: "text-success border-success/40 bg-success/10",
-    icon: <AlertTriangle className="h-4 w-4" />, text: "Detectamos uma falha isolada na DNS. O servidor principal continua online.",
+    label: "Anti-Falso Positivo", cls: "text-success border-success/40 bg-success/10",
+    icon: <AlertTriangle className="h-4 w-4" />, text: "Falso Positivo Evitado: Falha isolada detectada em apenas um ponto, enquanto o restante da estrutura permanece estável.",
   },
   partial: {
-    label: "Instabilidade parcial", cls: "text-warning border-warning/40 bg-warning/10",
-    icon: <AlertTriangle className="h-4 w-4" />, text: "Detectamos instabilidade parcial no servidor. Algumas conexões apresentam falha.",
+    label: "Instabilidade Detectada", cls: "text-warning border-warning/40 bg-warning/10",
+    icon: <AlertTriangle className="h-4 w-4" />, text: "Atenção: Instabilidade parcial detectada. Algumas rotas apresentam falha, sugerindo problemas de rede ou carga.",
   },
   server_down: {
-    label: "Queda real do servidor", cls: "text-destructive border-destructive/40 bg-destructive/10",
-    icon: <XCircle className="h-4 w-4" />, text: "Possível indisponibilidade do servidor. Todas as DNS vinculadas apresentam falha.",
+    label: "Queda Confirmada", cls: "text-destructive border-destructive/40 bg-destructive/10",
+    icon: <XCircle className="h-4 w-4" />, text: "Alerta Crítico: Possível queda total da infraestrutura. Todas as rotas de monitoramento falharam simultaneamente.",
   },
 };
 

@@ -191,11 +191,11 @@ export async function buildDigestForUser(userId: string, since: Date): Promise<B
   // Monta mensagem
   const first = (prof?.full_name ?? "").split(" ")[0] || "revenda";
   const L: string[] = [];
-  L.push("🚀 <b>Resumo do Stream Monitor</b>", "");
+  L.push("🚀 <b>Relatório Inteligente — Stream Monitor</b>", "");
   L.push(`Olá, ${esc(first)}!`, "");
-  L.push("Estas foram as novidades dos seus servidores desde o último resumo.", "");
-  L.push("📊 <b>Resumo</b>");
-  L.push(`🖥️ Servidores monitorados: <b>${servers.length}</b>`);
+  L.push("Aqui está o seu diagnóstico detalhado de infraestrutura e conteúdos.", "");
+  L.push("📊 <b>Status da Infraestrutura</b>");
+  L.push(`🖥️ Servidores: <b>${servers.length}</b>`);
   L.push(`🟢 Online: ${online}`);
   L.push(`🟡 Atenção: ${warn}`);
   L.push(`🔴 Offline: ${offline}`, "");
