@@ -87,8 +87,9 @@ export async function buildDigestForUser(userId: string, since: Date): Promise<B
 
   const { data: servers } = await supabaseAdmin
     .from("servers")
-    .select("id, name, current_status, health_score, ssl_days_remaining, last_checked_at")
+    .select("*")
     .eq("owner_id", userId);
+
   if (!servers?.length) return null;
 
   const ids = servers.map((s) => s.id);
@@ -114,7 +115,7 @@ export async function buildDigestForUser(userId: string, since: Date): Promise<B
     .limit(4000);
 
   const perServer = new Map<string, Record<string, { count: number; names: string[] }>>();
-  for (const c of changes ?? []) {
+  for (const c of (changes ?? [])) {
     const bucket = perServer.get(c.server_id) ?? {};
     const entry = bucket[c.kind] ?? { count: 0, names: [] };
     entry.count++;
@@ -122,6 +123,7 @@ export async function buildDigestForUser(userId: string, since: Date): Promise<B
     bucket[c.kind] = entry;
     perServer.set(c.server_id, bucket);
   }
+
   const totalNews = (changes ?? []).length;
   const topServerId = Array.from(perServer.entries())
     .map(([sid, b]) => [sid, Object.values(b).reduce((a, e) => a + e.count, 0)] as const)
@@ -199,6 +201,24 @@ export async function buildDigestForUser(userId: string, since: Date): Promise<B
   L.push(`🟢 Online: ${online}`);
   L.push(`🟡 Atenção: ${warn}`);
   L.push(`🔴 Offline: ${offline}`, "");
+
+  const riskCounts = new Map<string, number>();
+  for (const s of (servers as any[])) {
+    const label = (s as any).risk_score_label || "Saudável";
+    riskCounts.set(label, (riskCounts.get(label) || 0) + 1);
+  }
+
+
+  if (riskCounts.size > 0) {
+    L.push("🧠 <b>Diagnóstico Inteligente (Risk Score)</b>");
+    if (riskCounts.has("Saudável")) L.push(`🟢 Saudável: ${riskCounts.get("Saudável")}`);
+    if (riskCounts.has("Atenção")) L.push(`🟡 Atenção: ${riskCounts.get("Atenção")}`);
+    if (riskCounts.has("Risco elevado")) L.push(`🟠 Risco elevado: ${riskCounts.get("Risco elevado")}`);
+    if (riskCounts.has("Queda iminente")) L.push(`🔴 Queda iminente: ${riskCounts.get("Queda iminente")}`);
+    L.push("");
+  }
+
+
 
   if (totalNews > 0) {
     L.push("🎬 <b>Novidades dos seus servidores</b>", "");
