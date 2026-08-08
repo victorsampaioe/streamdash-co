@@ -33,7 +33,7 @@ import { broadcastTelegram } from "@/lib/telegram-broadcast.functions";
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { PausedServersPanel } from "@/components/admin/paused-servers-panel";
-import { UserCog, History, PlusCircle, UserCheck, UserRoundCog, Settings2, Trash2, ShoppingBag, ShoppingBag as StoreIcon, Wallet } from "lucide-react";
+import { UserCog, History, PlusCircle, UserCheck, UserRoundCog, Settings2, Trash2, ShoppingBag as StoreIcon, Wallet } from "lucide-react";
 
 
 import { StorageReportCard } from "@/components/storage-report-card";
@@ -1363,7 +1363,7 @@ function StoreManagementSection() {
           </Card>
 
           <Card className="p-4 bg-primary/5 border-primary/20 flex flex-col justify-center items-center text-center space-y-2">
-            <ShoppingBag className="h-8 w-8 text-primary opacity-50" />
+            <StoreIcon className="h-8 w-8 text-primary opacity-50" />
             <p className="text-sm text-muted-foreground max-w-[200px]">
               O PIX configurado aqui é usado para todos os produtos da loja.
             </p>
