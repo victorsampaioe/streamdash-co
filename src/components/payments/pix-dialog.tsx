@@ -10,7 +10,7 @@ import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
 interface PixDialogProps {
-  openPlan: PlanId | null;
+  openPlan: string | null;
   onClose: () => void;
   pix: Awaited<ReturnType<typeof createPixPayment>> | null;
   loading: boolean;
@@ -208,16 +208,37 @@ export function PixDialog({ openPlan, onClose, pix, loading, error, onPaid }: Pi
                   </ol>
                 </div>
 
-                {/* Actions */}
-                <div className="grid gap-2">
-                  <Button onClick={checkNow} disabled={checking} className="w-full">
-                    {checking ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <RefreshCw className="h-4 w-4 mr-2" />}
-                    Já paguei, verificar agora
-                  </Button>
-                  <Button variant="ghost" onClick={onClose} className="w-full text-muted-foreground hover:text-foreground">
-                    Voltar
-                  </Button>
-                </div>
+                {/* Success Message for Approved */}
+                {pix.status === ("approved" as string) ? (
+                  <div className="space-y-4 animate-in zoom-in duration-300">
+                    <div className="rounded-xl bg-success/10 border border-success/20 p-5 text-center space-y-3">
+                      <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-success/20">
+                        <ShieldCheck className="h-6 w-6 text-success" />
+                      </div>
+                      <h3 className="text-lg font-bold text-success">✅ Pagamento confirmado com sucesso!</h3>
+                      <p className="text-sm text-muted-foreground leading-relaxed">
+                        Seu pagamento foi aprovado. Para receber o acesso ao produto comprado, entre em contato com nosso suporte no Telegram:
+                      </p>
+                      <div className="font-bold text-primary text-base">📲 @StreamMonitorOfc</div>
+                    </div>
+                    <Button asChild className="w-full h-12 text-base font-semibold shadow-lg shadow-primary/20 bg-gradient-to-r from-primary to-purple-600 hover:from-primary/90 hover:to-purple-600/90 transition-all">
+                      <a href="https://t.me/StreamMonitorOfc" target="_blank" rel="noopener noreferrer" className="flex items-center justify-center gap-2">
+                        Entrar em contato pelo Telegram
+                      </a>
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="grid gap-2">
+                    <Button onClick={checkNow} disabled={checking} className="w-full">
+                      {checking ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <RefreshCw className="h-4 w-4 mr-2" />}
+                      Já paguei, verificar agora
+                    </Button>
+                    <Button variant="ghost" onClick={onClose} className="w-full text-muted-foreground hover:text-foreground">
+                      Voltar
+                    </Button>
+                  </div>
+                )}
+
 
                 {/* Trust badge */}
                 <div className="flex items-center justify-center gap-1.5 text-[10px] text-muted-foreground">
