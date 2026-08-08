@@ -125,6 +125,15 @@ export const createPixPayment = createServerFn({ method: "POST" })
     const payerEmail = (claims?.email as string | undefined) || `user-${userId}@streammonitor.site`;
 
     try {
+      console.log("[mercadopago] creating charge with params:", {
+        amountCents,
+        description,
+        payerEmail,
+        externalReference: payment.id,
+        expiresAt,
+        notificationUrl
+      });
+
       const charge = await createMpPixCharge({
         amountCents,
         description: `${description}${discountApplied ? " (desconto indicação)" : ""}`,
@@ -134,10 +143,13 @@ export const createPixPayment = createServerFn({ method: "POST" })
         notificationUrl,
       });
 
+      console.log("[mercadopago] charge created successfully:", charge.id);
+
       const td = charge.point_of_interaction?.transaction_data;
       const pixCopyPaste = typeof td?.qr_code === "string" ? td.qr_code.trim() : "";
       if (!pixCopyPaste) {
-        throw new Error("O Mercado Pago não retornou um código PIX válido. Tente gerar uma nova cobrança.");
+        console.error("[mercadopago] missing qr_code in response", charge);
+        throw new Error("O Mercado Pago não retornou um código PIX válido. Resposta: " + JSON.stringify(charge));
       }
       const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
       await supabaseAdmin
@@ -161,8 +173,8 @@ export const createPixPayment = createServerFn({ method: "POST" })
         discountApplied,
       };
     } catch (e) {
-      console.error("[mercadopago] createPixPayment failed:", e);
-      throw new Error(e instanceof Error ? e.message : "Falha ao gerar cobrança PIX");
+      console.error("[mercadopago] createPixPayment internal error:", e);
+      throw new Error(e instanceof Error ? `Erro MP: ${e.message}` : "Falha ao gerar cobrança PIX");
     }
   });
 
