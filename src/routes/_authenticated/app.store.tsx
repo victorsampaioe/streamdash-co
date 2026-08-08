@@ -10,12 +10,8 @@ import {
   CreditCard, 
   Sparkles, 
   CheckCircle2, 
-  ShoppingBag as ShoppingBagIcon, 
-  Send as SendIcon, 
-  CreditCard as CreditCardIcon, 
-  Sparkles as SparklesIcon, 
-  CheckCircle2 as CheckCircle2Icon 
 } from "lucide-react";
+
 import { formatBRL } from "@/lib/payments";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogTrigger } from "@/components/ui/dialog";
 import { useState } from "react";
