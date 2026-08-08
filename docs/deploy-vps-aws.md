@@ -130,17 +130,21 @@ IS_CORE=true
 CRON_SECRET=<mesmo valor do painel>
 ```
 
-Preciso conectar minha VPS AWS ao mesmo banco Supabase que o Lovable está usando neste projeto.
-Me ensine passo a passo onde encontro as credenciais corretas do Supabase deste projeto para colocar no .env da AWS.
+O Supabase conectado atualmente está errado.
 
-Preciso saber onde pegar:
+Trocar a conexão:
 
-SUPABASE_URL
-SUPABASE_SERVICE_ROLE_KEY
-SUPABASE_PROJECT_ID
+DE:
+https://rbmrnqtkddvjpaznyvtk.supabase.co
 
-Explique exatamente pelo painel do Lovable/Supabase onde clicar e qual valor copiar.
-Não quero criar outro banco, quero usar exatamente o banco que já está conectado ao projeto e que contém a tabela public.servers.
+PARA:
+https://yiwyfiaqehhmngqngxvx.supabase.co
+
+Não criar banco novo.
+Não migrar dados.
+Não alterar tabelas.
+
+Apenas atualizar o apontamento da aplicação para o Supabase correto e manter todas as funções existentes.
 
 O motor de monitoramento (`servers`, `checks`, `dns_snapshots`, `iptv_*`,
 `content_*`, `expiry_notices`, RPCs como `get_admin_stats`, `rollup_metrics`,
