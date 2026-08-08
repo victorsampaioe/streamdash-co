@@ -14,39 +14,38 @@ export const createPixPayment = createServerFn({ method: "POST" })
 
     if (planId) {
       const standardPlan = PLANS.find((p) => p.id === planId);
-
-    if (standardPlan) {
-      amountCents = effectivePriceCents(standardPlan);
-      description = `StreamMonitor — Plano ${standardPlan.name}`;
-    } else if (planId.startsWith("credits_")) {
-      const packs: Record<string, { price: number; label: string }> = {
-        credits_10: { price: 10000, label: "10 créditos" },
-        credits_30: { price: 27000, label: "30 créditos" },
-        credits_40: { price: 35000, label: "40 créditos" },
-      };
-      const pack = packs[planId];
-      if (!pack) throw new Error("Pacote de créditos inválido");
-      amountCents = pack.price;
-      description = `StreamMonitor — ${pack.label}`;
+      if (standardPlan) {
+        amountCents = effectivePriceCents(standardPlan);
+        description = `StreamMonitor — Plano ${standardPlan.name}`;
+      } else if (planId.startsWith("credits_")) {
+        const packs: Record<string, { price: number; label: string }> = {
+          credits_10: { price: 10000, label: "10 créditos" },
+          credits_30: { price: 27000, label: "30 créditos" },
+          credits_40: { price: 35000, label: "40 créditos" },
+        };
+        const pack = packs[planId];
+        if (!pack) throw new Error("Pacote de créditos inválido");
+        amountCents = pack.price;
+        description = `StreamMonitor — ${pack.label}`;
+      } else {
+        throw new Error("Plano inválido");
+      }
     } else if (storeProductId) {
-      // Handle store products
       const { data: product, error: productError } = await context.supabase
         .from("store_products")
         .select("name, price")
         .eq("id", storeProductId)
         .single();
-
       
       if (productError || !product) throw new Error("Produto da loja não encontrado");
       amountCents = Math.round(product.price * 100);
       description = `StreamMonitor — ${product.name}`;
     } else {
-      throw new Error("Plano ou produto inválido");
+      throw new Error("Informe o plano ou produto");
     }
 
     const { supabase, userId, claims } = context;
     const expiresAt = new Date(Date.now() + 30 * 60 * 1000).toISOString(); // PIX 30min
-
     const discountApplied = false;
 
     // Reuse a still-valid charge.
@@ -55,7 +54,6 @@ export const createPixPayment = createServerFn({ method: "POST" })
       .select("id, amount_cents, expires_at, pix_copy_paste, pix_qr_code")
       .eq("user_id", userId)
       .eq(storeProductId ? "store_product_id" : "plan", storeProductId || planId)
-
       .eq("status", "pending")
       .eq("amount_cents", amountCents)
       .gt("expires_at", new Date().toISOString())
@@ -82,7 +80,6 @@ export const createPixPayment = createServerFn({ method: "POST" })
       };
     }
 
-
     // 1) Create pending payment row
     const { data: payment, error } = await supabase
       .from("payments")
@@ -96,7 +93,6 @@ export const createPixPayment = createServerFn({ method: "POST" })
         plan: planId || null,
         store_product_id: storeProductId || null,
         expires_at: expiresAt,
-
       })
       .select()
       .single();
