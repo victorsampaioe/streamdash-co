@@ -1264,6 +1264,7 @@ function EditClientDialog({ user, onDone, isAdminUser, onToggleAdmin }: { user: 
 
 function StoreManagementSection() {
   const qc = useQueryClient();
+  const navigate = useNavigate();
 
   const productsQ = useQuery({
     queryKey: ["admin-store-products"],
@@ -1301,6 +1302,7 @@ function StoreManagementSection() {
             Ver meu PIX
           </Button>
         </div>
+
 
 
 
