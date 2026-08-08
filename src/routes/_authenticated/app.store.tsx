@@ -59,8 +59,9 @@ function StorePage() {
     setPix(null);
     setPaymentError(null);
     try {
-      const res = await createPix({ data: { storeProductId: productId } });
+      const res = await createPix({ data: { storeProductId: productId, paymentType: "store" } });
       setPix(res);
+
 
       if (!res.integrationReady) {
         toast.info("Estrutura de pagamento pronta. Configure o Mercado Pago para gerar o QR Code PIX.");
