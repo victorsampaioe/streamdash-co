@@ -130,21 +130,23 @@ IS_CORE=true
 CRON_SECRET=<mesmo valor do painel>
 ```
 
-O Supabase conectado atualmente está errado.
+Não quero alterar documentação.
 
-Trocar a conexão:
+Quero alterar a configuração do projeto.
 
-DE:
+O Supabase usado pela aplicação está apontando para:
+
 https://rbmrnqtkddvjpaznyvtk.supabase.co
 
-PARA:
+Trocar para:
+
 https://yiwyfiaqehhmngqngxvx.supabase.co
 
-Não criar banco novo.
-Não migrar dados.
-Não alterar tabelas.
+Atualize as variáveis de ambiente/configuração do Supabase da aplicação.
 
-Apenas atualizar o apontamento da aplicação para o Supabase correto e manter todas as funções existentes.
+Troque também a anon key se necessário.
+
+Depois teste se o site está lendo os dados do novo Supabase.
 
 O motor de monitoramento (`servers`, `checks`, `dns_snapshots`, `iptv_*`,
 `content_*`, `expiry_notices`, RPCs como `get_admin_stats`, `rollup_metrics`,
