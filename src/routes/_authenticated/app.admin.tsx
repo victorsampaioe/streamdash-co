@@ -1289,14 +1289,19 @@ function StoreManagementSection() {
           <div className="p-2 bg-primary/10 rounded-full">
             <Wallet className="h-5 w-5 text-primary" />
           </div>
-          <div>
-            <h3 className="font-semibold text-primary">PIX Centralizado</h3>
+          <div className="flex-1">
+            <h3 className="font-semibold text-primary">Configuração PIX</h3>
             <p className="text-sm text-muted-foreground max-w-2xl">
-              A Loja Stream Monitor utiliza automaticamente o PIX configurado no seu perfil administrativo principal. 
-              Para alterar a chave de recebimento da loja, atualize seu PIX nas configurações gerais do painel.
+              A Loja Stream Monitor utiliza automaticamente o PIX configurado no seu perfil administrativo. 
+              Ao alterar seu PIX nas configurações gerais do painel, a loja será atualizada instantaneamente.
             </p>
           </div>
+          <Button variant="outline" size="sm" onClick={() => navigate({ to: "/app/profile" })} className="shrink-0">
+            <ExternalLink className="h-4 w-4 mr-2" />
+            Ver meu PIX
+          </Button>
         </div>
+
 
 
         <div className="overflow-x-auto rounded-md border">
