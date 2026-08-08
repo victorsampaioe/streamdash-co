@@ -2056,6 +2056,7 @@ export type Database = {
           id: string
           method: Database["public"]["Enums"]["payment_method"]
           paid_at: string | null
+          payment_type: string | null
           pix_copy_paste: string | null
           pix_qr_code: string | null
           pix_qr_code_base64: string | null
@@ -2077,6 +2078,7 @@ export type Database = {
           id?: string
           method?: Database["public"]["Enums"]["payment_method"]
           paid_at?: string | null
+          payment_type?: string | null
           pix_copy_paste?: string | null
           pix_qr_code?: string | null
           pix_qr_code_base64?: string | null
@@ -2098,6 +2100,7 @@ export type Database = {
           id?: string
           method?: Database["public"]["Enums"]["payment_method"]
           paid_at?: string | null
+          payment_type?: string | null
           pix_copy_paste?: string | null
           pix_qr_code?: string | null
           pix_qr_code_base64?: string | null

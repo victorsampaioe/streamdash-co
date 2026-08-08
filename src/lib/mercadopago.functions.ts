@@ -5,12 +5,18 @@ import { PLANS, effectivePriceCents, type PlanId } from "./payments";
 
 export const createPixPayment = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input) => z.object({ plan: z.string().optional(), storeProductId: z.string().optional() }).parse(input))
+  .inputValidator((input) => z.object({ 
+    plan: z.string().optional(), 
+    storeProductId: z.string().optional(),
+    paymentType: z.enum(["subscription", "store"]).optional()
+  }).parse(input))
   .handler(async ({ data, context }) => {
     let amountCents: number;
     let description: string;
     let planId = data.plan as PlanId | undefined;
     let storeProductId = data.storeProductId;
+    let paymentType = data.paymentType || (storeProductId ? "store" : "subscription");
+
 
     if (planId) {
       const standardPlan = PLANS.find((p) => p.id === planId);
@@ -92,7 +98,9 @@ export const createPixPayment = createServerFn({ method: "POST" })
         currency: "BRL",
         plan: (planId || null) as any,
         store_product_id: storeProductId || null,
+        payment_type: paymentType as any,
         expires_at: expiresAt,
+
       })
       .select()
       .single();
