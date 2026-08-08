@@ -13,8 +13,8 @@ export const createPixPayment = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     let amountCents: number;
     let description: string;
-    let planId = data.plan as PlanId | undefined;
-    let storeProductId = data.storeProductId;
+    let planId = (data.plan || undefined) as PlanId | undefined;
+    let storeProductId = data.storeProductId || undefined;
     let paymentType = data.paymentType || (storeProductId ? "store" : "subscription");
 
 
