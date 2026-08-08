@@ -1297,9 +1297,9 @@ function StoreManagementSection() {
               Ao alterar seu PIX nas configurações gerais do painel, a loja será atualizada instantaneamente.
             </p>
           </div>
-          <Button variant="outline" size="sm" onClick={() => navigate({ to: "/app/profile" })} className="shrink-0">
+          <Button variant="outline" size="sm" onClick={() => navigate({ to: "/app/subscription" })} className="shrink-0">
             <ExternalLink className="h-4 w-4 mr-2" />
-            Ver meu PIX
+            Configurações
           </Button>
         </div>
 
