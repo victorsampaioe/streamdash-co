@@ -2059,11 +2059,12 @@ export type Database = {
           pix_copy_paste: string | null
           pix_qr_code: string | null
           pix_qr_code_base64: string | null
-          plan: Database["public"]["Enums"]["plan_type"]
+          plan: string
           provider: string
           provider_payment_id: string | null
           raw_payload: Json | null
           status: Database["public"]["Enums"]["payment_status"]
+          store_product_id: string | null
           subscription_id: string | null
           updated_at: string
           user_id: string
@@ -2079,11 +2080,12 @@ export type Database = {
           pix_copy_paste?: string | null
           pix_qr_code?: string | null
           pix_qr_code_base64?: string | null
-          plan: Database["public"]["Enums"]["plan_type"]
+          plan: string
           provider?: string
           provider_payment_id?: string | null
           raw_payload?: Json | null
           status?: Database["public"]["Enums"]["payment_status"]
+          store_product_id?: string | null
           subscription_id?: string | null
           updated_at?: string
           user_id: string
@@ -2099,16 +2101,24 @@ export type Database = {
           pix_copy_paste?: string | null
           pix_qr_code?: string | null
           pix_qr_code_base64?: string | null
-          plan?: Database["public"]["Enums"]["plan_type"]
+          plan?: string
           provider?: string
           provider_payment_id?: string | null
           raw_payload?: Json | null
           status?: Database["public"]["Enums"]["payment_status"]
+          store_product_id?: string | null
           subscription_id?: string | null
           updated_at?: string
           user_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "payments_store_product_id_fkey"
+            columns: ["store_product_id"]
+            isOneToOne: false
+            referencedRelation: "store_products"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "payments_subscription_id_fkey"
             columns: ["subscription_id"]
