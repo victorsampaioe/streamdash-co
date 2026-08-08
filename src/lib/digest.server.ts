@@ -202,10 +202,11 @@ export async function buildDigestForUser(userId: string, since: Date): Promise<B
   L.push(`🔴 Offline: ${offline}`, "");
 
   const riskCounts = new Map<string, number>();
-  for (const s of servers) {
-    const label = s.risk_score_label || "Saudável";
+  for (const s of (servers as any[])) {
+    const label = (s as any).risk_score_label || "Saudável";
     riskCounts.set(label, (riskCounts.get(label) || 0) + 1);
   }
+
 
   if (riskCounts.size > 0) {
     L.push("🧠 <b>Diagnóstico Inteligente (Risk Score)</b>");
