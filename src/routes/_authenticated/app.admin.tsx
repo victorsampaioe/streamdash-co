@@ -1260,5 +1260,254 @@ function EditClientDialog({ user, onDone, isAdminUser, onToggleAdmin }: { user: 
   );
 }
 
+function StoreManagementSection() {
+  const qc = useQueryClient();
+  const [isEditingPix, setIsEditingPix] = useState(false);
+  const [pixKey, setPixKey] = useState("");
+  const [pixName, setPixName] = useState("");
+  const [pixCity, setPixCity] = useState("");
+
+  const productsQ = useQuery({
+    queryKey: ["admin-store-products"],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("store_products").select("*").order("created_at", { ascending: false });
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  const pixSettingsQ = useQuery({
+    queryKey: ["admin-store-settings", "global_pix"],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("store_settings").select("value").eq("key", "global_pix").single();
+      if (error) return null;
+      const val = data.value as any;
+      setPixKey(val.key || "");
+      setPixName(val.name || "");
+      setPixCity(val.city || "");
+      return val;
+    },
+  });
+
+  const updatePix = useMutation({
+    mutationFn: async () => {
+      const { error } = await supabase.from("store_settings").upsert({
+        key: "global_pix",
+        value: { key: pixKey, name: pixName, city: pixCity }
+      });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success("PIX da loja atualizado!");
+      setIsEditingPix(false);
+      qc.invalidateQueries({ queryKey: ["admin-store-settings"] });
+    },
+    onError: (e: any) => toast.error(e.message)
+  });
+
+  return (
+    <div className="space-y-6">
+      <Card className="p-6">
+        <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center gap-2">
+            <StoreIcon className="h-5 w-5 text-primary" />
+            <h2 className="text-xl font-bold">Configurações da Loja</h2>
+          </div>
+          <ProductDialog onDone={() => productsQ.refetch()} />
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+          <Card className="p-4 bg-muted/20 border-primary/10">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="font-semibold flex items-center gap-2">
+                <Wallet className="h-4 w-4 text-primary" /> PIX Global da Loja
+              </h3>
+              {!isEditingPix ? (
+                <Button variant="ghost" size="sm" onClick={() => setIsEditingPix(true)}>Editar</Button>
+              ) : (
+                <div className="flex gap-2">
+                  <Button variant="ghost" size="sm" onClick={() => setIsEditingPix(false)}>Cancelar</Button>
+                  <Button size="sm" onClick={() => updatePix.mutate()}>Salvar</Button>
+                </div>
+              )}
+            </div>
+            
+            <div className="space-y-3">
+              <div>
+                <Label className="text-[10px] uppercase text-muted-foreground">Chave PIX</Label>
+                {isEditingPix ? (
+                  <Input value={pixKey} onChange={e => setPixKey(e.target.value)} placeholder="E-mail, CPF ou Aleatória" className="h-8 text-sm" />
+                ) : (
+                  <div className="text-sm font-mono break-all">{pixSettingsQ.data?.key || "Não configurado"}</div>
+                )}
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <Label className="text-[10px] uppercase text-muted-foreground">Nome Titular</Label>
+                  {isEditingPix ? (
+                    <Input value={pixName} onChange={e => setPixName(e.target.value)} placeholder="Nome completo" className="h-8 text-sm" />
+                  ) : (
+                    <div className="text-sm">{pixSettingsQ.data?.name || "—"}</div>
+                  )}
+                </div>
+                <div>
+                  <Label className="text-[10px] uppercase text-muted-foreground">Cidade</Label>
+                  {isEditingPix ? (
+                    <Input value={pixCity} onChange={e => setPixCity(e.target.value)} placeholder="SAO PAULO" className="h-8 text-sm" />
+                  ) : (
+                    <div className="text-sm">{pixSettingsQ.data?.city || "—"}</div>
+                  )}
+                </div>
+              </div>
+            </div>
+          </Card>
+
+          <Card className="p-4 bg-primary/5 border-primary/20 flex flex-col justify-center items-center text-center space-y-2">
+            <ShoppingBag className="h-8 w-8 text-primary opacity-50" />
+            <p className="text-sm text-muted-foreground max-w-[200px]">
+              O PIX configurado aqui é usado para todos os produtos da loja.
+            </p>
+          </Card>
+        </div>
+
+        <div className="overflow-x-auto rounded-md border">
+          <table className="w-full text-sm">
+            <thead className="bg-muted/40 text-xs uppercase tracking-wider text-muted-foreground">
+              <tr>
+                <th className="text-left p-3 font-medium">Produto</th>
+                <th className="text-right p-3 font-medium">Preço</th>
+                <th className="text-center p-3 font-medium">Status</th>
+                <th className="text-right p-3 font-medium">Ações</th>
+              </tr>
+            </thead>
+            <tbody>
+              {productsQ.isLoading && <tr><td colSpan={4} className="p-6 text-center">Carregando produtos...</td></tr>}
+              {productsQ.data?.map(p => (
+                <tr key={p.id} className="border-t border-border/60 hover:bg-muted/10">
+                  <td className="p-3">
+                    <div className="font-medium">{p.name}</div>
+                    <div className="text-[10px] text-muted-foreground truncate max-w-[300px]">{p.description}</div>
+                  </td>
+                  <td className="p-3 text-right font-mono">{formatBRL(p.price * 100)}</td>
+                  <td className="p-3 text-center">
+                    <Badge variant={p.is_active ? "default" : "outline"} className={p.is_active ? "bg-success" : ""}>
+                      {p.is_active ? "Ativo" : "Inativo"}
+                    </Badge>
+                  </td>
+                  <td className="p-3 text-right space-x-1">
+                    <ProductDialog product={p} onDone={() => productsQ.refetch()} />
+                    <DeleteProductButton productId={p.id} onDone={() => productsQ.refetch()} />
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </Card>
+    </div>
+  );
+}
+
+function ProductDialog({ product, onDone }: { product?: any; onDone: () => void }) {
+  const [open, setOpen] = useState(false);
+  const [name, setName] = useState(product?.name || "");
+  const [description, setDescription] = useState(product?.description || "");
+  const [price, setPrice] = useState(product?.price?.toString() || "");
+  const [imageUrl, setImageUrl] = useState(product?.image_url || "");
+  const [isActive, setIsActive] = useState(product ? product.is_active : true);
+
+  const save = useMutation({
+    mutationFn: async () => {
+      const payload = {
+        name,
+        description,
+        price: Number(price),
+        image_url: imageUrl,
+        is_active: isActive
+      };
+
+      if (product?.id) {
+        const { error } = await supabase.from("store_products").update(payload).eq("id", product.id);
+        if (error) throw error;
+      } else {
+        const { error } = await supabase.from("store_products").insert(payload);
+        if (error) throw error;
+      }
+    },
+    onSuccess: () => {
+      toast.success(product ? "Produto atualizado!" : "Produto criado!");
+      setOpen(false);
+      onDone();
+    },
+    onError: (e: any) => toast.error(e.message)
+  });
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <Button size="sm" variant={product ? "ghost" : "default"}>
+          {product ? <Settings2 className="h-3.5 w-3.5" /> : <PlusCircle className="h-4 w-4 mr-2" />}
+          {product ? "" : "Novo Produto"}
+        </Button>
+      </DialogTrigger>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>{product ? "Editar Produto" : "Novo Produto"}</DialogTitle>
+        </DialogHeader>
+        <div className="space-y-4 py-2">
+          <div className="space-y-1">
+            <Label>Nome do Produto</Label>
+            <Input value={name} onChange={e => setName(e.target.value)} placeholder="Ex: Gemini Pro - 18 meses" />
+          </div>
+          <div className="space-y-1">
+            <Label>Descrição</Label>
+            <Textarea value={description} onChange={e => setDescription(e.target.value)} placeholder="Descreva os benefícios..." rows={4} />
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-1">
+              <Label>Preço (R$)</Label>
+              <Input type="number" value={price} onChange={e => setPrice(e.target.value)} placeholder="60.00" />
+            </div>
+            <div className="space-y-1">
+              <Label>Imagem / Banner (URL)</Label>
+              <Input value={imageUrl} onChange={e => setImageUrl(e.target.value)} placeholder="/assets/image.jpg" />
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <input type="checkbox" id="is_active" checked={isActive} onChange={e => setIsActive(e.target.checked)} className="rounded border-input" />
+            <Label htmlFor="is_active" className="cursor-pointer">Produto Ativo na Loja</Label>
+          </div>
+          <Button className="w-full" onClick={() => save.mutate()} disabled={save.isPending}>
+            {save.isPending ? "Salvando..." : "Salvar Produto"}
+          </Button>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function DeleteProductButton({ productId, onDone }: { productId: string; onDone: () => void }) {
+  const del = useMutation({
+    mutationFn: async () => {
+      const { error } = await supabase.from("store_products").delete().eq("id", productId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success("Produto removido!");
+      onDone();
+    },
+    onError: (e: any) => toast.error(e.message)
+  });
+
+  return (
+    <Button variant="ghost" size="sm" className="text-destructive" onClick={() => {
+      if (confirm("Deseja realmente remover este produto?")) del.mutate();
+    }}>
+      <Trash2 className="h-3.5 w-3.5" />
+    </Button>
+  );
+}
+
 // Re-add Label import if missing
 import { Label } from "@/components/ui/label";
+
