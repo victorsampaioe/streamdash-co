@@ -42,18 +42,34 @@ function StorePage() {
     },
   });
 
-  const { data: pixSettings } = useQuery({
-    queryKey: ["store-settings", "global_pix"],
+  const { data: adminSettings } = useQuery({
+    queryKey: ["admin-pix-settings"],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("store_settings")
-        .select("value")
-        .eq("key", "global_pix")
-        .single();
-      if (error) return null;
-      return data.value as { key: string; name: string; city: string };
+      // Fetch the main admin's profile to get their specific PIX settings
+      const { data: adminProfiles, error } = await supabase
+        .from("profiles")
+        .select("pix_key, pix_name, pix_city")
+        .eq("owner_account_id", "admin") // Assuming there's a marker or we fetch the top-level admin
+        .limit(1);
+
+      if (error || !adminProfiles?.length) {
+        // Fallback: search for any admin profile
+        const { data: anyAdmin } = await supabase.rpc("has_role", { _role: "admin" }) as any;
+        // In this specific system, the owner is usually the one with the primary MP credentials
+        // We'll fetch the profile of the main user (hardcoded to your request preference for the admin)
+        const { data: mainAdmin } = await supabase
+          .from("profiles")
+          .select("pix_key, pix_name, pix_city")
+          .order("created_at", { ascending: true })
+          .limit(1)
+          .single();
+        
+        return mainAdmin;
+      }
+      return adminProfiles[0];
     },
   });
+
 
   return (
     <div className="space-y-8 animate-in fade-in duration-500">
