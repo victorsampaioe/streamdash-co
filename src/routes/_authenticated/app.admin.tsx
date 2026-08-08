@@ -1474,9 +1474,16 @@ function ProductDialog({ product, onDone }: { product?: any; onDone: () => void 
             </div>
           </div>
           <div className="flex items-center gap-2">
-            <input type="checkbox" id="is_active" checked={isActive} onChange={e => setIsActive(e.target.checked)} className="rounded border-input" />
+            <input 
+              type="checkbox" 
+              id="is_active" 
+              checked={isActive} 
+              onChange={e => setIsActive(e.target.checked)} 
+              className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary" 
+            />
             <Label htmlFor="is_active" className="cursor-pointer">Produto Ativo na Loja</Label>
           </div>
+
           <Button className="w-full" onClick={() => save.mutate()} disabled={save.isPending}>
             {save.isPending ? "Salvando..." : "Salvar Produto"}
           </Button>
