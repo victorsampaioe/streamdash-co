@@ -4,11 +4,14 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { ShoppingBag, Send, CreditCard, Sparkles, CheckCircle2 } from "lucide-react";
+import { ShoppingBag, Send, CreditCard, Sparkles, CheckCircle2 } from "lucide-center";
 import { formatBRL } from "@/lib/payments";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogTrigger } from "@/components/ui/dialog";
 import { useState } from "react";
+import { toast } from "sonner";
 import geminiBanner from "@/assets/gemini-pro-promo.jpg.asset.json";
+import { ShoppingBag as ShoppingBagIcon, Send as SendIcon, CreditCard as CreditCardIcon, Sparkles as SparklesIcon, CheckCircle2 as CheckCircle2Icon } from "lucide-react";
+
 
 export const Route = createFileRoute("/_authenticated/app/store")({
   beforeLoad: async ({ context }) => {
