@@ -296,12 +296,14 @@ function AdminPage() {
       </div>
 
       <Tabs defaultValue="overview" className="space-y-6">
-        <TabsList>
-          <TabsTrigger value="overview">Visão Geral</TabsTrigger>
-          <TabsTrigger value="resellers">Gerenciar Revendedores</TabsTrigger>
+        <TabsList className="grid grid-cols-5 w-full">
+          <TabsTrigger value="overview">Usuários</TabsTrigger>
+          <TabsTrigger value="resellers">Revendedores</TabsTrigger>
+          <TabsTrigger value="store">Loja & Vendas</TabsTrigger>
           <TabsTrigger value="paused">DNS Pausados</TabsTrigger>
           <TabsTrigger value="storage">Armazenamento</TabsTrigger>
         </TabsList>
+
 
         <TabsContent value="paused" className="space-y-6">
           <PausedServersPanel />
