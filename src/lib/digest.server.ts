@@ -87,8 +87,9 @@ export async function buildDigestForUser(userId: string, since: Date): Promise<B
 
   const { data: servers } = await supabaseAdmin
     .from("servers")
-    .select("id, name, current_status, health_score, risk_score_label, ssl_days_remaining, last_checked_at")
+    .select("*")
     .eq("owner_id", userId);
+
   if (!servers?.length) return null;
 
   const ids = servers.map((s) => s.id);
