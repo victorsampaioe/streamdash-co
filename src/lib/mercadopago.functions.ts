@@ -6,9 +6,9 @@ import { PLANS, effectivePriceCents, type PlanId } from "./payments";
 export const createPixPayment = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input) => z.object({ 
-    plan: z.string().optional(), 
-    storeProductId: z.string().optional(),
-    paymentType: z.enum(["subscription", "store"]).optional()
+    plan: z.string().optional().nullable(), 
+    storeProductId: z.string().optional().nullable(),
+    paymentType: z.enum(["subscription", "store"]).optional().nullable()
   }).parse(input))
   .handler(async ({ data, context }) => {
     let amountCents: number;
