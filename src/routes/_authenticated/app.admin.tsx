@@ -33,7 +33,7 @@ import { broadcastTelegram } from "@/lib/telegram-broadcast.functions";
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { PausedServersPanel } from "@/components/admin/paused-servers-panel";
-import { UserCog, History, PlusCircle, UserCheck, UserRoundCog, Settings2, Trash2, ShoppingBag, ShoppingBag as StoreIcon, Wallet } from "lucide-react";
+import { UserCog, History, PlusCircle, UserCheck, UserRoundCog, Settings2, Trash2, ShoppingBag as StoreIcon, Wallet } from "lucide-react";
 
 
 import { StorageReportCard } from "@/components/storage-report-card";
