@@ -1516,7 +1516,7 @@ function DeleteProductButton({ productId, onDone }: { productId: string; onDone:
 }
 
 import { Label } from "@/components/ui/label";
-import { Checkbox } from "@/components/ui/checkbox";
+
 
 
 
