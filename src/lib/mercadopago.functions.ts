@@ -87,20 +87,28 @@ export const createPixPayment = createServerFn({ method: "POST" })
     }
 
     // 1) Create pending payment row
+    const insertData: any = {
+      user_id: userId,
+      provider: "mercadopago",
+      method: "pix",
+      status: "pending",
+      amount_cents: amountCents,
+      currency: "BRL",
+      store_product_id: storeProductId || null,
+      payment_type: paymentType as any,
+      expires_at: expiresAt,
+    };
+    
+    // Only include plan if it's not a store product
+    if (!storeProductId && planId) {
+      insertData.plan = planId;
+    } else {
+      insertData.plan = null;
+    }
+
     const { data: payment, error } = await supabase
       .from("payments")
-      .insert({
-        user_id: userId,
-        provider: "mercadopago",
-        method: "pix",
-        status: "pending",
-        amount_cents: amountCents,
-        currency: "BRL",
-        plan: (planId || null) as any,
-        store_product_id: storeProductId || null,
-        payment_type: paymentType as any,
-        expires_at: expiresAt,
-      })
+      .insert(insertData)
       .select()
       .single();
     if (error) {
