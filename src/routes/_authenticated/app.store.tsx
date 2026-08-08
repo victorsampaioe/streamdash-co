@@ -16,7 +16,7 @@ import { formatBRL } from "@/lib/payments";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogTrigger } from "@/components/ui/dialog";
 import { useState } from "react";
 import { toast } from "sonner";
-import geminiBanner from "@/assets/gemini-banner.png.asset.json";
+import geminiBanner from "@/assets/gemini-pro-18m.png.asset.json";
 
 
 
@@ -43,17 +43,31 @@ function StorePage() {
   });
 
   const { data: pixSettings } = useQuery({
-    queryKey: ["store-settings", "global_pix"],
+    queryKey: ["admin-pix-settings"],
     queryFn: async () => {
+      // The store uses the primary administrator's PIX configuration.
+      // We look for the first created profile as that's typically the main admin.
       const { data, error } = await supabase
-        .from("store_settings")
-        .select("value")
-        .eq("key", "global_pix")
+        .from("profiles")
+        .select("*") // Selecting all to avoid missing column errors if names are different
+        .order("created_at", { ascending: true })
+        .limit(1)
         .single();
-      if (error) return null;
-      return data.value as { key: string; name: string; city: string };
+      
+      if (error || !data) return null;
+      
+      // Map potential column names based on observed schema
+      const profile = data as any;
+      const key = profile.pix_key || profile.pix_copy_paste || "";
+      const name = profile.pix_name || profile.full_name || "";
+      const city = profile.pix_city || "SAO PAULO";
+
+      if (!key) return null;
+
+      return { key, name, city };
     },
   });
+
 
   return (
     <div className="space-y-8 animate-in fade-in duration-500">
@@ -93,6 +107,7 @@ function StorePage() {
 }
 
 function ProductCard({ product, pixSettings }: { product: any; pixSettings: any }) {
+
   const [open, setOpen] = useState(false);
   const image = (product.name.includes("Gemini") && geminiBanner) ? geminiBanner.url : product.image_url;
 
