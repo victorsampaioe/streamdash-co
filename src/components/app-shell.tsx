@@ -117,6 +117,8 @@ function useNavItems() {
     { to: "/app/conteudos", label: "Conteúdos Offline", icon: Radio },
     { to: "/app/ranking", label: "Ranking", icon: Trophy },
     { to: "/app/achievements", label: "Conquistas", icon: Trophy },
+    { to: "/app/store", label: "Loja Stream Monitor", icon: ShoppingBag },
+
   ];
 
   if (isResellerOrAdmin) {
