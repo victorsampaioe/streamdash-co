@@ -479,7 +479,12 @@ function AdminPage() {
         <TabsContent value="storage">
           <StorageReportCard />
         </TabsContent>
+
+        <TabsContent value="store" className="space-y-6">
+          <StoreManagementSection />
+        </TabsContent>
       </Tabs>
+
     </div>
   );
 }
