@@ -1134,6 +1134,15 @@ export async function runIptvSync(serverId: string, opts: { mode?: "smart" | "fu
     .update({ health_score: health, last_iptv_sync_at: new Date().toISOString() })
     .eq("id", serverId);
 
+  // Inteligência IPTV Inteligente: Análise de comportamento e Risk Score
+  try {
+    const streamSample = streamProbes.find(s => s.kind === "live") || streamProbes[0] || null;
+    await runIptvIntelligence(server, x, streamSample);
+  } catch (e) {
+    console.warn("[iptv] falha na inteligência de comportamento:", (e as Error)?.message);
+  }
+
+
   /* ---- Inteligência de Conteúdo: catálogo, novidades e histórico ---- */
   let catalogDiff: Awaited<ReturnType<typeof import("./iptv-catalog.server").syncCatalog>> | null = null;
   if (x.login_ok && x.catalog.live.length + x.catalog.vod.length + x.catalog.series.length > 0) {
