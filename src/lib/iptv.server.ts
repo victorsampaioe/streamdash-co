@@ -35,6 +35,8 @@ type ServerRow = {
   iptv_stream_tests: boolean;
   last_iptv_sync_at: string | null;
   last_latency_ms: number | null;
+  health_score?: number | null;
+  risk_score_label?: string | null;
 };
 
 function base(host: string) {

@@ -87,7 +87,7 @@ export async function buildDigestForUser(userId: string, since: Date): Promise<B
 
   const { data: servers } = await supabaseAdmin
     .from("servers")
-    .select("id, name, current_status, health_score, ssl_days_remaining, last_checked_at")
+    .select("id, name, current_status, health_score, risk_score_label, ssl_days_remaining, last_checked_at")
     .eq("owner_id", userId);
   if (!servers?.length) return null;
 
@@ -199,6 +199,22 @@ export async function buildDigestForUser(userId: string, since: Date): Promise<B
   L.push(`🟢 Online: ${online}`);
   L.push(`🟡 Atenção: ${warn}`);
   L.push(`🔴 Offline: ${offline}`, "");
+
+  const riskCounts = new Map<string, number>();
+  for (const s of servers) {
+    const label = s.risk_score_label || "Saudável";
+    riskCounts.set(label, (riskCounts.get(label) || 0) + 1);
+  }
+
+  if (riskCounts.size > 0) {
+    L.push("🧠 <b>Diagnóstico Inteligente (Risk Score)</b>");
+    if (riskCounts.has("Saudável")) L.push(`🟢 Saudável: ${riskCounts.get("Saudável")}`);
+    if (riskCounts.has("Atenção")) L.push(`🟡 Atenção: ${riskCounts.get("Atenção")}`);
+    if (riskCounts.has("Risco elevado")) L.push(`🟠 Risco elevado: ${riskCounts.get("Risco elevado")}`);
+    if (riskCounts.has("Queda iminente")) L.push(`🔴 Queda iminente: ${riskCounts.get("Queda iminente")}`);
+    L.push("");
+  }
+
 
   if (totalNews > 0) {
     L.push("🎬 <b>Novidades dos seus servidores</b>", "");
