@@ -1,3 +1,18 @@
+-- StreamMonitor.site - Esquema Completo do Banco de Dados
+-- Este arquivo reconstrói toda a estrutura do banco de dados necessária para o Stream Monitor.
+-- Instruções:
+-- 1. Abra o SQL Editor no seu painel do Supabase.
+-- 2. Cole o conteúdo deste arquivo e execute.
+-- 3. Certifique-se de que as extensões (pg_cron, pgcrypto, etc) estão habilitadas caso o script falhe nelas.
+
+-- ======================================================================================
+-- 1. EXTENSÕES
+-- ======================================================================================
+CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+CREATE EXTENSION IF NOT EXISTS "pgcrypto";
+CREATE EXTENSION IF NOT EXISTS "pg_cron";
+CREATE EXTENSION IF NOT EXISTS "pg_net";
+
 
 -- =========================
 -- ENUMS
