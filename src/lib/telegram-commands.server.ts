@@ -48,7 +48,7 @@ export const COMMAND_HELP =
   `/series — últimas séries adicionadas\n` +
   `/canais — últimos canais adicionados\n` +
   `/ranking — sua posição no ranking IPTV\n` +
-  `/resumo — enviar agora o resumo inteligente completo\n` +
+  `/resumo — enviar agora o relatório inteligente completo\n` +
   `/id — mostrar seu código de vinculação\n` +
   `/ajuda — esta lista`;
 

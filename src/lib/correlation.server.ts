@@ -109,19 +109,19 @@ export async function analyzeCorrelation(server: {
   const confidence = Math.max(30, Math.min(99, Math.round(base * sample)));
 
   const headline =
-    verdict === "server_down" ? "🔴 QUEDA REAL DO SERVIDOR"
-    : verdict === "partial" ? "🟡 INSTABILIDADE PARCIAL"
-    : verdict === "isolated" ? "🟢 PROBLEMA ISOLADO NA DNS"
-    : "✅ Servidor respondendo";
+    verdict === "server_down" ? "🔴 QUEDA CONFIRMADA (Diagnóstico Inteligente)"
+    : verdict === "partial" ? "🟡 INSTABILIDADE DETECTADA"
+    : verdict === "isolated" ? "🟢 FALHA ISOLADA (Anti-Falso Positivo)"
+    : "✅ Monitoramento Normal";
 
   const summary =
     verdict === "server_down"
-      ? "Possível indisponibilidade do servidor. Todas as DNS vinculadas apresentam falha."
+      ? "Alerta Crítico: Possível queda total da infraestrutura. Todas as rotas de monitoramento falharam simultaneamente."
       : verdict === "partial"
-        ? "Detectamos instabilidade parcial no servidor. Algumas conexões apresentam falha."
+        ? "Atenção: Instabilidade parcial detectada. Algumas rotas apresentam falha, sugerindo problemas de rede ou carga."
         : verdict === "isolated"
-          ? "Detectamos uma falha isolada na DNS. O servidor principal continua online."
-          : "Nenhuma DNS vinculada apresenta falha no momento.";
+          ? "Falso Positivo Evitado: Falha isolada detectada em apenas um ponto, enquanto o restante da estrutura permanece estável."
+          : "Sistema operando dentro da normalidade.";
 
   return { groupKey, verdict, confidence, total, online, offline, related, headline, summary };
 }
