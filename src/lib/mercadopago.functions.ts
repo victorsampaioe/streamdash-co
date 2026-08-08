@@ -88,7 +88,7 @@ export const createPixPayment = createServerFn({ method: "POST" })
         status: "pending",
         amount_cents: amountCents,
         currency: "BRL",
-        plan: planId as any,
+        plan: planId as any, // Cast to any to bypass strict enum check in generated types
         expires_at: expiresAt,
       })
       .select()
