@@ -21,7 +21,7 @@ docker compose logs -f app
 curl -i http://127.0.0.1:3000/api/public/health
 ```
 
-Resposta esperada: `{"status":"ok","service":"stream-monitor-core", ...}`.
+Resposta esperada: `{"status":"ok","service":"stream-monitor-core", Clique no botão "View Backend" (ou no ícone de banco de dados no menu lateral do Lovable). não estou achando}`.
 
 ## 2. Caddy
 
