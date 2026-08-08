@@ -5,13 +5,16 @@ import { PLANS, effectivePriceCents, type PlanId } from "./payments";
 
 export const createPixPayment = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input) => z.object({ plan: z.string() }).parse(input))
+  .inputValidator((input) => z.object({ plan: z.string().optional(), storeProductId: z.string().optional() }).parse(input))
   .handler(async ({ data, context }) => {
     let amountCents: number;
     let description: string;
-    let planId = data.plan as PlanId;
+    let planId = data.plan as PlanId | undefined;
+    let storeProductId = data.storeProductId;
 
-    const standardPlan = PLANS.find((p) => p.id === planId);
+    if (planId) {
+      const standardPlan = PLANS.find((p) => p.id === planId);
+
     if (standardPlan) {
       amountCents = effectivePriceCents(standardPlan);
       description = `StreamMonitor — Plano ${standardPlan.name}`;
@@ -25,13 +28,14 @@ export const createPixPayment = createServerFn({ method: "POST" })
       if (!pack) throw new Error("Pacote de créditos inválido");
       amountCents = pack.price;
       description = `StreamMonitor — ${pack.label}`;
-    } else if (planId.startsWith("store_")) {
+    } else if (storeProductId) {
       // Handle store products
       const { data: product, error: productError } = await context.supabase
         .from("store_products")
         .select("name, price")
-        .eq("id", planId.replace("store_", ""))
+        .eq("id", storeProductId)
         .single();
+
       
       if (productError || !product) throw new Error("Produto da loja não encontrado");
       amountCents = Math.round(product.price * 100);
@@ -50,7 +54,8 @@ export const createPixPayment = createServerFn({ method: "POST" })
       .from("payments")
       .select("id, amount_cents, expires_at, pix_copy_paste, pix_qr_code")
       .eq("user_id", userId)
-      .eq("plan", planId as any)
+      .eq(storeProductId ? "store_product_id" : "plan", storeProductId || planId)
+
       .eq("status", "pending")
       .eq("amount_cents", amountCents)
       .gt("expires_at", new Date().toISOString())
@@ -88,8 +93,10 @@ export const createPixPayment = createServerFn({ method: "POST" })
         status: "pending",
         amount_cents: amountCents,
         currency: "BRL",
-        plan: planId as any, // Cast to any to bypass strict enum check in generated types
+        plan: planId || null,
+        store_product_id: storeProductId || null,
         expires_at: expiresAt,
+
       })
       .select()
       .single();

@@ -12,16 +12,32 @@ async function processPayment(mpPaymentId: string) {
       const { notifyAdmin } = await import("@/lib/admin-telegram.server");
       const { data: pay } = await supabaseAdmin
         .from("payments")
-        .select("user_id, plan, amount_cents")
+        .select("user_id, plan, store_product_id, amount_cents")
         .eq("id", res.paymentId)
         .maybeSingle();
+
       const { data: prof } = pay
         ? await supabaseAdmin.from("profiles").select("email, full_name").eq("id", pay.user_id).maybeSingle()
         : { data: null as any };
+
       const brl = pay ? (pay.amount_cents / 100).toLocaleString("pt-BR", { style: "currency", currency: "BRL" }) : "-";
-      await notifyAdmin(
-        `💰 <b>Assinatura confirmada</b>\nPlano: ${pay?.plan ?? "-"}\nValor: ${brl}\nUsuário: ${prof?.full_name ?? "-"} — ${prof?.email ?? "-"}\nValidade: ${res.subscriptionExpiresAt ? new Date(res.subscriptionExpiresAt).toLocaleString("pt-BR") : "-"}`
-      );
+
+      if (pay?.store_product_id) {
+        const { data: product } = await supabaseAdmin
+          .from("store_products")
+          .select("name")
+          .eq("id", pay.store_product_id)
+          .maybeSingle();
+
+        await notifyAdmin(
+          `🛍️ <b>Venda na Loja confirmada</b>\nProduto: ${product?.name ?? "Desconhecido"}\nValor: ${brl}\nUsuário: ${prof?.full_name ?? "-"} — ${prof?.email ?? "-"}\nID Transação: ${res.paymentId}`
+        );
+      } else {
+        await notifyAdmin(
+          `💰 <b>Assinatura confirmada</b>\nPlano: ${pay?.plan ?? "-"}\nValor: ${brl}\nUsuário: ${prof?.full_name ?? "-"} — ${prof?.email ?? "-"}\nValidade: ${res.subscriptionExpiresAt ? new Date(res.subscriptionExpiresAt).toLocaleString("pt-BR") : "-"}`
+        );
+      }
+
 
       console.log(`Payment processed for ${pay?.user_id || "unknown"}`);
     } catch (e) {
