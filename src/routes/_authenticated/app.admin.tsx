@@ -23,9 +23,9 @@ import {
   TrendingUp,
   UserPlus,
   Users,
-  Wallet,
   XCircle,
 } from "lucide-react";
+
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "@/components/ui/dialog";
 import { formatBRL } from "@/lib/payments";
 import { cn } from "@/lib/utils";
