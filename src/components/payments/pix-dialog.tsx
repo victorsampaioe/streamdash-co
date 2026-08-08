@@ -209,7 +209,7 @@ export function PixDialog({ openPlan, onClose, pix, loading, error, onPaid }: Pi
                 </div>
 
                 {/* Success Message for Approved */}
-                {pix.status === "approved" ? (
+                {pix.status === ("approved" as string) ? (
                   <div className="space-y-4 animate-in zoom-in duration-300">
                     <div className="rounded-xl bg-success/10 border border-success/20 p-5 text-center space-y-3">
                       <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-success/20">

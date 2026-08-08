@@ -53,7 +53,7 @@ export const createPixPayment = createServerFn({ method: "POST" })
       .from("payments")
       .select("id, amount_cents, expires_at, pix_copy_paste, pix_qr_code")
       .eq("user_id", userId)
-      .eq(storeProductId ? "store_product_id" : "plan", storeProductId || planId)
+      .eq(storeProductId ? "store_product_id" : "plan", (storeProductId || planId)!)
       .eq("status", "pending")
       .eq("amount_cents", amountCents)
       .gt("expires_at", new Date().toISOString())
@@ -90,7 +90,7 @@ export const createPixPayment = createServerFn({ method: "POST" })
         status: "pending",
         amount_cents: amountCents,
         currency: "BRL",
-        plan: planId || null,
+        plan: (planId || null) as any,
         store_product_id: storeProductId || null,
         expires_at: expiresAt,
       })
