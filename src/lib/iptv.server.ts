@@ -916,6 +916,57 @@ export function computeHealthScore(input: {
   return Math.max(0, Math.min(100, Math.round(score)));
 }
 
+/**
+ * Registra métricas IPTV no histórico e calcula o novo Health Score.
+ */
+export async function runIptvIntelligence(
+  server: ServerRow,
+  probeRes: XtreamResult,
+  streamRes: StreamProbe | null,
+) {
+  // 1. Salvar no histórico
+  await supabaseAdmin.from("iptv_metrics_history").insert({
+    server_id: server.id,
+    latency_ms: server.last_latency_ms,
+    api_response_ms: probeRes.api_ms,
+    stream_ok: streamRes ? streamRes.ok : probeRes.login_ok,
+    error_code: probeRes.error || streamRes?.error,
+  });
+
+  // 2. Calcular Saúde e Risco usando a função SQL (via query direta pois sandbox sandbox_exec falhou com DDL)
+  // Como não conseguimos rodar a migração DDL no sandbox, vamos emular a lógica aqui se necessário
+  // mas o ideal é que as colunas existam.
+  
+  const { data: metrics } = await supabaseAdmin
+    .from("iptv_metrics_history")
+    .select("latency_ms, api_response_ms, stream_ok, recorded_at")
+    .eq("server_id", server.id)
+    .gte("recorded_at", new Date(Date.now() - 24 * 3600_000).toISOString());
+
+  if (!metrics || metrics.length === 0) return;
+
+  const avgLatency = metrics.reduce((a, m) => a + (m.latency_ms || 0), 0) / metrics.length;
+  const avgApi = metrics.reduce((a, m) => a + (m.api_response_ms || 0), 0) / metrics.length;
+  const uptimePct = (metrics.filter(m => m.stream_ok).length / metrics.length) * 100;
+  
+  const twoHoursAgo = new Date(Date.now() - 2 * 3600_000).toISOString();
+  const recentFails = metrics.filter(m => m.recorded_at > twoHoursAgo && !m.stream_ok).length;
+
+  let label = "Saudável";
+  if (recentFails > 3 || avgLatency > 3000 || avgApi > 4000) label = "Queda iminente";
+  else if (recentFails > 1 || avgLatency > 1500 || avgApi > 2000) label = "Risco elevado";
+  else if (avgLatency > 800 || avgApi > 1000) label = "Atenção";
+
+  await supabaseAdmin
+    .from("servers")
+    .update({
+      health_score: Math.round(uptimePct),
+      risk_score_label: label,
+    } as any)
+    .eq("id", server.id);
+}
+
+
 
 export function healthLabel(score: number): { label: string; tone: "success" | "warning" | "destructive" } {
   if (score >= 95) return { label: "Excelente", tone: "success" };

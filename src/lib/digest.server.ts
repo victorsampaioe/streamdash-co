@@ -217,6 +217,7 @@ export async function buildDigestForUser(userId: string, since: Date): Promise<B
   }
 
 
+
   if (totalNews > 0) {
     L.push("🎬 <b>Novidades dos seus servidores</b>", "");
     for (const [sid, bucket] of perServer) {
