@@ -1,24 +1,20 @@
-import { createFileRoute, redirect } from "@tanstack/react-router";
+import { createFileRoute, redirect, useNavigate } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { 
   ShoppingBag, 
-  Send, 
-  CreditCard, 
-  Sparkles, 
-  CheckCircle2, 
 } from "lucide-react";
 
 import { formatBRL } from "@/lib/payments";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogTrigger } from "@/components/ui/dialog";
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import { toast } from "sonner";
 import geminiBanner from "@/assets/gemini-pro-18m.png.asset.json";
-
-
+import { createPixPayment } from "@/lib/mercadopago.functions";
+import { useServerFn } from "@tanstack/react-start";
+import { PixDialog } from "@/components/payments/pix-dialog";
 
 export const Route = createFileRoute("/_authenticated/app/store")({
   beforeLoad: async ({ context }) => {
@@ -29,7 +25,7 @@ export const Route = createFileRoute("/_authenticated/app/store")({
 });
 
 function StorePage() {
-  const { data: products, isLoading } = useQuery({
+  const { data: products, isLoading, refetch } = useQuery({
     queryKey: ["store-products"],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -42,32 +38,41 @@ function StorePage() {
     },
   });
 
-  const { data: pixSettings } = useQuery({
-    queryKey: ["admin-pix-settings"],
-    queryFn: async () => {
-      // The store uses the primary administrator's PIX configuration.
-      // We look for the first created profile as that's typically the main admin.
-      const { data, error } = await supabase
-        .from("profiles")
-        .select("*") // Selecting all to avoid missing column errors if names are different
-        .order("created_at", { ascending: true })
-        .limit(1)
-        .single();
-      
-      if (error || !data) return null;
-      
-      // Map potential column names based on observed schema
-      const profile = data as any;
-      const key = profile.pix_key || profile.pix_copy_paste || "";
-      const name = profile.pix_name || profile.full_name || "";
-      const city = profile.pix_city || "SAO PAULO";
+  const [openPlan, setOpenPlan] = useState<string | null>(null);
+  const [pix, setPix] = useState<any>(null);
+  const [paymentError, setPaymentError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+  
+  const createPix = useServerFn(createPixPayment);
+  const navigate = useNavigate();
 
-      if (!key) return null;
+  const handlePaid = useCallback(async () => {
+    toast.success("Pagamento confirmado! O administrador entrará em contato para liberar seu acesso.");
+    setOpenPlan(null);
+    setPix(null);
+    navigate({ to: "/app" });
+  }, [navigate]);
 
-      return { key, name, city };
-    },
-  });
-
+  async function handleBuy(productId: string) {
+    const planId = `store_${productId}`;
+    setOpenPlan(planId);
+    setLoading(true);
+    setPix(null);
+    setPaymentError(null);
+    try {
+      const res = await createPix({ data: { plan: planId } });
+      setPix(res);
+      if (!res.integrationReady) {
+        toast.info("Estrutura de pagamento pronta. Configure o Mercado Pago para gerar o QR Code PIX.");
+      }
+    } catch (e) {
+      const message = e instanceof Error ? e.message : "Falha ao iniciar pagamento";
+      setPaymentError(message);
+      toast.error(message);
+    } finally {
+      setLoading(false);
+    }
+  }
 
   return (
     <div className="space-y-8 animate-in fade-in duration-500">
@@ -90,7 +95,11 @@ function StorePage() {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
           {products?.map((product) => (
-            <ProductCard key={product.id} product={product} pixSettings={pixSettings} />
+            <ProductCard 
+              key={product.id} 
+              product={product} 
+              onBuy={() => handleBuy(product.id)}
+            />
           ))}
         </div>
       )}
@@ -102,13 +111,20 @@ function StorePage() {
           <p className="text-muted-foreground mt-2">Volte mais tarde para conferir as novidades.</p>
         </div>
       )}
+
+      <PixDialog
+        openPlan={openPlan as any}
+        onClose={() => { setOpenPlan(null); setPix(null); setPaymentError(null); }}
+        pix={pix}
+        loading={loading}
+        error={paymentError}
+        onPaid={handlePaid}
+      />
     </div>
   );
 }
 
-function ProductCard({ product, pixSettings }: { product: any; pixSettings: any }) {
-
-  const [open, setOpen] = useState(false);
+function ProductCard({ product, onBuy }: { product: any; onBuy: () => void }) {
   const image = (product.name.includes("Gemini") && geminiBanner) ? geminiBanner.url : product.image_url;
 
   return (
@@ -137,82 +153,16 @@ function ProductCard({ product, pixSettings }: { product: any; pixSettings: any 
       </CardHeader>
 
       <CardFooter className="pt-4 border-t border-primary/5 bg-primary/5">
-        <Dialog open={open} onOpenChange={setOpen}>
-          <DialogTrigger asChild>
-            <Button className="w-full group/btn relative overflow-hidden h-11" size="lg">
-              <span className="relative z-10 flex items-center gap-2">
-                <ShoppingBag className="h-4 w-4" /> Comprar agora
-              </span>
-              <div className="absolute inset-0 bg-gradient-to-r from-primary via-purple-600 to-primary opacity-0 group-hover/btn:opacity-100 transition-opacity" />
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="sm:max-w-[450px] bg-card border-primary/20">
-            <DialogHeader>
-              <DialogTitle className="text-2xl flex items-center gap-2">
-                <CreditCard className="h-6 w-6 text-primary" />
-                Pagamento via PIX
-              </DialogTitle>
-              <DialogDescription>
-                Realize o pagamento para liberar seu acesso ao {product.name}.
-              </DialogDescription>
-            </DialogHeader>
-
-            <div className="space-y-6 py-4">
-              <div className="bg-muted/30 p-6 rounded-xl border border-primary/10 text-center space-y-4">
-                <div className="text-3xl font-extrabold text-primary">
-                  {formatBRL(product.price * 100)}
-                </div>
-                
-                <div className="bg-white p-3 rounded-lg inline-block shadow-inner mx-auto">
-                   {/* Simplified QR Code Display */}
-                   <div className="w-48 h-48 bg-slate-100 flex items-center justify-center border-2 border-dashed border-slate-300">
-                      <CreditCard className="h-12 w-12 text-slate-300" />
-                      <span className="text-[10px] absolute mt-20 text-slate-400">QR CODE PIX</span>
-                   </div>
-                </div>
-
-                <div className="space-y-2">
-                  <p className="text-xs text-muted-foreground uppercase font-semibold">Chave PIX</p>
-                  <div className="flex items-center gap-2 bg-background p-3 rounded-md border border-input">
-                    <code className="text-sm font-mono flex-1 break-all text-left">
-                      {pixSettings?.key || "brunohbibiano1@gmail.com"}
-                    </code>
-                    <Button 
-                      variant="ghost" 
-                      size="sm" 
-                      className="h-8 w-8 p-0"
-                      onClick={() => {
-                        navigator.clipboard.writeText(pixSettings?.key || "brunohbibiano1@gmail.com");
-                        toast.success("Chave copiada!");
-                      }}
-                    >
-                      <CheckCircle2 className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </div>
-              </div>
-
-              <div className="text-center space-y-4">
-                <p className="text-sm font-medium text-amber-500 flex items-center justify-center gap-2">
-                  <Sparkles className="h-4 w-4" />
-                  Pagamento realizado? Entre em contato pelo Telegram para liberar seu acesso.
-                </p>
-                
-                <a 
-                  href="https://t.me/StreamMonitorOfc" 
-                  target="_blank" 
-                  rel="noopener noreferrer"
-                  className="block"
-                >
-                  <Button variant="outline" className="w-full border-primary/20 hover:bg-primary/5 h-11">
-                    <Send className="h-4 w-4 mr-2 text-[#229ED9]" />
-                    Falar no Telegram (@StreamMonitorOfc)
-                  </Button>
-                </a>
-              </div>
-            </div>
-          </DialogContent>
-        </Dialog>
+        <Button 
+          className="w-full group/btn relative overflow-hidden h-11" 
+          size="lg"
+          onClick={onBuy}
+        >
+          <span className="relative z-10 flex items-center gap-2">
+            <ShoppingBag className="h-4 w-4" /> Comprar agora
+          </span>
+          <div className="absolute inset-0 bg-gradient-to-r from-primary via-purple-600 to-primary opacity-0 group-hover/btn:opacity-100 transition-opacity" />
+        </Button>
       </CardFooter>
     </Card>
   );

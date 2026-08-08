@@ -16,7 +16,6 @@ export const createPixPayment = createServerFn({ method: "POST" })
       amountCents = effectivePriceCents(standardPlan);
       description = `StreamMonitor — Plano ${standardPlan.name}`;
     } else if (planId.startsWith("credits_")) {
-      // REMOVED BLOCK: Any user (even inactive/expired) can buy credits to activate their account
       const packs: Record<string, { price: number; label: string }> = {
         credits_10: { price: 10000, label: "10 créditos" },
         credits_30: { price: 27000, label: "30 créditos" },
@@ -26,8 +25,19 @@ export const createPixPayment = createServerFn({ method: "POST" })
       if (!pack) throw new Error("Pacote de créditos inválido");
       amountCents = pack.price;
       description = `StreamMonitor — ${pack.label}`;
+    } else if (planId.startsWith("store_")) {
+      // Handle store products
+      const { data: product, error: productError } = await context.supabase
+        .from("store_products")
+        .select("name, price")
+        .eq("id", planId.replace("store_", ""))
+        .single();
+      
+      if (productError || !product) throw new Error("Produto da loja não encontrado");
+      amountCents = Math.round(product.price * 100);
+      description = `StreamMonitor — ${product.name}`;
     } else {
-      throw new Error("Plano inválido");
+      throw new Error("Plano ou produto inválido");
     }
 
     const { supabase, userId, claims } = context;
