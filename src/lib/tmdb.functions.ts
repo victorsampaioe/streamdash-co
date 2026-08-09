@@ -144,7 +144,7 @@ export const getTmdbDetail = createServerFn({ method: "POST" })
 
     const { data: globalHistory } = await context.supabase
       .from("tmdb_content_history")
-      .select("first_detected_at, first_seen_at, servers_found_count")
+      .select("first_detected_at, servers_found_count")
       .eq("title_key", keys[0]) // Simplificado: pega a primeira chave
       .maybeSingle();
 
@@ -154,7 +154,7 @@ export const getTmdbDetail = createServerFn({ method: "POST" })
       podium,
       following: !!follow,
       global_stats: globalHistory ? {
-        first_seen_at: globalHistory.first_detected_at || globalHistory.first_seen_at,
+        first_seen_at: globalHistory.first_detected_at,
         server_count: globalHistory.servers_found_count
       } : null
     };
