@@ -273,18 +273,24 @@ async function performCheck(server: ServerRow) {
     }
   } else if (upConfirmed && openIncident) {
     await supabaseAdmin.from("incidents").update({ ended_at: new Date().toISOString() }).eq("id", openIncident.id);
-    let recovery = "";
+    let recoveryTime = "";
     try {
       const { closeCorrelationEvent } = await import("./correlation.server");
       const secs = await closeCorrelationEvent(server.id);
-      if (secs != null) recovery = `\nTempo até a recuperação: ${secs < 60 ? `${secs}s` : `${Math.round(secs / 60)}min`}`;
+      if (secs != null) recoveryTime = `\nTempo até a recuperação: ${secs < 60 ? `${secs}s` : `${Math.round(secs / 60)}min`}`;
     } catch { /* ignore */ }
-    await sendAlerts(
-      server,
-      "up",
-      `${server.name} normalizado — estabilidade confirmada em ~1min (${final.latency}ms)${recovery}`,
-      openIncident.id,
-    );
+    
+    // Novo formato de mensagem conforme solicitado
+    const now = new Date();
+    const timeStr = now.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
+    
+    const message = `✅ <b>Serviço normalizado</b>\n\n` +
+      `Servidor:\n${server.name}\n\n` +
+      `Região confirmada:\n🇧🇷 São Paulo\n\n` +
+      `Status:\nOnline novamente\n\n` +
+      `Detectado:\n${timeStr}`;
+
+    await sendAlerts(server, "up", message, openIncident.id);
   }
 
 
@@ -378,8 +384,6 @@ async function sendAlerts(server: ServerRow, event: "up" | "down", message: stri
         });
         ok = r.ok; response = `${r.status}`;
       } else if (ch.kind === "telegram") {
-        // Prefer shared bot via TELEGRAM_BOT_TOKEN; target is just the chat_id.
-        // Backwards-compat: if target contains ":", treat as "BOT_TOKEN:CHAT_ID".
         const sharedToken = process.env.TELEGRAM_BOT_TOKEN;
         let botToken = sharedToken ?? "";
         let chatId = ch.target?.trim() ?? "";
@@ -387,14 +391,36 @@ async function sendAlerts(server: ServerRow, event: "up" | "down", message: stri
           const [t, c] = chatId.split(":");
           botToken = t; chatId = c;
         }
-        if (!botToken || !chatId) { ok = false; response = "TELEGRAM_BOT_TOKEN ausente ou chat_id inválido"; }
-        else {
-          const r = await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ chat_id: chatId, text: `${event === "down" ? "🔴" : "🟢"} ${message}` }),
-          });
-          ok = r.ok; response = `${r.status}`;
+
+        if (botToken && chatId) {
+          if (event === "up") {
+            // Queue recovery notifications for grouping
+            await supabaseAdmin.from("notification_queue").insert({
+              owner_id: server.owner_id,
+              server_id: server.id,
+              channel_id: ch.id,
+              event: "up",
+              message: message
+            });
+            ok = true;
+            response = "Queued for grouping";
+          } else {
+            // Send DOWN alerts immediately (critical)
+            const r = await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ 
+                chat_id: chatId, 
+                text: message,
+                parse_mode: "HTML"
+              }),
+            });
+            ok = r.ok;
+            response = `${r.status}`;
+          }
+        } else {
+          ok = false;
+          response = "Configuração do Telegram inválida";
         }
       } else if (ch.kind === "email") {
         const key = process.env.RESEND_API_KEY;
