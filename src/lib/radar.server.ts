@@ -42,28 +42,57 @@ const STATUSPAGE_MAP: Record<string, ExternalIncident["status"]> = {
 };
 
 async function fetchStatuspage(provider: string, url: string, impact: string): Promise<ExternalIncident | null> {
-  try {
-    const ctl = new AbortController();
-    const t = setTimeout(() => ctl.abort(), 5000);
-    const r = await fetch(url, { signal: ctl.signal, headers: { "user-agent": "StreamMonitor-Radar/2.0" } });
-    clearTimeout(t);
-    if (!r.ok) return { provider, status: "unknown", summary: `HTTP ${r.status}`, updated_at: null, url: url.replace("/api/v2/status.json", ""), impact };
-    const j = await r.json() as { status?: { indicator?: string; description?: string; updated_at?: string }; page?: { updated_at?: string } };
-    const ind = j.status?.indicator ?? "none";
-    const status = STATUSPAGE_MAP[ind] ?? "unknown";
-    
-    return {
-      provider,
-      status,
-      summary: j.status?.description ?? "Operacional",
-      updated_at: j.status?.updated_at ?? j.page?.updated_at ?? null,
-      url: url.replace("/api/v2/status.json", ""),
-      impact,
-      recommendation: status !== "operational" ? "Aguardar normalização antes de investigar servidores." : undefined,
-    };
-  } catch (e: any) {
-    return { provider, status: "unknown", summary: `Sem resposta`, updated_at: null, url: url.replace("/api/v2/status.json", ""), impact };
+  const maxRetries = 2;
+  let lastError = null;
+
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    try {
+      const ctl = new AbortController();
+      const t = setTimeout(() => ctl.abort(), 6000);
+      const r = await fetch(url, { signal: ctl.signal, headers: { "user-agent": "StreamMonitor-Radar/2.0" } });
+      clearTimeout(t);
+
+      if (!r.ok) {
+        if (r.status === 404) {
+          return { provider, status: "unknown", summary: "Erro de monitoramento", updated_at: null, url: url.replace("/api/v2/status.json", ""), impact };
+        }
+        throw new Error(`HTTP ${r.status}`);
+      }
+
+      const j = await r.json() as { status?: { indicator?: string; description?: string; updated_at?: string }; page?: { updated_at?: string } };
+      
+      // Validação básica de estrutura para evitar processar respostas inválidas como incidentes
+      if (!j.status || !j.status.indicator) {
+        return { provider, status: "unknown", summary: "Fonte sem resposta", updated_at: null, url: url.replace("/api/v2/status.json", ""), impact };
+      }
+
+      const ind = j.status.indicator;
+      const status = STATUSPAGE_MAP[ind] ?? "unknown";
+      
+      return {
+        provider,
+        status,
+        summary: j.status.description ?? "Operacional",
+        updated_at: j.status.updated_at ?? j.page?.updated_at ?? null,
+        url: url.replace("/api/v2/status.json", ""),
+        impact,
+        recommendation: status !== "operational" && status !== "unknown" ? "Aguardar normalização antes de investigar servidores." : undefined,
+      };
+    } catch (e: any) {
+      lastError = e;
+      if (attempt < maxRetries) await new Promise(res => setTimeout(res, 1000));
+    }
   }
+
+  const errorMsg = lastError?.name === 'AbortError' ? "Tempo esgotado" : "Fonte sem resposta";
+  return { 
+    provider, 
+    status: "unknown", 
+    summary: errorMsg, 
+    updated_at: null, 
+    url: url.replace("/api/v2/status.json", ""), 
+    impact 
+  };
 }
 
 async function syncExternalIncidents(incidents: ExternalIncident[]) {
