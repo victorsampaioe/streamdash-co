@@ -31,6 +31,7 @@ const FEEDS: Array<{ provider: string; url: string; kind: "statuspage"; impact: 
   { provider: "OpenAI",        url: "https://status.openai.com",          kind: "statuspage", impact: "API, Chat, Modelos IA" },
   { provider: "Twilio",        url: "https://status.twilio.com",          kind: "statuspage", impact: "SMS, Voz, Mensageria" },
   { provider: "Stripe",        url: "https://status.stripe.com",          kind: "statuspage", impact: "Pagamentos, Checkout" },
+  { provider: "Discord",       url: "https://discordstatus.com",          kind: "statuspage", impact: "Comunidade, Bots" },
 ];
 
 const STATUSPAGE_MAP: Record<string, ExternalIncident["status"]> = {
