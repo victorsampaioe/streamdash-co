@@ -260,20 +260,41 @@ export async function syncCatalog(
     });
   }
 
-  // Registra no histórico global se houver novos itens
+  // Registra no histórico global se houver novos itens e notifica
   if (changes.length > 0) {
+    const { notifyNewContent } = await import("./iptv-notify.server");
     const newItems = changes.filter((c: any) => c.action === "added");
+    
     for (const item of newItems) {
       const tKey = titleKey(item.name as string);
+      
+      // Upsert no histórico global
+      const { data: existing } = await supabaseAdmin
+        .from("tmdb_content_history")
+        .select("title_key")
+        .eq("title_key", tKey)
+        .maybeSingle();
+
       await supabaseAdmin.from("tmdb_content_history").upsert(
         {
           title_key: tKey,
           media_type: item.kind === "live" ? "live" : (item.kind === "series" ? "tv" : "movie"),
           last_detected_at: nowIso,
           discovery_server_id: serverId,
+          ...(existing ? {} : { first_seen_at: nowIso }),
         } as never,
         { onConflict: "title_key,media_type" }
       );
+
+      // Notifica se for o primeiro servidor (ou um dos primeiros) a ter esse conteúdo
+      // Para não spammar, vamos notificar apenas se for uma novidade absoluta no sistema
+      if (!existing) {
+        await notifyNewContent(serverId, {
+          kind: item.kind as string,
+          name: item.name as string,
+          category: item.category as string | null
+        });
+      }
     }
   }
 
