@@ -6,7 +6,7 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ArrowLeft, Bell, BellOff, Clock, Film, Star, Trophy, Tv } from "lucide-react";
+import { ArrowLeft, Bell, BellOff, Clock, Film, Star, Trophy, Tv, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/_authenticated/app/inteligencia/$media/$id")({
