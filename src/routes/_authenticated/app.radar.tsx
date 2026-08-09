@@ -30,8 +30,12 @@ function RadarPage() {
     refetchInterval: 60000,
   });
 
-  const activeIncidents = snapshot.externalIncidents.filter(i => i.status !== "operational");
-  const operationalServices = snapshot.externalIncidents.filter(i => i.status === "operational");
+  const activeIncidents = snapshot.externalIncidents.filter(i => 
+    i.status !== "operational" && i.status !== "unknown"
+  );
+  const operationalServices = snapshot.externalIncidents.filter(i => 
+    i.status === "operational" || i.status === "unknown"
+  );
 
   return (
     <div className="flex-1 space-y-6 p-4 md:p-8 pt-6">
@@ -139,8 +143,8 @@ function RadarPage() {
         <div>
           <h4 className="font-semibold text-blue-400">Centro de Inteligência de Incidentes</h4>
           <p className="text-sm text-muted-foreground mt-1">
-            Este painel utiliza APIs oficiais e feeds de status em tempo real. Instabilidades em serviços de terceiros (Cloudflare, GitHub, etc) 
-            podem causar falsos positivos no monitoramento dos seus servidores. Recomendamos verificar este radar antes de realizar alterações críticas.
+            Este painel utiliza validação inteligente e APIs oficiais. 🚨 Incidentes são exibidos apenas quando confirmados pela fonte. 
+            Erros de monitoramento ou falta de resposta isolada são marcados como "Não verificado" para evitar falsos alertas.
           </p>
         </div>
       </div>
@@ -215,7 +219,7 @@ function StatusBadge({ status }: { status: ExternalIncident["status"] }) {
     partial_outage: { label: "Instabilidade", variant: "outline" as const, className: "text-orange-500 border-orange-500/20 bg-orange-500/10" },
     major_outage: { label: "Indisponível", variant: "outline" as const, className: "text-red-500 border-red-500/20 bg-red-500/10" },
     maintenance: { label: "Manutenção", variant: "outline" as const, className: "text-blue-500 border-blue-500/20 bg-blue-500/10" },
-    unknown: { label: "Desconhecido", variant: "outline" as const, className: "text-slate-500 border-slate-500/20 bg-slate-500/10" },
+    unknown: { label: "Não verificado", variant: "outline" as const, className: "text-slate-400 border-slate-500/20 bg-slate-500/5" },
   };
 
   const config = configs[status];
