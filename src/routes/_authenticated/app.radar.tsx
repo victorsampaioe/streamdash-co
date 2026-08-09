@@ -16,7 +16,7 @@ import {
 import { getRadarSnapshot } from "@/lib/radar.functions";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { Skeleton } from "@/components/ui/skeleton";
+
 import type { ExternalIncident, HistoricalIncident } from "@/lib/radar.server";
 
 export const Route = createFileRoute("/_authenticated/app/radar")({
