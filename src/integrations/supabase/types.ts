@@ -2078,6 +2078,54 @@ export type Database = {
           },
         ]
       }
+      notification_queue: {
+        Row: {
+          channel_id: string
+          created_at: string | null
+          event: string
+          id: string
+          message: string
+          owner_id: string
+          processed: boolean | null
+          server_id: string | null
+        }
+        Insert: {
+          channel_id: string
+          created_at?: string | null
+          event: string
+          id?: string
+          message: string
+          owner_id: string
+          processed?: boolean | null
+          server_id?: string | null
+        }
+        Update: {
+          channel_id?: string
+          created_at?: string | null
+          event?: string
+          id?: string
+          message?: string
+          owner_id?: string
+          processed?: boolean | null
+          server_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "notification_queue_channel_id_fkey"
+            columns: ["channel_id"]
+            isOneToOne: false
+            referencedRelation: "alert_channels"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "notification_queue_server_id_fkey"
+            columns: ["server_id"]
+            isOneToOne: false
+            referencedRelation: "servers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       notifications_log: {
         Row: {
           channel_id: string | null
@@ -2286,6 +2334,7 @@ export type Database = {
           referral_code: string | null
           referred_by: string | null
           signup_bonus_days: number
+          telegram_alert_style: string | null
           telegram_iptv_style: string | null
           trial_used: boolean
           whatsapp: string | null
@@ -2304,6 +2353,7 @@ export type Database = {
           referral_code?: string | null
           referred_by?: string | null
           signup_bonus_days?: number
+          telegram_alert_style?: string | null
           telegram_iptv_style?: string | null
           trial_used?: boolean
           whatsapp?: string | null
@@ -2322,6 +2372,7 @@ export type Database = {
           referral_code?: string | null
           referred_by?: string | null
           signup_bonus_days?: number
+          telegram_alert_style?: string | null
           telegram_iptv_style?: string | null
           trial_used?: boolean
           whatsapp?: string | null
