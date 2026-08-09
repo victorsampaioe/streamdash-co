@@ -42,7 +42,7 @@ function AlertsPage() {
     queryFn: async () => {
       const { data: u } = await supabase.auth.getUser();
       if (!u.user) return null;
-      const { data } = await supabase.from("profiles").select("telegram_iptv_style").eq("id", u.user.id).maybeSingle();
+      const { data } = await supabase.from("profiles").select("telegram_iptv_style, telegram_alert_style").eq("id", u.user.id).maybeSingle();
       return data;
     },
   });
