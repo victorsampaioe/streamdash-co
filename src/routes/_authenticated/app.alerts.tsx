@@ -37,6 +37,16 @@ function AlertsPage() {
   const [target, setTarget] = useState("");
   const test = useServerFn(testTelegramChat);
 
+  const { data: profile } = useQuery({
+    queryKey: ["profile-style"],
+    queryFn: async () => {
+      const { data: u } = await supabase.auth.getUser();
+      if (!u.user) return null;
+      const { data } = await supabase.from("profiles").select("telegram_iptv_style").eq("id", u.user.id).maybeSingle();
+      return data;
+    },
+  });
+
   const { data: channels = [] } = useQuery({
     queryKey: ["alert-channels"],
     queryFn: async () =>
@@ -201,7 +211,58 @@ function AlertsPage() {
       </Card>
 
       <DigestCard />
+      <TelegramStyleCard currentStyle={profile?.telegram_iptv_style} />
     </div>
+  );
+}
+
+function TelegramStyleCard({ currentStyle }: { currentStyle?: string }) {
+  const qc = useQueryClient();
+  const updateStyle = useServerFn(updateTelegramStyle);
+  const m = useMutation({
+    mutationFn: async (style: "summary" | "important" | "individual") => await updateStyle({ data: { style } }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["profile-style"] });
+      toast.success("Preferência atualizada");
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const styles = [
+    { id: "summary", label: "Receber resumo de novidades", desc: "Agrupa novos conteúdos e envia um relatório a cada 15 minutos." },
+    { id: "important", label: "Receber alertas importantes", desc: "Mensagens imediatas apenas para conteúdos raros ou grandes atualizações." },
+    { id: "individual", label: "Receber cada conteúdo individualmente", desc: "Alerta em tempo real para cada novo filme, série ou canal encontrado." },
+  ];
+
+  const styleValue = currentStyle || "summary";
+
+  return (
+    <Card className="p-4 space-y-4">
+      <div className="flex items-center gap-2 text-sm font-medium">
+        <Bell className="h-4 w-4" /> Configuração Telegram: IPTV
+      </div>
+      <div className="space-y-3">
+        {styles.map((s) => (
+          <button
+            key={s.id}
+            onClick={() => m.mutate(s.id as any)}
+            className="flex w-full items-start gap-3 p-2 rounded-lg hover:bg-muted/50 transition-colors text-left"
+          >
+            <div className="mt-0.5">
+              {styleValue === s.id ? (
+                <CheckSquare className="h-4 w-4 text-primary" />
+              ) : (
+                <Square className="h-4 w-4 text-muted-foreground" />
+              )}
+            </div>
+            <div className="space-y-0.5">
+              <p className="text-sm font-medium leading-none">{s.label}</p>
+              <p className="text-xs text-muted-foreground">{s.desc}</p>
+            </div>
+          </button>
+        ))}
+      </div>
+    </Card>
   );
 }
 
