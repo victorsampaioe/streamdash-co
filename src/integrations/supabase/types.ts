@@ -1409,6 +1409,53 @@ export type Database = {
           },
         ]
       }
+      iptv_notification_queue: {
+        Row: {
+          category: string | null
+          created_at: string | null
+          id: string
+          is_first_detection: boolean | null
+          is_rare: boolean | null
+          kind: string
+          name: string
+          owner_id: string
+          sent_at: string | null
+          server_id: string
+        }
+        Insert: {
+          category?: string | null
+          created_at?: string | null
+          id?: string
+          is_first_detection?: boolean | null
+          is_rare?: boolean | null
+          kind: string
+          name: string
+          owner_id: string
+          sent_at?: string | null
+          server_id: string
+        }
+        Update: {
+          category?: string | null
+          created_at?: string | null
+          id?: string
+          is_first_detection?: boolean | null
+          is_rare?: boolean | null
+          kind?: string
+          name?: string
+          owner_id?: string
+          sent_at?: string | null
+          server_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "iptv_notification_queue_server_id_fkey"
+            columns: ["server_id"]
+            isOneToOne: false
+            referencedRelation: "servers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       iptv_stream_tests: {
         Row: {
           bitrate_kbps: number | null
@@ -2239,6 +2286,7 @@ export type Database = {
           referral_code: string | null
           referred_by: string | null
           signup_bonus_days: number
+          telegram_iptv_style: string | null
           trial_used: boolean
           whatsapp: string | null
         }
@@ -2256,6 +2304,7 @@ export type Database = {
           referral_code?: string | null
           referred_by?: string | null
           signup_bonus_days?: number
+          telegram_iptv_style?: string | null
           trial_used?: boolean
           whatsapp?: string | null
         }
@@ -2273,6 +2322,7 @@ export type Database = {
           referral_code?: string | null
           referred_by?: string | null
           signup_bonus_days?: number
+          telegram_iptv_style?: string | null
           trial_used?: boolean
           whatsapp?: string | null
         }
