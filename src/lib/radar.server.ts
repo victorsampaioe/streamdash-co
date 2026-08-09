@@ -1,29 +1,39 @@
-// Server-only helpers for the Radar Brasil dashboard. Aggregates internal
-// monitoring data and pulls public status feeds from major providers.
+// Server-only helpers for the Radar Brasil dashboard. Professional incident monitoring.
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 
-type FeedIncident = {
+export type ExternalIncident = {
   provider: string;
   status: "operational" | "degraded" | "partial_outage" | "major_outage" | "maintenance" | "unknown";
   summary: string;
   updated_at: string | null;
   url: string;
+  impact?: string;
+  recommendation?: string;
 };
 
-const FEEDS: Array<{ provider: string; url: string; kind: "statuspage" }> = [
-  { provider: "Cloudflare",    url: "https://www.cloudflarestatus.com/api/v2/status.json",   kind: "statuspage" },
-  { provider: "GitHub",        url: "https://www.githubstatus.com/api/v2/status.json",       kind: "statuspage" },
-  { provider: "Discord",       url: "https://discordstatus.com/api/v2/status.json",          kind: "statuspage" },
-  { provider: "WhatsApp/Meta", url: "https://metastatus.com/api/v2/status.json",             kind: "statuspage" },
-  { provider: "Reddit",        url: "https://www.redditstatus.com/api/v2/status.json",       kind: "statuspage" },
-  { provider: "OpenAI",        url: "https://status.openai.com/api/v2/status.json",          kind: "statuspage" },
-  { provider: "Zoom",          url: "https://status.zoom.us/api/v2/status.json",             kind: "statuspage" },
-  { provider: "Twilio",        url: "https://status.twilio.com/api/v2/status.json",          kind: "statuspage" },
-  { provider: "Stripe",        url: "https://status.stripe.com/api/v2/status.json",          kind: "statuspage" },
-  { provider: "PagSeguro",     url: "https://status.pagseguro.uol.com.br/api/v2/status.json",kind: "statuspage" },
+export type HistoricalIncident = {
+  id: string;
+  service_name: string;
+  status: string;
+  description: string;
+  started_at: string;
+  resolved_at: string | null;
+  duration_minutes?: number;
+};
+
+const FEEDS: Array<{ provider: string; url: string; kind: "statuspage"; impact: string }> = [
+  { provider: "Cloudflare",    url: "https://www.cloudflarestatus.com/api/v2/status.json",   kind: "statuspage", impact: "DNS, CDN, Conexões externas" },
+  { provider: "GitHub",        url: "https://www.githubstatus.com/api/v2/status.json",       kind: "statuspage", impact: "Actions, Deploys, Repositórios" },
+  { provider: "Discord",       url: "https://discordstatus.com/api/v2/status.json",          kind: "statuspage", impact: "Comunidade, Bots" },
+  { provider: "WhatsApp/Meta", url: "https://metastatus.com/api/v2/status.json",             kind: "statuspage", impact: "Mensageria, Login, Webhooks" },
+  { provider: "OpenAI",        url: "https://status.openai.com/api/v2/status.json",          kind: "statuspage", impact: "API, Chat, Modelos IA" },
+  { provider: "Zoom",          url: "https://status.zoom.us/api/v2/status.json",             kind: "statuspage", impact: "Reuniões, Vídeo" },
+  { provider: "Twilio",        url: "https://status.twilio.com/api/v2/status.json",          kind: "statuspage", impact: "SMS, Voz, Mensageria" },
+  { provider: "Stripe",        url: "https://status.stripe.com/api/v2/status.json",          kind: "statuspage", impact: "Pagamentos, Checkout" },
+  { provider: "PagSeguro",     url: "https://status.pagseguro.uol.com.br/api/v2/status.json",kind: "statuspage", impact: "Pagamentos, Checkout" },
 ];
 
-const STATUSPAGE_MAP: Record<string, FeedIncident["status"]> = {
+const STATUSPAGE_MAP: Record<string, ExternalIncident["status"]> = {
   none: "operational",
   minor: "degraded",
   major: "partial_outage",
@@ -31,186 +41,145 @@ const STATUSPAGE_MAP: Record<string, FeedIncident["status"]> = {
   maintenance: "maintenance",
 };
 
-async function fetchStatuspage(provider: string, url: string): Promise<FeedIncident | null> {
+async function fetchStatuspage(provider: string, url: string, impact: string): Promise<ExternalIncident | null> {
   try {
     const ctl = new AbortController();
     const t = setTimeout(() => ctl.abort(), 5000);
-    const r = await fetch(url, { signal: ctl.signal, headers: { "user-agent": "StreamMonitor-Radar/1.0" } });
+    const r = await fetch(url, { signal: ctl.signal, headers: { "user-agent": "StreamMonitor-Radar/2.0" } });
     clearTimeout(t);
-    if (!r.ok) return { provider, status: "unknown", summary: `HTTP ${r.status}`, updated_at: null, url: url.replace("/api/v2/status.json", "") };
+    if (!r.ok) return { provider, status: "unknown", summary: `HTTP ${r.status}`, updated_at: null, url: url.replace("/api/v2/status.json", ""), impact };
     const j = await r.json() as { status?: { indicator?: string; description?: string; updated_at?: string }; page?: { updated_at?: string } };
     const ind = j.status?.indicator ?? "none";
+    const status = STATUSPAGE_MAP[ind] ?? "unknown";
+    
     return {
       provider,
-      status: STATUSPAGE_MAP[ind] ?? "unknown",
-      summary: j.status?.description ?? "Operational",
+      status,
+      summary: j.status?.description ?? "Operacional",
       updated_at: j.status?.updated_at ?? j.page?.updated_at ?? null,
       url: url.replace("/api/v2/status.json", ""),
+      impact,
+      recommendation: status !== "operational" ? "Aguardar normalização antes de investigar servidores." : undefined,
     };
   } catch (e: any) {
-    return { provider, status: "unknown", summary: `Sem resposta`, updated_at: null, url: url.replace("/api/v2/status.json", "") };
+    return { provider, status: "unknown", summary: `Sem resposta`, updated_at: null, url: url.replace("/api/v2/status.json", ""), impact };
   }
 }
 
-async function getExternalIncidents(): Promise<FeedIncident[]> {
-  const results = await Promise.all(FEEDS.map((f) => fetchStatuspage(f.provider, f.url)));
-  return results.filter((r): r is FeedIncident => !!r);
+async function syncExternalIncidents(incidents: ExternalIncident[]) {
+  const now = new Date().toISOString();
+  for (const inc of incidents) {
+    // Busca incidente ativo para este serviço
+    const { data: active } = await supabaseAdmin
+      .from("external_service_incidents")
+      .select("*")
+      .eq("service_name", inc.provider)
+      .is("resolved_at", null)
+      .maybeSingle();
+
+    if (inc.status !== "operational") {
+      if (!active) {
+        // Novo incidente
+        await supabaseAdmin.from("external_service_incidents").insert({
+          service_name: inc.provider,
+          status: inc.status,
+          description: inc.summary,
+          impact_assessment: inc.impact,
+          source_url: inc.url,
+          started_at: inc.updated_at || now,
+          last_update_at: now
+        } as never);
+        
+        // Alerta Telegram
+        await notifyExternalIncident(inc, "started");
+      } else if (active.status !== inc.status) {
+        // Mudança de status no incidente ativo
+        await supabaseAdmin.from("external_service_incidents")
+          .update({ 
+            status: inc.status, 
+            description: inc.summary, 
+            last_update_at: now 
+          } as never)
+          .eq("id", active.id);
+      }
+    } else if (active) {
+      // Resolvido
+      await supabaseAdmin.from("external_service_incidents")
+        .update({ 
+          resolved_at: now, 
+          last_update_at: now 
+        } as never)
+        .eq("id", active.id);
+      
+      // Alerta Telegram de normalização
+      await notifyExternalIncident(inc, "resolved");
+    }
+  }
 }
 
-async function getInternalStats() {
-  const since = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
-
-  const [{ count: incidentsOpen }, { count: incidentsClosed }, { count: serversMonitored }] = await Promise.all([
-    supabaseAdmin.from("incidents").select("*", { count: "exact", head: true }).is("ended_at", null),
-    supabaseAdmin.from("incidents").select("*", { count: "exact", head: true }).gte("started_at", since).not("ended_at", "is", null),
-    supabaseAdmin.from("servers").select("*", { count: "exact", head: true }),
-  ]);
-
-  // Totais e uptime vêm do resumo horário (sem varrer a tabela detalhada).
-  const { data: hourly } = await supabaseAdmin
-    .from("checks_hourly")
-    .select("total,ups")
-    .gte("hour", since)
-    .limit(5000);
-  const total = (hourly ?? []).reduce((s, r) => s + (r.total ?? 0), 0);
-  const ups = (hourly ?? []).reduce((s, r) => s + (r.ups ?? 0), 0);
-  const totalChecks24h = total;
-  const uptimePct = total > 0 ? (ups / total) * 100 : null;
-
-
-  return {
-    totalChecks24h: totalChecks24h ?? 0,
-    incidentsOpen: incidentsOpen ?? 0,
-    incidentsClosed24h: incidentsClosed ?? 0,
-    serversMonitored: serversMonitored ?? 0,
-    uptimePct,
-    since,
+async function notifyExternalIncident(inc: ExternalIncident, event: "started" | "resolved") {
+  const { notifyAdmin } = await import("./admin-telegram.server");
+  const statusLabels: Record<string, string> = {
+    degraded: "🟡 Degradado",
+    partial_outage: "🟠 Instabilidade parcial",
+    major_outage: "🔴 Indisponível",
+    maintenance: "⚙️ Manutenção",
+    operational: "✅ Operacional",
   };
+
+  const message = event === "started" 
+    ? `🚨 <b>Incidente externo detectado</b>\n\n` +
+      `Serviço: <b>${inc.provider}</b>\n` +
+      `Status: ${statusLabels[inc.status] || inc.status}\n\n` +
+      `⚠️ <b>Possível impacto:</b>\n${inc.impact}\n\n` +
+      `Recomendação: Aguardar normalização antes de investigar servidores.`
+    : `✅ <b>Serviço normalizado</b>\n\n` +
+      `O serviço <b>${inc.provider}</b> voltou ao funcionamento normal.\n\n` +
+      `Monitoramento DNS/IPTV estabilizado para esta fonte.`;
+
+  await notifyAdmin(message);
+
+  // Opcional: Notificar todos os usuários que cadastraram Telegram
+  // (Pode ser barulhento, então geralmente restringimos ao admin ou usamos um canal público)
 }
 
-async function getLatencyByRegion() {
-  const since = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
-  const { data: regions } = await supabaseAdmin
-    .from("check_regions").select("code,name,city,country,flag,latitude,longitude").eq("enabled", true);
-  // Lê o resumo horário (algumas centenas de linhas) em vez de dezenas de
-  // milhares de verificações detalhadas.
-  const { data: checks } = await supabaseAdmin
-    .from("region_checks_hourly")
-    .select("region_code,total,ups,avg_latency_ms")
-    .gte("hour", since)
-    .limit(5000);
+export type RadarSnapshot = {
+  generated_at: string;
+  externalIncidents: ExternalIncident[];
+  history: HistoricalIncident[];
+};
 
-  const map = new Map<string, { total: number; ups: number; latencySum: number; latencyCount: number }>();
-  for (const c of checks ?? []) {
-    const m = map.get(c.region_code) ?? { total: 0, ups: 0, latencySum: 0, latencyCount: 0 };
-    m.total += c.total ?? 0;
-    m.ups += c.ups ?? 0;
-    if (typeof c.avg_latency_ms === "number") {
-      m.latencySum += c.avg_latency_ms * (c.total ?? 1);
-      m.latencyCount += c.total ?? 1;
-    }
-    map.set(c.region_code, m);
-  }
-
-  // O resumo horário só é gerado pelo cron de agregação; as verificações da
-  // última hora ainda não estão lá. Sem esse complemento, regiões novas (ou
-  // recém-ativadas) aparecem como "sem dados". Aqui somamos as verificações
-  // brutas recentes ao que já foi agregado.
-  const rawSince = new Date(Date.now() - 3 * 60 * 60 * 1000).toISOString();
-  const { data: raw } = await supabaseAdmin
-    .from("region_checks")
-    .select("region_code,status,latency_ms")
-    .gte("checked_at", rawSince)
-    .limit(5000);
-  for (const c of raw ?? []) {
-    const m = map.get(c.region_code) ?? { total: 0, ups: 0, latencySum: 0, latencyCount: 0 };
-    m.total += 1;
-    if (c.status === "up") m.ups += 1;
-    if (typeof c.latency_ms === "number") {
-      m.latencySum += c.latency_ms;
-      m.latencyCount += 1;
-    }
-    map.set(c.region_code, m);
-  }
-
-
-  return (regions ?? []).map((r) => {
-    const m = map.get(r.code);
-    return {
-      code: r.code,
-      city: r.city,
-      country: r.country,
-      flag: r.flag,
-      lat: r.latitude,
-      lng: r.longitude,
-      avgLatencyMs: m && m.latencyCount ? Math.round(m.latencySum / m.latencyCount) : null,
-      uptimePct: m && m.total ? Math.round((m.ups / m.total) * 1000) / 10 : null,
-      samples: m?.total ?? 0,
-    };
-  });
-}
-
-async function getTopUnstableServers() {
-  const since = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+async function getHistoricalIncidents(): Promise<HistoricalIncident[]> {
   const { data } = await supabaseAdmin
-    .from("checks_hourly")
-    .select("server_id,total,ups,degraded,downs")
-    .gte("hour", since)
-    .limit(5000);
-
-  const per = new Map<string, { total: number; bad: number }>();
-  for (const c of data ?? []) {
-    const m = per.get(c.server_id) ?? { total: 0, bad: 0 };
-    m.total += c.total ?? 0;
-    m.bad += (c.downs ?? 0) + (c.degraded ?? 0);
-    per.set(c.server_id, m);
-  }
-
-  const withRatio = [...per.entries()]
-    .filter(([, m]) => m.total >= 5)
-    .map(([id, m]) => ({ id, total: m.total, bad: m.bad, badPct: (m.bad / m.total) * 100 }))
-    .sort((a, b) => b.badPct - a.badPct)
-    .slice(0, 10);
-
-
-  if (withRatio.length === 0) return [];
-
-  const ids = withRatio.map((x) => x.id);
-  const { data: servers } = await supabaseAdmin
-    .from("servers").select("id,name,is_public,public_slug").in("id", ids);
-  const byId = new Map((servers ?? []).map((s) => [s.id, s]));
-
-  return withRatio.map((x) => {
-    const s = byId.get(x.id);
-    return {
-      badPct: Math.round(x.badPct * 10) / 10,
-      total: x.total,
-      bad: x.bad,
-      name: s?.is_public ? s.name : "Servidor privado",
-      host: null,
-      slug: s?.is_public ? s.public_slug : null,
-    };
-  });
+    .from("external_service_incidents")
+    .select("*")
+    .order("started_at", { ascending: false })
+    .limit(20);
+  
+  return (data ?? []).map(d => ({
+    ...d,
+    duration_minutes: d.resolved_at 
+      ? Math.round((new Date(d.resolved_at).getTime() - new Date(d.started_at).getTime()) / 60000)
+      : undefined
+  }));
 }
 
 let snapshotCache: { at: number; data: RadarSnapshot } | null = null;
-const CACHE_TTL_MS = 5 * 60_000;
+const CACHE_TTL_MS = 60_000; // Radar professional updates faster
 
-export type RadarSnapshot = Awaited<ReturnType<typeof computeRadarSnapshot>>;
+async function computeRadarSnapshot(): Promise<RadarSnapshot> {
+  const incidents = await Promise.all(FEEDS.map((f) => fetchStatuspage(f.provider, f.url, f.impact)));
+  const externalIncidents = incidents.filter((r): r is ExternalIncident => !!r);
+  
+  // Background sync (sem travar o snapshot)
+  syncExternalIncidents(externalIncidents).catch(console.error);
 
-async function computeRadarSnapshot() {
-  const [externalIncidents, stats, byRegion, unstable] = await Promise.all([
-    getExternalIncidents(),
-    getInternalStats(),
-    getLatencyByRegion(),
-    getTopUnstableServers(),
-  ]);
+  const history = await getHistoricalIncidents();
+
   return {
     generated_at: new Date().toISOString(),
     externalIncidents,
-    stats,
-    byRegion,
-    unstable,
+    history,
   };
 }
 
