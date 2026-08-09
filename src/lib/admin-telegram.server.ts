@@ -149,3 +149,47 @@ export async function notifyExpiredAccessUsers(): Promise<{ sent: number; skippe
 
   return { sent, skipped: targets.length - sent };
 }
+
+/** Notifica todos os usuários ativos no Telegram sobre incidentes globais importantes. */
+export async function broadcastGlobalIncident(message: string) {
+  const token = process.env.TELEGRAM_BOT_TOKEN;
+  if (!token) return;
+  
+  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+  
+  // Apenas usuários ativos (não expirados)
+  const { data: subs } = await supabaseAdmin
+    .from("subscriptions")
+    .select("user_id")
+    .in("status", ["trial", "active"]);
+  
+  const activeIds = (subs ?? []).map(s => s.user_id);
+  if (!activeIds.length) return;
+
+  const { data: channels } = await supabaseAdmin
+    .from("alert_channels")
+    .select("target")
+    .in("owner_id", activeIds)
+    .eq("kind", "telegram")
+    .eq("enabled", true);
+  
+  if (!channels?.length) return;
+
+  // Envio em batches para evitar rate limit do Telegram se houver muitos usuários
+  for (const ch of channels) {
+    const raw = String(ch.target ?? "").trim();
+    const chatId = raw.includes(":") ? raw.split(":").slice(-1)[0] : raw;
+    if (!chatId) continue;
+    
+    fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ 
+        chat_id: chatId, 
+        text: message, 
+        parse_mode: "HTML", 
+        disable_web_page_preview: true 
+      }),
+    }).catch(() => {});
+  }
+}

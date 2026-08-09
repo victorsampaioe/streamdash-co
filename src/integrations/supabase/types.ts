@@ -922,6 +922,45 @@ export type Database = {
         }
         Relationships: []
       }
+      external_service_incidents: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          impact_assessment: string | null
+          last_update_at: string
+          resolved_at: string | null
+          service_name: string
+          source_url: string | null
+          started_at: string
+          status: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          impact_assessment?: string | null
+          last_update_at?: string
+          resolved_at?: string | null
+          service_name: string
+          source_url?: string | null
+          started_at?: string
+          status: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          impact_assessment?: string | null
+          last_update_at?: string
+          resolved_at?: string | null
+          service_name?: string
+          source_url?: string | null
+          started_at?: string
+          status?: string
+        }
+        Relationships: []
+      }
       hub_profiles: {
         Row: {
           banned: boolean
