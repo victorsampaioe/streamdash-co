@@ -5,10 +5,13 @@ export type ExternalIncident = {
   provider: string;
   status: "operational" | "degraded" | "partial_outage" | "major_outage" | "maintenance" | "unknown";
   summary: string;
+  description?: string;
   updated_at: string | null;
+  last_check_at: string;
   url: string;
   impact?: string;
   recommendation?: string;
+  active_incidents?: any[];
 };
 
 export type HistoricalIncident = {
@@ -22,15 +25,13 @@ export type HistoricalIncident = {
 };
 
 const FEEDS: Array<{ provider: string; url: string; kind: "statuspage"; impact: string }> = [
-  { provider: "Cloudflare",    url: "https://www.cloudflarestatus.com/api/v2/status.json",   kind: "statuspage", impact: "DNS, CDN, Conexões externas" },
-  { provider: "GitHub",        url: "https://www.githubstatus.com/api/v2/status.json",       kind: "statuspage", impact: "Actions, Deploys, Repositórios" },
-  { provider: "Discord",       url: "https://discordstatus.com/api/v2/status.json",          kind: "statuspage", impact: "Comunidade, Bots" },
-  { provider: "WhatsApp/Meta", url: "https://metastatus.com/api/v2/status.json",             kind: "statuspage", impact: "Mensageria, Login, Webhooks" },
-  { provider: "OpenAI",        url: "https://status.openai.com/api/v2/status.json",          kind: "statuspage", impact: "API, Chat, Modelos IA" },
-  { provider: "Zoom",          url: "https://status.zoom.us/api/v2/status.json",             kind: "statuspage", impact: "Reuniões, Vídeo" },
-  { provider: "Twilio",        url: "https://status.twilio.com/api/v2/status.json",          kind: "statuspage", impact: "SMS, Voz, Mensageria" },
-  { provider: "Stripe",        url: "https://status.stripe.com/api/v2/status.json",          kind: "statuspage", impact: "Pagamentos, Checkout" },
-  { provider: "PagSeguro",     url: "https://status.pagseguro.uol.com.br/api/v2/status.json",kind: "statuspage", impact: "Pagamentos, Checkout" },
+  { provider: "Cloudflare",    url: "https://www.cloudflarestatus.com",   kind: "statuspage", impact: "DNS, CDN, Conexões externas" },
+  { provider: "GitHub",        url: "https://www.githubstatus.com",       kind: "statuspage", impact: "Actions, Deploys, Repositórios" },
+  { provider: "Discord",       url: "https://discordstatus.com",          kind: "statuspage", impact: "Comunidade, Bots" },
+  { provider: "OpenAI",        url: "https://status.openai.com",          kind: "statuspage", impact: "API, Chat, Modelos IA" },
+  { provider: "Twilio",        url: "https://status.twilio.com",          kind: "statuspage", impact: "SMS, Voz, Mensageria" },
+  { provider: "Stripe",        url: "https://status.stripe.com",          kind: "statuspage", impact: "Pagamentos, Checkout" },
+  { provider: "Discord",       url: "https://discordstatus.com",          kind: "statuspage", impact: "Comunidade, Bots" },
 ];
 
 const STATUSPAGE_MAP: Record<string, ExternalIncident["status"]> = {
@@ -41,56 +42,72 @@ const STATUSPAGE_MAP: Record<string, ExternalIncident["status"]> = {
   maintenance: "maintenance",
 };
 
-async function fetchStatuspage(provider: string, url: string, impact: string): Promise<ExternalIncident | null> {
+async function fetchStatuspage(provider: string, baseUrl: string, impact: string): Promise<ExternalIncident | null> {
   const maxRetries = 2;
-  let lastError = null;
-
+  const now = new Date().toISOString();
+  
   for (let attempt = 0; attempt <= maxRetries; attempt++) {
     try {
       const ctl = new AbortController();
       const t = setTimeout(() => ctl.abort(), 6000);
-      const r = await fetch(url, { signal: ctl.signal, headers: { "user-agent": "StreamMonitor-Radar/2.0" } });
+      
+      // Fetch status and incidents in parallel
+      const [statusRes, incidentsRes] = await Promise.all([
+        fetch(`${baseUrl}/api/v2/status.json`, { signal: ctl.signal, headers: { "user-agent": "StreamMonitor-Radar/3.0" } }),
+        fetch(`${baseUrl}/api/v2/incidents.json`, { signal: ctl.signal, headers: { "user-agent": "StreamMonitor-Radar/3.0" } })
+      ]);
+      
       clearTimeout(t);
 
-      if (!r.ok) {
-        if (r.status === 404) {
-          return { provider, status: "unknown", summary: "Erro de monitoramento", updated_at: null, url: url.replace("/api/v2/status.json", ""), impact };
+      if (!statusRes.ok) {
+        if (statusRes.status === 404) {
+          return { provider, status: "unknown", summary: "⚪ Fonte indisponível", last_check_at: now, updated_at: null, url: baseUrl, impact };
         }
-        throw new Error(`HTTP ${r.status}`);
+        throw new Error(`HTTP ${statusRes.status}`);
       }
 
-      const j = await r.json() as { status?: { indicator?: string; description?: string; updated_at?: string }; page?: { updated_at?: string } };
+      const statusData = await statusRes.json();
+      const incidentsData = await incidentsRes.json();
       
-      // Validação básica de estrutura para evitar processar respostas inválidas como incidentes
-      if (!j.status || !j.status.indicator) {
-        return { provider, status: "unknown", summary: "Fonte sem resposta", updated_at: null, url: url.replace("/api/v2/status.json", ""), impact };
+      if (!statusData.status || !statusData.status.indicator) {
+        return { provider, status: "unknown", summary: "⚪ Fonte indisponível", last_check_at: now, updated_at: null, url: baseUrl, impact };
       }
 
-      const ind = j.status.indicator;
+      const ind = statusData.status.indicator;
       const status = STATUSPAGE_MAP[ind] ?? "unknown";
+      
+      // Somente mostrar incidente se a API oficial retornar incidente ativo
+      const activeIncidents = incidentsData.incidents?.filter((i: any) => i.status !== 'resolved') || [];
+      const hasActiveIncident = activeIncidents.length > 0;
+      
+      // Ajuste de status: Se a API diz "none" (operational) mas há incidentes não resolvidos, 
+      // confiamos na lista de incidentes para elevar a gravidade se necessário,
+      // mas o requisito diz "Somente mostrar 🚨 Incidente quando a API oficial retornar incidente ativo".
       
       return {
         provider,
-        status,
-        summary: j.status.description ?? "Operacional",
-        updated_at: j.status.updated_at ?? j.page?.updated_at ?? null,
-        url: url.replace("/api/v2/status.json", ""),
+        status: hasActiveIncident ? status : (status === "operational" ? "operational" : "unknown"),
+        summary: statusData.status.description ?? "Operacional",
+        description: hasActiveIncident ? activeIncidents[0]?.name : undefined,
+        updated_at: statusData.status.updated_at ?? statusData.page?.updated_at ?? null,
+        last_check_at: now,
+        url: baseUrl,
         impact,
-        recommendation: status !== "operational" && status !== "unknown" ? "Aguardar normalização antes de investigar servidores." : undefined,
+        active_incidents: activeIncidents,
+        recommendation: hasActiveIncident ? "Aguardar normalização antes de investigar servidores." : undefined,
       };
     } catch (e: any) {
-      lastError = e;
       if (attempt < maxRetries) await new Promise(res => setTimeout(res, 1000));
     }
   }
 
-  const errorMsg = lastError?.name === 'AbortError' ? "Tempo esgotado" : "Fonte sem resposta";
   return { 
     provider, 
     status: "unknown", 
-    summary: errorMsg, 
+    summary: "⚪ Fonte indisponível", 
+    last_check_at: now,
     updated_at: null, 
-    url: url.replace("/api/v2/status.json", ""), 
+    url: baseUrl, 
     impact 
   };
 }

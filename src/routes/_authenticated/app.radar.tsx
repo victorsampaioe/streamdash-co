@@ -31,10 +31,7 @@ function RadarPage() {
   });
 
   const activeIncidents = snapshot.externalIncidents.filter(i => 
-    i.status !== "operational" && i.status !== "unknown"
-  );
-  const operationalServices = snapshot.externalIncidents.filter(i => 
-    i.status === "operational" || i.status === "unknown"
+    i.status !== "operational" && i.status !== "unknown" && (i.active_incidents?.length ?? 0) > 0
   );
 
   return (
@@ -86,7 +83,14 @@ function RadarPage() {
                           <ExternalLink className="w-3 h-3" />
                         </a>
                       </div>
-                      <div className="text-xs text-muted-foreground">{inc.summary}</div>
+                      <div className="text-xs text-muted-foreground">
+                        {inc.summary}
+                        {inc.last_check_at && (
+                          <span className="ml-2 opacity-50">
+                            (Consulta: {format(new Date(inc.last_check_at), "HH:mm", { locale: ptBR })})
+                          </span>
+                        )}
+                      </div>
                     </div>
                   </div>
                   <StatusBadge status={inc.status} />
