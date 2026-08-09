@@ -229,11 +229,24 @@ function AlertsPage() {
   );
 }
 
-function TelegramStyleCard({ currentStyle }: { currentStyle?: string }) {
+function TelegramStyleCard({ 
+  currentStyle, 
+  title, 
+  scope,
+  summaryLabel = "Receber resumo de novidades",
+  summaryDesc = "Agrupa novos conteúdos e envia um relatório a cada 15 minutos."
+}: { 
+  currentStyle?: string; 
+  title: string;
+  scope: "iptv" | "monitoring";
+  summaryLabel?: string;
+  summaryDesc?: string;
+}) {
   const qc = useQueryClient();
   const updateStyle = useServerFn(updateTelegramStyle);
   const m = useMutation({
-    mutationFn: async (style: "summary" | "important" | "individual") => await updateStyle({ data: { style } }),
+    mutationFn: async (style: "summary" | "important" | "individual") => 
+      await updateStyle({ data: { style, scope } }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["profile-style"] });
       toast.success("Preferência atualizada");
@@ -242,7 +255,7 @@ function TelegramStyleCard({ currentStyle }: { currentStyle?: string }) {
   });
 
   const styles = [
-    { id: "summary", label: "Receber resumo de novidades", desc: "Agrupa novos conteúdos e envia um relatório a cada 15 minutos." },
+    { id: "summary", label: summaryLabel, desc: summaryDesc },
     { id: "important", label: "Receber alertas importantes", desc: "Mensagens imediatas apenas para conteúdos raros ou grandes atualizações." },
     { id: "individual", label: "Receber cada conteúdo individualmente", desc: "Alerta em tempo real para cada novo filme, série ou canal encontrado." },
   ];
@@ -252,7 +265,7 @@ function TelegramStyleCard({ currentStyle }: { currentStyle?: string }) {
   return (
     <Card className="p-4 space-y-4">
       <div className="flex items-center gap-2 text-sm font-medium">
-        <Bell className="h-4 w-4" /> Configuração Telegram: IPTV
+        <Bell className="h-4 w-4" /> {title}
       </div>
       <div className="space-y-3">
         {styles.map((s) => (
