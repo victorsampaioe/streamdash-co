@@ -121,7 +121,7 @@ function ContentIntelligence() {
             <div key={i} className="aspect-[2/3] w-full rounded-lg bg-muted animate-pulse" />
           ))}
         </div>
-      {data?.ranking ? (
+      ) : data?.ranking ? (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           {data.ranking.map((s: any, i: number) => (
             <Card key={i} className="p-5 flex items-center justify-between border-primary/20 bg-primary/5">
