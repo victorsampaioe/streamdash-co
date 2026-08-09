@@ -154,7 +154,7 @@ export const getTmdbDetail = createServerFn({ method: "POST" })
       podium,
       following: !!follow,
       global_stats: globalHistory ? {
-        first_seen_at: globalHistory.first_detected_at,
+        first_seen_at: globalHistory.first_detected_at || globalHistory.first_seen_at,
         server_count: globalHistory.servers_found_count
       } : null
     };
