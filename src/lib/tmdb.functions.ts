@@ -8,11 +8,34 @@ const mediaSchema = z.enum(["movie", "tv"]);
 /** Lista de lançamentos TMDB já cruzada com o catálogo dos servidores do usuário. */
 export const getTmdbFeed = createServerFn({ method: "POST" })
   .middleware([requireActiveSubscription])
-  .inputValidator((d: { feed: string; page?: number; query?: string }) =>
-    z.object({ feed: feedSchema, page: z.number().min(1).max(10).optional(), query: z.string().max(120).optional() }).parse(d))
+  .inputValidator((d: { feed: string; page?: number; query?: string; ranking?: boolean }) =>
+    z.object({ feed: feedSchema, page: z.number().min(1).max(10).optional(), query: z.string().max(120).optional(), ranking: z.boolean().optional() }).parse(d))
   .handler(async ({ data, context }) => {
     const { fetchFeed, searchTmdb } = await import("./tmdb.server");
     const { titleKey } = await import("./iptv-catalog.server");
+
+    if (data.ranking) {
+      const { data: stats } = await context.supabase
+        .from("reseller_catalog_stats")
+        .select("server_id, updates_last_7d, total_contents")
+        .order("updates_last_7d", { ascending: false })
+        .limit(10);
+      
+      const { maskServerName } = await import("./server-mask.server");
+      const { data: servers } = await context.supabase.from("servers").select("id, name, owner_id");
+      
+      return {
+        ranking: (stats ?? []).map(s => {
+          const srv = servers?.find(sv => sv.id === s.server_id);
+          const mine = srv?.owner_id === context.userId;
+          return {
+            name: maskServerName(s.server_id, mine, srv?.name ?? "Servidor"),
+            updates: s.updates_last_7d,
+            total: s.total_contents
+          };
+        })
+      };
+    }
 
     const cards = data.query?.trim()
       ? await searchTmdb(data.query.trim())

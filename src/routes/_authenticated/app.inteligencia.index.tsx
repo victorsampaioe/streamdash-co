@@ -135,11 +135,19 @@ function ContentIntelligence() {
                 <div className="p-3 space-y-1.5 flex-1">
                   <div className="text-sm font-medium line-clamp-2">{it.title}</div>
                   <div className="text-xs text-muted-foreground">{year(it.release_date)}</div>
-                  <div className="flex items-center gap-1 text-xs">
-                    <Server className="h-3 w-3 text-muted-foreground" />
-                    <span className="text-emerald-500 font-medium">✅ {it.found_count}</span>
-                    <span className="text-muted-foreground">/</span>
-                    <span className="text-destructive">❌ {it.missing_count}</span>
+                  <div className="flex flex-col gap-1 text-[11px]">
+                    <div className="flex items-center gap-1.5">
+                      <Server className="h-3 w-3 text-muted-foreground" />
+                      <span className={it.found_count > 0 ? "text-emerald-500 font-bold" : "text-muted-foreground"}>
+                        🎬 Disponível em {it.found_count} servidor{it.found_count !== 1 ? "es" : ""}
+                      </span>
+                    </div>
+                    {it.found_count > 0 && (
+                      <div className="flex items-center gap-1.5 text-primary font-medium">
+                        <Sparkles className="h-3 w-3" />
+                        Novidade no catálogo
+                      </div>
+                    )}
                   </div>
                 </div>
               </Card>
