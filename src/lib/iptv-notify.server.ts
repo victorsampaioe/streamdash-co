@@ -112,8 +112,8 @@ async function sendIndividualNotification(server: any, item: any, opts: any) {
     .eq("title_key", require("./iptv-catalog.server").titleKey(item.name))
     .maybeSingle();
 
-  const icon = item.kind === "live" ? "📡" : (item.kind === "series" ? "📺" : "🎬");
-  const kindLabel = item.kind === "live" ? "Canal" : (item.kind === "series" ? "Série" : "Filme");
+  const icon = item.kind === "live" ? "📡" : (item.kind === "series" ? "📺" : (item.kind === "system" ? "🔥" : "🎬"));
+  const kindLabel = item.kind === "live" ? "Canal" : (item.kind === "series" ? "Série" : (item.kind === "system" ? "Aviso" : "Filme"));
   
   const prefix = opts.isRare ? "🚨 <b>Conteúdo Raro</b>\n" : (opts.isFirst ? "🚨 <b>Primeira Detecção</b>\n" : "🚨 <b>Novo conteúdo detectado</b>\n");
 
