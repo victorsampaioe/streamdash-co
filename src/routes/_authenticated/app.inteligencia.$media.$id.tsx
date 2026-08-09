@@ -152,40 +152,81 @@ function TitleDetail() {
         <TabsList>
           <TabsTrigger value="podium">🏆 Quem adicionou primeiro</TabsTrigger>
           <TabsTrigger value="servers">🖥️ Disponibilidade</TabsTrigger>
+          {data.global_stats && <TabsTrigger value="stats">🧠 Radar Global</TabsTrigger>}
         </TabsList>
 
         <TabsContent value="podium" className="mt-4">
-          <Card className="p-5 space-y-3">
+          <Card className="p-5 space-y-3 border-yellow-500/20 bg-yellow-500/5">
             <div className="flex items-center gap-2">
               <Trophy className="h-5 w-5 text-yellow-500" />
-              <h2 className="font-semibold">Quem subiu mais rápido</h2>
+              <h2 className="font-semibold text-lg">Reconhecimento Real por Servidor</h2>
             </div>
             <p className="text-xs text-muted-foreground -mt-1">
-              Ordenado pelo horário em que o conteúdo apareceu em cada servidor cadastrado.
+              Descubra quem foi o primeiro a disponibilizar este conteúdo no catálogo.
             </p>
             {data.podium.length === 0 ? (
               <p className="py-6 text-center text-sm text-muted-foreground">
-                Nenhum servidor cadastrado possui este conteúdo ainda.
+                Nenhum servidor monitorado possui este conteúdo ainda.
               </p>
             ) : (
               <>
-                <div className="rounded-md border border-yellow-500/40 bg-yellow-500/10 px-3 py-2 text-sm">
-                  🥇 <b>{data.podium[0].name}</b> subiu primeiro em {full(data.podium[0].found_at!)}.
+                <div className="rounded-md border border-yellow-500/40 bg-yellow-500/20 px-4 py-3 text-sm flex items-center justify-between">
+                  <div>
+                    <span className="text-xl mr-2">🥇</span>
+                    <b>{data.podium[0].name}</b>
+                    <span className="text-xs text-muted-foreground ml-2">adicionou primeiro</span>
+                  </div>
+                  <Badge variant="outline" className="font-mono text-emerald-500">
+                    Hoje {new Date(data.podium[0].found_at!).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}
+                  </Badge>
                 </div>
-                <div className="divide-y">
+                <div className="divide-y border-t mt-4">
                   {data.podium.map((p, i) => (
-                    <div key={p.server_id} className="py-2.5 flex items-center justify-between gap-3">
-                      <span className="truncate text-sm">
-                        {MEDALS[i] ?? `${i + 1}º`} {p.name}
-                      </span>
-                      <span className="text-xs text-muted-foreground font-mono shrink-0 inline-flex items-center gap-1">
-                        <Clock className="h-3 w-3" /> {full(p.found_at!)}
-                      </span>
+                    <div key={p.server_id} className="py-3 flex items-center justify-between gap-3">
+                      <div className="flex items-center gap-3">
+                        <span className="text-lg w-6 text-center">{MEDALS[i] ?? `${i + 1}º`}</span>
+                        <div className="flex flex-col">
+                          <span className="text-sm font-medium">{p.name}</span>
+                          <span className="text-[10px] text-emerald-500 flex items-center gap-1">
+                            <Clock className="h-3 w-3" /> Detectado {new Date(p.found_at!).toLocaleDateString("pt-BR")}
+                          </span>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <Badge variant="secondary" className="text-[10px]">
+                          {p.quality || "HD"}
+                        </Badge>
+                        <div className="text-[10px] text-muted-foreground mt-1">
+                          ⚡ {p.latency_ms}ms
+                        </div>
+                      </div>
                     </div>
                   ))}
                 </div>
               </>
             )}
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="stats" className="mt-4">
+          <Card className="p-5 space-y-4 border-primary/20 bg-primary/5">
+            <div className="flex items-center gap-2 text-primary">
+              <Sparkles className="h-5 w-5" />
+              <h2 className="font-semibold text-lg">Inteligência de Catálogo Global</h2>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="p-4 rounded-lg bg-background/50 border">
+                <div className="text-xs text-muted-foreground uppercase tracking-wider mb-1">Primeira Aparição</div>
+                <div className="text-lg font-bold">{new Date(data.global_stats?.first_seen_at!).toLocaleDateString("pt-BR")}</div>
+              </div>
+              <div className="p-4 rounded-lg bg-background/50 border">
+                <div className="text-xs text-muted-foreground uppercase tracking-wider mb-1">Servidores Totais</div>
+                <div className="text-lg font-bold">{data.global_stats?.server_count} redes</div>
+              </div>
+            </div>
+            <div className="text-xs text-muted-foreground italic">
+              * Dados baseados em toda a rede monitorada pelo Stream Monitor.
+            </div>
           </Card>
         </TabsContent>
 
