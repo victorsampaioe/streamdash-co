@@ -384,8 +384,6 @@ async function sendAlerts(server: ServerRow, event: "up" | "down", message: stri
         });
         ok = r.ok; response = `${r.status}`;
       } else if (ch.kind === "telegram") {
-        // Prefer shared bot via TELEGRAM_BOT_TOKEN; target is just the chat_id.
-        // Backwards-compat: if target contains ":", treat as "BOT_TOKEN:CHAT_ID".
         const sharedToken = process.env.TELEGRAM_BOT_TOKEN;
         let botToken = sharedToken ?? "";
         let chatId = ch.target?.trim() ?? "";
@@ -393,14 +391,36 @@ async function sendAlerts(server: ServerRow, event: "up" | "down", message: stri
           const [t, c] = chatId.split(":");
           botToken = t; chatId = c;
         }
-        if (!botToken || !chatId) { ok = false; response = "TELEGRAM_BOT_TOKEN ausente ou chat_id inválido"; }
-        else {
-          const r = await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ chat_id: chatId, text: `${event === "down" ? "🔴" : "🟢"} ${message}` }),
-          });
-          ok = r.ok; response = `${r.status}`;
+
+        if (botToken && chatId) {
+          if (event === "up") {
+            // Queue recovery notifications for grouping
+            await supabaseAdmin.from("notification_queue").insert({
+              owner_id: server.owner_id,
+              server_id: server.id,
+              channel_id: ch.id,
+              event: "up",
+              message: message
+            });
+            ok = true;
+            response = "Queued for grouping";
+          } else {
+            // Send DOWN alerts immediately (critical)
+            const r = await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ 
+                chat_id: chatId, 
+                text: message,
+                parse_mode: "HTML"
+              }),
+            });
+            ok = r.ok;
+            response = `${r.status}`;
+          }
+        } else {
+          ok = false;
+          response = "Configuração do Telegram inválida";
         }
       } else if (ch.kind === "email") {
         const key = process.env.RESEND_API_KEY;
