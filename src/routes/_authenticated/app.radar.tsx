@@ -1,245 +1,238 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
-import { queryOptions, useSuspenseQuery } from "@tanstack/react-query";
-import { AlertTriangle, CheckCircle2, Clock, Flame, Globe, Wifi } from "lucide-react";
-import { Card } from "@/components/ui/card";
+import { createFileRoute } from "@tanstack/react-router";
+import { useSuspenseQuery } from "@tanstack/react-query";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { 
+  Activity, 
+  AlertTriangle, 
+  CheckCircle2, 
+  Clock, 
+  ExternalLink, 
+  History,
+  Info,
+  ShieldAlert,
+  Zap
+} from "lucide-react";
 import { getRadarSnapshot } from "@/lib/radar.functions";
-import type { RadarSnapshot } from "@/lib/radar.server";
-import { cn } from "@/lib/utils";
-
-const radarQuery = queryOptions<RadarSnapshot>({
-  queryKey: ["radar-snapshot"],
-  queryFn: () => getRadarSnapshot(),
-  refetchInterval: 60_000,
-  staleTime: 30_000,
-});
+import { format } from "date-fns";
+import { ptBR } from "date-fns/locale";
+import { Skeleton } from "@/components/ui/skeleton";
+import type { ExternalIncident, HistoricalIncident } from "@/lib/radar.server";
 
 export const Route = createFileRoute("/_authenticated/app/radar")({
-  head: () => ({
-    meta: [
-      { title: "Radar Brasil — StreamMonitor" },
-      { name: "robots", content: "noindex" },
-    ],
-  }),
-  loader: ({ context }) => context.queryClient.ensureQueryData(radarQuery),
-  errorComponent: RadarError,
-  notFoundComponent: () => <div className="p-8">Não encontrado</div>,
   component: RadarPage,
 });
 
-function RadarError({ error }: { error: Error }) {
-  return (
-    <Card className="p-8 text-center">
-      <AlertTriangle className="h-8 w-8 text-warning mx-auto mb-3" />
-      <p className="font-medium">Não foi possível carregar o Radar</p>
-      <p className="text-sm text-muted-foreground mt-1">{error.message}</p>
-    </Card>
-  );
-}
-
 function RadarPage() {
-  const { data } = useSuspenseQuery(radarQuery);
+  const { data: snapshot } = useSuspenseQuery({
+    queryKey: ["radar-snapshot"],
+    queryFn: () => getRadarSnapshot(),
+    refetchInterval: 60000,
+  });
+
+  const activeIncidents = snapshot.externalIncidents.filter(i => i.status !== "operational");
+  const operationalServices = snapshot.externalIncidents.filter(i => i.status === "operational");
+
   return (
-    <div className="space-y-6">
-      <Header generatedAt={data.generated_at} />
-      <StatsRow stats={data.stats} />
-
-      <div className="grid lg:grid-cols-2 gap-4">
-        <ExternalIncidentsCard incidents={data.externalIncidents} />
-        <LatencyByRegionCard rows={data.byRegion} />
-      </div>
-
-      <div className="grid lg:grid-cols-2 gap-4">
-        <UnstableCard rows={data.unstable} />
-        <PlaceholderCard
-          icon={<Wifi className="h-5 w-5 text-muted-foreground" />}
-          title="Provedores brasileiros com mais relatos"
-          body="Este painel será alimentado pelo Diagnóstico Colaborativo (em breve). Sem dados inventados enquanto isso."
-        />
-      </div>
-
-      <PlaceholderCard
-        icon={<Globe className="h-5 w-5 text-muted-foreground" />}
-        title="Mapa de calor Brasil (por estado)"
-        body="Ativado quando houver dados suficientes por UF (via workers regionais e relatos colaborativos)."
-      />
-    </div>
-  );
-}
-
-function Header({ generatedAt }: { generatedAt: string }) {
-  return (
-    <div className="flex items-baseline justify-between flex-wrap gap-3">
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight">📡 Radar Brasil</h1>
-        <p className="text-sm text-muted-foreground mt-1">
-          Status da internet em tempo real. Atualiza a cada 60 segundos.
+    <div className="flex-1 space-y-6 p-4 md:p-8 pt-6">
+      <div className="flex flex-col gap-2">
+        <h2 className="text-3xl font-bold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-purple-400">
+          Radar Brasil
+        </h2>
+        <p className="text-muted-foreground">
+          Monitoramento profissional de incidentes em infraestrutura externa e serviços críticos.
         </p>
       </div>
-      <div className="text-xs text-muted-foreground flex items-center gap-1">
-        <Clock className="h-3.5 w-3.5" />
-        Atualizado {new Date(generatedAt).toLocaleTimeString()}
-      </div>
-    </div>
-  );
-}
 
-function StatsRow({ stats }: { stats: RadarSnapshot["stats"] }) {
-  return (
-    <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-      <Metric label="Servidores monitorados" value={stats.serversMonitored.toLocaleString("pt-BR")} />
-      <Metric label="Checks nas últimas 24h" value={stats.totalChecks24h.toLocaleString("pt-BR")} />
-      <Metric
-        label="Uptime médio 24h"
-        value={stats.uptimePct != null ? `${stats.uptimePct.toFixed(2)}%` : "—"}
-        tone={stats.uptimePct != null && stats.uptimePct < 98 ? "warning" : "success"}
-      />
-      <Metric
-        label="Incidentes abertos"
-        value={String(stats.incidentsOpen)}
-        tone={stats.incidentsOpen > 0 ? "destructive" : "success"}
-      />
-    </div>
-  );
-}
-
-function Metric({ label, value, tone = "default" }: { label: string; value: string; tone?: "default" | "success" | "warning" | "destructive" }) {
-  const toneClass = {
-    default: "text-foreground",
-    success: "text-success",
-    warning: "text-warning",
-    destructive: "text-destructive",
-  }[tone];
-  return (
-    <Card className="p-4">
-      <div className="text-xs uppercase tracking-wider text-muted-foreground mb-1">{label}</div>
-      <div className={cn("text-2xl font-bold font-mono", toneClass)}>{value}</div>
-    </Card>
-  );
-}
-
-const STATUS_STYLE: Record<string, { label: string; badge: "default" | "secondary" | "outline" | "destructive"; cls: string; icon: React.ReactNode }> = {
-  operational:    { label: "Operacional",       badge: "outline",     cls: "text-success",     icon: <CheckCircle2 className="h-4 w-4" /> },
-  degraded:       { label: "Degradado",          badge: "secondary",   cls: "text-warning",     icon: <AlertTriangle className="h-4 w-4" /> },
-  partial_outage: { label: "Falha parcial",      badge: "destructive", cls: "text-warning",     icon: <AlertTriangle className="h-4 w-4" /> },
-  major_outage:   { label: "Falha grave",        badge: "destructive", cls: "text-destructive", icon: <AlertTriangle className="h-4 w-4" /> },
-  maintenance:    { label: "Manutenção",         badge: "secondary",   cls: "text-muted-foreground", icon: <Clock className="h-4 w-4" /> },
-  unknown:        { label: "Sem resposta",       badge: "outline",     cls: "text-muted-foreground", icon: <AlertTriangle className="h-4 w-4" /> },
-};
-
-function ExternalIncidentsCard({ incidents }: { incidents: RadarSnapshot["externalIncidents"] }) {
-  const sorted = [...incidents].sort((a, b) => {
-    const order = ["major_outage", "partial_outage", "degraded", "maintenance", "unknown", "operational"];
-    return order.indexOf(a.status) - order.indexOf(b.status);
-  });
-  const active = sorted.filter((i) => i.status !== "operational");
-  return (
-    <Card className="p-5">
-      <div className="flex items-center justify-between mb-4">
-        <h2 className="font-semibold flex items-center gap-2">🚨 Serviços com incidentes</h2>
-        <Badge variant={active.length > 0 ? "destructive" : "outline"}>
-          {active.length} {active.length === 1 ? "com problema" : "com problemas"}
-        </Badge>
-      </div>
-      <ul className="space-y-2">
-        {sorted.map((it) => {
-          const s = STATUS_STYLE[it.status] ?? STATUS_STYLE.unknown;
-          return (
-            <li key={it.provider} className="flex items-center justify-between gap-3 rounded-md border border-border/50 px-3 py-2">
-              <div className="flex items-center gap-2 min-w-0">
-                <span className={s.cls}>{s.icon}</span>
-                <div className="min-w-0">
-                  <a href={it.url} target="_blank" rel="noopener noreferrer" className="text-sm font-medium hover:underline truncate block">
-                    {it.provider}
-                  </a>
-                  <div className="text-[11px] text-muted-foreground truncate">{it.summary}</div>
-                </div>
-              </div>
-              <Badge variant={s.badge} className={cn(it.status === "operational" && "text-success border-success/40")}>{s.label}</Badge>
-            </li>
-          );
-        })}
-      </ul>
-    </Card>
-  );
-}
-
-function LatencyByRegionCard({ rows }: { rows: RadarSnapshot["byRegion"] }) {
-  return (
-    <Card className="p-5">
-      <h2 className="font-semibold mb-4">📡 Latência média por região (24h)</h2>
-      <ul className="space-y-2">
-        {rows.map((r) => (
-          <li key={r.code} className="flex items-center justify-between gap-3 rounded-md border border-border/50 px-3 py-2">
-            <div className="flex items-center gap-2 min-w-0">
-              <span className="text-lg leading-none">{r.flag}</span>
-              <div className="min-w-0">
-                <div className="text-sm font-medium truncate">{r.city}</div>
-                <div className="text-[11px] text-muted-foreground truncate">{r.country} · {r.samples} amostras</div>
-              </div>
-            </div>
-            <div className="text-right shrink-0">
-              <div className="font-mono text-sm">{r.avgLatencyMs != null ? `${r.avgLatencyMs}ms` : "—"}</div>
-              <div className="text-[11px] text-muted-foreground">
-                {r.uptimePct != null ? `${r.uptimePct}% uptime` : "aguardando worker"}
-              </div>
-            </div>
-          </li>
-        ))}
-      </ul>
-    </Card>
-  );
-}
-
-function UnstableCard({ rows }: { rows: RadarSnapshot["unstable"] }) {
-  return (
-    <Card className="p-5">
-      <h2 className="font-semibold mb-4 flex items-center gap-2">
-        <Flame className="h-4 w-4 text-destructive" />
-        Servidores mais instáveis (24h)
-      </h2>
-      {rows.length === 0 ? (
-        <p className="text-sm text-muted-foreground">Nenhuma instabilidade relevante nas últimas 24 horas. 🎉</p>
-      ) : (
-        <ul className="space-y-2">
-          {rows.map((r, i) => {
-            const body = (
-              <div className="flex items-center justify-between gap-3 rounded-md border border-border/50 px-3 py-2">
-                <div className="flex items-center gap-3 min-w-0">
-                  <span className="text-xs font-mono text-muted-foreground w-5">{i + 1}</span>
-                  <div className="min-w-0">
-                    <div className="text-sm font-medium truncate">{r.name}</div>
-                    {r.host && <div className="text-[11px] text-muted-foreground font-mono truncate">{r.host}</div>}
-                  </div>
-                </div>
-                <div className="text-right shrink-0">
-                  <div className="text-sm font-mono text-destructive">{r.badPct}%</div>
-                  <div className="text-[11px] text-muted-foreground">{r.bad}/{r.total} falhas</div>
-                </div>
-              </div>
-            );
-            return (
-              <li key={`${r.name}-${i}`}>
-                {r.slug ? <Link to="/status/$slug" params={{ slug: r.slug }} className="block hover:opacity-80">{body}</Link> : body}
-              </li>
-            );
-          })}
-        </ul>
+      {activeIncidents.length > 0 && (
+        <section className="space-y-4">
+          <div className="flex items-center gap-2">
+            <ShieldAlert className="w-5 h-5 text-red-500 animate-pulse" />
+            <h3 className="text-xl font-semibold text-red-500">🚨 Serviços com Incidentes</h3>
+          </div>
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+            {activeIncidents.map((inc) => (
+              <IncidentCard key={inc.provider} incident={inc} />
+            ))}
+          </div>
+        </section>
       )}
-    </Card>
-  );
-}
 
-function PlaceholderCard({ icon, title, body }: { icon: React.ReactNode; title: string; body: string }) {
-  return (
-    <Card className="p-5 border-dashed">
-      <div className="flex items-start gap-3">
-        <div className="mt-0.5">{icon}</div>
+      <div className="grid gap-6 md:grid-cols-2">
+        <Card className="bg-slate-900/50 border-slate-800">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Activity className="w-5 h-5 text-blue-400" />
+              Status dos Serviços
+            </CardTitle>
+            <CardDescription>
+              Acompanhamento em tempo real de provedores globais.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              {snapshot.externalIncidents.map((inc) => (
+                <div key={inc.provider} className="flex items-center justify-between p-3 rounded-lg bg-slate-950/50 border border-slate-800">
+                  <div className="flex items-center gap-3">
+                    <StatusIcon status={inc.status} />
+                    <div>
+                      <div className="font-medium flex items-center gap-2">
+                        {inc.provider}
+                        <a href={inc.url} target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-blue-400 transition-colors">
+                          <ExternalLink className="w-3 h-3" />
+                        </a>
+                      </div>
+                      <div className="text-xs text-muted-foreground">{inc.summary}</div>
+                    </div>
+                  </div>
+                  <StatusBadge status={inc.status} />
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="bg-slate-900/50 border-slate-800">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <History className="w-5 h-5 text-purple-400" />
+              📊 Histórico de Incidentes
+            </CardTitle>
+            <CardDescription>
+              Registros recentes de instabilidades detectadas.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              {snapshot.history.length > 0 ? (
+                snapshot.history.map((h) => (
+                  <div key={h.id} className="flex flex-col gap-1 p-3 rounded-lg bg-slate-950/50 border border-slate-800">
+                    <div className="flex items-center justify-between">
+                      <span className="font-medium">{h.service_name}</span>
+                      <span className="text-xs text-muted-foreground">
+                        {format(new Date(h.started_at), "dd/MM HH:mm", { locale: ptBR })}
+                      </span>
+                    </div>
+                    <div className="text-xs text-muted-foreground line-clamp-1">{h.description}</div>
+                    <div className="flex items-center justify-between mt-1">
+                      <StatusBadge status={h.status as any} />
+                      {h.duration_minutes && (
+                        <span className="text-[10px] text-muted-foreground">
+                          Duração: {h.duration_minutes} min
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <div className="text-center py-8 text-muted-foreground">
+                  Nenhum incidente registrado no histórico recente.
+                </div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      <div className="mt-8 p-4 rounded-xl bg-blue-500/10 border border-blue-500/20 flex items-start gap-4">
+        <Info className="w-6 h-6 text-blue-400 shrink-0 mt-0.5" />
         <div>
-          <h3 className="font-medium">{title}</h3>
-          <p className="text-sm text-muted-foreground mt-1">{body}</p>
+          <h4 className="font-semibold text-blue-400">Centro de Inteligência de Incidentes</h4>
+          <p className="text-sm text-muted-foreground mt-1">
+            Este painel utiliza APIs oficiais e feeds de status em tempo real. Instabilidades em serviços de terceiros (Cloudflare, GitHub, etc) 
+            podem causar falsos positivos no monitoramento dos seus servidores. Recomendamos verificar este radar antes de realizar alterações críticas.
+          </p>
         </div>
       </div>
+    </div>
+  );
+}
+
+function IncidentCard({ incident }: { incident: ExternalIncident }) {
+  const statusColors = {
+    operational: "border-green-500/20 bg-green-500/5",
+    degraded: "border-yellow-500/20 bg-yellow-500/5",
+    partial_outage: "border-orange-500/20 bg-orange-500/5",
+    major_outage: "border-red-500/20 bg-red-500/5",
+    maintenance: "border-blue-500/20 bg-blue-500/5",
+    unknown: "border-slate-500/20 bg-slate-500/5",
+  };
+
+  return (
+    <Card className={`border-2 ${statusColors[incident.status]}`}>
+      <CardHeader className="pb-2">
+        <div className="flex justify-between items-start">
+          <CardTitle className="text-lg">{incident.provider}</CardTitle>
+          <StatusBadge status={incident.status} />
+        </div>
+        <CardDescription className="text-red-400 font-medium animate-pulse">
+          ⚠️ Possível impacto
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <div className="p-3 rounded bg-slate-950/50 border border-slate-800 text-sm">
+          <p className="font-medium text-slate-300">{incident.provider} apresenta instabilidade.</p>
+          <div className="mt-2 space-y-1">
+            <p className="text-xs text-muted-foreground uppercase tracking-wider">Pode afetar:</p>
+            <ul className="text-xs list-disc list-inside text-slate-400">
+              {incident.impact?.split(",").map(i => (
+                <li key={i}>{i.trim()}</li>
+              ))}
+            </ul>
+          </div>
+        </div>
+        
+        <div className="text-xs space-y-2">
+          <div className="flex justify-between text-muted-foreground">
+            <span>Status:</span>
+            <span className="text-slate-200">{incident.summary}</span>
+          </div>
+          {incident.updated_at && (
+            <div className="flex justify-between text-muted-foreground">
+              <span>Última atualização:</span>
+              <span className="text-slate-200">
+                {format(new Date(incident.updated_at), "HH:mm", { locale: ptBR })}
+              </span>
+            </div>
+          )}
+        </div>
+
+        {incident.recommendation && (
+          <div className="flex items-center gap-2 p-2 rounded bg-red-500/10 text-[10px] text-red-400 border border-red-500/20">
+            <AlertTriangle className="w-3 h-3" />
+            {incident.recommendation}
+          </div>
+        )}
+      </CardContent>
     </Card>
   );
+}
+
+function StatusBadge({ status }: { status: ExternalIncident["status"] }) {
+  const configs = {
+    operational: { label: "Operacional", variant: "outline" as const, className: "text-green-500 border-green-500/20 bg-green-500/10" },
+    degraded: { label: "Degradado", variant: "outline" as const, className: "text-yellow-500 border-yellow-500/20 bg-yellow-500/10" },
+    partial_outage: { label: "Instabilidade", variant: "outline" as const, className: "text-orange-500 border-orange-500/20 bg-orange-500/10" },
+    major_outage: { label: "Indisponível", variant: "outline" as const, className: "text-red-500 border-red-500/20 bg-red-500/10" },
+    maintenance: { label: "Manutenção", variant: "outline" as const, className: "text-blue-500 border-blue-500/20 bg-blue-500/10" },
+    unknown: { label: "Desconhecido", variant: "outline" as const, className: "text-slate-500 border-slate-500/20 bg-slate-500/10" },
+  };
+
+  const config = configs[status];
+  return (
+    <Badge variant={config.variant} className={config.className}>
+      {config.label}
+    </Badge>
+  );
+}
+
+function StatusIcon({ status }: { status: ExternalIncident["status"] }) {
+  switch (status) {
+    case "operational": return <CheckCircle2 className="w-4 h-4 text-green-500" />;
+    case "degraded": return <AlertTriangle className="w-4 h-4 text-yellow-500" />;
+    case "partial_outage": return <AlertTriangle className="w-4 h-4 text-orange-500" />;
+    case "major_outage": return <ShieldAlert className="w-4 h-4 text-red-500" />;
+    case "maintenance": return <Clock className="w-4 h-4 text-blue-500" />;
+    default: return <Zap className="w-4 h-4 text-slate-500" />;
+  }
 }
