@@ -145,7 +145,7 @@ export const getTmdbDetail = createServerFn({ method: "POST" })
     const { data: globalHistory } = await context.supabase
       .from("tmdb_content_history")
       .select("first_detected_at, servers_found_count")
-      .eq("title_key", keys[0]) // Simplificado: pega a primeira chave
+      .eq("title_key", keys[0])
       .maybeSingle();
 
     return {

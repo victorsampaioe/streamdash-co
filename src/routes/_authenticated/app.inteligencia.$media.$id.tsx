@@ -176,8 +176,8 @@ function TitleDetail() {
                     <b>{data.podium[0].name}</b>
                     <span className="text-xs text-muted-foreground ml-2">adicionou primeiro</span>
                   </div>
-                  <Badge variant="outline" className="font-mono text-emerald-500">
-                    Hoje {new Date(data.podium[0].found_at!).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}
+                  <Badge variant="outline" className="font-mono text-emerald-500 bg-background/50">
+                    {new Date(data.podium[0].found_at!).toLocaleDateString("pt-BR")}
                   </Badge>
                 </div>
                 <div className="divide-y border-t mt-4">
