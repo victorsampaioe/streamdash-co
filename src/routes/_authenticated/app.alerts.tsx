@@ -211,7 +211,20 @@ function AlertsPage() {
       </Card>
 
       <DigestCard />
-      <TelegramStyleCard currentStyle={profile?.telegram_iptv_style || undefined} />
+      <div className="grid md:grid-cols-2 gap-6">
+        <TelegramStyleCard 
+          title="Configuração Telegram: IPTV"
+          currentStyle={profile?.telegram_iptv_style || undefined} 
+          scope="iptv"
+        />
+        <TelegramStyleCard 
+          title="Configuração Telegram: Monitoramento"
+          currentStyle={profile?.telegram_alert_style || undefined} 
+          scope="monitoring"
+          summaryLabel="Agrupar recuperações (10min)"
+          summaryDesc="Envia um resumo de todos os servidores que voltaram online nos últimos 10 minutos."
+        />
+      </div>
     </div>
   );
 }
