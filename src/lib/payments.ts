@@ -17,21 +17,21 @@ export const PLANS: PlanDefinition[] = [
   {
     id: "monthly",
     name: "Mensal",
-    priceCents: 3500,
+    priceCents: 2500,
     durationDays: 30,
     perks: ["Monitoramento ilimitado", "Alertas em tempo real", "Suporte por e-mail"],
   },
   {
     id: "quarterly",
     name: "Trimestral",
-    priceCents: 9000,
+    priceCents: 6500,
     durationDays: 92,
     perks: ["Tudo do Mensal", "Economia de ~14%", "Suporte por e-mail"],
   },
   {
     id: "yearly",
     name: "Anual",
-    priceCents: 29900,
+    priceCents: 22000,
     durationDays: 365,
     highlight: true,
     perks: ["Tudo do Mensal", "Economia de ~29%", "Suporte prioritário"],
@@ -42,23 +42,44 @@ export const CREDIT_PACKS: PlanDefinition[] = [
   {
     id: "credits_10",
     name: "10 créditos",
-    priceCents: 10000,
+    priceCents: 6000,
     credits: 10,
     perks: ["Painel de Revendedor ativado", "Créditos vitalícios", "Suporte VIP"],
   },
   {
     id: "credits_30",
     name: "30 créditos",
-    priceCents: 27000,
+    priceCents: 18000,
     credits: 30,
     perks: ["Tudo do pacote anterior", "Desconto por volume", "Suporte VIP"],
   },
   {
-    id: "credits_40",
-    name: "40 créditos",
-    priceCents: 35000,
-    credits: 40,
+    id: "credits_50",
+    name: "50 créditos",
+    priceCents: 25000,
+    credits: 50,
     highlight: true,
+    perks: ["Melhor custo-benefício", "Créditos vitalícios", "Suporte VIP"],
+  },
+  {
+    id: "credits_100",
+    name: "100 créditos",
+    priceCents: 50000,
+    credits: 100,
+    perks: ["Melhor custo-benefício", "Créditos vitalícios", "Suporte VIP"],
+  },
+  {
+    id: "credits_200",
+    name: "200 créditos",
+    priceCents: 100000,
+    credits: 200,
+    perks: ["Melhor custo-benefício", "Créditos vitalícios", "Suporte VIP"],
+  },
+  {
+    id: "credits_500",
+    name: "500 créditos",
+    priceCents: 250000,
+    credits: 500,
     perks: ["Melhor custo-benefício", "Créditos vitalícios", "Suporte VIP"],
   },
 ];
@@ -71,7 +92,8 @@ export const MONTHLY_PROMO = {
 };
 
 export function isMonthlyPromoActive(now: number = Date.now()) {
-  return now < Date.parse(MONTHLY_PROMO.endsAt);
+  // Desativado por padrão para usar os novos preços fixos do admin
+  return false;
 }
 
 // Promoção relâmpago do plano Anual (válida só hoje, até 23:59 no horário de Brasília).
@@ -82,7 +104,7 @@ export const YEARLY_PROMO = {
 };
 
 export function isYearlyPromoActive(now: number = Date.now()) {
-  return now < Date.parse(YEARLY_PROMO.endsAt);
+  return false;
 }
 
 /** Preço efetivo do plano considerando promoções ativas. */

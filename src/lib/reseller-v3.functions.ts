@@ -223,9 +223,9 @@ export const createSubReseller = createServerFn({ method: "POST" })
     await supabaseAdmin.from("reseller_settings").upsert(
       {
         reseller_id: newUserId,
-        monthly_price_cents: parentSettings?.monthly_price_cents ?? 3500,
-        quarterly_price_cents: parentSettings?.quarterly_price_cents ?? 9000,
-        annual_price_cents: parentSettings?.annual_price_cents ?? 29900,
+        monthly_price_cents: parentSettings?.monthly_price_cents ?? 2500,
+        quarterly_price_cents: parentSettings?.quarterly_price_cents ?? 6500,
+        annual_price_cents: parentSettings?.annual_price_cents ?? 22000,
       } as any,
       { onConflict: "reseller_id", ignoreDuplicates: true }
     );
