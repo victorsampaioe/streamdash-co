@@ -92,7 +92,8 @@ export const MONTHLY_PROMO = {
 };
 
 export function isMonthlyPromoActive(now: number = Date.now()) {
-  return now < Date.parse(MONTHLY_PROMO.endsAt);
+  // Desativado por padrão para usar os novos preços fixos do admin
+  return false;
 }
 
 // Promoção relâmpago do plano Anual (válida só hoje, até 23:59 no horário de Brasília).
@@ -103,7 +104,7 @@ export const YEARLY_PROMO = {
 };
 
 export function isYearlyPromoActive(now: number = Date.now()) {
-  return now < Date.parse(YEARLY_PROMO.endsAt);
+  return false;
 }
 
 /** Preço efetivo do plano considerando promoções ativas. */
