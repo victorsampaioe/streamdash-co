@@ -157,7 +157,7 @@ function TitleDetail() {
 
         <TabsContent value="podium" className="mt-4">
           <Card className="p-5 space-y-3 border-yellow-500/20 bg-yellow-500/5">
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 mb-3">
               <Trophy className="h-5 w-5 text-yellow-500" />
               <h2 className="font-semibold text-lg">Reconhecimento Real por Servidor</h2>
             </div>
