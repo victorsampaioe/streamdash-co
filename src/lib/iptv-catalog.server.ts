@@ -265,6 +265,11 @@ export async function syncCatalog(
     const { notifyNewContent } = await import("./iptv-notify.server");
     const newItems = changes.filter((c: any) => c.action === "added");
     
+    // Alerta de Grande Atualização
+    if (newItems.length >= 50) {
+      await notifyNewContent(serverId, { kind: "system", name: "Grande Atualização", category: null }, { isFirst: true });
+    }
+
     for (const item of newItems) {
       const tKey = titleKey(item.name as string);
       
@@ -287,8 +292,15 @@ export async function syncCatalog(
       );
 
       // Notifica se for o primeiro servidor (ou um dos primeiros) a ter esse conteúdo
-      // Para não spammar, vamos notificar apenas se for uma novidade absoluta no sistema
-      if (!existing) {
+      // Ou se for conteúdo raro (lógica a ser expandida no futuro, por enquanto usamos isFirst se for novo global)
+      if (!existing && newItems.length < 50) {
+        await notifyNewContent(serverId, {
+          kind: item.kind as string,
+          name: item.name as string,
+          category: item.category as string | null
+        }, { isFirst: true });
+      } else if (newItems.length < 50) {
+        // Se não for novo global, ainda notificamos mas sem a flag isFirst (cairá na fila/resumo)
         await notifyNewContent(serverId, {
           kind: item.kind as string,
           name: item.name as string,
