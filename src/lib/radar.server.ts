@@ -113,7 +113,7 @@ async function syncExternalIncidents(incidents: ExternalIncident[]) {
 
 async function notifyExternalIncident(inc: ExternalIncident, event: "started" | "resolved") {
   try {
-    const { notifyAdmin } = await import("./admin-telegram.server");
+    const { notifyAdmin, broadcastGlobalIncident } = await import("./admin-telegram.server");
     const statusLabels: Record<string, string> = {
       degraded: "🟡 Degradado",
       partial_outage: "🟠 Instabilidade parcial",
@@ -132,7 +132,16 @@ async function notifyExternalIncident(inc: ExternalIncident, event: "started" | 
         `O serviço <b>${inc.provider}</b> voltou ao funcionamento normal.\n\n` +
         `Monitoramento DNS/IPTV estabilizado para esta fonte.`;
 
+    // Sempre notifica o admin
     await notifyAdmin(message);
+
+    // Broadcast para todos os usuários se for um incidente grave
+    if (event === "started" && (inc.status === "major_outage" || inc.status === "partial_outage" || inc.provider === "Cloudflare")) {
+      await broadcastGlobalIncident(message);
+    } else if (event === "resolved") {
+      // Opcional: Avisar todos quando normaliza
+      await broadcastGlobalIncident(message);
+    }
   } catch (e) {
     console.error("Erro ao notificar incidente externo:", e);
   }
