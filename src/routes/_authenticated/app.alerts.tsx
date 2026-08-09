@@ -211,7 +211,7 @@ function AlertsPage() {
       </Card>
 
       <DigestCard />
-      <TelegramStyleCard currentStyle={profile?.telegram_iptv_style} />
+      <TelegramStyleCard currentStyle={profile?.telegram_iptv_style || undefined} />
     </div>
   );
 }
