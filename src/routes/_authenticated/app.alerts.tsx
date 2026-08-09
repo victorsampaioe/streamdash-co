@@ -14,6 +14,8 @@ import { PremiumGate } from "@/components/subscription/premium-gate";
 import { useServerFn } from "@tanstack/react-start";
 import { sendMyDigestNow } from "@/lib/digest.functions";
 import { testTelegramChat } from "@/lib/telegram-verify.functions";
+import { updateTelegramStyle } from "@/lib/profile-settings.functions";
+import { Check, CheckSquare, Square } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/app/alerts")({
   component: AlertsPage,
