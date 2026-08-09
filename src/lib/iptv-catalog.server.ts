@@ -24,13 +24,16 @@ const CHUNK = 500;
 
 /** Normaliza o título para comparar o mesmo conteúdo entre servidores diferentes. */
 export function titleKey(name: string): string {
+  if (!name) return "";
   return name
     .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[\u0300-\u036f]/g, "") // Remove acentos
     .toLowerCase()
-    .replace(/\b(4k|fhd|hd|sd|h265|hevc|dublado|legendado|leg|dub|l|d)\b/g, " ")
-    .replace(/\(\d{4}\)/g, " ")
-    .replace(/[^a-z0-9]+/g, " ")
+    .replace(/[^a-z0-9\s]/g, " ") // Remove pontuação e caracteres especiais
+    .replace(/\b(4k|fhd|hd|sd|h265|hevc|dublado|legendado|leg|dub|l|d|dual|audio|hdtv|webrip|bluray|x264|x265)\b/g, " ") // Remove tags comuns
+    .replace(/\(\d{4}\)|\b\d{4}\b/g, " ") // Remove ano entre parênteses ou solto
+    .replace(/\b(s\d{1,2}e\d{1,2}|s\d{1,2}|temporada\s?\d{1,2}|t\d{1,2}|ep\d{1,2})\b/g, " ") // Remove temporada/episódio
+    .replace(/\s+/g, " ")
     .trim()
     .slice(0, 160);
 }
@@ -246,6 +249,33 @@ export async function syncCatalog(
     .from("servers")
     .update({ catalog_hash: hash, catalog_synced_at: nowIso, catalog_sync_ms: syncMs } as never)
     .eq("id", serverId);
+
+  // Atualiza estatísticas globais para o ranking
+  const totalAdded = added.live + added.vod + added.series;
+  if (!firstRun) {
+    await supabaseAdmin.rpc("update_catalog_stats", {
+      _server_id: serverId,
+      _added_count: totalAdded,
+      _total: totals.live + totals.vod + totals.series,
+    });
+  }
+
+  // Registra no histórico global se houver novos itens
+  if (changes.length > 0) {
+    const newItems = changes.filter((c: any) => c.action === "added");
+    for (const item of newItems) {
+      const tKey = titleKey(item.name as string);
+      await supabaseAdmin.from("tmdb_content_history").upsert(
+        {
+          title_key: tKey,
+          media_type: item.kind === "live" ? "live" : (item.kind === "series" ? "tv" : "movie"),
+          last_detected_at: nowIso,
+          discovery_server_id: serverId,
+        } as never,
+        { onConflict: "title_key,media_type" }
+      );
+    }
+  }
 
   return {
     skipped: false,

@@ -69,20 +69,24 @@ export const getTmdbDetail = createServerFn({ method: "POST" })
     // Apenas servidores verificados (com catálogo IPTV sincronizado).
     const { data: servers } = await context.supabase
       .from("servers")
-      .select("id, name, owner_id, current_status, last_iptv_sync_at")
+      .select("id, name, owner_id, current_status, last_iptv_sync_at, last_latency_ms")
       .not("catalog_synced_at", "is", null)
       .order("name");
 
-    const firstSeen = new Map<string, string>();
+    const itemMeta = new Map<string, { first_seen_at: string; quality?: string }>();
     if (keys.length) {
       const { data: rows } = await context.supabase
         .from("iptv_catalog_items")
-        .select("server_id, first_seen_at")
+        .select("server_id, first_seen_at, name")
         .in("title_key", keys)
         .is("removed_at", null);
       for (const r of rows ?? []) {
-        const prev = firstSeen.get(r.server_id);
-        if (!prev || r.first_seen_at < prev) firstSeen.set(r.server_id, r.first_seen_at);
+        const prev = itemMeta.get(r.server_id);
+        // Tenta inferir qualidade do nome
+        const quality = r.name.toLowerCase().includes("4k") ? "4K" : (r.name.toLowerCase().includes("fhd") || r.name.toLowerCase().includes("1080") ? "FHD" : "HD");
+        if (!prev || r.first_seen_at < prev.first_seen_at) {
+          itemMeta.set(r.server_id, { first_seen_at: r.first_seen_at, quality });
+        }
       }
     }
 
@@ -91,13 +95,16 @@ export const getTmdbDetail = createServerFn({ method: "POST" })
 
     const availability = (servers ?? []).map((s) => {
       const mine = s.owner_id === context.userId;
+      const meta = itemMeta.get(s.id);
       return {
         server_id: maskServerId(s.id, mine),
         name: maskServerName(s.id, mine, s.name),
         is_mine: mine,
         status: s.current_status as string,
         last_sync_at: s.last_iptv_sync_at as string | null,
-        found_at: firstSeen.get(s.id) ?? null,
+        latency_ms: s.last_latency_ms,
+        found_at: meta?.first_seen_at ?? null,
+        quality: meta?.quality ?? null,
       };
     });
 
@@ -112,7 +119,22 @@ export const getTmdbDetail = createServerFn({ method: "POST" })
       .eq("tmdb_id", data.id)
       .maybeSingle();
 
-    return { detail, availability, podium, following: !!follow };
+    const { data: globalHistory } = await context.supabase
+      .from("tmdb_content_history")
+      .select("first_detected_at, servers_found_count")
+      .eq("title_key", keys[0]) // Simplificado: pega a primeira chave
+      .maybeSingle();
+
+    return {
+      detail,
+      availability,
+      podium,
+      following: !!follow,
+      global_stats: globalHistory ? {
+        first_seen_at: globalHistory.first_detected_at,
+        server_count: globalHistory.servers_found_count
+      } : null
+    };
   });
 
 /** Segue / deixa de seguir um título do TMDB. */
