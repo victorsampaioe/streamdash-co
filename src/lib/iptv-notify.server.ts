@@ -74,3 +74,50 @@ export async function notifyServerIptvAlerts(serverId: string, items: IptvAlertI
     } catch { /* best-effort */ }
   }));
 }
+
+/** Notifica sobre novos conteúdos detectados no catálogo. */
+export async function notifyNewContent(serverId: string, item: { kind: string; name: string; category: string | null }) {
+  const { data: server } = await supabaseAdmin
+    .from("servers").select("id, owner_id, name").eq("id", serverId).maybeSingle();
+  if (!server) return;
+
+  const { data: globalInfo } = await supabaseAdmin
+    .from("tmdb_content_history")
+    .select("servers_found_count")
+    .eq("title_key", require("./iptv-catalog.server").titleKey(item.name))
+    .maybeSingle();
+
+  const icon = item.kind === "live" ? "📡" : (item.kind === "series" ? "📺" : "🎬");
+  const kindLabel = item.kind === "live" ? "Canal" : (item.kind === "series" ? "Série" : "Filme");
+
+  const message = `🚨 <b>Novo conteúdo detectado</b>\n\n` +
+    `${icon} ${kindLabel}:\n<b>${item.name}</b>\n\n` +
+    `🔥 Adicionado primeiro:\n${server.name}\n\n` +
+    `📺 Encontrado em:\n${globalInfo?.servers_found_count || 1} servidores\n\n` +
+    `Confira no painel: streammonitor.site/app/inteligencia`;
+
+  // Notifica o admin
+  try {
+    const { notifyAdmin } = await import("./admin-telegram.server");
+    await notifyAdmin(message);
+  } catch { /* ignore */ }
+
+  // Notifica os canais do usuário
+  const { data: channels } = await supabaseAdmin
+    .from("alert_channels").select("*").eq("owner_id", server.owner_id).eq("enabled", true).eq("kind", "telegram");
+  
+  if (channels?.length) {
+    const token = process.env.TELEGRAM_BOT_TOKEN;
+    for (const ch of channels) {
+      let botToken = token ?? "";
+      let chatId = ch.target?.trim() ?? "";
+      if (chatId.includes(":")) { const [t, c] = chatId.split(":"); botToken = t; chatId = c; }
+      if (!botToken || !chatId) continue;
+      await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ chat_id: chatId, text: message, parse_mode: "HTML" }),
+      }).catch(() => {});
+    }
+  }
+}

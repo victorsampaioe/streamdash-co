@@ -8,11 +8,34 @@ const mediaSchema = z.enum(["movie", "tv"]);
 /** Lista de lançamentos TMDB já cruzada com o catálogo dos servidores do usuário. */
 export const getTmdbFeed = createServerFn({ method: "POST" })
   .middleware([requireActiveSubscription])
-  .inputValidator((d: { feed: string; page?: number; query?: string }) =>
-    z.object({ feed: feedSchema, page: z.number().min(1).max(10).optional(), query: z.string().max(120).optional() }).parse(d))
+  .inputValidator((d: { feed: string; page?: number; query?: string; ranking?: boolean }) =>
+    z.object({ feed: feedSchema, page: z.number().min(1).max(10).optional(), query: z.string().max(120).optional(), ranking: z.boolean().optional() }).parse(d))
   .handler(async ({ data, context }) => {
     const { fetchFeed, searchTmdb } = await import("./tmdb.server");
     const { titleKey } = await import("./iptv-catalog.server");
+
+    if (data.ranking) {
+      const { data: stats } = await context.supabase
+        .from("reseller_catalog_stats")
+        .select("server_id, updates_last_7d, total_contents")
+        .order("updates_last_7d", { ascending: false })
+        .limit(10);
+      
+      const { maskServerName } = await import("./server-mask.server");
+      const { data: servers } = await context.supabase.from("servers").select("id, name, owner_id");
+      
+      return {
+        ranking: (stats ?? []).map(s => {
+          const srv = servers?.find(sv => sv.id === s.server_id);
+          const mine = srv?.owner_id === context.userId;
+          return {
+            name: maskServerName(s.server_id, mine, srv?.name ?? "Servidor"),
+            updates: s.updates_last_7d,
+            total: s.total_contents
+          };
+        })
+      };
+    }
 
     const cards = data.query?.trim()
       ? await searchTmdb(data.query.trim())
@@ -69,20 +92,24 @@ export const getTmdbDetail = createServerFn({ method: "POST" })
     // Apenas servidores verificados (com catálogo IPTV sincronizado).
     const { data: servers } = await context.supabase
       .from("servers")
-      .select("id, name, owner_id, current_status, last_iptv_sync_at")
+      .select("id, name, owner_id, current_status, last_iptv_sync_at, last_latency_ms")
       .not("catalog_synced_at", "is", null)
       .order("name");
 
-    const firstSeen = new Map<string, string>();
+    const itemMeta = new Map<string, { first_seen_at: string; quality?: string }>();
     if (keys.length) {
       const { data: rows } = await context.supabase
         .from("iptv_catalog_items")
-        .select("server_id, first_seen_at")
+        .select("server_id, first_seen_at, name")
         .in("title_key", keys)
         .is("removed_at", null);
       for (const r of rows ?? []) {
-        const prev = firstSeen.get(r.server_id);
-        if (!prev || r.first_seen_at < prev) firstSeen.set(r.server_id, r.first_seen_at);
+        const prev = itemMeta.get(r.server_id);
+        // Tenta inferir qualidade do nome
+        const quality = r.name.toLowerCase().includes("4k") ? "4K" : (r.name.toLowerCase().includes("fhd") || r.name.toLowerCase().includes("1080") ? "FHD" : "HD");
+        if (!prev || r.first_seen_at < prev.first_seen_at) {
+          itemMeta.set(r.server_id, { first_seen_at: r.first_seen_at, quality });
+        }
       }
     }
 
@@ -91,13 +118,16 @@ export const getTmdbDetail = createServerFn({ method: "POST" })
 
     const availability = (servers ?? []).map((s) => {
       const mine = s.owner_id === context.userId;
+      const meta = itemMeta.get(s.id);
       return {
         server_id: maskServerId(s.id, mine),
         name: maskServerName(s.id, mine, s.name),
         is_mine: mine,
         status: s.current_status as string,
         last_sync_at: s.last_iptv_sync_at as string | null,
-        found_at: firstSeen.get(s.id) ?? null,
+        latency_ms: s.last_latency_ms,
+        found_at: meta?.first_seen_at ?? null,
+        quality: meta?.quality ?? null,
       };
     });
 
@@ -112,7 +142,22 @@ export const getTmdbDetail = createServerFn({ method: "POST" })
       .eq("tmdb_id", data.id)
       .maybeSingle();
 
-    return { detail, availability, podium, following: !!follow };
+    const { data: globalHistory } = await context.supabase
+      .from("tmdb_content_history")
+      .select("first_detected_at, servers_found_count")
+      .eq("title_key", keys[0])
+      .maybeSingle();
+
+    return {
+      detail,
+      availability,
+      podium,
+      following: !!follow,
+      global_stats: globalHistory ? {
+        first_seen_at: globalHistory.first_detected_at,
+        server_count: globalHistory.servers_found_count
+      } : null
+    };
   });
 
 /** Segue / deixa de seguir um título do TMDB. */

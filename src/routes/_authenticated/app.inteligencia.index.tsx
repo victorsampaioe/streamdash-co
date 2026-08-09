@@ -7,7 +7,7 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Brain, Search, Star, Server, Film, Tv } from "lucide-react";
+import { Brain, Search, Star, Server, Film, Tv, Sparkles, TrendingUp } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/app/inteligencia/")({
   component: ContentIntelligence,
@@ -41,7 +41,8 @@ function ContentIntelligence() {
 
   const { data, isLoading, error } = useQuery({
     queryKey: ["tmdb-feed", feed, query],
-    queryFn: () => run({ data: { feed, query: query || undefined } }),
+    queryFn: () =>
+      run({ data: { feed, query: query === "ranking_mode" ? undefined : query || undefined, ranking: query === "ranking_mode" } }),
     staleTime: 10 * 60_000,
   });
 
@@ -86,10 +87,28 @@ function ContentIntelligence() {
 
       <div className="flex flex-wrap gap-2">
         {FEEDS.map((f) => (
-          <Button key={f.k} size="sm" variant={feed === f.k && !query ? "default" : "outline"} onClick={() => { setFeed(f.k); setQuery(""); setTerm(""); }}>
+          <Button
+            key={f.k}
+            size="sm"
+            variant={feed === f.k && !query && !data?.ranking ? "default" : "outline"}
+            onClick={() => {
+              setFeed(f.k);
+              setQuery("");
+              setTerm("");
+            }}
+          >
             {f.l}
           </Button>
         ))}
+        <Button
+          size="sm"
+          variant={data?.ranking ? "default" : "outline"}
+          onClick={() => {
+            setQuery("ranking_mode"); // Gatilho interno
+          }}
+        >
+          <TrendingUp className="h-4 w-4 mr-1" /> Ranking Atualização
+        </Button>
       </div>
 
       {error ? (
@@ -102,9 +121,27 @@ function ContentIntelligence() {
             <div key={i} className="aspect-[2/3] w-full rounded-lg bg-muted animate-pulse" />
           ))}
         </div>
+      ) : data?.ranking ? (
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+          {data.ranking.map((s: any, i: number) => (
+            <Card key={i} className="p-5 flex items-center justify-between border-primary/20 bg-primary/5">
+              <div className="flex items-center gap-3">
+                <div className="text-2xl font-bold text-primary/40 italic">#{i + 1}</div>
+                <div>
+                  <div className="font-semibold text-lg">{s.name}</div>
+                  <div className="text-xs text-muted-foreground">Total: {s.total} conteúdos</div>
+                </div>
+              </div>
+              <div className="text-right">
+                <div className="text-emerald-500 font-bold text-xl">+{s.updates}</div>
+                <div className="text-[10px] text-muted-foreground uppercase tracking-wider">Últimos 7 dias</div>
+              </div>
+            </Card>
+          ))}
+        </div>
       ) : (
         <div className="grid gap-4 grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 xl:grid-cols-6">
-          {data?.items.map((it) => (
+          {data?.items?.map((it) => (
             <Link
               key={`${it.media_type}-${it.tmdb_id}`}
               to="/app/inteligencia/$media/$id"
@@ -135,17 +172,25 @@ function ContentIntelligence() {
                 <div className="p-3 space-y-1.5 flex-1">
                   <div className="text-sm font-medium line-clamp-2">{it.title}</div>
                   <div className="text-xs text-muted-foreground">{year(it.release_date)}</div>
-                  <div className="flex items-center gap-1 text-xs">
-                    <Server className="h-3 w-3 text-muted-foreground" />
-                    <span className="text-emerald-500 font-medium">✅ {it.found_count}</span>
-                    <span className="text-muted-foreground">/</span>
-                    <span className="text-destructive">❌ {it.missing_count}</span>
+                  <div className="flex flex-col gap-1 text-[11px]">
+                    <div className="flex items-center gap-1.5">
+                      <Server className="h-3 w-3 text-muted-foreground" />
+                      <span className={it.found_count > 0 ? "text-emerald-500 font-bold" : "text-muted-foreground"}>
+                        🎬 Disponível em {it.found_count} servidor{it.found_count !== 1 ? "es" : ""}
+                      </span>
+                    </div>
+                    {it.found_count > 0 && (
+                      <div className="flex items-center gap-1.5 text-primary font-medium">
+                        <Sparkles className="h-3 w-3" />
+                        Novidade no catálogo
+                      </div>
+                    )}
                   </div>
                 </div>
               </Card>
             </Link>
           ))}
-          {data?.items.length === 0 && (
+          {(!data?.items || data.items.length === 0) && !data?.ranking && (
             <Card className="p-8 col-span-full text-center text-sm text-muted-foreground">Nenhum resultado.</Card>
           )}
         </div>

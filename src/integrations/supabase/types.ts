@@ -2543,6 +2543,35 @@ export type Database = {
           },
         ]
       }
+      reseller_catalog_stats: {
+        Row: {
+          last_sync_at: string | null
+          server_id: string
+          total_contents: number | null
+          updates_last_7d: number | null
+        }
+        Insert: {
+          last_sync_at?: string | null
+          server_id: string
+          total_contents?: number | null
+          updates_last_7d?: number | null
+        }
+        Update: {
+          last_sync_at?: string | null
+          server_id?: string
+          total_contents?: number | null
+          updates_last_7d?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reseller_catalog_stats_server_id_fkey"
+            columns: ["server_id"]
+            isOneToOne: true
+            referencedRelation: "servers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       reseller_credit_history: {
         Row: {
           amount: number
@@ -3143,6 +3172,47 @@ export type Database = {
         }
         Relationships: []
       }
+      tmdb_content_history: {
+        Row: {
+          discovery_server_id: string | null
+          first_detected_at: string | null
+          id: string
+          last_detected_at: string | null
+          media_type: string
+          servers_found_count: number | null
+          title_key: string
+          tmdb_id: number | null
+        }
+        Insert: {
+          discovery_server_id?: string | null
+          first_detected_at?: string | null
+          id?: string
+          last_detected_at?: string | null
+          media_type: string
+          servers_found_count?: number | null
+          title_key: string
+          tmdb_id?: number | null
+        }
+        Update: {
+          discovery_server_id?: string | null
+          first_detected_at?: string | null
+          id?: string
+          last_detected_at?: string | null
+          media_type?: string
+          servers_found_count?: number | null
+          title_key?: string
+          tmdb_id?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tmdb_content_history_discovery_server_id_fkey"
+            columns: ["discovery_server_id"]
+            isOneToOne: false
+            referencedRelation: "servers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       tmdb_follows: {
         Row: {
           created_at: string
@@ -3679,6 +3749,10 @@ export type Database = {
       }
       transfer_credits_v2: {
         Args: { _amount: number; _recipient_id: string; _sender_id: string }
+        Returns: undefined
+      }
+      update_catalog_stats: {
+        Args: { _added_count: number; _server_id: string; _total: number }
         Returns: undefined
       }
     }
