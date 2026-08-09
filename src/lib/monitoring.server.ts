@@ -273,18 +273,24 @@ async function performCheck(server: ServerRow) {
     }
   } else if (upConfirmed && openIncident) {
     await supabaseAdmin.from("incidents").update({ ended_at: new Date().toISOString() }).eq("id", openIncident.id);
-    let recovery = "";
+    let recoveryTime = "";
     try {
       const { closeCorrelationEvent } = await import("./correlation.server");
       const secs = await closeCorrelationEvent(server.id);
-      if (secs != null) recovery = `\nTempo até a recuperação: ${secs < 60 ? `${secs}s` : `${Math.round(secs / 60)}min`}`;
+      if (secs != null) recoveryTime = `\nTempo até a recuperação: ${secs < 60 ? `${secs}s` : `${Math.round(secs / 60)}min`}`;
     } catch { /* ignore */ }
-    await sendAlerts(
-      server,
-      "up",
-      `${server.name} normalizado — estabilidade confirmada em ~1min (${final.latency}ms)${recovery}`,
-      openIncident.id,
-    );
+    
+    // Novo formato de mensagem conforme solicitado
+    const now = new Date();
+    const timeStr = now.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
+    
+    const message = `✅ <b>Serviço normalizado</b>\n\n` +
+      `Servidor:\n${server.name}\n\n` +
+      `Região confirmada:\n🇧🇷 São Paulo\n\n` +
+      `Status:\nOnline novamente\n\n` +
+      `Detectado:\n${timeStr}`;
+
+    await sendAlerts(server, "up", message, openIncident.id);
   }
 
 
