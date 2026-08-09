@@ -24,15 +24,12 @@ export const createPixPayment = createServerFn({ method: "POST" })
         amountCents = effectivePriceCents(standardPlan);
         description = `StreamMonitor — Plano ${standardPlan.name}`;
       } else if (planId.startsWith("credits_")) {
-        const packs: Record<string, { price: number; label: string }> = {
-          credits_10: { price: 10000, label: "10 créditos" },
-          credits_30: { price: 27000, label: "30 créditos" },
-          credits_40: { price: 35000, label: "40 créditos" },
-        };
-        const pack = packs[planId];
-        if (!pack) throw new Error("Pacote de créditos inválido");
-        amountCents = pack.price;
-        description = `StreamMonitor — ${pack.label}`;
+        const amount = parseInt(planId.replace("credits_", ""));
+        if (isNaN(amount)) throw new Error("Pacote de créditos inválido");
+        
+        const pricePerCredit = amount >= 50 ? 5.00 : 6.00;
+        amountCents = Math.round(amount * pricePerCredit * 100);
+        description = `StreamMonitor — ${amount} créditos`;
       } else {
         throw new Error("Plano inválido");
       }

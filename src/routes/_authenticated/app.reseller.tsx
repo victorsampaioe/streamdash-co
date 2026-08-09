@@ -80,9 +80,12 @@ export const Route = createFileRoute("/_authenticated/app/reseller")({
 });
 
 const CREDIT_PACKS = [
-  { amount: 10, price: 10000, plan: "credits_10" as PlanId, label: "10 créditos" },
-  { amount: 30, price: 27000, plan: "credits_30" as PlanId, label: "30 créditos" },
-  { amount: 40, price: 35000, plan: "credits_40" as PlanId, label: "40 créditos" },
+  { amount: 10, price: 6000, plan: "credits_10" as PlanId, label: "10 créditos" },
+  { amount: 30, price: 18000, plan: "credits_30" as PlanId, label: "30 créditos" },
+  { amount: 50, price: 25000, plan: "credits_50" as PlanId, label: "50 créditos" },
+  { amount: 100, price: 50000, plan: "credits_100" as PlanId, label: "100 créditos" },
+  { amount: 200, price: 100000, plan: "credits_200" as PlanId, label: "200 créditos" },
+  { amount: 500, price: 250000, plan: "credits_500" as PlanId, label: "500 créditos" },
 ];
 
 function ResellerDashboard() {
