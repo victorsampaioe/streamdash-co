@@ -69,7 +69,6 @@ async function fetchStatuspage(provider: string, url: string, impact: string): P
 async function syncExternalIncidents(incidents: ExternalIncident[]) {
   const now = new Date().toISOString();
   for (const inc of incidents) {
-    // Busca incidente ativo para este serviço
     const { data: active } = await supabaseAdmin
       .from("external_service_incidents")
       .select("*")
@@ -79,7 +78,6 @@ async function syncExternalIncidents(incidents: ExternalIncident[]) {
 
     if (inc.status !== "operational") {
       if (!active) {
-        // Novo incidente
         await supabaseAdmin.from("external_service_incidents").insert({
           service_name: inc.provider,
           status: inc.status,
@@ -90,10 +88,8 @@ async function syncExternalIncidents(incidents: ExternalIncident[]) {
           last_update_at: now
         } as never);
         
-        // Alerta Telegram
         await notifyExternalIncident(inc, "started");
       } else if (active.status !== inc.status) {
-        // Mudança de status no incidente ativo
         await supabaseAdmin.from("external_service_incidents")
           .update({ 
             status: inc.status, 
@@ -103,7 +99,6 @@ async function syncExternalIncidents(incidents: ExternalIncident[]) {
           .eq("id", active.id);
       }
     } else if (active) {
-      // Resolvido
       await supabaseAdmin.from("external_service_incidents")
         .update({ 
           resolved_at: now, 
@@ -111,36 +106,36 @@ async function syncExternalIncidents(incidents: ExternalIncident[]) {
         } as never)
         .eq("id", active.id);
       
-      // Alerta Telegram de normalização
       await notifyExternalIncident(inc, "resolved");
     }
   }
 }
 
 async function notifyExternalIncident(inc: ExternalIncident, event: "started" | "resolved") {
-  const { notifyAdmin } = await import("./admin-telegram.server");
-  const statusLabels: Record<string, string> = {
-    degraded: "🟡 Degradado",
-    partial_outage: "🟠 Instabilidade parcial",
-    major_outage: "🔴 Indisponível",
-    maintenance: "⚙️ Manutenção",
-    operational: "✅ Operacional",
-  };
+  try {
+    const { notifyAdmin } = await import("./admin-telegram.server");
+    const statusLabels: Record<string, string> = {
+      degraded: "🟡 Degradado",
+      partial_outage: "🟠 Instabilidade parcial",
+      major_outage: "🔴 Indisponível",
+      maintenance: "⚙️ Manutenção",
+      operational: "✅ Operacional",
+    };
 
-  const message = event === "started" 
-    ? `🚨 <b>Incidente externo detectado</b>\n\n` +
-      `Serviço: <b>${inc.provider}</b>\n` +
-      `Status: ${statusLabels[inc.status] || inc.status}\n\n` +
-      `⚠️ <b>Possível impacto:</b>\n${inc.impact}\n\n` +
-      `Recomendação: Aguardar normalização antes de investigar servidores.`
-    : `✅ <b>Serviço normalizado</b>\n\n` +
-      `O serviço <b>${inc.provider}</b> voltou ao funcionamento normal.\n\n` +
-      `Monitoramento DNS/IPTV estabilizado para esta fonte.`;
+    const message = event === "started" 
+      ? `🚨 <b>Incidente externo detectado</b>\n\n` +
+        `Serviço: <b>${inc.provider}</b>\n` +
+        `Status: ${statusLabels[inc.status] || inc.status}\n\n` +
+        `⚠️ <b>Possível impacto:</b>\n${inc.impact}\n\n` +
+        `Recomendação: Aguardar normalização antes de investigar servidores.`
+      : `✅ <b>Serviço normalizado</b>\n\n` +
+        `O serviço <b>${inc.provider}</b> voltou ao funcionamento normal.\n\n` +
+        `Monitoramento DNS/IPTV estabilizado para esta fonte.`;
 
-  await notifyAdmin(message);
-
-  // Opcional: Notificar todos os usuários que cadastraram Telegram
-  // (Pode ser barulhento, então geralmente restringimos ao admin ou usamos um canal público)
+    await notifyAdmin(message);
+  } catch (e) {
+    console.error("Erro ao notificar incidente externo:", e);
+  }
 }
 
 export type RadarSnapshot = {
@@ -157,7 +152,12 @@ async function getHistoricalIncidents(): Promise<HistoricalIncident[]> {
     .limit(20);
   
   return (data ?? []).map(d => ({
-    ...d,
+    id: d.id,
+    service_name: d.service_name,
+    status: d.status,
+    description: d.description || "Nenhuma descrição disponível",
+    started_at: d.started_at,
+    resolved_at: d.resolved_at,
     duration_minutes: d.resolved_at 
       ? Math.round((new Date(d.resolved_at).getTime() - new Date(d.started_at).getTime()) / 60000)
       : undefined
@@ -165,15 +165,13 @@ async function getHistoricalIncidents(): Promise<HistoricalIncident[]> {
 }
 
 let snapshotCache: { at: number; data: RadarSnapshot } | null = null;
-const CACHE_TTL_MS = 60_000; // Radar professional updates faster
+const CACHE_TTL_MS = 60_000;
 
 async function computeRadarSnapshot(): Promise<RadarSnapshot> {
   const incidents = await Promise.all(FEEDS.map((f) => fetchStatuspage(f.provider, f.url, f.impact)));
   const externalIncidents = incidents.filter((r): r is ExternalIncident => !!r);
   
-  // Background sync (sem travar o snapshot)
   syncExternalIncidents(externalIncidents).catch(console.error);
-
   const history = await getHistoricalIncidents();
 
   return {
