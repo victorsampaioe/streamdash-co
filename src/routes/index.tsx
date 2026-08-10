@@ -135,6 +135,11 @@ function Landing() {
             <a href="https://t.me/+RId642Ac4AFkOWFh" target="_blank" rel="noopener noreferrer" className="hover:text-primary inline-flex items-center gap-1.5">
               <Send className="h-4 w-4" />Novidades no Telegram
             </a>
+            <Link to="/monitoramento-iptv" className="hover:text-primary">Monitoramento IPTV</Link>
+            <Link to="/monitoramento-dns" className="hover:text-primary">Monitoramento DNS</Link>
+            <Link to="/alertas-telegram" className="hover:text-primary">Alertas</Link>
+            <Link to="/revendedor-stream-monitor" className="hover:text-primary">Revenda</Link>
+            <Link to="/blog" className="hover:text-primary">Blog</Link>
             <Link to="/auth" className="hover:text-primary">Entrar</Link>
           </div>
         </div>
