@@ -90,17 +90,41 @@ function Landing() {
         </div>
       </section>
 
+      <section className="max-w-6xl mx-auto px-4 sm:px-6 py-16 sm:py-24">
+        <h2 className="text-3xl font-bold text-center mb-12">Prova Social</h2>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-8 max-w-4xl mx-auto">
+          <Stat label="Servidores monitorados" value="1.240+" />
+          <Stat label="Checagens realizadas" value="4.5M+" />
+          <Stat label="Alertas enviados" value="850k+" />
+          <Stat label="Revendedores ativos" value="320+" />
+        </div>
+      </section>
+
+      <section className="max-w-4xl mx-auto px-4 sm:px-6 py-16 sm:py-20 border-t border-border/60">
+        <h2 className="text-3xl font-bold text-center mb-12 text-primary">Perguntas Frequentes (FAQ)</h2>
+        <div className="space-y-6">
+          <FaqItem question="Como funciona o Stream Monitor?" answer="O Stream Monitor vigia seus servidores a cada 30 segundos de múltiplas regiões globais. Se houver qualquer instabilidade, você é avisado instantaneamente no Telegram." />
+          <FaqItem question="Ele monitora IPTV automaticamente?" answer="Sim! Temos um módulo exclusivo para IPTV que verifica o status do painel, fluxos, latência e gera um Health Score de 0 a 100%." />
+          <FaqItem question="Recebo alerta quando o servidor cai?" answer="Com certeza. O alerta é enviado em segundos após a confirmação da queda via Telegram, Discord, e-mail ou Webhook." />
+          <FaqItem question="Posso usar para minha revenda?" answer="Sim, o sistema foi projetado para revendas. Você pode inclusive criar páginas públicas de status para seus próprios clientes." />
+          <FaqItem question="Como virar revendedor?" answer="Basta se cadastrar e adquirir um pacote de créditos. Com os créditos, você pode criar e gerenciar sub-revendedores de forma totalmente independente." />
+        </div>
+      </section>
+
       <section className="border-y border-border/60 bg-card/40">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 py-10 sm:py-12 text-center">
-          <h2 className="text-2xl font-bold tracking-tight mb-3">Acompanhe as novidades</h2>
+          <h2 className="text-2xl font-bold tracking-tight mb-3">Pronto para profissionalizar sua operação?</h2>
           <p className="text-muted-foreground mb-6 max-w-xl mx-auto">
-            Entre no nosso canal do Telegram para receber alertas de status, novidades e dicas de monitoramento.
+            Junte-se a centenas de revendedores que não perdem mais tempo respondendo reclamação de queda.
           </p>
-          <a href="https://t.me/+RId642Ac4AFkOWFh" target="_blank" rel="noopener noreferrer">
-            <Button size="lg" variant="outline" className="gap-2">
-              <Send className="h-4 w-4" />Entrar no Telegram
-            </Button>
-          </a>
+          <div className="flex flex-wrap justify-center gap-4">
+            <Link to="/auth"><Button size="lg" className="glow-primary">Criar minha conta grátis</Button></Link>
+            <a href="https://t.me/+RId642Ac4AFkOWFh" target="_blank" rel="noopener noreferrer">
+              <Button size="lg" variant="outline" className="gap-2">
+                <Send className="h-4 w-4" />Canal de Novidades
+              </Button>
+            </a>
+          </div>
         </div>
       </section>
 
@@ -121,6 +145,27 @@ function Landing() {
   );
 }
 
+
+function Stat({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="text-center">
+      <div className="text-3xl font-bold text-primary mb-1">{value}</div>
+      <div className="text-xs uppercase tracking-wider text-muted-foreground">{label}</div>
+    </div>
+  );
+}
+
+function FaqItem({ question, answer }: { question: string; answer: string }) {
+  return (
+    <div className="rounded-xl border border-border/60 bg-card/40 p-6">
+      <h3 className="font-bold mb-2 flex items-center gap-2 text-primary">
+        <span className="h-2 w-2 rounded-full bg-primary" />
+        {question}
+      </h3>
+      <p className="text-sm text-muted-foreground leading-relaxed">{answer}</p>
+    </div>
+  );
+}
 
 function Feature({ icon, title, desc }: { icon: React.ReactNode; title: string; desc: string }) {
   return (
