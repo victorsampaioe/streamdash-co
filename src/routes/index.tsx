@@ -7,13 +7,16 @@ import { SupportFab } from "@/components/support-fab";
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "Stream Monitor - Monitoramento IPTV, DNS e Servidores em Tempo Real" },
-      { name: "description", content: "Monitore servidores IPTV, DNS e infraestrutura em tempo real. Receba alertas no Telegram antes dos seus clientes perceberem problemas." },
-      { property: "og:title", content: "Stream Monitor 🚀" },
-      { property: "og:description", content: "Monitoramento inteligente IPTV, DNS e servidores em tempo real." },
+      { title: "Stream Monitor | Monitoramento IPTV, DNS e Servidores em Tempo Real" },
+      { name: "description", content: "Monitore servidores IPTV, DNS e infraestrutura 24 horas. Receba alertas inteligentes no Telegram e descubra problemas antes dos seus clientes." },
+      { property: "og:title", content: "Stream Monitor | Monitoramento IPTV, DNS e Servidores em Tempo Real" },
+      { property: "og:description", content: "Monitore servidores IPTV, DNS e infraestrutura 24 horas. Receba alertas inteligentes no Telegram e descubra problemas antes dos seus clientes." },
       { property: "og:type", content: "website" },
+      { property: "og:url", content: "https://streammonitor.site" },
       { property: "og:image", content: "https://storage.googleapis.com/gpt-engineer-file-uploads/zowG5KmEoBQiJwfUQDz2ZUEdQ2a2/social-images/social-1783131758542-ChatGPT_Image_3_de_jul._de_2026,_23_22_19.webp" },
       { name: "twitter:card", content: "summary_large_image" },
+      { name: "twitter:title", content: "Stream Monitor | Monitoramento IPTV, DNS e Servidores em Tempo Real" },
+      { name: "twitter:description", content: "Monitore servidores IPTV, DNS e infraestrutura 24 horas. Receba alertas inteligentes no Telegram e descubra problemas antes dos seus clientes." },
       { name: "twitter:image", content: "https://storage.googleapis.com/gpt-engineer-file-uploads/zowG5KmEoBQiJwfUQDz2ZUEdQ2a2/social-images/social-1783131758542-ChatGPT_Image_3_de_jul._de_2026,_23_22_19.webp" },
     ],
   }),
