@@ -206,19 +206,23 @@ async function performCheck(server: ServerRow) {
   let confirmNote = "";
 
   if (first.status === "down") {
-    // 1ª falha -> não considerar offline; entrar em Confirmação de Queda (~2min).
-    const burst = await confirmationBurst(server, DOWN_CONFIRM_PROBES, sslDays);
-    const all = [first, ...burst];
-    const fails = all.filter((p) => p.status === "down").length;
-    const ratio = fails / all.length;
-    final = burst[burst.length - 1] ?? first;
-    if (ratio >= DOWN_CONFIRM_RATIO) {
-      downConfirmed = true;
-      displayStatus = "down";
-      confirmNote = `${fails}/${all.length} verificações falharam em ~2min`;
+    // Só entra em confirmação se já não estiver confirmado como DOWN
+    if (!wasDown) {
+      const burst = await confirmationBurst(server, DOWN_CONFIRM_PROBES, sslDays);
+      const all = [first, ...burst];
+      const fails = all.filter((p) => p.status === "down").length;
+      const ratio = fails / all.length;
+      final = burst[burst.length - 1] ?? first;
+      if (ratio >= DOWN_CONFIRM_RATIO) {
+        downConfirmed = true;
+        displayStatus = "down";
+        confirmNote = `${fails}/${all.length} verificações falharam em ~2min`;
+      } else {
+        // Instabilidade isolada -> degradado, mas não muda status base se era UP
+        displayStatus = wasDown ? "down" : "degraded";
+      }
     } else {
-      // Alternância entre ❌ e ✅ -> instabilidade, sem alerta de OFFLINE.
-      displayStatus = "degraded";
+      displayStatus = "down";
     }
   } else if (wasDown) {
     // Retorno detectado -> confirmar estabilidade por ~1 minuto.
@@ -226,7 +230,8 @@ async function performCheck(server: ServerRow) {
     const all = [first, ...burst];
     final = burst[burst.length - 1] ?? first;
     upConfirmed = all.every((p) => p.status !== "down");
-    displayStatus = upConfirmed ? final.status : "degraded";
+    // Só volta a ser UP se todas as checagens do burst passarem
+    displayStatus = upConfirmed ? final.status : "down";
   }
 
   const newConsecutive = downConfirmed
@@ -243,7 +248,7 @@ async function performCheck(server: ServerRow) {
     consecutive_failures: newConsecutive,
   }).eq("id", server.id);
 
-  // Incidentes + alertas (somente após confirmação)
+  // Busca incidente aberto
   const { data: openIncident } = await supabaseAdmin
     .from("incidents")
     .select("id")
@@ -255,42 +260,59 @@ async function performCheck(server: ServerRow) {
 
   const reason = final.error ?? first.error ?? `HTTP ${final.httpStatus ?? "-"}`;
 
+  // LÓGICA DE TRANSIÇÃO DE ESTADO REAL
   if (downConfirmed && !openIncident) {
+    // Transição: QUALQUER -> OFFLINE_CONFIRMED
     const { data: inc } = await supabaseAdmin.from("incidents").insert({
       server_id: server.id,
       reason,
     }).select("id").single();
+    
     if (inc) {
-      // DNS Correlation Intelligence: camada extra de diagnóstico (não altera o monitoramento).
-      let message = `${server.name} está OFFLINE (confirmado — ${confirmNote})\nMotivo: ${reason}`;
-      try {
-        const { analyzeCorrelation, recordCorrelationEvent, correlationMessage } = await import("./correlation.server");
-        const corr = await analyzeCorrelation(server as any);
-        await recordCorrelationEvent(server as any, corr);
-        message = correlationMessage(server, corr, reason, confirmNote);
-      } catch { /* correlação nunca deve bloquear o alerta */ }
-      await sendAlerts(server, "down", message, inc.id);
+      const idempotencyKey = `${server.id}_${inc.id}_down`;
+      const { error: idError } = await supabaseAdmin.from("alert_idempotency" as any).insert({ id: idempotencyKey });
+      
+      if (!idError) {
+        let message = `${server.name} está OFFLINE (confirmado — ${confirmNote})\nMotivo: ${reason}`;
+        try {
+          const { analyzeCorrelation, recordCorrelationEvent, correlationMessage } = await import("./correlation.server");
+          const corr = await analyzeCorrelation(server as any);
+          await recordCorrelationEvent(server as any, corr);
+          message = correlationMessage(server, corr, reason, confirmNote);
+        } catch { /* ignore correlation error */ }
+        await sendAlerts(server, "down", message, inc.id);
+      }
     }
   } else if (upConfirmed && openIncident) {
-    await supabaseAdmin.from("incidents").update({ ended_at: new Date().toISOString() }).eq("id", openIncident.id);
-    let recoveryTime = "";
-    try {
-      const { closeCorrelationEvent } = await import("./correlation.server");
-      const secs = await closeCorrelationEvent(server.id);
-      if (secs != null) recoveryTime = `\nTempo até a recuperação: ${secs < 60 ? `${secs}s` : `${Math.round(secs / 60)}min`}`;
-    } catch { /* ignore */ }
-    
-    // Novo formato de mensagem conforme solicitado
-    const now = new Date();
-    const timeStr = now.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
-    
-    const message = `✅ <b>Serviço normalizado</b>\n\n` +
-      `Servidor:\n${server.name}\n\n` +
-      `Região confirmada:\n🇧🇷 São Paulo\n\n` +
-      `Status:\nOnline novamente\n\n` +
-      `Detectado:\n${timeStr}`;
+    // Transição: OFFLINE_CONFIRMED -> ONLINE
+    // Apenas se o status anterior no banco fosse REALMENTE down
+    if (wasDown) {
+      const idempotencyKey = `${server.id}_${openIncident.id}_up`;
+      const { error: idError } = await supabaseAdmin.from("alert_idempotency" as any).insert({ id: idempotencyKey });
 
-    await sendAlerts(server, "up", message, openIncident.id);
+      if (!idError) {
+        await supabaseAdmin.from("incidents").update({ ended_at: new Date().toISOString() }).eq("id", openIncident.id);
+        await supabaseAdmin.from("servers").update({ recovery_alert_sent_at: new Date().toISOString() } as any).eq("id", server.id);
+        
+        let recoveryTime = "";
+        try {
+          const { closeCorrelationEvent } = await import("./correlation.server");
+          const secs = await closeCorrelationEvent(server.id);
+          if (secs != null) recoveryTime = `\nTempo até a recuperação: ${secs < 60 ? `${secs}s` : `${Math.round(secs / 60)}min`}`;
+        } catch { /* ignore */ }
+        
+        const now = new Date();
+        const timeStr = now.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
+        
+        const message = `✅ <b>Serviço normalizado</b>\n\n` +
+          `Servidor:\n${server.name}\n\n` +
+          `Região confirmada:\n🇧🇷 São Paulo\n\n` +
+          `Status:\nOnline novamente\n\n` +
+          `Detectado:\n${timeStr}`;
+
+        await sendAlerts(server, "up", message, openIncident.id);
+      }
+    }
   }
 
 
