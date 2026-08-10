@@ -12,7 +12,6 @@ Disallow: /dashboard/
 Disallow: /config/
 Disallow: /api/
 Allow: /api/public/
-Allow: /sitemap.xml
 
 Sitemap: https://streammonitor.site/sitemap.xml`;
 
