@@ -7,12 +7,14 @@ import { SupportFab } from "@/components/support-fab";
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "StreamMonitor — Descubra a queda antes do seu cliente" },
-      { name: "description", content: "Plataforma premium de monitoramento para revendas e provedores: uptime, latência, DNS, SSL e IPTV vigiados 24/7 com alerta imediato no Telegram, Discord, e-mail e webhook." },
-      { property: "og:title", content: "StreamMonitor — Descubra a queda antes do seu cliente" },
-      { property: "og:description", content: "Monitoramento 24/7 de uptime, DNS, SSL e IPTV com alertas instantâneos e página pública de status para seus clientes." },
+      { title: "Stream Monitor - Monitoramento IPTV, DNS e Servidores em Tempo Real" },
+      { name: "description", content: "Monitore servidores IPTV, DNS e infraestrutura em tempo real. Receba alertas no Telegram antes dos seus clientes perceberem problemas." },
+      { property: "og:title", content: "Stream Monitor 🚀" },
+      { property: "og:description", content: "Monitoramento inteligente IPTV, DNS e servidores em tempo real." },
       { property: "og:type", content: "website" },
+      { property: "og:image", content: "https://storage.googleapis.com/gpt-engineer-file-uploads/zowG5KmEoBQiJwfUQDz2ZUEdQ2a2/social-images/social-1783131758542-ChatGPT_Image_3_de_jul._de_2026,_23_22_19.webp" },
       { name: "twitter:card", content: "summary_large_image" },
+      { name: "twitter:image", content: "https://storage.googleapis.com/gpt-engineer-file-uploads/zowG5KmEoBQiJwfUQDz2ZUEdQ2a2/social-images/social-1783131758542-ChatGPT_Image_3_de_jul._de_2026,_23_22_19.webp" },
     ],
   }),
   component: Landing,
@@ -50,17 +52,17 @@ function Landing() {
             Monitoramento ativo a cada 30 segundos
           </div>
           <h1 className="text-4xl sm:text-5xl md:text-7xl font-bold tracking-tight mb-6 break-words">
-            Evite descobrir uma queda<br />
-            <span className="text-primary">pelo seu cliente.</span>
+            Seu servidor IPTV caiu?<br />
+            <span className="text-primary">Descubra antes dos seus clientes.</span>
           </h1>
           <p className="text-base sm:text-lg text-muted-foreground max-w-2xl mx-auto mb-8 sm:mb-10">
-            O StreamMonitor vigia seus servidores, DNS, certificados e painéis IPTV 24 horas por dia
-            e te avisa no Telegram em segundos — antes que o suporte encha de mensagem.
+            Monitoramento inteligente de IPTV, DNS e servidores com alertas automáticos no Telegram.
           </p>
           <div className="flex flex-wrap items-center justify-center gap-3">
-            <Link to="/auth"><Button size="lg" className="glow-primary">Começar agora</Button></Link>
-            <a href="#recursos"><Button size="lg" variant="outline">Ver recursos</Button></a>
+            <Link to="/auth"><Button size="lg" className="glow-primary">✅ Testar sistema</Button></Link>
+            <Link to="/auth"><Button size="lg" variant="outline">✅ Seja revendedor</Button></Link>
           </div>
+        </div>
           <div className="mt-10 grid grid-cols-2 sm:grid-cols-4 gap-4 max-w-3xl mx-auto">
             {[
               { k: "30s", v: "Intervalo de checagem" },
@@ -78,13 +80,14 @@ function Landing() {
       </section>
 
       <section id="recursos" className="max-w-6xl mx-auto px-4 sm:px-6 py-16 sm:py-20">
+        <h2 className="text-3xl font-bold text-center mb-12">Por que usar o Stream Monitor?</h2>
         <div className="grid md:grid-cols-3 gap-6">
-          <Feature icon={<Zap className="h-5 w-5" />} title="Vigilância a cada 30s" desc="DNS, HTTP, latência e certificado SSL conferidos sem parar, de várias regiões." />
-          <Feature icon={<Bell className="h-5 w-5" />} title="Alerta antes da reclamação" desc="Telegram, Discord, e-mail e webhook disparados no primeiro sinal de instabilidade." />
-          <Feature icon={<LineChart className="h-5 w-5" />} title="Histórico que prova" desc="Gráficos de disponibilidade, incidentes documentados e exportação em CSV." />
-          <Feature icon={<Globe className="h-5 w-5" />} title="Status page da sua marca" desc="Uma página pública elegante para tranquilizar clientes durante um incidente." />
-          <Feature icon={<ShieldCheck className="h-5 w-5" />} title="Segurança de verdade" desc="Credenciais criptografadas, logs sem dados sensíveis e bloqueio anti força bruta." />
-          <Feature icon={<Activity className="h-5 w-5" />} title="Inteligência IPTV" desc="Player API, playlist, canais, VOD e séries monitorados com health score." />
+          <Feature icon={<Zap className="h-5 w-5" />} title="✅ Monitoramento 24 horas" desc="DNS, HTTP, latência e certificado SSL conferidos sem parar, de várias regiões." />
+          <Feature icon={<ShieldCheck className="h-5 w-5" />} title="✅ Inteligência de diagnóstico" desc="Sistema anti-falso positivo com burst de confirmação e análise detalhada de falhas." />
+          <Feature icon={<Bell className="h-5 w-5" />} title="✅ Alertas Telegram" desc="Receba notificações instantâneas no seu Telegram antes dos seus clientes perceberem." />
+          <Feature icon={<Activity className="h-5 w-5" />} title="✅ Monitoramento IPTV real" desc="Monitoramento dedicado de painéis IPTV com Health Score exclusivo e verificação de fluxo." />
+          <Feature icon={<Globe className="h-5 w-5" />} title="✅ Análise de conteúdo" desc="Acompanhe conteúdos recentes e status de servidores IPTV com integração TMDB." />
+          <Feature icon={<LineChart className="h-5 w-5" />} title="✅ Sistema para revendedores" desc="Estrutura completa para gerenciar sub-revendas com sistema de créditos independente." />
         </div>
       </section>
 
