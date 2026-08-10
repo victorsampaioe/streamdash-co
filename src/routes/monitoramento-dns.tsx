@@ -5,9 +5,14 @@ import { Globe, Lock, Search, CheckCircle2 } from "lucide-react";
 export const Route = createFileRoute('/monitoramento-dns')({
   head: () => ({
     meta: [
-      { title: "Monitoramento DNS e SSL em Tempo Real - Stream Monitor" },
-      { name: "description", content: "Evite que seu domínio fique fora do ar. Monitoramento de DNS, mudanças de IP e expiração de certificados SSL." },
-      { property: "og:title", content: "Monitoramento DNS e SSL 🌐" },
+      { title: "Monitoramento DNS e Servidores | Stream Monitor" },
+      { name: "description", content: "Acompanhe DNS, IP, SSL, disponibilidade e desempenho dos seus servidores em tempo real." },
+      { property: "og:title", content: "Monitoramento DNS e Servidores | Stream Monitor" },
+      { property: "og:description", content: "Acompanhe DNS, IP, SSL, disponibilidade e desempenho dos seus servidores em tempo real." },
+      { property: "og:type", content: "website" },
+      { property: "og:url", content: "https://streammonitor.site/monitoramento-dns" },
+      { property: "og:image", content: "https://storage.googleapis.com/gpt-engineer-file-uploads/zowG5KmEoBQiJwfUQDz2ZUEdQ2a2/social-images/social-1783131758542-ChatGPT_Image_3_de_jul._de_2026,_23_22_19.webp" },
+      { name: "twitter:card", content: "summary_large_image" },
     ],
   }),
   component: DnsPage,

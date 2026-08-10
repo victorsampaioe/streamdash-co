@@ -5,8 +5,14 @@ import { Users, CreditCard, TrendingUp, DollarSign } from "lucide-react";
 export const Route = createFileRoute('/revendedor-stream-monitor')({
   head: () => ({
     meta: [
-      { title: "Seja um Revendedor Stream Monitor - Ganhe Dinheiro" },
-      { name: "description", content: "Crie sua própria rede de monitoramento. Sistema de créditos para revendedores com margem de lucro agressiva." },
+      { title: "Seja Revendedor Stream Monitor | Sistema de Monitoramento IPTV" },
+      { name: "description", content: "Revenda uma plataforma profissional de monitoramento IPTV e ofereça tecnologia para seus clientes." },
+      { property: "og:title", content: "Seja Revendedor Stream Monitor | Sistema de Monitoramento IPTV" },
+      { property: "og:description", content: "Revenda uma plataforma profissional de monitoramento IPTV e ofereça tecnologia para seus clientes." },
+      { property: "og:type", content: "website" },
+      { property: "og:url", content: "https://streammonitor.site/revendedor-stream-monitor" },
+      { property: "og:image", content: "https://storage.googleapis.com/gpt-engineer-file-uploads/zowG5KmEoBQiJwfUQDz2ZUEdQ2a2/social-images/social-1783131758542-ChatGPT_Image_3_de_jul._de_2026,_23_22_19.webp" },
+      { name: "twitter:card", content: "summary_large_image" },
     ],
   }),
   component: ResellerPage,
