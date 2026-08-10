@@ -270,7 +270,7 @@ async function performCheck(server: ServerRow) {
     
     if (inc) {
       const idempotencyKey = `${server.id}_${inc.id}_down`;
-      const { error: idError } = await supabaseAdmin.from("alert_idempotency").insert({ id: idempotencyKey });
+      const { error: idError } = await supabaseAdmin.from("alert_idempotency" as any).insert({ id: idempotencyKey });
       
       if (!idError) {
         let message = `${server.name} está OFFLINE (confirmado — ${confirmNote})\nMotivo: ${reason}`;
@@ -288,11 +288,11 @@ async function performCheck(server: ServerRow) {
     // Apenas se o status anterior no banco fosse REALMENTE down
     if (wasDown) {
       const idempotencyKey = `${server.id}_${openIncident.id}_up`;
-      const { error: idError } = await supabaseAdmin.from("alert_idempotency").insert({ id: idempotencyKey });
+      const { error: idError } = await supabaseAdmin.from("alert_idempotency" as any).insert({ id: idempotencyKey });
 
       if (!idError) {
         await supabaseAdmin.from("incidents").update({ ended_at: new Date().toISOString() }).eq("id", openIncident.id);
-        await supabaseAdmin.from("servers").update({ recovery_alert_sent_at: new Date().toISOString() }).eq("id", server.id);
+        await supabaseAdmin.from("servers").update({ recovery_alert_sent_at: new Date().toISOString() } as any).eq("id", server.id);
         
         let recoveryTime = "";
         try {
