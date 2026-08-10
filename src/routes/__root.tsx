@@ -68,14 +68,16 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "StreamMonitor — Monitoramento de infraestrutura em tempo real" },
-      { name: "description", content: "Monitore uptime, latência, DNS e SSL dos seus servidores. Alertas por e-mail, Discord, Telegram e webhooks. Dashboard em tempo real." },
-      { property: "og:title", content: "StreamMonitor — Monitoramento de infraestrutura em tempo real" },
-      { property: "og:description", content: "Monitore uptime, latência, DNS e SSL dos seus servidores. Alertas por e-mail, Discord, Telegram e webhooks. Dashboard em tempo real." },
+      { title: "Stream Monitor | Monitoramento IPTV, DNS e Servidores em Tempo Real" },
+      { name: "description", content: "Monitore servidores IPTV, DNS e infraestrutura 24 horas. Receba alertas inteligentes no Telegram e descubra problemas antes dos seus clientes." },
+      { property: "og:site_name", content: "Stream Monitor" },
+      { property: "og:title", content: "Stream Monitor | Monitoramento IPTV, DNS e Servidores em Tempo Real" },
+      { property: "og:description", content: "Monitore servidores IPTV, DNS e infraestrutura 24 horas. Receba alertas inteligentes no Telegram e descubra problemas antes dos seus clientes." },
       { property: "og:type", content: "website" },
+      { property: "og:url", content: "https://streammonitor.site" },
       { name: "twitter:card", content: "summary_large_image" },
-      { name: "twitter:title", content: "StreamMonitor — Monitoramento de infraestrutura em tempo real" },
-      { name: "twitter:description", content: "Monitore uptime, latência, DNS e SSL dos seus servidores. Alertas por e-mail, Discord, Telegram e webhooks. Dashboard em tempo real." },
+      { name: "twitter:title", content: "Stream Monitor | Monitoramento IPTV, DNS e Servidores em Tempo Real" },
+      { name: "twitter:description", content: "Monitore servidores IPTV, DNS e infraestrutura 24 horas. Receba alertas inteligentes no Telegram e descubra problemas antes dos seus clientes." },
       { property: "og:image", content: "https://storage.googleapis.com/gpt-engineer-file-uploads/zowG5KmEoBQiJwfUQDz2ZUEdQ2a2/social-images/social-1783131758542-ChatGPT_Image_3_de_jul._de_2026,_23_22_19.webp" },
       { name: "twitter:image", content: "https://storage.googleapis.com/gpt-engineer-file-uploads/zowG5KmEoBQiJwfUQDz2ZUEdQ2a2/social-images/social-1783131758542-ChatGPT_Image_3_de_jul._de_2026,_23_22_19.webp" },
     ],
@@ -94,23 +96,36 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
 });
 
 function RootShell({ children }: { children: ReactNode }) {
+  const structuredData = [
+    {
+      "@context": "https://schema.org",
+      "@type": "Organization",
+      "name": "Stream Monitor",
+      "url": "https://streammonitor.site",
+      "logo": "https://streammonitor.site/favicon.ico",
+      "description": "Plataforma de monitoramento profissional para IPTV, DNS e infraestrutura."
+    },
+    {
+      "@context": "https://schema.org",
+      "@type": "SoftwareApplication",
+      "name": "Stream Monitor",
+      "operatingSystem": "Web",
+      "applicationCategory": "InfrastructureMonitoring",
+      "description": "Monitore servidores IPTV, DNS e infraestrutura 24 horas com alertas inteligentes no Telegram.",
+      "offers": {
+        "@type": "Offer",
+        "price": "25.00",
+        "priceCurrency": "BRL"
+      }
+    }
+  ];
+
   return (
     <html lang="pt-BR">
       <head>
         <HeadContent />
         <script type="application/ld+json">
-          {JSON.stringify({
-            "@context": "https://schema.org",
-            "@type": "SoftwareApplication",
-            "name": "Stream Monitor",
-            "operatingSystem": "Web",
-            "applicationCategory": "InfrastructureMonitoring",
-            "offers": {
-              "@type": "Offer",
-              "price": "25.00",
-              "priceCurrency": "BRL"
-            }
-          })}
+          {JSON.stringify(structuredData)}
         </script>
       </head>
       <body>
