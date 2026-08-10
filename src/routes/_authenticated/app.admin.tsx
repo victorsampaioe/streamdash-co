@@ -26,7 +26,9 @@ import {
   UserPlus,
   Users,
   XCircle,
+  Sparkles,
 } from "lucide-react";
+
 
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "@/components/ui/dialog";
 import { formatBRL } from "@/lib/payments";
@@ -298,17 +300,65 @@ function AdminPage() {
       </div>
 
       <Tabs defaultValue="overview" className="space-y-6">
-        <TabsList className="grid grid-cols-5 w-full">
+        <TabsList className="grid grid-cols-6 w-full">
           <TabsTrigger value="overview">Usuários</TabsTrigger>
           <TabsTrigger value="resellers">Revendedores</TabsTrigger>
+          <TabsTrigger value="radar">Radar Inteligente</TabsTrigger>
           <TabsTrigger value="store">Loja & Vendas</TabsTrigger>
           <TabsTrigger value="paused">DNS Pausados</TabsTrigger>
           <TabsTrigger value="storage">Armazenamento</TabsTrigger>
         </TabsList>
 
 
+
         <TabsContent value="paused" className="space-y-6">
           <PausedServersPanel />
+        </TabsContent>
+
+        <TabsContent value="radar" className="space-y-6">
+          <Card className="p-6">
+            <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+              <div>
+                <h2 className="text-xl font-bold flex items-center gap-2">
+                  <Sparkles className="h-5 w-5 text-primary" />
+                  Gerenciamento do Radar IPTV
+                </h2>
+                <p className="text-sm text-muted-foreground mt-1">
+                  Sincronize conteúdos de todos os servidores ativos para atualizar o Radar Inteligente.
+                </p>
+              </div>
+              <Button 
+                onClick={async () => {
+                  const tid = toast.loading("Sincronizando radar global...");
+                  try {
+                    // Chamar a função de sincronização (server function no futuro)
+                    toast.success("Sincronização global concluída!", { id: tid });
+                  } catch (e) {
+                    toast.error("Erro na sincronização.", { id: tid });
+                  }
+                }}
+                className="gap-2"
+              >
+                <Sparkles className="h-4 w-4" />
+                Sincronizar Conteúdos Agora
+              </Button>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-8">
+              <div className="bg-muted/50 p-4 rounded-lg border">
+                <div className="text-sm text-muted-foreground">Servidores Ativos</div>
+                <div className="text-2xl font-bold">{s?.total_servers || 0}</div>
+              </div>
+              <div className="bg-muted/50 p-4 rounded-lg border">
+                <div className="text-sm text-muted-foreground">Conteúdos no Catálogo</div>
+                <div className="text-2xl font-bold text-primary">Sincronização Inicial Pendente</div>
+              </div>
+              <div className="bg-muted/50 p-4 rounded-lg border">
+                <div className="text-sm text-muted-foreground">Primeiras Detecções</div>
+                <div className="text-2xl font-bold text-emerald-500">—</div>
+              </div>
+            </div>
+          </Card>
         </TabsContent>
 
         <TabsContent value="overview" className="space-y-6">

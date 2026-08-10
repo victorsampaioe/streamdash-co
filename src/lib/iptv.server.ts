@@ -1,12 +1,14 @@
 // Server-only IPTV intelligence engine.
 // Low impact by design: sampling, caching, rate limits and configurable intervals.
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
+import { titleKey } from "./iptv-catalog.server";
 
 const API_TIMEOUT_MS = 12_000;
 const M3U_TIMEOUT_MS = 20_000;
 const STREAM_TIMEOUT_MS = 10_000;
-const STREAM_SAMPLE_BYTES = 350_000; // ~ enough to estimate bitrate without draining the server
-const MIN_GAP_MS = 5 * 60_000; // internal rate limit per server
+const STREAM_SAMPLE_BYTES = 350_000; // ~ o suficiente para estimar o bitrate sem drenar o servidor
+const MIN_GAP_MS = 5 * 60_000; // limite interno por servidor
+
 
 export type StreamProbe = {
   kind: "live" | "vod" | "series";
