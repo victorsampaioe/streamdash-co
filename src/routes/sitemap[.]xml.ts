@@ -12,8 +12,6 @@ export const Route = createFileRoute('/sitemap.xml')({
           { url: '/revendedor-stream-monitor', priority: '0.8', changefreq: 'weekly' },
           { url: '/blog', priority: '0.7', changefreq: 'daily' },
           { url: '/blog/como-evitar-queda-iptv', priority: '0.7', changefreq: 'weekly' },
-          { url: '/login', priority: '0.5', changefreq: 'monthly' },
-          { url: '/cadastro', priority: '0.5', changefreq: 'monthly' },
           { url: '/planos', priority: '0.8', changefreq: 'weekly' },
           { url: '/contato', priority: '0.5', changefreq: 'monthly' },
           { url: '/sobre', priority: '0.5', changefreq: 'monthly' },
