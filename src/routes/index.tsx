@@ -118,7 +118,7 @@ function Landing() {
             Junte-se a centenas de revendedores que não perdem mais tempo respondendo reclamação de queda.
           </p>
           <div className="flex flex-wrap justify-center gap-4">
-            <Link to="/auth"><Button size="lg" className="glow-primary">Criar minha conta grátis</Button></Link>
+            <Link to="/auth"><Button size="lg" className="glow-primary">✅ Começar agora</Button></Link>
             <a href="https://t.me/+RId642Ac4AFkOWFh" target="_blank" rel="noopener noreferrer">
               <Button size="lg" variant="outline" className="gap-2">
                 <Send className="h-4 w-4" />Canal de Novidades
