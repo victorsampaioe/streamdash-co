@@ -5,10 +5,14 @@ import { ShieldCheck, Zap, Bell, CheckCircle2 } from "lucide-react";
 export const Route = createFileRoute('/monitoramento-iptv')({
   head: () => ({
     meta: [
-      { title: "Monitoramento IPTV Profissional - Stream Monitor" },
-      { name: "description", content: "Descubra como o monitoramento inteligente de IPTV pode salvar sua revenda. Health Score, análise de fluxos e alertas automáticos." },
-      { property: "og:title", content: "Monitoramento IPTV Profissional 🎬" },
-      { property: "og:type", content: "article" },
+      { title: "Monitoramento IPTV Inteligente | Stream Monitor" },
+      { name: "description", content: "Analise servidores IPTV, status, latência, disponibilidade e receba alertas automáticos quando houver problemas." },
+      { property: "og:title", content: "Monitoramento IPTV Inteligente | Stream Monitor" },
+      { property: "og:description", content: "Analise servidores IPTV, status, latência, disponibilidade e receba alertas automáticos quando houver problemas." },
+      { property: "og:type", content: "website" },
+      { property: "og:url", content: "https://streammonitor.site/monitoramento-iptv" },
+      { property: "og:image", content: "https://storage.googleapis.com/gpt-engineer-file-uploads/zowG5KmEoBQiJwfUQDz2ZUEdQ2a2/social-images/social-1783131758542-ChatGPT_Image_3_de_jul._de_2026,_23_22_19.webp" },
+      { name: "twitter:card", content: "summary_large_image" },
     ],
   }),
   component: IptvPage,

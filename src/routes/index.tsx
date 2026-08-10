@@ -7,13 +7,16 @@ import { SupportFab } from "@/components/support-fab";
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "Stream Monitor - Monitoramento IPTV, DNS e Servidores em Tempo Real" },
-      { name: "description", content: "Monitore servidores IPTV, DNS e infraestrutura em tempo real. Receba alertas no Telegram antes dos seus clientes perceberem problemas." },
-      { property: "og:title", content: "Stream Monitor 🚀" },
-      { property: "og:description", content: "Monitoramento inteligente IPTV, DNS e servidores em tempo real." },
+      { title: "Stream Monitor | Monitoramento IPTV, DNS e Servidores em Tempo Real" },
+      { name: "description", content: "Monitore servidores IPTV, DNS e infraestrutura 24 horas. Receba alertas inteligentes no Telegram e descubra problemas antes dos seus clientes." },
+      { property: "og:title", content: "Stream Monitor | Monitoramento IPTV, DNS e Servidores em Tempo Real" },
+      { property: "og:description", content: "Monitore servidores IPTV, DNS e infraestrutura 24 horas. Receba alertas inteligentes no Telegram e descubra problemas antes dos seus clientes." },
       { property: "og:type", content: "website" },
+      { property: "og:url", content: "https://streammonitor.site" },
       { property: "og:image", content: "https://storage.googleapis.com/gpt-engineer-file-uploads/zowG5KmEoBQiJwfUQDz2ZUEdQ2a2/social-images/social-1783131758542-ChatGPT_Image_3_de_jul._de_2026,_23_22_19.webp" },
       { name: "twitter:card", content: "summary_large_image" },
+      { name: "twitter:title", content: "Stream Monitor | Monitoramento IPTV, DNS e Servidores em Tempo Real" },
+      { name: "twitter:description", content: "Monitore servidores IPTV, DNS e infraestrutura 24 horas. Receba alertas inteligentes no Telegram e descubra problemas antes dos seus clientes." },
       { name: "twitter:image", content: "https://storage.googleapis.com/gpt-engineer-file-uploads/zowG5KmEoBQiJwfUQDz2ZUEdQ2a2/social-images/social-1783131758542-ChatGPT_Image_3_de_jul._de_2026,_23_22_19.webp" },
     ],
   }),
@@ -108,11 +111,11 @@ function Landing() {
       <section className="max-w-4xl mx-auto px-4 sm:px-6 py-16 sm:py-20 border-t border-border/60" itemScope itemType="https://schema.org/FAQPage">
         <h2 className="text-3xl font-bold text-center mb-12 text-primary">Perguntas Frequentes (FAQ)</h2>
         <div className="space-y-6">
-          <FaqItem question="Como funciona o Stream Monitor?" answer="O Stream Monitor vigia seus servidores a cada 30 segundos de múltiplas regiões globais. Se houver qualquer instabilidade, você é avisado instantaneamente no Telegram." />
-          <FaqItem question="Ele monitora IPTV automaticamente?" answer="Sim! Temos um módulo exclusivo para IPTV que verifica o status do painel, fluxos, latência e gera um Health Score de 0 a 100%." />
-          <FaqItem question="Recebo alerta quando o servidor cai?" answer="Com certeza. O alerta é enviado em segundos após a confirmação da queda via Telegram, Discord, e-mail ou Webhook." />
-          <FaqItem question="Posso usar para minha revenda?" answer="Sim, o sistema foi projetado para revendas. Você pode inclusive criar páginas públicas de status para seus próprios clientes." />
-          <FaqItem question="Como virar revendedor?" answer="Basta se cadastrar e adquirir um pacote de créditos. Com os créditos, você pode criar e gerenciar sub-revendedores de forma totalmente independente." />
+          <FaqItem question="O que é o Stream Monitor?" answer="O Stream Monitor é uma plataforma profissional de monitoramento 24h para servidores IPTV, DNS e infraestrutura, com foco em diagnóstico inteligente e alertas instantâneos." />
+          <FaqItem question="Como funciona o monitoramento IPTV?" answer="O sistema verifica a disponibilidade da API, status de fluxos e gera um Health Score exclusivo de 0 a 100%, alertando sobre qualquer instabilidade detectada." />
+          <FaqItem question="Recebo alertas no Telegram?" answer="Sim! O Stream Monitor envia notificações em tempo real no Telegram, permitindo que você resolva problemas antes que seus clientes percebam." />
+          <FaqItem question="Posso usar para revenda?" answer="Sim, oferecemos um sistema completo para revendedores gerenciarem suas próprias redes de monitoramento com autonomia e lucratividade." />
+          <FaqItem question="Como contratar?" answer="Basta criar uma conta, escolher seu plano ou adquirir créditos e começar a monitorar sua infraestrutura em segundos." />
         </div>
       </section>
 
