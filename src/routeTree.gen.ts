@@ -10,15 +10,20 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as VerifyEmailRouteImport } from './routes/verify-email'
-import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
+import { Route as RevendedorStreamMonitorRouteImport } from './routes/revendedor-stream-monitor'
 import { Route as ResetPasswordRouteImport } from './routes/reset-password'
+import { Route as MonitoramentoIptvRouteImport } from './routes/monitoramento-iptv'
+import { Route as MonitoramentoDnsRouteImport } from './routes/monitoramento-dns'
 import { Route as McpRouteImport } from './routes/mcp'
 import { Route as DnsRouteImport } from './routes/dns'
+import { Route as BlogRouteImport } from './routes/blog'
 import { Route as AuthRouteImport } from './routes/auth'
+import { Route as AlertasTelegramRouteImport } from './routes/alertas-telegram'
 import { Route as SlugRouteImport } from './routes/$slug'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as StatusSlugRouteImport } from './routes/status.$slug'
+import { Route as BlogComoEvitarQuedaIptvRouteImport } from './routes/blog.como-evitar-queda-iptv'
 import { Route as AuthenticatedAppRouteImport } from './routes/_authenticated/app'
 import { Route as Char91DotwellKnownChar93OauthProtectedResourceRouteImport } from './routes/[.well-known]/oauth-protected-resource'
 import { Route as Char91DotmcpChar93ListToolsRouteImport } from './routes/[.mcp]/list-tools'
@@ -46,6 +51,8 @@ import { Route as AuthenticatedAppInteligenciaIndexRouteImport } from './routes/
 import { Route as AuthenticatedAppHubIndexRouteImport } from './routes/_authenticated/app.hub.index'
 import { Route as ApiPublicWebhooksMercadopagoRouteImport } from './routes/api/public/webhooks/mercadopago'
 import { Route as ApiPublicTelegramWebhookRouteImport } from './routes/api/public/telegram/webhook'
+import { Route as ApiPublicSitemapXmlRouteImport } from './routes/api/public/sitemap.xml'
+import { Route as ApiPublicRobotsTxtRouteImport } from './routes/api/public/robots.txt'
 import { Route as ApiPublicRegionsTargetsRouteImport } from './routes/api/public/regions/targets'
 import { Route as ApiPublicRegionsReportRouteImport } from './routes/api/public/regions/report'
 import { Route as ApiPublicCronNotificationsRouteImport } from './routes/api/public/cron/notifications'
@@ -70,14 +77,24 @@ const VerifyEmailRoute = VerifyEmailRouteImport.update({
   path: '/verify-email',
   getParentRoute: () => rootRouteImport,
 } as any)
-const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
-  id: '/sitemap.xml',
-  path: '/sitemap.xml',
+const RevendedorStreamMonitorRoute = RevendedorStreamMonitorRouteImport.update({
+  id: '/revendedor-stream-monitor',
+  path: '/revendedor-stream-monitor',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ResetPasswordRoute = ResetPasswordRouteImport.update({
   id: '/reset-password',
   path: '/reset-password',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const MonitoramentoIptvRoute = MonitoramentoIptvRouteImport.update({
+  id: '/monitoramento-iptv',
+  path: '/monitoramento-iptv',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const MonitoramentoDnsRoute = MonitoramentoDnsRouteImport.update({
+  id: '/monitoramento-dns',
+  path: '/monitoramento-dns',
   getParentRoute: () => rootRouteImport,
 } as any)
 const McpRoute = McpRouteImport.update({
@@ -90,9 +107,19 @@ const DnsRoute = DnsRouteImport.update({
   path: '/dns',
   getParentRoute: () => rootRouteImport,
 } as any)
+const BlogRoute = BlogRouteImport.update({
+  id: '/blog',
+  path: '/blog',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AuthRoute = AuthRouteImport.update({
   id: '/auth',
   path: '/auth',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AlertasTelegramRoute = AlertasTelegramRouteImport.update({
+  id: '/alertas-telegram',
+  path: '/alertas-telegram',
   getParentRoute: () => rootRouteImport,
 } as any)
 const SlugRoute = SlugRouteImport.update({
@@ -113,6 +140,11 @@ const StatusSlugRoute = StatusSlugRouteImport.update({
   id: '/status/$slug',
   path: '/status/$slug',
   getParentRoute: () => rootRouteImport,
+} as any)
+const BlogComoEvitarQuedaIptvRoute = BlogComoEvitarQuedaIptvRouteImport.update({
+  id: '/como-evitar-queda-iptv',
+  path: '/como-evitar-queda-iptv',
+  getParentRoute: () => BlogRoute,
 } as any)
 const AuthenticatedAppRoute = AuthenticatedAppRouteImport.update({
   id: '/app',
@@ -263,6 +295,16 @@ const ApiPublicTelegramWebhookRoute =
     path: '/api/public/telegram/webhook',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiPublicSitemapXmlRoute = ApiPublicSitemapXmlRouteImport.update({
+  id: '/api/public/sitemap/xml',
+  path: '/api/public/sitemap/xml',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiPublicRobotsTxtRoute = ApiPublicRobotsTxtRouteImport.update({
+  id: '/api/public/robots/txt',
+  path: '/api/public/robots/txt',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiPublicRegionsTargetsRoute = ApiPublicRegionsTargetsRouteImport.update({
   id: '/api/public/regions/targets',
   path: '/api/public/regions/targets',
@@ -368,15 +410,20 @@ const AuthenticatedAppHubLIdRoute = AuthenticatedAppHubLIdRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/$slug': typeof SlugRoute
+  '/alertas-telegram': typeof AlertasTelegramRoute
   '/auth': typeof AuthRoute
+  '/blog': typeof BlogRouteWithChildren
   '/dns': typeof DnsRoute
   '/mcp': typeof McpRoute
+  '/monitoramento-dns': typeof MonitoramentoDnsRoute
+  '/monitoramento-iptv': typeof MonitoramentoIptvRoute
   '/reset-password': typeof ResetPasswordRoute
-  '/sitemap.xml': typeof SitemapDotxmlRoute
+  '/revendedor-stream-monitor': typeof RevendedorStreamMonitorRoute
   '/verify-email': typeof VerifyEmailRoute
   '/.mcp/list-tools': typeof Char91DotmcpChar93ListToolsRoute
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   '/app': typeof AuthenticatedAppRouteWithChildren
+  '/blog/como-evitar-queda-iptv': typeof BlogComoEvitarQuedaIptvRoute
   '/status/$slug': typeof StatusSlugRoute
   '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
@@ -412,6 +459,8 @@ export interface FileRoutesByFullPath {
   '/api/public/cron/notifications': typeof ApiPublicCronNotificationsRoute
   '/api/public/regions/report': typeof ApiPublicRegionsReportRoute
   '/api/public/regions/targets': typeof ApiPublicRegionsTargetsRoute
+  '/api/public/robots/txt': typeof ApiPublicRobotsTxtRoute
+  '/api/public/sitemap/xml': typeof ApiPublicSitemapXmlRoute
   '/api/public/telegram/webhook': typeof ApiPublicTelegramWebhookRoute
   '/api/public/webhooks/mercadopago': typeof ApiPublicWebhooksMercadopagoRoute
   '/app/hub/': typeof AuthenticatedAppHubIndexRoute
@@ -424,14 +473,19 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/$slug': typeof SlugRoute
+  '/alertas-telegram': typeof AlertasTelegramRoute
   '/auth': typeof AuthRoute
+  '/blog': typeof BlogRouteWithChildren
   '/dns': typeof DnsRoute
   '/mcp': typeof McpRoute
+  '/monitoramento-dns': typeof MonitoramentoDnsRoute
+  '/monitoramento-iptv': typeof MonitoramentoIptvRoute
   '/reset-password': typeof ResetPasswordRoute
-  '/sitemap.xml': typeof SitemapDotxmlRoute
+  '/revendedor-stream-monitor': typeof RevendedorStreamMonitorRoute
   '/verify-email': typeof VerifyEmailRoute
   '/.mcp/list-tools': typeof Char91DotmcpChar93ListToolsRoute
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
+  '/blog/como-evitar-queda-iptv': typeof BlogComoEvitarQuedaIptvRoute
   '/status/$slug': typeof StatusSlugRoute
   '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
@@ -466,6 +520,8 @@ export interface FileRoutesByTo {
   '/api/public/cron/notifications': typeof ApiPublicCronNotificationsRoute
   '/api/public/regions/report': typeof ApiPublicRegionsReportRoute
   '/api/public/regions/targets': typeof ApiPublicRegionsTargetsRoute
+  '/api/public/robots/txt': typeof ApiPublicRobotsTxtRoute
+  '/api/public/sitemap/xml': typeof ApiPublicSitemapXmlRoute
   '/api/public/telegram/webhook': typeof ApiPublicTelegramWebhookRoute
   '/api/public/webhooks/mercadopago': typeof ApiPublicWebhooksMercadopagoRoute
   '/app/hub': typeof AuthenticatedAppHubIndexRoute
@@ -480,15 +536,20 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
   '/$slug': typeof SlugRoute
+  '/alertas-telegram': typeof AlertasTelegramRoute
   '/auth': typeof AuthRoute
+  '/blog': typeof BlogRouteWithChildren
   '/dns': typeof DnsRoute
   '/mcp': typeof McpRoute
+  '/monitoramento-dns': typeof MonitoramentoDnsRoute
+  '/monitoramento-iptv': typeof MonitoramentoIptvRoute
   '/reset-password': typeof ResetPasswordRoute
-  '/sitemap.xml': typeof SitemapDotxmlRoute
+  '/revendedor-stream-monitor': typeof RevendedorStreamMonitorRoute
   '/verify-email': typeof VerifyEmailRoute
   '/.mcp/list-tools': typeof Char91DotmcpChar93ListToolsRoute
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   '/_authenticated/app': typeof AuthenticatedAppRouteWithChildren
+  '/blog/como-evitar-queda-iptv': typeof BlogComoEvitarQuedaIptvRoute
   '/status/$slug': typeof StatusSlugRoute
   '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
@@ -524,6 +585,8 @@ export interface FileRoutesById {
   '/api/public/cron/notifications': typeof ApiPublicCronNotificationsRoute
   '/api/public/regions/report': typeof ApiPublicRegionsReportRoute
   '/api/public/regions/targets': typeof ApiPublicRegionsTargetsRoute
+  '/api/public/robots/txt': typeof ApiPublicRobotsTxtRoute
+  '/api/public/sitemap/xml': typeof ApiPublicSitemapXmlRoute
   '/api/public/telegram/webhook': typeof ApiPublicTelegramWebhookRoute
   '/api/public/webhooks/mercadopago': typeof ApiPublicWebhooksMercadopagoRoute
   '/_authenticated/app/hub/': typeof AuthenticatedAppHubIndexRoute
@@ -538,15 +601,20 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/$slug'
+    | '/alertas-telegram'
     | '/auth'
+    | '/blog'
     | '/dns'
     | '/mcp'
+    | '/monitoramento-dns'
+    | '/monitoramento-iptv'
     | '/reset-password'
-    | '/sitemap.xml'
+    | '/revendedor-stream-monitor'
     | '/verify-email'
     | '/.mcp/list-tools'
     | '/.well-known/oauth-protected-resource'
     | '/app'
+    | '/blog/como-evitar-queda-iptv'
     | '/status/$slug'
     | '/.lovable/oauth/consent'
     | '/.mcp/invoke-tool/$tool'
@@ -582,6 +650,8 @@ export interface FileRouteTypes {
     | '/api/public/cron/notifications'
     | '/api/public/regions/report'
     | '/api/public/regions/targets'
+    | '/api/public/robots/txt'
+    | '/api/public/sitemap/xml'
     | '/api/public/telegram/webhook'
     | '/api/public/webhooks/mercadopago'
     | '/app/hub/'
@@ -594,14 +664,19 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/$slug'
+    | '/alertas-telegram'
     | '/auth'
+    | '/blog'
     | '/dns'
     | '/mcp'
+    | '/monitoramento-dns'
+    | '/monitoramento-iptv'
     | '/reset-password'
-    | '/sitemap.xml'
+    | '/revendedor-stream-monitor'
     | '/verify-email'
     | '/.mcp/list-tools'
     | '/.well-known/oauth-protected-resource'
+    | '/blog/como-evitar-queda-iptv'
     | '/status/$slug'
     | '/.lovable/oauth/consent'
     | '/.mcp/invoke-tool/$tool'
@@ -636,6 +711,8 @@ export interface FileRouteTypes {
     | '/api/public/cron/notifications'
     | '/api/public/regions/report'
     | '/api/public/regions/targets'
+    | '/api/public/robots/txt'
+    | '/api/public/sitemap/xml'
     | '/api/public/telegram/webhook'
     | '/api/public/webhooks/mercadopago'
     | '/app/hub'
@@ -649,15 +726,20 @@ export interface FileRouteTypes {
     | '/'
     | '/_authenticated'
     | '/$slug'
+    | '/alertas-telegram'
     | '/auth'
+    | '/blog'
     | '/dns'
     | '/mcp'
+    | '/monitoramento-dns'
+    | '/monitoramento-iptv'
     | '/reset-password'
-    | '/sitemap.xml'
+    | '/revendedor-stream-monitor'
     | '/verify-email'
     | '/.mcp/list-tools'
     | '/.well-known/oauth-protected-resource'
     | '/_authenticated/app'
+    | '/blog/como-evitar-queda-iptv'
     | '/status/$slug'
     | '/.lovable/oauth/consent'
     | '/.mcp/invoke-tool/$tool'
@@ -693,6 +775,8 @@ export interface FileRouteTypes {
     | '/api/public/cron/notifications'
     | '/api/public/regions/report'
     | '/api/public/regions/targets'
+    | '/api/public/robots/txt'
+    | '/api/public/sitemap/xml'
     | '/api/public/telegram/webhook'
     | '/api/public/webhooks/mercadopago'
     | '/_authenticated/app/hub/'
@@ -707,11 +791,15 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
   SlugRoute: typeof SlugRoute
+  AlertasTelegramRoute: typeof AlertasTelegramRoute
   AuthRoute: typeof AuthRoute
+  BlogRoute: typeof BlogRouteWithChildren
   DnsRoute: typeof DnsRoute
   McpRoute: typeof McpRoute
+  MonitoramentoDnsRoute: typeof MonitoramentoDnsRoute
+  MonitoramentoIptvRoute: typeof MonitoramentoIptvRoute
   ResetPasswordRoute: typeof ResetPasswordRoute
-  SitemapDotxmlRoute: typeof SitemapDotxmlRoute
+  RevendedorStreamMonitorRoute: typeof RevendedorStreamMonitorRoute
   VerifyEmailRoute: typeof VerifyEmailRoute
   Char91DotmcpChar93ListToolsRoute: typeof Char91DotmcpChar93ListToolsRoute
   Char91DotwellKnownChar93OauthProtectedResourceRoute: typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
@@ -727,6 +815,8 @@ export interface RootRouteChildren {
   ApiPublicCronNotificationsRoute: typeof ApiPublicCronNotificationsRoute
   ApiPublicRegionsReportRoute: typeof ApiPublicRegionsReportRoute
   ApiPublicRegionsTargetsRoute: typeof ApiPublicRegionsTargetsRoute
+  ApiPublicRobotsTxtRoute: typeof ApiPublicRobotsTxtRoute
+  ApiPublicSitemapXmlRoute: typeof ApiPublicSitemapXmlRoute
   ApiPublicTelegramWebhookRoute: typeof ApiPublicTelegramWebhookRoute
   ApiPublicWebhooksMercadopagoRoute: typeof ApiPublicWebhooksMercadopagoRoute
 }
@@ -740,11 +830,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof VerifyEmailRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/sitemap.xml': {
-      id: '/sitemap.xml'
-      path: '/sitemap.xml'
-      fullPath: '/sitemap.xml'
-      preLoaderRoute: typeof SitemapDotxmlRouteImport
+    '/revendedor-stream-monitor': {
+      id: '/revendedor-stream-monitor'
+      path: '/revendedor-stream-monitor'
+      fullPath: '/revendedor-stream-monitor'
+      preLoaderRoute: typeof RevendedorStreamMonitorRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/reset-password': {
@@ -752,6 +842,20 @@ declare module '@tanstack/react-router' {
       path: '/reset-password'
       fullPath: '/reset-password'
       preLoaderRoute: typeof ResetPasswordRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/monitoramento-iptv': {
+      id: '/monitoramento-iptv'
+      path: '/monitoramento-iptv'
+      fullPath: '/monitoramento-iptv'
+      preLoaderRoute: typeof MonitoramentoIptvRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/monitoramento-dns': {
+      id: '/monitoramento-dns'
+      path: '/monitoramento-dns'
+      fullPath: '/monitoramento-dns'
+      preLoaderRoute: typeof MonitoramentoDnsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/mcp': {
@@ -768,11 +872,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DnsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/blog': {
+      id: '/blog'
+      path: '/blog'
+      fullPath: '/blog'
+      preLoaderRoute: typeof BlogRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/auth': {
       id: '/auth'
       path: '/auth'
       fullPath: '/auth'
       preLoaderRoute: typeof AuthRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/alertas-telegram': {
+      id: '/alertas-telegram'
+      path: '/alertas-telegram'
+      fullPath: '/alertas-telegram'
+      preLoaderRoute: typeof AlertasTelegramRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/$slug': {
@@ -802,6 +920,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/status/$slug'
       preLoaderRoute: typeof StatusSlugRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/blog/como-evitar-queda-iptv': {
+      id: '/blog/como-evitar-queda-iptv'
+      path: '/como-evitar-queda-iptv'
+      fullPath: '/blog/como-evitar-queda-iptv'
+      preLoaderRoute: typeof BlogComoEvitarQuedaIptvRouteImport
+      parentRoute: typeof BlogRoute
     }
     '/_authenticated/app': {
       id: '/_authenticated/app'
@@ -990,6 +1115,20 @@ declare module '@tanstack/react-router' {
       path: '/api/public/telegram/webhook'
       fullPath: '/api/public/telegram/webhook'
       preLoaderRoute: typeof ApiPublicTelegramWebhookRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/sitemap/xml': {
+      id: '/api/public/sitemap/xml'
+      path: '/api/public/sitemap/xml'
+      fullPath: '/api/public/sitemap/xml'
+      preLoaderRoute: typeof ApiPublicSitemapXmlRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/robots/txt': {
+      id: '/api/public/robots/txt'
+      path: '/api/public/robots/txt'
+      fullPath: '/api/public/robots/txt'
+      preLoaderRoute: typeof ApiPublicRobotsTxtRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/public/regions/targets': {
@@ -1210,15 +1349,29 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
 const AuthenticatedRouteRouteWithChildren =
   AuthenticatedRouteRoute._addFileChildren(AuthenticatedRouteRouteChildren)
 
+interface BlogRouteChildren {
+  BlogComoEvitarQuedaIptvRoute: typeof BlogComoEvitarQuedaIptvRoute
+}
+
+const BlogRouteChildren: BlogRouteChildren = {
+  BlogComoEvitarQuedaIptvRoute: BlogComoEvitarQuedaIptvRoute,
+}
+
+const BlogRouteWithChildren = BlogRoute._addFileChildren(BlogRouteChildren)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
   SlugRoute: SlugRoute,
+  AlertasTelegramRoute: AlertasTelegramRoute,
   AuthRoute: AuthRoute,
+  BlogRoute: BlogRouteWithChildren,
   DnsRoute: DnsRoute,
   McpRoute: McpRoute,
+  MonitoramentoDnsRoute: MonitoramentoDnsRoute,
+  MonitoramentoIptvRoute: MonitoramentoIptvRoute,
   ResetPasswordRoute: ResetPasswordRoute,
-  SitemapDotxmlRoute: SitemapDotxmlRoute,
+  RevendedorStreamMonitorRoute: RevendedorStreamMonitorRoute,
   VerifyEmailRoute: VerifyEmailRoute,
   Char91DotmcpChar93ListToolsRoute: Char91DotmcpChar93ListToolsRoute,
   Char91DotwellKnownChar93OauthProtectedResourceRoute:
@@ -1235,6 +1388,8 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPublicCronNotificationsRoute: ApiPublicCronNotificationsRoute,
   ApiPublicRegionsReportRoute: ApiPublicRegionsReportRoute,
   ApiPublicRegionsTargetsRoute: ApiPublicRegionsTargetsRoute,
+  ApiPublicRobotsTxtRoute: ApiPublicRobotsTxtRoute,
+  ApiPublicSitemapXmlRoute: ApiPublicSitemapXmlRoute,
   ApiPublicTelegramWebhookRoute: ApiPublicTelegramWebhookRoute,
   ApiPublicWebhooksMercadopagoRoute: ApiPublicWebhooksMercadopagoRoute,
 }

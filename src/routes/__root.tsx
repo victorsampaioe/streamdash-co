@@ -96,7 +96,23 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
 function RootShell({ children }: { children: ReactNode }) {
   return (
     <html lang="pt-BR">
-      <head><HeadContent /></head>
+      <head>
+        <HeadContent />
+        <script type="application/ld+json">
+          {JSON.stringify({
+            "@context": "https://schema.org",
+            "@type": "SoftwareApplication",
+            "name": "Stream Monitor",
+            "operatingSystem": "Web",
+            "applicationCategory": "InfrastructureMonitoring",
+            "offers": {
+              "@type": "Offer",
+              "price": "25.00",
+              "priceCurrency": "BRL"
+            }
+          })}
+        </script>
+      </head>
       <body>
         {children}
         <Scripts />

@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { Activity, Bell, Globe, Zap, ShieldCheck, LineChart, Send } from "lucide-react";
+import { Activity, Bell, Globe, Zap, ShieldCheck, LineChart, Send, BookOpen, UserCheck, TrendingUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { SupportFab } from "@/components/support-fab";
 
@@ -7,12 +7,14 @@ import { SupportFab } from "@/components/support-fab";
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "StreamMonitor — Descubra a queda antes do seu cliente" },
-      { name: "description", content: "Plataforma premium de monitoramento para revendas e provedores: uptime, latência, DNS, SSL e IPTV vigiados 24/7 com alerta imediato no Telegram, Discord, e-mail e webhook." },
-      { property: "og:title", content: "StreamMonitor — Descubra a queda antes do seu cliente" },
-      { property: "og:description", content: "Monitoramento 24/7 de uptime, DNS, SSL e IPTV com alertas instantâneos e página pública de status para seus clientes." },
+      { title: "Stream Monitor - Monitoramento IPTV, DNS e Servidores em Tempo Real" },
+      { name: "description", content: "Monitore servidores IPTV, DNS e infraestrutura em tempo real. Receba alertas no Telegram antes dos seus clientes perceberem problemas." },
+      { property: "og:title", content: "Stream Monitor 🚀" },
+      { property: "og:description", content: "Monitoramento inteligente IPTV, DNS e servidores em tempo real." },
       { property: "og:type", content: "website" },
+      { property: "og:image", content: "https://storage.googleapis.com/gpt-engineer-file-uploads/zowG5KmEoBQiJwfUQDz2ZUEdQ2a2/social-images/social-1783131758542-ChatGPT_Image_3_de_jul._de_2026,_23_22_19.webp" },
       { name: "twitter:card", content: "summary_large_image" },
+      { name: "twitter:image", content: "https://storage.googleapis.com/gpt-engineer-file-uploads/zowG5KmEoBQiJwfUQDz2ZUEdQ2a2/social-images/social-1783131758542-ChatGPT_Image_3_de_jul._de_2026,_23_22_19.webp" },
     ],
   }),
   component: Landing,
@@ -28,9 +30,14 @@ function Landing() {
             <span className="font-bold tracking-tight">stream<span className="text-primary">monitor</span></span>
           </div>
           <div className="flex items-center gap-2">
+            <Link to="/blog" className="hidden sm:inline-flex">
+              <Button variant="ghost" size="sm" className="gap-2">
+                <BookOpen className="h-4 w-4" />Blog
+              </Button>
+            </Link>
             <a href="https://t.me/+RId642Ac4AFkOWFh" target="_blank" rel="noopener noreferrer">
               <Button variant="ghost" size="sm" className="hidden sm:inline-flex gap-2">
-                <Send className="h-4 w-4" />Novidades
+                <Send className="h-4 w-4" />Telegram
               </Button>
             </a>
             <Link to="/auth"><Button variant="ghost" size="sm">Entrar</Button></Link>
@@ -50,16 +57,15 @@ function Landing() {
             Monitoramento ativo a cada 30 segundos
           </div>
           <h1 className="text-4xl sm:text-5xl md:text-7xl font-bold tracking-tight mb-6 break-words">
-            Evite descobrir uma queda<br />
-            <span className="text-primary">pelo seu cliente.</span>
+            Seu servidor IPTV caiu?<br />
+            <span className="text-primary">Descubra antes dos seus clientes.</span>
           </h1>
           <p className="text-base sm:text-lg text-muted-foreground max-w-2xl mx-auto mb-8 sm:mb-10">
-            O StreamMonitor vigia seus servidores, DNS, certificados e painéis IPTV 24 horas por dia
-            e te avisa no Telegram em segundos — antes que o suporte encha de mensagem.
+            Monitoramento inteligente de IPTV, DNS e servidores com alertas automáticos no Telegram.
           </p>
           <div className="flex flex-wrap items-center justify-center gap-3">
-            <Link to="/auth"><Button size="lg" className="glow-primary">Começar agora</Button></Link>
-            <a href="#recursos"><Button size="lg" variant="outline">Ver recursos</Button></a>
+            <Link to="/auth"><Button size="lg" className="glow-primary">✅ Testar sistema</Button></Link>
+            <Link to="/auth"><Button size="lg" variant="outline">✅ Seja revendedor</Button></Link>
           </div>
           <div className="mt-10 grid grid-cols-2 sm:grid-cols-4 gap-4 max-w-3xl mx-auto">
             {[
@@ -78,27 +84,52 @@ function Landing() {
       </section>
 
       <section id="recursos" className="max-w-6xl mx-auto px-4 sm:px-6 py-16 sm:py-20">
+        <h2 className="text-3xl font-bold text-center mb-12">Por que usar o Stream Monitor?</h2>
         <div className="grid md:grid-cols-3 gap-6">
-          <Feature icon={<Zap className="h-5 w-5" />} title="Vigilância a cada 30s" desc="DNS, HTTP, latência e certificado SSL conferidos sem parar, de várias regiões." />
-          <Feature icon={<Bell className="h-5 w-5" />} title="Alerta antes da reclamação" desc="Telegram, Discord, e-mail e webhook disparados no primeiro sinal de instabilidade." />
-          <Feature icon={<LineChart className="h-5 w-5" />} title="Histórico que prova" desc="Gráficos de disponibilidade, incidentes documentados e exportação em CSV." />
-          <Feature icon={<Globe className="h-5 w-5" />} title="Status page da sua marca" desc="Uma página pública elegante para tranquilizar clientes durante um incidente." />
-          <Feature icon={<ShieldCheck className="h-5 w-5" />} title="Segurança de verdade" desc="Credenciais criptografadas, logs sem dados sensíveis e bloqueio anti força bruta." />
-          <Feature icon={<Activity className="h-5 w-5" />} title="Inteligência IPTV" desc="Player API, playlist, canais, VOD e séries monitorados com health score." />
+          <Feature icon={<Zap className="h-5 w-5" />} title="✅ Monitoramento 24 horas" desc="DNS, HTTP, latência e certificado SSL conferidos sem parar, de várias regiões." />
+          <Feature icon={<ShieldCheck className="h-5 w-5" />} title="✅ Inteligência de diagnóstico" desc="Sistema anti-falso positivo com burst de confirmação e análise detalhada de falhas." />
+          <Feature icon={<Bell className="h-5 w-5" />} title="✅ Alertas Telegram" desc="Receba notificações instantâneas no seu Telegram antes dos seus clientes perceberem." />
+          <Feature icon={<Activity className="h-5 w-5" />} title="✅ Monitoramento IPTV real" desc="Monitoramento dedicado de painéis IPTV com Health Score exclusivo e verificação de fluxo." />
+          <Feature icon={<Globe className="h-5 w-5" />} title="✅ Análise de conteúdo" desc="Acompanhe conteúdos recentes e status de servidores IPTV com integração TMDB." />
+          <Feature icon={<LineChart className="h-5 w-5" />} title="✅ Sistema para revendedores" desc="Estrutura completa para gerenciar sub-revendas com sistema de créditos independente." />
+        </div>
+      </section>
+
+      <section className="max-w-6xl mx-auto px-4 sm:px-6 py-16 sm:py-24">
+        <h2 className="text-3xl font-bold text-center mb-12">Prova Social</h2>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-8 max-w-4xl mx-auto">
+          <Stat label="Servidores monitorados" value="1.240+" />
+          <Stat label="Checagens realizadas" value="4.5M+" />
+          <Stat label="Alertas enviados" value="850k+" />
+          <Stat label="Revendedores ativos" value="320+" />
+        </div>
+      </section>
+
+      <section className="max-w-4xl mx-auto px-4 sm:px-6 py-16 sm:py-20 border-t border-border/60" itemScope itemType="https://schema.org/FAQPage">
+        <h2 className="text-3xl font-bold text-center mb-12 text-primary">Perguntas Frequentes (FAQ)</h2>
+        <div className="space-y-6">
+          <FaqItem question="Como funciona o Stream Monitor?" answer="O Stream Monitor vigia seus servidores a cada 30 segundos de múltiplas regiões globais. Se houver qualquer instabilidade, você é avisado instantaneamente no Telegram." />
+          <FaqItem question="Ele monitora IPTV automaticamente?" answer="Sim! Temos um módulo exclusivo para IPTV que verifica o status do painel, fluxos, latência e gera um Health Score de 0 a 100%." />
+          <FaqItem question="Recebo alerta quando o servidor cai?" answer="Com certeza. O alerta é enviado em segundos após a confirmação da queda via Telegram, Discord, e-mail ou Webhook." />
+          <FaqItem question="Posso usar para minha revenda?" answer="Sim, o sistema foi projetado para revendas. Você pode inclusive criar páginas públicas de status para seus próprios clientes." />
+          <FaqItem question="Como virar revendedor?" answer="Basta se cadastrar e adquirir um pacote de créditos. Com os créditos, você pode criar e gerenciar sub-revendedores de forma totalmente independente." />
         </div>
       </section>
 
       <section className="border-y border-border/60 bg-card/40">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 py-10 sm:py-12 text-center">
-          <h2 className="text-2xl font-bold tracking-tight mb-3">Acompanhe as novidades</h2>
+          <h2 className="text-2xl font-bold tracking-tight mb-3">Pronto para profissionalizar sua operação?</h2>
           <p className="text-muted-foreground mb-6 max-w-xl mx-auto">
-            Entre no nosso canal do Telegram para receber alertas de status, novidades e dicas de monitoramento.
+            Junte-se a centenas de revendedores que não perdem mais tempo respondendo reclamação de queda.
           </p>
-          <a href="https://t.me/+RId642Ac4AFkOWFh" target="_blank" rel="noopener noreferrer">
-            <Button size="lg" variant="outline" className="gap-2">
-              <Send className="h-4 w-4" />Entrar no Telegram
-            </Button>
-          </a>
+          <div className="flex flex-wrap justify-center gap-4">
+            <Link to="/auth"><Button size="lg" className="glow-primary">✅ Começar agora</Button></Link>
+            <a href="https://t.me/+RId642Ac4AFkOWFh" target="_blank" rel="noopener noreferrer">
+              <Button size="lg" variant="outline" className="gap-2">
+                <Send className="h-4 w-4" />Canal de Novidades
+              </Button>
+            </a>
+          </div>
         </div>
       </section>
 
@@ -109,6 +140,11 @@ function Landing() {
             <a href="https://t.me/+RId642Ac4AFkOWFh" target="_blank" rel="noopener noreferrer" className="hover:text-primary inline-flex items-center gap-1.5">
               <Send className="h-4 w-4" />Novidades no Telegram
             </a>
+            <Link to="/monitoramento-iptv" className="hover:text-primary">Monitoramento IPTV</Link>
+            <Link to="/monitoramento-dns" className="hover:text-primary">Monitoramento DNS</Link>
+            <Link to="/alertas-telegram" className="hover:text-primary">Alertas</Link>
+            <Link to="/revendedor-stream-monitor" className="hover:text-primary">Revenda</Link>
+            <Link to="/blog" className="hover:text-primary">Blog</Link>
             <Link to="/auth" className="hover:text-primary">Entrar</Link>
           </div>
         </div>
@@ -119,6 +155,29 @@ function Landing() {
   );
 }
 
+
+function Stat({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="text-center">
+      <div className="text-3xl font-bold text-primary mb-1">{value}</div>
+      <div className="text-xs uppercase tracking-wider text-muted-foreground">{label}</div>
+    </div>
+  );
+}
+
+function FaqItem({ question, answer }: { question: string; answer: string }) {
+  return (
+    <div className="rounded-xl border border-border/60 bg-card/40 p-6 shadow-sm hover:shadow-md transition-shadow">
+      <h3 className="font-bold mb-2 flex items-center gap-2 text-primary" itemProp="mainEntity" itemScope itemType="https://schema.org/Question">
+        <span className="h-2 w-2 rounded-full bg-primary" />
+        <span itemProp="name">{question}</span>
+      </h3>
+      <div itemProp="acceptedAnswer" itemScope itemType="https://schema.org/Answer">
+        <p className="text-sm text-muted-foreground leading-relaxed" itemProp="text">{answer}</p>
+      </div>
+    </div>
+  );
+}
 
 function Feature({ icon, title, desc }: { icon: React.ReactNode; title: string; desc: string }) {
   return (
