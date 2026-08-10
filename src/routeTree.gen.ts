@@ -10,6 +10,8 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as VerifyEmailRouteImport } from './routes/verify-email'
+import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
+import { Route as RobotsDottxtRouteImport } from './routes/robots[.]txt'
 import { Route as RevendedorStreamMonitorRouteImport } from './routes/revendedor-stream-monitor'
 import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as MonitoramentoIptvRouteImport } from './routes/monitoramento-iptv'
@@ -51,8 +53,6 @@ import { Route as AuthenticatedAppInteligenciaIndexRouteImport } from './routes/
 import { Route as AuthenticatedAppHubIndexRouteImport } from './routes/_authenticated/app.hub.index'
 import { Route as ApiPublicWebhooksMercadopagoRouteImport } from './routes/api/public/webhooks/mercadopago'
 import { Route as ApiPublicTelegramWebhookRouteImport } from './routes/api/public/telegram/webhook'
-import { Route as ApiPublicSitemapXmlRouteImport } from './routes/api/public/sitemap.xml'
-import { Route as ApiPublicRobotsTxtRouteImport } from './routes/api/public/robots.txt'
 import { Route as ApiPublicRegionsTargetsRouteImport } from './routes/api/public/regions/targets'
 import { Route as ApiPublicRegionsReportRouteImport } from './routes/api/public/regions/report'
 import { Route as ApiPublicCronNotificationsRouteImport } from './routes/api/public/cron/notifications'
@@ -75,6 +75,16 @@ import { Route as AuthenticatedAppHubLIdRouteImport } from './routes/_authentica
 const VerifyEmailRoute = VerifyEmailRouteImport.update({
   id: '/verify-email',
   path: '/verify-email',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
+  id: '/sitemap.xml',
+  path: '/sitemap.xml',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const RobotsDottxtRoute = RobotsDottxtRouteImport.update({
+  id: '/robots.txt',
+  path: '/robots.txt',
   getParentRoute: () => rootRouteImport,
 } as any)
 const RevendedorStreamMonitorRoute = RevendedorStreamMonitorRouteImport.update({
@@ -295,16 +305,6 @@ const ApiPublicTelegramWebhookRoute =
     path: '/api/public/telegram/webhook',
     getParentRoute: () => rootRouteImport,
   } as any)
-const ApiPublicSitemapXmlRoute = ApiPublicSitemapXmlRouteImport.update({
-  id: '/api/public/sitemap/xml',
-  path: '/api/public/sitemap/xml',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ApiPublicRobotsTxtRoute = ApiPublicRobotsTxtRouteImport.update({
-  id: '/api/public/robots/txt',
-  path: '/api/public/robots/txt',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const ApiPublicRegionsTargetsRoute = ApiPublicRegionsTargetsRouteImport.update({
   id: '/api/public/regions/targets',
   path: '/api/public/regions/targets',
@@ -419,6 +419,8 @@ export interface FileRoutesByFullPath {
   '/monitoramento-iptv': typeof MonitoramentoIptvRoute
   '/reset-password': typeof ResetPasswordRoute
   '/revendedor-stream-monitor': typeof RevendedorStreamMonitorRoute
+  '/robots.txt': typeof RobotsDottxtRoute
+  '/sitemap.xml': typeof SitemapDotxmlRoute
   '/verify-email': typeof VerifyEmailRoute
   '/.mcp/list-tools': typeof Char91DotmcpChar93ListToolsRoute
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
@@ -459,8 +461,6 @@ export interface FileRoutesByFullPath {
   '/api/public/cron/notifications': typeof ApiPublicCronNotificationsRoute
   '/api/public/regions/report': typeof ApiPublicRegionsReportRoute
   '/api/public/regions/targets': typeof ApiPublicRegionsTargetsRoute
-  '/api/public/robots/txt': typeof ApiPublicRobotsTxtRoute
-  '/api/public/sitemap/xml': typeof ApiPublicSitemapXmlRoute
   '/api/public/telegram/webhook': typeof ApiPublicTelegramWebhookRoute
   '/api/public/webhooks/mercadopago': typeof ApiPublicWebhooksMercadopagoRoute
   '/app/hub/': typeof AuthenticatedAppHubIndexRoute
@@ -482,6 +482,8 @@ export interface FileRoutesByTo {
   '/monitoramento-iptv': typeof MonitoramentoIptvRoute
   '/reset-password': typeof ResetPasswordRoute
   '/revendedor-stream-monitor': typeof RevendedorStreamMonitorRoute
+  '/robots.txt': typeof RobotsDottxtRoute
+  '/sitemap.xml': typeof SitemapDotxmlRoute
   '/verify-email': typeof VerifyEmailRoute
   '/.mcp/list-tools': typeof Char91DotmcpChar93ListToolsRoute
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
@@ -520,8 +522,6 @@ export interface FileRoutesByTo {
   '/api/public/cron/notifications': typeof ApiPublicCronNotificationsRoute
   '/api/public/regions/report': typeof ApiPublicRegionsReportRoute
   '/api/public/regions/targets': typeof ApiPublicRegionsTargetsRoute
-  '/api/public/robots/txt': typeof ApiPublicRobotsTxtRoute
-  '/api/public/sitemap/xml': typeof ApiPublicSitemapXmlRoute
   '/api/public/telegram/webhook': typeof ApiPublicTelegramWebhookRoute
   '/api/public/webhooks/mercadopago': typeof ApiPublicWebhooksMercadopagoRoute
   '/app/hub': typeof AuthenticatedAppHubIndexRoute
@@ -545,6 +545,8 @@ export interface FileRoutesById {
   '/monitoramento-iptv': typeof MonitoramentoIptvRoute
   '/reset-password': typeof ResetPasswordRoute
   '/revendedor-stream-monitor': typeof RevendedorStreamMonitorRoute
+  '/robots.txt': typeof RobotsDottxtRoute
+  '/sitemap.xml': typeof SitemapDotxmlRoute
   '/verify-email': typeof VerifyEmailRoute
   '/.mcp/list-tools': typeof Char91DotmcpChar93ListToolsRoute
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
@@ -585,8 +587,6 @@ export interface FileRoutesById {
   '/api/public/cron/notifications': typeof ApiPublicCronNotificationsRoute
   '/api/public/regions/report': typeof ApiPublicRegionsReportRoute
   '/api/public/regions/targets': typeof ApiPublicRegionsTargetsRoute
-  '/api/public/robots/txt': typeof ApiPublicRobotsTxtRoute
-  '/api/public/sitemap/xml': typeof ApiPublicSitemapXmlRoute
   '/api/public/telegram/webhook': typeof ApiPublicTelegramWebhookRoute
   '/api/public/webhooks/mercadopago': typeof ApiPublicWebhooksMercadopagoRoute
   '/_authenticated/app/hub/': typeof AuthenticatedAppHubIndexRoute
@@ -610,6 +610,8 @@ export interface FileRouteTypes {
     | '/monitoramento-iptv'
     | '/reset-password'
     | '/revendedor-stream-monitor'
+    | '/robots.txt'
+    | '/sitemap.xml'
     | '/verify-email'
     | '/.mcp/list-tools'
     | '/.well-known/oauth-protected-resource'
@@ -650,8 +652,6 @@ export interface FileRouteTypes {
     | '/api/public/cron/notifications'
     | '/api/public/regions/report'
     | '/api/public/regions/targets'
-    | '/api/public/robots/txt'
-    | '/api/public/sitemap/xml'
     | '/api/public/telegram/webhook'
     | '/api/public/webhooks/mercadopago'
     | '/app/hub/'
@@ -673,6 +673,8 @@ export interface FileRouteTypes {
     | '/monitoramento-iptv'
     | '/reset-password'
     | '/revendedor-stream-monitor'
+    | '/robots.txt'
+    | '/sitemap.xml'
     | '/verify-email'
     | '/.mcp/list-tools'
     | '/.well-known/oauth-protected-resource'
@@ -711,8 +713,6 @@ export interface FileRouteTypes {
     | '/api/public/cron/notifications'
     | '/api/public/regions/report'
     | '/api/public/regions/targets'
-    | '/api/public/robots/txt'
-    | '/api/public/sitemap/xml'
     | '/api/public/telegram/webhook'
     | '/api/public/webhooks/mercadopago'
     | '/app/hub'
@@ -735,6 +735,8 @@ export interface FileRouteTypes {
     | '/monitoramento-iptv'
     | '/reset-password'
     | '/revendedor-stream-monitor'
+    | '/robots.txt'
+    | '/sitemap.xml'
     | '/verify-email'
     | '/.mcp/list-tools'
     | '/.well-known/oauth-protected-resource'
@@ -775,8 +777,6 @@ export interface FileRouteTypes {
     | '/api/public/cron/notifications'
     | '/api/public/regions/report'
     | '/api/public/regions/targets'
-    | '/api/public/robots/txt'
-    | '/api/public/sitemap/xml'
     | '/api/public/telegram/webhook'
     | '/api/public/webhooks/mercadopago'
     | '/_authenticated/app/hub/'
@@ -800,6 +800,8 @@ export interface RootRouteChildren {
   MonitoramentoIptvRoute: typeof MonitoramentoIptvRoute
   ResetPasswordRoute: typeof ResetPasswordRoute
   RevendedorStreamMonitorRoute: typeof RevendedorStreamMonitorRoute
+  RobotsDottxtRoute: typeof RobotsDottxtRoute
+  SitemapDotxmlRoute: typeof SitemapDotxmlRoute
   VerifyEmailRoute: typeof VerifyEmailRoute
   Char91DotmcpChar93ListToolsRoute: typeof Char91DotmcpChar93ListToolsRoute
   Char91DotwellKnownChar93OauthProtectedResourceRoute: typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
@@ -815,8 +817,6 @@ export interface RootRouteChildren {
   ApiPublicCronNotificationsRoute: typeof ApiPublicCronNotificationsRoute
   ApiPublicRegionsReportRoute: typeof ApiPublicRegionsReportRoute
   ApiPublicRegionsTargetsRoute: typeof ApiPublicRegionsTargetsRoute
-  ApiPublicRobotsTxtRoute: typeof ApiPublicRobotsTxtRoute
-  ApiPublicSitemapXmlRoute: typeof ApiPublicSitemapXmlRoute
   ApiPublicTelegramWebhookRoute: typeof ApiPublicTelegramWebhookRoute
   ApiPublicWebhooksMercadopagoRoute: typeof ApiPublicWebhooksMercadopagoRoute
 }
@@ -828,6 +828,20 @@ declare module '@tanstack/react-router' {
       path: '/verify-email'
       fullPath: '/verify-email'
       preLoaderRoute: typeof VerifyEmailRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/sitemap.xml': {
+      id: '/sitemap.xml'
+      path: '/sitemap.xml'
+      fullPath: '/sitemap.xml'
+      preLoaderRoute: typeof SitemapDotxmlRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/robots.txt': {
+      id: '/robots.txt'
+      path: '/robots.txt'
+      fullPath: '/robots.txt'
+      preLoaderRoute: typeof RobotsDottxtRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/revendedor-stream-monitor': {
@@ -1117,20 +1131,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicTelegramWebhookRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/api/public/sitemap/xml': {
-      id: '/api/public/sitemap/xml'
-      path: '/api/public/sitemap/xml'
-      fullPath: '/api/public/sitemap/xml'
-      preLoaderRoute: typeof ApiPublicSitemapXmlRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/public/robots/txt': {
-      id: '/api/public/robots/txt'
-      path: '/api/public/robots/txt'
-      fullPath: '/api/public/robots/txt'
-      preLoaderRoute: typeof ApiPublicRobotsTxtRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/api/public/regions/targets': {
       id: '/api/public/regions/targets'
       path: '/api/public/regions/targets'
@@ -1372,6 +1372,8 @@ const rootRouteChildren: RootRouteChildren = {
   MonitoramentoIptvRoute: MonitoramentoIptvRoute,
   ResetPasswordRoute: ResetPasswordRoute,
   RevendedorStreamMonitorRoute: RevendedorStreamMonitorRoute,
+  RobotsDottxtRoute: RobotsDottxtRoute,
+  SitemapDotxmlRoute: SitemapDotxmlRoute,
   VerifyEmailRoute: VerifyEmailRoute,
   Char91DotmcpChar93ListToolsRoute: Char91DotmcpChar93ListToolsRoute,
   Char91DotwellKnownChar93OauthProtectedResourceRoute:
@@ -1388,8 +1390,6 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPublicCronNotificationsRoute: ApiPublicCronNotificationsRoute,
   ApiPublicRegionsReportRoute: ApiPublicRegionsReportRoute,
   ApiPublicRegionsTargetsRoute: ApiPublicRegionsTargetsRoute,
-  ApiPublicRobotsTxtRoute: ApiPublicRobotsTxtRoute,
-  ApiPublicSitemapXmlRoute: ApiPublicSitemapXmlRoute,
   ApiPublicTelegramWebhookRoute: ApiPublicTelegramWebhookRoute,
   ApiPublicWebhooksMercadopagoRoute: ApiPublicWebhooksMercadopagoRoute,
 }
