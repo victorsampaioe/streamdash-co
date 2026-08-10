@@ -30,9 +30,14 @@ function Landing() {
             <span className="font-bold tracking-tight">stream<span className="text-primary">monitor</span></span>
           </div>
           <div className="flex items-center gap-2">
+            <Link to="/blog" className="hidden sm:inline-flex">
+              <Button variant="ghost" size="sm" className="gap-2">
+                <BookOpen className="h-4 w-4" />Blog
+              </Button>
+            </Link>
             <a href="https://t.me/+RId642Ac4AFkOWFh" target="_blank" rel="noopener noreferrer">
               <Button variant="ghost" size="sm" className="hidden sm:inline-flex gap-2">
-                <Send className="h-4 w-4" />Novidades
+                <Send className="h-4 w-4" />Telegram
               </Button>
             </a>
             <Link to="/auth"><Button variant="ghost" size="sm">Entrar</Button></Link>

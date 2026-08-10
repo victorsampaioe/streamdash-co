@@ -27,7 +27,7 @@ function BlogPage() {
         
         <div className="grid gap-8">
           {posts.map(post => (
-            <div key={post.slug} className="group p-6 bg-card/40 border border-border/60 rounded-2xl hover:border-primary/50 transition-all cursor-pointer">
+            <Link key={post.slug} to={`/blog/${post.slug}`} className="group p-6 bg-card/40 border border-border/60 rounded-2xl hover:border-primary/50 transition-all cursor-pointer block">
               <div className="flex items-center gap-4 text-xs text-muted-foreground mb-3">
                 <span className="flex items-center gap-1"><Clock className="h-3 w-3" /> {post.date}</span>
                 <span className="flex items-center gap-1 bg-primary/20 text-primary px-2 py-0.5 rounded-full"><Tag className="h-3 w-3" /> {post.category}</span>
@@ -35,7 +35,7 @@ function BlogPage() {
               <h2 className="text-2xl font-bold mb-2 group-hover:text-primary transition-colors">{post.title}</h2>
               <p className="text-muted-foreground mb-4">Descubra as melhores práticas para manter seu serviço estável e seus clientes satisfeitos...</p>
               <span className="text-primary font-semibold flex items-center gap-1">Ler mais <BookOpen className="h-4 w-4" /></span>
-            </div>
+            </Link>
           ))}
         </div>
       </div>
