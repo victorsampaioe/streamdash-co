@@ -37,42 +37,86 @@ export const getTmdbFeed = createServerFn({ method: "POST" })
       };
     }
 
-    const cards = data.query?.trim()
-      ? await searchTmdb(data.query.trim())
-      : await fetchFeed(data.feed, data.page ?? 1);
-
-    // Apenas servidores verificados: com catálogo IPTV já sincronizado.
+    // 1. Busca servidores para cruzar dados
     const { data: servers } = await context.supabase
       .from("servers")
       .select("id")
       .not("catalog_synced_at", "is", null);
     const totalServers = servers?.length ?? 0;
+
+    // 2. Modo Radar Global (Últimos encontrados)
+    if (data.feed === 'movie_recent' && !data.query) {
+      const { data: globalItems } = await context.supabase
+        .from("iptv_global_catalog")
+        .select(`
+          *,
+          first_server:servers!first_server_id(name)
+        `)
+        .order("first_detected_at", { ascending: false })
+        .limit(20);
+
+      if (globalItems && globalItems.length > 0) {
+        return {
+          totalServers,
+          isRadar: true,
+          items: globalItems.map(it => ({
+            media_type: it.media_type,
+            tmdb_id: it.tmdb_id,
+            title: it.normalized_name,
+            original_title: it.normalized_name,
+            poster_path: it.poster_path,
+            release_date: it.first_detected_at,
+            vote_average: 0,
+            found_count: it.servers_found_count || 0,
+            first_server_name: (it.first_server as any)?.name || "Servidor",
+            first_detected_at: it.first_detected_at,
+            last_detected_at: it.last_detected_at
+          }))
+        };
+      }
+    }
+
+    const cards = data.query?.trim()
+      ? await searchTmdb(data.query.trim())
+      : await fetchFeed(data.feed, data.page ?? 1);
+
+
     const verifiedIds = new Set((servers ?? []).map((s) => s.id));
 
     const keys = [...new Set(cards.flatMap((c) => [titleKey(c.title), titleKey(c.original_title)]).filter(Boolean))];
-    const matchMap = new Map<string, Set<string>>();
+    const matchMap = new Map<string, { count: number, first_server?: string, first_at?: string }>();
+    
     if (keys.length && totalServers) {
-      const { data: rows } = await context.supabase
-        .from("iptv_catalog_items")
-        .select("server_id, title_key")
-        .in("title_key", keys)
-        .is("removed_at", null);
-      for (const r of rows ?? []) {
-        if (!verifiedIds.has(r.server_id)) continue;
-        const set = matchMap.get(r.title_key) ?? new Set<string>();
-        set.add(r.server_id);
-        matchMap.set(r.title_key, set);
+      const { data: globalMatches } = await context.supabase
+        .from("iptv_global_catalog")
+        .select(`
+          title_key,
+          servers_found_count,
+          first_detected_at,
+          first_server:servers!first_server_id(name)
+        `)
+        .in("title_key", keys);
+
+      for (const m of globalMatches ?? []) {
+        matchMap.set(m.title_key, {
+          count: (m.servers_found_count || 0) as number,
+          first_server: (m.first_server as any)?.name,
+          first_at: m.first_detected_at as string
+        });
+
       }
     }
 
     return {
       totalServers,
       items: cards.map((c) => {
-        const ids = new Set<string>([
-          ...(matchMap.get(titleKey(c.title)) ?? []),
-          ...(matchMap.get(titleKey(c.original_title)) ?? []),
-        ]);
-        return { ...c, found_count: ids.size, missing_count: Math.max(totalServers - ids.size, 0) };
+        const match = matchMap.get(titleKey(c.title)) || matchMap.get(titleKey(c.original_title));
+        return { 
+          ...c, 
+          found_count: match?.count || 0,
+          first_server_name: match?.first_server,
+          first_detected_at: match?.first_at
+        };
       }),
     };
   });
@@ -154,9 +198,10 @@ export const getTmdbDetail = createServerFn({ method: "POST" })
       podium,
       following: !!follow,
       global_stats: globalHistory ? {
-        first_seen_at: globalHistory.first_detected_at,
-        server_count: globalHistory.servers_found_count
+        first_seen_at: globalHistory.first_detected_at as string,
+        server_count: (globalHistory.servers_found_count || 0) as number
       } : null
+
     };
   });
 

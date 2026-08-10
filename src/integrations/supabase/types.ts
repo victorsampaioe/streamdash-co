@@ -1318,6 +1318,98 @@ export type Database = {
           },
         ]
       }
+      iptv_catalog_matches: {
+        Row: {
+          catalog_id: string | null
+          detected_at: string | null
+          external_id: string
+          id: string
+          raw_name: string
+          server_id: string | null
+        }
+        Insert: {
+          catalog_id?: string | null
+          detected_at?: string | null
+          external_id: string
+          id?: string
+          raw_name: string
+          server_id?: string | null
+        }
+        Update: {
+          catalog_id?: string | null
+          detected_at?: string | null
+          external_id?: string
+          id?: string
+          raw_name?: string
+          server_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "iptv_catalog_matches_catalog_id_fkey"
+            columns: ["catalog_id"]
+            isOneToOne: false
+            referencedRelation: "iptv_global_catalog"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "iptv_catalog_matches_server_id_fkey"
+            columns: ["server_id"]
+            isOneToOne: false
+            referencedRelation: "servers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      iptv_global_catalog: {
+        Row: {
+          first_detected_at: string | null
+          first_server_id: string | null
+          id: string
+          is_rare: boolean | null
+          last_detected_at: string | null
+          media_type: string
+          normalized_name: string
+          poster_path: string | null
+          servers_found_count: number | null
+          title_key: string
+          tmdb_id: number | null
+        }
+        Insert: {
+          first_detected_at?: string | null
+          first_server_id?: string | null
+          id?: string
+          is_rare?: boolean | null
+          last_detected_at?: string | null
+          media_type: string
+          normalized_name: string
+          poster_path?: string | null
+          servers_found_count?: number | null
+          title_key: string
+          tmdb_id?: number | null
+        }
+        Update: {
+          first_detected_at?: string | null
+          first_server_id?: string | null
+          id?: string
+          is_rare?: boolean | null
+          last_detected_at?: string | null
+          media_type?: string
+          normalized_name?: string
+          poster_path?: string | null
+          servers_found_count?: number | null
+          title_key?: string
+          tmdb_id?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "iptv_global_catalog_first_server_id_fkey"
+            columns: ["first_server_id"]
+            isOneToOne: false
+            referencedRelation: "servers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       iptv_ip_history: {
         Row: {
           changed_at: string

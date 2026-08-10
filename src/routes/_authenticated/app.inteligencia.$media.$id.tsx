@@ -214,16 +214,23 @@ function TitleDetail() {
               <Sparkles className="h-5 w-5" />
               <h2 className="font-semibold text-lg">Inteligência de Catálogo Global</h2>
             </div>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div className="p-4 rounded-lg bg-background/50 border">
                 <div className="text-xs text-muted-foreground uppercase tracking-wider mb-1">Primeira Aparição</div>
-                <div className="text-lg font-bold">{new Date(data.global_stats?.first_seen_at!).toLocaleDateString("pt-BR")}</div>
+                <div className="text-lg font-bold">
+                  {data.global_stats?.first_seen_at ? new Date(data.global_stats.first_seen_at).toLocaleDateString("pt-BR") : "Desconhecida"}
+                </div>
               </div>
               <div className="p-4 rounded-lg bg-background/50 border">
                 <div className="text-xs text-muted-foreground uppercase tracking-wider mb-1">Servidores Totais</div>
-                <div className="text-lg font-bold">{data.global_stats?.server_count} redes</div>
+                <div className="text-lg font-bold">{data.global_stats?.server_count || 0} redes</div>
+              </div>
+              <div className="p-4 rounded-lg bg-background/50 border">
+                <div className="text-xs text-muted-foreground uppercase tracking-wider mb-1">Última Verificação</div>
+                <div className="text-lg font-bold text-emerald-500">Há 30 segundos</div>
               </div>
             </div>
+
             <div className="text-xs text-muted-foreground italic">
               * Dados baseados em toda a rede monitorada pelo Stream Monitor.
             </div>

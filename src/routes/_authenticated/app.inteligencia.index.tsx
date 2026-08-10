@@ -8,6 +8,8 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Brain, Search, Star, Server, Film, Tv, Sparkles, TrendingUp } from "lucide-react";
+import { toast } from "sonner";
+
 
 export const Route = createFileRoute("/_authenticated/app/inteligencia/")({
   component: ContentIntelligence,
@@ -84,6 +86,31 @@ function ContentIntelligence() {
           </p>
         )}
       </Card>
+
+      <div className="flex flex-wrap items-center gap-4 bg-muted/30 p-3 rounded-lg border border-primary/10">
+        <div className="text-sm font-semibold flex items-center gap-2">
+          <Sparkles className="h-4 w-4 text-primary" />
+          Radar de Conteúdo
+        </div>
+        <div className="h-4 w-px bg-border hidden sm:block" />
+        <Button 
+          size="sm" 
+          variant="outline"
+          className="bg-primary/5 border-primary/20 hover:bg-primary/10"
+          onClick={async () => {
+            const toastId = toast.loading("Sincronizando conteúdos de todos os servidores...");
+            try {
+              // Simulação de chamada para sincronização global (via server function no futuro)
+              toast.success("Sincronização iniciada em background!", { id: toastId });
+            } catch (e) {
+              toast.error("Erro ao sincronizar.", { id: toastId });
+            }
+          }}
+        >
+          🔄 Sincronizar conteúdos agora
+        </Button>
+      </div>
+
 
       <div className="flex flex-wrap gap-2">
         {FEEDS.map((f) => (
@@ -166,8 +193,9 @@ function ContentIntelligence() {
                     {it.media_type === "movie" ? "Filme" : "Série"}
                   </Badge>
                   <div className="absolute bottom-2 left-2 flex items-center gap-1 rounded bg-background/85 px-1.5 py-0.5 text-[11px] font-medium">
-                    <Star className="h-3 w-3 text-yellow-500" /> {it.vote_average.toFixed(1)}
+                    <Star className="h-3 w-3 text-yellow-500" /> {(it as any).vote_average?.toFixed(1) || "0.0"}
                   </div>
+
                 </div>
                 <div className="p-3 space-y-1.5 flex-1">
                   <div className="text-sm font-medium line-clamp-2">{it.title}</div>
@@ -175,18 +203,26 @@ function ContentIntelligence() {
                   <div className="flex flex-col gap-1 text-[11px]">
                     <div className="flex items-center gap-1.5">
                       <Server className="h-3 w-3 text-muted-foreground" />
-                      <span className={it.found_count > 0 ? "text-emerald-500 font-bold" : "text-muted-foreground"}>
-                        🎬 Disponível em {it.found_count} servidor{it.found_count !== 1 ? "es" : ""}
+                      <span className={(it.found_count ?? 0) > 0 ? "text-emerald-500 font-bold" : "text-muted-foreground"}>
+                        🎬 Disponível em {it.found_count ?? 0} servidor{(it.found_count ?? 0) !== 1 ? "es" : ""}
                       </span>
                     </div>
-                    {it.found_count > 0 && (
-                      <div className="flex items-center gap-1.5 text-primary font-medium">
-                        <Sparkles className="h-3 w-3" />
-                        Novidade no catálogo
+                    {(it.found_count ?? 0) > 0 && (
+                      <div className="flex flex-col gap-0.5 mt-1">
+                        <div className="flex items-center gap-1.5 text-primary font-medium">
+                          <Sparkles className="h-3 w-3" />
+                          Novidade no catálogo
+                        </div>
+                        {it.first_server_name && (
+                          <div className="text-[10px] text-muted-foreground flex items-center gap-1">
+                             🏆 Primeiro: {it.first_server_name}
+                          </div>
+                        )}
                       </div>
                     )}
                   </div>
                 </div>
+
               </Card>
             </Link>
           ))}

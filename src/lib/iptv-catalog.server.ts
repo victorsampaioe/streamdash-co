@@ -22,20 +22,38 @@ export type CatalogDiff = {
 const MAX_ITEMS_PER_KIND = 40_000;
 const CHUNK = 500;
 
-/** Normaliza o título para comparar o mesmo conteúdo entre servidores diferentes. */
+/** 
+ * Normaliza o título para comparar o mesmo conteúdo entre servidores diferentes.
+ * Implementa reconhecimento inteligente conforme requisitos.
+ */
 export function titleKey(name: string): string {
   if (!name) return "";
-  return name
+  
+  // 1. Normalização base
+  let key = name
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "") // Remove acentos
-    .toLowerCase()
-    .replace(/[^a-z0-9\s]/g, " ") // Remove pontuação e caracteres especiais
-    .replace(/\b(4k|fhd|hd|sd|h265|hevc|dublado|legendado|leg|dub|l|d|dual|audio|hdtv|webrip|bluray|x264|x265)\b/g, " ") // Remove tags comuns
-    .replace(/\(\d{4}\)|\b\d{4}\b/g, " ") // Remove ano entre parênteses ou solto
-    .replace(/\b(s\d{1,2}e\d{1,2}|s\d{1,2}|temporada\s?\d{1,2}|t\d{1,2}|ep\d{1,2})\b/g, " ") // Remove temporada/episódio
+    .toLowerCase();
+
+  // 2. Remoção de tags e qualidades (Ignorar tags)
+  key = key.replace(/\b(4k|fhd|hd|sd|hevc|h265|x265|x264|h264|web-dl|hdr|bluray|hdtv|webrip)\b/g, " ");
+  
+  // 3. Remoção de idiomas e extras
+  key = key.replace(/\b(dublado|legendado|leg|dub|l|d|dual|audio|multi|pt|en|br|latam)\b/g, " ");
+
+  // 4. Remoção de temporada/episódio (para agrupar séries)
+  key = key.replace(/\b(s\d{1,2}e\d{1,2}|s\d{1,2}|temporada\s?\d{1,2}|t\d{1,2}|ep\d{1,2})\b/g, " ");
+
+  // 5. Remoção de anos (para lidar com Homem Aranha 2026 vs Homem Aranha)
+  // Mas guardamos o ano se quisermos ser mais precisos, requisitos pedem que Homem Aranha 2026 = Homem Aranha
+  key = key.replace(/\(\d{4}\)|\b\d{4}\b/g, " ");
+
+  // 6. Limpeza final de símbolos e pontuação
+  key = key.replace(/[^a-z0-9]/g, " ")
     .replace(/\s+/g, " ")
-    .trim()
-    .slice(0, 160);
+    .trim();
+
+  return key.slice(0, 160);
 }
 
 /** Hash rápido e estável (FNV-1a) da lista completa — evita reprocessar catálogo idêntico. */
@@ -250,62 +268,63 @@ export async function syncCatalog(
     .update({ catalog_hash: hash, catalog_synced_at: nowIso, catalog_sync_ms: syncMs } as never)
     .eq("id", serverId);
 
-  // Atualiza estatísticas globais para o ranking
-  const totalAdded = added.live + added.vod + added.series;
-  if (!firstRun) {
-    await supabaseAdmin.rpc("update_catalog_stats", {
-      _server_id: serverId,
-      _added_count: totalAdded,
-      _total: totals.live + totals.vod + totals.series,
-    });
-  }
-
-  // Registra no histórico global se houver novos itens e notifica
-  if (changes.length > 0) {
+  // 7. Sincronização com o Radar Inteligente Global
+  if (changes.length > 0 || firstRun) {
     const { notifyNewContent } = await import("./iptv-notify.server");
-    const newItems = changes.filter((c: any) => c.action === "added");
     
-    // Alerta de Grande Atualização
-    if (newItems.length >= 50) {
-      await notifyNewContent(serverId, { kind: "system", name: "Grande Atualização", category: null }, { isFirst: true });
-    }
+    // Processamos todos os itens atuais (no firstRun) ou apenas as mudanças
+    const itemsToProcess = firstRun 
+      ? Object.entries(clean).flatMap(([kind, items]) => items.map(it => ({ ...it, kind })))
+      : changes.filter((c: any) => c.action === "added");
 
-    for (const item of newItems) {
+    for (const item of itemsToProcess) {
       const tKey = titleKey(item.name as string);
+      const mediaType = item.kind === "live" ? "live" : (item.kind === "series" ? "tv" : "movie");
       
-      // Upsert no histórico global
-      const { data: existing } = await supabaseAdmin
-        .from("tmdb_content_history")
-        .select("title_key")
-        .eq("title_key", tKey)
-        .maybeSingle();
-
-      await supabaseAdmin.from("tmdb_content_history").upsert(
-        {
+      // Upsert no Radar Global
+      const { data: globalItem, error: globalErr } = await supabaseAdmin
+        .from("iptv_global_catalog")
+        .upsert({
           title_key: tKey,
-          media_type: item.kind === "live" ? "live" : (item.kind === "series" ? "tv" : "movie"),
+          media_type: mediaType,
+          normalized_name: item.name as string,
           last_detected_at: nowIso,
-          discovery_server_id: serverId,
-          ...(existing ? {} : { first_seen_at: nowIso }),
-        } as never,
-        { onConflict: "title_key,media_type" }
-      );
+          // Se for novo, estes campos serão definidos
+          first_server_id: serverId,
+          first_detected_at: nowIso
+        } as never, { onConflict: 'title_key,media_type' })
+        .select('id, first_detected_at')
+        .single();
 
-      // Notifica se for o primeiro servidor (ou um dos primeiros) a ter esse conteúdo
-      // Ou se for conteúdo raro (lógica a ser expandida no futuro, por enquanto usamos isFirst se for novo global)
-      if (!existing && newItems.length < 50) {
-        await notifyNewContent(serverId, {
-          kind: item.kind as string,
-          name: item.name as string,
-          category: item.category as string | null
-        }, { isFirst: true });
-      } else if (newItems.length < 50) {
-        // Se não for novo global, ainda notificamos mas sem a flag isFirst (cairá na fila/resumo)
-        await notifyNewContent(serverId, {
-          kind: item.kind as string,
-          name: item.name as string,
-          category: item.category as string | null
-        });
+      if (globalItem) {
+        // Vincula este servidor ao conteúdo
+        await supabaseAdmin
+          .from("iptv_catalog_matches")
+          .upsert({
+            catalog_id: globalItem.id,
+            server_id: serverId,
+            external_id: item.id as string,
+            raw_name: item.name as string,
+            detected_at: nowIso
+          } as never, { onConflict: 'catalog_id,server_id' });
+
+        // Notifica se for novidade real (não apenas no firstRun do app, mas first_detected_at recente)
+        const isNewGlobal = globalItem.first_detected_at === nowIso;
+        
+        if (isNewGlobal && !firstRun) {
+          await notifyNewContent(serverId, {
+            kind: item.kind as string,
+            name: item.name as string,
+            category: item.category as string | null
+          }, { isFirst: true });
+        } else if (!firstRun && itemsToProcess.length < 20) {
+          // Notifica como atualização se não houver muitos itens (evita flood)
+          await notifyNewContent(serverId, {
+            kind: item.kind as string,
+            name: item.name as string,
+            category: item.category as string | null
+          });
+        }
       }
     }
   }
