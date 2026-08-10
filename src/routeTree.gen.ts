@@ -10,7 +10,6 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as VerifyEmailRouteImport } from './routes/verify-email'
-import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
 import { Route as RevendedorStreamMonitorRouteImport } from './routes/revendedor-stream-monitor'
 import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as MonitoramentoIptvRouteImport } from './routes/monitoramento-iptv'
@@ -75,11 +74,6 @@ import { Route as AuthenticatedAppHubLIdRouteImport } from './routes/_authentica
 const VerifyEmailRoute = VerifyEmailRouteImport.update({
   id: '/verify-email',
   path: '/verify-email',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
-  id: '/sitemap.xml',
-  path: '/sitemap.xml',
   getParentRoute: () => rootRouteImport,
 } as any)
 const RevendedorStreamMonitorRoute = RevendedorStreamMonitorRouteImport.update({
@@ -419,7 +413,6 @@ export interface FileRoutesByFullPath {
   '/monitoramento-iptv': typeof MonitoramentoIptvRoute
   '/reset-password': typeof ResetPasswordRoute
   '/revendedor-stream-monitor': typeof RevendedorStreamMonitorRoute
-  '/sitemap.xml': typeof SitemapDotxmlRoute
   '/verify-email': typeof VerifyEmailRoute
   '/.mcp/list-tools': typeof Char91DotmcpChar93ListToolsRoute
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
@@ -482,7 +475,6 @@ export interface FileRoutesByTo {
   '/monitoramento-iptv': typeof MonitoramentoIptvRoute
   '/reset-password': typeof ResetPasswordRoute
   '/revendedor-stream-monitor': typeof RevendedorStreamMonitorRoute
-  '/sitemap.xml': typeof SitemapDotxmlRoute
   '/verify-email': typeof VerifyEmailRoute
   '/.mcp/list-tools': typeof Char91DotmcpChar93ListToolsRoute
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
@@ -545,7 +537,6 @@ export interface FileRoutesById {
   '/monitoramento-iptv': typeof MonitoramentoIptvRoute
   '/reset-password': typeof ResetPasswordRoute
   '/revendedor-stream-monitor': typeof RevendedorStreamMonitorRoute
-  '/sitemap.xml': typeof SitemapDotxmlRoute
   '/verify-email': typeof VerifyEmailRoute
   '/.mcp/list-tools': typeof Char91DotmcpChar93ListToolsRoute
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
@@ -610,7 +601,6 @@ export interface FileRouteTypes {
     | '/monitoramento-iptv'
     | '/reset-password'
     | '/revendedor-stream-monitor'
-    | '/sitemap.xml'
     | '/verify-email'
     | '/.mcp/list-tools'
     | '/.well-known/oauth-protected-resource'
@@ -673,7 +663,6 @@ export interface FileRouteTypes {
     | '/monitoramento-iptv'
     | '/reset-password'
     | '/revendedor-stream-monitor'
-    | '/sitemap.xml'
     | '/verify-email'
     | '/.mcp/list-tools'
     | '/.well-known/oauth-protected-resource'
@@ -735,7 +724,6 @@ export interface FileRouteTypes {
     | '/monitoramento-iptv'
     | '/reset-password'
     | '/revendedor-stream-monitor'
-    | '/sitemap.xml'
     | '/verify-email'
     | '/.mcp/list-tools'
     | '/.well-known/oauth-protected-resource'
@@ -800,7 +788,6 @@ export interface RootRouteChildren {
   MonitoramentoIptvRoute: typeof MonitoramentoIptvRoute
   ResetPasswordRoute: typeof ResetPasswordRoute
   RevendedorStreamMonitorRoute: typeof RevendedorStreamMonitorRoute
-  SitemapDotxmlRoute: typeof SitemapDotxmlRoute
   VerifyEmailRoute: typeof VerifyEmailRoute
   Char91DotmcpChar93ListToolsRoute: typeof Char91DotmcpChar93ListToolsRoute
   Char91DotwellKnownChar93OauthProtectedResourceRoute: typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
@@ -829,13 +816,6 @@ declare module '@tanstack/react-router' {
       path: '/verify-email'
       fullPath: '/verify-email'
       preLoaderRoute: typeof VerifyEmailRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/sitemap.xml': {
-      id: '/sitemap.xml'
-      path: '/sitemap.xml'
-      fullPath: '/sitemap.xml'
-      preLoaderRoute: typeof SitemapDotxmlRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/revendedor-stream-monitor': {
@@ -1363,7 +1343,6 @@ const rootRouteChildren: RootRouteChildren = {
   MonitoramentoIptvRoute: MonitoramentoIptvRoute,
   ResetPasswordRoute: ResetPasswordRoute,
   RevendedorStreamMonitorRoute: RevendedorStreamMonitorRoute,
-  SitemapDotxmlRoute: SitemapDotxmlRoute,
   VerifyEmailRoute: VerifyEmailRoute,
   Char91DotmcpChar93ListToolsRoute: Char91DotmcpChar93ListToolsRoute,
   Char91DotwellKnownChar93OauthProtectedResourceRoute:
