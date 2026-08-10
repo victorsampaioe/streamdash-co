@@ -46,6 +46,7 @@ import { Route as AuthenticatedAppInteligenciaIndexRouteImport } from './routes/
 import { Route as AuthenticatedAppHubIndexRouteImport } from './routes/_authenticated/app.hub.index'
 import { Route as ApiPublicWebhooksMercadopagoRouteImport } from './routes/api/public/webhooks/mercadopago'
 import { Route as ApiPublicTelegramWebhookRouteImport } from './routes/api/public/telegram/webhook'
+import { Route as ApiPublicRobotsTxtRouteImport } from './routes/api/public/robots.txt'
 import { Route as ApiPublicRegionsTargetsRouteImport } from './routes/api/public/regions/targets'
 import { Route as ApiPublicRegionsReportRouteImport } from './routes/api/public/regions/report'
 import { Route as ApiPublicCronNotificationsRouteImport } from './routes/api/public/cron/notifications'
@@ -263,6 +264,11 @@ const ApiPublicTelegramWebhookRoute =
     path: '/api/public/telegram/webhook',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiPublicRobotsTxtRoute = ApiPublicRobotsTxtRouteImport.update({
+  id: '/api/public/robots/txt',
+  path: '/api/public/robots/txt',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiPublicRegionsTargetsRoute = ApiPublicRegionsTargetsRouteImport.update({
   id: '/api/public/regions/targets',
   path: '/api/public/regions/targets',
@@ -412,6 +418,7 @@ export interface FileRoutesByFullPath {
   '/api/public/cron/notifications': typeof ApiPublicCronNotificationsRoute
   '/api/public/regions/report': typeof ApiPublicRegionsReportRoute
   '/api/public/regions/targets': typeof ApiPublicRegionsTargetsRoute
+  '/api/public/robots/txt': typeof ApiPublicRobotsTxtRoute
   '/api/public/telegram/webhook': typeof ApiPublicTelegramWebhookRoute
   '/api/public/webhooks/mercadopago': typeof ApiPublicWebhooksMercadopagoRoute
   '/app/hub/': typeof AuthenticatedAppHubIndexRoute
@@ -466,6 +473,7 @@ export interface FileRoutesByTo {
   '/api/public/cron/notifications': typeof ApiPublicCronNotificationsRoute
   '/api/public/regions/report': typeof ApiPublicRegionsReportRoute
   '/api/public/regions/targets': typeof ApiPublicRegionsTargetsRoute
+  '/api/public/robots/txt': typeof ApiPublicRobotsTxtRoute
   '/api/public/telegram/webhook': typeof ApiPublicTelegramWebhookRoute
   '/api/public/webhooks/mercadopago': typeof ApiPublicWebhooksMercadopagoRoute
   '/app/hub': typeof AuthenticatedAppHubIndexRoute
@@ -524,6 +532,7 @@ export interface FileRoutesById {
   '/api/public/cron/notifications': typeof ApiPublicCronNotificationsRoute
   '/api/public/regions/report': typeof ApiPublicRegionsReportRoute
   '/api/public/regions/targets': typeof ApiPublicRegionsTargetsRoute
+  '/api/public/robots/txt': typeof ApiPublicRobotsTxtRoute
   '/api/public/telegram/webhook': typeof ApiPublicTelegramWebhookRoute
   '/api/public/webhooks/mercadopago': typeof ApiPublicWebhooksMercadopagoRoute
   '/_authenticated/app/hub/': typeof AuthenticatedAppHubIndexRoute
@@ -582,6 +591,7 @@ export interface FileRouteTypes {
     | '/api/public/cron/notifications'
     | '/api/public/regions/report'
     | '/api/public/regions/targets'
+    | '/api/public/robots/txt'
     | '/api/public/telegram/webhook'
     | '/api/public/webhooks/mercadopago'
     | '/app/hub/'
@@ -636,6 +646,7 @@ export interface FileRouteTypes {
     | '/api/public/cron/notifications'
     | '/api/public/regions/report'
     | '/api/public/regions/targets'
+    | '/api/public/robots/txt'
     | '/api/public/telegram/webhook'
     | '/api/public/webhooks/mercadopago'
     | '/app/hub'
@@ -693,6 +704,7 @@ export interface FileRouteTypes {
     | '/api/public/cron/notifications'
     | '/api/public/regions/report'
     | '/api/public/regions/targets'
+    | '/api/public/robots/txt'
     | '/api/public/telegram/webhook'
     | '/api/public/webhooks/mercadopago'
     | '/_authenticated/app/hub/'
@@ -727,6 +739,7 @@ export interface RootRouteChildren {
   ApiPublicCronNotificationsRoute: typeof ApiPublicCronNotificationsRoute
   ApiPublicRegionsReportRoute: typeof ApiPublicRegionsReportRoute
   ApiPublicRegionsTargetsRoute: typeof ApiPublicRegionsTargetsRoute
+  ApiPublicRobotsTxtRoute: typeof ApiPublicRobotsTxtRoute
   ApiPublicTelegramWebhookRoute: typeof ApiPublicTelegramWebhookRoute
   ApiPublicWebhooksMercadopagoRoute: typeof ApiPublicWebhooksMercadopagoRoute
 }
@@ -992,6 +1005,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicTelegramWebhookRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/robots/txt': {
+      id: '/api/public/robots/txt'
+      path: '/api/public/robots/txt'
+      fullPath: '/api/public/robots/txt'
+      preLoaderRoute: typeof ApiPublicRobotsTxtRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/regions/targets': {
       id: '/api/public/regions/targets'
       path: '/api/public/regions/targets'
@@ -1235,6 +1255,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPublicCronNotificationsRoute: ApiPublicCronNotificationsRoute,
   ApiPublicRegionsReportRoute: ApiPublicRegionsReportRoute,
   ApiPublicRegionsTargetsRoute: ApiPublicRegionsTargetsRoute,
+  ApiPublicRobotsTxtRoute: ApiPublicRobotsTxtRoute,
   ApiPublicTelegramWebhookRoute: ApiPublicTelegramWebhookRoute,
   ApiPublicWebhooksMercadopagoRoute: ApiPublicWebhooksMercadopagoRoute,
 }

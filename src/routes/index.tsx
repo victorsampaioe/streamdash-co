@@ -62,7 +62,6 @@ function Landing() {
             <Link to="/auth"><Button size="lg" className="glow-primary">✅ Testar sistema</Button></Link>
             <Link to="/auth"><Button size="lg" variant="outline">✅ Seja revendedor</Button></Link>
           </div>
-        </div>
           <div className="mt-10 grid grid-cols-2 sm:grid-cols-4 gap-4 max-w-3xl mx-auto">
             {[
               { k: "30s", v: "Intervalo de checagem" },
