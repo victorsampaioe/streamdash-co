@@ -100,7 +100,7 @@ function Landing() {
         </div>
       </section>
 
-      <section className="max-w-4xl mx-auto px-4 sm:px-6 py-16 sm:py-20 border-t border-border/60">
+      <section className="max-w-4xl mx-auto px-4 sm:px-6 py-16 sm:py-20 border-t border-border/60" itemScope itemType="https://schema.org/FAQPage">
         <h2 className="text-3xl font-bold text-center mb-12 text-primary">Perguntas Frequentes (FAQ)</h2>
         <div className="space-y-6">
           <FaqItem question="Como funciona o Stream Monitor?" answer="O Stream Monitor vigia seus servidores a cada 30 segundos de múltiplas regiões globais. Se houver qualquer instabilidade, você é avisado instantaneamente no Telegram." />
@@ -162,12 +162,14 @@ function Stat({ label, value }: { label: string; value: string }) {
 
 function FaqItem({ question, answer }: { question: string; answer: string }) {
   return (
-    <div className="rounded-xl border border-border/60 bg-card/40 p-6">
-      <h3 className="font-bold mb-2 flex items-center gap-2 text-primary">
+    <div className="rounded-xl border border-border/60 bg-card/40 p-6 shadow-sm hover:shadow-md transition-shadow">
+      <h3 className="font-bold mb-2 flex items-center gap-2 text-primary" itemProp="mainEntity" itemScope itemType="https://schema.org/Question">
         <span className="h-2 w-2 rounded-full bg-primary" />
-        {question}
+        <span itemProp="name">{question}</span>
       </h3>
-      <p className="text-sm text-muted-foreground leading-relaxed">{answer}</p>
+      <div itemProp="acceptedAnswer" itemScope itemType="https://schema.org/Answer">
+        <p className="text-sm text-muted-foreground leading-relaxed" itemProp="text">{answer}</p>
+      </div>
     </div>
   );
 }

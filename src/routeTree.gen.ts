@@ -23,6 +23,7 @@ import { Route as SlugRouteImport } from './routes/$slug'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as StatusSlugRouteImport } from './routes/status.$slug'
+import { Route as BlogComoEvitarQuedaIptvRouteImport } from './routes/blog.como-evitar-queda-iptv'
 import { Route as AuthenticatedAppRouteImport } from './routes/_authenticated/app'
 import { Route as Char91DotwellKnownChar93OauthProtectedResourceRouteImport } from './routes/[.well-known]/oauth-protected-resource'
 import { Route as Char91DotmcpChar93ListToolsRouteImport } from './routes/[.mcp]/list-tools'
@@ -139,6 +140,11 @@ const StatusSlugRoute = StatusSlugRouteImport.update({
   id: '/status/$slug',
   path: '/status/$slug',
   getParentRoute: () => rootRouteImport,
+} as any)
+const BlogComoEvitarQuedaIptvRoute = BlogComoEvitarQuedaIptvRouteImport.update({
+  id: '/como-evitar-queda-iptv',
+  path: '/como-evitar-queda-iptv',
+  getParentRoute: () => BlogRoute,
 } as any)
 const AuthenticatedAppRoute = AuthenticatedAppRouteImport.update({
   id: '/app',
@@ -406,7 +412,7 @@ export interface FileRoutesByFullPath {
   '/$slug': typeof SlugRoute
   '/alertas-telegram': typeof AlertasTelegramRoute
   '/auth': typeof AuthRoute
-  '/blog': typeof BlogRoute
+  '/blog': typeof BlogRouteWithChildren
   '/dns': typeof DnsRoute
   '/mcp': typeof McpRoute
   '/monitoramento-dns': typeof MonitoramentoDnsRoute
@@ -417,6 +423,7 @@ export interface FileRoutesByFullPath {
   '/.mcp/list-tools': typeof Char91DotmcpChar93ListToolsRoute
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   '/app': typeof AuthenticatedAppRouteWithChildren
+  '/blog/como-evitar-queda-iptv': typeof BlogComoEvitarQuedaIptvRoute
   '/status/$slug': typeof StatusSlugRoute
   '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
@@ -468,7 +475,7 @@ export interface FileRoutesByTo {
   '/$slug': typeof SlugRoute
   '/alertas-telegram': typeof AlertasTelegramRoute
   '/auth': typeof AuthRoute
-  '/blog': typeof BlogRoute
+  '/blog': typeof BlogRouteWithChildren
   '/dns': typeof DnsRoute
   '/mcp': typeof McpRoute
   '/monitoramento-dns': typeof MonitoramentoDnsRoute
@@ -478,6 +485,7 @@ export interface FileRoutesByTo {
   '/verify-email': typeof VerifyEmailRoute
   '/.mcp/list-tools': typeof Char91DotmcpChar93ListToolsRoute
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
+  '/blog/como-evitar-queda-iptv': typeof BlogComoEvitarQuedaIptvRoute
   '/status/$slug': typeof StatusSlugRoute
   '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
@@ -530,7 +538,7 @@ export interface FileRoutesById {
   '/$slug': typeof SlugRoute
   '/alertas-telegram': typeof AlertasTelegramRoute
   '/auth': typeof AuthRoute
-  '/blog': typeof BlogRoute
+  '/blog': typeof BlogRouteWithChildren
   '/dns': typeof DnsRoute
   '/mcp': typeof McpRoute
   '/monitoramento-dns': typeof MonitoramentoDnsRoute
@@ -541,6 +549,7 @@ export interface FileRoutesById {
   '/.mcp/list-tools': typeof Char91DotmcpChar93ListToolsRoute
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   '/_authenticated/app': typeof AuthenticatedAppRouteWithChildren
+  '/blog/como-evitar-queda-iptv': typeof BlogComoEvitarQuedaIptvRoute
   '/status/$slug': typeof StatusSlugRoute
   '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
@@ -605,6 +614,7 @@ export interface FileRouteTypes {
     | '/.mcp/list-tools'
     | '/.well-known/oauth-protected-resource'
     | '/app'
+    | '/blog/como-evitar-queda-iptv'
     | '/status/$slug'
     | '/.lovable/oauth/consent'
     | '/.mcp/invoke-tool/$tool'
@@ -666,6 +676,7 @@ export interface FileRouteTypes {
     | '/verify-email'
     | '/.mcp/list-tools'
     | '/.well-known/oauth-protected-resource'
+    | '/blog/como-evitar-queda-iptv'
     | '/status/$slug'
     | '/.lovable/oauth/consent'
     | '/.mcp/invoke-tool/$tool'
@@ -728,6 +739,7 @@ export interface FileRouteTypes {
     | '/.mcp/list-tools'
     | '/.well-known/oauth-protected-resource'
     | '/_authenticated/app'
+    | '/blog/como-evitar-queda-iptv'
     | '/status/$slug'
     | '/.lovable/oauth/consent'
     | '/.mcp/invoke-tool/$tool'
@@ -781,7 +793,7 @@ export interface RootRouteChildren {
   SlugRoute: typeof SlugRoute
   AlertasTelegramRoute: typeof AlertasTelegramRoute
   AuthRoute: typeof AuthRoute
-  BlogRoute: typeof BlogRoute
+  BlogRoute: typeof BlogRouteWithChildren
   DnsRoute: typeof DnsRoute
   McpRoute: typeof McpRoute
   MonitoramentoDnsRoute: typeof MonitoramentoDnsRoute
@@ -908,6 +920,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/status/$slug'
       preLoaderRoute: typeof StatusSlugRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/blog/como-evitar-queda-iptv': {
+      id: '/blog/como-evitar-queda-iptv'
+      path: '/como-evitar-queda-iptv'
+      fullPath: '/blog/como-evitar-queda-iptv'
+      preLoaderRoute: typeof BlogComoEvitarQuedaIptvRouteImport
+      parentRoute: typeof BlogRoute
     }
     '/_authenticated/app': {
       id: '/_authenticated/app'
@@ -1330,13 +1349,23 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
 const AuthenticatedRouteRouteWithChildren =
   AuthenticatedRouteRoute._addFileChildren(AuthenticatedRouteRouteChildren)
 
+interface BlogRouteChildren {
+  BlogComoEvitarQuedaIptvRoute: typeof BlogComoEvitarQuedaIptvRoute
+}
+
+const BlogRouteChildren: BlogRouteChildren = {
+  BlogComoEvitarQuedaIptvRoute: BlogComoEvitarQuedaIptvRoute,
+}
+
+const BlogRouteWithChildren = BlogRoute._addFileChildren(BlogRouteChildren)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
   SlugRoute: SlugRoute,
   AlertasTelegramRoute: AlertasTelegramRoute,
   AuthRoute: AuthRoute,
-  BlogRoute: BlogRoute,
+  BlogRoute: BlogRouteWithChildren,
   DnsRoute: DnsRoute,
   McpRoute: McpRoute,
   MonitoramentoDnsRoute: MonitoramentoDnsRoute,
