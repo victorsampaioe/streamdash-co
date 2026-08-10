@@ -6,7 +6,7 @@ export const Route = createFileRoute('/api/public/robots/txt')({
       GET: async () => {
         const robots = `User-agent: *
 Allow: /
-Sitemap: https://streammonitor.site/api/public/sitemap/xml`;
+Sitemap: https://streammonitor.site/api/public/sitemap`;
 
         return new Response(robots, {
           headers: {
