@@ -10,6 +10,8 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as VerifyEmailRouteImport } from './routes/verify-email'
+import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
+import { Route as RobotsDottxtRouteImport } from './routes/robots[.]txt'
 import { Route as RevendedorStreamMonitorRouteImport } from './routes/revendedor-stream-monitor'
 import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as MonitoramentoIptvRouteImport } from './routes/monitoramento-iptv'
@@ -23,8 +25,6 @@ import { Route as SlugRouteImport } from './routes/$slug'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as StatusSlugRouteImport } from './routes/status.$slug'
-import { Route as SitemapXmlRouteImport } from './routes/sitemap.xml'
-import { Route as RobotsTxtRouteImport } from './routes/robots.txt'
 import { Route as BlogComoEvitarQuedaIptvRouteImport } from './routes/blog.como-evitar-queda-iptv'
 import { Route as AuthenticatedAppRouteImport } from './routes/_authenticated/app'
 import { Route as Char91DotwellKnownChar93OauthProtectedResourceRouteImport } from './routes/[.well-known]/oauth-protected-resource'
@@ -75,6 +75,16 @@ import { Route as AuthenticatedAppHubLIdRouteImport } from './routes/_authentica
 const VerifyEmailRoute = VerifyEmailRouteImport.update({
   id: '/verify-email',
   path: '/verify-email',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
+  id: '/sitemap.xml',
+  path: '/sitemap.xml',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const RobotsDottxtRoute = RobotsDottxtRouteImport.update({
+  id: '/robots.txt',
+  path: '/robots.txt',
   getParentRoute: () => rootRouteImport,
 } as any)
 const RevendedorStreamMonitorRoute = RevendedorStreamMonitorRouteImport.update({
@@ -139,16 +149,6 @@ const IndexRoute = IndexRouteImport.update({
 const StatusSlugRoute = StatusSlugRouteImport.update({
   id: '/status/$slug',
   path: '/status/$slug',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const SitemapXmlRoute = SitemapXmlRouteImport.update({
-  id: '/sitemap/xml',
-  path: '/sitemap/xml',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const RobotsTxtRoute = RobotsTxtRouteImport.update({
-  id: '/robots/txt',
-  path: '/robots/txt',
   getParentRoute: () => rootRouteImport,
 } as any)
 const BlogComoEvitarQuedaIptvRoute = BlogComoEvitarQuedaIptvRouteImport.update({
@@ -419,13 +419,13 @@ export interface FileRoutesByFullPath {
   '/monitoramento-iptv': typeof MonitoramentoIptvRoute
   '/reset-password': typeof ResetPasswordRoute
   '/revendedor-stream-monitor': typeof RevendedorStreamMonitorRoute
+  '/robots.txt': typeof RobotsDottxtRoute
+  '/sitemap.xml': typeof SitemapDotxmlRoute
   '/verify-email': typeof VerifyEmailRoute
   '/.mcp/list-tools': typeof Char91DotmcpChar93ListToolsRoute
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   '/app': typeof AuthenticatedAppRouteWithChildren
   '/blog/como-evitar-queda-iptv': typeof BlogComoEvitarQuedaIptvRoute
-  '/robots/txt': typeof RobotsTxtRoute
-  '/sitemap/xml': typeof SitemapXmlRoute
   '/status/$slug': typeof StatusSlugRoute
   '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
@@ -482,12 +482,12 @@ export interface FileRoutesByTo {
   '/monitoramento-iptv': typeof MonitoramentoIptvRoute
   '/reset-password': typeof ResetPasswordRoute
   '/revendedor-stream-monitor': typeof RevendedorStreamMonitorRoute
+  '/robots.txt': typeof RobotsDottxtRoute
+  '/sitemap.xml': typeof SitemapDotxmlRoute
   '/verify-email': typeof VerifyEmailRoute
   '/.mcp/list-tools': typeof Char91DotmcpChar93ListToolsRoute
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   '/blog/como-evitar-queda-iptv': typeof BlogComoEvitarQuedaIptvRoute
-  '/robots/txt': typeof RobotsTxtRoute
-  '/sitemap/xml': typeof SitemapXmlRoute
   '/status/$slug': typeof StatusSlugRoute
   '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
@@ -545,13 +545,13 @@ export interface FileRoutesById {
   '/monitoramento-iptv': typeof MonitoramentoIptvRoute
   '/reset-password': typeof ResetPasswordRoute
   '/revendedor-stream-monitor': typeof RevendedorStreamMonitorRoute
+  '/robots.txt': typeof RobotsDottxtRoute
+  '/sitemap.xml': typeof SitemapDotxmlRoute
   '/verify-email': typeof VerifyEmailRoute
   '/.mcp/list-tools': typeof Char91DotmcpChar93ListToolsRoute
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   '/_authenticated/app': typeof AuthenticatedAppRouteWithChildren
   '/blog/como-evitar-queda-iptv': typeof BlogComoEvitarQuedaIptvRoute
-  '/robots/txt': typeof RobotsTxtRoute
-  '/sitemap/xml': typeof SitemapXmlRoute
   '/status/$slug': typeof StatusSlugRoute
   '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
@@ -610,13 +610,13 @@ export interface FileRouteTypes {
     | '/monitoramento-iptv'
     | '/reset-password'
     | '/revendedor-stream-monitor'
+    | '/robots.txt'
+    | '/sitemap.xml'
     | '/verify-email'
     | '/.mcp/list-tools'
     | '/.well-known/oauth-protected-resource'
     | '/app'
     | '/blog/como-evitar-queda-iptv'
-    | '/robots/txt'
-    | '/sitemap/xml'
     | '/status/$slug'
     | '/.lovable/oauth/consent'
     | '/.mcp/invoke-tool/$tool'
@@ -673,12 +673,12 @@ export interface FileRouteTypes {
     | '/monitoramento-iptv'
     | '/reset-password'
     | '/revendedor-stream-monitor'
+    | '/robots.txt'
+    | '/sitemap.xml'
     | '/verify-email'
     | '/.mcp/list-tools'
     | '/.well-known/oauth-protected-resource'
     | '/blog/como-evitar-queda-iptv'
-    | '/robots/txt'
-    | '/sitemap/xml'
     | '/status/$slug'
     | '/.lovable/oauth/consent'
     | '/.mcp/invoke-tool/$tool'
@@ -735,13 +735,13 @@ export interface FileRouteTypes {
     | '/monitoramento-iptv'
     | '/reset-password'
     | '/revendedor-stream-monitor'
+    | '/robots.txt'
+    | '/sitemap.xml'
     | '/verify-email'
     | '/.mcp/list-tools'
     | '/.well-known/oauth-protected-resource'
     | '/_authenticated/app'
     | '/blog/como-evitar-queda-iptv'
-    | '/robots/txt'
-    | '/sitemap/xml'
     | '/status/$slug'
     | '/.lovable/oauth/consent'
     | '/.mcp/invoke-tool/$tool'
@@ -800,11 +800,11 @@ export interface RootRouteChildren {
   MonitoramentoIptvRoute: typeof MonitoramentoIptvRoute
   ResetPasswordRoute: typeof ResetPasswordRoute
   RevendedorStreamMonitorRoute: typeof RevendedorStreamMonitorRoute
+  RobotsDottxtRoute: typeof RobotsDottxtRoute
+  SitemapDotxmlRoute: typeof SitemapDotxmlRoute
   VerifyEmailRoute: typeof VerifyEmailRoute
   Char91DotmcpChar93ListToolsRoute: typeof Char91DotmcpChar93ListToolsRoute
   Char91DotwellKnownChar93OauthProtectedResourceRoute: typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
-  RobotsTxtRoute: typeof RobotsTxtRoute
-  SitemapXmlRoute: typeof SitemapXmlRoute
   StatusSlugRoute: typeof StatusSlugRoute
   DotlovableOauthConsentRoute: typeof DotlovableOauthConsentRoute
   Char91DotmcpChar93InvokeToolToolRoute: typeof Char91DotmcpChar93InvokeToolToolRoute
@@ -828,6 +828,20 @@ declare module '@tanstack/react-router' {
       path: '/verify-email'
       fullPath: '/verify-email'
       preLoaderRoute: typeof VerifyEmailRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/sitemap.xml': {
+      id: '/sitemap.xml'
+      path: '/sitemap.xml'
+      fullPath: '/sitemap.xml'
+      preLoaderRoute: typeof SitemapDotxmlRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/robots.txt': {
+      id: '/robots.txt'
+      path: '/robots.txt'
+      fullPath: '/robots.txt'
+      preLoaderRoute: typeof RobotsDottxtRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/revendedor-stream-monitor': {
@@ -919,20 +933,6 @@ declare module '@tanstack/react-router' {
       path: '/status/$slug'
       fullPath: '/status/$slug'
       preLoaderRoute: typeof StatusSlugRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/sitemap/xml': {
-      id: '/sitemap/xml'
-      path: '/sitemap/xml'
-      fullPath: '/sitemap/xml'
-      preLoaderRoute: typeof SitemapXmlRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/robots/txt': {
-      id: '/robots/txt'
-      path: '/robots/txt'
-      fullPath: '/robots/txt'
-      preLoaderRoute: typeof RobotsTxtRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/blog/como-evitar-queda-iptv': {
@@ -1372,12 +1372,12 @@ const rootRouteChildren: RootRouteChildren = {
   MonitoramentoIptvRoute: MonitoramentoIptvRoute,
   ResetPasswordRoute: ResetPasswordRoute,
   RevendedorStreamMonitorRoute: RevendedorStreamMonitorRoute,
+  RobotsDottxtRoute: RobotsDottxtRoute,
+  SitemapDotxmlRoute: SitemapDotxmlRoute,
   VerifyEmailRoute: VerifyEmailRoute,
   Char91DotmcpChar93ListToolsRoute: Char91DotmcpChar93ListToolsRoute,
   Char91DotwellKnownChar93OauthProtectedResourceRoute:
     Char91DotwellKnownChar93OauthProtectedResourceRoute,
-  RobotsTxtRoute: RobotsTxtRoute,
-  SitemapXmlRoute: SitemapXmlRoute,
   StatusSlugRoute: StatusSlugRoute,
   DotlovableOauthConsentRoute: DotlovableOauthConsentRoute,
   Char91DotmcpChar93InvokeToolToolRoute: Char91DotmcpChar93InvokeToolToolRoute,
