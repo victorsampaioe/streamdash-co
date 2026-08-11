@@ -3,7 +3,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
-import { Sparkles, Server, ShieldCheck, Clock, Film, Trophy, AlertTriangle, Loader2, Tv, Image } from "lucide-react";
+import { Sparkles, Server, ShieldCheck, Clock, Film, Trophy, AlertTriangle, Loader2, Tv, Image, Search, CheckCircle2, XCircle } from "lucide-react";
 import { toast } from "sonner";
 import { getIptvRadarStats } from "@/lib/radar-stats.functions";
 import { startRadarSyncJob, getRadarJobStatus } from "@/lib/radar-jobs.functions";
