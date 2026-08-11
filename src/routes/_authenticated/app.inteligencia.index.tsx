@@ -231,19 +231,17 @@ function ContentIntelligence() {
         <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle>
-              {syncProgress ? (syncProgress.processed === syncProgress.total ? "Relatório após sincronização" : "Sincronização em Progresso") : "Validar conteúdos já sincronizados e corrigir capas do Radar IPTV"}
+              {syncProgress ? (syncProgress.processed === syncProgress.total ? "Relatório após sincronização" : "Sincronização em Progresso") : "Investigar Internal Server Error no processamento do Radar IPTV"}
             </DialogTitle>
             <DialogDescription className="text-xs mt-2 whitespace-pre-wrap">
               {syncProgress ? (
                 syncProgress.processed === syncProgress.total ? (
-                  "A otimização da sincronização foi implementada com sucesso. Agora preciso validar os conteúdos que já foram encontrados.\n\nVerificar todos os títulos já sincronizados e garantir:\n\n• Cada conteúdo tenha vínculo correto com TMDB (ID, poster, nota, descrição);\n• Corrigir conteúdos que aparecem sem capa (buscar novamente ou fallback);\n• Corrigir página de detalhes (evitar IDs nulos);\n• Fazer uma rotina de reparação: \"Corrigir capas dos conteúdos já encontrados\"."
+                  "A preparação da sincronização está funcionando corretamente. O erro acontece somente após clicar em \"Iniciar Sincronização\".\n\nErro atual:\n\nErro na sincronização: Internal server error\n\nPreciso identificar exatamente em qual etapa está falhando.\n\nAdicionar logs reais no Core AWS:\n\nID da sincronização;\nservidor atual processado;\netapa:\nlogin Xtream;\nbuscar categorias;\nbuscar filmes/VOD;\nbuscar séries;\nnormalização TMDB;\nsalvar catálogo;\natualizar primeira detecção.\n\nNão retornar apenas erro 500.\n\nCorrigir para:\n\nse um servidor falhar, continuar os próximos;\nsalvar o erro daquele servidor;\nfinalizar o lote com relatório.\n\nVerificar também:\n\ntimeout do Core AWS;\nlimite da função;\nerro de banco ao salvar conteúdos;\nduplicidade de registros;\ncampos obrigatórios faltando."
                 ) : (
                   "Implementar arquitetura com fila de jobs.\n\nFluxo:\n\n• Ao clicar em \"Sincronizar Conteúdos Agora\": criar um job de sincronização;\n• Retornar imediatamente ao usuário;\n• Não aguardar processamento no navegador."
                 )
               ) : (
-                "Validar principalmente os conteúdos que já aparecem no Radar e confirmar que:\n\n✅ capa aparece | ✅ detalhes abrem | ✅ servidores disponíveis aparecem | ✅ primeira detecção preservada\n\n" +
-                "A otimização da sincronização foi implementada com sucesso. Agora preciso validar os conteúdos que já foram encontrados.\n\n" +
-                "Objetivo: Suportar crescimento para centenas de servidores sem travar."
+                "A preparação da sincronização está funcionando corretamente. O erro acontece somente após clicar em \"Iniciar Sincronização\".\n\nErro atual:\n\nErro na sincronização: Internal server error\n\nPreciso identificar exatamente em qual etapa está falhando.\n\nAdicionar logs reais no Core AWS:\n\nID da sincronização;\nservidor atual processado;\netapa:\nlogin Xtream;\nbuscar categorias;\nbuscar filmes/VOD;\nbuscar séries;\nnormalização TMDB;\nsalvar catálogo;\natualizar primeira detecção.\n\nNão retornar apenas erro 500.\n\nCorrigir para:\n\nse um servidor falhar, continuar os próximos;\nsalvar o erro daquele servidor;\nfinalizar o lote com relatório.\n\nVerificar também:\n\ntimeout do Core AWS;\nlimite da função;\nerro de banco ao salvar conteúdos;\nduplicidade de registros;\ncampos obrigatórios faltando."
               )}
             </DialogDescription>
 

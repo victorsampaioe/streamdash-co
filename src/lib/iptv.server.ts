@@ -498,10 +498,14 @@ export async function probeXtream(
   for (const s of steps) {
     let stepDone = false;
     const wait = STEP_BACKOFF_MS[s.step - 1] ?? 0;
-    if (wait) await sleep(wait + Math.floor(Math.random() * 400));
+    if (wait) {
+      console.log(`[iptv-probe] [${clean}] Aguardando backoff (${wait}ms) para ${s.label}...`);
+      await sleep(wait + Math.floor(Math.random() * 400));
+    }
     for (const candidate of [`http://${clean}`, `https://${clean}`]) {
       const url = `${candidate}/${s.path}?${auth}`;
       try {
+        console.log(`[iptv-probe] [${clean}] Tentando: ${s.label} (${candidate})`);
         const r = await getJson(url, API_TIMEOUT_MS, s.ua);
         info = r.data;
         okDiag = r.diag;
@@ -986,12 +990,14 @@ import type { AlertCandidate } from "./alert-state.server";
 
 
 export async function runIptvSync(serverId: string, opts: { mode?: "smart" | "full"; force?: boolean } = {}) {
-  const stage = (s: string) => console.log(`[iptv-sync] [${serverId}] Etapa: ${s}`);
+  const logPrefix = `[iptv-sync] [${serverId}]`;
+  const stage = (s: string) => console.log(`${logPrefix} Etapa: ${s}`);
+  
   stage("Iniciando processamento");
   
   const { data: srv, error: srvErr } = await supabaseAdmin.from("servers").select("*").eq("id", serverId).maybeSingle();
   if (srvErr) {
-    console.error(`[iptv-sync] [${serverId}] Erro ao buscar servidor:`, srvErr);
+    console.error(`${logPrefix} Erro ao buscar servidor:`, srvErr);
     throw new Error(`Erro de banco: ${srvErr.message}`);
   }
   if (!srv) throw new Error("Servidor não encontrado no banco de dados.");
@@ -1008,6 +1014,7 @@ export async function runIptvSync(serverId: string, opts: { mode?: "smart" | "fu
 
   const server = srv as unknown as ServerRow;
   const mode = opts.mode ?? (server.iptv_mode === "basic" ? "smart" : server.iptv_mode);
+  stage(`Modo definido: ${mode}`);
 
   // Todos os problemas detectados nesta execução são acumulados e enviados
   // em UMA única mensagem consolidada no final (ver dispatchAlerts).
@@ -1352,23 +1359,25 @@ export async function runIptvBatchSync(serverIds: string[], opts: { mode?: "smar
   const BATCH_SIZE = 5;
   const results = [];
   let total_contents = 0;
+  const batchId = Math.random().toString(36).substring(7);
   
-  console.log(`[iptv-batch] Iniciando lote de ${serverIds.length} servidores (tamanho do lote: ${BATCH_SIZE})`);
+  console.log(`[iptv-batch] [${batchId}] Iniciando lote de ${serverIds.length} servidores (tamanho do lote: ${BATCH_SIZE})`);
   
-  // Dividir em pedaços para processamento
   for (let i = 0; i < serverIds.length; i += BATCH_SIZE) {
     const chunk = serverIds.slice(i, i + BATCH_SIZE);
-    console.log(`[iptv-batch] Processando lote ${Math.floor(i / BATCH_SIZE) + 1} (${chunk.length} servidores)`);
+    console.log(`[iptv-batch] [${batchId}] Processando lote ${Math.floor(i / BATCH_SIZE) + 1} (${chunk.length} servidores)`);
     
     const chunkResults = await Promise.all(
       chunk.map(async (id) => {
         try {
+          console.log(`[iptv-batch] [${batchId}] [${id}] Iniciando sincronização...`);
           const res = await runIptvSync(id, { mode: opts.mode, force: true });
           const count = (res as any)?.contents_found || 0;
           total_contents += count;
+          console.log(`[iptv-batch] [${batchId}] [${id}] ✅ Concluído: ${count} conteúdos encontrados.`);
           return { id, ok: true, contents_found: count, no_changes: !(res as any)?.changes };
         } catch (e: any) {
-          console.error(`[iptv-batch] [${id}] Falha individual:`, e.message);
+          console.error(`[iptv-batch] [${batchId}] [${id}] ❌ Falha:`, e.message);
           return { id, ok: false, error: e.message };
         }
       })
