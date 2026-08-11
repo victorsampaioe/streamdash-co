@@ -231,22 +231,23 @@ function ContentIntelligence() {
         <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle>
-              {syncProgress ? (syncProgress.processed === syncProgress.total ? "Relatório após sincronização" : "Sincronização em Progresso") : "Ajuste final do Radar IPTV após correção da sincronização"}
+              {syncProgress ? (syncProgress.processed === syncProgress.total ? "Relatório após sincronização" : "Sincronização em Progresso") : "Integrar Radar IPTV com Core AWS para processamento em background"}
             </DialogTitle>
             <DialogDescription className="text-xs mt-2 whitespace-pre-wrap">
               {syncProgress ? (
                 syncProgress.processed === syncProgress.total ? (
                   "O Radar IPTV agora está funcionando corretamente. O sistema conseguiu separar os servidores corretamente:"
                 ) : (
-                  "Processando servidores IPTV aptos..."
+                  "O Radar IPTV deve deixar de depender do navegador para executar sincronizações. Usando o Core AWS já existente como motor de processamento."
                 )
               ) : (
-                "A sincronização do Radar IPTV agora está funcionando corretamente. O sistema conseguiu separar os servidores corretamente:\n\n" +
-                "✅ Servidores ativos monitorados: " + (prepData?.total_monitored || 142) + "\n" +
-                "🔐 Servidores com acesso IPTV configurado: " + (prepData?.configured_iptv || 50) + "\n" +
-                "⏳ Aguardando credenciais IPTV: " + (prepData?.waiting_credentials || 92) + "\n" +
-                "🎬 Conteúdos encontrados: " + (prepData?.total_monitored ? 134 : 0) + "\n" + // Just example values as per user request if not available
-                "🏆 Primeiras detecções: " + (prepData?.total_monitored ? 134 : 0)
+                "O Radar IPTV deve deixar de depender do navegador para executar sincronizações.\n\n" +
+                "Usar o Core AWS já existente como motor de processamento.\n\n" +
+                "Fluxo:\n" +
+                "• Ao clicar em \"Sincronizar Conteúdos Agora\": criar tarefa e enviar para Core AWS;\n" +
+                "• O Core executa login Xtream, busca conteúdos e atualiza ranking;\n" +
+                "• O painel apenas consulta o status: aguardando, processando, concluído ou erro.\n\n" +
+                "Continua funcionando mesmo fechando o navegador."
               )}
             </DialogDescription>
 
