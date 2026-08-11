@@ -26,12 +26,18 @@ async function chunked<T>(rows: T[], fn: (part: T[]) => Promise<unknown>) {
 /* ------------------------------------------------------------------ */
 
 export async function eligibleRadarServerIds(): Promise<string[]> {
-  const { data, error } = await supabaseAdmin.rpc("run_radar_batch_sync").catch(e => ({ data: null, error: e }));
-  if (error) {
-    console.error("[radar-job] Erro RPC run_radar_batch_sync:", error);
-    throw new Error(error.message);
+  try {
+    const { data, error } = await supabaseAdmin.rpc("run_radar_batch_sync");
+    if (error) {
+      console.error("[radar-job] Erro RPC run_radar_batch_sync:", error);
+      throw error;
+    }
+    return ((data as any)?.server_ids ?? []) as string[];
+  } catch (error) {
+    console.error("[radar-job] Exceção em eligibleRadarServerIds:", error);
+    throw error;
   }
-  return ((data as any)?.server_ids ?? []) as string[];
+}
 }
 
 /* ------------------------------------------------------------------ */
