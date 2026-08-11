@@ -3692,6 +3692,7 @@ export type Database = {
         }[]
       }
       get_correlation_overview: { Args: { _server_id: string }; Returns: Json }
+      get_iptv_radar_stats: { Args: never; Returns: Json }
       get_iptv_ranking: {
         Args: { _limit?: number }
         Returns: {
@@ -3974,6 +3975,7 @@ export type Database = {
       }
       rollup_metrics: { Args: { _hours?: number }; Returns: Json }
       rollup_regional: { Args: { _hours?: number }; Returns: Json }
+      run_radar_batch_sync: { Args: never; Returns: Json }
       subscription_is_active: { Args: { _user_id: string }; Returns: boolean }
       transfer_credits: {
         Args: { _amount: number; _recipient_id: string; _sender_id: string }

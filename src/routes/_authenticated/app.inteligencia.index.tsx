@@ -2,7 +2,11 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useState } from "react";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { getTmdbFeed } from "@/lib/tmdb.functions";
+import { prepareRadarBatchSync, runRadarBatchSyncNow } from "@/lib/radar-stats.functions";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
+import { Loader2, AlertTriangle } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -40,6 +44,32 @@ function ContentIntelligence() {
   const [term, setTerm] = useState("");
   const [query, setQuery] = useState("");
   const run = useServerFn(getTmdbFeed);
+
+  const qc = useQueryClient();
+  const prepareSync = useServerFn(prepareRadarBatchSync);
+  const runSync = useServerFn(runRadarBatchSyncNow);
+  const [showConfirm, setShowConfirm] = useState(false);
+  const [prepData, setPrepData] = useState<{ servers_found: number; server_ids: string[] } | null>(null);
+
+  const prepareMutation = useMutation({
+    mutationFn: () => prepareSync(),
+    onSuccess: (data) => {
+      setPrepData(data);
+      setShowConfirm(true);
+    },
+    onError: (e: Error) => toast.error("Erro ao preparar sincronização: " + e.message),
+  });
+
+  const syncMutation = useMutation({
+    mutationFn: (ids: string[]) => runSync({ data: { serverIds: ids } }),
+    onSuccess: (res) => {
+      const ok = res.results.filter((r) => r.ok).length;
+      toast.success(`Sincronização concluída para ${ok} servidores!`);
+      qc.invalidateQueries({ queryKey: ["tmdb-feed"] });
+      setShowConfirm(false);
+    },
+    onError: (e: Error) => toast.error("Erro na sincronização: " + e.message),
+  });
 
   const { data, isLoading, error } = useQuery({
     queryKey: ["tmdb-feed", feed, query],
@@ -97,19 +127,48 @@ function ContentIntelligence() {
           size="sm" 
           variant="outline"
           className="bg-primary/5 border-primary/20 hover:bg-primary/10"
-          onClick={async () => {
-            const toastId = toast.loading("Sincronizando conteúdos de todos os servidores...");
-            try {
-              // Simulação de chamada para sincronização global (via server function no futuro)
-              toast.success("Sincronização iniciada em background!", { id: toastId });
-            } catch (e) {
-              toast.error("Erro ao sincronizar.", { id: toastId });
-            }
-          }}
+          onClick={() => prepareMutation.mutate()}
+          disabled={prepareMutation.isPending || syncMutation.isPending}
         >
+          {prepareMutation.isPending ? (
+            <Loader2 className="h-4 w-4 animate-spin mr-2" />
+          ) : (
+            <Sparkles className="h-4 w-4 mr-2" />
+          )}
           🔄 Sincronizar conteúdos agora
         </Button>
       </div>
+
+      <Dialog open={showConfirm} onOpenChange={setShowConfirm}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Confirmar Sincronização em Lote</DialogTitle>
+            <DialogDescription className="space-y-4 pt-2">
+              <p>
+                Encontramos **{prepData?.servers_found}** servidores preparados para sincronização de conteúdo (com credenciais e teste de login aprovado).
+              </p>
+              <div className="p-3 bg-amber-500/10 border border-amber-500/20 rounded text-xs flex gap-2">
+                <AlertTriangle className="h-4 w-4 text-amber-500 shrink-0" />
+                <span>
+                  Servidores sem credenciais ou com erros de login são ignorados automaticamente para economizar processamento.
+                </span>
+              </div>
+              <p>Deseja iniciar o processo agora?</p>
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="mt-4">
+            <Button variant="ghost" onClick={() => setShowConfirm(false)}>Cancelar</Button>
+            <Button 
+              onClick={() => prepData && syncMutation.mutate(prepData.server_ids)}
+              disabled={syncMutation.isPending}
+              className="gap-2"
+            >
+              {syncMutation.isPending && <Loader2 className="h-4 w-4 animate-spin" />}
+              Iniciar Sincronização
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
 
       <div className="flex flex-wrap gap-2">
