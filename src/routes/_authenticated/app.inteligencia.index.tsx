@@ -46,113 +46,40 @@ function ContentIntelligence() {
   const run = useServerFn(getTmdbFeed);
 
   const qc = useQueryClient();
-  const prepareSync = useServerFn(prepareRadarBatchSync);
-  const runSync = useServerFn(runRadarBatchSyncNow);
-  const [showConfirm, setShowConfirm] = useState(false);
-  const [prepData, setPrepData] = useState<{ 
-    servers_found: number; 
-    server_ids: string[];
-    total_db_servers: number;
-    with_host: number;
-    with_username: number;
-    with_password: number;
-    login_approved: number;
-    total_monitored: number;
-    configured_iptv: number;
-    waiting_credentials: number;
-    excluded_reasons: {
-      no_username: number;
-      no_password: number;
-      invalid_login: number;
-      paused: number;
-      inactive_account: number;
-    };
-  } | null>(null);
+  const jobStatus = useServerFn(getRadarJobStatus);
+  const startJob = useServerFn(startRadarSyncJob);
 
-  const prepareMutation = useMutation({
-    mutationFn: () => prepareSync(),
-    onSuccess: (data: any) => {
-      console.group("[Radar Tech Log] Preparação Concluída");
-      console.log("Total servidores no banco:", data.total_db_servers);
-      console.log("Servidores com URL Xtream:", data.with_host);
-      console.log("Servidores com Credenciais (User/Pass):", data.with_username, "/", data.with_password);
-      console.log("Servidores com Login Aprovado:", data.login_approved);
-      console.log("Servidores Aptos (Filtro Final):", data.servers_found);
-      console.groupEnd();
-
-      setPrepData(data);
-      setShowConfirm(true);
-    },
-
-    onError: (e: Error) => {
-      console.error("[Radar Tech Log] Erro na preparação do Radar:", e);
-      console.error("[Radar Tech Log] Etapa: Chamada RPC prepareRadarBatchSync");
-      console.error("[Radar Tech Log] Erro Real:", e.message);
-      toast.error("Erro ao preparar sincronização: " + e.message);
-
-    },
+  const statusQuery = useQuery({
+    queryKey: ["radar-job-status"],
+    queryFn: () => jobStatus(),
+    retry: false,
+    refetchInterval: 10_000,
   });
 
-  const [syncProgress, setSyncProgress] = useState<{
-    processed: number;
-    total: number;
-    success: number;
-    errors: number;
-    contents: number;
-    results: any[];
-  } | null>(null);
-
-  const syncMutation = useMutation({
-    mutationFn: async ({ ids, testOne }: { ids: string[]; testOne?: boolean }) => {
-      const targetIds = testOne ? ids.slice(0, 1) : ids;
-      setSyncProgress({
-        processed: 0,
-        total: targetIds.length,
-        success: 0,
-        errors: 0,
-        contents: 0,
-        results: [],
-      });
-
-      console.log(`[Radar Tech Log] Iniciando sincronização. Alvo: ${testOne ? "Teste Individual" : "Lote Completo"}. Qtd: ${targetIds.length}`);
-      const res = await runSync({ data: { serverIds: ids, testOne } });
-      return res;
-    },
-    onSuccess: (res: any) => {
-      const ok = res.results.filter((r: any) => r.ok).length;
-      const fails = res.results.filter((r: any) => !r.ok);
-      const contents = res.results.reduce((acc: number, r: any) => acc + (r.contents_found || 0), 0);
-      
-      setSyncProgress(prev => prev ? {
-        ...prev,
-        processed: prev.total,
-        success: ok,
-        errors: fails.length,
-        contents: contents,
-        results: res.results
-      } : null);
-
-      console.group("Relatório Técnico de Sincronização Radar");
-      res.results.forEach((r: any) => {
-        const icon = r.ok ? "✅" : (r.error?.toLowerCase().includes("login") ? "⚠️" : "❌");
-        const msg = r.ok ? `Sincronizado (${r.contents_found || 0} itens)` : (r.error?.toLowerCase().includes("login") ? "Falha de login" : `Erro API: ${r.error}`);
-        console.log(`${icon} Servidor ${r.id}: ${msg}`);
-      });
-      console.groupEnd();
-
-      if (fails.length > 0) {
-        toast.warning(`Sincronização concluída: ${ok} sucesso, ${fails.length} falhas. Novos conteúdos: ${contents}`);
-      } else {
-        toast.success(`Sincronização concluída! ${ok} servidores processados, ${contents} novos conteúdos.`);
+  const isAdmin = !!statusQuery.data;
+  const job = (statusQuery.data as any)?.job as
+    | {
+        status: string;
+        processed: number;
+        total_servers: number;
+        success_count: number;
+        failed_count: number;
+        movies_found: number;
+        series_found: number;
       }
-      
-      qc.invalidateQueries({ queryKey: ["tmdb-feed"] });
+    | null
+    | undefined;
+  const running = job && (job.status === "queued" || job.status === "running");
+
+  const startMutation = useMutation({
+    mutationFn: () => startJob(),
+    onSuccess: () => {
+      toast.success("Sincronização iniciada em segundo plano. Pode fechar o navegador.");
+      qc.invalidateQueries({ queryKey: ["radar-job-status"] });
     },
-    onError: (e: Error) => {
-      console.error("[Radar Tech Log] Erro crítico na sincronização do Radar");
-      toast.error("Erro na sincronização: " + e.message);
-    },
+    onError: (e: Error) => toast.error("Erro ao iniciar sincronização: " + e.message),
   });
+
 
   const { data, isLoading, error } = useQuery({
     queryKey: ["tmdb-feed", feed, query],
