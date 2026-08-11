@@ -59,6 +59,9 @@ function ContentIntelligence() {
   });
 
   const isAdmin = !!statusQuery.data;
+
+
+
   const job = (statusQuery.data as any)?.job as
     | {
         status: string;
