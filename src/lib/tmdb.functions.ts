@@ -86,10 +86,25 @@ export const getTmdbFeed = createServerFn({ method: "POST" })
       ? await searchTmdb(data.query.trim())
       : await fetchFeed(data.feed, data.page ?? 1);
 
+    // Filtragem final para garantir que apenas itens válidos apareçam no Radar
+    const validCards = cards.filter(c => {
+      // Se for busca ou abas normais, garantir poster e tmdb_id
+      const hasPoster = !!c.poster_path;
+      const hasTmdbId = !!c.tmdb_id;
+      
+      // Aplicar segregação por abas
+      if (data.feed.startsWith('movie_')) {
+        return c.media_type === 'movie' && hasPoster && hasTmdbId;
+      }
+      if (data.feed.startsWith('tv_')) {
+        return c.media_type === 'tv' && hasPoster && hasTmdbId;
+      }
+      return hasPoster && hasTmdbId;
+    });
 
     const verifiedIds = new Set((servers ?? []).map((s) => s.id));
 
-    const keys = [...new Set(cards.flatMap((c) => [titleKey(c.title), titleKey(c.original_title)]).filter(Boolean))];
+    const keys = [...new Set(validCards.flatMap((c) => [titleKey(c.title), titleKey(c.original_title)]).filter(Boolean))];
     const matchMap = new Map<string, { count: number, first_server?: string, first_at?: string }>();
     
     if (keys.length && totalServers) {
