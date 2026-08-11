@@ -164,21 +164,46 @@ function ContentIntelligence() {
       </div>
 
       <Dialog open={showConfirm} onOpenChange={setShowConfirm}>
-        <DialogContent>
+        <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle>Confirmar Sincronização em Lote</DialogTitle>
-            <DialogDescription className="space-y-4 pt-2">
-              <p>
-                Encontramos **{prepData?.servers_found}** servidores preparados para sincronização de conteúdo (com credenciais e teste de login aprovado).
-              </p>
-              <div className="p-3 bg-amber-500/10 border border-amber-500/20 rounded text-xs flex gap-2">
-                <AlertTriangle className="h-4 w-4 text-amber-500 shrink-0" />
-                <span>
-                  Servidores sem credenciais ou com erros de login são ignorados automaticamente para economizar processamento.
-                </span>
+            <div className="pt-4 space-y-4">
+              <div className="grid grid-cols-1 gap-3 text-left">
+                <div className="p-3 bg-emerald-500/10 border border-emerald-500/20 rounded flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Server className="h-4 w-4 text-emerald-500" />
+                    <span className="text-sm font-medium">Servidores ativos</span>
+                  </div>
+                  <Badge variant="outline" className="text-emerald-500 border-emerald-500/30">
+                    {prepData?.total_monitored || 0}
+                  </Badge>
+                </div>
+                
+                <div className="p-3 bg-primary/10 border border-primary/20 rounded flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Sparkles className="h-4 w-4 text-primary" />
+                    <span className="text-sm font-medium">Com acesso IPTV válido</span>
+                  </div>
+                  <Badge variant="outline" className="text-primary border-primary/30">
+                    {prepData?.configured_iptv || 0}
+                  </Badge>
+                </div>
+
+                <div className="p-3 bg-muted border border-border rounded flex items-center justify-between">
+                  <div className="flex items-center gap-2 text-muted-foreground">
+                    <AlertTriangle className="h-4 w-4" />
+                    <span className="text-sm font-medium">Aguardando credenciais</span>
+                  </div>
+                  <Badge variant="outline" className="text-muted-foreground">
+                    {prepData?.waiting_credentials || 0}
+                  </Badge>
+                </div>
               </div>
-              <p>Deseja iniciar o processo agora?</p>
-            </DialogDescription>
+
+              <DialogDescription className="text-sm">
+                Encontramos <strong>{prepData?.servers_found}</strong> servidores preparados para sincronização. Deseja iniciar a varredura inteligente?
+              </DialogDescription>
+            </div>
           </DialogHeader>
           <DialogFooter className="mt-4">
             <Button variant="ghost" onClick={() => setShowConfirm(false)}>Cancelar</Button>
