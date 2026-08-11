@@ -169,7 +169,7 @@ function Dashboard() {
         <Link to="/app/servers/new" className="w-full sm:w-auto"><Button className="w-full sm:w-auto"><Plus className="h-4 w-4 mr-1" />Novo servidor</Button></Link>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         <Card className="p-5 lg:col-span-2">
           <div className="text-xs uppercase tracking-wider text-muted-foreground mb-4">Resumo do monitoramento</div>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">

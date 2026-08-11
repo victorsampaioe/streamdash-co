@@ -17,7 +17,7 @@ function AlertsPage() {
     <div className="min-h-screen bg-background text-foreground py-16 px-4">
       <div className="max-w-4xl mx-auto">
         <Link to="/" className="text-primary hover:underline mb-8 inline-block">← Voltar para o início</Link>
-        <h1 className="text-4xl sm:text-5xl font-bold mb-6">Alertas Automáticos no Telegram</h1>
+        <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold mb-6">Alertas Automáticos no Telegram</h1>
         <p className="text-xl text-muted-foreground mb-12">
           A forma mais rápida e eficiente de ser avisado sobre problemas na sua infraestrutura.
         </p>
