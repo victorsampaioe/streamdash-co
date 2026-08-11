@@ -17,6 +17,10 @@ export function RadarAdminPanel() {
   const getStats = useServerFn(getIptvRadarStats);
   const getJob = useServerFn(getRadarJobStatus);
   const startJob = useServerFn(startRadarSyncJob);
+  const searchManual = useServerFn(searchRadarTitleManual);
+
+  const [searchTerm, setSearchTerm] = useState("");
+  const [searchResult, setSearchResult] = useState<any>(null);
 
   const { data: s, isLoading } = useQuery({
     queryKey: ["admin-radar-stats"],
