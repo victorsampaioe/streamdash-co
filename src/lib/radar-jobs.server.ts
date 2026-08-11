@@ -38,7 +38,6 @@ export async function eligibleRadarServerIds(): Promise<string[]> {
     throw error;
   }
 }
-}
 
 /* ------------------------------------------------------------------ */
 /* Criação de job                                                      */
