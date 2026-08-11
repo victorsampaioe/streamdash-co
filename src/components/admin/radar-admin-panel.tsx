@@ -47,6 +47,19 @@ export function RadarAdminPanel() {
     onError: (e: Error) => toast.error("Erro ao iniciar sincronização: " + e.message),
   });
 
+  const searchMutation = useMutation({
+    mutationFn: (title: string) => searchManual({ data: { title } }),
+    onSuccess: (res: any) => {
+      setSearchResult(res);
+      if (res.found) {
+        toast.success(`Título encontrado em ${res.server_count} servidores!`);
+      } else {
+        toast.error("Título não encontrado nos servidores ativos.");
+      }
+    },
+    onError: (e: Error) => toast.error("Erro na busca: " + e.message),
+  });
+
   if (isLoading) return <div className="p-8 text-center animate-pulse">Carregando dados do Radar...</div>;
 
   const pct = job?.total_servers ? Math.round(((job.processed ?? 0) / job.total_servers) * 100) : 0;
