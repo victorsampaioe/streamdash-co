@@ -188,9 +188,9 @@ function TitleDetail() {
 
         <TabsContent value="servers" className="mt-4">
           <Card className="p-5 space-y-3">
-            <h2 className="font-semibold">Servidores cadastrados</h2>
+            <h2 className="font-semibold">Servidores com o conteúdo</h2>
             <p className="text-xs text-muted-foreground -mt-1">
-              ✅ {data.podium.length} servidor{(data.podium.length !== 1) ? "es possuem" : " possui"} o conteúdo.
+              ✅ Encontrado em {data.podium.length} servidor{(data.podium.length !== 1) ? "es" : ""}.
             </p>
             {data.availability.length === 0 ? (
               <p className="py-6 text-center text-sm text-muted-foreground">Nenhum servidor cadastrado.</p>
