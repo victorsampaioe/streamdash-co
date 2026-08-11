@@ -20,20 +20,19 @@ export const recalculateRadarAvailability = createServerFn({ method: "POST" })
     const now = new Date().toISOString();
 
     // 1. Unificar TMDB IDs entre registros duplicados (mesmo nome/tipo)
-    // Buscamos registros que têm TMDB_ID e aplicamos nos que não têm
     const { data: enrichmentData } = await supabaseAdmin
       .from("iptv_global_catalog")
       .select("normalized_name, media_type, tmdb_id, poster_path")
       .not("tmdb_id", "is", null);
 
     if (enrichmentData && enrichmentData.length > 0) {
-      // Agrupar por nome + tipo para ter um mapa de referência
       const map = new Map<string, { id: number; poster: string }>();
       for (const row of enrichmentData) {
-        map.set(`${row.media_type}:${row.normalized_name}`, { id: row.tmdb_id!, poster: row.poster_path! });
+        if (row.tmdb_id && row.poster_path) {
+          map.set(`${row.media_type}:${row.normalized_name}`, { id: row.tmdb_id, poster: row.poster_path });
+        }
       }
 
-      // Atualizar em chunks os registros sem TMDB ID que agora temos match
       const entries = Array.from(map.entries());
       for (let i = 0; i < entries.length; i += 50) {
         const chunk = entries.slice(i, i + 50);
@@ -56,12 +55,12 @@ export const recalculateRadarAvailability = createServerFn({ method: "POST" })
     }
 
     // 2. Recalcular contadores (BATCH)
-    // Processamos apenas itens que possuem matches para otimizar
     const { data: itemsWithMatches } = await supabaseAdmin
         .from("iptv_catalog_matches")
         .select("catalog_id");
     
-    const uniqueCatalogIds = [...new Set((itemsWithMatches ?? []).map(m => m.catalog_id))];
+    const uniqueIds = (itemsWithMatches ?? []).map(m => m.catalog_id).filter((id): id is string => !!id);
+    const uniqueCatalogIds = [...new Set(uniqueIds)];
     let totalUpdated = 0;
 
     const CHUNK_SIZE = 50;
@@ -98,10 +97,16 @@ export const recalculateRadarAvailability = createServerFn({ method: "POST" })
     }
 
     // Resetar contadores para quem não tem match
-    await supabaseAdmin
-      .from("iptv_global_catalog")
-      .update({ servers_found_count: 0 } as never)
-      .not("id", "in", uniqueCatalogIds);
+    if (uniqueCatalogIds.length > 0) {
+      await supabaseAdmin
+        .from("iptv_global_catalog")
+        .update({ servers_found_count: 0 } as never)
+        .not("id", "in", uniqueCatalogIds);
+    } else {
+      await supabaseAdmin
+        .from("iptv_global_catalog")
+        .update({ servers_found_count: 0 } as never);
+    }
 
     return { success: true, total: totalUpdated };
   });
