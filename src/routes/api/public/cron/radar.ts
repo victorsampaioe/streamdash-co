@@ -27,9 +27,8 @@ async function run() {
     }
   }
 
-  const { runRadarJobStep, enrichTmdbPending, ensureAutoRadarJob, reclaimStuckRadarWork } = await import(
-    "@/lib/radar-jobs.server"
-  );
+  const { runRadarJobStep, enrichTmdbPending, ensureAutoRadarJob, reclaimStuckRadarWork, ensureLogicalClusters } =
+    await import("@/lib/radar-jobs.server");
 
   let recovered: unknown = null;
   try {
@@ -37,6 +36,14 @@ async function run() {
   } catch (e: any) {
     errors.push(`recover: ${e?.message}`);
   }
+
+  let clusters: unknown = null;
+  try {
+    clusters = await ensureLogicalClusters();
+  } catch (e: any) {
+    errors.push(`clusters: ${e?.message}`);
+  }
+
 
 
   let auto: unknown = null;
