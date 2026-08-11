@@ -14,7 +14,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { analyzeServer } from "@/lib/analysis.functions";
 import { validateHostEligibility } from "@/lib/validation.functions";
 import { PremiumGate } from "@/components/subscription/premium-gate";
-import { AlertCircle, CheckCircle2, XCircle, Clock, Info } from "lucide-react";
+import { AlertCircle, CheckCircle2, XCircle, Clock, Info, Loader2 } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 export const Route = createFileRoute("/_authenticated/app/servers/new")({
