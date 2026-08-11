@@ -8,6 +8,9 @@ import { toast } from "sonner";
 import { getIptvRadarStats } from "@/lib/radar-stats.functions";
 import { startRadarSyncJob, getRadarJobStatus } from "@/lib/radar-jobs.functions";
 import { cn } from "@/lib/utils";
+import { searchRadarTitleManual } from "@/lib/radar-admin.functions";
+import { useState } from "react";
+import { Input } from "@/components/ui/input";
 
 export function RadarAdminPanel() {
   const qc = useQueryClient();
