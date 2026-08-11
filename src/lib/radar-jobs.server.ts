@@ -66,20 +66,76 @@ export async function createRadarJob(
   return { job_id: (job as any).id as string, total_servers: ids.length };
 }
 
-/** Dispara o processamento no Core AWS sem esperar a conclusão. */
+/** Dispara o processamento no Core AWS; se o Core não responder JSON, processa local. */
 export async function kickRadarJob(): Promise<"core" | "local"> {
-  const { useCore, coreApiUrl } = await import("./core-api.server");
+  const { useCore, coreJsonPost } = await import("./core-api.server");
   if (useCore()) {
-    const url = `${coreApiUrl()}/api/public/cron/radar`;
-    // fire-and-forget: o Core processa em background.
-    fetch(url, { method: "POST", headers: { "x-cron-secret": process.env.CRON_SECRET ?? "" } }).catch((e) =>
-      console.warn("[radar-job] falha ao acionar o Core:", (e as Error).message),
-    );
-    return "core";
+    try {
+      await coreJsonPost("/api/public/cron/radar", 15_000);
+      return "core";
+    } catch (e) {
+      console.warn("[radar-job] Core indisponível, processando local:", (e as Error).message);
+    }
   }
   void runRadarJobStep().catch((e) => console.error("[radar-job] erro no step local:", e));
   return "local";
 }
+
+/* ------------------------------------------------------------------ */
+/* Recuperação automática de trabalho travado                          */
+/* ------------------------------------------------------------------ */
+
+const ITEM_STUCK_MS = 15 * 60_000;
+
+/**
+ * Devolve para a fila itens que ficaram presos em "running" (worker morto,
+ * timeout do Core, deploy no meio do lote) e conclui jobs cujos itens
+ * terminaram mas que ficaram marcados como em andamento.
+ */
+export async function reclaimStuckRadarWork() {
+  const cutoff = new Date(Date.now() - ITEM_STUCK_MS).toISOString();
+
+  const { data: stuck } = await supabaseAdmin
+    .from("iptv_sync_job_items")
+    .select("id")
+    .eq("status", "running")
+    .lt("updated_at", cutoff)
+    .limit(200);
+
+  const stuckIds = ((stuck ?? []) as { id: string }[]).map((r) => r.id);
+  if (stuckIds.length) {
+    await supabaseAdmin
+      .from("iptv_sync_job_items")
+      .update({ status: "pending", started_at: null } as never)
+      .in("id", stuckIds);
+    console.warn(`[radar-job] ${stuckIds.length} itens presos devolvidos para a fila.`);
+  }
+
+  // Jobs abertos sem itens pendentes → concluídos.
+  const { data: openJobs } = await supabaseAdmin
+    .from("iptv_sync_jobs")
+    .select("id")
+    .in("status", ["queued", "running"]);
+
+  let closed = 0;
+  for (const j of (openJobs ?? []) as { id: string }[]) {
+    const { count } = await supabaseAdmin
+      .from("iptv_sync_job_items")
+      .select("id", { count: "exact", head: true })
+      .eq("job_id", j.id)
+      .in("status", ["pending", "running"]);
+    if (!count) {
+      await supabaseAdmin
+        .from("iptv_sync_jobs")
+        .update({ status: "completed", finished_at: new Date().toISOString() } as never)
+        .eq("id", j.id);
+      closed++;
+    }
+  }
+
+  return { requeued: stuckIds.length, jobs_closed: closed };
+}
+
 
 /* ------------------------------------------------------------------ */
 /* Sincronização incremental de um servidor (somente VOD + séries)     */
