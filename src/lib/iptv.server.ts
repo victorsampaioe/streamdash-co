@@ -1334,7 +1334,59 @@ export async function runIptvSync(serverId: string, opts: { mode?: "smart" | "fu
   }
 
 
-  return { skipped: false as const, sync_id: sync?.id ?? null, health, channels: x.channels, streams: streamProbes, catalog: catalogDiff };
+  return { 
+    skipped: false as const, 
+    sync_id: sync?.id ?? null, 
+    health, 
+    channels: x.channels, 
+    streams: streamProbes, 
+    catalog: catalogDiff,
+    contents_found: (catalogDiff as any)?.new_titles || 0,
+    changes: ((catalogDiff as any)?.total_changes || 0) > 0
+  };
+}
+
+/**
+ * Processa servidores IPTV em lotes no Core AWS.
+ * Garante que um servidor com erro não derrube toda sincronização.
+ */
+export async function runIptvBatchSync(serverIds: string[], opts: { mode?: "smart" | "full" } = {}) {
+  const BATCH_SIZE = 5;
+  const results = [];
+  let total_contents = 0;
+  
+  console.log(`[iptv-batch] Iniciando lote de ${serverIds.length} servidores (tamanho do lote: ${BATCH_SIZE})`);
+  
+  // Dividir em pedaços para processamento
+  for (let i = 0; i < serverIds.length; i += BATCH_SIZE) {
+    const chunk = serverIds.slice(i, i + BATCH_SIZE);
+    console.log(`[iptv-batch] Processando lote ${Math.floor(i / BATCH_SIZE) + 1} (${chunk.length} servidores)`);
+    
+    const chunkResults = await Promise.all(
+      chunk.map(async (id) => {
+        try {
+          const res = await runIptvSync(id, { mode: opts.mode, force: true });
+          const count = (res as any)?.contents_found || 0;
+          total_contents += count;
+          return { id, ok: true, contents_found: count, no_changes: !(res as any)?.changes };
+        } catch (e: any) {
+          console.error(`[iptv-batch] [${id}] Falha individual:`, e.message);
+          return { id, ok: false, error: e.message };
+        }
+      })
+    );
+    results.push(...chunkResults);
+  }
+  
+  return { 
+    results, 
+    total_contents_found: total_contents,
+    summary: {
+      total: results.length,
+      success: results.filter(r => r.ok).length,
+      failed: results.filter(r => !r.ok).length
+    }
+  };
 }
 
 export async function runDueIptvSyncs() {
