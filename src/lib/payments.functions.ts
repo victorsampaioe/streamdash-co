@@ -21,10 +21,11 @@ export const reconcileAllPayments = createServerFn({ method: "POST" })
       // Tenta finalizar para garantir que a assinatura existe e está correta
       const { data: finalized, error: finalizeError } = await supabaseAdmin.rpc("finalize_approved_payment", {
         _payment_id: pay.id,
-        _provider_payment_id: pay.provider_payment_id,
-        _raw_payload: pay.raw_payload,
+        _provider_payment_id: pay.provider_payment_id || "",
+        _raw_payload: pay.raw_payload || {},
         _paid_at: new Date().toISOString()
       });
+
 
       if (!finalizeError) {
         autoFixed++;
