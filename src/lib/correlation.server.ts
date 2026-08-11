@@ -171,33 +171,34 @@ export async function closeCorrelationEvent(serverId: string) {
   return seconds;
 }
 
-/** Mensagem consolidada de diagnóstico inteligente (Telegram/Discord/e-mail). */
+/** 
+ * Mensagem consolidada de diagnóstico inteligente. 
+ * Ajustada para remover dados sensíveis (DNS/Host) em alertas.
+ */
 export function correlationMessage(
   server: { name: string; host: string },
   c: CorrelationResult,
   reason: string,
   confirmNote: string,
 ) {
-  const lines = c.related.map((r) =>
-    `${r.status === "up" ? "✅" : "❌"} ${r.host}${r.is_failed ? " (afetada)" : ""} — ${r.status === "up" ? "online" : "offline"}`,
-  );
+  // Removido o detalhamento de hosts vinculados para proteção de dados
   const conclusion =
     c.verdict === "server_down"
-      ? "Conclusão: possível indisponibilidade do servidor inteiro."
+      ? "Conclusão: Queda total da infraestrutura detectada."
       : c.verdict === "partial"
-        ? "Conclusão: instabilidade parcial — parte das conexões falhando."
-        : "Conclusão: possível falha isolada nesta DNS. Servidor continua ativo.";
+        ? "Conclusão: Instabilidade parcial detectada."
+        : "Conclusão: Possível falha isolada nesta rota.";
 
   return (
-    `🚨 Diagnóstico inteligente\n\n` +
-    `Servidor: ${c.groupKey}\n` +
-    `DNS afetada: ${server.host}\n` +
-    `Status: Offline${confirmNote ? ` (${confirmNote})` : ""}\n` +
+    `🚨 <b>Diagnóstico Inteligente</b>\n\n` +
+    `Servidor: ${server.name}\n` +
+    `Status: OFFLINE\n` +
+    `Confirmação: ${confirmNote || "Pendente"}\n` +
     `Motivo: ${reason}\n\n` +
     `Classificação: ${c.headline}\n` +
-    `Confiança do alerta: ${c.confidence}%\n` +
-    `DNS vinculadas: ${c.total} · online ${c.online} · offline ${c.offline}\n\n` +
-    `Análise:\n${lines.join("\n")}\n\n` +
-    `${conclusion}`
+    `Confiança: ${c.confidence}%\n` +
+    `DNS Vinculadas: ${c.total} (Online: ${c.online} · Offline: ${c.offline})\n\n` +
+    `<b>${conclusion}</b>`
   );
 }
+
