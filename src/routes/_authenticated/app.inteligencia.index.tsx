@@ -179,55 +179,86 @@ function ContentIntelligence() {
       <Dialog open={showConfirm} onOpenChange={setShowConfirm}>
         <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle>Confirmar Sincronização em Lote</DialogTitle>
-            <div className="pt-4 space-y-4">
-              <div className="grid grid-cols-1 gap-3 text-left">
-                <div className="p-3 bg-emerald-500/10 border border-emerald-500/20 rounded flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <Server className="h-4 w-4 text-emerald-500" />
-                    <span className="text-sm font-medium">Servidores ativos</span>
-                  </div>
-                  <Badge variant="outline" className="text-emerald-500 border-emerald-500/30">
-                    {prepData?.total_monitored || 0}
-                  </Badge>
-                </div>
+            <DialogTitle>Diagnóstico e Sincronização Radar</DialogTitle>
+            <div className="pt-4 space-y-4 max-h-[60vh] overflow-y-auto pr-2">
+              <div className="grid grid-cols-1 gap-2 text-left">
+                <div className="text-xs font-bold text-muted-foreground uppercase mb-1">Status Geral do Banco</div>
                 
-                <div className="p-3 bg-primary/10 border border-primary/20 rounded flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <Sparkles className="h-4 w-4 text-primary" />
-                    <span className="text-sm font-medium">Com acesso IPTV válido</span>
-                  </div>
-                  <Badge variant="outline" className="text-primary border-primary/30">
-                    {prepData?.configured_iptv || 0}
-                  </Badge>
+                <div className="flex justify-between text-sm py-1 border-b border-border/50">
+                  <span>Total de servidores no banco:</span>
+                  <span className="font-mono">{prepData?.total_db_servers || 0}</span>
+                </div>
+                <div className="flex justify-between text-sm py-1 border-b border-border/50">
+                  <span>Servidores com URL IPTV:</span>
+                  <span className="font-mono">{prepData?.with_host || 0}</span>
+                </div>
+                <div className="flex justify-between text-sm py-1 border-b border-border/50">
+                  <span>Servidores com usuário IPTV:</span>
+                  <span className="font-mono">{prepData?.with_username || 0}</span>
+                </div>
+                <div className="flex justify-between text-sm py-1 border-b border-border/50">
+                  <span>Servidores com senha IPTV:</span>
+                  <span className="font-mono">{prepData?.with_password || 0}</span>
+                </div>
+                <div className="flex justify-between text-sm py-1 border-b border-border/50">
+                  <span>Servidores com login aprovado:</span>
+                  <span className="font-mono">{prepData?.login_approved || 0}</span>
+                </div>
+                <div className="flex justify-between text-sm py-1 border-b border-border/50 font-bold text-primary">
+                  <span>Servidores aptos para Radar:</span>
+                  <span className="font-mono">{prepData?.servers_found || 0}</span>
                 </div>
 
-                <div className="p-3 bg-muted border border-border rounded flex items-center justify-between">
-                  <div className="flex items-center gap-2 text-muted-foreground">
-                    <AlertTriangle className="h-4 w-4" />
-                    <span className="text-sm font-medium">Aguardando credenciais</span>
+                <div className="text-xs font-bold text-muted-foreground uppercase mt-4 mb-1">Servidores excluídos e motivo:</div>
+                <div className="space-y-1">
+                  <div className="flex justify-between text-xs text-destructive/80">
+                    <span>Sem usuário:</span>
+                    <span>{prepData?.excluded_reasons?.no_username || 0}</span>
                   </div>
-                  <Badge variant="outline" className="text-muted-foreground">
-                    {prepData?.waiting_credentials || 0}
-                  </Badge>
+                  <div className="flex justify-between text-xs text-destructive/80">
+                    <span>Sem senha:</span>
+                    <span>{prepData?.excluded_reasons?.no_password || 0}</span>
+                  </div>
+                  <div className="flex justify-between text-xs text-destructive/80">
+                    <span>Conta expirada / Inativa:</span>
+                    <span>{prepData?.excluded_reasons?.inactive_account || 0}</span>
+                  </div>
+                  <div className="flex justify-between text-xs text-destructive/80">
+                    <span>Login inválido (bloqueado):</span>
+                    <span>{prepData?.excluded_reasons?.invalid_login || 0}</span>
+                  </div>
+                  <div className="flex justify-between text-xs text-destructive/80">
+                    <span>Monitoramento pausado:</span>
+                    <span>{prepData?.excluded_reasons?.paused || 0}</span>
+                  </div>
                 </div>
               </div>
 
-              <DialogDescription className="text-sm">
-                Encontramos <strong>{prepData?.servers_found}</strong> servidores preparados para sincronização. Deseja iniciar a varredura inteligente?
+              <DialogDescription className="text-xs italic bg-muted p-2 rounded">
+                * Servidores aptos são aqueles com credenciais válidas, conta ativa e sem bloqueio de login.
               </DialogDescription>
             </div>
           </DialogHeader>
-          <DialogFooter className="mt-4">
-            <Button variant="ghost" onClick={() => setShowConfirm(false)}>Cancelar</Button>
+          <DialogFooter className="mt-4 gap-2 flex-col sm:flex-row">
             <Button 
-              onClick={() => prepData && syncMutation.mutate(prepData.server_ids)}
-              disabled={syncMutation.isPending}
-              className="gap-2"
+              variant="outline" 
+              className="sm:mr-auto"
+              onClick={() => prepData && syncMutation.mutate({ ids: prepData.server_ids, testOne: true })}
+              disabled={syncMutation.isPending || !prepData?.servers_found}
             >
-              {syncMutation.isPending && <Loader2 className="h-4 w-4 animate-spin" />}
-              Iniciar Sincronização
+              Testar com 1 servidor
             </Button>
+            <div className="flex gap-2">
+              <Button variant="ghost" onClick={() => setShowConfirm(false)}>Cancelar</Button>
+              <Button 
+                onClick={() => prepData && syncMutation.mutate({ ids: prepData.server_ids })}
+                disabled={syncMutation.isPending || !prepData?.servers_found}
+                className="gap-2"
+              >
+                {syncMutation.isPending && <Loader2 className="h-4 w-4 animate-spin" />}
+                Sincronizar Todos ({prepData?.servers_found || 0})
+              </Button>
+            </div>
           </DialogFooter>
         </DialogContent>
       </Dialog>
