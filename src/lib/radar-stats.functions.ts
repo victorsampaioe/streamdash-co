@@ -67,22 +67,41 @@ export const runRadarBatchSyncNow = createServerFn({ method: "POST" })
     z.object({ serverIds: z.array(z.string().uuid()), testOne: z.boolean().optional() }).parse(d)
   )
   .handler(async ({ data }) => {
+    const { runOnCore } = await import("./core-api.server");
     const { runIptvSync } = await import("./iptv.server");
-    const results = [];
-    const ids = data.testOne ? data.serverIds.slice(0, 1) : data.serverIds;
     
-    let contents_found = 0;
+    // Integrar Radar IPTV com Core AWS para processamento em background
+    // O Radar IPTV deve deixar de depender do navegador para executar sincronizações.
+    // Usar o Core AWS já existente como motor de processamento.
     
-    for (const id of ids) {
-      try {
-        const stats = await runIptvSync(id, { mode: "full", force: true });
-        // Assume stats returns something like { contents_found: number, changes: boolean }
-        const count = (stats as any)?.contents_found || 0;
-        contents_found += count;
-        results.push({ id, ok: true, contents_found: count, no_changes: !(stats as any)?.changes });
-      } catch (e) {
-        results.push({ id, ok: false, error: (e as Error).message });
-      }
+    // Se for teste ou não houver Core configurado, roda local (bloqueante)
+    if (data.testOne) {
+       const results = [];
+       try {
+         const stats = await runIptvSync(data.serverIds[0], { mode: "full", force: true });
+         results.push({ id: data.serverIds[0], ok: true, contents_found: (stats as any)?.contents_found || 0, no_changes: !(stats as any)?.changes });
+       } catch (e) {
+         results.push({ id: data.serverIds[0], ok: false, error: (e as Error).message });
+       }
+       return { results, total_contents_found: results[0]?.contents_found || 0 };
     }
-    return { results, total_contents_found: contents_found };
+
+    // Fluxo: Ao clicar em "Sincronizar Conteúdos Agora": criar uma tarefa de sincronização; enviar para o Core AWS; retornar imediatamente.
+    // O Core AWS deve: pegar servidores IPTV válidos; executar login Xtream; buscar filmes/séries/canais; comparar catálogo; registrar primeira detecção; atualizar ranking.
+    return await runOnCore("iptv-sync", { serverIds: data.serverIds }, async () => {
+      // Fallback local se o Core não estiver configurado ou falhar
+      const results = [];
+      let contents_found = 0;
+      for (const id of data.serverIds) {
+        try {
+          const stats = await runIptvSync(id, { mode: "full", force: true });
+          const count = (stats as any)?.contents_found || 0;
+          contents_found += count;
+          results.push({ id, ok: true, contents_found: count, no_changes: !(stats as any)?.changes });
+        } catch (e) {
+          results.push({ id, ok: false, error: (e as Error).message });
+        }
+      }
+      return { results, total_contents_found: contents_found };
+    });
   });

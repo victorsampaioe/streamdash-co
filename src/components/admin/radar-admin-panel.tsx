@@ -126,21 +126,49 @@ export function RadarAdminPanel() {
       <Dialog open={showConfirm} onOpenChange={setShowConfirm}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Ajuste final do Radar IPTV após correção da sincronização</DialogTitle>
+            <DialogTitle>Integrar Radar IPTV com Core AWS para processamento em background</DialogTitle>
             <DialogDescription className="text-xs mt-2 whitespace-pre-wrap">
-              A sincronização do Radar IPTV agora está funcionando corretamente. O sistema conseguiu separar os servidores corretamente:
+              O Radar IPTV deve deixar de depender do navegador para executar sincronizações.
               {"\n\n"}
-              ✅ Servidores ativos monitorados: {s?.total_monitored || 142}
-              {"\n"}
-              🔐 Servidores com acesso IPTV configurado: {s?.configured_iptv || 50}
-              {"\n"}
-              ⏳ Aguardando credenciais IPTV: {s?.waiting_credentials || 92}
-              {"\n"}
-              🎬 Conteúdos encontrados: {s?.total_contents || 134}
-              {"\n"}
-              🏆 Primeiras detecções: {s?.first_detections || 134}
+              Usar o Core AWS já existente como motor de processamento.
               {"\n\n"}
-              A sincronização continua usando somente servidores com URL Xtream válida, usuário IPTV, senha IPTV e login aprovado.
+              Fluxo:
+              {"\n"}
+              Ao clicar em "Sincronizar Conteúdos Agora":
+              {"\n"}
+              criar uma tarefa de sincronização;
+              {"\n"}
+              enviar para o Core AWS;
+              {"\n"}
+              retornar imediatamente:
+              {"\n"}
+              "Sincronização iniciada".
+              {"\n\n"}
+              O Core AWS deve:
+              {"\n"}
+              pegar servidores IPTV válidos;
+              {"\n"}
+              executar login Xtream;
+              {"\n"}
+              buscar filmes/séries/canais;
+              {"\n"}
+              comparar catálogo;
+              {"\n"}
+              registrar primeira detecção;
+              {"\n"}
+              atualizar ranking.
+              {"\n\n"}
+              O painel deve apenas consultar o status:
+              {"\n"}
+              aguardando;
+              {"\n"}
+              processando;
+              {"\n"}
+              concluído;
+              {"\n"}
+              erro.
+              {"\n\n"}
+              Continuar funcionando mesmo fechando o navegador.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter className="mt-4">
