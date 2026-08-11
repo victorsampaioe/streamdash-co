@@ -1,0 +1,1209 @@
+// Server-only IPTV intelligence engine.
+// Low impact by design: sampling, caching, rate limits and configurable intervals.
+import { supabaseAdmin } from "@/integrations/supabase/client.server";
+const API_TIMEOUT_MS = 12000;
+const M3U_TIMEOUT_MS = 20000;
+const STREAM_TIMEOUT_MS = 10000;
+const STREAM_SAMPLE_BYTES = 350000; // ~ o suficiente para estimar o bitrate sem drenar o servidor
+const MIN_GAP_MS = 5 * 60000; // limite interno por servidor
+function base(host) {
+    return `http://${host.replace(/^https?:\/\//, "").replace(/\/+$/, "")}`;
+}
+/** User-Agents usados nos testes (padrão = player IPTV real; alternativo = navegador). */
+export const UA_PLAYER = "IPTVSmartersPlayer/3.1.5 (Linux; Android 11) ExoPlayerLib/2.18.1";
+export const UA_BROWSER = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36";
+/** Terceiro método: cliente clássico aceito por quase todo painel Xtream. */
+export const UA_VLC = "VLC/3.0.20 LibVLC/3.0.20";
+/** Catálogo completo é pesado: só relemos a lista inteira a cada 6h. */
+const CATALOG_TTL_MS = 6 * 3600000;
+/** Pausa progressiva entre tentativas para não parecer varredura automática. */
+const STEP_BACKOFF_MS = [0, 900, 2200];
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+/**
+ * Classifica a recusa: proteção contra consultas automáticas (anti-bot,
+ * rate-limit, WAF) x indisponibilidade real do servidor.
+ */
+export function classifyRefusal(status, stage) {
+    if (status === 401 || status === 403 || status === 406 || status === 429)
+        return "protection";
+    if (status === 503 && stage === "http")
+        return "protection";
+    if (stage === "content-type" || stage === "empty" || stage === "parse")
+        return "protection";
+    if (status == null)
+        return "network";
+    return "server";
+}
+function playerHeaders(ua) {
+    return {
+        "user-agent": ua,
+        accept: "application/json, text/plain, */*",
+        "accept-language": "pt-BR,pt;q=0.9,en;q=0.8",
+        "cache-control": "no-cache",
+        connection: "keep-alive",
+    };
+}
+/** IP de saída do monitor (cacheado por 10 min) — útil para diagnosticar bloqueio por IP. */
+let _egress = { ip: null, at: 0 };
+export async function egressIp() {
+    if (_egress.ip && Date.now() - _egress.at < 600000)
+        return _egress.ip;
+    for (const url of ["https://api.ipify.org?format=json", "https://ifconfig.me/all.json"]) {
+        try {
+            const res = await timedFetch(url, 5000);
+            const j = await res.json();
+            const ip = j?.ip ?? j?.ip_addr ?? null;
+            if (ip) {
+                _egress = { ip: String(ip), at: Date.now() };
+                return _egress.ip;
+            }
+        }
+        catch {
+            /* ignora */
+        }
+    }
+    return null;
+}
+async function timedFetch(url, ms, init) {
+    const ctl = new AbortController();
+    const t = setTimeout(() => ctl.abort(), ms);
+    try {
+        return await fetch(url, { redirect: "follow", signal: ctl.signal, ...init });
+    }
+    finally {
+        clearTimeout(t);
+    }
+}
+/* ------------------------------------------------------------------ */
+/* Detection                                                           */
+/* ------------------------------------------------------------------ */
+export async function detectIptvKind(host, username, password) {
+    const clean = host.replace(/^https?:\/\//, "").replace(/\/+$/, "");
+    const u = username ?? "test";
+    const p = password ?? "test";
+    const auth = `username=${encodeURIComponent(u)}&password=${encodeURIComponent(p)}`;
+    let xtream = false;
+    let m3u = false;
+    const details = {};
+    // 1) Fonte de verdade: Player API (Xtream). Tenta http e https.
+    for (const candidate of [`http://${clean}`, `https://${clean}`]) {
+        try {
+            const { data, diag } = await getJson(`${candidate}/player_api.php?${auth}`);
+            details.player_api_status = diag.http_status;
+            details.player_api_base = candidate;
+            const info = data;
+            if (info && typeof info === "object" && "user_info" in info) {
+                xtream = true;
+                details.auth = info?.user_info?.auth ?? null;
+                details.status = info?.user_info?.status ?? null;
+            }
+            break;
+        }
+        catch (e) {
+            const err = e;
+            details.player_api_status = err?.status ?? null;
+            details.player_api_error = String(err?.message ?? e).slice(0, 160);
+            if (err?.status != null)
+                break; // servidor respondeu: não tentar outro esquema
+        }
+    }
+    // 2) get.php é apenas teste de playlist M3U — NUNCA define validade do login.
+    try {
+        const res = await timedFetch(`http://${clean}/get.php?${auth}&type=m3u_plus&output=ts`, API_TIMEOUT_MS, { headers: { Range: "bytes=0-2048" } });
+        const head = (await res.text()).slice(0, 2048);
+        details.m3u_status = res.status;
+        if (res.status < 500 && /#EXTM3U/i.test(head))
+            m3u = true;
+    }
+    catch (e) {
+        details.m3u_error = String(e?.message ?? e).slice(0, 160);
+    }
+    const kind = xtream && m3u ? "both" : xtream ? "xtream" : m3u ? "m3u" : "none";
+    return { kind, details };
+}
+/** Remove credenciais da URL antes de registrar em logs. */
+function safeUrl(url) {
+    return url.replace(/(username|password)=[^&]*/gi, "$1=***");
+}
+/** Remove credenciais do corpo retornado (o Xtream ecoa usuário/senha em user_info). */
+export function redactSnippet(text) {
+    if (!text)
+        return null;
+    return text
+        .replace(/("(?:username|password|auth_?token|token)"\s*:\s*")[^"]*(")/gi, "$1***$2")
+        .replace(/(username|password)=[^&"\s]*/gi, "$1=***");
+}
+/**
+ * Versão do diagnóstico segura para persistir: sem corpo da resposta e sem
+ * headers. Guardamos apenas status, tempo, tamanho, estágio e mensagem.
+ */
+export function sanitizeDiagnostics(diag) {
+    if (!diag)
+        return null;
+    const { body_snippet: _b, request_headers: _q, response_headers: _r, ...rest } = diag;
+    return rest;
+}
+class PlayerApiError extends Error {
+    status;
+    snippet;
+    diag;
+    constructor(diag) {
+        super(diag.message);
+        this.name = "PlayerApiError";
+        this.status = diag.http_status;
+        this.snippet = diag.body_snippet;
+        this.diag = diag;
+    }
+}
+/**
+ * Busca JSON da Player API validando disponibilidade, status HTTP, corpo e
+ * Content-Type ANTES do parse. Nunca propaga exceções cruas do JSON.parse.
+ * Sempre devolve um diagnóstico completo (mascarando credenciais).
+ */
+async function getJson(url, ms = API_TIMEOUT_MS, ua = UA_PLAYER) {
+    const t0 = Date.now();
+    const masked = safeUrl(url);
+    const reqHeaders = playerHeaders(ua);
+    const outIp = await egressIp();
+    let res;
+    try {
+        res = await timedFetch(url, ms, { headers: reqHeaders });
+    }
+    catch (e) {
+        const aborted = e?.name === "AbortError";
+        const diag = {
+            url: masked,
+            final_url: null,
+            redirected: false,
+            http_status: null,
+            status_text: null,
+            elapsed_ms: Date.now() - t0,
+            content_type: null,
+            size_bytes: null,
+            body_snippet: null,
+            user_agent: ua,
+            request_headers: reqHeaders,
+            response_headers: null,
+            egress_ip: outIp,
+            stage: "network",
+            message: aborted
+                ? "❌ Sem resposta: tempo limite excedido ao conectar no servidor."
+                : `❌ Sem resposta do servidor (${String(e?.message ?? e).slice(0, 120)}).`,
+        };
+        console.warn("[iptv] player_api falhou", sanitizeDiagnostics(diag));
+        throw new PlayerApiError(diag);
+    }
+    const headers = {};
+    res.headers.forEach((v, k) => {
+        if (!/^set-cookie$|authorization/i.test(k))
+            headers[k] = v;
+    });
+    const ctype = (headers["content-type"] ?? "").toLowerCase();
+    let text = "";
+    try {
+        text = await res.text();
+    }
+    catch {
+        text = "";
+    }
+    const diag = {
+        url: masked,
+        final_url: res.url ? safeUrl(res.url) : null,
+        redirected: Boolean(res.redirected) || (!!res.url && safeUrl(res.url) !== masked),
+        http_status: res.status,
+        status_text: res.statusText || null,
+        elapsed_ms: Date.now() - t0,
+        content_type: headers["content-type"] ?? null,
+        size_bytes: text.length,
+        body_snippet: redactSnippet(text.slice(0, 500)),
+        user_agent: ua,
+        request_headers: reqHeaders,
+        response_headers: headers,
+        egress_ip: outIp,
+        stage: "ok",
+        message: "",
+    };
+    const fail = (stage, message) => {
+        diag.stage = stage;
+        diag.message = message;
+        console.warn("[iptv] player_api", sanitizeDiagnostics(diag));
+        throw new PlayerApiError(diag);
+    };
+    if (res.status !== 200) {
+        const extra = res.status === 403 || res.status === 401 ? " (acesso bloqueado pelo servidor)" : "";
+        fail("http", `❌ Servidor respondeu HTTP ${res.status}${extra}. Não foi possível validar o login.`);
+    }
+    const trimmed = text.trim();
+    if (!trimmed)
+        fail("empty", "❌ Resposta vazia da Player API (0 bytes). Não foi possível validar o login.");
+    if (/^\s*(<!doctype|<html|<\?xml|<)/i.test(trimmed) || ctype.includes("text/html")) {
+        fail("content-type", "❌ Player API retornou HTML em vez de JSON (possível bloqueio/proxy).");
+    }
+    if (ctype && !/(json|text\/plain|application\/octet-stream)/.test(ctype)) {
+        fail("content-type", `❌ Content-Type inesperado (${ctype.split(";")[0]}). Resposta não é JSON.`);
+    }
+    try {
+        return { data: JSON.parse(trimmed), diag };
+    }
+    catch {
+        fail("parse", "❌ Resposta incompleta ou inválida: não foi possível interpretar o JSON.");
+    }
+    throw new Error("unreachable");
+}
+/**
+ * Último recurso: confirma se o host está realmente acessível (playlist ou
+ * porta HTTP respondendo), mesmo quando a Player API recusa consultas.
+ */
+async function confirmReachability(clean, auth) {
+    const targets = [
+        `http://${clean}/get.php?${auth}&type=m3u_plus&output=ts`,
+        `http://${clean}/`,
+    ];
+    let last = {
+        status: null, ms: null, error: "sem resposta",
+    };
+    for (const url of targets) {
+        const t = Date.now();
+        try {
+            const res = await timedFetch(url, API_TIMEOUT_MS, {
+                headers: { ...playerHeaders(UA_VLC), Range: "bytes=0-2048" },
+            });
+            const ms = Date.now() - t;
+            if (res.status < 500)
+                return { ok: true, status: res.status, ms, error: null };
+            last = { status: res.status, ms, error: `HTTP ${res.status}` };
+        }
+        catch (e) {
+            last = {
+                status: null,
+                ms: Date.now() - t,
+                error: String(e?.message ?? e).slice(0, 160),
+            };
+        }
+    }
+    return { ok: false, ...last };
+}
+export async function probeXtream(host, username, password, opts = {}) {
+    const clean = host.replace(/^https?:\/\//, "").replace(/\/+$/, "");
+    const auth = `username=${encodeURIComponent(username)}&password=${encodeURIComponent(password)}`;
+    const catalogMode = opts.catalogMode ?? "full";
+    const out = {
+        api_ms: null, login_ok: false, json_valid: false,
+        reachable: false, login_checked: false,
+        http_status: null, body_snippet: null, diagnostics: null,
+        attempts: [], succeeded_step: null, fallback_notice: null, access_verdict: null,
+        protection_suspected: false, catalog_cached: catalogMode !== "full",
+        account: null, content: { live_ok: false, vod_ok: false, series_ok: false },
+        channels: null, movies: null, series: null, categories: null,
+        sampleLive: [], sampleVod: [], sampleSeries: [],
+        catalog: { live: [], vod: [], series: [] },
+        error: null,
+    };
+    // 1) Validação progressiva: UA padrão → UA alternativo → confirmação alternativa.
+    // Há uma pausa crescente entre os passos para não parecer varredura automática,
+    // e uma falha no passo 1 NUNCA marca o servidor como offline por si só.
+    const t0 = Date.now();
+    let info = null;
+    let okDiag = null;
+    let b = `http://${clean}`;
+    let lastErr = null;
+    let protectionHits = 0;
+    let networkHits = 0;
+    const steps = [
+        { step: 1, label: "Player API (User-Agent padrão)", ua: UA_PLAYER, path: "player_api.php" },
+        { step: 2, label: "Player API (User-Agent alternativo)", ua: UA_BROWSER, path: "player_api.php" },
+        { step: 3, label: "Confirmação alternativa (VLC + panel_api)", ua: UA_VLC, path: "panel_api.php" },
+    ];
+    for (const s of steps) {
+        let stepDone = false;
+        const wait = STEP_BACKOFF_MS[s.step - 1] ?? 0;
+        if (wait) {
+            console.log(`[iptv-probe] [${clean}] Aguardando backoff (${wait}ms) para ${s.label}...`);
+            await sleep(wait + Math.floor(Math.random() * 400));
+        }
+        for (const candidate of [`http://${clean}`, `https://${clean}`]) {
+            const url = `${candidate}/${s.path}?${auth}`;
+            try {
+                console.log(`[iptv-probe] [${clean}] Tentando: ${s.label} (${candidate})`);
+                const r = await getJson(url, API_TIMEOUT_MS, s.ua);
+                info = r.data;
+                okDiag = r.diag;
+                b = candidate;
+                lastErr = null;
+                out.succeeded_step = s.step;
+                out.attempts.push({
+                    step: s.step, label: s.label, user_agent: s.ua, base: candidate,
+                    ok: true, http_status: r.diag.http_status, elapsed_ms: r.diag.elapsed_ms, error: null,
+                    kind: null,
+                });
+                stepDone = true;
+                break;
+            }
+            catch (e) {
+                lastErr = e instanceof PlayerApiError
+                    ? e
+                    : new PlayerApiError({
+                        url: safeUrl(url),
+                        final_url: null, redirected: false, http_status: null, status_text: null,
+                        elapsed_ms: 0, content_type: null, size_bytes: null, body_snippet: null,
+                        user_agent: s.ua, request_headers: null, response_headers: null, egress_ip: null,
+                        stage: "network", message: "❌ Sem resposta do servidor.",
+                    });
+                const kind = classifyRefusal(lastErr.status, lastErr.diag?.stage ?? null);
+                if (kind === "protection")
+                    protectionHits++;
+                if (kind === "network")
+                    networkHits++;
+                out.attempts.push({
+                    step: s.step, label: s.label, user_agent: s.ua, base: candidate,
+                    ok: false, http_status: lastErr.status, elapsed_ms: lastErr.diag?.elapsed_ms ?? null,
+                    error: kind === "protection"
+                        ? `🛡️ Consulta recusada (proteção contra consultas automáticas) — ${String(lastErr.message).slice(0, 180)}`
+                        : String(lastErr.message).slice(0, 240),
+                    kind,
+                });
+                // Se o servidor respondeu (status HTTP conhecido), não vale tentar outro esquema.
+                if (lastErr.status !== null)
+                    break;
+            }
+        }
+        if (stepDone)
+            break;
+    }
+    out.api_ms = Date.now() - t0;
+    if (out.succeeded_step && out.succeeded_step > 1) {
+        out.protection_suspected = true;
+        out.fallback_notice =
+            out.succeeded_step === 2
+                ? "🛡️ A primeira consulta foi recusada pela proteção contra consultas automáticas do painel; o acesso foi confirmado com User-Agent alternativo."
+                : "🛡️ As duas primeiras consultas foram recusadas pela proteção anti-automação; o acesso foi confirmado pelo método alternativo.";
+    }
+    if (lastErr || info === null) {
+        // Nenhum passo trouxe JSON. Confirma se o host está ao menos acessível
+        // (porta aberta / playlist respondendo) antes de sugerir "offline".
+        const reach = await confirmReachability(clean, auth);
+        out.attempts.push({
+            step: 4, label: "Confirmação de acessibilidade (get.php / porta HTTP)",
+            user_agent: UA_VLC, base: `http://${clean}`,
+            ok: reach.ok, http_status: reach.status, elapsed_ms: reach.ms,
+            error: reach.ok ? null : reach.error,
+            kind: reach.ok ? null : "network",
+        });
+        out.error = lastErr?.message ?? "❌ Sem resposta do servidor.";
+        out.http_status = lastErr?.status ?? null;
+        out.body_snippet = lastErr?.snippet ?? null;
+        out.diagnostics = lastErr?.diag ?? null;
+        out.reachable = lastErr?.status != null || reach.ok;
+        // Falha de transporte/servidor: login NÃO foi verificado.
+        out.login_checked = false;
+        out.protection_suspected = protectionHits > 0 || (reach.ok && networkHits === 0) || (reach.ok && protectionHits === 0 && out.reachable);
+        out.access_verdict = out.protection_suspected && out.reachable
+            ? "🛡️ Servidor no ar, porém a Player API está recusando consultas automáticas (proteção anti-bot, limite de requisições ou bloqueio de IP/região). Isso NÃO é queda do servidor."
+            : out.reachable
+                ? "🟡 Servidor acessível, mas a Player API não respondeu de forma válida. Nova confirmação será feita antes de qualquer alerta."
+                : "🔴 Servidor não respondeu em nenhuma das tentativas (indício real de indisponibilidade).";
+        return out;
+    }
+    // 2) JSON válido → só agora avaliamos usuário/senha
+    out.reachable = true;
+    out.json_valid = true;
+    out.http_status = okDiag?.http_status ?? 200;
+    out.body_snippet = okDiag?.body_snippet ?? null;
+    out.diagnostics = okDiag;
+    out.access_verdict = "🟢 Servidor acessível" + (out.succeeded_step && out.succeeded_step > 1
+        ? ` (confirmado na tentativa ${out.succeeded_step}).`
+        : ".");
+    out.login_checked = typeof info === "object" && info !== null && "user_info" in info;
+    if (!out.login_checked) {
+        out.error = "❌ Resposta JSON sem 'user_info' — login não pôde ser verificado (URL Xtream incorreta?).";
+        return out;
+    }
+    // 3) Autenticação + informações da conta (status, expiração, conexões)
+    const ui = info.user_info ?? {};
+    const status = String(ui.status ?? "");
+    const expTs = Number(ui.exp_date);
+    const expIso = Number.isFinite(expTs) && expTs > 0 ? new Date(expTs * 1000).toISOString() : null;
+    const createdTs = Number(ui.created_at);
+    const num = (v) => (v == null || v === "" || Number.isNaN(Number(v)) ? null : Number(v));
+    out.account = {
+        status: status || null,
+        is_trial: ui.is_trial == null ? null : String(ui.is_trial) === "1",
+        exp_date: expIso,
+        days_to_expire: expIso ? Math.ceil((new Date(expIso).getTime() - Date.now()) / 864e5) : null,
+        max_connections: num(ui.max_connections),
+        active_connections: num(ui.active_cons),
+        created_at: Number.isFinite(createdTs) && createdTs > 0 ? new Date(createdTs * 1000).toISOString() : null,
+        timezone: info?.server_info?.timezone ?? null,
+        server_url: info?.server_info?.url
+            ? `${info.server_info.url}${info.server_info.port ? `:${info.server_info.port}` : ""}`
+            : null,
+    };
+    const expired = expIso != null && new Date(expIso).getTime() <= Date.now();
+    out.login_ok =
+        String(ui.auth ?? "0") === "1" && status !== "Disabled" && status !== "Banned" && !expired;
+    if (!out.login_ok) {
+        out.error =
+            status === "Disabled" || status === "Banned"
+                ? `❌ Conta Xtream ${status === "Banned" ? "banida" : "desativada"}.`
+                : expired
+                    ? `❌ Conta Xtream expirada em ${new Date(expIso).toLocaleString("pt-BR")}.`
+                    : "❌ Usuário ou senha inválidos.";
+        return out;
+    }
+    // Etapa 1 concluída: login aprovado. No modo "auth" paramos aqui — nenhuma
+    // consulta de catálogo é feita, exatamente como um app IPTV faz ao entrar.
+    if (catalogMode === "auth") {
+        out.access_verdict =
+            (out.access_verdict ?? "") + " Login validado — catálogo não consultado nesta etapa.";
+        return out;
+    }
+    const arr = (r) => r.status === "fulfilled" && Array.isArray(r.value.data) ? r.value.data : [];
+    // Etapa 2 — somente após o acesso confirmado: informações do servidor,
+    // categorias e depois o conteúdo. Uma pequena pausa imita o comportamento
+    // de um cliente IPTV real (login → navegação) e evita bloqueios automáticos.
+    await sleep(700 + Math.floor(Math.random() * 500));
+    const [catsLive, catsVod, catsSeries] = await Promise.allSettled([
+        getJson(`${b}/player_api.php?${auth}&action=get_live_categories`),
+        getJson(`${b}/player_api.php?${auth}&action=get_vod_categories`),
+        getJson(`${b}/player_api.php?${auth}&action=get_series_categories`),
+    ]);
+    const catCount = arr(catsLive).length + arr(catsVod).length + arr(catsSeries).length;
+    out.categories = catCount || null;
+    const pick = (list, n) => {
+        if (list.length <= n)
+            return list;
+        const step = Math.floor(list.length / n);
+        return Array.from({ length: n }, (_, i) => list[i * step]);
+    };
+    if (catalogMode === "counts") {
+        // Consulta leve: apenas uma categoria de canais para amostragem de stream.
+        const firstCat = arr(catsLive)[0]?.category_id;
+        const sample = firstCat
+            ? await Promise.allSettled([
+                getJson(`${b}/player_api.php?${auth}&action=get_live_streams&category_id=${encodeURIComponent(String(firstCat))}`),
+            ])
+            : [];
+        const smallLive = sample.length ? arr(sample[0]) : [];
+        out.content = {
+            live_ok: arr(catsLive).length > 0 || smallLive.length > 0,
+            vod_ok: arr(catsVod).length > 0,
+            series_ok: arr(catsSeries).length > 0,
+        };
+        out.sampleLive = pick(smallLive, 1).map((x) => ({ id: x?.stream_id, name: x?.name ?? "" }));
+        return out;
+    }
+    // Catálogo completo: sequencial (canais → filmes → séries) com pausas curtas,
+    // igual à navegação de um app IPTV. Evita rajadas paralelas que disparam WAF.
+    const settle = async (url) => {
+        try {
+            return { status: "fulfilled", value: await getJson(url, M3U_TIMEOUT_MS) };
+        }
+        catch (e) {
+            return { status: "rejected", reason: e };
+        }
+    };
+    // No modo "vod" (Radar de Conteúdo) NUNCA consultamos get_live_streams:
+    // canais ao vivo, rádios e eventos não entram no catálogo do Radar.
+    const live = catalogMode === "vod"
+        ? { status: "fulfilled", value: { data: [] } }
+        : await settle(`${b}/player_api.php?${auth}&action=get_live_streams`);
+    if (catalogMode !== "vod")
+        await sleep(500 + Math.floor(Math.random() * 400));
+    const vod = await settle(`${b}/player_api.php?${auth}&action=get_vod_streams`);
+    await sleep(500 + Math.floor(Math.random() * 400));
+    const series = await settle(`${b}/player_api.php?${auth}&action=get_series`);
+    const liveList = arr(live);
+    const vodList = arr(vod);
+    const seriesList = arr(series);
+    out.content = {
+        live_ok: live.status === "fulfilled" && liveList.length > 0,
+        vod_ok: vod.status === "fulfilled" && vodList.length > 0,
+        series_ok: series.status === "fulfilled" && seriesList.length > 0,
+    };
+    out.channels = liveList.length || null;
+    out.movies = vodList.length || null;
+    out.series = seriesList.length || null;
+    out.sampleLive = pick(liveList, 3).map((x) => ({ id: x?.stream_id, name: x?.name ?? "" }));
+    out.sampleVod = pick(vodList, 2).map((x) => ({ id: x?.stream_id, name: x?.name ?? "", ext: x?.container_extension ?? "mp4" }));
+    out.sampleSeries = pick(seriesList, 2).map((x) => ({ id: x?.series_id, name: x?.name ?? "" }));
+    // Catálogo (apenas metadados) para a Inteligência de Conteúdo.
+    const entry = (id, name, cat) => ({
+        id: String(id ?? ""),
+        name: String(name ?? "").trim(),
+        category: cat == null ? null : String(cat),
+    });
+    out.catalog = {
+        live: liveList.map((x) => entry(x?.stream_id, x?.name, x?.category_id)),
+        vod: vodList.map((x) => entry(x?.stream_id, x?.name, x?.category_id)),
+        series: seriesList.map((x) => entry(x?.series_id, x?.name, x?.category_id)),
+    };
+    return out;
+}
+/**
+ * Etapa 1 — autenticação inicial (DNS + usuário + senha).
+ * Valida SOMENTE o login: resposta do servidor, credenciais válidas e status
+ * da conta (ativa/expirada). Nenhuma consulta de catálogo é feita aqui.
+ */
+export async function validateXtreamLogin(host, username, password) {
+    const x = await probeXtream(host, username, password, { catalogMode: "auth" });
+    return {
+        reachable: x.reachable,
+        login_checked: x.login_checked,
+        login_ok: x.login_ok,
+        account: x.account,
+        account_active: x.account
+            ? x.account.status !== "Disabled" &&
+                x.account.status !== "Banned" &&
+                (x.account.days_to_expire == null || x.account.days_to_expire > 0)
+            : null,
+        protection_suspected: x.protection_suspected,
+        access_verdict: x.access_verdict,
+        fallback_notice: x.fallback_notice,
+        attempts: x.attempts,
+        succeeded_step: x.succeeded_step,
+        api_ms: x.api_ms,
+        error: x.error,
+    };
+}
+/* ------------------------------------------------------------------ */
+/* M3U integrity (modo completo)                                       */
+/* ------------------------------------------------------------------ */
+export async function probeM3U(host, username, password) {
+    const b = base(host);
+    const url = `${b}/get.php?username=${encodeURIComponent(username)}&password=${encodeURIComponent(password)}&type=m3u_plus&output=ts`;
+    try {
+        const res = await timedFetch(url, M3U_TIMEOUT_MS);
+        if (!res.ok)
+            return { playlist_ok: false, m3u_channels: null, m3u_groups: null, m3u_bytes: null, error: `HTTP ${res.status}` };
+        const text = await res.text();
+        const bytes = text.length;
+        const okHeader = /#EXTM3U/i.test(text.slice(0, 512));
+        const extinf = text.match(/#EXTINF/gi)?.length ?? 0;
+        const urls = text.split("\n").filter((l) => /^https?:\/\//i.test(l.trim())).length;
+        const groups = new Set(Array.from(text.matchAll(/group-title="([^"]*)"/gi)).map((m) => m[1]));
+        const balanced = extinf > 0 && Math.abs(extinf - urls) <= Math.max(2, extinf * 0.02);
+        return {
+            playlist_ok: okHeader && balanced,
+            m3u_channels: extinf || null,
+            m3u_groups: groups.size || null,
+            m3u_bytes: bytes,
+            error: okHeader ? (balanced ? null : "Playlist inconsistente (EXTINF x URLs)") : "Cabeçalho #EXTM3U ausente",
+        };
+    }
+    catch (e) {
+        return { playlist_ok: false, m3u_channels: null, m3u_groups: null, m3u_bytes: null, error: String(e?.message ?? e).slice(0, 200) };
+    }
+}
+/* ------------------------------------------------------------------ */
+/* Stream sampling                                                     */
+/* ------------------------------------------------------------------ */
+function parseHls(text) {
+    const stream = /#EXT-X-STREAM-INF:([^\n]*)/i.exec(text)?.[1] ?? "";
+    const resolution = /RESOLUTION=(\d+x\d+)/i.exec(stream)?.[1] ?? null;
+    const bandwidth = /BANDWIDTH=(\d+)/i.exec(stream)?.[1];
+    const codecs = /CODECS="([^"]+)"/i.exec(stream)?.[1] ?? null;
+    return {
+        resolution,
+        bitrate_kbps: bandwidth ? Math.round(Number(bandwidth) / 1000) : null,
+        codec: codecs ? prettyCodec(codecs) : null,
+    };
+}
+function prettyCodec(c) {
+    const l = c.toLowerCase();
+    if (l.includes("hvc1") || l.includes("hev1") || l.includes("hevc"))
+        return "HEVC";
+    if (l.includes("avc1") || l.includes("h264"))
+        return "H.264";
+    if (l.includes("av01"))
+        return "AV1";
+    if (l.includes("mp4v"))
+        return "MPEG-4";
+    return c.split(",")[0].toUpperCase();
+}
+export async function probeStream(kind, url, label) {
+    const t0 = Date.now();
+    const out = {
+        kind, label, ok: false, start_ms: null, total_ms: null,
+        bitrate_kbps: null, resolution: null, codec: null, buffer_ms: null, error: null,
+    };
+    try {
+        const res = await timedFetch(url, STREAM_TIMEOUT_MS);
+        out.start_ms = Date.now() - t0;
+        if (!res.ok || !res.body) {
+            out.error = `HTTP ${res.status}`;
+            out.total_ms = Date.now() - t0;
+            return out;
+        }
+        const ctype = res.headers.get("content-type") ?? "";
+        const reader = res.body.getReader();
+        let received = 0;
+        let firstChunkAt = null;
+        const chunks = [];
+        const readStart = Date.now();
+        while (received < STREAM_SAMPLE_BYTES && Date.now() - readStart < 4000) {
+            const { done, value } = await reader.read();
+            if (done)
+                break;
+            if (value) {
+                if (firstChunkAt === null)
+                    firstChunkAt = Date.now();
+                received += value.byteLength;
+                if (chunks.length < 4)
+                    chunks.push(value);
+            }
+        }
+        try {
+            await reader.cancel();
+        }
+        catch { /* ignore */ }
+        out.buffer_ms = firstChunkAt ? firstChunkAt - t0 - (out.start_ms ?? 0) : null;
+        const elapsedSec = Math.max(0.15, (Date.now() - readStart) / 1000);
+        if (/mpegurl/i.test(ctype) || url.endsWith(".m3u8")) {
+            const text = new TextDecoder().decode(chunks[0] ?? new Uint8Array());
+            const hls = parseHls(text);
+            out.resolution = hls.resolution;
+            out.codec = hls.codec;
+            out.bitrate_kbps = hls.bitrate_kbps;
+            out.ok = /#EXTM3U/i.test(text);
+            if (!out.ok)
+                out.error = "Manifesto HLS inválido";
+        }
+        else {
+            out.bitrate_kbps = received > 0 ? Math.round((received * 8) / elapsedSec / 1000) : null;
+            const head = chunks[0];
+            // MPEG-TS sync byte 0x47 -> transport stream válido
+            if (head && head[0] === 0x47)
+                out.codec = "H.264/TS";
+            out.ok = received > 20000;
+            if (!out.ok)
+                out.error = "Stream não iniciou (poucos bytes)";
+        }
+        out.total_ms = Date.now() - t0;
+        return out;
+    }
+    catch (e) {
+        out.total_ms = Date.now() - t0;
+        out.error = String(e?.message ?? e).slice(0, 200);
+        return out;
+    }
+}
+/* ------------------------------------------------------------------ */
+/* Health score                                                        */
+/* ------------------------------------------------------------------ */
+export function computeHealthScore(input) {
+    const scale = (v, good, bad) => {
+        if (v == null)
+            return 0.7;
+        if (v <= good)
+            return 1;
+        if (v >= bad)
+            return 0;
+        return 1 - (v - good) / (bad - good);
+    };
+    const flag = (v) => (v == null ? 0.7 : v ? 1 : 0);
+    const uptimeBase = input.uptimePct == null ? 0.7 : Math.max(0, Math.min(1, input.uptimePct / 100));
+    const stability = input.instability24h == null ? 0.7 : Math.max(0, 1 - input.instability24h * 3);
+    const uptime = uptimeBase * 0.7 + stability * 0.3;
+    const response = scale(input.latencyMs, 120, 1500) * 0.6 + scale(input.streamStartMs, 1200, 8000) * 0.4;
+    const api = scale(input.apiMs, 400, 5000);
+    const ip = input.ipChanges7d === 0 ? 1 : input.ipChanges7d === 1 ? 0.6 : 0.2;
+    // Uptime 30 · Player API 15 · Tempo de resposta 15 · Live 20 · VOD 10 · Séries 5 · IP/DNS 5
+    const score = uptime * 30 +
+        api * 15 +
+        response * 15 +
+        flag(input.liveOk) * 20 +
+        flag(input.vodOk) * 10 +
+        flag(input.seriesOk) * 5 +
+        ip * 5;
+    return Math.max(0, Math.min(100, Math.round(score)));
+}
+/**
+ * Registra métricas IPTV no histórico e calcula o novo Health Score.
+ */
+export async function runIptvIntelligence(server, probeRes, streamRes) {
+    // 1. Salvar no histórico (bypass typing errors using any as table doesn't exist in generated types yet)
+    await supabaseAdmin.from("iptv_metrics_history").insert({
+        server_id: server.id,
+        latency_ms: server.last_latency_ms,
+        api_response_ms: probeRes.api_ms,
+        stream_ok: streamRes ? streamRes.ok : probeRes.login_ok,
+        error_code: probeRes.error || streamRes?.error,
+    });
+    // 2. Calcular Saúde e Risco
+    const { data: metrics } = await supabaseAdmin
+        .from("iptv_metrics_history")
+        .select("latency_ms, api_response_ms, stream_ok, recorded_at")
+        .eq("server_id", server.id)
+        .gte("recorded_at", new Date(Date.now() - 24 * 3600000).toISOString());
+    if (!metrics || metrics.length === 0)
+        return;
+    const mList = metrics;
+    const avgLatency = mList.reduce((a, m) => a + (m.latency_ms || 0), 0) / mList.length;
+    const avgApi = mList.reduce((a, m) => a + (m.api_response_ms || 0), 0) / mList.length;
+    const uptimePct = (mList.filter(m => m.stream_ok).length / mList.length) * 100;
+    const twoHoursAgo = new Date(Date.now() - 2 * 3600000).toISOString();
+    const recentFails = mList.filter(m => m.recorded_at > twoHoursAgo && !m.stream_ok).length;
+    let label = "Saudável";
+    if (recentFails > 3 || avgLatency > 3000 || avgApi > 4000)
+        label = "Queda iminente";
+    else if (recentFails > 1 || avgLatency > 1500 || avgApi > 2000)
+        label = "Risco elevado";
+    else if (avgLatency > 800 || avgApi > 1000)
+        label = "Atenção";
+    await supabaseAdmin
+        .from("servers")
+        .update({
+        health_score: Math.round(uptimePct),
+        risk_score_label: label,
+    })
+        .eq("id", server.id);
+}
+export function healthLabel(score) {
+    if (score >= 95)
+        return { label: "Excelente", tone: "success" };
+    if (score >= 85)
+        return { label: "Muito Bom", tone: "success" };
+    if (score >= 70)
+        return { label: "Bom", tone: "success" };
+    if (score >= 50)
+        return { label: "Atenção", tone: "warning" };
+    return { label: "Crítico", tone: "destructive" };
+}
+export async function runIptvSync(serverId, opts = {}) {
+    const logPrefix = `[iptv-sync] [${serverId}]`;
+    const stage = (s) => console.log(`${logPrefix} Etapa: ${s}`);
+    stage("Iniciando processamento");
+    const { data: srv, error: srvErr } = await supabaseAdmin.from("servers").select("*").eq("id", serverId).maybeSingle();
+    if (srvErr) {
+        console.error(`${logPrefix} Erro ao buscar servidor:`, srvErr);
+        throw new Error(`Erro de banco: ${srvErr.message}`);
+    }
+    if (!srv)
+        throw new Error("Servidor não encontrado no banco de dados.");
+    // Nenhuma consulta Xtream/Player API para contas expiradas ou sem créditos.
+    {
+        const { getActiveOwnerIds, MONITORING_PAUSED_MESSAGE, syncServersPauseState } = await import("./service-status.server");
+        const allowed = await getActiveOwnerIds([srv.owner_id]);
+        if (!allowed.has(srv.owner_id)) {
+            await syncServersPauseState([srv.owner_id]).catch(() => null);
+            throw new Error(MONITORING_PAUSED_MESSAGE);
+        }
+    }
+    const server = srv;
+    const mode = opts.mode ?? (server.iptv_mode === "basic" ? "smart" : server.iptv_mode);
+    stage(`Modo definido: ${mode}`);
+    // Todos os problemas detectados nesta execução são acumulados e enviados
+    // em UMA única mensagem consolidada no final (ver dispatchAlerts).
+    const alerts = [];
+    const pushAlert = (c) => { alerts.push(c); };
+    if (!opts.force && server.last_iptv_sync_at && Date.now() - new Date(server.last_iptv_sync_at).getTime() < MIN_GAP_MS) {
+        return { skipped: true, reason: "rate-limit" };
+    }
+    const { getIptvCredentials, checkLoginGuard, guardMessage, registerLoginResult } = await import("./iptv-credentials.server");
+    const cred0 = await getIptvCredentials(serverId);
+    const username = cred0.username ?? "";
+    const password = cred0.password ?? "";
+    if (!username || !password)
+        throw new Error("Configure usuário e senha do Xtream para o modo inteligente.");
+    const guard = await checkLoginGuard(serverId);
+    if (!guard.allowed)
+        throw new Error(guardMessage(guard));
+    // Detecção automática (barata) quando ainda desconhecida
+    let detected = server.iptv_detected;
+    if (detected === "none") {
+        detected = (await detectIptvKind(server.host, username, password)).kind;
+        await supabaseAdmin.from("servers").update({ iptv_detected: detected }).eq("id", serverId);
+    }
+    // Cache de catálogo: só relemos as listas completas quando o TTL expirou
+    // (ou em modo full/forçado). No resto das execuções usamos consultas menores.
+    const catalogSyncedAt = srv.catalog_synced_at ?? null;
+    const catalogFresh = !!catalogSyncedAt && Date.now() - new Date(catalogSyncedAt).getTime() < CATALOG_TTL_MS;
+    const catalogMode = opts.force || mode === "full" || !catalogFresh ? "full" : "counts";
+    stage("Executando probeXtream (login + catálogo)");
+    const x = await probeXtream(server.host, username, password, { catalogMode });
+    // Contabiliza tentativas apenas quando o login foi de fato verificado
+    // (falhas de rede/servidor não contam como senha errada).
+    if (x.login_checked)
+        await registerLoginResult(serverId, x.login_ok, x.error);
+    let m3u = null;
+    if (mode === "full" && (detected === "m3u" || detected === "both")) {
+        m3u = await probeM3U(server.host, username, password);
+    }
+    // Amostragem de streams (sequencial, no máximo 3 requisições)
+    const streamProbes = [];
+    if (server.iptv_stream_tests && x.login_ok) {
+        const b = base(server.host);
+        const cred = `${encodeURIComponent(username)}/${encodeURIComponent(password)}`;
+        const live = x.sampleLive[0];
+        const vod = x.sampleVod[0];
+        if (live?.id != null)
+            streamProbes.push(await probeStream("live", `${b}/${cred}/${live.id}`, live.name));
+        if (vod?.id != null)
+            streamProbes.push(await probeStream("vod", `${b}/movie/${cred}/${vod.id}.${vod.ext || "mp4"}`, vod.name));
+        const serie = x.sampleSeries[0];
+        if (serie?.id != null && mode === "full") {
+            streamProbes.push(await probeStream("series", `${b}/series/${cred}/${serie.id}.mp4`, serie.name));
+        }
+    }
+    // Contexto de rede/uptime
+    const since24 = new Date(Date.now() - 24 * 3600000).toISOString();
+    const { data: checks24 } = await supabaseAdmin
+        .from("checks").select("status, latency_ms").eq("server_id", serverId).gte("checked_at", since24).limit(1000);
+    const total = checks24?.length ?? 0;
+    const ups = (checks24 ?? []).filter((c) => c.status === "up").length;
+    const uptimePct = total ? (ups / total) * 100 : null;
+    const instability = total ? (total - ups) / total : null;
+    const { data: regionStats } = await supabaseAdmin
+        .from("region_checks").select("region_code, latency_ms").eq("server_id", serverId)
+        .gte("checked_at", new Date(Date.now() - 3600000).toISOString()).limit(500);
+    const byRegion = new Map();
+    for (const r of regionStats ?? []) {
+        if (r.latency_ms == null)
+            continue;
+        byRegion.set(r.region_code, [...(byRegion.get(r.region_code) ?? []), r.latency_ms]);
+    }
+    const avgs = Array.from(byRegion.entries()).map(([code, arr]) => ({ code, avg: arr.reduce((a, b) => a + b, 0) / arr.length }));
+    avgs.sort((a, b) => a.avg - b.avg);
+    const fastest = avgs[0]?.code ?? null;
+    const slowest = avgs[avgs.length - 1]?.code ?? null;
+    const avgGlobal = avgs.length ? Math.round(avgs.reduce((a, b) => a + b.avg, 0) / avgs.length) : null;
+    // DNS intelligence
+    const { data: analysis } = await supabaseAdmin
+        .from("server_analysis").select("ipv4, asn, org, country, city").eq("server_id", serverId).maybeSingle();
+    const currentIp = analysis?.ipv4?.[0] ?? null;
+    const currentAsn = analysis?.asn ?? null;
+    const { data: lastSync } = await supabaseAdmin
+        .from("iptv_syncs").select("*").eq("server_id", serverId).order("synced_at", { ascending: false }).limit(1).maybeSingle();
+    if (lastSync?.ip && currentIp && lastSync.ip !== currentIp) {
+        await supabaseAdmin.from("iptv_ip_history").insert({
+            server_id: serverId, old_ip: lastSync.ip, new_ip: currentIp,
+            old_asn: lastSync.asn, new_asn: currentAsn, datacenter: analysis?.org ?? null,
+            country: analysis?.country ?? null, city: analysis?.city ?? null,
+        });
+        pushAlert({ kind: "ip_change", severity: "warning", title: "⚠ DNS mudou de IP", detail: `${lastSync.ip} → ${currentIp}`, transient: true });
+    }
+    if (lastSync?.asn && currentAsn && lastSync.asn !== currentAsn) {
+        pushAlert({ kind: "asn_change", severity: "warning", title: "⚠ Mudança de ASN/Datacenter", detail: `${lastSync.asn} → ${currentAsn}`, transient: true });
+    }
+    const { count: ipChanges7d } = await supabaseAdmin
+        .from("iptv_ip_history").select("id", { count: "exact", head: true })
+        .eq("server_id", serverId).gte("changed_at", new Date(Date.now() - 7 * 864e5).toISOString());
+    const streamStart = streamProbes.length
+        ? Math.round(streamProbes.reduce((a, s) => a + (s.start_ms ?? 0), 0) / streamProbes.length)
+        : null;
+    const probeOk = (kind) => {
+        const p = streamProbes.find((s) => s.kind === kind);
+        return p ? p.ok : null;
+    };
+    const health = computeHealthScore({
+        uptimePct,
+        latencyMs: server.last_latency_ms,
+        apiMs: x.api_ms,
+        streamStartMs: streamStart,
+        instability24h: instability,
+        ipChanges7d: ipChanges7d ?? 0,
+        liveOk: x.login_ok ? (probeOk("live") ?? x.content.live_ok) : false,
+        vodOk: x.login_ok ? (probeOk("vod") ?? x.content.vod_ok) : false,
+        seriesOk: x.login_ok ? (probeOk("series") ?? x.content.series_ok) : false,
+    });
+    stage("Salvando catálogo e comparando TMDB");
+    const { data: sync, error: syncErr } = await supabaseAdmin.from("iptv_syncs").insert({
+        server_id: serverId,
+        mode,
+        api_ms: x.api_ms,
+        login_ok: x.login_ok,
+        json_valid: x.json_valid,
+        channels: x.channels ?? (x.catalog_cached ? (lastSync?.channels ?? null) : null),
+        movies: x.movies ?? (x.catalog_cached ? (lastSync?.movies ?? null) : null),
+        series: x.series ?? (x.catalog_cached ? (lastSync?.series ?? null) : null),
+        categories: x.categories,
+        m3u_channels: m3u?.m3u_channels ?? null,
+        m3u_groups: m3u?.m3u_groups ?? null,
+        m3u_bytes: m3u?.m3u_bytes ?? null,
+        playlist_ok: m3u?.playlist_ok ?? null,
+        latency_ms: server.last_latency_ms,
+        health_score: health,
+        fastest_region: fastest,
+        slowest_region: slowest,
+        avg_region_ms: avgGlobal,
+        ip: currentIp,
+        asn: currentAsn,
+        datacenter: analysis?.org ?? null,
+        error: x.error ?? (m3u?.error ? `Playlist M3U: ${m3u.error}` : null),
+        login_checked: x.login_checked,
+        diagnostics: {
+            ...(sanitizeDiagnostics(x.diagnostics) ?? {}),
+            attempts: x.attempts,
+            succeeded_step: x.succeeded_step,
+            fallback_notice: x.fallback_notice,
+            access_verdict: x.access_verdict,
+            protection_suspected: x.protection_suspected,
+            catalog_cached: x.catalog_cached,
+        },
+    }).select("id").maybeSingle();
+    if (syncErr) {
+        console.error(`[iptv-sync] [${serverId}] Erro ao salvar log de sincronização:`, syncErr);
+    }
+    if (sync?.id && streamProbes.length) {
+        await supabaseAdmin.from("iptv_stream_tests").insert(streamProbes.map((s) => ({ server_id: serverId, sync_id: sync.id, ...s })));
+    }
+    await supabaseAdmin.from("servers")
+        .update({ health_score: health, last_iptv_sync_at: new Date().toISOString() })
+        .eq("id", serverId);
+    // Inteligência IPTV Inteligente: Análise de comportamento e Risk Score
+    try {
+        const streamSample = streamProbes.find(s => s.kind === "live") || streamProbes[0] || null;
+        await runIptvIntelligence(server, x, streamSample);
+    }
+    catch (e) {
+        console.warn("[iptv] falha na inteligência de comportamento:", e?.message);
+    }
+    /* ---- Inteligência de Conteúdo: catálogo, novidades e histórico ---- */
+    let catalogDiff = null;
+    if (x.login_ok && x.catalog.live.length + x.catalog.vod.length + x.catalog.series.length > 0) {
+        try {
+            const { syncCatalog } = await import("./iptv-catalog.server");
+            catalogDiff = await syncCatalog(serverId, x.catalog);
+            if (catalogDiff && !catalogDiff.skipped) {
+                const parts = [];
+                if (catalogDiff.added.vod)
+                    parts.push(`🎬 +${catalogDiff.added.vod} filmes`);
+                if (catalogDiff.added.series)
+                    parts.push(`📚 +${catalogDiff.added.series} séries`);
+                if (catalogDiff.added.live)
+                    parts.push(`📺 +${catalogDiff.added.live} canais`);
+                if (parts.length) {
+                    pushAlert({ kind: "catalog_added", severity: "info", title: "🎬 Novos conteúdos no catálogo", detail: parts.join(" · "), transient: true });
+                }
+                if (catalogDiff.removed > 0) {
+                    pushAlert({
+                        kind: "catalog_removed",
+                        severity: catalogDiff.removed > 50 ? "warning" : "info",
+                        title: `📉 ${catalogDiff.removed} conteúdo(s) removido(s) do catálogo`,
+                        detail: `Total atual: ${catalogDiff.totals.live} canais · ${catalogDiff.totals.vod} filmes · ${catalogDiff.totals.series} séries`,
+                        transient: true,
+                    });
+                }
+            }
+        }
+        catch (e) {
+            console.error(`[iptv] Erro fatal na sincronização de catálogo (Servidor ${serverId}):`, e);
+            throw new Error(`Falha no Radar (syncCatalog): ${e?.message}`);
+        }
+    }
+    /* ---- Alertas inteligentes (agrupados em uma única notificação) ---- */
+    const drop = (prev, curr, label, kind) => {
+        if (!prev || !curr)
+            return;
+        const diff = prev - curr;
+        if (diff > Math.max(5, prev * 0.02)) {
+            pushAlert({
+                kind,
+                severity: diff > prev * 0.1 ? "critical" : "warning",
+                title: `⚠ Servidor perdeu ${diff.toLocaleString("pt-BR")} ${label}`,
+                detail: `${prev.toLocaleString("pt-BR")} → ${curr.toLocaleString("pt-BR")}`,
+                transient: true,
+            });
+        }
+    };
+    // Em consulta leve (cache) os totais não são recalculados: não comparar.
+    if (!x.catalog_cached) {
+        drop(lastSync?.channels, x.channels, "canais", "channels_drop");
+        drop(lastSync?.movies, x.movies, "filmes", "movies_drop");
+        drop(lastSync?.series, x.series, "séries", "series_drop");
+    }
+    drop(lastSync?.categories, x.categories, "categorias", "categories_drop");
+    if (x.login_checked && !x.login_ok) {
+        pushAlert({ kind: "login_invalid", severity: "critical", title: "🚨 Login do Xtream inválido", detail: x.error });
+    }
+    // Player API lenta só alerta após 2 detecções seguidas (confirmação).
+    if (x.api_ms && x.api_ms > 5000) {
+        pushAlert({ kind: "api_slow", severity: "warning", title: "⚠ Player API lenta", detail: `${x.api_ms}ms`, confirmations: 2 });
+    }
+    if (!x.json_valid) {
+        // Recusa da Player API com o host no ar = proteção contra consultas
+        // automáticas. Nunca vira "offline" e exige 3 confirmações seguidas.
+        const protection = x.protection_suspected && x.reachable;
+        pushAlert({
+            kind: "api_down",
+            severity: protection ? "warning" : x.reachable ? "warning" : "critical",
+            title: protection
+                ? "🛡️ Player API com proteção contra consultas automáticas"
+                : x.reachable
+                    ? "⚠ Player API sem resposta válida (servidor no ar)"
+                    : "🚨 Servidor IPTV sem resposta",
+            detail: x.access_verdict ?? x.error,
+            confirmations: protection ? 3 : x.reachable ? 2 : 2,
+        });
+    }
+    // get.php é apenas playlist: nunca gera alerta de login inválido.
+    if (m3u && m3u.playlist_ok === false) {
+        pushAlert({ kind: "playlist_broken", severity: "warning", title: "⚠ Playlist M3U com problema", detail: m3u.error });
+    }
+    if (x.account?.days_to_expire != null && x.account.days_to_expire <= 7 && x.account.days_to_expire >= 0) {
+        pushAlert({
+            kind: "account_expiring", severity: "warning", title: "⚠ Conta Xtream perto do vencimento",
+            detail: `Expira em ${x.account.days_to_expire} dia(s) — ${new Date(x.account.exp_date).toLocaleString("pt-BR")}`,
+        });
+    }
+    if (x.account?.max_connections != null && x.account.active_connections != null &&
+        x.account.max_connections > 0 && x.account.active_connections >= x.account.max_connections) {
+        pushAlert({
+            kind: "connections_limit", severity: "warning", title: "⚠ Limite de conexões atingido",
+            detail: `${x.account.active_connections}/${x.account.max_connections} conexões ativas`,
+        });
+    }
+    if (x.login_ok && !x.content.live_ok) {
+        pushAlert({ kind: "content_live_empty", severity: "warning", title: "⚠ Nenhum canal ao vivo retornado pela Player API" });
+    }
+    // Streams de amostra só alertam após 2 detecções seguidas (confirmação).
+    if (streamProbes.some((s) => !s.ok)) {
+        pushAlert({
+            kind: "stream_offline", severity: "warning", title: "⚠ Streams de amostra offline",
+            detail: streamProbes.filter((s) => !s.ok).map((s) => `${s.kind}: ${s.error ?? "falhou"}`).join(" · "),
+            confirmations: 2,
+        });
+    }
+    if (health < 70 && (lastSync?.health_score ?? 100) >= 70) {
+        pushAlert({
+            kind: "health_drop", severity: "critical", title: "🚨 Seu servidor perdeu desempenho",
+            detail: `Detectamos degradação antes da queda. Health Score: ${health}%`,
+        });
+    }
+    try {
+        const { dispatchAlerts } = await import("./alert-state.server");
+        await dispatchAlerts(serverId, alerts, [
+            "login_invalid", "api_slow", "api_down", "playlist_broken",
+            "account_expiring", "connections_limit", "content_live_empty",
+            "stream_offline", "health_drop",
+        ]);
+    }
+    catch (e) {
+        console.warn("[iptv] falha ao despachar alertas:", e?.message);
+    }
+    return {
+        skipped: false,
+        sync_id: sync?.id ?? null,
+        health,
+        channels: x.channels,
+        streams: streamProbes,
+        catalog: catalogDiff,
+        contents_found: catalogDiff?.new_titles || 0,
+        changes: (catalogDiff?.total_changes || 0) > 0
+    };
+}
+/**
+ * Processa servidores IPTV em lotes no Core AWS.
+ * Garante que um servidor com erro não derrube toda sincronização.
+ */
+export async function runIptvBatchSync(serverIds, opts = {}) {
+    const BATCH_SIZE = 5;
+    const results = [];
+    let total_contents = 0;
+    const batchId = Math.random().toString(36).substring(7);
+    console.log(`[iptv-batch] [${batchId}] Iniciando lote de ${serverIds.length} servidores (tamanho do lote: ${BATCH_SIZE})`);
+    for (let i = 0; i < serverIds.length; i += BATCH_SIZE) {
+        const chunk = serverIds.slice(i, i + BATCH_SIZE);
+        console.log(`[iptv-batch] [${batchId}] Processando lote ${Math.floor(i / BATCH_SIZE) + 1} (${chunk.length} servidores)`);
+        const chunkResults = await Promise.all(chunk.map(async (id) => {
+            try {
+                console.log(`[iptv-batch] [${batchId}] [${id}] Iniciando sincronização...`);
+                const res = await runIptvSync(id, { mode: opts.mode, force: true });
+                const count = res?.contents_found || 0;
+                total_contents += count;
+                console.log(`[iptv-batch] [${batchId}] [${id}] ✅ Concluído: ${count} conteúdos encontrados.`);
+                return { id, ok: true, contents_found: count, no_changes: !res?.changes };
+            }
+            catch (e) {
+                console.error(`[iptv-batch] [${batchId}] [${id}] ❌ Falha:`, e.message);
+                return { id, ok: false, error: e.message };
+            }
+        }));
+        results.push(...chunkResults);
+    }
+    return {
+        results,
+        total_contents_found: total_contents,
+        summary: {
+            total: results.length,
+            success: results.filter(r => r.ok).length,
+            failed: results.filter(r => !r.ok).length
+        }
+    };
+}
+export async function runDueIptvSyncs() {
+    const { data: servers } = await supabaseAdmin
+        .from("servers")
+        .select("id, owner_id, iptv_mode, iptv_interval_minutes, last_iptv_sync_at, iptv_username, iptv_password")
+        .neq("iptv_mode", "basic")
+        .eq("monitoring_paused", false);
+    if (!servers?.length)
+        return { synced: 0, errors: 0 };
+    const { getActiveOwnerIds } = await import("./service-status.server");
+    const active = await getActiveOwnerIds(servers.map((s) => s.owner_id));
+    const due = servers.filter((s) => {
+        if (!active.has(s.owner_id))
+            return false;
+        if (!s.iptv_username || !s.iptv_password)
+            return false;
+        if (!s.last_iptv_sync_at)
+            return true;
+        return Date.now() - new Date(s.last_iptv_sync_at).getTime() >= s.iptv_interval_minutes * 60000;
+    }).slice(0, 10); // fila: no máximo 10 servidores por execução
+    let synced = 0, errors = 0;
+    for (const s of due) {
+        try {
+            await runIptvSync(s.id, { mode: "smart" });
+            synced++;
+        }
+        catch {
+            errors++;
+        }
+    }
+    return { synced, errors };
+}
+/**
+ * Chama a Player API com dois User-Agents (player IPTV e navegador) para
+ * distinguir bloqueio por identificação da requisição x bloqueio por IP.
+ */
+export async function comparePlayerApiUserAgents(host, username, password) {
+    const clean = host.replace(/^https?:\/\//, "").replace(/\/+$/, "");
+    const auth = `username=${encodeURIComponent(username)}&password=${encodeURIComponent(password)}`;
+    const url = `http://${clean}/player_api.php?${auth}`;
+    const run = async (label, ua) => {
+        try {
+            const { diag } = await getJson(url, API_TIMEOUT_MS, ua);
+            return { label, user_agent: ua, ok: true, diagnostics: diag, error: null };
+        }
+        catch (e) {
+            const err = e;
+            return {
+                label,
+                user_agent: ua,
+                ok: false,
+                diagnostics: err?.diag ?? null,
+                error: String(err?.message ?? e).slice(0, 240),
+            };
+        }
+    };
+    const probes = [
+        await run("Player IPTV (padrão)", UA_PLAYER),
+        await run("Navegador (Mozilla/5.0)", UA_BROWSER),
+        await run("VLC (confirmação alternativa)", UA_VLC),
+    ];
+    const [player, browser] = probes;
+    let verdict;
+    if (player.ok || browser.ok) {
+        verdict = player.ok && browser.ok
+            ? "✅ Servidor aceita ambos os User-Agents. O bloqueio anterior não é por identificação da requisição."
+            : `⚠️ Servidor aceita apenas o User-Agent "${player.ok ? player.label : browser.label}". O bloqueio é por identificação da requisição (User-Agent).`;
+    }
+    else if (player.diagnostics?.http_status === 403 &&
+        browser.diagnostics?.http_status === 403) {
+        verdict = "🚫 HTTP 403 com os dois User-Agents: bloqueio provavelmente pelo IP de saída do monitor (ou firewall/anti-bot do servidor).";
+    }
+    else {
+        verdict = "❌ Falha nos dois testes por motivos diferentes — veja os diagnósticos abaixo.";
+    }
+    return { egress_ip: await egressIp(), probes, verdict };
+}
