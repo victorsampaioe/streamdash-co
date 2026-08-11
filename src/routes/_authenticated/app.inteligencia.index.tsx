@@ -71,10 +71,19 @@ function ContentIntelligence() {
 
   const prepareMutation = useMutation({
     mutationFn: () => prepareSync(),
-    onSuccess: (data) => {
-      setPrepData(data as any);
+    onSuccess: (data: any) => {
+      console.group("[Radar Tech Log] Preparação Concluída");
+      console.log("Total servidores no banco:", data.total_db_servers);
+      console.log("Servidores com URL Xtream:", data.with_host);
+      console.log("Servidores com Credenciais (User/Pass):", data.with_username, "/", data.with_password);
+      console.log("Servidores com Login Aprovado:", data.login_approved);
+      console.log("Servidores Aptos (Filtro Final):", data.servers_found);
+      console.groupEnd();
+
+      setPrepData(data);
       setShowConfirm(true);
     },
+
     onError: (e: Error) => {
       console.error("[Radar Tech Log] Erro na preparação do Radar:", e);
       console.error("[Radar Tech Log] Etapa: Chamada RPC prepareRadarBatchSync");
@@ -111,9 +120,12 @@ function ContentIntelligence() {
       setShowConfirm(false);
     },
     onError: (e: Error) => {
-      console.error("Erro crítico na sincronização do Radar:", e);
+      console.error("[Radar Tech Log] Erro crítico na sincronização do Radar");
+      console.error("[Radar Tech Log] Etapa: Processamento da fila (runRadarBatchSyncNow)");
+      console.error("[Radar Tech Log] Erro Real:", e.message);
       toast.error("Erro na sincronização: " + e.message);
     },
+
   });
 
   const { data, isLoading, error } = useQuery({
