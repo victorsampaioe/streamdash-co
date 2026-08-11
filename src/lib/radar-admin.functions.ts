@@ -114,101 +114,125 @@ export const recalculateRadarAvailability = createServerFn({ method: "POST" })
   });
 
 /**
- * Teste manual de busca específica no Radar IPTV
+ * Teste manual de busca no Radar IPTV.
+ *
+ * Consulta o catálogo já coletado dos servidores (iptv_catalog_items), que é
+ * atualizado pelo job de sincronização. É instantâneo e não sobrecarrega os
+ * servidores IPTV — além de revalidar os vínculos de disponibilidade.
  */
 export const searchRadarTitleManual = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: { title: string }) => z.object({ title: z.string().min(2) }).parse(d))
   .handler(async ({ data, context }) => {
     await assertAdmin(context);
-    
+
     const { title } = data;
     const { titleKey } = await import("./iptv-catalog.server");
     const tKey = titleKey(title);
-    
-    console.log(`[radar-admin] Busca manual solicitada: "${title}" (key: ${tKey})`);
-    
-    // 1. Identificar servidores elegíveis (ativos + credenciais)
-    const { eligibleRadarServerIds } = await import("./radar-jobs.server");
-    const serverIds = await eligibleRadarServerIds();
-    
-    if (!serverIds.length) {
-      return { 
-        found: false, 
-        message: "Nenhum servidor elegível encontrado para o teste.",
-        checked_at: new Date().toISOString()
-      };
-    }
-
-    // 2. Localizar o item no catálogo global
-    const { data: globalItem } = await supabaseAdmin
-      .from("iptv_global_catalog")
-      .select("id, normalized_name, media_type")
-      .eq("title_key", tKey)
-      .maybeSingle();
-
-    const serversFound: string[] = [];
     const now = new Date().toISOString();
 
-    // 3. Executar busca rápida em paralelo
-    const BATCH_SIZE = 5;
-    for (let i = 0; i < serverIds.length; i += BATCH_SIZE) {
-      const batch = serverIds.slice(i, i + BATCH_SIZE);
-      await Promise.all(batch.map(async (sid) => {
-        try {
-          const { data: srv } = await supabaseAdmin.from("servers").select("name, host").eq("id", sid).single();
-          const { getIptvCredentials } = await import("./iptv-credentials.server");
-          const cred = await getIptvCredentials(sid);
-          
-          if (!cred.username || !cred.password) return;
+    console.log(`[radar-admin] Busca manual: "${title}" (key: ${tKey})`);
 
-          const { probeXtream } = await import("./iptv.server");
-          const x = await probeXtream(srv!.host, cred.username, cred.password, { catalogMode: "vod" });
-          
-          if (!x.login_ok) return;
+    // 1. Itens encontrados nos catálogos coletados
+    const { data: items, error } = await supabaseAdmin
+      .from("iptv_catalog_items")
+      .select("server_id, kind, external_id, name, title_key, last_seen_at")
+      .eq("title_key", tKey)
+      .is("removed_at", null)
+      .limit(500);
+    if (error) throw new Error(error.message);
 
-          const allItems = [...x.catalog.vod, ...x.catalog.series];
-          const match = allItems.find(it => titleKey(it.name) === tKey);
+    const rows = (items ?? []) as {
+      server_id: string;
+      kind: string;
+      external_id: string;
+      name: string;
+      title_key: string;
+      last_seen_at: string;
+    }[];
 
-          if (match) {
-            serversFound.push(srv!.name);
-            
-            if (globalItem) {
-              await supabaseAdmin.from("iptv_catalog_matches").upsert({
-                catalog_id: globalItem.id,
-                server_id: sid,
-                external_id: String(match.id),
-                raw_name: match.name,
-                detected_at: now
-              } as never, { onConflict: 'catalog_id,server_id' });
-            }
-          }
-        } catch (e) {
-          console.error(`[radar-manual] Erro no servidor ${sid}:`, e);
-        }
-      }));
+    // 2. Nomes reais dos servidores
+    const serverIds = [...new Set(rows.map((r) => r.server_id))];
+    const nameById = new Map<string, string>();
+    if (serverIds.length) {
+      const { data: srvs } = await supabaseAdmin.from("servers").select("id, name").in("id", serverIds);
+      for (const s of (srvs ?? []) as { id: string; name: string }[]) nameById.set(s.id, s.name);
     }
 
-    // 4. Se não tínhamos o globalItem mas encontramos em algum servidor, criamos agora
-    if (!globalItem && serversFound.length > 0) {
-      await supabaseAdmin
+    // 3. Revalidar/registrar o vínculo no catálogo global
+    for (const kind of ["vod", "series"] as const) {
+      const kindRows = rows.filter((r) => r.kind === kind);
+      if (!kindRows.length) continue;
+      const mediaType = kind === "series" ? "tv" : "movie";
+
+      let { data: globalItem } = await supabaseAdmin
         .from("iptv_global_catalog")
-        .insert({
-          title_key: tKey,
-          media_type: 'movie',
-          normalized_name: title,
-          first_server_id: serverIds[0],
-          first_detected_at: now,
-          last_detected_at: now,
-          tmdb_status: 'pending'
-        } as never);
+        .select("id")
+        .eq("title_key", tKey)
+        .eq("media_type", mediaType)
+        .maybeSingle();
+
+      if (!globalItem) {
+        const { data: created } = await supabaseAdmin
+          .from("iptv_global_catalog")
+          .insert({
+            title_key: tKey,
+            media_type: mediaType,
+            normalized_name: kindRows[0]!.name,
+            first_server_id: kindRows[0]!.server_id,
+            first_detected_at: now,
+            last_detected_at: now,
+            tmdb_status: "pending",
+          } as never)
+          .select("id")
+          .maybeSingle();
+        globalItem = created as any;
+      }
+
+      if (globalItem) {
+        const seen = new Set<string>();
+        const matches = kindRows
+          .filter((r) => !seen.has(r.server_id) && seen.add(r.server_id))
+          .map((r) => ({
+            catalog_id: (globalItem as any).id,
+            server_id: r.server_id,
+            external_id: r.external_id,
+            raw_name: r.name,
+            detected_at: now,
+          }));
+        await supabaseAdmin
+          .from("iptv_catalog_matches")
+          .upsert(matches as never, { onConflict: "catalog_id,server_id" });
+        await supabaseAdmin
+          .from("iptv_global_catalog")
+          .update({ servers_found_count: matches.length, last_detected_at: now } as never)
+          .eq("id", (globalItem as any).id);
+      }
     }
+
+    // 4. Sugestões quando não houver correspondência exata
+    let suggestions: string[] = [];
+    if (!rows.length) {
+      const { data: like } = await supabaseAdmin
+        .from("iptv_catalog_items")
+        .select("name")
+        .ilike("name", `%${title.replace(/\((\d{4})\)/, "").trim()}%`)
+        .is("removed_at", null)
+        .limit(20);
+      suggestions = [...new Set(((like ?? []) as { name: string }[]).map((r) => r.name))].slice(0, 10);
+    }
+
+    const servers = [...new Set(rows.map((r) => nameById.get(r.server_id) ?? "Servidor"))];
 
     return {
-      title: title,
-      found: serversFound.length > 0,
-      server_count: serversFound.length,
-      servers: serversFound,
-      checked_at: now
+      title,
+      title_key: tKey,
+      found: servers.length > 0,
+      media_type: rows[0]?.kind === "series" ? "Série" : rows.length ? "Filme" : null,
+      server_count: servers.length,
+      servers,
+      suggestions,
+      checked_at: now,
     };
   });
+
