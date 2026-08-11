@@ -34,7 +34,9 @@ function TitleDetail() {
   const { data, isLoading, error } = useQuery({
     queryKey: ["tmdb-detail", mediaType, id],
     queryFn: () => load({ data: { media: mediaType, id: Number(id) } }),
+    enabled: !!id && id !== "null",
   });
+
 
   if (isLoading) return <Card className="p-10 text-center text-sm text-muted-foreground">Carregando ficha...</Card>;
   if (error || !data)

@@ -114,11 +114,13 @@ export const getTmdbFeed = createServerFn({ method: "POST" })
         const match = matchMap.get(titleKey(c.title)) || matchMap.get(titleKey(c.original_title));
         return { 
           ...c, 
+          tmdb_id: c.tmdb_id, // Garantir tmdb_id numérico
           found_count: match?.count || 0,
           first_server_name: match?.first_server,
           first_detected_at: match?.first_at
         };
       }),
+
     };
   });
 
