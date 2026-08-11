@@ -92,13 +92,13 @@ function ContentIntelligence() {
     <div className="space-y-5">
       <Card className="p-5 sm:p-6 space-y-4 bg-gradient-to-br from-primary/10 to-transparent">
         <div className="flex items-center gap-2 text-xs uppercase tracking-wider text-primary font-semibold">
-          <Brain className="h-4 w-4" /> Quem sobe conteúdo mais rápido
+          <Brain className="h-4 w-4" /> Inteligência de Conteúdo
         </div>
         <div>
-          <h1 className="text-2xl sm:text-3xl font-bold">Inteligência de Conteúdo</h1>
+          <h1 className="text-2xl sm:text-3xl font-bold">Radar de Conteúdo</h1>
           <p className="text-sm text-muted-foreground mt-1 max-w-2xl">
-            Lançamentos direto do TMDB cruzados automaticamente com o catálogo dos seus servidores — descubra quem
-            adiciona primeiro e onde cada filme ou série já está disponível.
+            Lançamentos direto do TMDB cruzados automaticamente com o catálogo dos seus servidores — descubra 
+            onde cada filme ou série já está disponível.
           </p>
         </div>
         <form
@@ -174,15 +174,17 @@ function ContentIntelligence() {
             {f.l}
           </Button>
         ))}
-        <Button
-          size="sm"
-          variant={data?.ranking ? "default" : "outline"}
-          onClick={() => {
-            setQuery("ranking_mode");
-          }}
-        >
-          <TrendingUp className="h-4 w-4 mr-1" /> Ranking Atualização
-        </Button>
+        {isAdmin && (
+          <Button
+            size="sm"
+            variant={data?.ranking ? "default" : "outline"}
+            onClick={() => {
+              setQuery("ranking_mode");
+            }}
+          >
+            <TrendingUp className="h-4 w-4 mr-1" /> Ranking Atualização
+          </Button>
+        )}
       </div>
 
       {error ? (
@@ -258,13 +260,8 @@ function ContentIntelligence() {
                       <div className="flex flex-col gap-0.5 mt-1">
                         <div className="flex items-center gap-1.5 text-primary font-medium">
                           <Sparkles className="h-3 w-3" />
-                          Novidade no catálogo
+                          Presente no catálogo
                         </div>
-                        {it.first_server_name && (
-                          <div className="text-[10px] text-muted-foreground flex items-center gap-1">
-                             🏆 Primeiro: {it.first_server_name}
-                          </div>
-                        )}
                       </div>
                     )}
                   </div>

@@ -150,65 +150,12 @@ function TitleDetail() {
         </div>
       </Card>
 
-      <Tabs defaultValue="podium">
+      <Tabs defaultValue="servers">
         <TabsList>
-          <TabsTrigger value="podium">🏆 Quem adicionou primeiro</TabsTrigger>
           <TabsTrigger value="servers">🖥️ Disponibilidade</TabsTrigger>
           {data.global_stats && <TabsTrigger value="stats">🧠 Radar Global</TabsTrigger>}
         </TabsList>
 
-        <TabsContent value="podium" className="mt-4">
-          <Card className="p-5 space-y-3 border-yellow-500/20 bg-yellow-500/5">
-            <div className="flex items-center gap-2 mb-3">
-              <Trophy className="h-5 w-5 text-yellow-500" />
-              <h2 className="font-semibold text-lg">Reconhecimento Real por Servidor</h2>
-            </div>
-            <p className="text-xs text-muted-foreground -mt-1">
-              Descubra quem foi o primeiro a disponibilizar este conteúdo no catálogo.
-            </p>
-            {data.podium.length === 0 ? (
-              <p className="py-6 text-center text-sm text-muted-foreground">
-                Nenhum servidor monitorado possui este conteúdo ainda.
-              </p>
-            ) : (
-              <>
-                <div className="rounded-md border border-yellow-500/40 bg-yellow-500/20 px-4 py-3 text-sm flex items-center justify-between">
-                  <div>
-                    <span className="text-xl mr-2">🥇</span>
-                    <b>{data.podium[0].name}</b>
-                    <span className="text-xs text-muted-foreground ml-2">adicionou primeiro</span>
-                  </div>
-                  <Badge variant="outline" className="font-mono text-emerald-500 bg-background/50">
-                    {new Date(data.podium[0].found_at!).toLocaleDateString("pt-BR")}
-                  </Badge>
-                </div>
-                <div className="divide-y border-t mt-4">
-                  {data.podium.map((p, i) => (
-                    <div key={p.server_id} className="py-3 flex items-center justify-between gap-3">
-                      <div className="flex items-center gap-3">
-                        <span className="text-lg w-6 text-center">{MEDALS[i] ?? `${i + 1}º`}</span>
-                        <div className="flex flex-col">
-                          <span className="text-sm font-medium">{p.name}</span>
-                          <span className="text-[10px] text-emerald-500 flex items-center gap-1">
-                            <Clock className="h-3 w-3" /> Detectado {new Date(p.found_at!).toLocaleDateString("pt-BR")}
-                          </span>
-                        </div>
-                      </div>
-                      <div className="text-right">
-                        <Badge variant="secondary" className="text-[10px]">
-                          {p.quality || "HD"}
-                        </Badge>
-                        <div className="text-[10px] text-muted-foreground mt-1">
-                          ⚡ {p.latency_ms}ms
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </>
-            )}
-          </Card>
-        </TabsContent>
 
         <TabsContent value="stats" className="mt-4">
           <Card className="p-5 space-y-4 border-primary/20 bg-primary/5">
@@ -243,21 +190,24 @@ function TitleDetail() {
           <Card className="p-5 space-y-3">
             <h2 className="font-semibold">Servidores cadastrados</h2>
             <p className="text-xs text-muted-foreground -mt-1">
-              ✅ {data.podium.length} com o conteúdo · ❌ {missing.length} ainda sem.
+              ✅ {data.podium.length} servidor{(data.podium.length !== 1) ? "es possuem" : " possui"} o conteúdo.
             </p>
             {data.availability.length === 0 ? (
               <p className="py-6 text-center text-sm text-muted-foreground">Nenhum servidor cadastrado.</p>
             ) : (
               <div className="divide-y">
                 {[...data.availability]
-                  .sort((a, b) => Number(!!b.found_at) - Number(!!a.found_at))
+                  .filter(s => s.found_at)
+                  .sort((a, b) => (a.name || "").localeCompare(b.name || ""))
                   .map((s) => (
                     <div key={s.server_id} className="py-2.5 flex items-center justify-between gap-3">
                       <span className="truncate text-sm">
-                        {s.found_at ? "🟢" : "🔴"} {s.name}
+                        ✅ {s.name}
                       </span>
                       <span className="text-xs text-muted-foreground text-right shrink-0">
-                        {s.found_at ? "✅ Encontrado" : "❌ Não encontrado"}
+                        <Badge variant="outline" className="text-emerald-500 bg-emerald-500/5 border-emerald-500/20">
+                          Disponível
+                        </Badge>
                         {s.last_sync_at && (
                           <span className="block font-mono">Última sync: {full(s.last_sync_at)}</span>
                         )}
