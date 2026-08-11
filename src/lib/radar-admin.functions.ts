@@ -35,10 +35,12 @@ export const recalculateRadarAvailability = createServerFn({ method: "POST" })
 
       // Atualizar em chunks os registros sem TMDB ID que agora temos match
       const entries = Array.from(map.entries());
-      for (let i = 0; i < entries.length; i += 100) {
-        const chunk = entries.slice(i, i + 100);
+      for (let i = 0; i < entries.length; i += 50) {
+        const chunk = entries.slice(i, i + 50);
         await Promise.all(chunk.map(async ([key, val]) => {
-          const [media_type, normalized_name] = key.split(":");
+          const parts = key.split(":");
+          const media_type = parts[0];
+          const normalized_name = parts.slice(1).join(":");
           await supabaseAdmin
             .from("iptv_global_catalog")
             .update({ 
@@ -54,32 +56,28 @@ export const recalculateRadarAvailability = createServerFn({ method: "POST" })
     }
 
     // 2. Recalcular contadores (BATCH)
-    // Como a tabela pode ser grande, processamos em lotes de IDs do catálogo
-    let from = 0;
-    const batchSize = 1000;
+    // Processamos apenas itens que possuem matches para otimizar
+    const { data: itemsWithMatches } = await supabaseAdmin
+        .from("iptv_catalog_matches")
+        .select("catalog_id");
+    
+    const uniqueCatalogIds = [...new Set((itemsWithMatches ?? []).map(m => m.catalog_id))];
     let totalUpdated = 0;
 
-    for (;;) {
-      const { data: catalogIds } = await supabaseAdmin
-        .from("iptv_global_catalog")
-        .select("id")
-        .range(from, from + batchSize - 1)
-        .order("id");
-
-      if (!catalogIds || catalogIds.length === 0) break;
-
-      await Promise.all(catalogIds.map(async (row: any) => {
-        // Contar matches únicos para este item
+    const CHUNK_SIZE = 50;
+    for (let i = 0; i < uniqueCatalogIds.length; i += CHUNK_SIZE) {
+      const chunk = uniqueCatalogIds.slice(i, i + CHUNK_SIZE);
+      
+      await Promise.all(chunk.map(async (id) => {
         const { count } = await supabaseAdmin
           .from("iptv_catalog_matches")
           .select("*", { count: 'exact', head: true })
-          .eq("catalog_id", row.id);
+          .eq("catalog_id", id);
         
-        // Buscar data mais recente
         const { data: latest } = await supabaseAdmin
           .from("iptv_catalog_matches")
           .select("detected_at")
-          .eq("catalog_id", row.id)
+          .eq("catalog_id", id)
           .order("detected_at", { ascending: false })
           .limit(1)
           .maybeSingle();
@@ -91,15 +89,19 @@ export const recalculateRadarAvailability = createServerFn({ method: "POST" })
               servers_found_count: count,
               last_detected_at: latest?.detected_at || now
             } as never)
-            .eq("id", row.id);
+            .eq("id", id);
         }
       }));
 
-      totalUpdated += catalogIds.length;
-      from += batchSize;
-      console.log(`[radar-admin] Processados ${totalUpdated} registros...`);
-      if (catalogIds.length < batchSize) break;
+      totalUpdated += chunk.length;
+      if (i % 500 === 0) console.log(`[radar-admin] Processados ${totalUpdated} registros...`);
     }
+
+    // Resetar contadores para quem não tem match
+    await supabaseAdmin
+      .from("iptv_global_catalog")
+      .update({ servers_found_count: 0 } as never)
+      .not("id", "in", uniqueCatalogIds);
 
     return { success: true, total: totalUpdated };
   });
