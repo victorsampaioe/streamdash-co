@@ -43,19 +43,35 @@ export const prepareRadarBatchSync = createServerFn({ method: "POST" })
     } as {
       servers_found: number;
       server_ids: string[];
+      total_db_servers: number;
+      with_host: number;
+      with_username: number;
+      with_password: number;
+      login_approved: number;
       total_monitored: number;
       configured_iptv: number;
       waiting_credentials: number;
+      excluded_reasons: {
+        no_username: number;
+        no_password: number;
+        invalid_login: number;
+        paused: number;
+        inactive_account: number;
+      };
     };
   });
 
 export const runRadarBatchSyncNow = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: { serverIds: string[] }) => z.object({ serverIds: z.array(z.string().uuid()) }).parse(d))
+  .inputValidator((d: { serverIds: string[]; testOne?: boolean }) => 
+    z.object({ serverIds: z.array(z.string().uuid()), testOne: z.boolean().optional() }).parse(d)
+  )
   .handler(async ({ data }) => {
     const { runIptvSync } = await import("./iptv.server");
     const results = [];
-    for (const id of data.serverIds) {
+    const ids = data.testOne ? data.serverIds.slice(0, 1) : data.serverIds;
+    
+    for (const id of ids) {
       try {
         await runIptvSync(id, { mode: "full", force: true });
         results.push({ id, ok: true });
