@@ -37,7 +37,7 @@ function Dashboard() {
       const { data, error } = await supabase
         .from("servers")
         .select(
-          "id, name, description, category, current_status, last_latency_ms, last_checked_at, ssl_days_remaining, health_score, dns_health_score, is_public, public_slug, created_at",
+          "id, name, description, category, current_status, last_latency_ms, last_checked_at, ssl_days_remaining, health_score, dns_health_score, is_public, public_slug, created_at, monitoring_paused",
         )
         .order("created_at", { ascending: false });
       if (error) throw error;
@@ -87,18 +87,23 @@ function Dashboard() {
 
   const filtered = useMemo(() => {
     return servers.filter((s) => {
+      // Ocultar servidores pausados/sem serviço da lista principal de monitoramento
+      if (s.monitoring_paused) return false;
       if (filter !== "all" && s.current_status !== filter) return false;
       if (query && !`${s.name} ${s.description ?? ""}`.toLowerCase().includes(query.toLowerCase())) return false;
       return true;
     });
   }, [servers, filter, query]);
 
-  const counts = useMemo(() => ({
-    total: servers.length,
-    up: servers.filter((s) => s.current_status === "up").length,
-    down: servers.filter((s) => s.current_status === "down").length,
-    degraded: servers.filter((s) => s.current_status === "degraded").length,
-  }), [servers]);
+  const counts = useMemo(() => {
+    const active = servers.filter(s => !s.monitoring_paused);
+    return {
+      total: active.length,
+      up: active.filter((s) => s.current_status === "up").length,
+      down: active.filter((s) => s.current_status === "down").length,
+      degraded: active.filter((s) => s.current_status === "degraded").length,
+    };
+  }, [servers]);
 
   const health = useMemo(() => scoreOf(servers), [servers]);
   const iptvHealth = useMemo(() => {
@@ -166,9 +171,9 @@ function Dashboard() {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         <Card className="p-5 lg:col-span-2">
-          <div className="text-xs uppercase tracking-wider text-muted-foreground mb-4">Resumo dos seus servidores</div>
+          <div className="text-xs uppercase tracking-wider text-muted-foreground mb-4">Resumo do monitoramento</div>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-            <Summary emoji="🖥️" label="Servidores" value={counts.total} tone="text-foreground" />
+            <Summary emoji="✅" label="Monitorando" value={counts.up + counts.degraded + counts.down} tone="text-foreground" />
             <Summary emoji="🟢" label="Online" value={counts.up} tone="text-success" />
             <Summary emoji="🟡" label="Atenção" value={counts.degraded} tone="text-warning" />
             <Summary emoji="🔴" label="Offline" value={counts.down} tone="text-destructive" />
