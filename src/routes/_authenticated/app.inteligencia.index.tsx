@@ -212,6 +212,10 @@ function ContentIntelligence() {
                 <div className="text-xs font-bold text-muted-foreground uppercase mt-4 mb-1">Servidores excluídos e motivo:</div>
                 <div className="space-y-1">
                   <div className="flex justify-between text-xs text-destructive/80">
+                    <span>URL inválida (Vazia):</span>
+                    <span>{prepData && (prepData.total_db_servers - prepData.with_host)}</span>
+                  </div>
+                  <div className="flex justify-between text-xs text-destructive/80">
                     <span>Sem usuário:</span>
                     <span>{prepData?.excluded_reasons?.no_username || 0}</span>
                   </div>
