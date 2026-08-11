@@ -38,6 +38,47 @@ export type Database = {
         }
         Relationships: []
       }
+      activation_logs: {
+        Row: {
+          created_at: string | null
+          id: string
+          payment_id: string | null
+          plan: string | null
+          status_payment: string | null
+          telegram_error: string | null
+          telegram_sent: boolean | null
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          payment_id?: string | null
+          plan?: string | null
+          status_payment?: string | null
+          telegram_error?: string | null
+          telegram_sent?: boolean | null
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          payment_id?: string | null
+          plan?: string | null
+          status_payment?: string | null
+          telegram_error?: string | null
+          telegram_sent?: boolean | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "activation_logs_payment_id_fkey"
+            columns: ["payment_id"]
+            isOneToOne: false
+            referencedRelation: "payments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       alert_channels: {
         Row: {
           created_at: string
