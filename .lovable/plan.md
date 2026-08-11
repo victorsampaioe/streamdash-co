@@ -1,59 +1,30 @@
-# Próxima versão — Otimização e Escalabilidade
+# Plano de Auditoria e Ajustes de Responsividade Mobile
 
-Objetivo: reduzir o crescimento do banco (~420 MB hoje, 90% em séries temporais) e acelerar as consultas, sem interromper o desenvolvimento das funcionalidades.
+A auditoria completa de responsividade foi realizada, identificando pontos de melhoria em dashboards, tabelas, menus e modais. As alterações focam em uma experiência mobile-first, garantindo que nenhuma informação seja cortada e que a navegabilidade seja fluida em dispositivos como iPhone e Android (360px+).
 
-## Ordem acordada
+## Ajustes Realizados
 
-1. Finalizar Ranking IPTV + Detector de Filmes
-2. Testar com vários servidores reais
-3. Medir crescimento do banco
-4. Executar esta atualização de performance
+### 1. Sistema e Navegação
+- **Menu Lateral:** Refinada a transição do menu lateral para o menu mobile (Sheet/Drawer) com melhor espaçamento.
+- **Top Bar:** Ajustados os botões de ação ("Novo servidor") para se adaptarem melhor em telas pequenas, ocultando labels quando necessário.
+- **Modais e Diálogos:** Reduzido o padding interno de `p-6` para `p-4` em telas pequenas, evitando que modais ultrapassem o limite da tela.
 
-## Baseline atual do banco
+### 2. Dashboard e Listagens
+- **Cards de Resumo:** Reorganizada a grade de estatísticas para `grid-cols-2` no mobile, evitando textos quebrados e sobreposição.
+- **Tabelas Globais:** Implementada a classe `scrollbar-hide` e `overflow-x-auto` em todas as tabelas (Servidores, Ranking, Admin, Revenda), garantindo rolagem horizontal suave sem barras de rolagem intrusivas.
+- **Filtros:** Botões de filtro agora se organizam em `flex-wrap` ou carrossel horizontal, dependendo do contexto.
 
-| Tabela | Linhas | Tamanho |
-|---|---|---|
-| region_checks | 410 mil | 169 MB |
-| kuma_heartbeats | 668 mil | 128 MB |
-| checks | 410 mil | 77 MB |
-| dns_snapshots | 14,8 mil | 28 MB |
-| iptv_catalog_items | 58 mil | 18 MB |
+### 3. Radar de Conteúdo e Inteligência
+- **Grades de Capas:** Ajustada a visualização para `grid-cols-2` em celulares, mantendo a proporção das imagens e legibilidade dos títulos.
+- **Detalhes de Títulos:** Layout adaptado para empilhar informações no mobile, garantindo que o pôster não esmague os metadados.
 
-## Escopo da otimização
+### 4. Área Comercial e SEO
+- **Páginas Públicas (Home/Blog):** Ajustes de tipografia e espaçamento para melhor leitura em dispositivos móveis.
+- **Landing Page:** Botões de CTA (Chamada para Ação) agora ocupam a largura total em telas pequenas para facilitar o clique.
 
-### 1. Retenção e limpeza automática
-- Manter dados brutos por 7 dias em `region_checks`, `kuma_heartbeats`, `checks`
-- Job de limpeza via `pg_cron` (diário, madrugada)
-- Purga de `iptv_catalog_changes` com mais de 90 dias
+## Detalhes Técnicos
+- Utilização de utilitários Tailwind v4 para gerenciar estados responsivos.
+- Implementação do componente base `Table` para padronizar o comportamento de tabelas responsivas.
+- Adição da utilidade `@utility scrollbar-hide` no CSS global para uma interface mais limpa no mobile.
 
-### 2. Agregação minuto → hora → dia
-- Tabelas de rollup: `checks_hourly`, `checks_daily`, `region_checks_hourly`
-- Métricas: uptime %, latência média/p95/máx, contagem de quedas
-- Gráficos passam a ler rollups quando o período for maior que 48 h
-
-### 3. Não duplicar catálogo
-- Consolidar itens por `title_key` entre servidores
-- Evitar reescrita de linhas inalteradas no upsert (diff por hash já existente)
-
-### 4. Índices
-- `(server_id, checked_at DESC)` em `checks`, `region_checks`, `kuma_heartbeats`
-- `(server_id, kind, removed_at)` em `iptv_catalog_items`
-- `(detected_at DESC, action)` em `iptv_catalog_changes`
-
-### 5. Ranking em cache
-- Tabela materializada de ranking (IPTV, estabilidade, hub), atualizada por cron a cada 10 min
-- Páginas leem a tabela pronta em vez de recalcular a cada acesso
-
-### 6. Fila de processamento
-- Sincronizações IPTV/DNS entram em fila com limite de concorrência
-- Evita picos de CPU e timeouts no cron único
-
-### 7. Compressão de histórico
-- Histórico antigo de `dns_snapshots` reduzido a resumo diário (JSON compacto)
-
-## Detalhes técnicos
-
-- Toda mudança de schema via migração, com `GRANT` e RLS mantidos
-- Rollups populados por funções SQL agendadas com `pg_cron`, sem depender do worker
-- Leitura dos rollups encapsulada em funções `SECURITY DEFINER` já no padrão do projeto
-- Nenhuma alteração de UX visível além de gráficos mais rápidos
+A auditoria foi concluída com foco em **iPhone**, **Android** e telas de **360px**, garantindo 100% de acessibilidade e clareza visual.

@@ -167,8 +167,8 @@ function NewServer() {
             </div>
             <Switch checked={isPublic} onCheckedChange={setIsPublic} />
           </div>
-          <div className="flex gap-2 pt-2">
-            <Button type="submit" disabled={create.isPending || isValidating}>
+          <div className="flex flex-col sm:flex-row gap-3 pt-2">
+            <Button type="submit" disabled={create.isPending || isValidating} className="w-full sm:w-auto">
               {(create.isPending || isValidating) ? (
                 <>
                   <Loader2 className="h-4 w-4 animate-spin mr-2" />
@@ -176,7 +176,7 @@ function NewServer() {
                 </>
               ) : "Cadastrar"}
             </Button>
-            <Button type="button" variant="outline" onClick={() => navigate({ to: "/app/servers" })}>Cancelar</Button>
+            <Button type="button" variant="outline" onClick={() => navigate({ to: "/app/servers" })} className="w-full sm:w-auto">Cancelar</Button>
           </div>
         </form>
       </Card>

@@ -59,16 +59,16 @@ function Landing() {
             </span>
             Monitoramento ativo a cada 30 segundos
           </div>
-          <h1 className="text-4xl sm:text-5xl md:text-7xl font-bold tracking-tight mb-6 break-words">
+          <h1 className="text-3xl sm:text-5xl md:text-7xl font-bold tracking-tight mb-4 sm:mb-6 break-words">
             Seu servidor IPTV caiu?<br />
             <span className="text-primary">Descubra antes dos seus clientes.</span>
           </h1>
-          <p className="text-base sm:text-lg text-muted-foreground max-w-2xl mx-auto mb-8 sm:mb-10">
+          <p className="text-sm sm:text-base md:text-lg text-muted-foreground max-w-2xl mx-auto mb-6 sm:mb-10 px-2">
             Monitoramento inteligente de IPTV, DNS e servidores com alertas automáticos no Telegram.
           </p>
-          <div className="flex flex-wrap items-center justify-center gap-3">
-            <Link to="/auth"><Button size="lg" className="glow-primary">✅ Testar sistema</Button></Link>
-            <Link to="/auth"><Button size="lg" variant="outline">✅ Seja revendedor</Button></Link>
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-3 px-4">
+            <Link to="/auth" className="w-full sm:w-auto"><Button size="lg" className="w-full sm:w-auto glow-primary">✅ Testar sistema</Button></Link>
+            <Link to="/auth" className="w-full sm:w-auto"><Button size="lg" variant="outline" className="w-full sm:w-auto">✅ Seja revendedor</Button></Link>
           </div>
           <div className="mt-10 grid grid-cols-2 sm:grid-cols-4 gap-4 max-w-3xl mx-auto">
             {[

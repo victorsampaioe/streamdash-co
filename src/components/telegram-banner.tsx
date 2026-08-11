@@ -43,15 +43,15 @@ export function TelegramBanner() {
               ? "Seu Telegram parece estar configurado incorretamente"
               : "Você ainda não cadastrou o Telegram"}
           </p>
-          <p className="text-muted-foreground">
+          <p className="text-muted-foreground text-xs sm:text-sm">
             {hasInvalid
-              ? "O código informado não é um chat_id válido ou o canal está desativado — você não receberá alertas nem o resumo diário."
+              ? "O código informado não é um chat_id válido — você não receberá alertas nem o resumo diário."
               : "Cadastre seu Telegram para receber alertas de queda e o resumo inteligente dos seus servidores."}
           </p>
         </div>
       </div>
-      <Button asChild size="sm" className="shrink-0">
-        <Link to="/app/alerts">Cadastrar Telegram</Link>
+      <Button asChild size="sm" className="shrink-0 w-full sm:w-auto">
+        <Link to="/app/alerts" className="w-full sm:w-auto">Cadastrar Telegram</Link>
       </Button>
     </div>
   );

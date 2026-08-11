@@ -184,7 +184,7 @@ function ServerDetail() {
         <Link to="/app/servers" className="hover:text-foreground"><ArrowLeft className="h-4 w-4 inline mr-1" />Servidores</Link>
       </div>
 
-      <div className="flex items-start justify-between flex-wrap gap-3">
+      <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2 sm:gap-3 mb-1 flex-wrap">
             <StatusDot status={server.current_status} />
@@ -193,10 +193,10 @@ function ServerDetail() {
           </div>
           {server.description && <p className="text-sm text-muted-foreground mt-1 break-words">{server.description}</p>}
         </div>
-        <div className="flex gap-2 flex-wrap w-full sm:w-auto">
-          <Button variant="outline" size="sm" onClick={handleRun}><Play className="h-4 w-4 mr-1" />Verificar</Button>
-          <Button variant="outline" size="sm" onClick={exportCsv}><Download className="h-4 w-4 mr-1" />CSV</Button>
-          <Button variant="ghost" size="icon" onClick={() => setConfirmDel(true)}><Trash2 className="h-4 w-4 text-destructive" /></Button>
+        <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
+          <Button variant="outline" size="sm" onClick={handleRun} className="flex-1 sm:flex-initial"><Play className="h-4 w-4 mr-1" />Verificar</Button>
+          <Button variant="outline" size="sm" onClick={exportCsv} className="flex-1 sm:flex-initial"><Download className="h-4 w-4 mr-1" />CSV</Button>
+          <Button variant="ghost" size="icon" onClick={() => setConfirmDel(true)} className="ml-auto sm:ml-0"><Trash2 className="h-4 w-4 text-destructive" /></Button>
         </div>
       </div>
 

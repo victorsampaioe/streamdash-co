@@ -9,7 +9,7 @@ import { Card } from "@/components/ui/card";
  */
 export function WelcomeOnboarding() {
   return (
-    <div className="mx-auto w-full max-w-xl space-y-8 py-12">
+    <div className="mx-auto w-full max-w-xl space-y-8 py-8 px-4 sm:py-12">
       <div className="text-center space-y-2">
         <div className="mx-auto grid h-14 w-14 place-items-center rounded-2xl bg-primary/15 border border-primary/30">
           <Sparkles className="h-6 w-6 text-primary" />

@@ -133,11 +133,12 @@ function AlertsPage() {
 
       <PremiumGate title="Cadastro do Telegram bloqueado">
         <Card className="p-4 sm:p-6 space-y-4">
-          <form onSubmit={(e) => { e.preventDefault(); create.mutate(); }} className="grid md:grid-cols-3 gap-3 items-end">
-            <div className="space-y-2">
-              <Label>Nome (opcional)</Label>
-              <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="Meu Telegram" />
-            </div>
+          <form onSubmit={(e) => { e.preventDefault(); create.mutate(); }} className="flex flex-col gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
+              <div className="space-y-2">
+                <Label>Nome (opcional)</Label>
+                <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="Meu Telegram" />
+              </div>
             <div className="space-y-2 md:col-span-2">
               <Label>Seu código do Telegram (chat_id)</Label>
               <Input
@@ -157,6 +158,7 @@ function AlertsPage() {
                   Vamos enviar uma mensagem de teste antes de salvar — se não chegar, avisamos o que corrigir.
                 </p>
               )}
+            </div>
             </div>
             <div className="md:col-span-3">
               <TelegramGuide />

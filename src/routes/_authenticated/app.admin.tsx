@@ -310,14 +310,16 @@ function AdminPage() {
       </div>
 
       <Tabs defaultValue="overview" className="space-y-6">
-        <TabsList className="grid grid-cols-6 w-full">
-          <TabsTrigger value="overview">Usuários</TabsTrigger>
-          <TabsTrigger value="resellers">Revendedores</TabsTrigger>
-          <TabsTrigger value="radar">Radar Inteligente</TabsTrigger>
-          <TabsTrigger value="store">Loja & Vendas</TabsTrigger>
-          <TabsTrigger value="paused">DNS Pausados</TabsTrigger>
-          <TabsTrigger value="storage">Armazenamento</TabsTrigger>
-        </TabsList>
+        <div className="overflow-x-auto pb-2 scrollbar-hide">
+          <TabsList className="flex w-max min-w-full sm:grid sm:grid-cols-6 sm:w-full">
+            <TabsTrigger value="overview" className="px-4">Usuários</TabsTrigger>
+            <TabsTrigger value="resellers" className="px-4">Revendedores</TabsTrigger>
+            <TabsTrigger value="radar" className="px-4">Radar Inteligente</TabsTrigger>
+            <TabsTrigger value="store" className="px-4">Loja & Vendas</TabsTrigger>
+            <TabsTrigger value="paused" className="px-4">DNS Pausados</TabsTrigger>
+            <TabsTrigger value="storage" className="px-4">Armazenamento</TabsTrigger>
+          </TabsList>
+        </div>
 
 
 
@@ -362,8 +364,8 @@ function AdminPage() {
               <FilterChip active={filter === "expired"} onClick={() => setFilter("expired")} tone="destructive">Expirados</FilterChip>
             </div>
 
-            <div className="overflow-x-auto rounded-md border">
-              <table className="w-full text-sm">
+            <div className="overflow-x-auto rounded-md border scrollbar-hide">
+              <table className="w-full text-sm min-w-[900px]">
                 <thead className="bg-muted/40 text-xs uppercase tracking-wider text-muted-foreground">
                   <tr>
                     <th className="text-left p-3 font-medium">Usuário</th>

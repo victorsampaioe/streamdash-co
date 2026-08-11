@@ -14,13 +14,15 @@ export function SubscriptionBanner() {
   if (data.isExpired) {
     return (
       <div className="border-b border-destructive/40 bg-destructive/10 text-destructive-foreground">
-        <div className="max-w-[1600px] mx-auto px-6 py-3 flex items-center gap-3 flex-wrap">
-          <AlertTriangle className="h-4 w-4 text-destructive" />
-          <p className="text-sm flex-1">
-            Sua assinatura expirou. Os recursos premium estão bloqueados até a renovação.
-          </p>
-          <Link to="/app/subscription">
-            <Button size="sm" variant="destructive">Renovar Assinatura</Button>
+        <div className="max-w-[1600px] mx-auto px-4 sm:px-6 py-3 flex flex-col sm:flex-row sm:items-center gap-3">
+          <div className="flex items-center gap-3 flex-1">
+            <AlertTriangle className="h-4 w-4 text-destructive shrink-0" />
+            <p className="text-sm">
+              Sua assinatura expirou. Os recursos premium estão bloqueados até a renovação.
+            </p>
+          </div>
+          <Link to="/app/subscription" className="w-full sm:w-auto">
+            <Button size="sm" variant="destructive" className="w-full sm:w-auto">Renovar Assinatura</Button>
           </Link>
         </div>
       </div>
@@ -30,13 +32,15 @@ export function SubscriptionBanner() {
   if (data.isExpiringSoon) {
     return (
       <div className="border-b border-warning/40 bg-warning/10">
-        <div className="max-w-[1600px] mx-auto px-6 py-3 flex items-center gap-3 flex-wrap">
-          <Clock className="h-4 w-4 text-warning" />
-          <p className="text-sm flex-1">
-            Sua assinatura vence em <strong>{data.daysRemaining} dia{data.daysRemaining === 1 ? "" : "s"}</strong>. Renove para não perder acesso.
-          </p>
-          <Link to="/app/subscription">
-            <Button size="sm" variant="outline">Ver plano</Button>
+        <div className="max-w-[1600px] mx-auto px-4 sm:px-6 py-3 flex flex-col sm:flex-row sm:items-center gap-3">
+          <div className="flex items-center gap-3 flex-1">
+            <Clock className="h-4 w-4 text-warning shrink-0" />
+            <p className="text-sm">
+              Sua assinatura vence em <strong>{data.daysRemaining} dia{data.daysRemaining === 1 ? "" : "s"}</strong>. Renove para não perder acesso.
+            </p>
+          </div>
+          <Link to="/app/subscription" className="w-full sm:w-auto">
+            <Button size="sm" variant="outline" className="w-full sm:w-auto">Ver plano</Button>
           </Link>
         </div>
       </div>

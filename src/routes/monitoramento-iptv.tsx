@@ -23,7 +23,7 @@ function IptvPage() {
     <div className="min-h-screen bg-background text-foreground py-16 px-4">
       <div className="max-w-4xl mx-auto">
         <Link to="/" className="text-primary hover:underline mb-8 inline-block">← Voltar para o início</Link>
-        <h1 className="text-4xl sm:text-5xl font-bold mb-6">O que é monitoramento IPTV?</h1>
+        <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold mb-6">O que é monitoramento IPTV?</h1>
         <p className="text-xl text-muted-foreground mb-12">
           Monitorar um servidor IPTV vai além de um simples "ping". Envolve verificar se a API está respondendo, se os fluxos de vídeo estão ativos e se a latência permite uma boa experiência para o usuário final.
         </p>
