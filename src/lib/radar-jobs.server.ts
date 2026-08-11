@@ -228,9 +228,10 @@ export async function syncServerVodCatalog(
           detected_at: nowIso,
         }));
       if (matches.length) {
+        // Upsert para garantir que atualizamos a última detecção e mantemos o vínculo catálogo <-> servidor
         await supabaseAdmin
           .from("iptv_catalog_matches")
-          .upsert(matches as never, { onConflict: "catalog_id,server_id", ignoreDuplicates: true });
+          .upsert(matches as never, { onConflict: "catalog_id,server_id" });
       }
     }
   }
