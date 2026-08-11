@@ -71,13 +71,18 @@ export const runRadarBatchSyncNow = createServerFn({ method: "POST" })
     const results = [];
     const ids = data.testOne ? data.serverIds.slice(0, 1) : data.serverIds;
     
+    let contents_found = 0;
+    
     for (const id of ids) {
       try {
-        await runIptvSync(id, { mode: "full", force: true });
-        results.push({ id, ok: true });
+        const stats = await runIptvSync(id, { mode: "full", force: true });
+        // Assume stats returns something like { contents_found: number, changes: boolean }
+        const count = (stats as any)?.contents_found || 0;
+        contents_found += count;
+        results.push({ id, ok: true, contents_found: count, no_changes: !(stats as any)?.changes });
       } catch (e) {
         results.push({ id, ok: false, error: (e as Error).message });
       }
     }
-    return { results };
+    return { results, total_contents_found: contents_found };
   });
