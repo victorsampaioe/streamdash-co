@@ -37,7 +37,7 @@ function Dashboard() {
       const { data, error } = await supabase
         .from("servers")
         .select(
-          "id, name, description, category, current_status, last_latency_ms, last_checked_at, ssl_days_remaining, health_score, dns_health_score, is_public, public_slug, created_at",
+          "id, name, description, category, current_status, last_latency_ms, last_checked_at, ssl_days_remaining, health_score, dns_health_score, is_public, public_slug, created_at, monitoring_paused",
         )
         .order("created_at", { ascending: false });
       if (error) throw error;
