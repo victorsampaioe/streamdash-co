@@ -75,8 +75,6 @@ export async function callCore<T>(task: CoreTask, payload: Record<string, unknow
     clearTimeout(timeout);
   }
 }
-  return (await res.json()) as T;
-}
 
 /**
  * Roda a tarefa no Core AWS; se o Core estiver indisponível, executa local
