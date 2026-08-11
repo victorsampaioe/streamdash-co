@@ -16,21 +16,28 @@ function isAuthorized(request: Request): boolean {
 async function run() {
   const errors: string[] = [];
 
-  const { useCore, coreApiUrl } = await import("@/lib/core-api.server");
+  const { useCore, coreJsonPost } = await import("@/lib/core-api.server");
   if (useCore()) {
     try {
-      const res = await fetch(`${coreApiUrl()}/api/public/cron/radar`, {
-        method: "POST",
-        headers: { "x-cron-secret": process.env.CRON_SECRET ?? "" },
-      });
-      if (res.ok) return { forwardedToCore: true, ...(await res.json()) };
-      errors.push(`core: HTTP ${res.status}`);
+      const out = await coreJsonPost<Record<string, unknown>>("/api/public/cron/radar", 25_000);
+      return { forwardedToCore: true, ...out };
     } catch (e: any) {
+      // Core indisponível ou com build antigo → processa localmente (não pode parar o Radar).
       errors.push(`core: ${e?.message ?? "fetch failed"}`);
     }
   }
 
-  const { runRadarJobStep, enrichTmdbPending, ensureAutoRadarJob } = await import("@/lib/radar-jobs.server");
+  const { runRadarJobStep, enrichTmdbPending, ensureAutoRadarJob, reclaimStuckRadarWork } = await import(
+    "@/lib/radar-jobs.server"
+  );
+
+  let recovered: unknown = null;
+  try {
+    recovered = await reclaimStuckRadarWork();
+  } catch (e: any) {
+    errors.push(`recover: ${e?.message}`);
+  }
+
 
   let auto: unknown = null;
   try {
