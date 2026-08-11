@@ -5,7 +5,8 @@ import { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { getTmdbFeed } from "@/lib/tmdb.functions";
 import { getRadarJobStatus, startRadarSyncJob } from "@/lib/radar-jobs.functions";
-import { Loader2 } from "lucide-react";
+import { recalculateRadarAvailability } from "@/lib/radar-admin.functions";
+import { Loader2, RefreshCw } from "lucide-react";
 
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -48,6 +49,7 @@ function ContentIntelligence() {
   const qc = useQueryClient();
   const jobStatus = useServerFn(getRadarJobStatus);
   const startJob = useServerFn(startRadarSyncJob);
+  const recalcAction = useServerFn(recalculateRadarAvailability);
 
   const statusQuery = useQuery({
     queryKey: ["radar-job-status"],
@@ -78,6 +80,15 @@ function ContentIntelligence() {
       qc.invalidateQueries({ queryKey: ["radar-job-status"] });
     },
     onError: (e: Error) => toast.error("Erro ao iniciar sincronização: " + e.message),
+  });
+
+  const recalcMutation = useMutation({
+    mutationFn: () => recalcAction(),
+    onSuccess: (res: any) => {
+      toast.success(`Recálculo concluído! ${res.total} registros atualizados.`);
+      qc.invalidateQueries({ queryKey: ["tmdb-feed"] });
+    },
+    onError: (e: Error) => toast.error("Erro no recálculo: " + e.message),
   });
 
 
@@ -148,6 +159,22 @@ function ContentIntelligence() {
             )}
             {running ? "Sincronizando em segundo plano..." : "🔄 Sincronizar conteúdos agora"}
           </Button>
+
+          <Button
+            size="sm"
+            variant="ghost"
+            className="text-muted-foreground hover:text-primary"
+            onClick={() => recalcMutation.mutate()}
+            disabled={recalcMutation.isPending}
+          >
+            {recalcMutation.isPending ? (
+              <Loader2 className="h-4 w-4 animate-spin mr-2" />
+            ) : (
+              <RefreshCw className="h-4 w-4 mr-2" />
+            )}
+            Recalcular disponibilidade
+          </Button>
+
           {job && (
             <div className="text-xs text-muted-foreground">
               Servidores {job.processed ?? 0}/{job.total_servers ?? 0} · 🎬 {(job.movies_found ?? 0).toLocaleString("pt-BR")} ·
