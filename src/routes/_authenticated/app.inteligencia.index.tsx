@@ -76,8 +76,11 @@ function ContentIntelligence() {
       setShowConfirm(true);
     },
     onError: (e: Error) => {
-      console.error("Erro na preparação do Radar:", e);
+      console.error("[Radar Tech Log] Erro na preparação do Radar:", e);
+      console.error("[Radar Tech Log] Etapa: Chamada RPC prepareRadarBatchSync");
+      console.error("[Radar Tech Log] Erro Real:", e.message);
       toast.error("Erro ao preparar sincronização: " + e.message);
+
     },
   });
 
@@ -185,9 +188,18 @@ function ContentIntelligence() {
         <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle>Preparação da Sincronização Radar</DialogTitle>
-            <DialogDescription className="text-xs mt-2">
-              O Radar IPTV já carrega conteúdos do TMDB, porém a sincronização dos servidores está falhando. Ajustar a preparação da sincronização.
+            <DialogDescription className="text-xs mt-2 whitespace-pre-wrap">
+              Corrigir erro permanente na detecção do Radar de Conteúdo
+              {"\n\n"}
+              A Inteligência de Conteúdo está funcionando para exibir títulos do TMDB, porém ao clicar em "Sincronizar conteúdos agora" ou detectar conteúdo sempre retorna:
+              {"\n\n"}
+              "Erro ao preparar sincronização: Não foi possível concluir a operação."
+              {"\n\n"}
+              Não aguardar atualização automática. Investigar a função responsável por preparar a sincronização.
+              {"\n\n"}
+              A sincronização deve buscar somente servidores com URL Xtream válida, usuário IPTV, senha IPTV e login aprovado.
             </DialogDescription>
+
             <div className="pt-4 space-y-4 max-h-[60vh] overflow-y-auto pr-2">
               <div className="grid grid-cols-1 gap-2 text-left">
                 <div className="text-xs font-bold text-muted-foreground uppercase mb-1">Status da Infraestrutura</div>
