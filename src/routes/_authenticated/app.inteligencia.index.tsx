@@ -426,7 +426,7 @@ function ContentIntelligence() {
             <Link
               key={`${it.media_type}-${it.tmdb_id}`}
               to="/app/inteligencia/$media/$id"
-              params={{ media: it.media_type, id: String(it.tmdb_id) }}
+              params={{ media: it.media_type as any, id: String(it.tmdb_id) }}
               className="group"
             >
               <Card className="overflow-hidden h-full flex flex-col hover:border-primary/60 transition-colors">
