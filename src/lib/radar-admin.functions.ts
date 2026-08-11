@@ -55,62 +55,13 @@ export const recalculateRadarAvailability = createServerFn({ method: "POST" })
       }
     }
 
-    // 2. Recalcular contadores (BATCH)
-    const { data: itemsWithMatches } = await supabaseAdmin
-        .from("iptv_catalog_matches")
-        .select("catalog_id");
-    
-    const uniqueIds = (itemsWithMatches ?? []).map(m => m.catalog_id).filter((id): id is string => !!id);
-    const uniqueCatalogIds = [...new Set(uniqueIds)];
-    let totalUpdated = 0;
+    // 2. Recalcular contadores por SERVIDOR LÓGICO (aliases do mesmo cluster contam como 1)
+    const { data: updated, error: recalcErr } = await (context.supabase as any).rpc(
+      "recalc_iptv_availability",
+    );
+    if (recalcErr) throw new Error(recalcErr.message);
 
-    const CHUNK_SIZE = 50;
-    for (let i = 0; i < uniqueCatalogIds.length; i += CHUNK_SIZE) {
-      const chunk = uniqueCatalogIds.slice(i, i + CHUNK_SIZE);
-      
-      await Promise.all(chunk.map(async (id) => {
-        const { count } = await supabaseAdmin
-          .from("iptv_catalog_matches")
-          .select("*", { count: 'exact', head: true })
-          .eq("catalog_id", id);
-        
-        const { data: latest } = await supabaseAdmin
-          .from("iptv_catalog_matches")
-          .select("detected_at")
-          .eq("catalog_id", id)
-          .order("detected_at", { ascending: false })
-          .limit(1)
-          .maybeSingle();
-
-        if (count !== null) {
-          await supabaseAdmin
-            .from("iptv_global_catalog")
-            .update({ 
-              servers_found_count: count,
-              last_detected_at: latest?.detected_at || now
-            } as never)
-            .eq("id", id);
-        }
-      }));
-
-      totalUpdated += chunk.length;
-      if (i % 500 === 0) console.log(`[radar-admin] Processados ${totalUpdated} registros...`);
-    }
-
-    // Resetar contadores para quem não tem match
-    if (uniqueCatalogIds.length > 0) {
-      await supabaseAdmin
-        .from("iptv_global_catalog")
-        .update({ servers_found_count: 0 } as never)
-        .not("id", "in", uniqueCatalogIds);
-    } else {
-      await supabaseAdmin
-        .from("iptv_global_catalog")
-        .update({ servers_found_count: 0 } as never);
-    }
-
-
-    return { success: true, total: totalUpdated };
+    return { success: true, total: (updated as number) ?? 0 };
   });
 
 /**
@@ -151,12 +102,32 @@ export const searchRadarTitleManual = createServerFn({ method: "POST" })
       last_seen_at: string;
     }[];
 
-    // 2. Nomes reais dos servidores
+    // 2. Nomes reais dos servidores + servidor lógico (cluster)
     const serverIds = [...new Set(rows.map((r) => r.server_id))];
     const nameById = new Map<string, string>();
+    const clusterByServer = new Map<string, { id: string; name: string }>();
     if (serverIds.length) {
       const { data: srvs } = await supabaseAdmin.from("servers").select("id, name").in("id", serverIds);
       for (const s of (srvs ?? []) as { id: string; name: string }[]) nameById.set(s.id, s.name);
+
+      const { data: mem } = await supabaseAdmin
+        .from("iptv_cluster_members")
+        .select("server_id, cluster_id")
+        .in("server_id", serverIds);
+      const clusterIds = [...new Set(((mem ?? []) as any[]).map((m) => m.cluster_id as string))];
+      if (clusterIds.length) {
+        const { data: cls } = await supabaseAdmin
+          .from("iptv_server_clusters")
+          .select("id, name")
+          .in("id", clusterIds);
+        const clName = new Map(((cls ?? []) as any[]).map((c) => [c.id as string, c.name as string]));
+        for (const m of (mem ?? []) as any[]) {
+          clusterByServer.set(m.server_id as string, {
+            id: m.cluster_id as string,
+            name: clName.get(m.cluster_id as string) ?? "Servidor",
+          });
+        }
+      }
     }
 
     // 3. Revalidar/registrar o vínculo no catálogo global
@@ -203,9 +174,14 @@ export const searchRadarTitleManual = createServerFn({ method: "POST" })
         await supabaseAdmin
           .from("iptv_catalog_matches")
           .upsert(matches as never, { onConflict: "catalog_id,server_id" });
+
+        // Conta servidores lógicos (aliases do mesmo cluster contam como 1)
+        const logical = new Set(
+          matches.map((m) => clusterByServer.get(m.server_id)?.id ?? m.server_id),
+        );
         await supabaseAdmin
           .from("iptv_global_catalog")
-          .update({ servers_found_count: matches.length, last_detected_at: now } as never)
+          .update({ servers_found_count: logical.size, last_detected_at: now } as never)
           .eq("id", (globalItem as any).id);
       }
     }
@@ -222,7 +198,13 @@ export const searchRadarTitleManual = createServerFn({ method: "POST" })
       suggestions = [...new Set(((like ?? []) as { name: string }[]).map((r) => r.name))].slice(0, 10);
     }
 
-    const servers = [...new Set(rows.map((r) => nameById.get(r.server_id) ?? "Servidor"))];
+    // Lista por servidor lógico (aliases agrupados contam como um só)
+    const logicalNames = new Map<string, string>();
+    for (const r of rows) {
+      const cl = clusterByServer.get(r.server_id);
+      logicalNames.set(cl?.id ?? r.server_id, cl?.name ?? nameById.get(r.server_id) ?? "Servidor");
+    }
+    const servers = [...logicalNames.values()];
 
     return {
       title,

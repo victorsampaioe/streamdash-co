@@ -227,6 +227,26 @@ export async function syncServerVodCatalog(
   });
 
   // ---- Radar Global (independe do TMDB) ----
+  // Servidor lógico: se este DNS é um alias de outro servidor do mesmo cluster,
+  // evitamos criar vínculos redundantes quando o servidor principal já cobre o título.
+  let clusterPrimaryId: string | null = null;
+  {
+    const { data: member } = await supabaseAdmin
+      .from("iptv_cluster_members")
+      .select("cluster_id")
+      .eq("server_id", serverId)
+      .maybeSingle();
+    if (member) {
+      const { data: cl } = await supabaseAdmin
+        .from("iptv_server_clusters")
+        .select("primary_server_id")
+        .eq("id", (member as any).cluster_id)
+        .maybeSingle();
+      const primary = (cl as any)?.primary_server_id as string | undefined;
+      if (primary && primary !== serverId) clusterPrimaryId = primary;
+    }
+  }
+
   let newTitles = 0;
   for (const kind of ["vod", "series"] as const) {
     const mediaType = kind === "series" ? "tv" : "movie";
@@ -288,7 +308,7 @@ export async function syncServerVodCatalog(
           .in("id", ids);
       }
 
-      const matches = part
+      let matches = part
         .filter((k) => existingMap.has(k) && byKey.has(k))
         .map((k) => ({
           catalog_id: existingMap.get(k)!,
@@ -297,6 +317,21 @@ export async function syncServerVodCatalog(
           raw_name: byKey.get(k)!.name,
           detected_at: nowIso,
         }));
+
+      // Alias de cluster: só grava vínculo se o servidor principal ainda não cobrir o título.
+      if (clusterPrimaryId && matches.length) {
+        const ids = matches.map((m) => m.catalog_id);
+        const covered = new Set<string>();
+        for (let j = 0; j < ids.length; j += 200) {
+          const { data: prim } = await supabaseAdmin
+            .from("iptv_catalog_matches")
+            .select("catalog_id")
+            .eq("server_id", clusterPrimaryId)
+            .in("catalog_id", ids.slice(j, j + 200));
+          for (const r of (prim ?? []) as any[]) covered.add(r.catalog_id as string);
+        }
+        matches = matches.filter((m) => !covered.has(m.catalog_id));
+      }
 
       if (matches.length) {
         // Upsert para garantir que atualizamos a última detecção e mantemos o vínculo catálogo <-> servidor
@@ -622,4 +657,24 @@ export async function getRadarJobProgress() {
       tmdb_pending: tmdbPending ?? 0,
     },
   };
+}
+
+/**
+ * Reagrupa servidores lógicos (deduplicação do Radar) no máximo 1x por dia.
+ * Usa sinais técnicos reais — nomes parecidos nunca agrupam sozinhos.
+ */
+export async function ensureLogicalClusters(maxAgeHours = 24) {
+  const { data: last } = await supabaseAdmin
+    .from("iptv_server_clusters")
+    .select("updated_at")
+    .order("updated_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  const age = last?.updated_at ? Date.now() - new Date(last.updated_at as string).getTime() : Infinity;
+  if (age < maxAgeHours * 3600_000) return { skipped: true };
+
+  const { data, error } = await (supabaseAdmin as any).rpc("rebuild_iptv_clusters_service", {});
+  if (error) throw new Error(error.message);
+  return data as Record<string, unknown>;
 }

@@ -16,20 +16,28 @@ function isAuthorized(request: Request): boolean {
 async function run() {
   const errors: string[] = [];
 
+  // Deduplicação de servidores lógicos: roda no painel (1x/dia), independente do Core.
+  let clusters: unknown = null;
+  try {
+    const { ensureLogicalClusters } = await import("@/lib/radar-jobs.server");
+    clusters = await ensureLogicalClusters();
+  } catch (e: any) {
+    errors.push(`clusters: ${e?.message}`);
+  }
+
   const { useCore, coreJsonPost } = await import("@/lib/core-api.server");
   if (useCore()) {
     try {
       const out = await coreJsonPost<Record<string, unknown>>("/api/public/cron/radar", 25_000);
-      return { forwardedToCore: true, ...out };
+      return { forwardedToCore: true, clusters, ...out };
     } catch (e: any) {
       // Core indisponível ou com build antigo → processa localmente (não pode parar o Radar).
       errors.push(`core: ${e?.message ?? "fetch failed"}`);
     }
   }
 
-  const { runRadarJobStep, enrichTmdbPending, ensureAutoRadarJob, reclaimStuckRadarWork } = await import(
-    "@/lib/radar-jobs.server"
-  );
+  const { runRadarJobStep, enrichTmdbPending, ensureAutoRadarJob, reclaimStuckRadarWork } =
+    await import("@/lib/radar-jobs.server");
 
   let recovered: unknown = null;
   try {
@@ -37,6 +45,8 @@ async function run() {
   } catch (e: any) {
     errors.push(`recover: ${e?.message}`);
   }
+
+
 
 
   let auto: unknown = null;
@@ -60,7 +70,7 @@ async function run() {
     errors.push(`tmdb: ${e?.message}`);
   }
 
-  return { ok: errors.length === 0, recovered, auto, step, tmdb, ...(errors.length ? { errors } : {}) };
+  return { ok: errors.length === 0, recovered, clusters, auto, step, tmdb, ...(errors.length ? { errors } : {}) };
 }
 
 export const Route = createFileRoute("/api/public/cron/radar")({

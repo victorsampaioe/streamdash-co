@@ -20,11 +20,11 @@ export async function processTelegramAlert(data: AlertData) {
   const { serverId, incidentId, event, reason, confirmNote, regions } = data;
 
   // 1. Buscar dados do servidor e dono (Fonte única de verdade)
-  const { data: server, error: sErr } = await supabaseAdmin
+  const { data: server, error: sErr } = (await (supabaseAdmin as any)
     .from("servers")
     .select("*, profiles(*)")
     .eq("id", serverId)
-    .maybeSingle();
+    .maybeSingle()) as { data: any; error: any };
 
   if (sErr || !server) {
     console.error(`[TelegramAlert] Servidor ${serverId} não encontrado.`);
