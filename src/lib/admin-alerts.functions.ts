@@ -8,9 +8,9 @@ export const triggerTestAlert = createServerFn({ method: "POST" })
     userId: z.string(),
     event: z.enum(["OFFLINE", "ONLINE"])
   }).parse(data))
-  .handler(async ({ data, context }) => {
-    // Verificar se o chamador é admin
-    const { supabase } = context;
+  .handler(async ({ data }) => {
+    const { createSupabaseServerClient } = await import("@/integrations/supabase/client.server");
+    const supabase = createSupabaseServerClient();
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) throw new Error("Unauthorized");
     
