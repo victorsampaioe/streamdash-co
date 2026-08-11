@@ -9,7 +9,13 @@ import { fetchDetail } from "./tmdb.server";
 export const repairTmdbPosters = createServerFn({ method: "POST" })
   .middleware([requireActiveSubscription])
   .handler(async () => {
-    // Busca itens sem poster ou com tmdb_id nulo no catálogo global
+    // 1. Limpeza proativa de registros inválidos (Rádios, Live, sem Capa)
+    await supabaseAdmin
+      .from("iptv_global_catalog")
+      .delete()
+      .or("media_type.eq.live,normalized_name.ilike.%radio%,tmdb_id.is.null,poster_path.is.null,poster_path.eq.''");
+
+    // 2. Busca itens sem poster ou com tmdb_id nulo no catálogo global que sobraram
     const { data: items } = await supabaseAdmin
       .from("iptv_global_catalog")
       .select("id, tmdb_id, media_type, normalized_name")
