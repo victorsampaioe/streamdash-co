@@ -180,7 +180,10 @@ export async function syncServerVodCatalog(
     }
   }
 
-  const upserts: Record<string, unknown>[] = [];
+  // Novos e atualizados vão em lotes separados: no PostgREST todas as linhas de um
+  // upsert precisam ter exatamente as mesmas colunas, senão "first_seen_at" entra NULL.
+  const newRows: Record<string, unknown>[] = [];
+  const updRows: Record<string, unknown>[] = [];
   const currentKeys = new Set<string>();
 
   for (const kind of ["vod", "series"] as const) {
@@ -188,28 +191,30 @@ export async function syncServerVodCatalog(
       const key = `${kind}:${it.id}`;
       currentKeys.add(key);
       const prev = known.get(key);
-      if (!prev || prev.name !== it.name || prev.category !== it.category) {
-        upserts.push({
-          server_id: serverId,
-          kind,
-          external_id: it.id,
-          name: it.name,
-          title_key: titleKey(it.name),
-          category: it.category,
-          last_seen_at: nowIso,
-          removed_at: null,
-          ...(prev ? {} : { first_seen_at: nowIso }),
-        });
-      }
+      const base = {
+        server_id: serverId,
+        kind,
+        external_id: it.id,
+        name: it.name,
+        title_key: titleKey(it.name),
+        category: it.category,
+        last_seen_at: nowIso,
+        removed_at: null,
+      };
+      if (!prev) newRows.push({ ...base, first_seen_at: nowIso });
+      else if (prev.name !== it.name || prev.category !== it.category) updRows.push(base);
     }
   }
 
-  await chunked(upserts, async (part) => {
-    const { error } = await supabaseAdmin
-      .from("iptv_catalog_items")
-      .upsert(part as never, { onConflict: "server_id,kind,external_id" });
-    if (error) throw new Error(`catalog_items: ${error.message}`);
-  });
+  for (const rows of [newRows, updRows]) {
+    await chunked(rows, async (part) => {
+      const { error } = await supabaseAdmin
+        .from("iptv_catalog_items")
+        .upsert(part as never, { onConflict: "server_id,kind,external_id" });
+      if (error) throw new Error(`catalog_items: ${error.message}`);
+    });
+  }
+
 
   // Ausentes: marcados como removidos (não apagamos o catálogo inteiro).
   const missing = [...known.keys()].filter((k) => !currentKeys.has(k));
