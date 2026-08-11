@@ -1401,6 +1401,45 @@ export type Database = {
           },
         ]
       }
+      iptv_cluster_members: {
+        Row: {
+          cluster_id: string
+          confidence: number
+          matched_at: string
+          server_id: string
+          signals: Json
+        }
+        Insert: {
+          cluster_id: string
+          confidence?: number
+          matched_at?: string
+          server_id: string
+          signals?: Json
+        }
+        Update: {
+          cluster_id?: string
+          confidence?: number
+          matched_at?: string
+          server_id?: string
+          signals?: Json
+        }
+        Relationships: [
+          {
+            foreignKeyName: "iptv_cluster_members_cluster_id_fkey"
+            columns: ["cluster_id"]
+            isOneToOne: false
+            referencedRelation: "iptv_server_clusters"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "iptv_cluster_members_server_id_fkey"
+            columns: ["server_id"]
+            isOneToOne: true
+            referencedRelation: "servers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       iptv_global_catalog: {
         Row: {
           first_detected_at: string | null
@@ -1595,6 +1634,44 @@ export type Database = {
           {
             foreignKeyName: "iptv_notification_queue_server_id_fkey"
             columns: ["server_id"]
+            isOneToOne: false
+            referencedRelation: "servers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      iptv_server_clusters: {
+        Row: {
+          created_at: string
+          id: string
+          members_count: number
+          name: string
+          primary_server_id: string | null
+          signals: Json
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          members_count?: number
+          name: string
+          primary_server_id?: string | null
+          signals?: Json
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          members_count?: number
+          name?: string
+          primary_server_id?: string | null
+          signals?: Json
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "iptv_server_clusters_primary_server_id_fkey"
+            columns: ["primary_server_id"]
             isOneToOne: false
             referencedRelation: "servers"
             referencedColumns: ["id"]
@@ -4045,6 +4122,7 @@ export type Database = {
       }
       hub_recompute_rating: { Args: { _user: string }; Returns: undefined }
       hub_start_conversation: { Args: { _listing_id: string }; Returns: string }
+      iptv_cluster_diagnostics: { Args: never; Returns: Json }
       iptv_find_title: {
         Args: { _kind?: string; _limit?: number; _query: string }
         Returns: {
@@ -4147,11 +4225,13 @@ export type Database = {
         }
         Returns: boolean
       }
+      prune_redundant_catalog_matches: { Args: never; Returns: number }
       purge_content_checks: { Args: { _days?: number }; Returns: number }
       purge_old_metrics: { Args: { _dry_run?: boolean }; Returns: Json }
       radar_title_availability: {
         Args: { _media: string; _title_keys: string[] }
         Returns: {
+          aliases: number
           found_at: string
           is_mine: boolean
           last_sync_at: string
@@ -4165,6 +4245,15 @@ export type Database = {
         Args: { _media: string; _title_keys: string[] }
         Returns: number
       }
+      rebuild_iptv_clusters: {
+        Args: {
+          _min_items?: number
+          _min_overlap?: number
+          _weak_overlap?: number
+        }
+        Returns: Json
+      }
+      recalc_iptv_availability: { Args: never; Returns: number }
       region_consensus: {
         Args: { _server_id: string; _window_minutes?: number }
         Returns: Json
