@@ -20,10 +20,18 @@ async function chunked(rows, fn) {
 /* Servidores elegíveis                                                */
 /* ------------------------------------------------------------------ */
 export async function eligibleRadarServerIds() {
-    const { data, error } = await supabaseAdmin.rpc("run_radar_batch_sync");
-    if (error)
-        throw new Error(error.message);
-    return (data?.server_ids ?? []);
+    try {
+        const { data, error } = await supabaseAdmin.rpc("run_radar_batch_sync");
+        if (error) {
+            console.error("[radar-job] Erro RPC run_radar_batch_sync:", error);
+            throw error;
+        }
+        return (data?.server_ids ?? []);
+    }
+    catch (error) {
+        console.error("[radar-job] Exceção em eligibleRadarServerIds:", error);
+        throw error;
+    }
 }
 /* ------------------------------------------------------------------ */
 /* Criação de job                                                      */
@@ -456,12 +464,15 @@ export async function ensureAutoRadarJob() {
 /* Progresso                                                           */
 /* ------------------------------------------------------------------ */
 export async function getRadarJobProgress() {
-    const { data: job } = await supabaseAdmin
+    const { data: job, error } = await supabaseAdmin
         .from("iptv_sync_jobs")
         .select("*")
         .order("created_at", { ascending: false })
         .limit(1)
         .maybeSingle();
+    if (error) {
+        console.error("[radar-job] Erro ao buscar progresso do job:", error);
+    }
     const [{ count: tmdbFound }, { count: tmdbPending }] = await Promise.all([
         supabaseAdmin.from("iptv_global_catalog").select("id", { count: "exact", head: true }).eq("tmdb_status", "found"),
         supabaseAdmin.from("iptv_global_catalog").select("id", { count: "exact", head: true }).eq("tmdb_status", "pending"),
