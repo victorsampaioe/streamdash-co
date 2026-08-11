@@ -8,11 +8,23 @@ export const getIptvRadarStats = createServerFn({ method: "GET" })
     const { data, error } = await context.supabase.rpc("get_iptv_radar_stats");
     if (error) throw new Error(error.message);
     return data as {
+      total_db_servers: number;
+      with_host: number;
+      with_username: number;
+      with_password: number;
+      login_approved: number;
       total_monitored: number;
       configured_iptv: number;
       waiting_credentials: number;
       total_contents: number;
       first_detections: number;
+      excluded_reasons: {
+        no_username: number;
+        no_password: number;
+        invalid_login: number;
+        paused: number;
+        inactive_account: number;
+      };
     };
   });
 
