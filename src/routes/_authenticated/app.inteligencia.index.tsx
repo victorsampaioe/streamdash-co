@@ -238,7 +238,7 @@ function ContentIntelligence() {
                 syncProgress.processed === syncProgress.total ? (
                   "O Radar IPTV está encontrando os conteúdos corretamente, porém existem dois problemas:\n\nAs capas/posters não carregam:\ncards aparecem sem imagem;\nverificar se o poster_url está sendo salvo corretamente;\nvalidar integração TMDB.\nAo clicar nos conteúdos não abre o detalhe:\na URL está gerando /movie/null;\no ID do conteúdo está chegando vazio.\n\nCorrigir o fluxo:\n\nTMDB → salvar:\n\ntmdb_id\ntítulo\ntipo (filme/série)\nposter_path\nbackdrop_path\nnota\ndescrição\n\nDepois usar esse ID para:\n\nabrir página de detalhes;\ncarregar capa;\nmostrar servidores disponíveis.\n\nAdicionar fallback:\nCaso TMDB não tenha imagem, mostrar uma imagem padrão e nunca deixar card quebrado.\n\nValidar todos os conteúdos já sincronizados para preencher os campos faltantes."
                 ) : (
-                  "Implementar arquitetura com fila de jobs.\n\nFluxo:\n\nAo clicar em \"Sincronizar Conteúdos Agora\":\ncriar um job de sincronização;\nretornar imediatamente ao usuário;\nnão aguardar processamento no navegador."
+                  "Implementar arquitetura com fila de jobs.\n\nFluxo:\n\n• Ao clicar em \"Sincronizar Conteúdos Agora\": criar um job de sincronização;\n• Retornar imediatamente ao usuário;\n• Não aguardar processamento no navegador."
                 )
               ) : (
                 "O Radar IPTV precisa ser preparado para crescimento. Atualmente a sincronização depende de uma execução única, o que pode causar travamentos quando aumentar a quantidade de servidores.\n\n" +
