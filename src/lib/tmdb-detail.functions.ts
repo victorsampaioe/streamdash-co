@@ -40,7 +40,7 @@ export const getTmdbDetail = createServerFn({ method: "POST" })
       for (const m of matches ?? []) {
         const nameLower = (m.raw_name || "").toLowerCase();
         const quality = nameLower.includes("4k") ? "4K" : (nameLower.includes("fhd") || nameLower.includes("1080") ? "FHD" : "HD");
-        itemMeta.set(m.server_id, { first_seen_at: m.detected_at || new Date().toISOString(), quality });
+        itemMeta.set(m.server_id, { first_seen_at: String(m.detected_at ?? new Date().toISOString()), quality });
       }
     }
 
