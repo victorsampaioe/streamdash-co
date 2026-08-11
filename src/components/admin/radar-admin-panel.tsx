@@ -31,9 +31,10 @@ export function RadarAdminPanel() {
   const { data: progress } = useQuery({
     queryKey: ["admin-radar-job"],
     queryFn: () => getJob(),
-    refetchInterval: (data) => {
+    refetchInterval: (query) => {
+      const data = query.state.data as any;
       const isRunning = data?.job?.status === "queued" || data?.job?.status === "running";
-      return isRunning ? 3_000 : 10_000;
+      return isRunning ? 3000 : 10000;
     },
   });
 
@@ -95,8 +96,16 @@ export function RadarAdminPanel() {
           <div className="mt-6 rounded-lg border bg-muted/20 p-4 space-y-3">
             <div className="flex items-center justify-between text-sm">
               <span className="font-semibold">
-                Radar IPTV — {job.status === "running" ? "Executando" : job.status === "queued" ? "Na fila" : "Concluído"}
-                {job.kind === "auto" ? " (automático)" : ""}
+                {job.status === "completed" ? (
+                  <span className="text-emerald-500 flex items-center gap-1">
+                    <CheckCircle2 className="h-3 w-3" /> Sincronização concluída
+                  </span>
+                ) : (
+                  <>
+                    Radar IPTV — {job.status === "running" ? "Executando" : "Na fila"}
+                    {job.kind === "auto" ? " (automático)" : ""}
+                  </>
+                )}
               </span>
               <span className="text-muted-foreground">
                 Servidores: {job.processed ?? 0}/{job.total_servers ?? 0}
