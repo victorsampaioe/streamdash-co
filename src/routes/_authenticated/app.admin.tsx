@@ -330,6 +330,7 @@ function AdminPage() {
         </TabsContent>
 
         <TabsContent value="overview" className="space-y-6">
+          <SyncPaymentsCard />
           <TelegramBroadcastCard />
           
           <Card className="p-4 space-y-4">
