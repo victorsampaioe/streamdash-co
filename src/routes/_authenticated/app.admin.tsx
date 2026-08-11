@@ -504,6 +504,9 @@ function AdminPage() {
         <TabsContent value="store" className="space-y-6">
           <StoreManagementSection />
         </TabsContent>
+        <TabsContent value="alerts" className="space-y-6">
+          <AdminAlertsPanel />
+        </TabsContent>
       </Tabs>
 
     </div>
@@ -1470,7 +1473,139 @@ function DeleteProductButton({ productId, onDone }: { productId: string; onDone:
   );
 }
 
+function AdminAlertsPanel() {
+  const { data: logs, refetch } = useQuery({
+    queryKey: ["admin-alert-logs"],
+    queryFn: async () => {
+      const { getAlertLogs } = await import("@/lib/admin-alerts.functions");
+      return await getAlertLogs({ limit: 20 });
+    },
+    refetchInterval: 10000
+  });
+
+  const triggerFn = useServerFn(async (args: any) => {
+    const { triggerTestAlert } = await import("@/lib/admin-alerts.functions");
+    return await triggerTestAlert(args);
+  });
+
+  const testAlert = useMutation({
+    mutationFn: triggerFn,
+    onSuccess: () => toast.success("Alerta de teste enviado!"),
+    onError: (e: any) => toast.error(e.message)
+  });
+
+  const { data: users } = useQuery({
+    queryKey: ["admin-users-simple"],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("profiles").select("id, email, full_name").limit(50);
+      if (error) throw error;
+      return data;
+    }
+  });
+
+  const [targetUserId, setTargetUserId] = useState("");
+
+  return (
+    <div className="space-y-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <Card className="p-6 col-span-1 space-y-4">
+          <div className="flex items-center gap-2 mb-2">
+            <Send className="h-5 w-5 text-primary" />
+            <h2 className="text-xl font-bold">Teste de Alertas</h2>
+          </div>
+          <p className="text-sm text-muted-foreground">
+            Simule incidentes reais para validar o fluxo de notificações e o novo motor de alertas.
+          </p>
+
+          <div className="space-y-4 pt-4 border-t">
+            <div className="space-y-2">
+              <Label>Selecionar Usuário para Teste</Label>
+              <select 
+                className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                value={targetUserId}
+                onChange={(e) => setTargetUserId(e.target.value)}
+              >
+                <option value="">Selecione um usuário...</option>
+                {users?.map(u => (
+                  <option key={u.id} value={u.id}>{u.email} ({u.full_name})</option>
+                ))}
+              </select>
+            </div>
+
+            <div className="grid grid-cols-2 gap-2">
+              <Button 
+                variant="destructive" 
+                onClick={() => testAlert.mutate({ userId: targetUserId, event: "OFFLINE" })}
+                disabled={!targetUserId || testAlert.isPending}
+              >
+                Simular QUEDA
+              </Button>
+              <Button 
+                variant="default" 
+                className="bg-success hover:bg-success/90"
+                onClick={() => testAlert.mutate({ userId: targetUserId, event: "ONLINE" })}
+                disabled={!targetUserId || testAlert.isPending}
+              >
+                Simular RETORNO
+              </Button>
+            </div>
+          </div>
+        </Card>
+
+        <Card className="p-6 lg:col-span-2">
+          <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center gap-2">
+              <History className="h-5 w-5 text-primary" />
+              <h2 className="text-xl font-bold">Histórico de Disparos</h2>
+            </div>
+            <Button variant="outline" size="sm" onClick={() => refetch()}>Atualizar</Button>
+          </div>
+
+          <div className="overflow-x-auto rounded-md border">
+            <table className="w-full text-xs">
+              <thead className="bg-muted/40 text-muted-foreground uppercase">
+                <tr>
+                  <th className="text-left p-3">Data/Hora</th>
+                  <th className="text-left p-3">Servidor</th>
+                  <th className="text-center p-3">Evento</th>
+                  <th className="text-center p-3">Canal</th>
+                  <th className="text-center p-3">Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                {logs?.length === 0 && (
+                  <tr><td colSpan={5} className="p-6 text-center text-muted-foreground">Nenhum alerta disparado recentemente.</td></tr>
+                )}
+                {logs?.map((log: any) => (
+                  <tr key={log.id} className="border-t border-border/60">
+                    <td className="p-3 whitespace-nowrap">{new Date(log.created_at).toLocaleString("pt-BR")}</td>
+                    <td className="p-3 font-medium">{log.servers?.name || "Desconhecido"}</td>
+                    <td className="p-3 text-center">
+                      <Badge variant={log.event === "down" ? "destructive" : "default"} className={log.event === "up" ? "bg-success" : ""}>
+                        {log.event === "down" ? "OFFLINE" : "ONLINE"}
+                      </Badge>
+                    </td>
+                    <td className="p-3 text-center uppercase text-[10px]">{log.channel_id ? "Telegram" : "Admin"}</td>
+                    <td className="p-3 text-center">
+                      {log.ok ? (
+                        <BadgeCheck className="h-4 w-4 text-success mx-auto" />
+                      ) : (
+                        <XCircle className="h-4 w-4 text-destructive mx-auto" />
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </Card>
+      </div>
+    </div>
+  );
+}
+
 import { Label } from "@/components/ui/label";
+
 
 
 
