@@ -289,7 +289,7 @@ export async function syncServerVodCatalog(
       }
 
       const matches = part
-        .filter((k) => existingMap.has(k))
+        .filter((k) => existingMap.has(k) && byKey.has(k))
         .map((k) => ({
           catalog_id: existingMap.get(k)!,
           server_id: serverId,
@@ -297,6 +297,7 @@ export async function syncServerVodCatalog(
           raw_name: byKey.get(k)!.name,
           detected_at: nowIso,
         }));
+
       if (matches.length) {
         // Upsert para garantir que atualizamos a última detecção e mantemos o vínculo catálogo <-> servidor
         await supabaseAdmin
