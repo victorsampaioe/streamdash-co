@@ -16,18 +16,27 @@ function isAuthorized(request: Request): boolean {
 async function run() {
   const errors: string[] = [];
 
+  // Deduplicação de servidores lógicos: roda no painel (1x/dia), independente do Core.
+  let clusters: unknown = null;
+  try {
+    const { ensureLogicalClusters } = await import("@/lib/radar-jobs.server");
+    clusters = await ensureLogicalClusters();
+  } catch (e: any) {
+    errors.push(`clusters: ${e?.message}`);
+  }
+
   const { useCore, coreJsonPost } = await import("@/lib/core-api.server");
   if (useCore()) {
     try {
       const out = await coreJsonPost<Record<string, unknown>>("/api/public/cron/radar", 25_000);
-      return { forwardedToCore: true, ...out };
+      return { forwardedToCore: true, clusters, ...out };
     } catch (e: any) {
       // Core indisponível ou com build antigo → processa localmente (não pode parar o Radar).
       errors.push(`core: ${e?.message ?? "fetch failed"}`);
     }
   }
 
-  const { runRadarJobStep, enrichTmdbPending, ensureAutoRadarJob, reclaimStuckRadarWork, ensureLogicalClusters } =
+  const { runRadarJobStep, enrichTmdbPending, ensureAutoRadarJob, reclaimStuckRadarWork } =
     await import("@/lib/radar-jobs.server");
 
   let recovered: unknown = null;
@@ -37,12 +46,6 @@ async function run() {
     errors.push(`recover: ${e?.message}`);
   }
 
-  let clusters: unknown = null;
-  try {
-    clusters = await ensureLogicalClusters();
-  } catch (e: any) {
-    errors.push(`clusters: ${e?.message}`);
-  }
 
 
 
