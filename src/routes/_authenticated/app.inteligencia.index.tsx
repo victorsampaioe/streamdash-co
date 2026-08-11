@@ -45,6 +45,32 @@ function ContentIntelligence() {
   const [query, setQuery] = useState("");
   const run = useServerFn(getTmdbFeed);
 
+  const qc = useQueryClient();
+  const prepareSync = useServerFn(prepareRadarBatchSync);
+  const runSync = useServerFn(runRadarBatchSyncNow);
+  const [showConfirm, setShowConfirm] = useState(false);
+  const [prepData, setPrepData] = useState<{ servers_found: number; server_ids: string[] } | null>(null);
+
+  const prepareMutation = useMutation({
+    mutationFn: () => prepareSync(),
+    onSuccess: (data) => {
+      setPrepData(data);
+      setShowConfirm(true);
+    },
+    onError: (e: Error) => toast.error("Erro ao preparar sincronização: " + e.message),
+  });
+
+  const syncMutation = useMutation({
+    mutationFn: (ids: string[]) => runSync({ data: { serverIds: ids } }),
+    onSuccess: (res) => {
+      const ok = res.results.filter((r) => r.ok).length;
+      toast.success(`Sincronização concluída para ${ok} servidores!`);
+      qc.invalidateQueries({ queryKey: ["tmdb-feed"] });
+      setShowConfirm(false);
+    },
+    onError: (e: Error) => toast.error("Erro na sincronização: " + e.message),
+  });
+
   const { data, isLoading, error } = useQuery({
     queryKey: ["tmdb-feed", feed, query],
     queryFn: () =>
