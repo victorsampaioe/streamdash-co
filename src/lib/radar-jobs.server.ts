@@ -227,6 +227,26 @@ export async function syncServerVodCatalog(
   });
 
   // ---- Radar Global (independe do TMDB) ----
+  // Servidor lógico: se este DNS é um alias de outro servidor do mesmo cluster,
+  // evitamos criar vínculos redundantes quando o servidor principal já cobre o título.
+  let clusterPrimaryId: string | null = null;
+  {
+    const { data: member } = await supabaseAdmin
+      .from("iptv_cluster_members")
+      .select("cluster_id")
+      .eq("server_id", serverId)
+      .maybeSingle();
+    if (member) {
+      const { data: cl } = await supabaseAdmin
+        .from("iptv_server_clusters")
+        .select("primary_server_id")
+        .eq("id", (member as any).cluster_id)
+        .maybeSingle();
+      const primary = (cl as any)?.primary_server_id as string | undefined;
+      if (primary && primary !== serverId) clusterPrimaryId = primary;
+    }
+  }
+
   let newTitles = 0;
   for (const kind of ["vod", "series"] as const) {
     const mediaType = kind === "series" ? "tv" : "movie";
