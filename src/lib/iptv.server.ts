@@ -1227,7 +1227,8 @@ export async function runIptvSync(serverId: string, opts: { mode?: "smart" | "fu
         }
       }
     } catch (e) {
-      console.warn("[iptv] falha ao sincronizar catálogo:", (e as Error)?.message);
+      console.error(`[iptv] Erro fatal na sincronização de catálogo (Servidor ${serverId}):`, e);
+      throw new Error(`Falha no Radar (syncCatalog): ${(e as Error)?.message}`);
     }
   }
 
