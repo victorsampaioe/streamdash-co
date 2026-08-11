@@ -308,7 +308,7 @@ export async function syncServerVodCatalog(
           .in("id", ids);
       }
 
-      const matches = part
+      let matches = part
         .filter((k) => existingMap.has(k) && byKey.has(k))
         .map((k) => ({
           catalog_id: existingMap.get(k)!,
@@ -317,6 +317,21 @@ export async function syncServerVodCatalog(
           raw_name: byKey.get(k)!.name,
           detected_at: nowIso,
         }));
+
+      // Alias de cluster: só grava vínculo se o servidor principal ainda não cobrir o título.
+      if (clusterPrimaryId && matches.length) {
+        const ids = matches.map((m) => m.catalog_id);
+        const covered = new Set<string>();
+        for (let j = 0; j < ids.length; j += 200) {
+          const { data: prim } = await supabaseAdmin
+            .from("iptv_catalog_matches")
+            .select("catalog_id")
+            .eq("server_id", clusterPrimaryId)
+            .in("catalog_id", ids.slice(j, j + 200));
+          for (const r of (prim ?? []) as any[]) covered.add(r.catalog_id as string);
+        }
+        matches = matches.filter((m) => !covered.has(m.catalog_id));
+      }
 
       if (matches.length) {
         // Upsert para garantir que atualizamos a última detecção e mantemos o vínculo catálogo <-> servidor
