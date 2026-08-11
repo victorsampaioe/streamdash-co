@@ -185,9 +185,10 @@ export function RadarAdminPanel() {
                   </span>
                 </div>
                 
-                {searchResult.found && (
+                {searchResult.found ? (
                   <div className="space-y-2">
                     <div className="text-xs">
+                      {searchResult.media_type ? `${searchResult.media_type} · ` : ""}
                       Encontrado em <b className="text-emerald-500">{searchResult.server_count}</b> servidores:
                     </div>
                     <div className="flex flex-wrap gap-1">
@@ -196,7 +197,17 @@ export function RadarAdminPanel() {
                       ))}
                     </div>
                   </div>
-                )}
+                ) : searchResult.suggestions?.length ? (
+                  <div className="space-y-2">
+                    <div className="text-xs text-muted-foreground">Títulos parecidos no catálogo coletado:</div>
+                    <div className="flex flex-wrap gap-1">
+                      {searchResult.suggestions.map((s: string) => (
+                        <Badge key={s} variant="secondary" className="text-[10px] py-0">{s}</Badge>
+                      ))}
+                    </div>
+                  </div>
+                ) : null}
+
               </div>
             )}
           </div>
@@ -206,10 +217,11 @@ export function RadarAdminPanel() {
             <div className="text-sm space-y-2">
               <p className="font-semibold">Como funciona:</p>
               <p className="text-muted-foreground">
-                A sincronização automática cria um job processado em segundo plano pelo Core AWS. 
-                O **Teste Manual** é uma ferramenta de diagnóstico que varre os servidores em tempo real para confirmar 
-                se um conteúdo específico está sendo detectado corretamente pela lógica de normalização.
+                A sincronização roda automaticamente a cada minuto em segundo plano (Core AWS, com fallback no
+                painel). O Teste Manual consulta o catálogo já coletado dos servidores, revalida os vínculos de
+                disponibilidade e sugere títulos parecidos quando não há correspondência exata.
               </p>
+
             </div>
           </div>
         </div>

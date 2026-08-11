@@ -66,20 +66,76 @@ export async function createRadarJob(
   return { job_id: (job as any).id as string, total_servers: ids.length };
 }
 
-/** Dispara o processamento no Core AWS sem esperar a conclusão. */
+/** Dispara o processamento no Core AWS; se o Core não responder JSON, processa local. */
 export async function kickRadarJob(): Promise<"core" | "local"> {
-  const { useCore, coreApiUrl } = await import("./core-api.server");
+  const { useCore, coreJsonPost } = await import("./core-api.server");
   if (useCore()) {
-    const url = `${coreApiUrl()}/api/public/cron/radar`;
-    // fire-and-forget: o Core processa em background.
-    fetch(url, { method: "POST", headers: { "x-cron-secret": process.env.CRON_SECRET ?? "" } }).catch((e) =>
-      console.warn("[radar-job] falha ao acionar o Core:", (e as Error).message),
-    );
-    return "core";
+    try {
+      await coreJsonPost("/api/public/cron/radar", 15_000);
+      return "core";
+    } catch (e) {
+      console.warn("[radar-job] Core indisponível, processando local:", (e as Error).message);
+    }
   }
   void runRadarJobStep().catch((e) => console.error("[radar-job] erro no step local:", e));
   return "local";
 }
+
+/* ------------------------------------------------------------------ */
+/* Recuperação automática de trabalho travado                          */
+/* ------------------------------------------------------------------ */
+
+const ITEM_STUCK_MS = 15 * 60_000;
+
+/**
+ * Devolve para a fila itens que ficaram presos em "running" (worker morto,
+ * timeout do Core, deploy no meio do lote) e conclui jobs cujos itens
+ * terminaram mas que ficaram marcados como em andamento.
+ */
+export async function reclaimStuckRadarWork() {
+  const cutoff = new Date(Date.now() - ITEM_STUCK_MS).toISOString();
+
+  const { data: stuck } = await supabaseAdmin
+    .from("iptv_sync_job_items")
+    .select("id")
+    .eq("status", "running")
+    .lt("updated_at", cutoff)
+    .limit(200);
+
+  const stuckIds = ((stuck ?? []) as { id: string }[]).map((r) => r.id);
+  if (stuckIds.length) {
+    await supabaseAdmin
+      .from("iptv_sync_job_items")
+      .update({ status: "pending", started_at: null } as never)
+      .in("id", stuckIds);
+    console.warn(`[radar-job] ${stuckIds.length} itens presos devolvidos para a fila.`);
+  }
+
+  // Jobs abertos sem itens pendentes → concluídos.
+  const { data: openJobs } = await supabaseAdmin
+    .from("iptv_sync_jobs")
+    .select("id")
+    .in("status", ["queued", "running"]);
+
+  let closed = 0;
+  for (const j of (openJobs ?? []) as { id: string }[]) {
+    const { count } = await supabaseAdmin
+      .from("iptv_sync_job_items")
+      .select("id", { count: "exact", head: true })
+      .eq("job_id", j.id)
+      .in("status", ["pending", "running"]);
+    if (!count) {
+      await supabaseAdmin
+        .from("iptv_sync_jobs")
+        .update({ status: "completed", finished_at: new Date().toISOString() } as never)
+        .eq("id", j.id);
+      closed++;
+    }
+  }
+
+  return { requeued: stuckIds.length, jobs_closed: closed };
+}
+
 
 /* ------------------------------------------------------------------ */
 /* Sincronização incremental de um servidor (somente VOD + séries)     */
@@ -124,7 +180,10 @@ export async function syncServerVodCatalog(
     }
   }
 
-  const upserts: Record<string, unknown>[] = [];
+  // Novos e atualizados vão em lotes separados: no PostgREST todas as linhas de um
+  // upsert precisam ter exatamente as mesmas colunas, senão "first_seen_at" entra NULL.
+  const newRows: Record<string, unknown>[] = [];
+  const updRows: Record<string, unknown>[] = [];
   const currentKeys = new Set<string>();
 
   for (const kind of ["vod", "series"] as const) {
@@ -132,28 +191,30 @@ export async function syncServerVodCatalog(
       const key = `${kind}:${it.id}`;
       currentKeys.add(key);
       const prev = known.get(key);
-      if (!prev || prev.name !== it.name || prev.category !== it.category) {
-        upserts.push({
-          server_id: serverId,
-          kind,
-          external_id: it.id,
-          name: it.name,
-          title_key: titleKey(it.name),
-          category: it.category,
-          last_seen_at: nowIso,
-          removed_at: null,
-          ...(prev ? {} : { first_seen_at: nowIso }),
-        });
-      }
+      const base = {
+        server_id: serverId,
+        kind,
+        external_id: it.id,
+        name: it.name,
+        title_key: titleKey(it.name),
+        category: it.category,
+        last_seen_at: nowIso,
+        removed_at: null,
+      };
+      if (!prev) newRows.push({ ...base, first_seen_at: nowIso });
+      else if (prev.name !== it.name || prev.category !== it.category) updRows.push(base);
     }
   }
 
-  await chunked(upserts, async (part) => {
-    const { error } = await supabaseAdmin
-      .from("iptv_catalog_items")
-      .upsert(part as never, { onConflict: "server_id,kind,external_id" });
-    if (error) throw new Error(`catalog_items: ${error.message}`);
-  });
+  for (const rows of [newRows, updRows]) {
+    await chunked(rows, async (part) => {
+      const { error } = await supabaseAdmin
+        .from("iptv_catalog_items")
+        .upsert(part as never, { onConflict: "server_id,kind,external_id" });
+      if (error) throw new Error(`catalog_items: ${error.message}`);
+    });
+  }
+
 
   // Ausentes: marcados como removidos (não apagamos o catálogo inteiro).
   const missing = [...known.keys()].filter((k) => !currentKeys.has(k));
@@ -187,7 +248,7 @@ export async function syncServerVodCatalog(
       const existingMap = new Map((existing ?? []).map((r: any) => [r.title_key as string, r.id as string]));
 
       const toInsert = part
-        .filter((k) => !existingMap.has(k))
+        .filter((k) => !existingMap.has(k) && byKey.has(k))
         .map((k) => ({
           title_key: k,
           media_type: mediaType,
@@ -197,6 +258,7 @@ export async function syncServerVodCatalog(
           last_detected_at: nowIso,
           tmdb_status: "pending",
         }));
+
 
       if (toInsert.length) {
         const { data: inserted } = await supabaseAdmin
@@ -227,7 +289,7 @@ export async function syncServerVodCatalog(
       }
 
       const matches = part
-        .filter((k) => existingMap.has(k))
+        .filter((k) => existingMap.has(k) && byKey.has(k))
         .map((k) => ({
           catalog_id: existingMap.get(k)!,
           server_id: serverId,
@@ -235,6 +297,7 @@ export async function syncServerVodCatalog(
           raw_name: byKey.get(k)!.name,
           detected_at: nowIso,
         }));
+
       if (matches.length) {
         // Upsert para garantir que atualizamos a última detecção e mantemos o vínculo catálogo <-> servidor
         await supabaseAdmin
@@ -322,9 +385,10 @@ export async function runRadarJobStep(opts: { batchSize?: number } = {}) {
     .from("iptv_sync_job_items")
     .select("id, server_id")
     .eq("job_id", jobId)
-    .in("status", ["pending", "running"])
+    .eq("status", "pending")
     .order("created_at", { ascending: true })
     .limit(batchSize);
+
 
   const items = (pending ?? []) as { id: string; server_id: string }[];
 

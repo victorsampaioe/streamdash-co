@@ -94,3 +94,33 @@ export async function runOnCore<T>(
     return await local();
   }
 }
+
+/**
+ * POST em um endpoint do Core exigindo resposta JSON.
+ *
+ * O Core roda a mesma aplicação; quando ele está com um build antigo a rota
+ * não existe e o catch-all devolve HTML com status 200 — o que fazia o painel
+ * acreditar que a tarefa tinha sido aceita. Aqui isso é tratado como falha.
+ */
+export async function coreJsonPost<T>(path: string, timeoutMs = 20_000): Promise<T> {
+  const base = coreApiUrl();
+  if (!base) throw new Error("CORE_API_URL não configurada");
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    const res = await fetch(`${base}${path}`, {
+      method: "POST",
+      headers: { "x-cron-secret": process.env.CRON_SECRET ?? "" },
+      signal: controller.signal,
+    });
+    const ct = res.headers.get("content-type") ?? "";
+    if (!res.ok) throw new Error(`Core ${path} HTTP ${res.status}`);
+    if (!ct.includes("application/json")) {
+      throw new Error(`Core ${path} respondeu ${ct || "sem content-type"} (rota inexistente no build do Core)`);
+    }
+    return (await res.json()) as T;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
