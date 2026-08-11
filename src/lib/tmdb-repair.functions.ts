@@ -22,11 +22,7 @@ export const repairTmdbPosters = createServerFn({ method: "POST" })
     for (const item of items) {
       try {
         const mediaType = item.media_type as "movie" | "tv";
-        
-        // Se não tem ID, tenta buscar pelo nome
-        let tmdbId = item.tmdb_id;
-        if (!tmdbId) {
-          const { searchTmdb } = await import("./tmdb.server");
+        const searchTmdb = (await import("./tmdb.server")).searchTmdb;
           const results = await searchTmdb(item.normalized_name);
           const match = results.find(r => r.media_type === mediaType);
           if (match) tmdbId = match.tmdb_id;
