@@ -217,10 +217,11 @@ export function RadarAdminPanel() {
             <div className="text-sm space-y-2">
               <p className="font-semibold">Como funciona:</p>
               <p className="text-muted-foreground">
-                A sincronização automática cria um job processado em segundo plano pelo Core AWS. 
-                O **Teste Manual** é uma ferramenta de diagnóstico que varre os servidores em tempo real para confirmar 
-                se um conteúdo específico está sendo detectado corretamente pela lógica de normalização.
+                A sincronização roda automaticamente a cada minuto em segundo plano (Core AWS, com fallback no
+                painel). O Teste Manual consulta o catálogo já coletado dos servidores, revalida os vínculos de
+                disponibilidade e sugere títulos parecidos quando não há correspondência exata.
               </p>
+
             </div>
           </div>
         </div>
