@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Sparkles, Server, ShieldCheck, Clock, Film, Trophy, AlertTriangle, Loader2, Tv, Image, Search, CheckCircle2, XCircle } from "lucide-react";
 import { toast } from "sonner";
