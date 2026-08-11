@@ -396,7 +396,7 @@ function ContentIntelligence() {
           size="sm"
           variant={data?.ranking ? "default" : "outline"}
           onClick={() => {
-            setQuery("ranking_mode"); // Gatilho interno
+            setQuery("ranking_mode");
           }}
         >
           <TrendingUp className="h-4 w-4 mr-1" /> Ranking Atualização

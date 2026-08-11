@@ -36,19 +36,15 @@ export function titleKey(name: string): string {
     .toLowerCase();
 
   // 2. Remoção de tags e qualidades (Ignorar tags)
-  key = key.replace(/\b(4k|fhd|hd|sd|hevc|h265|x265|x264|h264|web-dl|hdr|bluray|hdtv|webrip)\b/g, " ");
+  key = key.replace(/\b(4k|fhd|hd|sd|hevc|h265|x265|x264|h264|web-dl|hdr|bluray|hdtv|webrip|dublado|legendado|leg|dub|l|d|dual|audio|multi|pt|en|br|latam)\b/g, " ");
   
-  // 3. Remoção de idiomas e extras
-  key = key.replace(/\b(dublado|legendado|leg|dub|l|d|dual|audio|multi|pt|en|br|latam)\b/g, " ");
-
-  // 4. Remoção de temporada/episódio (para agrupar séries)
+  // 3. Remoção de temporada/episódio (para agrupar séries)
   key = key.replace(/\b(s\d{1,2}e\d{1,2}|s\d{1,2}|temporada\s?\d{1,2}|t\d{1,2}|ep\d{1,2})\b/g, " ");
 
-  // 5. Remoção de anos (para lidar com Homem Aranha 2026 vs Homem Aranha)
-  // Mas guardamos o ano se quisermos ser mais precisos, requisitos pedem que Homem Aranha 2026 = Homem Aranha
+  // 4. Remoção de anos (para lidar com Homem Aranha 2026 vs Homem Aranha)
   key = key.replace(/\(\d{4}\)|\b\d{4}\b/g, " ");
 
-  // 6. Limpeza final de símbolos e pontuação
+  // 5. Limpeza final de símbolos e pontuação
   key = key.replace(/[^a-z0-9]/g, " ")
     .replace(/\s+/g, " ")
     .trim();
