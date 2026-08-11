@@ -4,9 +4,9 @@ import { useServerFn } from "@tanstack/react-start";
 import { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { getTmdbFeed } from "@/lib/tmdb.functions";
-import { prepareRadarBatchSync, runRadarBatchSyncNow } from "@/lib/radar-stats.functions";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
-import { Loader2, AlertTriangle } from "lucide-react";
+import { getRadarJobStatus, startRadarSyncJob } from "@/lib/radar-jobs.functions";
+import { Loader2 } from "lucide-react";
+
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
