@@ -698,14 +698,20 @@ export async function probeXtream(
       return { status: "rejected" as const, reason: e };
     }
   };
-  const live = await settle(`${b}/player_api.php?${auth}&action=get_live_streams`);
-  await sleep(500 + Math.floor(Math.random() * 400));
+  // No modo "vod" (Radar de Conteúdo) NUNCA consultamos get_live_streams:
+  // canais ao vivo, rádios e eventos não entram no catálogo do Radar.
+  const live =
+    catalogMode === "vod"
+      ? { status: "fulfilled" as const, value: { data: [] as unknown[] } }
+      : await settle(`${b}/player_api.php?${auth}&action=get_live_streams`);
+  if (catalogMode !== "vod") await sleep(500 + Math.floor(Math.random() * 400));
   const vod = await settle(`${b}/player_api.php?${auth}&action=get_vod_streams`);
   await sleep(500 + Math.floor(Math.random() * 400));
   const series = await settle(`${b}/player_api.php?${auth}&action=get_series`);
 
 
-  const liveList = arr(live);
+  const liveList = arr(live as PromiseSettledResult<{ data: unknown }>);
+
   const vodList = arr(vod);
   const seriesList = arr(series);
 
