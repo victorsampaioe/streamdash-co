@@ -159,14 +159,14 @@ function Dashboard() {
         </Alert>
       )}
 
-      <div className="flex items-center justify-between flex-wrap gap-3">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight">
+          <h1 className="text-xl sm:text-2xl font-semibold tracking-tight">
             Olá{firstName ? `, ${capitalize(firstName)}` : ""} 👋
           </h1>
           <p className="text-sm text-muted-foreground">Resumo dos seus servidores em tempo real.</p>
         </div>
-        <Link to="/app/servers/new"><Button><Plus className="h-4 w-4 mr-1" />Novo servidor</Button></Link>
+        <Link to="/app/servers/new" className="w-full sm:w-auto"><Button className="w-full sm:w-auto"><Plus className="h-4 w-4 mr-1" />Novo servidor</Button></Link>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">

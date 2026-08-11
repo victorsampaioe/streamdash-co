@@ -88,14 +88,14 @@ function ServersList() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-start justify-between flex-wrap gap-3">
+      <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
         <div className="min-w-0">
           <h1 className="text-2xl font-semibold tracking-tight">Servidores</h1>
           <p className="text-sm text-muted-foreground">Todos os hosts monitorados. Porta fixa 80 / HTTP.</p>
         </div>
-        <div className="flex gap-2 w-full sm:w-auto">
-          <div className="flex-1 sm:flex-initial"><SearchInput value={q} onChange={setQ} /></div>
-          <Link to="/app/servers/new"><Button className="shrink-0"><Plus className="h-4 w-4 sm:mr-1" /><span className="hidden sm:inline">Novo</span></Button></Link>
+        <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+          <SearchInput value={q} onChange={setQ} />
+          <Link to="/app/servers/new" className="w-full sm:w-auto"><Button className="w-full sm:w-auto shrink-0"><Plus className="h-4 w-4 sm:mr-1" /><span className="sm:inline">Novo</span></Button></Link>
         </div>
       </div>
 

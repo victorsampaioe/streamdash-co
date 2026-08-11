@@ -304,15 +304,17 @@ function ResellerDashboard() {
         </Card>
       </div>
 
-      <Tabs defaultValue="rede" className="w-full">
-        <TabsList className="grid w-full grid-cols-6 max-w-2xl">
-          <TabsTrigger value="rede">Rede</TabsTrigger>
-          <TabsTrigger value="clientes">Clientes</TabsTrigger>
-          <TabsTrigger value="criações">Criações</TabsTrigger>
-          <TabsTrigger value="historico">Histórico</TabsTrigger>
-          <TabsTrigger value="planos">Planos</TabsTrigger>
-          <TabsTrigger value="config">Config</TabsTrigger>
-        </TabsList>
+      <Tabs defaultValue="rede" className="w-full overflow-hidden">
+        <div className="overflow-x-auto pb-2 scrollbar-hide">
+          <TabsList className="flex w-max min-w-full sm:grid sm:w-full sm:grid-cols-6 sm:max-w-2xl">
+            <TabsTrigger value="rede" className="px-4">Rede</TabsTrigger>
+            <TabsTrigger value="clientes" className="px-4">Clientes</TabsTrigger>
+            <TabsTrigger value="criações" className="px-4">Criações</TabsTrigger>
+            <TabsTrigger value="historico" className="px-4">Histórico</TabsTrigger>
+            <TabsTrigger value="planos" className="px-4">Planos</TabsTrigger>
+            <TabsTrigger value="config" className="px-4">Config</TabsTrigger>
+          </TabsList>
+        </div>
 
         <TabsContent value="rede" className="mt-4">
           <AccountsManager kind="reseller" onCreate={() => setResellerDialogOpen(true)} />
