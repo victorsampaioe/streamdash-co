@@ -31,7 +31,7 @@ export function RadarAdminPanel() {
   const { data: progress } = useQuery({
     queryKey: ["admin-radar-job"],
     queryFn: () => getJob(),
-    refetchInterval: (query) => {
+    refetchInterval: (query: any) => {
       const data = query.state.data as any;
       const isRunning = data?.job?.status === "queued" || data?.job?.status === "running";
       return isRunning ? 3000 : 10000;
