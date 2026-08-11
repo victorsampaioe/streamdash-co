@@ -52,9 +52,21 @@ function ContentIntelligence() {
   const [prepData, setPrepData] = useState<{ 
     servers_found: number; 
     server_ids: string[];
+    total_db_servers: number;
+    with_host: number;
+    with_username: number;
+    with_password: number;
+    login_approved: number;
     total_monitored: number;
     configured_iptv: number;
     waiting_credentials: number;
+    excluded_reasons: {
+      no_username: number;
+      no_password: number;
+      invalid_login: number;
+      paused: number;
+      inactive_account: number;
+    };
   } | null>(null);
 
   const prepareMutation = useMutation({
@@ -70,7 +82,8 @@ function ContentIntelligence() {
   });
 
   const syncMutation = useMutation({
-    mutationFn: (ids: string[]) => runSync({ data: { serverIds: ids } }),
+    mutationFn: ({ ids, testOne }: { ids: string[]; testOne?: boolean }) => 
+      runSync({ data: { serverIds: ids, testOne } }),
     onSuccess: (res) => {
       const ok = res.results.filter((r) => r.ok).length;
       const fails = res.results.filter((r) => !r.ok);
