@@ -37,6 +37,7 @@ import { broadcastTelegram } from "@/lib/telegram-broadcast.functions";
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { PausedServersPanel } from "@/components/admin/paused-servers-panel";
+import { RadarAdminPanel } from "@/components/admin/radar-admin-panel";
 import { UserCog, History, PlusCircle, UserCheck, UserRoundCog, Settings2, Trash2, ShoppingBag as StoreIcon, Wallet, ExternalLink } from "lucide-react";
 
 
