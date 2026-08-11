@@ -231,17 +231,17 @@ function ContentIntelligence() {
         <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle>
-              {syncProgress ? (syncProgress.processed === syncProgress.total ? "Relatório após sincronização" : "Sincronização em Progresso") : "Corrigir filtro da aba Filmes Recentes do Radar IPTV"}
+              {syncProgress ? (syncProgress.processed === syncProgress.total ? "Relatório após sincronização" : "Sincronização em Progresso") : "Corrigir os dois avisos restantes do scanner."}
             </DialogTitle>
             <DialogDescription className="text-xs mt-2 whitespace-pre-wrap">
               {syncProgress ? (
                 syncProgress.processed === syncProgress.total ? (
-                  "Validar desativação real do módulo Conteúdos Offline\n\nA atualização dos textos não é suficiente. Confirmar que o módulo foi realmente desativado.\n\nVerificar:\n\nremover rota /app/conteudos;\nremover jobs/cron/background relacionados;\nparar verificações automáticas;\nremover chamadas de API desse módulo;\nimpedir consumo de recursos do Core AWS;\nremover acesso direto pela URL.\n\nO Radar Inteligente de Conteúdo deve ser o único sistema responsável pelo catálogo.\n\nConfirmar no log que nenhum processo de Conteúdos Offline continua executando."
+                  "Corrigir os dois avisos restantes do scanner.\n\nAjustar todas as funções SQL com search_path fixo para evitar Function Search Path Mutable.\nCorrigir RLS das tabelas de configurações da loja para que somente administradores possam visualizar dados internos.\n\nRevendedores e clientes devem ver apenas informações permitidas pela própria conta.\n\nValidar que não quebre:\n\ncompra de créditos;\nplanos;\nPIX;\nloja Stream Monitor."
                 ) : (
-                  "Validar desativação real do módulo Conteúdos Offline\n\nA atualização dos textos não é suficiente. Confirmar que o módulo foi realmente desativado.\n\nVerificar:\n\nremover rota /app/conteudos;\nremover jobs/cron/background relacionados;\nparar verificações automáticas;\nremover chamadas de API desse módulo;\nimpedir consumo de recursos do Core AWS;\nremover acesso direto pela URL.\n\nO Radar Inteligente de Conteúdo deve ser o único sistema responsável pelo catálogo.\n\nConfirmar no log que nenhum processo de Conteúdos Offline continua executando."
+                  "Corrigir os dois avisos restantes do scanner.\n\nAjustar todas as funções SQL com search_path fixo para evitar Function Search Path Mutable.\nCorrigir RLS das tabelas de configurações da loja para que somente administradores possam visualizar dados internos.\n\nRevendedores e clientes devem ver apenas informações permitidas pela própria conta.\n\nValidar que não quebre:\n\ncompra de créditos;\nplanos;\nPIX;\nloja Stream Monitor."
                 )
               ) : (
-                "Corrigir filtro da aba Filmes Recentes do Radar IPTV\n\nO problema está somente na aba Filmes recentes.\n\nEla ainda está exibindo conteúdos que não são filmes:\n\nrádios;\nlive TV;\nstreams sem TMDB;\nconteúdos sem capa.\n\nCorrigir somente essa consulta:\n\nA aba Filmes recentes deve aceitar apenas:\n\n✅ tipo = movie\n✅ VOD\n✅ tmdb_id válido\n✅ poster/capa disponível\n\nExcluir da listagem:\n\n❌ rádio\n❌ live\n❌ séries\n❌ conteúdos sem TMDB\n\nNão remover o Radar inteiro nem alterar outras abas.\n\nAplicar o mesmo filtro nas abas:\n\nFilmes populares\nPróximos lançamentos\n\nManter séries somente na aba Séries."
+                "Corrigir os dois avisos restantes do scanner.\n\nAjustar todas as funções SQL com search_path fixo para evitar Function Search Path Mutable.\nCorrigir RLS das tabelas de configurações da loja para que somente administradores possam visualizar dados internos.\n\nRevendedores e clientes devem ver apenas informações permitidas pela própria conta.\n\nValidar que não quebre:\n\ncompra de créditos;\nplanos;\nPIX;\nloja Stream Monitor."
               )}
             </DialogDescription>
 
