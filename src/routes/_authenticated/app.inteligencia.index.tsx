@@ -93,39 +93,65 @@ function ContentIntelligence() {
     },
   });
 
+  const [syncProgress, setSyncProgress] = useState<{
+    processed: number;
+    total: number;
+    success: number;
+    errors: number;
+    contents: number;
+    results: any[];
+  } | null>(null);
+
   const syncMutation = useMutation({
-    mutationFn: ({ ids, testOne }: { ids: string[]; testOne?: boolean }) => {
-      console.log(`[Radar Tech Log] Iniciando sincronização. Alvo: ${testOne ? "Teste Individual" : "Lote Completo"}. Qtd: ${testOne ? 1 : ids.length}`);
-      return runSync({ data: { serverIds: ids, testOne } });
+    mutationFn: async ({ ids, testOne }: { ids: string[]; testOne?: boolean }) => {
+      const targetIds = testOne ? ids.slice(0, 1) : ids;
+      setSyncProgress({
+        processed: 0,
+        total: targetIds.length,
+        success: 0,
+        errors: 0,
+        contents: 0,
+        results: [],
+      });
+
+      console.log(`[Radar Tech Log] Iniciando sincronização. Alvo: ${testOne ? "Teste Individual" : "Lote Completo"}. Qtd: ${targetIds.length}`);
+      const res = await runSync({ data: { serverIds: ids, testOne } });
+      return res;
     },
-    onSuccess: (res) => {
-      const ok = res.results.filter((r) => r.ok).length;
-      const fails = res.results.filter((r) => !r.ok);
+    onSuccess: (res: any) => {
+      const ok = res.results.filter((r: any) => r.ok).length;
+      const fails = res.results.filter((r: any) => !r.ok);
+      const contents = res.results.reduce((acc: number, r: any) => acc + (r.contents_found || 0), 0);
       
+      setSyncProgress(prev => prev ? {
+        ...prev,
+        processed: prev.total,
+        success: ok,
+        errors: fails.length,
+        contents: contents,
+        results: res.results
+      } : null);
+
       console.group("Relatório Técnico de Sincronização Radar");
-      res.results.forEach(r => {
+      res.results.forEach((r: any) => {
         const icon = r.ok ? "✅" : (r.error?.toLowerCase().includes("login") ? "⚠️" : "❌");
-        const msg = r.ok ? "Sincronizado" : (r.error?.toLowerCase().includes("login") ? "Falha de login" : `Erro API: ${r.error}`);
+        const msg = r.ok ? `Sincronizado (${r.contents_found || 0} itens)` : (r.error?.toLowerCase().includes("login") ? "Falha de login" : `Erro API: ${r.error}`);
         console.log(`${icon} Servidor ${r.id}: ${msg}`);
       });
       console.groupEnd();
 
       if (fails.length > 0) {
-        toast.warning(`Sincronização concluída: ${ok} sucesso, ${fails.length} falhas. Veja os logs no console.`);
+        toast.warning(`Sincronização concluída: ${ok} sucesso, ${fails.length} falhas. Novos conteúdos: ${contents}`);
       } else {
-        toast.success(`Sincronização concluída para ${ok} servidores!`);
+        toast.success(`Sincronização concluída! ${ok} servidores processados, ${contents} novos conteúdos.`);
       }
       
       qc.invalidateQueries({ queryKey: ["tmdb-feed"] });
-      setShowConfirm(false);
     },
     onError: (e: Error) => {
       console.error("[Radar Tech Log] Erro crítico na sincronização do Radar");
-      console.error("[Radar Tech Log] Etapa: Processamento da fila (runRadarBatchSyncNow)");
-      console.error("[Radar Tech Log] Erro Real:", e.message);
       toast.error("Erro na sincronização: " + e.message);
     },
-
   });
 
   const { data, isLoading, error } = useQuery({
