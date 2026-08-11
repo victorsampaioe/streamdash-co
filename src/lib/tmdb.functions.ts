@@ -128,6 +128,9 @@ export const getTmdbFeed = createServerFn({ method: "POST" })
 /** Detalhes TMDB + disponibilidade. Mapeado para arquivo separado para evitar inflar o bundle. */
 export { getTmdbDetail } from "./tmdb-detail.functions";
 
+/** Rotina de reparação de posters. */
+export { repairTmdbPosters } from "./tmdb-repair.functions";
+
 
 /** Segue / deixa de seguir um título do TMDB. */
 export const toggleTmdbFollow = createServerFn({ method: "POST" })

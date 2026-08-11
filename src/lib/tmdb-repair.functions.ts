@@ -21,26 +21,26 @@ export const repairTmdbPosters = createServerFn({ method: "POST" })
     let repaired = 0;
     for (const item of items) {
       try {
+        const mediaType = item.media_type as "movie" | "tv";
+        
         // Se não tem ID, tenta buscar pelo nome
         let tmdbId = item.tmdb_id;
         if (!tmdbId) {
           const { searchTmdb } = await import("./tmdb.server");
           const results = await searchTmdb(item.normalized_name);
-          const match = results.find(r => r.media_type === item.media_type);
+          const match = results.find(r => r.media_type === mediaType);
           if (match) tmdbId = match.tmdb_id;
         }
 
         if (tmdbId) {
-          const detail = await fetchDetail(item.media_type, tmdbId);
+          const detail = await fetchDetail(mediaType, tmdbId);
+          // Atualiza apenas os campos que existem na tabela
           await supabaseAdmin
             .from("iptv_global_catalog")
             .update({
               tmdb_id: tmdbId,
-              poster_path: detail.poster_path,
-              backdrop_path: detail.backdrop_path,
-              rating: detail.vote_average,
-              overview: detail.overview
-            })
+              poster_path: detail.poster_path
+            } as any)
             .eq("id", item.id);
           repaired++;
         }
