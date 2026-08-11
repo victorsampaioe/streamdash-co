@@ -114,7 +114,7 @@ function useNavItems() {
     { to: "/app/detector", label: "Detector", icon: ShieldAlert },
     { to: "/app/inteligencia", label: "Inteligência de Conteúdo", icon: Sparkles },
     
-    { to: "/app/conteudos", label: "Conteúdos Offline", icon: Radio },
+    
     { to: "/app/ranking", label: "Ranking", icon: Trophy },
     { to: "/app/achievements", label: "Conquistas", icon: Trophy },
     { to: "/app/store", label: "Loja Stream Monitor", icon: ShoppingBag },
