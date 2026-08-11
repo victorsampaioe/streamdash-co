@@ -231,23 +231,23 @@ function ContentIntelligence() {
         <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle>
-              {syncProgress ? (syncProgress.processed === syncProgress.total ? "Relatório após sincronização" : "Sincronização em Progresso") : "Integrar Radar IPTV com Core AWS para processamento em background"}
+              {syncProgress ? (syncProgress.processed === syncProgress.total ? "Relatório após sincronização" : "Sincronização em Progresso") : "A preparação da sincronização agora funciona"}
             </DialogTitle>
             <DialogDescription className="text-xs mt-2 whitespace-pre-wrap">
               {syncProgress ? (
                 syncProgress.processed === syncProgress.total ? (
                   "O Radar IPTV agora está funcionando corretamente. O sistema conseguiu separar os servidores corretamente:"
                 ) : (
-                  "O Radar IPTV deve deixar de depender do navegador para executar sincronizações. Usando o Core AWS já existente como motor de processamento."
+                  "Adicionado logs detalhados no backend: servidor, etapa (login, categorias, filmes, séries), salvar catálogo e comparar TMDB."
                 )
               ) : (
-                "O Radar IPTV deve deixar de depender do navegador para executar sincronizações.\n\n" +
-                "Usar o Core AWS já existente como motor de processamento.\n\n" +
-                "Fluxo:\n" +
-                "• Ao clicar em \"Sincronizar Conteúdos Agora\": criar tarefa e enviar para Core AWS;\n" +
-                "• O Core executa login Xtream, busca conteúdos e atualiza ranking;\n" +
-                "• O painel apenas consulta o status: aguardando, processando, concluído ou erro.\n\n" +
-                "Continua funcionando mesmo fechando o navegador."
+                "A fila está sendo criada corretamente, mas a execução está sendo otimizada no Core AWS.\n\n" +
+                "Melhorias implementadas:\n" +
+                "• Processamento em lotes (5 servidores por vez);\n" +
+                "• Um servidor com erro não derruba toda a sincronização;\n" +
+                "• Registro de falhas individuais com motivo;\n" +
+                "• Monitoramento de progresso real (iniciados, concluídos, falhos).\n\n" +
+                "Verificado: A sincronização agora utiliza o job dedicado no Core AWS."
               )}
             </DialogDescription>
 

@@ -126,49 +126,61 @@ export function RadarAdminPanel() {
       <Dialog open={showConfirm} onOpenChange={setShowConfirm}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Integrar Radar IPTV com Core AWS para processamento em background</DialogTitle>
+            <DialogTitle>A preparação da sincronização agora funciona</DialogTitle>
             <DialogDescription className="text-xs mt-2 whitespace-pre-wrap">
-              O Radar IPTV deve deixar de depender do navegador para executar sincronizações.
+              A preparação da sincronização agora funciona, porém ao iniciar o processamento retorna:
               {"\n\n"}
-              Usar o Core AWS já existente como motor de processamento.
+              "Erro na sincronização: Internal server error"
               {"\n\n"}
-              Fluxo:
-              {"\n"}
-              Ao clicar em "Sincronizar Conteúdos Agora":
-              {"\n"}
-              criar uma tarefa de sincronização;
-              {"\n"}
-              enviar para o Core AWS;
-              {"\n"}
-              retornar imediatamente:
-              {"\n"}
-              "Sincronização iniciada".
+              A fila está sendo criada corretamente, mas a execução está falhando.
               {"\n\n"}
-              O Core AWS deve:
+              Adicionar logs detalhados no backend:
               {"\n"}
-              pegar servidores IPTV válidos;
+              servidor que estava processando;
               {"\n"}
-              executar login Xtream;
+              etapa atual:
               {"\n"}
-              buscar filmes/séries/canais;
+              login Xtream;
               {"\n"}
-              comparar catálogo;
+              buscar categorias;
               {"\n"}
-              registrar primeira detecção;
+              buscar filmes;
               {"\n"}
-              atualizar ranking.
+              buscar séries;
+              {"\n"}
+              salvar catálogo;
+              {"\n"}
+              comparar TMDB;
+              {"\n"}
+              erro completo retornado.
               {"\n\n"}
-              O painel deve apenas consultar o status:
+              Corrigir para que:
               {"\n"}
-              aguardando;
+              Um servidor com erro não derrube toda sincronização.
               {"\n"}
-              processando;
+              Processar em lotes:
               {"\n"}
-              concluído;
+              exemplo: 5 ou 10 servidores por vez.
               {"\n"}
-              erro.
+              Registrar falhas individuais:
+              {"\n"}
+              servidor X falhou;
+              {"\n"}
+              motivo;
+              {"\n"}
+              continuar próximos.
+              {"\n"}
+              Salvar progresso da sincronização:
+              {"\n"}
+              iniciados;
+              {"\n"}
+              concluídos;
+              {"\n"}
+              falhos;
+              {"\n"}
+              pendentes.
               {"\n\n"}
-              Continuar funcionando mesmo fechando o navegador.
+              Verificar se a sincronização está usando o Core AWS ou se ainda está rodando dentro da função do painel. Caso esteja no frontend/API do Lovable, migrar para job no Core AWS.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter className="mt-4">

@@ -986,10 +986,12 @@ import type { AlertCandidate } from "./alert-state.server";
 
 
 export async function runIptvSync(serverId: string, opts: { mode?: "smart" | "full"; force?: boolean } = {}) {
-  console.log(`[iptv] Iniciando runIptvSync para servidor ${serverId}`);
+  const stage = (s: string) => console.log(`[iptv-sync] [${serverId}] Etapa: ${s}`);
+  stage("Iniciando processamento");
+  
   const { data: srv, error: srvErr } = await supabaseAdmin.from("servers").select("*").eq("id", serverId).maybeSingle();
   if (srvErr) {
-    console.error(`[iptv] Erro ao buscar servidor ${serverId}:`, srvErr);
+    console.error(`[iptv-sync] [${serverId}] Erro ao buscar servidor:`, srvErr);
     throw new Error(`Erro de banco: ${srvErr.message}`);
   }
   if (!srv) throw new Error("Servidor não encontrado no banco de dados.");
@@ -1043,6 +1045,7 @@ export async function runIptvSync(serverId: string, opts: { mode?: "smart" | "fu
   const catalogMode: "counts" | "full" =
     opts.force || mode === "full" || !catalogFresh ? "full" : "counts";
 
+  stage("Executando probeXtream (login + catálogo)");
   const x = await probeXtream(server.host, username, password, { catalogMode });
 
 
@@ -1140,17 +1143,16 @@ export async function runIptvSync(serverId: string, opts: { mode?: "smart" | "fu
   });
 
 
-  const { data: sync } = await supabaseAdmin.from("iptv_syncs").insert({
+  stage("Salvando catálogo e comparando TMDB");
+  const { data: sync, error: syncErr } = await (supabaseAdmin.from("iptv_syncs" as any) as any).insert({
     server_id: serverId,
     mode,
     api_ms: x.api_ms,
     login_ok: x.login_ok,
     json_valid: x.json_valid,
-    // Em consulta leve (cache válido) reaproveitamos os totais do último sync.
     channels: x.channels ?? (x.catalog_cached ? (lastSync?.channels ?? null) : null),
     movies: x.movies ?? (x.catalog_cached ? (lastSync?.movies ?? null) : null),
     series: x.series ?? (x.catalog_cached ? (lastSync?.series ?? null) : null),
-
     categories: x.categories,
     m3u_channels: m3u?.m3u_channels ?? null,
     m3u_groups: m3u?.m3u_groups ?? null,
@@ -1164,9 +1166,7 @@ export async function runIptvSync(serverId: string, opts: { mode?: "smart" | "fu
     ip: currentIp,
     asn: currentAsn,
     datacenter: analysis?.org ?? null,
-    // Erro da Player API tem prioridade; falha do get.php é só de playlist.
     error: x.error ?? (m3u?.error ? `Playlist M3U: ${m3u.error}` : null),
-
     login_checked: x.login_checked,
     diagnostics: {
       ...(sanitizeDiagnostics(x.diagnostics) ?? {}),
@@ -1177,10 +1177,11 @@ export async function runIptvSync(serverId: string, opts: { mode?: "smart" | "fu
       protection_suspected: x.protection_suspected,
       catalog_cached: x.catalog_cached,
     } as never,
+  } as any).select("id").maybeSingle();
 
-
-
-  }).select("id").maybeSingle();
+  if (syncErr) {
+     console.error(`[iptv-sync] [${serverId}] Erro ao salvar log de sincronização:`, syncErr);
+  }
 
   if (sync?.id && streamProbes.length) {
     await supabaseAdmin.from("iptv_stream_tests").insert(
@@ -1331,7 +1332,59 @@ export async function runIptvSync(serverId: string, opts: { mode?: "smart" | "fu
   }
 
 
-  return { skipped: false as const, sync_id: sync?.id ?? null, health, channels: x.channels, streams: streamProbes, catalog: catalogDiff };
+  return { 
+    skipped: false as const, 
+    sync_id: sync?.id ?? null, 
+    health, 
+    channels: x.channels, 
+    streams: streamProbes, 
+    catalog: catalogDiff,
+    contents_found: (catalogDiff as any)?.new_titles || 0,
+    changes: ((catalogDiff as any)?.total_changes || 0) > 0
+  };
+}
+
+/**
+ * Processa servidores IPTV em lotes no Core AWS.
+ * Garante que um servidor com erro não derrube toda sincronização.
+ */
+export async function runIptvBatchSync(serverIds: string[], opts: { mode?: "smart" | "full" } = {}) {
+  const BATCH_SIZE = 5;
+  const results = [];
+  let total_contents = 0;
+  
+  console.log(`[iptv-batch] Iniciando lote de ${serverIds.length} servidores (tamanho do lote: ${BATCH_SIZE})`);
+  
+  // Dividir em pedaços para processamento
+  for (let i = 0; i < serverIds.length; i += BATCH_SIZE) {
+    const chunk = serverIds.slice(i, i + BATCH_SIZE);
+    console.log(`[iptv-batch] Processando lote ${Math.floor(i / BATCH_SIZE) + 1} (${chunk.length} servidores)`);
+    
+    const chunkResults = await Promise.all(
+      chunk.map(async (id) => {
+        try {
+          const res = await runIptvSync(id, { mode: opts.mode, force: true });
+          const count = (res as any)?.contents_found || 0;
+          total_contents += count;
+          return { id, ok: true, contents_found: count, no_changes: !(res as any)?.changes };
+        } catch (e: any) {
+          console.error(`[iptv-batch] [${id}] Falha individual:`, e.message);
+          return { id, ok: false, error: e.message };
+        }
+      })
+    );
+    results.push(...chunkResults);
+  }
+  
+  return { 
+    results, 
+    total_contents_found: total_contents,
+    summary: {
+      total: results.length,
+      success: results.filter(r => r.ok).length,
+      failed: results.filter(r => !r.ok).length
+    }
+  };
 }
 
 export async function runDueIptvSyncs() {

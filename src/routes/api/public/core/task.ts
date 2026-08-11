@@ -16,11 +16,13 @@ const Body = z.object({
     "iptv-detect",
     "iptv-validate",
     "iptv-sync",
+    "iptv-batch-sync",
     "iptv-ua-test",
     "content-scan",
     "telegram-broadcast",
   ]),
   serverId: z.string().uuid().optional(),
+  serverIds: z.array(z.string().uuid()).optional(),
   host: z.string().min(1).max(255).optional(),
   username: z.string().max(200).nullable().optional(),
   password: z.string().max(200).nullable().optional(),
@@ -56,6 +58,10 @@ async function execute(input: z.infer<typeof Body>) {
     case "iptv-sync": {
       const { runIptvSync } = await import("@/lib/iptv.server");
       return await runIptvSync(input.serverId!, { mode: input.mode ?? "smart", force: true });
+    }
+    case "iptv-batch-sync": {
+      const { runIptvBatchSync } = await import("@/lib/iptv.server");
+      return await runIptvBatchSync(input.serverIds || [], { mode: input.mode ?? "full" });
     }
     case "iptv-ua-test": {
       const { comparePlayerApiUserAgents } = await import("@/lib/iptv.server");
