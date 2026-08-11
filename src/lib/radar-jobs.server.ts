@@ -248,7 +248,7 @@ export async function syncServerVodCatalog(
       const existingMap = new Map((existing ?? []).map((r: any) => [r.title_key as string, r.id as string]));
 
       const toInsert = part
-        .filter((k) => !existingMap.has(k))
+        .filter((k) => !existingMap.has(k) && byKey.has(k))
         .map((k) => ({
           title_key: k,
           media_type: mediaType,
@@ -258,6 +258,7 @@ export async function syncServerVodCatalog(
           last_detected_at: nowIso,
           tmdb_status: "pending",
         }));
+
 
       if (toInsert.length) {
         const { data: inserted } = await supabaseAdmin
