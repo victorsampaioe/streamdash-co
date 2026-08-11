@@ -3912,6 +3912,15 @@ export type Database = {
           name: string
         }[]
       }
+      get_public_region_checks: {
+        Args: { _limit?: number; _minutes?: number; _slug: string }
+        Returns: {
+          checked_at: string
+          latency_ms: number
+          region_code: string
+          status: string
+        }[]
+      }
       get_public_status: {
         Args: { _slug: string }
         Returns: {
