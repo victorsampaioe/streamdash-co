@@ -186,7 +186,7 @@ function ContentIntelligence() {
           <DialogHeader>
             <DialogTitle>Preparação da Sincronização Radar</DialogTitle>
             <DialogDescription className="text-xs mt-2">
-              O Radar IPTV já carrega conteúdos do TMDB, porém a sincronização dos servidores está falhando. Ajustando a preparação abaixo.
+              O Radar IPTV já carrega conteúdos do TMDB, porém a sincronização dos servidores está falhando. Ajustar a preparação da sincronização.
             </DialogDescription>
             <div className="pt-4 space-y-4 max-h-[60vh] overflow-y-auto pr-2">
               <div className="grid grid-cols-1 gap-2 text-left">
@@ -252,7 +252,7 @@ function ContentIntelligence() {
               onClick={() => prepData && syncMutation.mutate({ ids: prepData.server_ids, testOne: true })}
               disabled={syncMutation.isPending || !prepData?.servers_found}
             >
-              Fazer teste forçado (1 servidor)
+              Fazer um teste forçado (1 servidor)
             </Button>
             <div className="flex gap-2">
               <Button variant="ghost" onClick={() => setShowConfirm(false)}>Cancelar</Button>
