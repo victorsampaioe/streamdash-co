@@ -198,7 +198,13 @@ export const searchRadarTitleManual = createServerFn({ method: "POST" })
       suggestions = [...new Set(((like ?? []) as { name: string }[]).map((r) => r.name))].slice(0, 10);
     }
 
-    const servers = [...new Set(rows.map((r) => nameById.get(r.server_id) ?? "Servidor"))];
+    // Lista por servidor lógico (aliases agrupados contam como um só)
+    const logicalNames = new Map<string, string>();
+    for (const r of rows) {
+      const cl = clusterByServer.get(r.server_id);
+      logicalNames.set(cl?.id ?? r.server_id, cl?.name ?? nameById.get(r.server_id) ?? "Servidor");
+    }
+    const servers = [...logicalNames.values()];
 
     return {
       title,
