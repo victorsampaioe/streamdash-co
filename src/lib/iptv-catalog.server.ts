@@ -82,8 +82,10 @@ export async function syncCatalog(
   opts: { force?: boolean } = {},
 ): Promise<CatalogDiff> {
   const started = Date.now();
-  console.log(`[iptv-radar] Iniciando processamento do catálogo para o servidor: ${serverId}`);
+  console.log(`[iptv-radar] [${serverId}] Iniciando processamento do catálogo...`);
   const kinds: CatalogKind[] = ["live", "vod", "series"];
+
+  console.log(`[iptv-radar] [${serverId}] Etapa: Normalização e limpeza de duplicados...`);
 
   const clean: CatalogInput = { live: [], vod: [], series: [] };
   for (const kind of kinds) {
@@ -124,6 +126,7 @@ export async function syncCatalog(
   }
 
   // Estado atual no banco (apenas itens ativos)
+  console.log(`[iptv-radar] [${serverId}] Etapa: Carregando catálogo atual do banco de dados (${totals.live + totals.vod + totals.series} itens pendentes)...`);
   const known = new Map<string, { name: string; category: string | null }>();
   {
     let from = 0;
@@ -149,6 +152,7 @@ export async function syncCatalog(
   const added = { live: 0, vod: 0, series: 0 } as Record<CatalogKind, number>;
   const currentKeys = new Set<string>();
 
+  console.log(`[iptv-radar] [${serverId}] Etapa: Comparando e gerando diff...`);
   for (const kind of kinds) {
     for (const it of clean[kind]) {
       const key = `${kind}:${it.id}`;

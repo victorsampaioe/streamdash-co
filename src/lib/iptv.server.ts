@@ -498,10 +498,14 @@ export async function probeXtream(
   for (const s of steps) {
     let stepDone = false;
     const wait = STEP_BACKOFF_MS[s.step - 1] ?? 0;
-    if (wait) await sleep(wait + Math.floor(Math.random() * 400));
+    if (wait) {
+      console.log(`[iptv-probe] [${clean}] Aguardando backoff (${wait}ms) para ${s.label}...`);
+      await sleep(wait + Math.floor(Math.random() * 400));
+    }
     for (const candidate of [`http://${clean}`, `https://${clean}`]) {
       const url = `${candidate}/${s.path}?${auth}`;
       try {
+        console.log(`[iptv-probe] [${clean}] Tentando: ${s.label} (${candidate})`);
         const r = await getJson(url, API_TIMEOUT_MS, s.ua);
         info = r.data;
         okDiag = r.diag;
@@ -986,12 +990,14 @@ import type { AlertCandidate } from "./alert-state.server";
 
 
 export async function runIptvSync(serverId: string, opts: { mode?: "smart" | "full"; force?: boolean } = {}) {
-  const stage = (s: string) => console.log(`[iptv-sync] [${serverId}] Etapa: ${s}`);
+  const logPrefix = `[iptv-sync] [${serverId}]`;
+  const stage = (s: string) => console.log(`${logPrefix} Etapa: ${s}`);
+  
   stage("Iniciando processamento");
   
   const { data: srv, error: srvErr } = await supabaseAdmin.from("servers").select("*").eq("id", serverId).maybeSingle();
   if (srvErr) {
-    console.error(`[iptv-sync] [${serverId}] Erro ao buscar servidor:`, srvErr);
+    console.error(`${logPrefix} Erro ao buscar servidor:`, srvErr);
     throw new Error(`Erro de banco: ${srvErr.message}`);
   }
   if (!srv) throw new Error("Servidor não encontrado no banco de dados.");
@@ -1008,6 +1014,7 @@ export async function runIptvSync(serverId: string, opts: { mode?: "smart" | "fu
 
   const server = srv as unknown as ServerRow;
   const mode = opts.mode ?? (server.iptv_mode === "basic" ? "smart" : server.iptv_mode);
+  stage(`Modo definido: ${mode}`);
 
   // Todos os problemas detectados nesta execução são acumulados e enviados
   // em UMA única mensagem consolidada no final (ver dispatchAlerts).
