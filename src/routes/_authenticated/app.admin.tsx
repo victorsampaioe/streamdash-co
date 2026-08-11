@@ -42,7 +42,9 @@ import { UserCog, History, PlusCircle, UserCheck, UserRoundCog, Settings2, Trash
 
 
 import { StorageReportCard } from "@/components/storage-report-card";
+import { SyncPaymentsCard } from "@/components/admin/sync-payments-card";
 import { AlertCircle } from "lucide-react";
+
 import { convertToReseller } from "@/lib/reseller-conversion.functions";
 import { updateReseller } from "@/lib/reseller-update.functions";
 import { deleteUserAdmin } from "@/lib/admin-actions.functions";
@@ -328,6 +330,7 @@ function AdminPage() {
         </TabsContent>
 
         <TabsContent value="overview" className="space-y-6">
+          <SyncPaymentsCard />
           <TelegramBroadcastCard />
           
           <Card className="p-4 space-y-4">
