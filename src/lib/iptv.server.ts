@@ -986,8 +986,13 @@ import type { AlertCandidate } from "./alert-state.server";
 
 
 export async function runIptvSync(serverId: string, opts: { mode?: "smart" | "full"; force?: boolean } = {}) {
-  const { data: srv } = await supabaseAdmin.from("servers").select("*").eq("id", serverId).maybeSingle();
-  if (!srv) throw new Error("Servidor não encontrado");
+  console.log(`[iptv] Iniciando runIptvSync para servidor ${serverId}`);
+  const { data: srv, error: srvErr } = await supabaseAdmin.from("servers").select("*").eq("id", serverId).maybeSingle();
+  if (srvErr) {
+    console.error(`[iptv] Erro ao buscar servidor ${serverId}:`, srvErr);
+    throw new Error(`Erro de banco: ${srvErr.message}`);
+  }
+  if (!srv) throw new Error("Servidor não encontrado no banco de dados.");
 
   // Nenhuma consulta Xtream/Player API para contas expiradas ou sem créditos.
   {
@@ -1222,7 +1227,8 @@ export async function runIptvSync(serverId: string, opts: { mode?: "smart" | "fu
         }
       }
     } catch (e) {
-      console.warn("[iptv] falha ao sincronizar catálogo:", (e as Error)?.message);
+      console.error(`[iptv] Erro fatal na sincronização de catálogo (Servidor ${serverId}):`, e);
+      throw new Error(`Falha no Radar (syncCatalog): ${(e as Error)?.message}`);
     }
   }
 

@@ -86,6 +86,7 @@ export async function syncCatalog(
   opts: { force?: boolean } = {},
 ): Promise<CatalogDiff> {
   const started = Date.now();
+  console.log(`[iptv-radar] Iniciando processamento do catálogo para o servidor: ${serverId}`);
   const kinds: CatalogKind[] = ["live", "vod", "series"];
 
   const clean: CatalogInput = { live: [], vod: [], series: [] };
