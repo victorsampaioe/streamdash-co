@@ -67,7 +67,7 @@ async function run() {
     errors.push(`tmdb: ${e?.message}`);
   }
 
-  return { ok: errors.length === 0, recovered, auto, step, tmdb, ...(errors.length ? { errors } : {}) };
+  return { ok: errors.length === 0, recovered, clusters, auto, step, tmdb, ...(errors.length ? { errors } : {}) };
 }
 
 export const Route = createFileRoute("/api/public/cron/radar")({
