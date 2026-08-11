@@ -231,29 +231,18 @@ function ContentIntelligence() {
         <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle>
-              {syncProgress ? (syncProgress.processed === syncProgress.total ? "Relatório após sincronização" : "Sincronização em Progresso") : "O Radar IPTV precisa ser preparado para crescimento"}
+              {syncProgress ? (syncProgress.processed === syncProgress.total ? "Relatório após sincronização" : "Sincronização em Progresso") : "Validar conteúdos já sincronizados e corrigir capas do Radar IPTV"}
             </DialogTitle>
             <DialogDescription className="text-xs mt-2 whitespace-pre-wrap">
               {syncProgress ? (
                 syncProgress.processed === syncProgress.total ? (
-                  "O Radar IPTV está encontrando os conteúdos corretamente, porém existem dois problemas:\n\nAs capas/posters não carregam:\ncards aparecem sem imagem;\nverificar se o poster_url está sendo salvo corretamente;\nvalidar integração TMDB.\nAo clicar nos conteúdos não abre o detalhe:\na URL está gerando /movie/null;\no ID do conteúdo está chegando vazio.\n\nCorrigir o fluxo:\n\nTMDB → salvar:\n\ntmdb_id\ntítulo\ntipo (filme/série)\nposter_path\nbackdrop_path\nnota\ndescrição\n\nDepois usar esse ID para:\n\nabrir página de detalhes;\ncarregar capa;\nmostrar servidores disponíveis.\n\nAdicionar fallback:\nCaso TMDB não tenha imagem, mostrar uma imagem padrão e nunca deixar card quebrado.\n\nValidar todos os conteúdos já sincronizados para preencher os campos faltantes."
+                  "A otimização da sincronização foi implementada com sucesso. Agora preciso validar os conteúdos que já foram encontrados.\n\nVerificar todos os títulos já sincronizados e garantir:\n\n• Cada conteúdo tenha vínculo correto com TMDB (ID, poster, nota, descrição);\n• Corrigir conteúdos que aparecem sem capa (buscar novamente ou fallback);\n• Corrigir página de detalhes (evitar IDs nulos);\n• Fazer uma rotina de reparação: \"Corrigir capas dos conteúdos já encontrados\"."
                 ) : (
                   "Implementar arquitetura com fila de jobs.\n\nFluxo:\n\n• Ao clicar em \"Sincronizar Conteúdos Agora\": criar um job de sincronização;\n• Retornar imediatamente ao usuário;\n• Não aguardar processamento no navegador."
                 )
               ) : (
-                "O Radar IPTV precisa ser preparado para crescimento. Atualmente a sincronização depende de uma execução única, o que pode causar travamentos quando aumentar a quantidade de servidores.\n\n" +
-                "Implementar arquitetura com fila de jobs.\n\n" +
-                "Fluxo:\n" +
-                "• Ao clicar em \"Sincronizar Conteúdos Agora\": criar um job de sincronização;\n" +
-                "• Retornar imediatamente ao usuário;\n" +
-                "• Não aguardar processamento no navegador.\n\n" +
-                "O Core AWS deve processar a fila:\n" +
-                "• Pegar servidores pendentes;\n" +
-                "• Processar em lotes;\n" +
-                "• Salvar progresso.\n\n" +
-                "Cada servidor deve ter status individual:\n" +
-                "⏳ aguardando | 🔄 processando | ✅ concluído | ⚠️ erro\n\n" +
-                "Se um servidor falhar: registrar erro, continuar próximos, não cancelar a sincronização inteira.\n\n" +
+                "Validar principalmente os conteúdos que já aparecem no Radar e confirmar que:\n\n✅ capa aparece | ✅ detalhes abrem | ✅ servidores disponíveis aparecem | ✅ primeira detecção preservada\n\n" +
+                "A otimização da sincronização foi implementada com sucesso. Agora preciso validar os conteúdos que já foram encontrados.\n\n" +
                 "Objetivo: Suportar crescimento para centenas de servidores sem travar."
               )}
             </DialogDescription>

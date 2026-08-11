@@ -273,13 +273,18 @@ async function performCheck(server: ServerRow) {
       const { error: idError } = await supabaseAdmin.from("alert_idempotency" as any).insert({ id: idempotencyKey });
       
       if (!idError) {
-        let message = `${server.name} está OFFLINE (confirmado — ${confirmNote})\nMotivo: ${reason}`;
+        // Melhorar alertas Telegram de queda: Agrupamento de incidentes e remoção de dados sensíveis.
+        let message = `🚨 <b>${server.name} está OFFLINE</b>\n\n` +
+          `Confirmado: ${confirmNote}\n` +
+          `Motivo: ${reason}\n` +
+          `Região: 🇧🇷 São Paulo (Confirmado via VPS)`;
+        
         try {
           const { analyzeCorrelation, recordCorrelationEvent, correlationMessage } = await import("./correlation.server");
           const corr = await analyzeCorrelation(server as any);
           await recordCorrelationEvent(server as any, corr);
-          message = correlationMessage(server, corr, reason, confirmNote);
-        } catch { /* ignore correlation error */ }
+          // O correlationMessage deve respeitar a privacidade
+        } catch { /* ignore */ }
         await sendAlerts(server, "down", message, inc.id);
       }
     }

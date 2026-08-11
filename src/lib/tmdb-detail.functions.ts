@@ -51,9 +51,11 @@ export const getTmdbDetail = createServerFn({ method: "POST" })
     const availability = (servers ?? []).map((s) => {
       const mine = s.owner_id === context.userId;
       const meta = itemMeta.get(s.id);
+      // Ajustar Ranking do Radar para exibir somente nome público do servidor
+      // Garantir que DNS/Host/IP nunca cheguem ao frontend
       return {
         server_id: maskServerId(s.id, mine),
-        name: maskServerName(s.id, mine, s.name),
+        name: s.name || "Servidor Privado",
         is_mine: mine,
         status: s.current_status as string,
         last_sync_at: s.last_iptv_sync_at as string | null,

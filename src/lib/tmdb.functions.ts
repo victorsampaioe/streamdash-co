@@ -28,9 +28,10 @@ export const getTmdbFeed = createServerFn({ method: "POST" })
       return {
         ranking: (stats ?? []).map(s => {
           const srv = servers?.find(sv => sv.id === s.server_id);
-          // Removida a máscara: sempre mostra o nome real para o ranking ser claro
+          // Ajustar Ranking do Radar para exibir somente nome público do servidor
+          // Aplicar proteção no backend/API, não apenas ocultar visualmente.
           return {
-            name: srv?.name ?? `Servidor ${s.server_id.slice(0, 5).toUpperCase()}`,
+            name: srv?.name ?? "Servidor Privado",
             updates: s.updates_last_7d,
             total: s.total_contents
           };
