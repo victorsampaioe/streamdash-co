@@ -1144,7 +1144,7 @@ export async function runIptvSync(serverId: string, opts: { mode?: "smart" | "fu
 
 
   stage("Salvando catálogo e comparando TMDB");
-  const { data: syncData, error: syncErr } = await (supabaseAdmin.from("iptv_syncs" as any) as any).insert({
+  const { data: sync, error: syncErr } = await (supabaseAdmin.from("iptv_syncs" as any) as any).insert({
     server_id: serverId,
     mode,
     api_ms: x.api_ms,
