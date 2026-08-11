@@ -89,3 +89,23 @@ async function sendToChannel(ch: any, message: string, event: "up" | "down") {
     console.error("Erro ao enviar notificação agrupada:", e);
   }
 }
+
+export async function notifyUserActivation(userId: string, planName: string) {
+  const { data: channels } = await supabaseAdmin
+    .from("alert_channels")
+    .select("target")
+    .eq("owner_id", userId)
+    .eq("kind", "telegram")
+    .eq("enabled", true);
+
+  if (!channels || channels.length === 0) return;
+
+  const planLabel = planName === "yearly" ? "Anual" : (planName === "monthly" ? "Mensal" : planName);
+  
+  const message = `✅ <b>Stream Monitor</b>\n\nSua assinatura foi confirmada!\n\nPlano: ${planLabel}\nStatus: Ativo\nAcesso liberado.`;
+
+  for (const ch of channels) {
+    await sendToChannel({ kind: "telegram", target: ch.target }, message, "up");
+  }
+}
+
