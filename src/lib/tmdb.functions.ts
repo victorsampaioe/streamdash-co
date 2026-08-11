@@ -21,15 +21,16 @@ export const getTmdbFeed = createServerFn({ method: "POST" })
         .order("updates_last_7d", { ascending: false })
         .limit(10);
       
-      const { maskServerName } = await import("./server-mask.server");
-      const { data: servers } = await context.supabase.from("servers").select("id, name, owner_id");
+      const { data: servers } = await context.supabase
+        .from("servers")
+        .select("id, name, owner_id");
       
       return {
         ranking: (stats ?? []).map(s => {
           const srv = servers?.find(sv => sv.id === s.server_id);
-          const mine = srv?.owner_id === context.userId;
+          // Removida a máscara: sempre mostra o nome real para o ranking ser claro
           return {
-            name: maskServerName(s.server_id, mine, srv?.name ?? "Servidor"),
+            name: srv?.name ?? `Servidor ${s.server_id.slice(0, 5).toUpperCase()}`,
             updates: s.updates_last_7d,
             total: s.total_contents
           };

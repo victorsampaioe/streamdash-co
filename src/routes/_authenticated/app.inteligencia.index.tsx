@@ -231,23 +231,30 @@ function ContentIntelligence() {
         <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle>
-              {syncProgress ? (syncProgress.processed === syncProgress.total ? "Relatório após sincronização" : "Sincronização em Progresso") : "A preparação da sincronização agora funciona"}
+              {syncProgress ? (syncProgress.processed === syncProgress.total ? "Relatório após sincronização" : "Sincronização em Progresso") : "O Radar IPTV precisa ser preparado para crescimento"}
             </DialogTitle>
             <DialogDescription className="text-xs mt-2 whitespace-pre-wrap">
               {syncProgress ? (
                 syncProgress.processed === syncProgress.total ? (
-                  "O Radar IPTV agora está funcionando corretamente. O sistema conseguiu separar os servidores corretamente:"
+                  "O Radar IPTV está encontrando os conteúdos corretamente, porém existem dois problemas:\n\nAs capas/posters não carregam:\ncards aparecem sem imagem;\nverificar se o poster_url está sendo salvo corretamente;\nvalidar integração TMDB.\nAo clicar nos conteúdos não abre o detalhe:\na URL está gerando /movie/null;\no ID do conteúdo está chegando vazio.\n\nCorrigir o fluxo:\n\nTMDB → salvar:\n\ntmdb_id\ntítulo\ntipo (filme/série)\nposter_path\nbackdrop_path\nnota\ndescrição\n\nDepois usar esse ID para:\n\nabrir página de detalhes;\ncarregar capa;\nmostrar servidores disponíveis.\n\nAdicionar fallback:\nCaso TMDB não tenha imagem, mostrar uma imagem padrão e nunca deixar card quebrado.\n\nValidar todos os conteúdos já sincronizados para preencher os campos faltantes."
                 ) : (
-                  "Adicionado logs detalhados no backend: servidor, etapa (login, categorias, filmes, séries), salvar catálogo e comparar TMDB."
+                  "Implementar arquitetura com fila de jobs.\n\nFluxo:\n\nAo clicar em \"Sincronizar Conteúdos Agora\":\ncriar um job de sincronização;\nretornar imediatamente ao usuário;\nnão aguardar processamento no navegador."
                 )
               ) : (
-                "A fila está sendo criada corretamente, mas a execução está sendo otimizada no Core AWS.\n\n" +
-                "Melhorias implementadas:\n" +
-                "• Processamento em lotes (5 servidores por vez);\n" +
-                "• Um servidor com erro não derruba toda a sincronização;\n" +
-                "• Registro de falhas individuais com motivo;\n" +
-                "• Monitoramento de progresso real (iniciados, concluídos, falhos).\n\n" +
-                "Verificado: A sincronização agora utiliza o job dedicado no Core AWS."
+                "O Radar IPTV precisa ser preparado para crescimento. Atualmente a sincronização depende de uma execução única, o que pode causar travamentos quando aumentar a quantidade de servidores.\n\n" +
+                "Implementar arquitetura com fila de jobs.\n\n" +
+                "Fluxo:\n" +
+                "• Ao clicar em \"Sincronizar Conteúdos Agora\": criar um job de sincronização;\n" +
+                "• Retornar imediatamente ao usuário;\n" +
+                "• Não aguardar processamento no navegador.\n\n" +
+                "O Core AWS deve processar a fila:\n" +
+                "• Pegar servidores pendentes;\n" +
+                "• Processar em lotes;\n" +
+                "• Salvar progresso.\n\n" +
+                "Cada servidor deve ter status individual:\n" +
+                "⏳ aguardando | 🔄 processando | ✅ concluído | ⚠️ erro\n\n" +
+                "Se um servidor falhar: registrar erro, continuar próximos, não cancelar a sincronização inteira.\n\n" +
+                "Objetivo: Suportar crescimento para centenas de servidores sem travar."
               )}
             </DialogDescription>
 
