@@ -53,15 +53,28 @@ export function useCore(): boolean {
 export async function callCore<T>(task: CoreTask, payload: Record<string, unknown> = {}): Promise<T> {
   const base = coreApiUrl();
   if (!base) throw new Error("CORE_API_URL não configurada");
-  const res = await fetch(`${base}/api/public/core/task`, {
-    method: "POST",
-    headers: {
-      "content-type": "application/json",
-      "x-cron-secret": process.env.CRON_SECRET ?? "",
-    },
-    body: JSON.stringify({ task, ...payload }),
-  });
-  if (!res.ok) throw new Error(`Core ${task} falhou (${res.status}): ${await res.text()}`);
+  
+  // Timeout estendido para sincronização em lote (2 minutos)
+  const isBatch = task === "iptv-batch-sync";
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), isBatch ? 120_000 : 30_000);
+
+  try {
+    const res = await fetch(`${base}/api/public/core/task`, {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        "x-cron-secret": process.env.CRON_SECRET ?? "",
+      },
+      body: JSON.stringify({ task, ...payload }),
+      signal: controller.signal,
+    });
+    if (!res.ok) throw new Error(`Core ${task} falhou (${res.status}): ${await res.text()}`);
+    return (await res.json()) as T;
+  } finally {
+    clearTimeout(timeout);
+  }
+}
   return (await res.json()) as T;
 }
 
