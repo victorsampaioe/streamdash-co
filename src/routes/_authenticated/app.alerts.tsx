@@ -159,6 +159,7 @@ function AlertsPage() {
                 </p>
               )}
             </div>
+            </div>
             <div className="md:col-span-3">
               <TelegramGuide />
             </div>
