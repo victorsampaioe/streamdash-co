@@ -329,6 +329,7 @@ function AdminPage() {
 
         <TabsContent value="radar" className="space-y-6">
           <RadarAdminPanel />
+          <RadarClustersPanel />
         </TabsContent>
 
         <TabsContent value="overview" className="space-y-6">
