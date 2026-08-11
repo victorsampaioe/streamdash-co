@@ -378,9 +378,10 @@ export async function runRadarJobStep(opts: { batchSize?: number } = {}) {
     .from("iptv_sync_job_items")
     .select("id, server_id")
     .eq("job_id", jobId)
-    .in("status", ["pending", "running"])
+    .eq("status", "pending")
     .order("created_at", { ascending: true })
     .limit(batchSize);
+
 
   const items = (pending ?? []) as { id: string; server_id: string }[];
 
