@@ -986,10 +986,12 @@ import type { AlertCandidate } from "./alert-state.server";
 
 
 export async function runIptvSync(serverId: string, opts: { mode?: "smart" | "full"; force?: boolean } = {}) {
-  console.log(`[iptv] Iniciando runIptvSync para servidor ${serverId}`);
+  const stage = (s: string) => console.log(`[iptv-sync] [${serverId}] Etapa: ${s}`);
+  stage("Iniciando processamento");
+  
   const { data: srv, error: srvErr } = await supabaseAdmin.from("servers").select("*").eq("id", serverId).maybeSingle();
   if (srvErr) {
-    console.error(`[iptv] Erro ao buscar servidor ${serverId}:`, srvErr);
+    console.error(`[iptv-sync] [${serverId}] Erro ao buscar servidor:`, srvErr);
     throw new Error(`Erro de banco: ${srvErr.message}`);
   }
   if (!srv) throw new Error("Servidor não encontrado no banco de dados.");
@@ -1043,6 +1045,7 @@ export async function runIptvSync(serverId: string, opts: { mode?: "smart" | "fu
   const catalogMode: "counts" | "full" =
     opts.force || mode === "full" || !catalogFresh ? "full" : "counts";
 
+  stage("Executando probeXtream (login + catálogo)");
   const x = await probeXtream(server.host, username, password, { catalogMode });
 
 

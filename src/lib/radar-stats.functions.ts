@@ -88,7 +88,7 @@ export const runRadarBatchSyncNow = createServerFn({ method: "POST" })
 
     // Fluxo: Ao clicar em "Sincronizar Conteúdos Agora": criar uma tarefa de sincronização; enviar para o Core AWS; retornar imediatamente.
     // O Core AWS deve: pegar servidores IPTV válidos; executar login Xtream; buscar filmes/séries/canais; comparar catálogo; registrar primeira detecção; atualizar ranking.
-    return await runOnCore("iptv-sync", { serverIds: data.serverIds }, async () => {
+    return await runOnCore("iptv-batch-sync", { serverIds: data.serverIds }, async () => {
       // Fallback local se o Core não estiver configurado ou falhar
       const results = [];
       let contents_found = 0;
