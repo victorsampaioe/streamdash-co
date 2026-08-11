@@ -283,8 +283,8 @@ async function performCheck(server: ServerRow) {
           const { analyzeCorrelation, recordCorrelationEvent, correlationMessage } = await import("./correlation.server");
           const corr = await analyzeCorrelation(server as any);
           await recordCorrelationEvent(server as any, corr);
-          // O correlationMessage deve respeitar a privacidade
-        } catch { /* ignore */ }
+          message = correlationMessage(server, corr, reason, confirmNote);
+        } catch { /* ignore correlation error */ }
         await sendAlerts(server, "down", message, inc.id);
       }
     }
