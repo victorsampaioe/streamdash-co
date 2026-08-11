@@ -8,7 +8,7 @@ import { fetchDetail } from "./tmdb.server";
  */
 export const repairTmdbPosters = createServerFn({ method: "POST" })
   .middleware([requireActiveSubscription])
-  .handler(async ({ context }) => {
+  .handler(async () => {
     // Busca itens sem poster ou com tmdb_id nulo no catálogo global
     const { data: items } = await supabaseAdmin
       .from("iptv_global_catalog")
@@ -22,7 +22,10 @@ export const repairTmdbPosters = createServerFn({ method: "POST" })
     for (const item of items) {
       try {
         const mediaType = item.media_type as "movie" | "tv";
-        const searchTmdb = (await import("./tmdb.server")).searchTmdb;
+        let tmdbId = item.tmdb_id;
+
+        if (!tmdbId) {
+          const { searchTmdb } = await import("./tmdb.server");
           const results = await searchTmdb(item.normalized_name);
           const match = results.find(r => r.media_type === mediaType);
           if (match) tmdbId = match.tmdb_id;
@@ -30,7 +33,6 @@ export const repairTmdbPosters = createServerFn({ method: "POST" })
 
         if (tmdbId) {
           const detail = await fetchDetail(mediaType, tmdbId);
-          // Atualiza apenas os campos que existem na tabela
           await supabaseAdmin
             .from("iptv_global_catalog")
             .update({
