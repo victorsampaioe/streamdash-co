@@ -1478,7 +1478,8 @@ function AdminAlertsPanel() {
     queryKey: ["admin-alert-logs"],
     queryFn: async () => {
       const { getAlertLogs } = await import("@/lib/admin-alerts.functions");
-      return await getAlertLogs({ limit: 20 });
+      const fn = getAlertLogs;
+      return await fn({ data: { limit: 20 } });
     },
     refetchInterval: 10000
   });
