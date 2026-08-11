@@ -51,14 +51,18 @@ export const getTmdbFeed = createServerFn({ method: "POST" })
       const { data: globalItems } = await context.supabase
         .from("iptv_global_catalog")
         .select(`
-          *,
-          first_server:servers!first_server_id(name)
+          media_type,
+          tmdb_id,
+          normalized_name,
+          poster_path,
+          servers_found_count,
+          last_detected_at
         `)
-        .eq("media_type", "movie") // Apenas filmes na aba Filmes Recentes
+        .eq("media_type", "movie") 
         .not("tmdb_id", "is", null)
         .not("poster_path", "is", null)
         .neq("poster_path", "")
-        .order("first_detected_at", { ascending: false })
+        .order("last_detected_at", { ascending: false })
         .limit(20);
 
       if (globalItems && globalItems.length > 0) {
@@ -71,12 +75,9 @@ export const getTmdbFeed = createServerFn({ method: "POST" })
             title: it.normalized_name,
             original_title: it.normalized_name,
             poster_path: it.poster_path,
-            release_date: it.first_detected_at,
+            release_date: it.last_detected_at,
             vote_average: 0,
-            found_count: it.servers_found_count || 0,
-            first_server_name: (it.first_server as any)?.name || "Servidor",
-            first_detected_at: it.first_detected_at,
-            last_detected_at: it.last_detected_at
+            found_count: it.servers_found_count || 0
           }))
         };
       }
