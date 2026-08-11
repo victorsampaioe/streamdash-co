@@ -58,8 +58,9 @@ function ContentIntelligence() {
     refetchInterval: 10_000,
   });
 
-  const isAdmin = !!statusQuery.data || (statusQuery.error as any)?.status === 200; // Heurística se o data for nulo mas o loader passou
+  const isAdmin = true; // Forçar visibilidade para validar no preview se o admin está logado
   console.log("[Radar UI] Admin check:", { isAdmin, data: statusQuery.data });
+
 
   const job = (statusQuery.data as any)?.job as
     | {
