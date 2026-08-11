@@ -54,6 +54,7 @@ import { Route as ApiPublicWebhooksMercadopagoRouteImport } from './routes/api/p
 import { Route as ApiPublicTelegramWebhookRouteImport } from './routes/api/public/telegram/webhook'
 import { Route as ApiPublicRegionsTargetsRouteImport } from './routes/api/public/regions/targets'
 import { Route as ApiPublicRegionsReportRouteImport } from './routes/api/public/regions/report'
+import { Route as ApiPublicCronRadarRouteImport } from './routes/api/public/cron/radar'
 import { Route as ApiPublicCronNotificationsRouteImport } from './routes/api/public/cron/notifications'
 import { Route as ApiPublicCronIptvNotificationsRouteImport } from './routes/api/public/cron/iptv-notifications'
 import { Route as ApiPublicCronDigestRouteImport } from './routes/api/public/cron/digest'
@@ -308,6 +309,11 @@ const ApiPublicRegionsReportRoute = ApiPublicRegionsReportRouteImport.update({
   path: '/api/public/regions/report',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicCronRadarRoute = ApiPublicCronRadarRouteImport.update({
+  id: '/api/public/cron/radar',
+  path: '/api/public/cron/radar',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiPublicCronNotificationsRoute =
   ApiPublicCronNotificationsRouteImport.update({
     id: '/api/public/cron/notifications',
@@ -451,6 +457,7 @@ export interface FileRoutesByFullPath {
   '/api/public/cron/digest': typeof ApiPublicCronDigestRoute
   '/api/public/cron/iptv-notifications': typeof ApiPublicCronIptvNotificationsRoute
   '/api/public/cron/notifications': typeof ApiPublicCronNotificationsRoute
+  '/api/public/cron/radar': typeof ApiPublicCronRadarRoute
   '/api/public/regions/report': typeof ApiPublicRegionsReportRoute
   '/api/public/regions/targets': typeof ApiPublicRegionsTargetsRoute
   '/api/public/telegram/webhook': typeof ApiPublicTelegramWebhookRoute
@@ -511,6 +518,7 @@ export interface FileRoutesByTo {
   '/api/public/cron/digest': typeof ApiPublicCronDigestRoute
   '/api/public/cron/iptv-notifications': typeof ApiPublicCronIptvNotificationsRoute
   '/api/public/cron/notifications': typeof ApiPublicCronNotificationsRoute
+  '/api/public/cron/radar': typeof ApiPublicCronRadarRoute
   '/api/public/regions/report': typeof ApiPublicRegionsReportRoute
   '/api/public/regions/targets': typeof ApiPublicRegionsTargetsRoute
   '/api/public/telegram/webhook': typeof ApiPublicTelegramWebhookRoute
@@ -575,6 +583,7 @@ export interface FileRoutesById {
   '/api/public/cron/digest': typeof ApiPublicCronDigestRoute
   '/api/public/cron/iptv-notifications': typeof ApiPublicCronIptvNotificationsRoute
   '/api/public/cron/notifications': typeof ApiPublicCronNotificationsRoute
+  '/api/public/cron/radar': typeof ApiPublicCronRadarRoute
   '/api/public/regions/report': typeof ApiPublicRegionsReportRoute
   '/api/public/regions/targets': typeof ApiPublicRegionsTargetsRoute
   '/api/public/telegram/webhook': typeof ApiPublicTelegramWebhookRoute
@@ -639,6 +648,7 @@ export interface FileRouteTypes {
     | '/api/public/cron/digest'
     | '/api/public/cron/iptv-notifications'
     | '/api/public/cron/notifications'
+    | '/api/public/cron/radar'
     | '/api/public/regions/report'
     | '/api/public/regions/targets'
     | '/api/public/telegram/webhook'
@@ -699,6 +709,7 @@ export interface FileRouteTypes {
     | '/api/public/cron/digest'
     | '/api/public/cron/iptv-notifications'
     | '/api/public/cron/notifications'
+    | '/api/public/cron/radar'
     | '/api/public/regions/report'
     | '/api/public/regions/targets'
     | '/api/public/telegram/webhook'
@@ -762,6 +773,7 @@ export interface FileRouteTypes {
     | '/api/public/cron/digest'
     | '/api/public/cron/iptv-notifications'
     | '/api/public/cron/notifications'
+    | '/api/public/cron/radar'
     | '/api/public/regions/report'
     | '/api/public/regions/targets'
     | '/api/public/telegram/webhook'
@@ -802,6 +814,7 @@ export interface RootRouteChildren {
   ApiPublicCronDigestRoute: typeof ApiPublicCronDigestRoute
   ApiPublicCronIptvNotificationsRoute: typeof ApiPublicCronIptvNotificationsRoute
   ApiPublicCronNotificationsRoute: typeof ApiPublicCronNotificationsRoute
+  ApiPublicCronRadarRoute: typeof ApiPublicCronRadarRoute
   ApiPublicRegionsReportRoute: typeof ApiPublicRegionsReportRoute
   ApiPublicRegionsTargetsRoute: typeof ApiPublicRegionsTargetsRoute
   ApiPublicTelegramWebhookRoute: typeof ApiPublicTelegramWebhookRoute
@@ -1125,6 +1138,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicRegionsReportRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/cron/radar': {
+      id: '/api/public/cron/radar'
+      path: '/api/public/cron/radar'
+      fullPath: '/api/public/cron/radar'
+      preLoaderRoute: typeof ApiPublicCronRadarRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/cron/notifications': {
       id: '/api/public/cron/notifications'
       path: '/api/public/cron/notifications'
@@ -1366,6 +1386,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPublicCronDigestRoute: ApiPublicCronDigestRoute,
   ApiPublicCronIptvNotificationsRoute: ApiPublicCronIptvNotificationsRoute,
   ApiPublicCronNotificationsRoute: ApiPublicCronNotificationsRoute,
+  ApiPublicCronRadarRoute: ApiPublicCronRadarRoute,
   ApiPublicRegionsReportRoute: ApiPublicRegionsReportRoute,
   ApiPublicRegionsTargetsRoute: ApiPublicRegionsTargetsRoute,
   ApiPublicTelegramWebhookRoute: ApiPublicTelegramWebhookRoute,
