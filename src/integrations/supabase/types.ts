@@ -4253,6 +4253,14 @@ export type Database = {
         }
         Returns: Json
       }
+      rebuild_iptv_clusters_service: {
+        Args: {
+          _min_items?: number
+          _min_overlap?: number
+          _weak_overlap?: number
+        }
+        Returns: Json
+      }
       recalc_iptv_availability: { Args: never; Returns: number }
       region_consensus: {
         Args: { _server_id: string; _window_minutes?: number }
