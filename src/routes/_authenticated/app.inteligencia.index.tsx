@@ -49,26 +49,50 @@ function ContentIntelligence() {
   const prepareSync = useServerFn(prepareRadarBatchSync);
   const runSync = useServerFn(runRadarBatchSyncNow);
   const [showConfirm, setShowConfirm] = useState(false);
-  const [prepData, setPrepData] = useState<{ servers_found: number; server_ids: string[] } | null>(null);
+  const [prepData, setPrepData] = useState<{ 
+    servers_found: number; 
+    server_ids: string[];
+    total_monitored: number;
+    configured_iptv: number;
+    waiting_credentials: number;
+  } | null>(null);
 
   const prepareMutation = useMutation({
     mutationFn: () => prepareSync(),
     onSuccess: (data) => {
-      setPrepData(data);
+      setPrepData(data as any);
       setShowConfirm(true);
     },
-    onError: (e: Error) => toast.error("Erro ao preparar sincronização: " + e.message),
+    onError: (e: Error) => {
+      console.error("Erro na preparação do Radar:", e);
+      toast.error("Erro ao preparar sincronização: " + e.message);
+    },
   });
 
   const syncMutation = useMutation({
     mutationFn: (ids: string[]) => runSync({ data: { serverIds: ids } }),
     onSuccess: (res) => {
       const ok = res.results.filter((r) => r.ok).length;
-      toast.success(`Sincronização concluída para ${ok} servidores!`);
+      const fails = res.results.filter((r) => !r.ok);
+      
+      if (fails.length > 0) {
+        console.group("Relatório de Falhas do Radar");
+        fails.forEach(f => {
+          console.error(`Servidor ${f.id} falhou:`, f.error);
+        });
+        console.groupEnd();
+        toast.warning(`Sincronização concluída: ${ok} sucesso, ${fails.length} falhas. Veja os logs no console.`);
+      } else {
+        toast.success(`Sincronização concluída para ${ok} servidores!`);
+      }
+      
       qc.invalidateQueries({ queryKey: ["tmdb-feed"] });
       setShowConfirm(false);
     },
-    onError: (e: Error) => toast.error("Erro na sincronização: " + e.message),
+    onError: (e: Error) => {
+      console.error("Erro crítico na sincronização do Radar:", e);
+      toast.error("Erro na sincronização: " + e.message);
+    },
   });
 
   const { data, isLoading, error } = useQuery({
