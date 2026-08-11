@@ -3858,6 +3858,14 @@ export type Database = {
           total_paid_cents: number
         }[]
       }
+      get_catalog_update_ranking: {
+        Args: { _limit?: number }
+        Returns: {
+          name: string
+          total: number
+          updates: number
+        }[]
+      }
       get_correlation_overview: { Args: { _server_id: string }; Returns: Json }
       get_iptv_radar_stats: { Args: never; Returns: Json }
       get_iptv_ranking: {

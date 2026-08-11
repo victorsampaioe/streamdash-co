@@ -15,27 +15,15 @@ export const getTmdbFeed = createServerFn({ method: "POST" })
     const { titleKey } = await import("./iptv-catalog.server");
 
     if (data.ranking) {
-      const { data: stats } = await context.supabase
-        .from("reseller_catalog_stats")
-        .select("server_id, updates_last_7d, total_contents")
-        .order("updates_last_7d", { ascending: false })
-        .limit(10);
-      
-      const { data: servers } = await context.supabase
-        .from("servers")
-        .select("id, name, owner_id");
-      
+      // Consulta segura: retorna apenas nome e contadores, sem expor dados de outros donos.
+      const { data: rows } = await (context.supabase as any).rpc("get_catalog_update_ranking", { _limit: 10 });
+
       return {
-        ranking: (stats ?? []).map(s => {
-          const srv = servers?.find(sv => sv.id === s.server_id);
-          // Ajustar Ranking do Radar para exibir somente nome público do servidor
-          // Aplicar proteção no backend/API, não apenas ocultar visualmente.
-          return {
-            name: srv?.name ?? "Servidor Privado",
-            updates: s.updates_last_7d,
-            total: s.total_contents
-          };
-        })
+        ranking: ((rows ?? []) as Array<{ name: string; updates: number; total: number }>).map((r) => ({
+          name: r.name ?? "Servidor Privado",
+          updates: r.updates ?? 0,
+          total: r.total ?? 0,
+        })),
       };
     }
 
