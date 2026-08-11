@@ -305,26 +305,29 @@ async function performCheck(server: ServerRow) {
       const { error: idError } = await supabaseAdmin.from("alert_idempotency" as any).insert({ id: idempotencyKey });
 
       if (!idError) {
-        await supabaseAdmin.from("incidents").update({ ended_at: new Date().toISOString() }).eq("id", openIncident.id);
-        await supabaseAdmin.from("servers").update({ recovery_alert_sent_at: new Date().toISOString() } as any).eq("id", server.id);
+        const now = new Date();
+        await supabaseAdmin.from("incidents").update({ ended_at: now.toISOString() }).eq("id", openIncident.id);
         
         let recoveryTime = "";
         try {
           const { closeCorrelationEvent } = await import("./correlation.server");
           const secs = await closeCorrelationEvent(server.id);
-          if (secs != null) recoveryTime = `\nTempo até a recuperação: ${secs < 60 ? `${secs}s` : `${Math.round(secs / 60)}min`}`;
+          if (secs != null) recoveryTime = `${secs < 60 ? `${secs}s` : `${Math.round(secs / 60)}min`}`;
         } catch { /* ignore */ }
-        
-        const now = new Date();
-        const timeStr = now.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
-        
-        const message = `✅ <b>Serviço normalizado</b>\n\n` +
-          `Servidor:\n${server.name}\n\n` +
-          `Região confirmada:\n🇧🇷 São Paulo\n\n` +
-          `Status:\nOnline novamente\n\n` +
-          `Detectado:\n${timeStr}`;
 
-        await sendAlerts(server, "up", message, openIncident.id);
+        // NOVO SISTEMA DE ALERTAS TELEGRAM
+        const { processTelegramAlert } = await import("./telegram-alerts.server");
+        await processTelegramAlert({
+          serverId: server.id,
+          incidentId: openIncident.id,
+          event: "ONLINE",
+          timeOffline: recoveryTime || "Desconhecido"
+        });
+
+        // Legado (opcional)
+        const timeStr = now.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
+        const legacyMessage = `✅ <b>${server.name} RESTABELECIDO</b>\nTempo: ${recoveryTime}\nDetectado: ${timeStr}`;
+        await sendAlerts(server, "up", legacyMessage, openIncident.id);
       }
     }
   }
