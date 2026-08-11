@@ -658,3 +658,23 @@ export async function getRadarJobProgress() {
     },
   };
 }
+
+/**
+ * Reagrupa servidores lógicos (deduplicação do Radar) no máximo 1x por dia.
+ * Usa sinais técnicos reais — nomes parecidos nunca agrupam sozinhos.
+ */
+export async function ensureLogicalClusters(maxAgeHours = 24) {
+  const { data: last } = await supabaseAdmin
+    .from("iptv_server_clusters")
+    .select("updated_at")
+    .order("updated_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  const age = last?.updated_at ? Date.now() - new Date(last.updated_at as string).getTime() : Infinity;
+  if (age < maxAgeHours * 3600_000) return { skipped: true };
+
+  const { data, error } = await (supabaseAdmin as any).rpc("rebuild_iptv_clusters_service", {});
+  if (error) throw new Error(error.message);
+  return data as Record<string, unknown>;
+}
