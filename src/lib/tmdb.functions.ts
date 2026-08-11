@@ -130,7 +130,7 @@ export const getTmdbFeed = createServerFn({ method: "POST" })
 
     return {
       totalServers,
-      items: cards.map((c) => {
+      items: validCards.map((c) => {
         const match = matchMap.get(titleKey(c.title)) || matchMap.get(titleKey(c.original_title));
         return { 
           ...c, 
