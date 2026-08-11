@@ -273,19 +273,28 @@ async function performCheck(server: ServerRow) {
       const { error: idError } = await supabaseAdmin.from("alert_idempotency" as any).insert({ id: idempotencyKey });
       
       if (!idError) {
-        // Melhorar alertas Telegram de queda: Agrupamento de incidentes e remoção de dados sensíveis.
-        let message = `🚨 <b>${server.name} está OFFLINE</b>\n\n` +
-          `Confirmado: ${confirmNote}\n` +
-          `Motivo: ${reason}\n` +
-          `Região: 🇧🇷 São Paulo (Confirmado via VPS)`;
+        // NOVO SISTEMA DE ALERTAS TELEGRAM
+        const { processTelegramAlert } = await import("./telegram-alerts.server");
         
+        let confirmDetails = confirmNote || "Confirmado via múltiplas regiões";
         try {
-          const { analyzeCorrelation, recordCorrelationEvent, correlationMessage } = await import("./correlation.server");
+          const { analyzeCorrelation, recordCorrelationEvent } = await import("./correlation.server");
           const corr = await analyzeCorrelation(server as any);
           await recordCorrelationEvent(server as any, corr);
-          message = correlationMessage(server, corr, reason, confirmNote);
-        } catch { /* ignore correlation error */ }
-        await sendAlerts(server, "down", message, inc.id);
+          if (corr.verdict === "server_down") confirmDetails = "Queda Total Confirmada (Diagnóstico Inteligente)";
+        } catch { /* ignore */ }
+
+        await processTelegramAlert({
+          serverId: server.id,
+          incidentId: inc.id,
+          event: "OFFLINE",
+          reason: reason,
+          confirmNote: confirmDetails,
+          regions: ["🇧🇷 São Paulo (VPS)"]
+        });
+        
+        // Outros canais (Discord/Email) mantidos via função legada ou migrados futuramente
+        await sendAlerts(server, "down", `🚨 ${server.name} está OFFLINE\n${reason}`, inc.id);
       }
     }
   } else if (upConfirmed && openIncident) {
