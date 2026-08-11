@@ -29,7 +29,11 @@ export function RadarAdminPanel() {
       setPrepData(data);
       setShowConfirm(true);
     },
-    onError: (e: Error) => toast.error("Erro ao preparar sincronização: " + e.message),
+    onError: (e: Error) => {
+      console.error("[Radar Admin Log] Erro na preparação:", e);
+      toast.error("Erro ao preparar sincronização: " + e.message);
+    },
+
   });
 
   const syncMutation = useMutation({
@@ -41,7 +45,11 @@ export function RadarAdminPanel() {
       qc.invalidateQueries({ queryKey: ["admin-radar-stats"] });
       setShowConfirm(false);
     },
-    onError: (e: Error) => toast.error("Erro na sincronização: " + e.message),
+    onError: (e: Error) => {
+      console.error("[Radar Admin Log] Erro na sincronização:", e);
+      toast.error("Erro na sincronização: " + e.message);
+    },
+
   });
 
   if (isLoading) return <div className="p-8 text-center animate-pulse">Carregando dados do Radar...</div>;
