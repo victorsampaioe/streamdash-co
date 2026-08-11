@@ -174,9 +174,14 @@ export const searchRadarTitleManual = createServerFn({ method: "POST" })
         await supabaseAdmin
           .from("iptv_catalog_matches")
           .upsert(matches as never, { onConflict: "catalog_id,server_id" });
+
+        // Conta servidores lógicos (aliases do mesmo cluster contam como 1)
+        const logical = new Set(
+          matches.map((m) => clusterByServer.get(m.server_id)?.id ?? m.server_id),
+        );
         await supabaseAdmin
           .from("iptv_global_catalog")
-          .update({ servers_found_count: matches.length, last_detected_at: now } as never)
+          .update({ servers_found_count: logical.size, last_detected_at: now } as never)
           .eq("id", (globalItem as any).id);
       }
     }
