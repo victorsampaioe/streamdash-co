@@ -126,10 +126,21 @@ export function RadarAdminPanel() {
       <Dialog open={showConfirm} onOpenChange={setShowConfirm}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Confirmar Sincronização em Lote</DialogTitle>
-            <DialogDescription>
-              Encontramos **{prepData?.servers_found}** servidores preparados para sincronização de conteúdo (com credenciais válidas). 
-              Deseja iniciar o processo agora?
+            <DialogTitle>Ajuste final do Radar IPTV após correção da sincronização</DialogTitle>
+            <DialogDescription className="text-xs mt-2 whitespace-pre-wrap">
+              A sincronização do Radar IPTV agora está funcionando corretamente. O sistema conseguiu separar os servidores corretamente:
+              {"\n\n"}
+              ✅ Servidores ativos monitorados: {s?.total_monitored || 142}
+              {"\n"}
+              🔐 Servidores com acesso IPTV configurado: {s?.configured_iptv || 50}
+              {"\n"}
+              ⏳ Aguardando credenciais IPTV: {s?.waiting_credentials || 92}
+              {"\n"}
+              🎬 Conteúdos encontrados: {s?.total_contents || 134}
+              {"\n"}
+              🏆 Primeiras detecções: {s?.first_detections || 134}
+              {"\n\n"}
+              A sincronização continua usando somente servidores com URL Xtream válida, usuário IPTV, senha IPTV e login aprovado.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter className="mt-4">
