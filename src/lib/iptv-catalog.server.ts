@@ -339,3 +339,51 @@ export async function syncCatalog(
     totals,
   };
 }
+
+/** 
+ * Sincronização simplificada para o Radar Global.
+ * Utilizado pelo motor de Inteligência para registrar novas detecções.
+ */
+export async function syncCatalogWithGlobal(serverId: string, input: CatalogInput) {
+  const nowIso = new Date().toISOString();
+  let new_titles = 0;
+  let total_changes = 0;
+
+  const kinds: CatalogKind[] = ["vod", "series", "live"];
+  for (const kind of kinds) {
+    for (const it of input[kind] ?? []) {
+      const tKey = titleKey(it.name);
+      const mediaType = kind === "live" ? "live" : (kind === "series" ? "tv" : "movie");
+      
+      const { data: globalItem } = await supabaseAdmin
+        .from("iptv_global_catalog")
+        .upsert({
+          title_key: tKey,
+          media_type: mediaType,
+          normalized_name: it.name,
+          last_detected_at: nowIso,
+          first_server_id: serverId,
+          first_detected_at: nowIso
+        } as never, { onConflict: 'title_key,media_type' })
+        .select('id, first_detected_at')
+        .single();
+
+      if (globalItem) {
+        total_changes++;
+        if (globalItem.first_detected_at === nowIso) new_titles++;
+
+        await supabaseAdmin
+          .from("iptv_catalog_matches")
+          .upsert({
+            catalog_id: globalItem.id,
+            server_id: serverId,
+            external_id: it.id,
+            raw_name: it.name,
+            detected_at: nowIso
+          } as never, { onConflict: 'catalog_id,server_id' });
+      }
+    }
+  }
+
+  return { new_titles, total_changes };
+}
