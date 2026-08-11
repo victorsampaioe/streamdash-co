@@ -84,9 +84,10 @@ export const getTmdbDetail = createServerFn({ method: "POST" })
       .maybeSingle();
 
     const { data: globalHistory } = await context.supabase
-      .from("tmdb_content_history")
+      .from("iptv_global_catalog")
       .select("first_detected_at, servers_found_count")
-      .eq("title_key", keys[0])
+      .eq("tmdb_id", data.id)
+      .eq("media_type", data.media === "tv" ? "tv" : "movie")
       .maybeSingle();
 
     return {

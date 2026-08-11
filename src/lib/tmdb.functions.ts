@@ -113,19 +113,14 @@ export const getTmdbFeed = createServerFn({ method: "POST" })
         .from("iptv_global_catalog")
         .select(`
           title_key,
-          servers_found_count,
-          first_detected_at,
-          first_server:servers!first_server_id(name)
+          servers_found_count
         `)
         .in("title_key", keys);
 
       for (const m of globalMatches ?? []) {
         matchMap.set(m.title_key, {
-          count: (m.servers_found_count || 0) as number,
-          first_server: (m.first_server as any)?.name,
-          first_at: m.first_detected_at as string
+          count: (m.servers_found_count || 0) as number
         });
-
       }
     }
 
@@ -136,9 +131,7 @@ export const getTmdbFeed = createServerFn({ method: "POST" })
         return { 
           ...c, 
           tmdb_id: c.tmdb_id, // Garantir tmdb_id numérico
-          found_count: match?.count || 0,
-          first_server_name: match?.first_server,
-          first_detected_at: match?.first_at
+          found_count: match?.count || 0
         };
       }),
 
