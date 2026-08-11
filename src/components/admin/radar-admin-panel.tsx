@@ -123,16 +123,81 @@ export function RadarAdminPanel() {
           <StatCard icon={Trophy} label="🏆 Primeiras detecções" value={s?.first_detections ?? 0} color="text-emerald-500" />
         </div>
 
-        <div className="mt-6 p-4 bg-primary/5 border border-primary/20 rounded-lg flex gap-3">
-          <AlertTriangle className="h-5 w-5 text-primary shrink-0 mt-0.5" />
-          <div className="text-sm space-y-2">
-            <p className="font-semibold">Como funciona:</p>
-            <p className="text-muted-foreground">
-              A sincronização cria um job processado em segundo plano pelo Core AWS, em lotes de 5 servidores. Falhas
-              individuais são registradas sem interromper os demais. O catálogo é incremental (nada é apagado a cada
-              execução) e o TMDB é aplicado numa segunda etapa — títulos não identificados ficam salvos como pendentes.
-              O Core também executa sincronizações automáticas periódicas.
+        <div className="mt-8 grid grid-cols-1 lg:grid-cols-2 gap-6 border-t pt-8">
+          <div className="space-y-4">
+            <h3 className="text-lg font-bold flex items-center gap-2">
+              <Search className="h-5 w-5 text-primary" />
+              Teste manual de busca específica
+            </h3>
+            <p className="text-sm text-muted-foreground">
+              Procura um título específico nos servidores IPTV com credenciais ativas para validar o motor de busca.
             </p>
+            <div className="flex gap-2">
+              <Input 
+                placeholder="Ex: The Dark (2026)" 
+                value={searchTerm} 
+                onChange={(e) => setSearchTerm(e.target.value)}
+                disabled={searchMutation.isPending}
+              />
+              <Button 
+                onClick={() => searchMutation.mutate(searchTerm)} 
+                disabled={searchMutation.isPending || searchTerm.length < 2}
+                variant="secondary"
+              >
+                {searchMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : "Buscar"}
+              </Button>
+            </div>
+
+            {searchResult && (
+              <div className={cn(
+                "p-4 rounded-lg border flex flex-col gap-2",
+                searchResult.found ? "bg-emerald-500/5 border-emerald-500/20" : "bg-destructive/5 border-destructive/20"
+              )}>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-semibold flex items-center gap-2">
+                    {searchResult.found ? (
+                      <>
+                        <CheckCircle2 className="h-4 w-4 text-emerald-500" />
+                        Título encontrado!
+                      </>
+                    ) : (
+                      <>
+                        <XCircle className="h-4 w-4 text-destructive" />
+                        Não encontrado
+                      </>
+                    )}
+                  </span>
+                  <span className="text-[10px] text-muted-foreground">
+                    Verificado em: {new Date(searchResult.checked_at).toLocaleString("pt-BR")}
+                  </span>
+                </div>
+                
+                {searchResult.found && (
+                  <div className="space-y-2">
+                    <div className="text-xs">
+                      Encontrado em <b className="text-emerald-500">{searchResult.server_count}</b> servidores:
+                    </div>
+                    <div className="flex flex-wrap gap-1">
+                      {searchResult.servers.map((s: string) => (
+                        <Badge key={s} variant="outline" className="text-[10px] py-0">{s}</Badge>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+
+          <div className="p-4 bg-primary/5 border border-primary/20 rounded-lg flex gap-3">
+            <AlertTriangle className="h-5 w-5 text-primary shrink-0 mt-0.5" />
+            <div className="text-sm space-y-2">
+              <p className="font-semibold">Como funciona:</p>
+              <p className="text-muted-foreground">
+                A sincronização automática cria um job processado em segundo plano pelo Core AWS. 
+                O **Teste Manual** é uma ferramenta de diagnóstico que varre os servidores em tempo real para confirmar 
+                se um conteúdo específico está sendo detectado corretamente pela lógica de normalização.
+              </p>
+            </div>
           </div>
         </div>
       </Card>
