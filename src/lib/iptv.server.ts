@@ -451,7 +451,7 @@ export type ProbeOptions = {
    * "counts" = Etapa 3: consulta leve (categorias + amostra);
    * "full"   = catálogo completo (primeira vez ou cache expirado).
    */
-  catalogMode?: "auth" | "counts" | "full";
+  catalogMode?: "auth" | "counts" | "full" | "vod";
 };
 
 
