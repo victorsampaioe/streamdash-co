@@ -97,6 +97,8 @@ function ContentIntelligence() {
         console.log(`${icon} Servidor ${r.id}: ${msg}`);
       });
       console.groupEnd();
+
+      if (fails.length > 0) {
         toast.warning(`Sincronização concluída: ${ok} sucesso, ${fails.length} falhas. Veja os logs no console.`);
       } else {
         toast.success(`Sincronização concluída para ${ok} servidores!`);
