@@ -82,18 +82,23 @@ function ContentIntelligence() {
   });
 
   const syncMutation = useMutation({
-    mutationFn: ({ ids, testOne }: { ids: string[]; testOne?: boolean }) => 
-      runSync({ data: { serverIds: ids, testOne } }),
+    mutationFn: ({ ids, testOne }: { ids: string[]; testOne?: boolean }) => {
+      console.log(`[Radar Tech Log] Iniciando sincronização. Alvo: ${testOne ? "Teste Individual" : "Lote Completo"}. Qtd: ${testOne ? 1 : ids.length}`);
+      return runSync({ data: { serverIds: ids, testOne } });
+    },
     onSuccess: (res) => {
       const ok = res.results.filter((r) => r.ok).length;
       const fails = res.results.filter((r) => !r.ok);
       
+      console.group("Relatório Técnico de Sincronização Radar");
+      res.results.forEach(r => {
+        const icon = r.ok ? "✅" : (r.error?.toLowerCase().includes("login") ? "⚠️" : "❌");
+        const msg = r.ok ? "Sincronizado" : (r.error?.toLowerCase().includes("login") ? "Falha de login" : `Erro API: ${r.error}`);
+        console.log(`${icon} Servidor ${r.id}: ${msg}`);
+      });
+      console.groupEnd();
+
       if (fails.length > 0) {
-        console.group("Relatório de Falhas do Radar");
-        fails.forEach(f => {
-          console.error(`Servidor ${f.id} falhou:`, f.error);
-        });
-        console.groupEnd();
         toast.warning(`Sincronização concluída: ${ok} sucesso, ${fails.length} falhas. Veja os logs no console.`);
       } else {
         toast.success(`Sincronização concluída para ${ok} servidores!`);
@@ -179,68 +184,65 @@ function ContentIntelligence() {
       <Dialog open={showConfirm} onOpenChange={setShowConfirm}>
         <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle>Diagnóstico e Sincronização Radar</DialogTitle>
+            <DialogTitle>Preparação da Sincronização Radar</DialogTitle>
+            <DialogDescription className="text-xs mt-2">
+              O Radar IPTV já carrega conteúdos do TMDB, porém a sincronização dos servidores está falhando. Ajustar a preparação da sincronização.
+            </DialogDescription>
             <div className="pt-4 space-y-4 max-h-[60vh] overflow-y-auto pr-2">
               <div className="grid grid-cols-1 gap-2 text-left">
-                <div className="text-xs font-bold text-muted-foreground uppercase mb-1">Status Geral do Banco</div>
+                <div className="text-xs font-bold text-muted-foreground uppercase mb-1">Status da Infraestrutura</div>
                 
                 <div className="flex justify-between text-sm py-1 border-b border-border/50">
-                  <span>Total de servidores no banco:</span>
+                  <span>Total servidores cadastrados:</span>
                   <span className="font-mono">{prepData?.total_db_servers || 0}</span>
                 </div>
                 <div className="flex justify-between text-sm py-1 border-b border-border/50">
-                  <span>Servidores com URL IPTV:</span>
-                  <span className="font-mono">{prepData?.with_host || 0}</span>
-                </div>
-                <div className="flex justify-between text-sm py-1 border-b border-border/50">
-                  <span>Servidores com usuário IPTV:</span>
-                  <span className="font-mono">{prepData?.with_username || 0}</span>
-                </div>
-                <div className="flex justify-between text-sm py-1 border-b border-border/50">
-                  <span>Servidores com senha IPTV:</span>
-                  <span className="font-mono">{prepData?.with_password || 0}</span>
+                  <span>Servidores com IPTV configurado:</span>
+                  <span className="font-mono">{prepData?.configured_iptv || 0}</span>
                 </div>
                 <div className="flex justify-between text-sm py-1 border-b border-border/50">
                   <span>Servidores com login aprovado:</span>
                   <span className="font-mono">{prepData?.login_approved || 0}</span>
                 </div>
                 <div className="flex justify-between text-sm py-1 border-b border-border/50 font-bold text-primary">
-                  <span>Servidores aptos para Radar:</span>
+                  <span>Servidores prontos para sincronização:</span>
                   <span className="font-mono">{prepData?.servers_found || 0}</span>
                 </div>
 
-                <div className="text-xs font-bold text-muted-foreground uppercase mt-4 mb-1">Servidores excluídos e motivo:</div>
+                <div className="text-xs font-bold text-muted-foreground uppercase mt-4 mb-1">Servidores ignorados:</div>
                 <div className="space-y-1">
                   <div className="flex justify-between text-xs text-destructive/80">
-                    <span>URL inválida (Vazia):</span>
-                    <span>{prepData && (prepData.total_db_servers - prepData.with_host)}</span>
-                  </div>
-                  <div className="flex justify-between text-xs text-destructive/80">
-                    <span>Sem usuário:</span>
+                    <span>sem usuário:</span>
                     <span>{prepData?.excluded_reasons?.no_username || 0}</span>
                   </div>
                   <div className="flex justify-between text-xs text-destructive/80">
-                    <span>Sem senha:</span>
+                    <span>sem senha:</span>
                     <span>{prepData?.excluded_reasons?.no_password || 0}</span>
                   </div>
                   <div className="flex justify-between text-xs text-destructive/80">
-                    <span>Conta expirada / Inativa:</span>
-                    <span>{prepData?.excluded_reasons?.inactive_account || 0}</span>
+                    <span>sem URL Xtream:</span>
+                    <span>{prepData && (prepData.total_db_servers - prepData.with_host)}</span>
                   </div>
                   <div className="flex justify-between text-xs text-destructive/80">
-                    <span>Login inválido (bloqueado):</span>
+                    <span>login inválido:</span>
                     <span>{prepData?.excluded_reasons?.invalid_login || 0}</span>
                   </div>
                   <div className="flex justify-between text-xs text-destructive/80">
-                    <span>Monitoramento pausado:</span>
-                    <span>{prepData?.excluded_reasons?.paused || 0}</span>
+                    <span>conta expirada:</span>
+                    <span>{prepData?.excluded_reasons?.inactive_account || 0}</span>
                   </div>
                 </div>
               </div>
 
-              <DialogDescription className="text-xs italic bg-muted p-2 rounded">
-                * Servidores aptos são aqueles com credenciais válidas, conta ativa e sem bloqueio de login.
-              </DialogDescription>
+              <div className="text-[10px] text-muted-foreground bg-muted/50 p-2 rounded border border-border/40">
+                <p>A sincronização usará apenas servidores aptos. Falhas individuais não bloqueiam o processo geral.</p>
+                <div className="mt-1 flex flex-wrap gap-x-3 gap-y-1 opacity-70">
+                  <span>✅ Sincronizado</span>
+                  <span>⚠️ Falha login</span>
+                  <span>⚪ Sem credencial</span>
+                  <span>❌ Erro API</span>
+                </div>
+              </div>
             </div>
           </DialogHeader>
           <DialogFooter className="mt-4 gap-2 flex-col sm:flex-row">
@@ -250,7 +252,7 @@ function ContentIntelligence() {
               onClick={() => prepData && syncMutation.mutate({ ids: prepData.server_ids, testOne: true })}
               disabled={syncMutation.isPending || !prepData?.servers_found}
             >
-              Testar com 1 servidor
+              Fazer um teste forçado (1 servidor)
             </Button>
             <div className="flex gap-2">
               <Button variant="ghost" onClick={() => setShowConfirm(false)}>Cancelar</Button>
