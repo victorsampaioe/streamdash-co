@@ -528,12 +528,16 @@ export async function ensureAutoRadarJob() {
 /* ------------------------------------------------------------------ */
 
 export async function getRadarJobProgress() {
-  const { data: job } = await supabaseAdmin
+  const { data: job, error } = await supabaseAdmin
     .from("iptv_sync_jobs")
     .select("*")
     .order("created_at", { ascending: false })
     .limit(1)
     .maybeSingle();
+
+  if (error) {
+    console.error("[radar-job] Erro ao buscar progresso do job:", error);
+  }
 
   const [{ count: tmdbFound }, { count: tmdbPending }] = await Promise.all([
     supabaseAdmin.from("iptv_global_catalog").select("id", { count: "exact", head: true }).eq("tmdb_status", "found"),
