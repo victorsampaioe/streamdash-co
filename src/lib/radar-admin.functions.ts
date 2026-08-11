@@ -1,4 +1,5 @@
 import { createServerFn } from "@tanstack/react-start";
+import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 
@@ -108,5 +109,106 @@ export const recalculateRadarAvailability = createServerFn({ method: "POST" })
         .update({ servers_found_count: 0 } as never);
     }
 
+
     return { success: true, total: totalUpdated };
+  });
+
+/**
+ * Teste manual de busca específica no Radar IPTV
+ */
+export const searchRadarTitleManual = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: { title: string }) => z.object({ title: z.string().min(2) }).parse(d))
+  .handler(async ({ data, context }) => {
+    await assertAdmin(context);
+    
+    const { title } = data;
+    const { titleKey } = await import("./iptv-catalog.server");
+    const tKey = titleKey(title);
+    
+    console.log(`[radar-admin] Busca manual solicitada: "${title}" (key: ${tKey})`);
+    
+    // 1. Identificar servidores elegíveis (ativos + credenciais)
+    const { eligibleRadarServerIds } = await import("./radar-jobs.server");
+    const serverIds = await eligibleRadarServerIds();
+    
+    if (!serverIds.length) {
+      return { 
+        found: false, 
+        message: "Nenhum servidor elegível encontrado para o teste.",
+        checked_at: new Date().toISOString()
+      };
+    }
+
+    // 2. Localizar o item no catálogo global
+    const { data: globalItem } = await supabaseAdmin
+      .from("iptv_global_catalog")
+      .select("id, normalized_name, media_type")
+      .eq("title_key", tKey)
+      .maybeSingle();
+
+    const serversFound: string[] = [];
+    const now = new Date().toISOString();
+
+    // 3. Executar busca rápida em paralelo
+    const BATCH_SIZE = 5;
+    for (let i = 0; i < serverIds.length; i += BATCH_SIZE) {
+      const batch = serverIds.slice(i, i + BATCH_SIZE);
+      await Promise.all(batch.map(async (sid) => {
+        try {
+          const { data: srv } = await supabaseAdmin.from("servers").select("name, host").eq("id", sid).single();
+          const { getIptvCredentials } = await import("./iptv-credentials.server");
+          const cred = await getIptvCredentials(sid);
+          
+          if (!cred.username || !cred.password) return;
+
+          const { probeXtream } = await import("./iptv.server");
+          const x = await probeXtream(srv!.host, cred.username, cred.password, { catalogMode: "vod" });
+          
+          if (!x.login_ok) return;
+
+          const allItems = [...x.catalog.vod, ...x.catalog.series];
+          const match = allItems.find(it => titleKey(it.name) === tKey);
+
+          if (match) {
+            serversFound.push(srv!.name);
+            
+            if (globalItem) {
+              await supabaseAdmin.from("iptv_catalog_matches").upsert({
+                catalog_id: globalItem.id,
+                server_id: sid,
+                external_id: String(match.id),
+                raw_name: match.name,
+                detected_at: now
+              } as never, { onConflict: 'catalog_id,server_id' });
+            }
+          }
+        } catch (e) {
+          console.error(`[radar-manual] Erro no servidor ${sid}:`, e);
+        }
+      }));
+    }
+
+    // 4. Se não tínhamos o globalItem mas encontramos em algum servidor, criamos agora
+    if (!globalItem && serversFound.length > 0) {
+      await supabaseAdmin
+        .from("iptv_global_catalog")
+        .insert({
+          title_key: tKey,
+          media_type: 'movie',
+          normalized_name: title,
+          first_server_id: serverIds[0],
+          first_detected_at: now,
+          last_detected_at: now,
+          tmdb_status: 'pending'
+        } as never);
+    }
+
+    return {
+      title: title,
+      found: serversFound.length > 0,
+      server_count: serversFound.length,
+      servers: serversFound,
+      checked_at: now
+    };
   });

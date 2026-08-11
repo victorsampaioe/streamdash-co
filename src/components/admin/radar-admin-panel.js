@@ -12,66 +12,55 @@ import { cn } from "@/lib/utils";
 import { searchRadarTitleManual } from "@/lib/radar-admin.functions";
 import { useState } from "react";
 import { Input } from "@/components/ui/input";
-
 export function RadarAdminPanel() {
-  const qc = useQueryClient();
-  const getStats = useServerFn(getIptvRadarStats);
-  const getJob = useServerFn(getRadarJobStatus);
-  const startJob = useServerFn(startRadarSyncJob);
-  const searchManual = useServerFn(searchRadarTitleManual);
-
-  const [searchTerm, setSearchTerm] = useState("");
-  const [searchResult, setSearchResult] = useState<any>(null);
-
-  const { data: s, isLoading } = useQuery({
-    queryKey: ["admin-radar-stats"],
-    queryFn: () => getStats(),
-  });
-
-  const { data: progress } = useQuery({
-    queryKey: ["admin-radar-job"],
-    queryFn: () => getJob(),
-    refetchInterval: 10_000,
-  });
-
-  const job = progress?.job as any | null;
-  const running = job && (job.status === "queued" || job.status === "running");
-
-  const startMutation = useMutation({
-    mutationFn: () => startJob(),
-    onSuccess: (data: any) => {
-      toast.success(
-        `Sincronização enfileirada: ${data.total_servers} servidores. O processamento continua no servidor mesmo se você fechar o navegador.`,
-      );
-      qc.invalidateQueries({ queryKey: ["admin-radar-job"] });
-    },
-    onError: (e: Error) => toast.error("Erro ao iniciar sincronização: " + e.message),
-  });
-
-  const searchMutation = useMutation({
-    mutationFn: (title: string) => searchManual({ data: { title } }),
-    onSuccess: (res: any) => {
-      setSearchResult(res);
-      if (res.found) {
-        toast.success(`Título encontrado em ${res.server_count} servidores!`);
-      } else {
-        toast.error("Título não encontrado nos servidores ativos.");
-      }
-    },
-    onError: (e: Error) => toast.error("Erro na busca: " + e.message),
-  });
-
-  if (isLoading) return <div className="p-8 text-center animate-pulse">Carregando dados do Radar...</div>;
-
-  const pct = job?.total_servers ? Math.round(((job.processed ?? 0) / job.total_servers) * 100) : 0;
-
-  return (
-    <div className="space-y-6">
+    const qc = useQueryClient();
+    const getStats = useServerFn(getIptvRadarStats);
+    const getJob = useServerFn(getRadarJobStatus);
+    const startJob = useServerFn(startRadarSyncJob);
+    const searchManual = useServerFn(searchRadarTitleManual);
+    const [searchTerm, setSearchTerm] = useState("");
+    const [searchResult, setSearchResult] = useState(null);
+    const { data: s, isLoading } = useQuery({
+        queryKey: ["admin-radar-stats"],
+        queryFn: () => getStats(),
+    });
+    const { data: progress } = useQuery({
+        queryKey: ["admin-radar-job"],
+        queryFn: () => getJob(),
+        refetchInterval: 10000,
+    });
+    const job = progress?.job;
+    const running = job && (job.status === "queued" || job.status === "running");
+    const startMutation = useMutation({
+        mutationFn: () => startJob(),
+        onSuccess: (data) => {
+            toast.success(`Sincronização enfileirada: ${data.total_servers} servidores. O processamento continua no servidor mesmo se você fechar o navegador.`);
+            qc.invalidateQueries({ queryKey: ["admin-radar-job"] });
+        },
+        onError: (e) => toast.error("Erro ao iniciar sincronização: " + e.message),
+    });
+    const searchMutation = useMutation({
+        mutationFn: (title) => searchManual({ data: { title } }),
+        onSuccess: (res) => {
+            setSearchResult(res);
+            if (res.found) {
+                toast.success(`Título encontrado em ${res.server_count} servidores!`);
+            }
+            else {
+                toast.error("Título não encontrado nos servidores ativos.");
+            }
+        },
+        onError: (e) => toast.error("Erro na busca: " + e.message),
+    });
+    if (isLoading)
+        return <div className="p-8 text-center animate-pulse">Carregando dados do Radar...</div>;
+    const pct = job?.total_servers ? Math.round(((job.processed ?? 0) / job.total_servers) * 100) : 0;
+    return (<div className="space-y-6">
       <Card className="p-6">
         <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
           <div>
             <h2 className="text-xl font-bold flex items-center gap-2">
-              <Sparkles className="h-5 w-5 text-primary" />
+              <Sparkles className="h-5 w-5 text-primary"/>
               Gerenciamento do Radar IPTV
             </h2>
             <p className="text-sm text-muted-foreground mt-1">
@@ -79,17 +68,12 @@ export function RadarAdminPanel() {
             </p>
           </div>
           <Button onClick={() => startMutation.mutate()} disabled={startMutation.isPending || !!running} className="gap-2">
-            {startMutation.isPending || running ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : (
-              <Sparkles className="h-4 w-4" />
-            )}
+            {startMutation.isPending || running ? (<Loader2 className="h-4 w-4 animate-spin"/>) : (<Sparkles className="h-4 w-4"/>)}
             {running ? "Sincronização em andamento" : "Sincronizar Conteúdos Agora"}
           </Button>
         </div>
 
-        {job && (
-          <div className="mt-6 rounded-lg border bg-muted/20 p-4 space-y-3">
+        {job && (<div className="mt-6 rounded-lg border bg-muted/20 p-4 space-y-3">
             <div className="flex items-center justify-between text-sm">
               <span className="font-semibold">
                 Radar IPTV — {job.status === "running" ? "Executando" : job.status === "queued" ? "Na fila" : "Concluído"}
@@ -99,7 +83,7 @@ export function RadarAdminPanel() {
                 Servidores: {job.processed ?? 0}/{job.total_servers ?? 0}
               </span>
             </div>
-            <Progress value={pct} />
+            <Progress value={pct}/>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-xs text-muted-foreground">
               <div>🎬 Filmes: <b className="text-foreground">{(job.movies_found ?? 0).toLocaleString("pt-BR")}</b></div>
               <div>📺 Séries: <b className="text-foreground">{(job.series_found ?? 0).toLocaleString("pt-BR")}</b></div>
@@ -110,87 +94,63 @@ export function RadarAdminPanel() {
             <div className="text-[11px] text-muted-foreground">
               Última atualização: {job.updated_at ? new Date(job.updated_at).toLocaleString("pt-BR") : "—"}
             </div>
-          </div>
-        )}
+          </div>)}
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mt-8">
-          <StatCard icon={Server} label="✅ Servidores ativos monitorados" value={s?.total_monitored ?? 0} color="text-blue-500" />
-          <StatCard icon={ShieldCheck} label="🔐 Com acesso IPTV configurado" value={s?.configured_iptv ?? 0} color="text-emerald-500" />
-          <StatCard icon={Clock} label="⏳ Aguardando credenciais IPTV" value={s?.waiting_credentials ?? 0} color="text-amber-500" />
-          <StatCard icon={Film} label="🎬 Filmes no catálogo" value={progress?.catalog.movies ?? 0} color="text-primary" />
-          <StatCard icon={Tv} label="📺 Séries no catálogo" value={progress?.catalog.series ?? 0} color="text-purple-500" />
-          <StatCard icon={Image} label="🖼️ TMDB identificados" value={progress?.catalog.tmdb_found ?? 0} color="text-cyan-500"
-            sub={`${(progress?.catalog.tmdb_pending ?? 0).toLocaleString("pt-BR")} pendentes de enriquecimento`} />
-          <StatCard icon={Trophy} label="🏆 Primeiras detecções" value={s?.first_detections ?? 0} color="text-emerald-500" />
+          <StatCard icon={Server} label="✅ Servidores ativos monitorados" value={s?.total_monitored ?? 0} color="text-blue-500"/>
+          <StatCard icon={ShieldCheck} label="🔐 Com acesso IPTV configurado" value={s?.configured_iptv ?? 0} color="text-emerald-500"/>
+          <StatCard icon={Clock} label="⏳ Aguardando credenciais IPTV" value={s?.waiting_credentials ?? 0} color="text-amber-500"/>
+          <StatCard icon={Film} label="🎬 Filmes no catálogo" value={progress?.catalog.movies ?? 0} color="text-primary"/>
+          <StatCard icon={Tv} label="📺 Séries no catálogo" value={progress?.catalog.series ?? 0} color="text-purple-500"/>
+          <StatCard icon={Image} label="🖼️ TMDB identificados" value={progress?.catalog.tmdb_found ?? 0} color="text-cyan-500" sub={`${(progress?.catalog.tmdb_pending ?? 0).toLocaleString("pt-BR")} pendentes de enriquecimento`}/>
+          <StatCard icon={Trophy} label="🏆 Primeiras detecções" value={s?.first_detections ?? 0} color="text-emerald-500"/>
         </div>
 
         <div className="mt-8 grid grid-cols-1 lg:grid-cols-2 gap-6 border-t pt-8">
           <div className="space-y-4">
             <h3 className="text-lg font-bold flex items-center gap-2">
-              <Search className="h-5 w-5 text-primary" />
+              <Search className="h-5 w-5 text-primary"/>
               Teste manual de busca específica
             </h3>
             <p className="text-sm text-muted-foreground">
               Procura um título específico nos servidores IPTV com credenciais ativas para validar o motor de busca.
             </p>
             <div className="flex gap-2">
-              <Input 
-                placeholder="Ex: The Dark (2026)" 
-                value={searchTerm} 
-                onChange={(e) => setSearchTerm(e.target.value)}
-                disabled={searchMutation.isPending}
-              />
-              <Button 
-                onClick={() => searchMutation.mutate(searchTerm)} 
-                disabled={searchMutation.isPending || searchTerm.length < 2}
-                variant="secondary"
-              >
-                {searchMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : "Buscar"}
+              <Input placeholder="Ex: The Dark (2026)" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} disabled={searchMutation.isPending}/>
+              <Button onClick={() => searchMutation.mutate(searchTerm)} disabled={searchMutation.isPending || searchTerm.length < 2} variant="secondary">
+                {searchMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin"/> : "Buscar"}
               </Button>
             </div>
 
-            {searchResult && (
-              <div className={cn(
-                "p-4 rounded-lg border flex flex-col gap-2",
-                searchResult.found ? "bg-emerald-500/5 border-emerald-500/20" : "bg-destructive/5 border-destructive/20"
-              )}>
+            {searchResult && (<div className={cn("p-4 rounded-lg border flex flex-col gap-2", searchResult.found ? "bg-emerald-500/5 border-emerald-500/20" : "bg-destructive/5 border-destructive/20")}>
                 <div className="flex items-center justify-between">
                   <span className="text-sm font-semibold flex items-center gap-2">
-                    {searchResult.found ? (
-                      <>
-                        <CheckCircle2 className="h-4 w-4 text-emerald-500" />
+                    {searchResult.found ? (<>
+                        <CheckCircle2 className="h-4 w-4 text-emerald-500"/>
                         Título encontrado!
-                      </>
-                    ) : (
-                      <>
-                        <XCircle className="h-4 w-4 text-destructive" />
+                      </>) : (<>
+                        <XCircle className="h-4 w-4 text-destructive"/>
                         Não encontrado
-                      </>
-                    )}
+                      </>)}
                   </span>
                   <span className="text-[10px] text-muted-foreground">
                     Verificado em: {new Date(searchResult.checked_at).toLocaleString("pt-BR")}
                   </span>
                 </div>
                 
-                {searchResult.found && (
-                  <div className="space-y-2">
+                {searchResult.found && (<div className="space-y-2">
                     <div className="text-xs">
                       Encontrado em <b className="text-emerald-500">{searchResult.server_count}</b> servidores:
                     </div>
                     <div className="flex flex-wrap gap-1">
-                      {searchResult.servers.map((s: string) => (
-                        <Badge key={s} variant="outline" className="text-[10px] py-0">{s}</Badge>
-                      ))}
+                      {searchResult.servers.map((s) => (<Badge key={s} variant="outline" className="text-[10px] py-0">{s}</Badge>))}
                     </div>
-                  </div>
-                )}
-              </div>
-            )}
+                  </div>)}
+              </div>)}
           </div>
 
           <div className="p-4 bg-primary/5 border border-primary/20 rounded-lg flex gap-3">
-            <AlertTriangle className="h-5 w-5 text-primary shrink-0 mt-0.5" />
+            <AlertTriangle className="h-5 w-5 text-primary shrink-0 mt-0.5"/>
             <div className="text-sm space-y-2">
               <p className="font-semibold">Como funciona:</p>
               <p className="text-muted-foreground">
@@ -202,21 +162,17 @@ export function RadarAdminPanel() {
           </div>
         </div>
       </Card>
-    </div>
-  );
+    </div>);
 }
-
-function StatCard({ icon: Icon, label, value, color, sub }: { icon: any; label: string; value: number; color: string; sub?: string }) {
-  return (
-    <div className="bg-muted/30 p-4 rounded-lg border flex items-start gap-3">
+function StatCard({ icon: Icon, label, value, color, sub }) {
+    return (<div className="bg-muted/30 p-4 rounded-lg border flex items-start gap-3">
       <div className={cn("p-2 rounded-md bg-background border", color)}>
-        <Icon className="h-4 w-4" />
+        <Icon className="h-4 w-4"/>
       </div>
       <div>
         <div className="text-xs text-muted-foreground font-medium uppercase tracking-wider">{label}</div>
         <div className="text-2xl font-bold mt-0.5">{value.toLocaleString("pt-BR")}</div>
         {sub && <div className="text-[10px] text-primary font-medium mt-1">{sub}</div>}
       </div>
-    </div>
-  );
+    </div>);
 }
