@@ -127,19 +127,48 @@ function ContentIntelligence() {
           size="sm" 
           variant="outline"
           className="bg-primary/5 border-primary/20 hover:bg-primary/10"
-          onClick={async () => {
-            const toastId = toast.loading("Sincronizando conteúdos de todos os servidores...");
-            try {
-              // Simulação de chamada para sincronização global (via server function no futuro)
-              toast.success("Sincronização iniciada em background!", { id: toastId });
-            } catch (e) {
-              toast.error("Erro ao sincronizar.", { id: toastId });
-            }
-          }}
+          onClick={() => prepareMutation.mutate()}
+          disabled={prepareMutation.isPending || syncMutation.isPending}
         >
+          {prepareMutation.isPending ? (
+            <Loader2 className="h-4 w-4 animate-spin mr-2" />
+          ) : (
+            <Sparkles className="h-4 w-4 mr-2" />
+          )}
           🔄 Sincronizar conteúdos agora
         </Button>
       </div>
+
+      <Dialog open={showConfirm} onOpenChange={setShowConfirm}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Confirmar Sincronização em Lote</DialogTitle>
+            <DialogDescription className="space-y-4 pt-2">
+              <p>
+                Encontramos **{prepData?.servers_found}** servidores preparados para sincronização de conteúdo (com credenciais e teste de login aprovado).
+              </p>
+              <div className="p-3 bg-amber-500/10 border border-amber-500/20 rounded text-xs flex gap-2">
+                <AlertTriangle className="h-4 w-4 text-amber-500 shrink-0" />
+                <span>
+                  Servidores sem credenciais ou com erros de login são ignorados automaticamente para economizar processamento.
+                </span>
+              </div>
+              <p>Deseja iniciar o processo agora?</p>
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="mt-4">
+            <Button variant="ghost" onClick={() => setShowConfirm(false)}>Cancelar</Button>
+            <Button 
+              onClick={() => prepData && syncMutation.mutate(prepData.server_ids)}
+              disabled={syncMutation.isPending}
+              className="gap-2"
+            >
+              {syncMutation.isPending && <Loader2 className="h-4 w-4 animate-spin" />}
+              Iniciar Sincronização
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
 
       <div className="flex flex-wrap gap-2">
