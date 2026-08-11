@@ -284,7 +284,7 @@ function AdminPage() {
         <Kpi icon={Wallet} label="Créditos disponíveis" value="∞" tone="primary" sub="Créditos ilimitados" />
         <Kpi icon={CircleDollarSign} label="Receita 30 dias" value={s ? formatBRL(s.revenue_cents_30d) : undefined} tone="success" sub={s ? `${formatBRL(s.revenue_cents_7d)} nos últimos 7d` : undefined} />
         <Kpi icon={TrendingUp} label="Receita total" value={s ? formatBRL(s.revenue_cents_total) : undefined} tone="primary" sub={s ? `${s.payments_approved_total} pagamentos` : undefined} />
-        <Kpi icon={ServerCog} label="Servidores monitorados" value={s?.total_servers} />
+        <Kpi icon={ServerCog} label="✅ Monitorando agora" value={s ? (s.servers_online + s.servers_warning + s.servers_offline) : 0} tone="success" sub="Apenas servidores ativos" />
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
@@ -295,7 +295,14 @@ function AdminPage() {
           icon={ServerCog}
           label="⚪ DNS Pausados"
           value={s?.servers_paused}
-          sub={s ? `${s.paused_owners} contas expiradas/sem créditos` : undefined}
+          sub="Servidores pausados manualmente"
+        />
+        <Kpi
+          icon={XCircle}
+          label="🔴 Contas expiradas"
+          value={s?.paused_owners}
+          tone="destructive"
+          sub="Sem créditos ou assinatura"
         />
       </div>
 

@@ -75,7 +75,8 @@ function ServersList() {
     }
   };
   const searched = servers.filter((s) => !q || `${s.name} ${s.description ?? ""}`.toLowerCase().includes(q.toLowerCase()));
-  const filtered = searched.filter(matchFilter);
+  // Filtro padrão: Apenas Ativos (active)
+  const filtered = searched.filter(matchFilter).filter(s => statusFilter !== "all" || !isPaused(s));
   const counts = {
     all: searched.length,
     active: searched.filter((s: any) => !isPaused(s)).length,
