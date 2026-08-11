@@ -364,8 +364,8 @@ function AdminPage() {
               <FilterChip active={filter === "expired"} onClick={() => setFilter("expired")} tone="destructive">Expirados</FilterChip>
             </div>
 
-            <div className="overflow-x-auto rounded-md border">
-              <table className="w-full text-sm">
+            <div className="overflow-x-auto rounded-md border scrollbar-hide">
+              <table className="w-full text-sm min-w-[900px]">
                 <thead className="bg-muted/40 text-xs uppercase tracking-wider text-muted-foreground">
                   <tr>
                     <th className="text-left p-3 font-medium">Usuário</th>

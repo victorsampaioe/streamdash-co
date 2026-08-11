@@ -155,7 +155,7 @@ function RankingPage() {
           </p>
         </Card>
       ) : (
-        <Card className="overflow-x-auto">
+        <Card className="overflow-x-auto scrollbar-hide">
           <table className="w-full text-sm min-w-[720px]">
             <thead className="bg-muted/40 text-xs uppercase tracking-wider text-muted-foreground">
               <tr>
@@ -206,7 +206,7 @@ function RankingPage() {
           <h2 className="text-lg font-semibold flex items-center gap-2">
             <AlertTriangle className="h-5 w-5 text-warning" /> Ranking de Instabilidade (24h)
           </h2>
-          <Card className="overflow-x-auto">
+          <Card className="overflow-x-auto scrollbar-hide">
             <table className="w-full text-sm min-w-[520px]">
               <thead className="bg-muted/40 text-xs uppercase tracking-wider text-muted-foreground">
                 <tr>
