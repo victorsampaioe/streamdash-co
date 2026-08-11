@@ -1352,23 +1352,25 @@ export async function runIptvBatchSync(serverIds: string[], opts: { mode?: "smar
   const BATCH_SIZE = 5;
   const results = [];
   let total_contents = 0;
+  const batchId = Math.random().toString(36).substring(7);
   
-  console.log(`[iptv-batch] Iniciando lote de ${serverIds.length} servidores (tamanho do lote: ${BATCH_SIZE})`);
+  console.log(`[iptv-batch] [${batchId}] Iniciando lote de ${serverIds.length} servidores (tamanho do lote: ${BATCH_SIZE})`);
   
-  // Dividir em pedaços para processamento
   for (let i = 0; i < serverIds.length; i += BATCH_SIZE) {
     const chunk = serverIds.slice(i, i + BATCH_SIZE);
-    console.log(`[iptv-batch] Processando lote ${Math.floor(i / BATCH_SIZE) + 1} (${chunk.length} servidores)`);
+    console.log(`[iptv-batch] [${batchId}] Processando lote ${Math.floor(i / BATCH_SIZE) + 1} (${chunk.length} servidores)`);
     
     const chunkResults = await Promise.all(
       chunk.map(async (id) => {
         try {
+          console.log(`[iptv-batch] [${batchId}] [${id}] Iniciando sincronização...`);
           const res = await runIptvSync(id, { mode: opts.mode, force: true });
           const count = (res as any)?.contents_found || 0;
           total_contents += count;
+          console.log(`[iptv-batch] [${batchId}] [${id}] ✅ Concluído: ${count} conteúdos encontrados.`);
           return { id, ok: true, contents_found: count, no_changes: !(res as any)?.changes };
         } catch (e: any) {
-          console.error(`[iptv-batch] [${id}] Falha individual:`, e.message);
+          console.error(`[iptv-batch] [${batchId}] [${id}] ❌ Falha:`, e.message);
           return { id, ok: false, error: e.message };
         }
       })
