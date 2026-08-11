@@ -55,62 +55,13 @@ export const recalculateRadarAvailability = createServerFn({ method: "POST" })
       }
     }
 
-    // 2. Recalcular contadores (BATCH)
-    const { data: itemsWithMatches } = await supabaseAdmin
-        .from("iptv_catalog_matches")
-        .select("catalog_id");
-    
-    const uniqueIds = (itemsWithMatches ?? []).map(m => m.catalog_id).filter((id): id is string => !!id);
-    const uniqueCatalogIds = [...new Set(uniqueIds)];
-    let totalUpdated = 0;
+    // 2. Recalcular contadores por SERVIDOR LÓGICO (aliases do mesmo cluster contam como 1)
+    const { data: updated, error: recalcErr } = await (context.supabase as any).rpc(
+      "recalc_iptv_availability",
+    );
+    if (recalcErr) throw new Error(recalcErr.message);
 
-    const CHUNK_SIZE = 50;
-    for (let i = 0; i < uniqueCatalogIds.length; i += CHUNK_SIZE) {
-      const chunk = uniqueCatalogIds.slice(i, i + CHUNK_SIZE);
-      
-      await Promise.all(chunk.map(async (id) => {
-        const { count } = await supabaseAdmin
-          .from("iptv_catalog_matches")
-          .select("*", { count: 'exact', head: true })
-          .eq("catalog_id", id);
-        
-        const { data: latest } = await supabaseAdmin
-          .from("iptv_catalog_matches")
-          .select("detected_at")
-          .eq("catalog_id", id)
-          .order("detected_at", { ascending: false })
-          .limit(1)
-          .maybeSingle();
-
-        if (count !== null) {
-          await supabaseAdmin
-            .from("iptv_global_catalog")
-            .update({ 
-              servers_found_count: count,
-              last_detected_at: latest?.detected_at || now
-            } as never)
-            .eq("id", id);
-        }
-      }));
-
-      totalUpdated += chunk.length;
-      if (i % 500 === 0) console.log(`[radar-admin] Processados ${totalUpdated} registros...`);
-    }
-
-    // Resetar contadores para quem não tem match
-    if (uniqueCatalogIds.length > 0) {
-      await supabaseAdmin
-        .from("iptv_global_catalog")
-        .update({ servers_found_count: 0 } as never)
-        .not("id", "in", uniqueCatalogIds);
-    } else {
-      await supabaseAdmin
-        .from("iptv_global_catalog")
-        .update({ servers_found_count: 0 } as never);
-    }
-
-
-    return { success: true, total: totalUpdated };
+    return { success: true, total: (updated as number) ?? 0 };
   });
 
 /**
