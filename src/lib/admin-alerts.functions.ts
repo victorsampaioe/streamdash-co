@@ -9,8 +9,7 @@ export const triggerTestAlert = createServerFn({ method: "POST" })
     event: z.enum(["OFFLINE", "ONLINE"])
   }).parse(data))
   .handler(async ({ data }) => {
-    const { createSupabaseServerClient } = await import("@/integrations/supabase/client.server");
-    const supabase = createSupabaseServerClient();
+    const { supabase } = await import("@/integrations/supabase/client");
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) throw new Error("Unauthorized");
     
@@ -45,8 +44,8 @@ export const getAlertLogs = createServerFn({ method: "GET" })
   .inputValidator((data) => z.object({
     limit: z.number().default(20)
   }).parse(data))
-  .handler(async ({ data, context }) => {
-    const { supabase } = context;
+  .handler(async ({ data }) => {
+    const { supabase } = await import("@/integrations/supabase/client");
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) throw new Error("Unauthorized");
 
