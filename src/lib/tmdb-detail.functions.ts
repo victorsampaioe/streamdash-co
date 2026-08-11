@@ -21,31 +21,35 @@ export const getTmdbDetail = createServerFn({ method: "POST" })
     const detail = await fetchDetail(data.media, data.id);
     const keys = [...new Set([titleKey(detail.title), titleKey(detail.original_title)].filter(Boolean))];
 
-    // 2. Busca servidores verificados
+    // 2. Encontrar o registro no catálogo global para este TMDB ID
+    const { data: globalEntry } = await context.supabase
+      .from("iptv_global_catalog")
+      .select("id")
+      .eq("tmdb_id", data.id)
+      .eq("media_type", data.media === "tv" ? "tv" : "movie")
+      .maybeSingle();
+
+    // 3. Busca disponibilidade real vinculada ao catálogo global
+    const itemMeta = new Map<string, { first_seen_at: string; quality?: string }>();
+    if (globalEntry) {
+      const { data: matches } = await context.supabase
+        .from("iptv_catalog_matches")
+        .select("server_id, detected_at, raw_name")
+        .eq("catalog_id", globalEntry.id);
+      
+      for (const m of matches ?? []) {
+        const nameLower = m.raw_name.toLowerCase();
+        const quality = nameLower.includes("4k") ? "4K" : (nameLower.includes("fhd") || nameLower.includes("1080") ? "FHD" : "HD");
+        itemMeta.set(m.server_id, { first_seen_at: m.detected_at, quality });
+      }
+    }
+
+    // 4. Busca servidores verificados para cruzar
     const { data: servers } = await context.supabase
       .from("servers")
       .select("id, name, owner_id, current_status, last_iptv_sync_at, last_latency_ms")
       .not("catalog_synced_at", "is", null)
       .order("name");
-
-    // 3. Busca disponibilidade real nos catálogos
-    const itemMeta = new Map<string, { first_seen_at: string; quality?: string }>();
-    if (keys.length) {
-      const { data: rows } = await context.supabase
-        .from("iptv_catalog_items")
-        .select("server_id, first_seen_at, name")
-        .in("title_key", keys)
-        .is("removed_at", null);
-      
-      for (const r of rows ?? []) {
-        const prev = itemMeta.get(r.server_id);
-        const nameLower = r.name.toLowerCase();
-        const quality = nameLower.includes("4k") ? "4K" : (nameLower.includes("fhd") || nameLower.includes("1080") ? "FHD" : "HD");
-        if (!prev || r.first_seen_at < prev.first_seen_at) {
-          itemMeta.set(r.server_id, { first_seen_at: r.first_seen_at, quality });
-        }
-      }
-    }
 
     // 4. Mapeia disponibilidade respeitando privacidade
     const availability = (servers ?? []).map((s) => {
