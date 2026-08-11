@@ -102,12 +102,32 @@ export const searchRadarTitleManual = createServerFn({ method: "POST" })
       last_seen_at: string;
     }[];
 
-    // 2. Nomes reais dos servidores
+    // 2. Nomes reais dos servidores + servidor lógico (cluster)
     const serverIds = [...new Set(rows.map((r) => r.server_id))];
     const nameById = new Map<string, string>();
+    const clusterByServer = new Map<string, { id: string; name: string }>();
     if (serverIds.length) {
       const { data: srvs } = await supabaseAdmin.from("servers").select("id, name").in("id", serverIds);
       for (const s of (srvs ?? []) as { id: string; name: string }[]) nameById.set(s.id, s.name);
+
+      const { data: mem } = await supabaseAdmin
+        .from("iptv_cluster_members")
+        .select("server_id, cluster_id")
+        .in("server_id", serverIds);
+      const clusterIds = [...new Set(((mem ?? []) as any[]).map((m) => m.cluster_id as string))];
+      if (clusterIds.length) {
+        const { data: cls } = await supabaseAdmin
+          .from("iptv_server_clusters")
+          .select("id, name")
+          .in("id", clusterIds);
+        const clName = new Map(((cls ?? []) as any[]).map((c) => [c.id as string, c.name as string]));
+        for (const m of (mem ?? []) as any[]) {
+          clusterByServer.set(m.server_id as string, {
+            id: m.cluster_id as string,
+            name: clName.get(m.cluster_id as string) ?? "Servidor",
+          });
+        }
+      }
     }
 
     // 3. Revalidar/registrar o vínculo no catálogo global
