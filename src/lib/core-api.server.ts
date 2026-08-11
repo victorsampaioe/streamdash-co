@@ -16,6 +16,7 @@ export type CoreTask =
   | "iptv-validate"
   | "iptv-sync"
   | "iptv-batch-sync"
+  | "radar-job-step"
   | "iptv-ua-test"
   | "content-scan"
   | "telegram-broadcast"
