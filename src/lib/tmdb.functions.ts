@@ -54,6 +54,10 @@ export const getTmdbFeed = createServerFn({ method: "POST" })
           *,
           first_server:servers!first_server_id(name)
         `)
+        .eq("media_type", "movie") // Apenas filmes na aba Filmes Recentes
+        .not("tmdb_id", "is", null)
+        .not("poster_path", "is", null)
+        .neq("poster_path", "")
         .order("first_detected_at", { ascending: false })
         .limit(20);
 
