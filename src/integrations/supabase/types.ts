@@ -1411,9 +1411,13 @@ export type Database = {
           media_type: string
           normalized_name: string
           poster_path: string | null
+          release_year: number | null
           servers_found_count: number | null
           title_key: string
+          tmdb_checked_at: string | null
           tmdb_id: number | null
+          tmdb_status: string
+          vote_average: number | null
         }
         Insert: {
           first_detected_at?: string | null
@@ -1424,9 +1428,13 @@ export type Database = {
           media_type: string
           normalized_name: string
           poster_path?: string | null
+          release_year?: number | null
           servers_found_count?: number | null
           title_key: string
+          tmdb_checked_at?: string | null
           tmdb_id?: number | null
+          tmdb_status?: string
+          vote_average?: number | null
         }
         Update: {
           first_detected_at?: string | null
@@ -1437,9 +1445,13 @@ export type Database = {
           media_type?: string
           normalized_name?: string
           poster_path?: string | null
+          release_year?: number | null
           servers_found_count?: number | null
           title_key?: string
+          tmdb_checked_at?: string | null
           tmdb_id?: number | null
+          tmdb_status?: string
+          vote_average?: number | null
         }
         Relationships: [
           {
@@ -1654,6 +1666,120 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      iptv_sync_job_items: {
+        Row: {
+          attempts: number
+          created_at: string
+          error: string | null
+          finished_at: string | null
+          id: string
+          job_id: string
+          movies: number
+          series: number
+          server_id: string
+          started_at: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          attempts?: number
+          created_at?: string
+          error?: string | null
+          finished_at?: string | null
+          id?: string
+          job_id: string
+          movies?: number
+          series?: number
+          server_id: string
+          started_at?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          attempts?: number
+          created_at?: string
+          error?: string | null
+          finished_at?: string | null
+          id?: string
+          job_id?: string
+          movies?: number
+          series?: number
+          server_id?: string
+          started_at?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "iptv_sync_job_items_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: false
+            referencedRelation: "iptv_sync_jobs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "iptv_sync_job_items_server_id_fkey"
+            columns: ["server_id"]
+            isOneToOne: false
+            referencedRelation: "servers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      iptv_sync_jobs: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          failed_count: number
+          finished_at: string | null
+          id: string
+          kind: string
+          last_error: string | null
+          movies_found: number
+          processed: number
+          series_found: number
+          started_at: string | null
+          status: string
+          success_count: number
+          total_servers: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          failed_count?: number
+          finished_at?: string | null
+          id?: string
+          kind?: string
+          last_error?: string | null
+          movies_found?: number
+          processed?: number
+          series_found?: number
+          started_at?: string | null
+          status?: string
+          success_count?: number
+          total_servers?: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          failed_count?: number
+          finished_at?: string | null
+          id?: string
+          kind?: string
+          last_error?: string | null
+          movies_found?: number
+          processed?: number
+          series_found?: number
+          started_at?: string | null
+          status?: string
+          success_count?: number
+          total_servers?: number
+          updated_at?: string
+        }
+        Relationships: []
       }
       iptv_syncs: {
         Row: {

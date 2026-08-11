@@ -20,6 +20,7 @@ const Body = z.object({
     "iptv-ua-test",
     "content-scan",
     "telegram-broadcast",
+    "radar-job-step",
   ]),
   serverId: z.string().uuid().optional(),
   serverIds: z.array(z.string().uuid()).optional(),
@@ -70,6 +71,13 @@ async function execute(input: z.infer<typeof Body>) {
     case "content-scan": {
       const { runContentScan } = await import("@/lib/content-monitor.server");
       return await runContentScan(input.serverId!, (input.options ?? {}) as any);
+    }
+    case "radar-job-step": {
+      const { runRadarJobStep, enrichTmdbPending, ensureAutoRadarJob } = await import("@/lib/radar-jobs.server");
+      const auto = await ensureAutoRadarJob();
+      const step = await runRadarJobStep();
+      const tmdb = await enrichTmdbPending(60);
+      return { auto, step, tmdb };
     }
     case "telegram-broadcast": {
       const { broadcastToTelegramSubscribers } = await import("@/lib/telegram-broadcast.server");

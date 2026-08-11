@@ -4,9 +4,9 @@ import { useServerFn } from "@tanstack/react-start";
 import { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { getTmdbFeed } from "@/lib/tmdb.functions";
-import { prepareRadarBatchSync, runRadarBatchSyncNow } from "@/lib/radar-stats.functions";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
-import { Loader2, AlertTriangle } from "lucide-react";
+import { getRadarJobStatus, startRadarSyncJob } from "@/lib/radar-jobs.functions";
+import { Loader2 } from "lucide-react";
+
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -46,113 +46,40 @@ function ContentIntelligence() {
   const run = useServerFn(getTmdbFeed);
 
   const qc = useQueryClient();
-  const prepareSync = useServerFn(prepareRadarBatchSync);
-  const runSync = useServerFn(runRadarBatchSyncNow);
-  const [showConfirm, setShowConfirm] = useState(false);
-  const [prepData, setPrepData] = useState<{ 
-    servers_found: number; 
-    server_ids: string[];
-    total_db_servers: number;
-    with_host: number;
-    with_username: number;
-    with_password: number;
-    login_approved: number;
-    total_monitored: number;
-    configured_iptv: number;
-    waiting_credentials: number;
-    excluded_reasons: {
-      no_username: number;
-      no_password: number;
-      invalid_login: number;
-      paused: number;
-      inactive_account: number;
-    };
-  } | null>(null);
+  const jobStatus = useServerFn(getRadarJobStatus);
+  const startJob = useServerFn(startRadarSyncJob);
 
-  const prepareMutation = useMutation({
-    mutationFn: () => prepareSync(),
-    onSuccess: (data: any) => {
-      console.group("[Radar Tech Log] Preparação Concluída");
-      console.log("Total servidores no banco:", data.total_db_servers);
-      console.log("Servidores com URL Xtream:", data.with_host);
-      console.log("Servidores com Credenciais (User/Pass):", data.with_username, "/", data.with_password);
-      console.log("Servidores com Login Aprovado:", data.login_approved);
-      console.log("Servidores Aptos (Filtro Final):", data.servers_found);
-      console.groupEnd();
-
-      setPrepData(data);
-      setShowConfirm(true);
-    },
-
-    onError: (e: Error) => {
-      console.error("[Radar Tech Log] Erro na preparação do Radar:", e);
-      console.error("[Radar Tech Log] Etapa: Chamada RPC prepareRadarBatchSync");
-      console.error("[Radar Tech Log] Erro Real:", e.message);
-      toast.error("Erro ao preparar sincronização: " + e.message);
-
-    },
+  const statusQuery = useQuery({
+    queryKey: ["radar-job-status"],
+    queryFn: () => jobStatus(),
+    retry: false,
+    refetchInterval: 10_000,
   });
 
-  const [syncProgress, setSyncProgress] = useState<{
-    processed: number;
-    total: number;
-    success: number;
-    errors: number;
-    contents: number;
-    results: any[];
-  } | null>(null);
-
-  const syncMutation = useMutation({
-    mutationFn: async ({ ids, testOne }: { ids: string[]; testOne?: boolean }) => {
-      const targetIds = testOne ? ids.slice(0, 1) : ids;
-      setSyncProgress({
-        processed: 0,
-        total: targetIds.length,
-        success: 0,
-        errors: 0,
-        contents: 0,
-        results: [],
-      });
-
-      console.log(`[Radar Tech Log] Iniciando sincronização. Alvo: ${testOne ? "Teste Individual" : "Lote Completo"}. Qtd: ${targetIds.length}`);
-      const res = await runSync({ data: { serverIds: ids, testOne } });
-      return res;
-    },
-    onSuccess: (res: any) => {
-      const ok = res.results.filter((r: any) => r.ok).length;
-      const fails = res.results.filter((r: any) => !r.ok);
-      const contents = res.results.reduce((acc: number, r: any) => acc + (r.contents_found || 0), 0);
-      
-      setSyncProgress(prev => prev ? {
-        ...prev,
-        processed: prev.total,
-        success: ok,
-        errors: fails.length,
-        contents: contents,
-        results: res.results
-      } : null);
-
-      console.group("Relatório Técnico de Sincronização Radar");
-      res.results.forEach((r: any) => {
-        const icon = r.ok ? "✅" : (r.error?.toLowerCase().includes("login") ? "⚠️" : "❌");
-        const msg = r.ok ? `Sincronizado (${r.contents_found || 0} itens)` : (r.error?.toLowerCase().includes("login") ? "Falha de login" : `Erro API: ${r.error}`);
-        console.log(`${icon} Servidor ${r.id}: ${msg}`);
-      });
-      console.groupEnd();
-
-      if (fails.length > 0) {
-        toast.warning(`Sincronização concluída: ${ok} sucesso, ${fails.length} falhas. Novos conteúdos: ${contents}`);
-      } else {
-        toast.success(`Sincronização concluída! ${ok} servidores processados, ${contents} novos conteúdos.`);
+  const isAdmin = !!statusQuery.data;
+  const job = (statusQuery.data as any)?.job as
+    | {
+        status: string;
+        processed: number;
+        total_servers: number;
+        success_count: number;
+        failed_count: number;
+        movies_found: number;
+        series_found: number;
       }
-      
-      qc.invalidateQueries({ queryKey: ["tmdb-feed"] });
+    | null
+    | undefined;
+  const running = job && (job.status === "queued" || job.status === "running");
+
+  const startMutation = useMutation({
+    mutationFn: () => startJob(),
+    onSuccess: () => {
+      toast.success("Sincronização iniciada em segundo plano. Pode fechar o navegador.");
+      qc.invalidateQueries({ queryKey: ["radar-job-status"] });
     },
-    onError: (e: Error) => {
-      console.error("[Radar Tech Log] Erro crítico na sincronização do Radar");
-      toast.error("Erro na sincronização: " + e.message);
-    },
+    onError: (e: Error) => toast.error("Erro ao iniciar sincronização: " + e.message),
   });
+
 
   const { data, isLoading, error } = useQuery({
     queryKey: ["tmdb-feed", feed, query],
@@ -200,168 +127,36 @@ function ContentIntelligence() {
         )}
       </Card>
 
-      <div className="flex flex-wrap items-center gap-4 bg-muted/30 p-3 rounded-lg border border-primary/10">
-        <div className="text-sm font-semibold flex items-center gap-2">
-          <Sparkles className="h-4 w-4 text-primary" />
-          Radar de Conteúdo
-        </div>
-        <div className="h-4 w-px bg-border hidden sm:block" />
-        <Button 
-          size="sm" 
-          variant="outline"
-          className="bg-primary/5 border-primary/20 hover:bg-primary/10"
-          onClick={() => prepareMutation.mutate()}
-          disabled={prepareMutation.isPending || syncMutation.isPending}
-        >
-          {prepareMutation.isPending ? (
-            <Loader2 className="h-4 w-4 animate-spin mr-2" />
-          ) : (
-            <Sparkles className="h-4 w-4 mr-2" />
-          )}
-          🔄 Sincronizar conteúdos agora
-        </Button>
-      </div>
-
-      <Dialog open={showConfirm} onOpenChange={(open) => {
-        if (!syncMutation.isPending) {
-          setShowConfirm(open);
-          if (!open) setSyncProgress(null);
-        }
-      }}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle>
-              {syncProgress ? (syncProgress.processed === syncProgress.total ? "Relatório após sincronização" : "Sincronização em Progresso") : "Corrigir Radar IPTV: remover rádios/live sem capa e remover Conteúdos Offline"}
-            </DialogTitle>
-            <DialogDescription className="text-xs mt-2 whitespace-pre-wrap">
-              {syncProgress ? (
-                syncProgress.processed === syncProgress.total ? (
-                  "Corrigir Radar IPTV: remover rádios/live sem capa e remover Conteúdos Offline\n\nPreciso corrigir dois pontos que ainda continuam no sistema.\n\n1. Radar de Conteúdo - Filmes Recentes com dados errados\n\nA aba Filmes Recentes ainda está trazendo conteúdos que não são filmes:\n\nExemplos encontrados:\n\nRadio Conexao Jovem\nRadio Paradise 87.5 FM\nWeb Radio ADC\nRádio Web Exclusiva\n\nEsses conteúdos entram sem capa, sem TMDB e ficam como Série com nota 0.0.\n\nCorrigir a consulta do Radar:\n\nPermitir somente:\n\nFilmes VOD (movie)\nSéries (series)\nConteúdos com TMDB válido\nConteúdos com poster/capa\n\nBloquear:\n\nRádio\nLive TV\nCanais ao vivo\nStreams sem TMDB\nConteúdos sem imagem\n\nFazer também uma limpeza dos registros antigos já salvos no Radar que são desse tipo.\n\nNão apagar filmes e séries válidos.\n\n2. Remover completamente o módulo Conteúdos Offline\n\nRemover:\n\nPágina:\nhttps://streammonitor.site/app/conteudos\n\nFazer:\n\nremover do menu lateral;\ndesativar a rota;\nremover processos/jobs relacionados;\nparar verificações desse módulo;\nnão consumir recursos do Core AWS;\nimpedir acesso direto pela URL.\n\nO catálogo oficial agora deve ser somente pelo:\n\nRadar Inteligente de Conteúdo\n\nValidar no backend, não apenas esconder na interface."
-                ) : (
-                  "Corrigir Radar IPTV: remover rádios/live sem capa e remover Conteúdos Offline\n\nPreciso corrigir dois pontos que ainda continuam no sistema.\n\n1. Radar de Conteúdo - Filmes Recentes com dados errados\n\nA aba Filmes Recentes ainda está trazendo conteúdos que não são filmes:\n\nExemplos encontrados:\n\nRadio Conexao Jovem\nRadio Paradise 87.5 FM\nWeb Radio ADC\nRádio Web Exclusiva\n\nEsses conteúdos entram sem capa, sem TMDB e ficam como Série com nota 0.0.\n\nCorrigir a consulta do Radar:\n\nPermitir somente:\n\nFilmes VOD (movie)\nSéries (series)\nConteúdos com TMDB válido\nConteúdos com poster/capa\n\nBloquear:\n\nRádio\nLive TV\nCanais ao vivo\nStreams sem TMDB\nConteúdos sem imagem\n\nFazer também uma limpeza dos registros antigos já salvos no Radar que são desse tipo.\n\nNão apagar filmes e séries válidos.\n\n2. Remover completamente o módulo Conteúdos Offline\n\nRemover:\n\nPágina:\nhttps://streammonitor.site/app/conteudos\n\nFazer:\n\nremover do menu lateral;\ndesativar a rota;\nremover processos/jobs relacionados;\nparar verificações desse módulo;\nnão consumir recursos do Core AWS;\nimpedir acesso direto pela URL.\n\nO catálogo oficial agora deve ser somente pelo:\n\nRadar Inteligente de Conteúdo\n\nValidar no backend, não apenas esconder na interface."
-                )
-              ) : (
-                "Corrigir Radar IPTV: remover rádios/live sem capa e remover Conteúdos Offline\n\nPreciso corrigir dois pontos que ainda continuam no sistema.\n\n1. Radar de Conteúdo - Filmes Recentes com dados errados\n\nA aba Filmes Recentes ainda está trazendo conteúdos que não são filmes:\n\nExemplos encontrados:\n\nRadio Conexao Jovem\nRadio Paradise 87.5 FM\nWeb Radio ADC\nRádio Web Exclusiva\n\nEsses conteúdos entram sem capa, sem TMDB e ficam como Série com nota 0.0.\n\nCorrigir a consulta do Radar:\n\nPermitir somente:\n\nFilmes VOD (movie)\nSéries (series)\nConteúdos com TMDB válido\nConteúdos com poster/capa\n\nBloquear:\n\nRádio\nLive TV\nCanais ao vivo\nStreams sem TMDB\nConteúdos sem imagem\n\nFazer também uma limpeza dos registros antigos já salvos no Radar que são desse tipo.\n\nNão apagar filmes e séries válidos.\n\n2. Remover completamente o módulo Conteúdos Offline\n\nRemover:\n\nPágina:\nhttps://streammonitor.site/app/conteudos\n\nFazer:\n\nremover do menu lateral;\ndesativar a rota;\nremover processos/jobs relacionados;\nparar verificações desse módulo;\nnão consumir recursos do Core AWS;\nimpedir acesso direto pela URL.\n\nO catálogo oficial agora deve ser somente pelo:\n\nRadar Inteligente de Conteúdo\n\nValidar no backend, não apenas esconder na interface."
-              )}
-            </DialogDescription>
-
-            <div className="pt-4 space-y-4 max-h-[60vh] overflow-y-auto pr-2">
-              {syncProgress ? (
-                <div className="space-y-4">
-                  {syncProgress.processed < syncProgress.total ? (
-                    <div className="space-y-2">
-                      <div className="flex justify-between text-sm">
-                        <span>Servidores processados:</span>
-                        <span className="font-bold">{syncProgress.processed}/{syncProgress.total}</span>
-                      </div>
-                      <div className="h-2 bg-muted rounded-full overflow-hidden">
-                        <div 
-                          className="h-full bg-primary transition-all duration-500" 
-                          style={{ width: `${(syncProgress.processed / syncProgress.total) * 100}%` }}
-                        />
-                      </div>
-                      <div className="grid grid-cols-2 gap-2 mt-4">
-                        <div className="bg-emerald-500/10 p-2 rounded text-center">
-                          <div className="text-xs text-emerald-500 uppercase">Sucesso</div>
-                          <div className="text-xl font-bold">{syncProgress.success}</div>
-                        </div>
-                        <div className="bg-destructive/10 p-2 rounded text-center">
-                          <div className="text-xs text-destructive uppercase">Erro</div>
-                          <div className="text-xl font-bold">{syncProgress.errors}</div>
-                        </div>
-                      </div>
-                      <div className="text-center text-xs text-muted-foreground mt-2">
-                        Tempo estimado: ~{Math.max(1, (syncProgress.total - syncProgress.processed) * 2)}s
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="space-y-2">
-                      <div className="flex justify-between text-sm py-1 border-b border-border/50">
-                        <span>✅ Sincronizados:</span>
-                        <span className="font-bold text-emerald-500">{syncProgress.success}</span>
-                      </div>
-                      <div className="flex justify-between text-sm py-1 border-b border-border/50">
-                        <span>⚠️ Falharam:</span>
-                        <span className="font-bold text-destructive">{syncProgress.errors}</span>
-                      </div>
-                      <div className="flex justify-between text-sm py-1 border-b border-border/50">
-                        <span>⏳ Sem alterações:</span>
-                        <span className="font-bold">{syncProgress.results.filter(r => r.ok && r.no_changes).length}</span>
-                      </div>
-                      <div className="flex justify-between text-sm py-1 border-b border-border/50">
-                        <span>🎬 Novos conteúdos encontrados:</span>
-                        <span className="font-bold text-primary">{syncProgress.contents}</span>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              ) : (
-                <div className="grid grid-cols-1 gap-2 text-left">
-                  <div className="text-xs font-bold text-muted-foreground uppercase mb-1">Status da Infraestrutura</div>
-                  
-                  <div className="flex justify-between text-sm py-1 border-b border-border/50">
-                    <span>Total servidores cadastrados:</span>
-                    <span className="font-mono">{prepData?.total_db_servers || 0}</span>
-                  </div>
-                  <div className="flex justify-between text-sm py-1 border-b border-border/50">
-                    <span>Servidores com IPTV configurado:</span>
-                    <span className="font-mono">{prepData?.configured_iptv || 0}</span>
-                  </div>
-                  <div className="flex justify-between text-sm py-1 border-b border-border/50 text-primary font-bold">
-                    <span>Servidores prontos para sincronização:</span>
-                    <span className="font-mono">{prepData?.servers_found || 0}</span>
-                  </div>
-
-                  <div className="text-xs font-bold text-muted-foreground uppercase mt-4 mb-1">Regras de Filtro Atuais:</div>
-                  <div className="text-[10px] space-y-1 text-muted-foreground bg-muted/30 p-2 rounded border border-border/40">
-                    <p>A sincronização usa somente servidores com:</p>
-                    <ul className="list-disc list-inside ml-1">
-                      <li>URL Xtream válida;</li>
-                      <li>usuário IPTV;</li>
-                      <li>senha IPTV;</li>
-                      <li>login aprovado.</li>
-                    </ul>
-                    <p className="mt-2 text-destructive/80 font-medium italic">
-                      Nunca enviados: sem credencial, contas expiradas ou pausadas.
-                    </p>
-                  </div>
-                </div>
-              )}
-            </div>
-          </DialogHeader>
-          <DialogFooter className="mt-4 gap-2 flex-col sm:flex-row">
-            {!syncProgress ? (
-              <>
-                <Button 
-                  variant="outline" 
-                  className="sm:mr-auto"
-                  onClick={() => prepData && syncMutation.mutate({ ids: prepData.server_ids, testOne: true })}
-                  disabled={syncMutation.isPending || !prepData?.servers_found}
-                >
-                  Fazer um teste forçado (1 servidor)
-                </Button>
-                <div className="flex gap-2">
-                  <Button variant="ghost" onClick={() => setShowConfirm(false)}>Cancelar</Button>
-                  <Button 
-                    onClick={() => prepData && syncMutation.mutate({ ids: prepData.server_ids })}
-                    disabled={syncMutation.isPending || !prepData?.servers_found}
-                    className="gap-2"
-                  >
-                    {syncMutation.isPending && <Loader2 className="h-4 w-4 animate-spin" />}
-                    Iniciar Sincronização
-                  </Button>
-                </div>
-              </>
+      {isAdmin && (
+        <div className="flex flex-wrap items-center gap-4 bg-muted/30 p-3 rounded-lg border border-primary/10">
+          <div className="text-sm font-semibold flex items-center gap-2">
+            <Sparkles className="h-4 w-4 text-primary" />
+            Radar de Conteúdo (Admin)
+          </div>
+          <div className="h-4 w-px bg-border hidden sm:block" />
+          <Button
+            size="sm"
+            variant="outline"
+            className="bg-primary/5 border-primary/20 hover:bg-primary/10"
+            onClick={() => startMutation.mutate()}
+            disabled={startMutation.isPending || !!running}
+          >
+            {startMutation.isPending || running ? (
+              <Loader2 className="h-4 w-4 animate-spin mr-2" />
             ) : (
-              syncProgress.processed === syncProgress.total && (
-                <Button className="w-full" onClick={() => { setShowConfirm(false); setSyncProgress(null); }}>
-                  Fechar Relatório
-                </Button>
-              )
+              <Sparkles className="h-4 w-4 mr-2" />
             )}
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+            {running ? "Sincronizando em segundo plano..." : "🔄 Sincronizar conteúdos agora"}
+          </Button>
+          {job && (
+            <div className="text-xs text-muted-foreground">
+              Servidores {job.processed ?? 0}/{job.total_servers ?? 0} · 🎬 {(job.movies_found ?? 0).toLocaleString("pt-BR")} ·
+              📺 {(job.series_found ?? 0).toLocaleString("pt-BR")} · ✅ {job.success_count ?? 0} · ❌ {job.failed_count ?? 0}
+            </div>
+          )}
+        </div>
+      )}
+
 
 
       <div className="flex flex-wrap gap-2">

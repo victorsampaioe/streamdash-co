@@ -2,57 +2,47 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Sparkles, Server, ShieldCheck, Clock, Film, Trophy, AlertTriangle, Loader2 } from "lucide-react";
+import { Progress } from "@/components/ui/progress";
+import { Sparkles, Server, ShieldCheck, Clock, Film, Trophy, AlertTriangle, Loader2, Tv, Image } from "lucide-react";
 import { toast } from "sonner";
-import { getIptvRadarStats, prepareRadarBatchSync, runRadarBatchSyncNow } from "@/lib/radar-stats.functions";
-import { useState } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
+import { getIptvRadarStats } from "@/lib/radar-stats.functions";
+import { startRadarSyncJob, getRadarJobStatus } from "@/lib/radar-jobs.functions";
+import { cn } from "@/lib/utils";
 
 export function RadarAdminPanel() {
   const qc = useQueryClient();
   const getStats = useServerFn(getIptvRadarStats);
-  const prepareSync = useServerFn(prepareRadarBatchSync);
-  const runSync = useServerFn(runRadarBatchSyncNow);
-  
-  const [showConfirm, setShowConfirm] = useState(false);
-  const [prepData, setPrepData] = useState<{ servers_found: number; server_ids: string[] } | null>(null);
+  const getJob = useServerFn(getRadarJobStatus);
+  const startJob = useServerFn(startRadarSyncJob);
 
   const { data: s, isLoading } = useQuery({
     queryKey: ["admin-radar-stats"],
     queryFn: () => getStats(),
   });
 
-  const prepareMutation = useMutation({
-    mutationFn: () => prepareSync(),
-    onSuccess: (data) => {
-      setPrepData(data);
-      setShowConfirm(true);
-    },
-    onError: (e: Error) => {
-      console.error("[Radar Admin Log] Erro na preparação:", e);
-      toast.error("Erro ao preparar sincronização: " + e.message);
-    },
-
+  const { data: progress } = useQuery({
+    queryKey: ["admin-radar-job"],
+    queryFn: () => getJob(),
+    refetchInterval: 10_000,
   });
 
-  const syncMutation = useMutation({
-    mutationFn: (ids: string[]) => runSync({ data: { serverIds: ids } }),
-    onSuccess: (res) => {
-      const ok = res.results.filter(r => r.ok).length;
-      const fail = res.results.length - ok;
-      toast.success(`Sincronização concluída: ${ok} sucesso(s), ${fail} falha(s).`);
-      qc.invalidateQueries({ queryKey: ["admin-radar-stats"] });
-      setShowConfirm(false);
-    },
-    onError: (e: Error) => {
-      console.error("[Radar Admin Log] Erro na sincronização:", e);
-      toast.error("Erro na sincronização: " + e.message);
-    },
+  const job = progress?.job as any | null;
+  const running = job && (job.status === "queued" || job.status === "running");
 
+  const startMutation = useMutation({
+    mutationFn: () => startJob(),
+    onSuccess: (data: any) => {
+      toast.success(
+        `Sincronização enfileirada: ${data.total_servers} servidores. O processamento continua no servidor mesmo se você fechar o navegador.`,
+      );
+      qc.invalidateQueries({ queryKey: ["admin-radar-job"] });
+    },
+    onError: (e: Error) => toast.error("Erro ao iniciar sincronização: " + e.message),
   });
 
   if (isLoading) return <div className="p-8 text-center animate-pulse">Carregando dados do Radar...</div>;
+
+  const pct = job?.total_servers ? Math.round(((job.processed ?? 0) / job.total_servers) * 100) : 0;
 
   return (
     <div className="space-y-6">
@@ -64,138 +54,68 @@ export function RadarAdminPanel() {
               Gerenciamento do Radar IPTV
             </h2>
             <p className="text-sm text-muted-foreground mt-1">
-              Separamos servidores monitorados daqueles com acesso IPTV configurado para otimizar o Radar.
+              Coleta apenas Filmes (VOD) e Séries. Canais ao vivo e rádios não entram no Radar.
             </p>
           </div>
-          <Button 
-            onClick={() => prepareMutation.mutate()}
-            disabled={prepareMutation.isPending || syncMutation.isPending}
-            className="gap-2"
-          >
-            {prepareMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
-            Sincronizar Conteúdos Agora
+          <Button onClick={() => startMutation.mutate()} disabled={startMutation.isPending || !!running} className="gap-2">
+            {startMutation.isPending || running ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Sparkles className="h-4 w-4" />
+            )}
+            {running ? "Sincronização em andamento" : "Sincronizar Conteúdos Agora"}
           </Button>
         </div>
 
+        {job && (
+          <div className="mt-6 rounded-lg border bg-muted/20 p-4 space-y-3">
+            <div className="flex items-center justify-between text-sm">
+              <span className="font-semibold">
+                Radar IPTV — {job.status === "running" ? "Executando" : job.status === "queued" ? "Na fila" : "Concluído"}
+                {job.kind === "auto" ? " (automático)" : ""}
+              </span>
+              <span className="text-muted-foreground">
+                Servidores: {job.processed ?? 0}/{job.total_servers ?? 0}
+              </span>
+            </div>
+            <Progress value={pct} />
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-xs text-muted-foreground">
+              <div>🎬 Filmes: <b className="text-foreground">{(job.movies_found ?? 0).toLocaleString("pt-BR")}</b></div>
+              <div>📺 Séries: <b className="text-foreground">{(job.series_found ?? 0).toLocaleString("pt-BR")}</b></div>
+              <div>✅ Sucesso: <b className="text-foreground">{job.success_count ?? 0}</b></div>
+              <div>❌ Falhas: <b className="text-foreground">{job.failed_count ?? 0}</b></div>
+            </div>
+            {job.last_error && <div className="text-xs text-destructive break-all">Último erro: {job.last_error}</div>}
+            <div className="text-[11px] text-muted-foreground">
+              Última atualização: {job.updated_at ? new Date(job.updated_at).toLocaleString("pt-BR") : "—"}
+            </div>
+          </div>
+        )}
+
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mt-8">
-          <StatCard 
-            icon={Server} 
-            label="✅ Servidores ativos monitorados" 
-            value={s?.total_monitored ?? 0} 
-            color="text-blue-500"
-          />
-          <StatCard 
-            icon={ShieldCheck} 
-            label="🔐 Com acesso IPTV configurado" 
-            value={s?.configured_iptv ?? 0} 
-            color="text-emerald-500"
-          />
-          <StatCard 
-            icon={Clock} 
-            label="⏳ Aguardando credenciais IPTV" 
-            value={s?.waiting_credentials ?? 0} 
-            color="text-amber-500"
-          />
-          <StatCard 
-            icon={Film} 
-            label="🎬 Conteúdos encontrados" 
-            value={s?.total_contents ?? 0} 
-            color="text-primary"
-            sub={s?.total_contents === 0 ? "Sincronização Inicial Pendente" : undefined}
-          />
-          <StatCard 
-            icon={Trophy} 
-            label="🏆 Primeiras detecções" 
-            value={s?.first_detections ?? 0} 
-            color="text-emerald-500"
-          />
+          <StatCard icon={Server} label="✅ Servidores ativos monitorados" value={s?.total_monitored ?? 0} color="text-blue-500" />
+          <StatCard icon={ShieldCheck} label="🔐 Com acesso IPTV configurado" value={s?.configured_iptv ?? 0} color="text-emerald-500" />
+          <StatCard icon={Clock} label="⏳ Aguardando credenciais IPTV" value={s?.waiting_credentials ?? 0} color="text-amber-500" />
+          <StatCard icon={Film} label="🎬 Filmes no catálogo" value={progress?.catalog.movies ?? 0} color="text-primary" />
+          <StatCard icon={Tv} label="📺 Séries no catálogo" value={progress?.catalog.series ?? 0} color="text-purple-500" />
+          <StatCard icon={Image} label="🖼️ TMDB identificados" value={progress?.catalog.tmdb_found ?? 0} color="text-cyan-500"
+            sub={`${(progress?.catalog.tmdb_pending ?? 0).toLocaleString("pt-BR")} pendentes de enriquecimento`} />
+          <StatCard icon={Trophy} label="🏆 Primeiras detecções" value={s?.first_detections ?? 0} color="text-emerald-500" />
         </div>
 
         <div className="mt-6 p-4 bg-primary/5 border border-primary/20 rounded-lg flex gap-3">
           <AlertTriangle className="h-5 w-5 text-primary shrink-0 mt-0.5" />
           <div className="text-sm space-y-2">
-            <p className="font-semibold">Regra de Sincronização:</p>
+            <p className="font-semibold">Como funciona:</p>
             <p className="text-muted-foreground">
-              A sincronização do Radar considera apenas servidores com **usuário IPTV, senha IPTV, URL Xtream válida e teste de login aprovado**. 
-              Servidores sem credenciais configuradas não entram na fila para economizar processamento.
+              A sincronização cria um job processado em segundo plano pelo Core AWS, em lotes de 5 servidores. Falhas
+              individuais são registradas sem interromper os demais. O catálogo é incremental (nada é apagado a cada
+              execução) e o TMDB é aplicado numa segunda etapa — títulos não identificados ficam salvos como pendentes.
+              O Core também executa sincronizações automáticas periódicas.
             </p>
           </div>
         </div>
       </Card>
-
-      <Dialog open={showConfirm} onOpenChange={setShowConfirm}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>A preparação da sincronização agora funciona</DialogTitle>
-            <DialogDescription className="text-xs mt-2 whitespace-pre-wrap">
-              A preparação da sincronização agora funciona, porém ao iniciar o processamento retorna:
-              {"\n\n"}
-              "Erro na sincronização: Internal server error"
-              {"\n\n"}
-              A fila está sendo criada corretamente, mas a execução está falhando.
-              {"\n\n"}
-              Adicionar logs detalhados no backend:
-              {"\n"}
-              servidor que estava processando;
-              {"\n"}
-              etapa atual:
-              {"\n"}
-              login Xtream;
-              {"\n"}
-              buscar categorias;
-              {"\n"}
-              buscar filmes;
-              {"\n"}
-              buscar séries;
-              {"\n"}
-              salvar catálogo;
-              {"\n"}
-              comparar TMDB;
-              {"\n"}
-              erro completo retornado.
-              {"\n\n"}
-              Corrigir para que:
-              {"\n"}
-              Um servidor com erro não derrube toda sincronização.
-              {"\n"}
-              Processar em lotes:
-              {"\n"}
-              exemplo: 5 ou 10 servidores por vez.
-              {"\n"}
-              Registrar falhas individuais:
-              {"\n"}
-              servidor X falhou;
-              {"\n"}
-              motivo;
-              {"\n"}
-              continuar próximos.
-              {"\n"}
-              Salvar progresso da sincronização:
-              {"\n"}
-              iniciados;
-              {"\n"}
-              concluídos;
-              {"\n"}
-              falhos;
-              {"\n"}
-              pendentes.
-              {"\n\n"}
-              Verificar se a sincronização está usando o Core AWS ou se ainda está rodando dentro da função do painel. Caso esteja no frontend/API do Lovable, migrar para job no Core AWS.
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter className="mt-4">
-            <Button variant="ghost" onClick={() => setShowConfirm(false)}>Cancelar</Button>
-            <Button 
-              onClick={() => prepData && syncMutation.mutate(prepData.server_ids)}
-              disabled={syncMutation.isPending}
-              className="gap-2"
-            >
-              {syncMutation.isPending && <Loader2 className="h-4 w-4 animate-spin" />}
-              Iniciar Sincronização
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }
@@ -214,5 +134,3 @@ function StatCard({ icon: Icon, label, value, color, sub }: { icon: any; label: 
     </div>
   );
 }
-
-import { cn } from "@/lib/utils";
