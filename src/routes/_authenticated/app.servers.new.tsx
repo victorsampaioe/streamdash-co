@@ -12,7 +12,10 @@ import { z } from "zod";
 import { toast } from "sonner";
 import { useServerFn } from "@tanstack/react-start";
 import { analyzeServer } from "@/lib/analysis.functions";
+import { validateHostEligibility } from "@/lib/validation.functions";
 import { PremiumGate } from "@/components/subscription/premium-gate";
+import { AlertCircle, CheckCircle2, XCircle, Clock, Info, Loader2 } from "lucide-react";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 export const Route = createFileRoute("/_authenticated/app/servers/new")({
   component: NewServer,
@@ -35,11 +38,35 @@ function NewServer() {
   const navigate = useNavigate();
   const qc = useQueryClient();
   const runAnalyze = useServerFn(analyzeServer);
+  const runValidation = useServerFn(validateHostEligibility);
   const [name, setName] = useState("");
   const [host, setHost] = useState("");
+  const [diagnosis, setDiagnosis] = useState<any>(null);
+  const [isValidating, setIsValidating] = useState(false);
   
   const [description, setDescription] = useState("");
   const [isPublic, setIsPublic] = useState(false);
+
+  const validateAndCreate = async () => {
+    if (!host) return;
+    setIsValidating(true);
+    try {
+      const res = await runValidation({ data: { host } });
+      setDiagnosis(res.diagnosis);
+      
+      if (!res.eligible) {
+        toast.error("Este host não está disponível para monitoramento no momento.");
+        setIsValidating(false);
+        return;
+      }
+      
+      create.mutate();
+    } catch (e: any) {
+      toast.error("Erro na validação do host: " + e.message);
+    } finally {
+      setIsValidating(false);
+    }
+  };
 
   const create = useMutation({
     mutationFn: async () => {
@@ -78,7 +105,7 @@ function NewServer() {
 
       <PremiumGate title="Cadastro de servidores bloqueado">
       <Card className="p-6">
-        <form onSubmit={(e) => { e.preventDefault(); create.mutate(); }} className="space-y-5">
+        <form onSubmit={(e) => { e.preventDefault(); validateAndCreate(); }} className="space-y-5">
           <div className="space-y-2">
             <Label>Nome do servidor</Label>
             <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="API de produção" required />
@@ -87,6 +114,46 @@ function NewServer() {
             <Label>Domínio ou IP (DNS)</Label>
             <Input value={host} onChange={(e) => setHost(e.target.value)} placeholder="api.exemplo.com" required className="font-mono" />
             <p className="text-xs text-muted-foreground">Somente o host, sem <code>http://</code> ou porta.</p>
+            
+            {diagnosis && (
+              <Alert variant={diagnosis.dns_resolved ? "default" : "destructive"} className="mt-4 bg-muted/30 border-primary/10">
+                <div className="flex items-start gap-2">
+                  {diagnosis.dns_resolved ? <CheckCircle2 className="h-4 w-4 text-emerald-500 mt-1" /> : <XCircle className="h-4 w-4 text-destructive mt-1" />}
+                  <div className="flex-1">
+                    <AlertTitle className="text-sm font-bold flex items-center justify-between">
+                      Relatório de Diagnóstico
+                      {diagnosis.response_ms && <span className="text-[10px] font-mono text-muted-foreground bg-background px-1.5 py-0.5 rounded border border-border">{diagnosis.response_ms}ms</span>}
+                    </AlertTitle>
+                    <AlertDescription className="text-xs space-y-2 mt-2">
+                      <div className="grid grid-cols-2 gap-x-4 gap-y-1">
+                        <div className="flex items-center gap-2">
+                          <span className={diagnosis.dns_resolved ? "text-emerald-500" : "text-destructive"}>●</span>
+                          DNS resolveu? {diagnosis.dns_resolved ? "Sim" : "Não"}
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className={diagnosis.ip_found ? "text-emerald-500" : "text-destructive"}>●</span>
+                          IP encontrado? {diagnosis.ip_found ? "Sim" : "Não"}
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className={diagnosis.http_80_ok ? "text-emerald-500" : "text-destructive"}>●</span>
+                          HTTP 80 respondeu? {diagnosis.http_80_ok ? "Sim" : "Não"}
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className={diagnosis.https_443_ok ? "text-emerald-500" : "text-destructive"}>●</span>
+                          HTTPS 443 respondeu? {diagnosis.https_443_ok ? "Sim" : "Não"}
+                        </div>
+                      </div>
+                      {diagnosis.reason && (
+                        <div className="mt-2 p-2 rounded bg-background/50 border border-border/50 text-[11px] italic flex gap-2 items-center">
+                          <Info className="h-3 w-3 text-primary" />
+                          {diagnosis.reason}
+                        </div>
+                      )}
+                    </AlertDescription>
+                  </div>
+                </div>
+              </Alert>
+            )}
           </div>
 
           <div className="space-y-2">
@@ -101,7 +168,14 @@ function NewServer() {
             <Switch checked={isPublic} onCheckedChange={setIsPublic} />
           </div>
           <div className="flex gap-2 pt-2">
-            <Button type="submit" disabled={create.isPending}>{create.isPending ? "Salvando..." : "Cadastrar"}</Button>
+            <Button type="submit" disabled={create.isPending || isValidating}>
+              {(create.isPending || isValidating) ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                  {isValidating ? "Validando..." : "Salvando..."}
+                </>
+              ) : "Cadastrar"}
+            </Button>
             <Button type="button" variant="outline" onClick={() => navigate({ to: "/app/servers" })}>Cancelar</Button>
           </div>
         </form>
