@@ -4132,6 +4132,22 @@ export type Database = {
       }
       purge_content_checks: { Args: { _days?: number }; Returns: number }
       purge_old_metrics: { Args: { _dry_run?: boolean }; Returns: Json }
+      radar_title_availability: {
+        Args: { _media: string; _title_keys: string[] }
+        Returns: {
+          found_at: string
+          is_mine: boolean
+          last_sync_at: string
+          name: string
+          quality: string
+          server_id: string
+          status: string
+        }[]
+      }
+      radar_title_count: {
+        Args: { _media: string; _title_keys: string[] }
+        Returns: number
+      }
       region_consensus: {
         Args: { _server_id: string; _window_minutes?: number }
         Returns: Json

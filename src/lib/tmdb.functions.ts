@@ -109,20 +109,19 @@ export const getTmdbFeed = createServerFn({ method: "POST" })
     const matchMap = new Map<string, { count: number, first_server?: string, first_at?: string }>();
     
     if (keys.length && totalServers) {
+      const feedMedia = data.feed.startsWith("tv_") ? "tv" : "movie";
       const { data: globalMatches } = await context.supabase
         .from("iptv_global_catalog")
-        .select(`
-          title_key,
-          servers_found_count
-        `)
+        .select("title_key, servers_found_count, media_type")
+        .eq("media_type", feedMedia)
         .in("title_key", keys);
 
       for (const m of globalMatches ?? []) {
-        matchMap.set(m.title_key, {
-          count: (m.servers_found_count || 0) as number
-        });
+        const prev = matchMap.get(m.title_key)?.count ?? 0;
+        matchMap.set(m.title_key, { count: Math.max(prev, (m.servers_found_count || 0) as number) });
       }
     }
+
 
     return {
       totalServers,
