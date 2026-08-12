@@ -204,6 +204,25 @@ async function executeDiagnostic(
       steps: steps.map(s => s.status === 'running' ? { ...s, status: 'error', details: err } : s) as any
     };
 
+    const { data: contentInfo } = await supabaseAdmin
+      .from("iptv_global_catalog")
+      .select("normalized_name")
+      .eq("tmdb_id", parseInt(contentId))
+      .eq("media_type", contentType === 'series' || contentType === 'episode' ? 'tv' : 'movie')
+      .maybeSingle();
+
+    await (supabaseAdmin.from('content_diagnostics' as any) as any).insert({
+      user_id: userId,
+      server_id: serverId,
+      content_id: contentId,
+      content_type: contentType,
+      content_title: contentInfo?.normalized_name || "Conteúdo TMDB",
+      status: result.status,
+      error: result.error,
+      duration_ms: Date.now() - tStart,
+      steps: JSON.stringify(result.steps)
+    });
+
     return result;
   }
 }
