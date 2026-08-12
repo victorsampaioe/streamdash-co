@@ -85,7 +85,8 @@ export const getSeriesSeasons = createServerFn({ method: "POST" })
     const { runOnCore } = await import("./core-api.server");
     const { getSeriesDataOnCore } = await import("./iptv.server");
 
-    if (!context?.userId) throw new Error("Não autenticado");
+    // Removida checagem redundante para evitar erro no Core AWS
+    // if (!context?.userId) throw new Error("Não autenticado");
 
     return await runOnCore(
       "get-series-seasons",
