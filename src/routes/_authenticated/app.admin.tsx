@@ -337,6 +337,7 @@ function AdminPage() {
 
         <TabsContent value="reactivation" className="space-y-6">
           <ReactivationPanel />
+        </TabsContent>
 
         <TabsContent value="overview" className="space-y-6">
           <SyncPaymentsCard />

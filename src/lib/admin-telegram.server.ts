@@ -271,7 +271,7 @@ export async function runReactivationCampaign(manual: boolean = false) {
     if (!chatId) continue;
 
     try {
-      const r = await fetch(\`https://api.telegram.org/bot\${token}/sendMessage\`, {
+      const r = await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ chat_id: chatId, text: message, parse_mode: "HTML" }),
@@ -289,7 +289,7 @@ export async function runReactivationCampaign(manual: boolean = false) {
         await supabaseAdmin.from("reactivation_logs").insert({
           user_id: ch.owner_id,
           status: "failed",
-          error_message: \`HTTP \${r.status}\`
+          error_message: `HTTP ${r.status}`
         });
       }
     } catch (e: any) {
