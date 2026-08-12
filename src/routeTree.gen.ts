@@ -50,6 +50,7 @@ import { Route as DotlovableOauthConsentRouteImport } from './routes/[.]lovable.
 import { Route as AuthenticatedAppServersIndexRouteImport } from './routes/_authenticated/app.servers.index'
 import { Route as AuthenticatedAppInteligenciaIndexRouteImport } from './routes/_authenticated/app.inteligencia.index'
 import { Route as AuthenticatedAppHubIndexRouteImport } from './routes/_authenticated/app.hub.index'
+import { Route as AuthenticatedAppDiagnosticoIndexRouteImport } from './routes/_authenticated/app.diagnostico.index'
 import { Route as ApiPublicWebhooksMercadopagoRouteImport } from './routes/api/public/webhooks/mercadopago'
 import { Route as ApiPublicTelegramWebhookRouteImport } from './routes/api/public/telegram/webhook'
 import { Route as ApiPublicRegionsTargetsRouteImport } from './routes/api/public/regions/targets'
@@ -287,6 +288,12 @@ const AuthenticatedAppHubIndexRoute =
     path: '/',
     getParentRoute: () => AuthenticatedAppHubRoute,
   } as any)
+const AuthenticatedAppDiagnosticoIndexRoute =
+  AuthenticatedAppDiagnosticoIndexRouteImport.update({
+    id: '/diagnostico/',
+    path: '/diagnostico/',
+    getParentRoute: () => AuthenticatedAppRoute,
+  } as any)
 const ApiPublicWebhooksMercadopagoRoute =
   ApiPublicWebhooksMercadopagoRouteImport.update({
     id: '/api/public/webhooks/mercadopago',
@@ -462,6 +469,7 @@ export interface FileRoutesByFullPath {
   '/api/public/regions/targets': typeof ApiPublicRegionsTargetsRoute
   '/api/public/telegram/webhook': typeof ApiPublicTelegramWebhookRoute
   '/api/public/webhooks/mercadopago': typeof ApiPublicWebhooksMercadopagoRoute
+  '/app/diagnostico/': typeof AuthenticatedAppDiagnosticoIndexRoute
   '/app/hub/': typeof AuthenticatedAppHubIndexRoute
   '/app/inteligencia/': typeof AuthenticatedAppInteligenciaIndexRoute
   '/app/servers/': typeof AuthenticatedAppServersIndexRoute
@@ -523,6 +531,7 @@ export interface FileRoutesByTo {
   '/api/public/regions/targets': typeof ApiPublicRegionsTargetsRoute
   '/api/public/telegram/webhook': typeof ApiPublicTelegramWebhookRoute
   '/api/public/webhooks/mercadopago': typeof ApiPublicWebhooksMercadopagoRoute
+  '/app/diagnostico': typeof AuthenticatedAppDiagnosticoIndexRoute
   '/app/hub': typeof AuthenticatedAppHubIndexRoute
   '/app/inteligencia': typeof AuthenticatedAppInteligenciaIndexRoute
   '/app/servers': typeof AuthenticatedAppServersIndexRoute
@@ -588,6 +597,7 @@ export interface FileRoutesById {
   '/api/public/regions/targets': typeof ApiPublicRegionsTargetsRoute
   '/api/public/telegram/webhook': typeof ApiPublicTelegramWebhookRoute
   '/api/public/webhooks/mercadopago': typeof ApiPublicWebhooksMercadopagoRoute
+  '/_authenticated/app/diagnostico/': typeof AuthenticatedAppDiagnosticoIndexRoute
   '/_authenticated/app/hub/': typeof AuthenticatedAppHubIndexRoute
   '/_authenticated/app/inteligencia/': typeof AuthenticatedAppInteligenciaIndexRoute
   '/_authenticated/app/servers/': typeof AuthenticatedAppServersIndexRoute
@@ -653,6 +663,7 @@ export interface FileRouteTypes {
     | '/api/public/regions/targets'
     | '/api/public/telegram/webhook'
     | '/api/public/webhooks/mercadopago'
+    | '/app/diagnostico/'
     | '/app/hub/'
     | '/app/inteligencia/'
     | '/app/servers/'
@@ -714,6 +725,7 @@ export interface FileRouteTypes {
     | '/api/public/regions/targets'
     | '/api/public/telegram/webhook'
     | '/api/public/webhooks/mercadopago'
+    | '/app/diagnostico'
     | '/app/hub'
     | '/app/inteligencia'
     | '/app/servers'
@@ -778,6 +790,7 @@ export interface FileRouteTypes {
     | '/api/public/regions/targets'
     | '/api/public/telegram/webhook'
     | '/api/public/webhooks/mercadopago'
+    | '/_authenticated/app/diagnostico/'
     | '/_authenticated/app/hub/'
     | '/_authenticated/app/inteligencia/'
     | '/_authenticated/app/servers/'
@@ -1110,6 +1123,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAppHubIndexRouteImport
       parentRoute: typeof AuthenticatedAppHubRoute
     }
+    '/_authenticated/app/diagnostico/': {
+      id: '/_authenticated/app/diagnostico/'
+      path: '/diagnostico'
+      fullPath: '/app/diagnostico/'
+      preLoaderRoute: typeof AuthenticatedAppDiagnosticoIndexRouteImport
+      parentRoute: typeof AuthenticatedAppRoute
+    }
     '/api/public/webhooks/mercadopago': {
       id: '/api/public/webhooks/mercadopago'
       path: '/api/public/webhooks/mercadopago'
@@ -1304,6 +1324,7 @@ interface AuthenticatedAppRouteChildren {
   AuthenticatedAppIndexRoute: typeof AuthenticatedAppIndexRoute
   AuthenticatedAppServersIdRoute: typeof AuthenticatedAppServersIdRoute
   AuthenticatedAppServersNewRoute: typeof AuthenticatedAppServersNewRoute
+  AuthenticatedAppDiagnosticoIndexRoute: typeof AuthenticatedAppDiagnosticoIndexRoute
   AuthenticatedAppInteligenciaIndexRoute: typeof AuthenticatedAppInteligenciaIndexRoute
   AuthenticatedAppServersIndexRoute: typeof AuthenticatedAppServersIndexRoute
   AuthenticatedAppInteligenciaMediaIdRoute: typeof AuthenticatedAppInteligenciaMediaIdRoute
@@ -1326,6 +1347,7 @@ const AuthenticatedAppRouteChildren: AuthenticatedAppRouteChildren = {
   AuthenticatedAppIndexRoute: AuthenticatedAppIndexRoute,
   AuthenticatedAppServersIdRoute: AuthenticatedAppServersIdRoute,
   AuthenticatedAppServersNewRoute: AuthenticatedAppServersNewRoute,
+  AuthenticatedAppDiagnosticoIndexRoute: AuthenticatedAppDiagnosticoIndexRoute,
   AuthenticatedAppInteligenciaIndexRoute:
     AuthenticatedAppInteligenciaIndexRoute,
   AuthenticatedAppServersIndexRoute: AuthenticatedAppServersIndexRoute,
