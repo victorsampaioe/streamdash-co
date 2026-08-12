@@ -19,6 +19,8 @@ const Body = z.object({
     "iptv-batch-sync",
     "iptv-ua-test",
     "content-scan",
+    "content-diagnostic",
+    "get-series-seasons",
     "telegram-broadcast",
     "radar-job-step",
   ]),
@@ -29,6 +31,9 @@ const Body = z.object({
   password: z.string().max(200).nullable().optional(),
   mode: z.enum(["smart", "full"]).optional(),
   message: z.string().min(1).max(3500).optional(),
+  contentId: z.string().optional(),
+  contentType: z.string().optional(),
+  seriesId: z.string().optional(),
   options: z.record(z.string(), z.unknown()).optional(),
 });
 
@@ -71,6 +76,15 @@ async function execute(input: z.infer<typeof Body>) {
     case "content-scan": {
       const { runContentScan } = await import("@/lib/content-monitor.server");
       return await runContentScan(input.serverId!, (input.options ?? {}) as any);
+    }
+    case "content-diagnostic": {
+      const { runContentDiagnostic } = await import("@/lib/diagnostics.server");
+      // O Core não tem userId, usamos um placeholder ou permitimos null se a função suportar
+      return await runContentDiagnostic("core-system", input.serverId!, input.contentId!, input.contentType as any);
+    }
+    case "get-series-seasons": {
+      const { getSeriesDataOnCore } = await import("@/lib/iptv.server");
+      return await getSeriesDataOnCore(input.serverId!, input.seriesId!);
     }
     case "radar-job-step": {
       const { runRadarJobStep, enrichTmdbPending, ensureAutoRadarJob } = await import("@/lib/radar-jobs.server");
