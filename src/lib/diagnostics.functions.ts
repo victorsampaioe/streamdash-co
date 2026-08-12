@@ -17,13 +17,16 @@ export const runDiagnostic = createServerFn({ method: "POST" })
     const { runContentDiagnostic } = await import("./diagnostics.server");
     const { runOnCore } = await import("./core-api.server");
 
+    if (!context?.userId) throw new Error("Não autenticado");
+
     // Executa na VPS para medir latência real do datacentro
     return await runOnCore(
       "content-diagnostic",
       data,
-      () => runContentDiagnostic(context.userId, data.serverId, data.contentId, data.contentType)
+      () => runContentDiagnostic(context.userId!, data.serverId, data.contentId, data.contentType)
     );
   });
+
 
 export const getCircuitBreakers = createServerFn({ method: "GET" })
   .handler(async ({ context }) => {
