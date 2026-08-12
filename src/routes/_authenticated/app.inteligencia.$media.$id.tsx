@@ -243,9 +243,10 @@ function TitleDetail() {
           serverName={diag.serverName}
           contentId={id}
           contentTitle={d.title}
-          contentType={mediaType}
+          contentType={mediaType === "tv" ? "series" : "movie"}
         />
       )}
+
     </div>
   );
 }
