@@ -169,8 +169,8 @@ async function executeDiagnostic(
     updateStep(9, 'success');
 
     // Persistir e Circuit Breaker
-    await supabaseAdmin.rpc('record_diagnostic_success', { p_server_id: serverId });
-    await supabaseAdmin.from('content_diagnostics').insert({
+    await (supabaseAdmin.rpc as any)('record_diagnostic_success', { p_server_id: serverId });
+    await (supabaseAdmin.from('content_diagnostics') as any).insert({
       user_id: userId,
       server_id: serverId,
       content_id: contentId,
@@ -187,9 +187,10 @@ async function executeDiagnostic(
 
   } catch (e: any) {
     const err = String(e.message || e);
-    await supabaseAdmin.rpc('record_diagnostic_failure', { p_server_id: serverId });
+    await (supabaseAdmin.rpc as any)('record_diagnostic_failure', { p_server_id: serverId });
     
     const result: DiagnosticResult = {
+
       status: err.includes('HTTP 5') ? 'server_unavailable' : 'unavailable',
       error: err,
       steps: steps.map(s => s.status === 'running' ? { ...s, status: 'error', details: err } : s) as any
