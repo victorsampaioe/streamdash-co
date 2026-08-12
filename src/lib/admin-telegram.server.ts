@@ -239,7 +239,7 @@ export async function runReactivationCampaign(manual: boolean = false) {
 
   if (!expiredSubs?.length) return { sent: 0, failed: 0, noTelegram: 0 };
 
-  const userIds = expiredSubs.map(s => s.user_id);
+  const userIds = (expiredSubs || []).map((s: any) => s.user_id);
 
   const { data: channels } = await (supabaseAdmin
     .from("alert_channels" as any) as any)
@@ -255,8 +255,8 @@ export async function runReactivationCampaign(manual: boolean = false) {
     .select("user_id")
     .eq("status", "success");
   
-  const sentSet = new Set(alreadySent?.map(l => l.user_id) || []);
-  const targets = channels.filter(c => !sentSet.has(c.owner_id));
+  const sentSet = new Set((alreadySent || []).map((l: any) => l.user_id) || []);
+  const targets = (channels || []).filter((c: any) => !sentSet.has(c.owner_id));
 
   const message = manual 
     ? `🚀 <b>Sentimos sua falta no Stream Monitor!</b>\n\nOlá! 👋\nVimos que sua conta expirou, mas queremos convidar você para voltar a usar o Stream Monitor.\n\nNossa plataforma continua evoluindo com novas ferramentas:\n\n✅ Monitoramento inteligente de servidores\n✅ Alertas automáticos pelo Telegram\n✅ Radar de conteúdos IPTV\n✅ Inteligência para detectar problemas antes das quedas\n✅ Mais controle e segurança para suas operações\n\n🔥 Estamos preparando cada vez mais novidades para nossos usuários.\n\nRenove sua conta e volte a aproveitar todos os recursos do Stream Monitor.\n\n🚀 Sua estrutura merece um monitoramento inteligente!\n\nStream Monitor | Tecnologia e inteligência para monitoramento.`
