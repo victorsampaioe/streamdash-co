@@ -37,11 +37,15 @@ export const runDiagnostic = createServerFn({ method: "POST" })
       console.error("[runDiagnostic] Fatal error:", e);
       const msg = e?.message || String(e);
       
-      // Se o erro for do Core, ele costuma vir com prefixo "Core content-diagnostic falhou (500): Error: ..."
-      // Vamos tentar extrair a mensagem limpa
+      // Se for um erro do Core, ele costuma vir com prefixo "Core content-diagnostic falhou (500): Error: ..."
       if (msg.includes("falhou (500): Error:")) {
         const cleanMsg = msg.split("Error:").pop()?.trim();
         if (cleanMsg) throw new Error(cleanMsg);
+      }
+      
+      // Se for Unauthorized, passamos uma mensagem clara
+      if (msg.includes("Unauthorized") || msg.includes("Unauthorized: Invalid token")) {
+        throw new Error("Sessão expirada. Por favor, recarregue a página e faça login.");
       }
       
       throw e;
