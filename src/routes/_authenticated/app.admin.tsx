@@ -40,7 +40,9 @@ import { PausedServersPanel } from "@/components/admin/paused-servers-panel";
 import { RadarAdminPanel } from "@/components/admin/radar-admin-panel";
 import { RadarClustersPanel } from "@/components/admin/radar-clusters-panel";
 import { ReactivationPanel } from "@/components/admin/reactivation-panel";
-import { UserCog, History, PlusCircle, UserCheck, UserRoundCog, Settings2, Trash2, ShoppingBag as StoreIcon, Wallet, ExternalLink } from "lucide-react";
+import { CircuitBreakerPanel } from "@/components/admin/circuit-breaker-panel";
+import { UserCog, History, PlusCircle, UserCheck, UserRoundCog, Settings2, Trash2, ShoppingBag as StoreIcon, Wallet, ExternalLink, Zap } from "lucide-react";
+
 
 
 import { StorageReportCard } from "@/components/storage-report-card";
@@ -313,15 +315,17 @@ function AdminPage() {
 
       <Tabs defaultValue="overview" className="space-y-6">
         <div className="overflow-x-auto pb-2 scrollbar-hide">
-          <TabsList className="flex w-max min-w-full sm:grid sm:grid-cols-7 sm:w-full">
+          <TabsList className="flex w-max min-w-full sm:grid sm:grid-cols-8 sm:w-full">
             <TabsTrigger value="overview" className="px-4">Usuários</TabsTrigger>
             <TabsTrigger value="resellers" className="px-4">Revendedores</TabsTrigger>
             <TabsTrigger value="radar" className="px-4">Radar Inteligente</TabsTrigger>
             <TabsTrigger value="reactivation" className="px-4">Reativação</TabsTrigger>
             <TabsTrigger value="store" className="px-4">Loja & Vendas</TabsTrigger>
+            <TabsTrigger value="diagnostics" className="px-4">Diagnósticos</TabsTrigger>
             <TabsTrigger value="paused" className="px-4">DNS Pausados</TabsTrigger>
             <TabsTrigger value="storage" className="px-4">Armazenamento</TabsTrigger>
           </TabsList>
+
         </div>
 
 
@@ -329,6 +333,11 @@ function AdminPage() {
         <TabsContent value="paused" className="space-y-6">
           <PausedServersPanel />
         </TabsContent>
+
+        <TabsContent value="diagnostics" className="space-y-6">
+          <CircuitBreakerPanel />
+        </TabsContent>
+
 
         <TabsContent value="radar" className="space-y-6">
           <RadarAdminPanel />
