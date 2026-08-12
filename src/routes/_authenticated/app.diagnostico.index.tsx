@@ -208,15 +208,30 @@ function ContentDiagnosticPage() {
             <div className="space-y-4">
               <h3 className="text-lg font-semibold">Escolha o Episódio</h3>
               {seasonsQuery.isLoading ? (
-                <div className="h-32 bg-muted animate-pulse rounded-lg flex items-center justify-center text-sm text-muted-foreground">
-                  Carregando temporadas via API...
+                <div className="h-32 bg-muted animate-pulse rounded-lg flex flex-col items-center justify-center text-sm text-muted-foreground gap-2">
+                  <Loader2 className="h-6 w-6 animate-spin text-primary" />
+                  Carregando temporadas e episódios...
+                </div>
+              ) : seasonsQuery.isError ? (
+                <div className="h-32 bg-red-500/5 border border-red-500/20 rounded-lg flex flex-col items-center justify-center text-sm text-red-500 gap-2 p-4 text-center">
+                  <AlertCircle className="h-6 w-6" />
+                  <div>
+                    <div className="font-bold">Não foi possível carregar as temporadas</div>
+                    <div className="text-xs opacity-80">{(seasonsQuery.error as any)?.message || "Ocorreu um erro na comunicação com o servidor."}</div>
+                  </div>
+                  <Button variant="outline" size="sm" onClick={() => seasonsQuery.refetch()} className="mt-2">Tentar novamente</Button>
+                </div>
+              ) : !seasonsQuery.data?.episodes || Object.keys(seasonsQuery.data.episodes).length === 0 ? (
+                <div className="h-32 bg-muted/20 border border-dashed rounded-lg flex flex-col items-center justify-center text-sm text-muted-foreground p-4 text-center">
+                  <Tv className="h-6 w-6 opacity-20 mb-2" />
+                  Nenhuma temporada ou episódio encontrado para esta série neste servidor.
                 </div>
               ) : (
                 <div className="grid gap-4 sm:grid-cols-2">
                   <div className="space-y-2">
                     <label className="text-xs font-bold text-muted-foreground uppercase">Temporada</label>
                     <div className="grid grid-cols-4 gap-2">
-                      {Object.keys(seasonsQuery.data?.episodes || {}).map(s => (
+                      {Object.keys(seasonsQuery.data.episodes).sort((a, b) => Number(a) - Number(b)).map(s => (
                         <Button 
                           key={s} 
                           variant={selectedSeason === s ? "default" : "outline"} 
@@ -232,7 +247,7 @@ function ContentDiagnosticPage() {
                     <div className="space-y-2">
                       <label className="text-xs font-bold text-muted-foreground uppercase">Episódio</label>
                       <div className="max-h-40 overflow-y-auto space-y-1 pr-2 thin-scrollbar">
-                        {seasonsQuery.data?.episodes[selectedSeason]?.map((ep: any) => (
+                        {seasonsQuery.data.episodes[selectedSeason]?.map((ep: any) => (
                           <Button 
                             key={ep.id} 
                             variant={selectedEpisode?.id === ep.id ? "secondary" : "ghost"} 
@@ -334,8 +349,16 @@ function ContentDiagnosticPage() {
           onClose={() => setIsDialogOpen(false)}
           serverId={selectedServer.id}
           serverName={selectedServer.name}
-          contentId={String(selectedContent?.kind === 'series' ? selectedEpisode?.id : (selectedContent?.servers?.find((s: any) => s.id === selectedServer.id)?.external_id || selectedContent?.title_key))}
-          contentTitle={selectedEpisode?.title || selectedContent?.title || 'Diagnóstico'}
+          contentId={String(
+            selectedContent?.kind === 'series' 
+              ? selectedEpisode?.id 
+              : (selectedContent?.servers?.find((s: any) => s.id === selectedServer.id)?.external_id || selectedContent?.title_key)
+          )}
+          contentTitle={
+            selectedContent?.kind === 'series'
+              ? `${selectedContent.title} - S${selectedSeason}E${selectedEpisode?.episode_num}: ${selectedEpisode?.title}`
+              : (selectedContent?.title || 'Diagnóstico')
+          }
           contentType={(selectedContent?.kind === 'series' ? 'episode' : selectedContent?.kind) || 'movie'}
         />
       )}
