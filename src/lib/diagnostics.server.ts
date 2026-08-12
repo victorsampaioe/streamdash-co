@@ -81,8 +81,11 @@ async function executeDiagnostic(
   try {
     // 1. Servidor Ativo
     updateStep(1, 'running');
-    const { data: server } = await supabaseAdmin.from('servers').select('*').eq('id', serverId).single();
-    if (!server || server.monitoring_paused) {
+    const { data: server } = await supabaseAdmin.from('servers').select('id, host, monitoring_paused').eq('id', serverId).single();
+    if (!server) {
+      throw new Error("Servidor não encontrado");
+    }
+    if (server.monitoring_paused) {
       throw new Error("Servidor inativo ou pausado");
     }
     updateStep(1, 'success');
@@ -91,7 +94,9 @@ async function executeDiagnostic(
     updateStep(2, 'running');
     const { getIptvCredentials } = await import("./iptv-credentials.server");
     const creds = await getIptvCredentials(serverId);
-    if (!creds.username) throw new Error("Credenciais ausentes");
+    if (!creds || !creds.username) {
+      throw new Error("Credenciais Xtream não configuradas");
+    }
     updateStep(2, 'success');
 
     updateStep(3, 'running');
@@ -116,7 +121,14 @@ async function executeDiagnostic(
     });
 
     if (!response.ok) {
-      throw new Error(`HTTP ${response.status}`);
+      // Diferenciar erros HTTP para facilitar diagnóstico
+      if (response.status === 401 || response.status === 403) {
+        throw new Error(`HTTP ${response.status}: Acesso negado pelo servidor`);
+      }
+      if (response.status === 404) {
+        throw new Error(`HTTP 404: Conteúdo não encontrado no host`);
+      }
+      throw new Error(`HTTP ${response.status}: Falha na requisição`);
     }
     updateStep(4, 'success');
 

@@ -31,9 +31,25 @@ export function sanitizeErrorMessage(input: unknown): string {
 
   const message = raw.trim();
   if (!message) return GENERIC_MESSAGE;
+  // Se for um erro amigável que já tratamos (como "Servidor inativo"), permite passar
   if (message.length > MAX_SAFE_LENGTH) return GENERIC_MESSAGE;
-  if (message.includes("\n")) return GENERIC_MESSAGE;
-  if (LEAK_PATTERNS.some((re) => re.test(message))) return GENERIC_MESSAGE;
+  if (message.includes("\n") && !message.includes("HTTP") && !message.includes("at ")) return GENERIC_MESSAGE;
+  if (LEAK_PATTERNS.some((re) => re.test(message))) {
+    // Exceção para mensagens de erro comuns que não vazam dados sensíveis
+    const isSafeWhitelisted = [
+      "Servidor inativo",
+      "Credenciais ausentes",
+      "HTTP 404",
+      "HTTP 500",
+      "HTTP 502",
+      "HTTP 503",
+      "HTTP 403",
+      "timeout",
+      "fetch failed"
+    ].some(term => message.toLowerCase().includes(term.toLowerCase()));
+    
+    if (!isSafeWhitelisted) return GENERIC_MESSAGE;
+  }
 
   return message;
 }
