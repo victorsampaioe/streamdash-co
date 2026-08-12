@@ -94,7 +94,9 @@ async function executeDiagnostic(
     updateStep(2, 'running');
     const { getIptvCredentials } = await import("./iptv-credentials.server");
     const creds = await getIptvCredentials(serverId);
-    if (!creds.username) throw new Error("Credenciais ausentes");
+    if (!creds || !creds.username) {
+      throw new Error("Credenciais Xtream não configuradas");
+    }
     updateStep(2, 'success');
 
     updateStep(3, 'running');
