@@ -47,6 +47,7 @@ export function sanitizeErrorMessage(input: unknown): string {
       "timeout",
       "fetch failed",
       "Unauthorized",
+      "Sessão expirada",
       "Acesso pausado"
     ].some(term => message.toLowerCase().includes(term.toLowerCase()));
     
