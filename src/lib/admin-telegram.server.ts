@@ -2,6 +2,7 @@
 // Do NOT import this file from client bundles.
 
 import { formatBRL, effectivePriceCents, PLANS } from "./payments";
+import { supabaseAdmin } from "@/integrations/supabase/client.server";
 
 export async function notifyAdmin(text: string): Promise<{ ok: boolean; error?: string }> {
   const token = process.env.TELEGRAM_BOT_TOKEN;
@@ -192,4 +193,124 @@ export async function broadcastGlobalIncident(message: string) {
       }),
     }).catch(() => {});
   }
+}
+
+export async function notifyAdminSignup(data: { email: string; name: string; phone: string; referralCode?: string }) {
+  const text = `🚀 <b>Novo cadastro</b>\n\nNome: ${escape(data.name)}\nE-mail: ${data.email}\nTelefone: ${data.phone}${data.referralCode ? `\nIndicação: ${data.referralCode}` : ""}`;
+  return notifyAdmin(text);
+}
+
+export async function getReactivationStats() {
+  const { data: expiredCount } = await supabaseAdmin
+    .from("subscriptions")
+    .select("user_id", { count: "exact", head: true })
+    .eq("status", "expired");
+
+  const { data: lastCampaign } = await supabaseAdmin
+    .from("reactivation_campaign_settings")
+    .select("*")
+    .limit(1)
+    .maybeSingle();
+
+  const { count: telegramActiveCount } = await supabaseAdmin
+    .from("alert_channels")
+    .select("*", { count: "exact", head: true })
+    .eq("kind", "telegram")
+    .eq("enabled", true)
+    .in("owner_id", (await supabaseAdmin.from("subscriptions").select("user_id").eq("status", "expired")).data?.map(s => s.user_id) || []);
+
+  return {
+    expiredWithTelegram: telegramActiveCount || 0,
+    lastSentAt: lastCampaign?.last_sent_at,
+    lastMessage: lastCampaign?.last_message,
+    totalSent: lastCampaign?.total_sent || 0,
+    totalFailed: lastCampaign?.total_failed || 0
+  };
+}
+
+export async function runReactivationCampaign(manual: boolean = false) {
+  const token = process.env.TELEGRAM_BOT_TOKEN;
+  if (!token) throw new Error("TELEGRAM_BOT_TOKEN não configurado");
+
+  const { data: expiredSubs } = await supabaseAdmin
+    .from("subscriptions")
+    .select("user_id")
+    .eq("status", "expired");
+
+  if (!expiredSubs?.length) return { sent: 0, failed: 0, noTelegram: 0 };
+
+  const userIds = expiredSubs.map(s => s.user_id);
+
+  const { data: channels } = await supabaseAdmin
+    .from("alert_channels")
+    .select("owner_id, target")
+    .eq("kind", "telegram")
+    .eq("enabled", true)
+    .in("owner_id", userIds);
+
+  if (!channels?.length) return { sent: 0, failed: 0, noTelegram: userIds.length };
+
+  const { data: alreadySent } = await supabaseAdmin
+    .from("reactivation_logs")
+    .select("user_id")
+    .eq("status", "success");
+  
+  const sentSet = new Set(alreadySent?.map(l => l.user_id) || []);
+  const targets = channels.filter(c => !sentSet.has(c.owner_id));
+
+  const message = manual 
+    ? `🚀 <b>Sentimos sua falta no Stream Monitor!</b>\n\nOlá! 👋\nVimos que sua conta expirou, mas queremos convidar você para voltar a usar o Stream Monitor.\n\nNossa plataforma continua evoluindo com novas ferramentas:\n\n✅ Monitoramento inteligente de servidores\n✅ Alertas automáticos pelo Telegram\n✅ Radar de conteúdos IPTV\n✅ Inteligência para detectar problemas antes das quedas\n✅ Mais controle e segurança para suas operações\n\n🔥 Estamos preparando cada vez mais novidades para nossos usuários.\n\nRenove sua conta e volte a aproveitar todos os recursos do Stream Monitor.\n\n🚀 Sua estrutura merece um monitoramento inteligente!\n\nStream Monitor | Tecnologia e inteligência para monitoramento.`
+    : `🚀 <b>Sentimos sua falta no Stream Monitor!</b>\n\nOlá! 👋\nSua assinatura do Stream Monitor expirou, mas você ainda pode voltar a ter acesso a todos os recursos da plataforma.\n\n✅ Monitoramento inteligente de servidores\n✅ Alertas em tempo real pelo Telegram\n✅ Radar de conteúdos IPTV\n✅ Diagnóstico inteligente de falhas\n✅ Mais segurança e controle para suas operações\n\n🔥 Estamos preparando cada vez mais novidades para entregarmos uma ferramenta cada vez mais completa.\n\nVolte agora e continue aproveitando todos os benefícios do Stream Monitor.\n\n👉 Acesse sua conta e renove hoje mesmo!\n\n🚀 Stream Monitor — tecnologia inteligente para monitoramento.`;
+
+  let sent = 0;
+  let failed = 0;
+
+  for (const ch of targets) {
+    const raw = String(ch.target ?? "").trim();
+    const chatId = raw.includes(":") ? raw.split(":").slice(-1)[0] : raw;
+    if (!chatId) continue;
+
+    try {
+      const r = await fetch(\`https://api.telegram.org/bot\${token}/sendMessage\`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ chat_id: chatId, text: message, parse_mode: "HTML" }),
+      });
+
+      if (r.ok) {
+        sent++;
+        await supabaseAdmin.from("reactivation_logs").insert({
+          user_id: ch.owner_id,
+          status: "success",
+          message_version: manual ? "manual" : "auto"
+        });
+      } else {
+        failed++;
+        await supabaseAdmin.from("reactivation_logs").insert({
+          user_id: ch.owner_id,
+          status: "failed",
+          error_message: \`HTTP \${r.status}\`
+        });
+      }
+    } catch (e: any) {
+      failed++;
+      await supabaseAdmin.from("reactivation_logs").insert({
+        user_id: ch.owner_id,
+        status: "failed",
+        error_message: e?.message || "Erro desconhecido"
+      });
+    }
+  }
+
+  await supabaseAdmin
+    .from("reactivation_campaign_settings")
+    .update({
+      last_sent_at: new Date().toISOString(),
+      last_message: message,
+      total_sent: sent,
+      total_failed: failed
+    })
+    .neq("id", "00000000-0000-0000-0000-000000000000"); // Update all rows (should only be one)
+
+  return { sent, failed, noTelegram: userIds.length - channels.length, skipped: alreadySent?.length || 0 };
 }
