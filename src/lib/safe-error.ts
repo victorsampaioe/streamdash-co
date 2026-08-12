@@ -45,7 +45,9 @@ export function sanitizeErrorMessage(input: unknown): string {
       "HTTP 503",
       "HTTP 403",
       "timeout",
-      "fetch failed"
+      "fetch failed",
+      "Unauthorized",
+      "Acesso pausado"
     ].some(term => message.toLowerCase().includes(term.toLowerCase()));
     
     if (!isSafeWhitelisted) return GENERIC_MESSAGE;
