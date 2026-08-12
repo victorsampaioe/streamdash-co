@@ -197,8 +197,8 @@ function Feature({ icon, title, desc }: { icon: React.ReactNode; title: string; 
 function RadarShowcase() {
   const films = [
     {
-      title: "Gladiador 2",
-      image: "https://image.tmdb.org/t/p/w500/2cxhvsy4g7qn195c19pvHrp8xpb.jpg",
+      title: "Duna: Parte Dois",
+      image: "https://image.tmdb.org/t/p/w500/8b8R8l3bd9e4SmsqzdA2jyvXIvO.jpg",
       status: "Novo conteúdo detectado",
       detected: "Hoje 14:32",
       servers: 8,
@@ -206,24 +206,24 @@ function RadarShowcase() {
       tag: "⚡ Detectado agora"
     },
     {
-      title: "Wicked",
-      image: "https://image.tmdb.org/t/p/w500/x26sDeU6lqT5Qnuzp192XG2nO8S.jpg",
+      title: "Godzilla e Kong: O Novo Império",
+      image: "https://image.tmdb.org/t/p/w500/1E4B3OaF0iYwK69x5h0T0X1K7F.jpg",
       status: "Disponível",
       detected: "Hoje 12:15",
       servers: 12,
       available: true
     },
     {
-      title: "Moana 2",
-      image: "https://image.tmdb.org/t/p/w500/yzH5zvuEa2Yh5tHmgrFbsBcICv6.jpg",
+      title: "Madame Teia",
+      image: "https://image.tmdb.org/t/p/w500/rulq7o4V84D01r3QJ1rM64XqH1M.jpg",
       status: "Disponível",
       detected: "Ontem",
       servers: 5,
       available: true
     },
     {
-      title: "Mufasa: O Rei Leão",
-      image: "https://image.tmdb.org/t/p/w500/b33kgP1t2YFhJaMxSslqpkqjnX9.jpg",
+      title: "Planeta dos Macacos: O Reinado",
+      image: "https://image.tmdb.org/t/p/w500/3s9MdiZRyhW2HhT35sW4K0X1J8.jpg",
       status: "Detectado recentemente",
       detected: "Há 2 horas",
       servers: 15,
@@ -233,31 +233,31 @@ function RadarShowcase() {
 
   const series = [
     {
-      title: "The Last of Us",
-      image: "https://image.tmdb.org/t/p/w500/uKVUSmHfs2sSHnBvllBKKu1pPpy.jpg",
-      info: "S02 E01",
+      title: "The Boys",
+      image: "https://image.tmdb.org/t/p/w500/mY7hlrYtShorSCpc8gVb21ilnSL.jpg",
+      info: "Temporada 4",
       status: "Atualização: Agora",
       servers: 7,
       tag: "⚡ Detectado agora"
     },
     {
-      title: "Arcane",
-      image: "https://image.tmdb.org/t/p/w500/abRq4mq1v24K48T35vNn9V359Wn.jpg",
-      info: "Temporada Final",
+      title: "House of the Dragon",
+      image: "https://image.tmdb.org/t/p/w500/7QMs7u127bT193792q9Jg30dbtO.jpg",
+      info: "Temporada 2",
       status: "Nova temporada detectada",
       servers: 11
     },
     {
-      title: "Stranger Things",
-      image: "https://image.tmdb.org/t/p/w500/x2LSRm21uTEx2Pq2SjkRpfYmws3.jpg",
-      info: "S05 E01",
+      title: "The Last of Us",
+      image: "https://image.tmdb.org/t/p/w500/uKVUSmHfs2sSHnBvllBKKu1pPpy.jpg",
+      info: "S02 E01",
       status: "Novo episódio encontrado",
       servers: 4
     },
     {
-      title: "Round 6",
-      image: "https://image.tmdb.org/t/p/w500/dDlEmu3EZjPj9erLsQmgzsJa2oW.jpg",
-      info: "Temporada 2",
+      title: "Stranger Things",
+      image: "https://image.tmdb.org/t/p/w500/x2LSRm21uTEx2Pq2SjkRpfYmws3.jpg",
+      info: "Temporada 5",
       status: "Atualização recente",
       servers: 9
     }
