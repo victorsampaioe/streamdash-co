@@ -101,9 +101,20 @@ async function executeDiagnostic(
 
     updateStep(3, 'running');
     // Construir URL de stream baseado no tipo
-    const streamUrl = contentType === 'live' 
-      ? `http://${server.host}/live/${creds.username}/${creds.password}/${contentId}.ts`
-      : `http://${server.host}/movie/${creds.username}/${creds.password}/${contentId}.mp4`; // Simplificado
+    let streamUrl = "";
+    if (contentType === 'live') {
+      streamUrl = `http://${server.host}/live/${creds.username}/${creds.password}/${contentId}.ts`;
+    } else if (contentType === 'movie') {
+      // Xtream VOD costuma usar a extensão cadastrada ou default .mp4/.mkv
+      // Se contentId for puramente numérico, é um VOD.
+      // Se vier com extensão, mantemos.
+      const ext = contentId.includes('.') ? '' : '.mp4';
+      streamUrl = `http://${server.host}/movie/${creds.username}/${creds.password}/${contentId}${ext}`;
+    } else {
+      // Episode
+      const ext = contentId.includes('.') ? '' : '.mp4';
+      streamUrl = `http://${server.host}/series/${creds.username}/${creds.password}/${contentId}${ext}`;
+    }
     updateStep(3, 'success', "Stream localizado");
 
     // 4, 5, 6, 7. Requisição e Streaming
