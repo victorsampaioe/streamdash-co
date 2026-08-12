@@ -17,14 +17,23 @@ export const runDiagnostic = createServerFn({ method: "POST" })
     const { runContentDiagnostic } = await import("./diagnostics.server");
     const { runOnCore } = await import("./core-api.server");
 
+    // No context (client-side render without session yet)? 
+    // O safeErrorMiddleware vai pegar se o core falhar com 401.
     const userId = context?.userId || null;
 
     // Executa na VPS para medir latência real do datacentro
-    return await runOnCore(
-      "content-diagnostic",
-      data,
-      () => runContentDiagnostic(userId, data.serverId, data.contentId, data.contentType)
-    );
+    try {
+      return await runOnCore(
+        "content-diagnostic",
+        data,
+        () => runContentDiagnostic(userId, data.serverId, data.contentId, data.contentType)
+      );
+    } catch (e: any) {
+      console.error("[runDiagnostic] Error:", e);
+      // Se for um erro que o safe-error mascararia como genérico,
+      // vamos tentar ser mais específicos se possível, mas o middleware já faz isso.
+      throw e;
+    }
   });
 
 

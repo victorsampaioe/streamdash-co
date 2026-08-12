@@ -81,8 +81,11 @@ async function executeDiagnostic(
   try {
     // 1. Servidor Ativo
     updateStep(1, 'running');
-    const { data: server } = await supabaseAdmin.from('servers').select('*').eq('id', serverId).single();
-    if (!server || server.monitoring_paused) {
+    const { data: server } = await supabaseAdmin.from('servers').select('id, host, monitoring_paused').eq('id', serverId).single();
+    if (!server) {
+      throw new Error("Servidor não encontrado");
+    }
+    if (server.monitoring_paused) {
       throw new Error("Servidor inativo ou pausado");
     }
     updateStep(1, 'success');
