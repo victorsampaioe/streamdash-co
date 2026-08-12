@@ -1,15 +1,15 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
+import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
 export const getMyDiagnostics = createServerFn({ method: "GET" })
-  .handler(async ({ context }: any) => {
-    if (!context?.userId) throw new Error("Não autenticado");
-    
-    const { supabase } = await import("@/integrations/supabase/client");
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const { userId, supabase } = context;
     
     // Admin pode ver todos, outros vêem os próprios
     const { data: isAdmin } = await supabase.rpc("has_role", { 
-      _user_id: context.userId, 
+      _user_id: userId, 
       _role: "admin" 
     });
 
@@ -20,7 +20,7 @@ export const getMyDiagnostics = createServerFn({ method: "GET" })
       .limit(10);
 
     if (!isAdmin) {
-      query = query.eq('user_id', context.userId);
+      query = query.eq('user_id', userId);
     }
 
     const { data, error } = await query;
