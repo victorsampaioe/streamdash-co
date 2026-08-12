@@ -85,12 +85,18 @@ export const getSeriesSeasons = createServerFn({ method: "POST" })
     const { runOnCore } = await import("./core-api.server");
     const { getSeriesDataOnCore } = await import("./iptv.server");
 
-    // Removida checagem redundante para evitar erro no Core AWS
-    // if (!context?.userId) throw new Error("Não autenticado");
-
-    return await runOnCore(
-      "get-series-seasons",
-      { serverId: data.serverId, seriesId: data.seriesId },
-      () => getSeriesDataOnCore(data.serverId, data.seriesId)
-    );
+    try {
+      return await runOnCore(
+        "get-series-seasons",
+        { serverId: data.serverId, seriesId: data.seriesId },
+        () => getSeriesDataOnCore(data.serverId, data.seriesId)
+      );
+    } catch (e: any) {
+      console.error("[getSeriesSeasons] Error:", e);
+      // Se for um erro 404 do core, passamos uma mensagem amigável
+      if (String(e.message).includes("404")) {
+        throw new Error("IPTV API Error: 404 (Série não encontrada no servidor)");
+      }
+      throw e;
+    }
   });
