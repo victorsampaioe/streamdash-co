@@ -1,35 +1,31 @@
-# Plano de Implementação: Diagnóstico de Conteúdo IPTV
+# Plano de Refatoração: Fluxo de Diagnóstico de Conteúdo
 
-Implementar um sistema de diagnóstico técnico profundo para fluxos IPTV (Live, VOD, Séries), integrado ao Radar de Conteúdo, permitindo identificar se falhas são no servidor ou no cliente, com proteções de concorrência e circuit breaker.
+Corrigir o fluxo da aba "Diagnóstico" para suportar busca unificada, seleção de servidores e navegação autocontida, evitando redirecionamentos para outras áreas.
 
-## 1. Infraestrutura de Dados (Concluído)
-- Criadas tabelas `content_diagnostics` para histórico e `diagnostic_circuit_breakers` para proteção de servidores.
-- Implementadas funções SQL (`record_diagnostic_failure/success`) com lógica de circuit breaker (5 falhas = suspensão de 3 min).
+## Mudanças Necessárias
 
-## 2. Motor de Diagnóstico (Backend)
-- Criado `src/lib/diagnostics.server.ts`:
-  - Execução progressiva em 9 etapas (Servidor -> API -> Stream -> Mídia -> Classificação).
-  - Limites rígidos: 512KB máx de leitura, timeout de 15s.
-  - Suporte a cabeçalho `Range` para economia de banda.
-  - Lógica de **Single-Flight** para deduplicar diagnósticos simultâneos idênticos.
-- Criado `src/lib/diagnostics.functions.ts`:
-  - Integração com o **Core AWS** (`runOnCore`) para medição de latência real.
-  - Middlewares de assinatura ativa e rate limiting.
+### Backend e Integração
+- Ajustar `getMyDiagnostics` em `src/lib/diagnostics-history.functions.ts` para usar o middleware `requireSupabaseAuth`, garantindo que o `context.userId` esteja disponível.
+- Refinar `searchDiagnosticContent` em `src/lib/diagnostics-search.functions.ts` para garantir que o agrupamento de servidores reflita os dados reais do catálogo.
 
-## 3. Interface de Usuário (Frontend)
-- Criado `src/components/iptv/diagnostic-dialog.tsx`:
-  - Stepper progressivo atualizado em tempo real.
-  - Classificação visual (Ícones/Cores) do resultado.
-  - Exibição de métricas técnicas (TTFB, Latência, Bytes).
-- Integrado na página de detalhes do título (`app/inteligencia//.tsx`):
-  - Botão "Testar agora" (ícone de Activity) na lista de servidores disponíveis.
+### Frontend (UI/UX)
+- **Busca Unificada**: Substituir `getTmdbFeed` por `searchDiagnosticContent` no componente `ContentDiagnosticPage`.
+- **Navegação em Etapas**:
+  1. **Pesquisa**: Usuário digita o termo.
+  2. **Resultados**: Lista de conteúdos (Canais, Filmes, Séries).
+  3. **Seleção de Episódio (apenas Séries)**: Se o conteúdo for série, carregar temporadas e episódios reais via `getSeriesSeasons`.
+  4. **Seleção de Servidor**: Mostrar lista de servidores reais que possuem aquele conteúdo/episódio.
+  5. **Início do Teste**: Ao clicar em "Testar agora", abrir o `DiagnosticDialog`.
+- **Remover Redirecionamentos**: Trocar o componente `Link` por botões de ação que atualizam o estado local da página, mantendo o usuário na rota `/app/diagnostico`.
 
-## 4. Painel Administrativo
-- Criado `src/components/admin/circuit-breaker-panel.tsx`:
-  - Visão geral dos servidores em modo `open` (suspenso) ou `half-open`.
-  - Contadores de falhas e cronômetro para o próximo teste permitido.
-- Adicionada aba **Diagnósticos** em `app.admin.tsx`.
+## Detalhes Técnicos
+- Utilizar `useQuery` para carregar temporadas/episódios sob demanda.
+- Adicionar estados no componente `ContentDiagnosticPage` para rastrear a seleção (`selectedContent`, `selectedEpisode`, `showServerList`).
+- Implementar interface de "Testar agora" com cache info (se disponível no histórico recente).
 
-## Próximos Passos
-- Validar a execução na VPS AWS (Core).
-- Refinar a inferência "Provável problema do cliente" comparando resultados de múltiplos servidores.
+---
+
+## Verificação
+- [ ] Buscar canal (ex: "Globo") e ver lista de servidores.
+- [ ] Buscar série e navegar até o episódio antes de ver servidores.
+- [ ] Clicar em "Testar agora" e ver o diálogo de 9 etapas abrir sem sair da página.
