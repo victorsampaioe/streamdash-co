@@ -13,7 +13,7 @@ export const runDiagnostic = createServerFn({ method: "POST" })
     contentId: z.string(),
     contentType: z.enum(['live', 'movie', 'series', 'episode'])
   }).parse(d))
-  .handler(async ({ data, context }) => {
+  .handler(async ({ data, context }: any) => {
     const { runContentDiagnostic } = await import("./diagnostics.server");
     const { runOnCore } = await import("./core-api.server");
 
