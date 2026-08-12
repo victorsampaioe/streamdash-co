@@ -183,7 +183,7 @@ async function executeDiagnostic(
       .maybeSingle();
 
     await (supabaseAdmin.from('content_diagnostics' as any) as any).insert({
-      user_id: userId === 'core-system' ? null : userId,
+      user_id: (!userId || userId === 'core-system') ? null : userId,
       server_id: serverId,
       content_id: contentId,
       content_type: contentType,
@@ -220,7 +220,7 @@ async function executeDiagnostic(
       .maybeSingle();
 
     await (supabaseAdmin.from('content_diagnostics' as any) as any).insert({
-      user_id: userId === 'core-system' ? null : userId,
+      user_id: (!userId || userId === 'core-system') ? null : userId,
       server_id: serverId,
       content_id: contentId,
       content_type: contentType,
