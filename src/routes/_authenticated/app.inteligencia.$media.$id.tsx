@@ -206,9 +206,19 @@ function TitleDetail() {
                   .sort((a, b) => (a.name || "").localeCompare(b.name || ""))
                   .map((s) => (
                     <div key={s.server_id} className="py-2.5 flex items-center justify-between gap-3">
-                      <span className="truncate text-sm">
-                        ✅ {s.name}
-                      </span>
+                      <div className="flex items-center gap-2 truncate">
+                        <span className="truncate text-sm">
+                          ✅ {s.name}
+                        </span>
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          className="h-7 w-7 text-primary hover:text-primary hover:bg-primary/10"
+                          onClick={() => setDiag({ open: true, serverId: s.server_id, serverName: s.name || "Servidor" })}
+                        >
+                          <Activity className="h-4 w-4" />
+                        </Button>
+                      </div>
                       <span className="text-xs text-muted-foreground text-right shrink-0">
                         <Badge variant="outline" className="text-emerald-500 bg-emerald-500/5 border-emerald-500/20">
                           Disponível
@@ -217,6 +227,7 @@ function TitleDetail() {
                           <span className="block font-mono">Última sync: {full(s.last_sync_at)}</span>
                         )}
                       </span>
+
                     </div>
                   ))}
               </div>
@@ -224,6 +235,18 @@ function TitleDetail() {
           </Card>
         </TabsContent>
       </Tabs>
+      {diag && (
+        <DiagnosticDialog
+          isOpen={diag.open}
+          onClose={() => setDiag(null)}
+          serverId={diag.serverId}
+          serverName={diag.serverName}
+          contentId={id}
+          contentTitle={d.title}
+          contentType={mediaType}
+        />
+      )}
     </div>
   );
 }
+
