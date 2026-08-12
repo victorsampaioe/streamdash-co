@@ -1493,3 +1493,26 @@ export async function comparePlayerApiUserAgents(
 
   return { egress_ip: await egressIp(), probes, verdict };
 }
+
+/**
+ * Busca dados reais de uma série (temporadas/episódios) via Player API Xtream.
+ * Executa no Core AWS para garantir latência real e IP autorizado.
+ */
+export async function getSeriesDataOnCore(serverId: string, seriesId: string) {
+  const { getIptvCredentials } = await import("./iptv-credentials.server");
+  const { data: server } = await supabaseAdmin.from("servers").select("host").eq("id", serverId).single();
+  if (!server) throw new Error("Servidor não encontrado");
+
+  const creds = await getIptvCredentials(serverId);
+  if (!creds.username || !creds.password) throw new Error("Credenciais IPTV não configuradas");
+
+  const auth = `username=${encodeURIComponent(creds.username)}&password=${encodeURIComponent(creds.password)}`;
+  const url = `http://${server.host}/player_api.php?${auth}&action=get_series_info&series_id=${seriesId}`;
+  
+  const res = await fetch(url, { headers: { "user-agent": UA_PLAYER } });
+  if (!res.ok) throw new Error(`IPTV API Error: ${res.status}`);
+  
+  const data = await res.json();
+  return data;
+}
+
