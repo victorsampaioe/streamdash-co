@@ -47,7 +47,14 @@
   --color-sidebar-ring: var(--sidebar-ring);
   --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
   --font-mono: "JetBrains Mono", ui-monospace, monospace;
+  --animate-scan: scan 3s infinite linear;
 }
+
+@keyframes scan {
+  from { transform: translateX(-100%); }
+  to { transform: translateX(100%); }
+}
+
 
 @utility scrollbar-hide {
   -ms-overflow-style: none;
