@@ -22,7 +22,8 @@ import {
   User,
   ArrowLeft,
   ChevronRight,
-  Play
+  Play,
+  Loader2
 } from "lucide-react";
 import { searchDiagnosticContent, getSeriesSeasons } from "@/lib/diagnostics-search.functions";
 import { getMyDiagnostics } from "@/lib/diagnostics-history.functions";
