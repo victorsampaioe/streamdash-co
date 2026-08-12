@@ -2,6 +2,14 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { Activity, Bell, Globe, Zap, ShieldCheck, LineChart, Send, BookOpen, UserCheck, TrendingUp, Search, Film, Tv, CheckCircle2, Cpu } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { SupportFab } from "@/components/support-fab";
+import poster_duneAsset from "@/assets/radar/dune.jpg.asset.json";
+import poster_godzillaAsset from "@/assets/radar/godzilla.jpg.asset.json";
+import poster_madamewebAsset from "@/assets/radar/madameweb.jpg.asset.json";
+import poster_apesAsset from "@/assets/radar/apes.jpg.asset.json";
+import poster_theboysAsset from "@/assets/radar/theboys.jpg.asset.json";
+import poster_hotdAsset from "@/assets/radar/hotd.jpg.asset.json";
+import poster_tlouAsset from "@/assets/radar/tlou.jpg.asset.json";
+import poster_stAsset from "@/assets/radar/st.jpg.asset.json";
 
 
 export const Route = createFileRoute("/")({
@@ -198,7 +206,7 @@ function RadarShowcase() {
   const films = [
     {
       title: "Duna: Parte Dois",
-      image: "https://images.tmdb.org/t/p/w600_and_h900_bestv2/8b8R8l3bd9e4SmsqzdA2jyvXIvO.jpg",
+      image: poster_duneAsset.url,
       status: "Novo conteúdo detectado",
       detected: "Hoje 14:32",
       servers: 8,
@@ -207,7 +215,7 @@ function RadarShowcase() {
     },
     {
       title: "Godzilla e Kong: O Novo Império",
-      image: "https://images.tmdb.org/t/p/w600_and_h900_bestv2/1E4B3OaF0iYwK69x5h0T0X1K7F.jpg",
+      image: poster_godzillaAsset.url,
       status: "Disponível",
       detected: "Hoje 12:15",
       servers: 12,
@@ -215,7 +223,7 @@ function RadarShowcase() {
     },
     {
       title: "Madame Teia",
-      image: "https://images.tmdb.org/t/p/w600_and_h900_bestv2/rulq7o4V84D01r3QJ1rM64XqH1M.jpg",
+      image: poster_madamewebAsset.url,
       status: "Disponível",
       detected: "Ontem",
       servers: 5,
@@ -223,7 +231,7 @@ function RadarShowcase() {
     },
     {
       title: "Planeta dos Macacos: O Reinado",
-      image: "https://images.tmdb.org/t/p/w600_and_h900_bestv2/3s9MdiZRyhW2HhT35sW4K0X1J8.jpg",
+      image: poster_apesAsset.url,
       status: "Detectado recentemente",
       detected: "Há 2 horas",
       servers: 15,
@@ -234,7 +242,7 @@ function RadarShowcase() {
   const series = [
     {
       title: "The Boys",
-      image: "https://images.tmdb.org/t/p/w600_and_h900_bestv2/mY7hlrYtShorSCpc8gVb21ilnSL.jpg",
+      image: poster_theboysAsset.url,
       info: "Temporada 4",
       status: "Atualização: Agora",
       servers: 7,
@@ -242,21 +250,21 @@ function RadarShowcase() {
     },
     {
       title: "House of the Dragon",
-      image: "https://images.tmdb.org/t/p/w600_and_h900_bestv2/7QMs7u127bT193792q9Jg30dbtO.jpg",
+      image: poster_hotdAsset.url,
       info: "Temporada 2",
       status: "Nova temporada detectada",
       servers: 11
     },
     {
       title: "The Last of Us",
-      image: "https://images.tmdb.org/t/p/w600_and_h900_bestv2/uKVUSmHfs2sSHnBvllBKKu1pPpy.jpg",
+      image: poster_tlouAsset.url,
       info: "S02 E01",
       status: "Novo episódio encontrado",
       servers: 4
     },
     {
       title: "Stranger Things",
-      image: "https://images.tmdb.org/t/p/w600_and_h900_bestv2/x2LSRm21uTEx2Pq2SjkRpfYmws3.jpg",
+      image: poster_stAsset.url,
       info: "Temporada 5",
       status: "Atualização recente",
       servers: 9
