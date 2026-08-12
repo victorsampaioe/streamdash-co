@@ -21,10 +21,13 @@ export function ReactivationPanel() {
     queryFn: () => getStats(),
   });
 
-  const { data: history, isLoading: historyLoading, refetch: refetchHistory } = useQuery({
+  const { data: historyData, isLoading: historyLoading, refetch: refetchHistory } = useQuery({
     queryKey: ["reactivation-history"],
     queryFn: () => getHistory(),
   });
+
+  const logs = historyData?.logs || [];
+  const campaigns = historyData?.campaigns || [];
 
   const mutation = useMutation({
     mutationFn: (manual: boolean) => triggerCampaign({ data: { manual } }),
