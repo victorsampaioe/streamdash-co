@@ -77,9 +77,10 @@ export const searchDiagnosticContent = createServerFn({ method: "POST" })
  */
 export const getSeriesSeasons = createServerFn({ method: "POST" })
   .middleware([requireActiveSubscription])
-  .inputValidator((d: { serverId: string, seriesId: string }) => z.object({
+  .inputValidator((d: { serverId: string, seriesId: string, seasonNum?: number }) => z.object({
     serverId: z.string().uuid(),
-    seriesId: z.string()
+    seriesId: z.string(),
+    seasonNum: z.number().optional()
   }).parse(d))
   .handler(async ({ data, context }): Promise<any> => {
     const { runOnCore } = await import("./core-api.server");
@@ -88,8 +89,8 @@ export const getSeriesSeasons = createServerFn({ method: "POST" })
     try {
       return await runOnCore(
         "get-series-seasons",
-        { serverId: data.serverId, seriesId: data.seriesId },
-        () => getSeriesDataOnCore(data.serverId, data.seriesId)
+        { serverId: data.serverId, seriesId: data.seriesId, seasonNum: data.seasonNum },
+        () => getSeriesDataOnCore(data.serverId, data.seriesId, data.seasonNum)
       );
     } catch (e: any) {
       console.error("[getSeriesSeasons] Error:", e);
