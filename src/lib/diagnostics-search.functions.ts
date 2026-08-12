@@ -15,7 +15,6 @@ export const searchDiagnosticContent = createServerFn({ method: "POST" })
     const tKey = titleKey(term);
 
     // 1. Busca no iptv_catalog_items os servidores do usuário que possuem o termo
-    // Priorizamos os servidores que o usuário realment tem acesso.
     const { data: myServers } = await context.supabase
       .from("servers")
       .select("id, name");
@@ -24,7 +23,6 @@ export const searchDiagnosticContent = createServerFn({ method: "POST" })
     const myServerIds = myServers.map(s => s.id);
 
     // 2. Busca por nome similar no catálogo
-    // Usamos ilike no name E busca exata no title_key
     const { data: items, error } = await context.supabase
       .from("iptv_catalog_items")
       .select(`
@@ -43,7 +41,6 @@ export const searchDiagnosticContent = createServerFn({ method: "POST" })
     if (error) throw error;
 
     // 3. Agrupar por conteúdo (title_key + kind)
-    // No diagnóstico, o usuário escolhe o CONTEÚDO primeiro, depois vê a lista de servidores.
     const grouped = new Map<string, any>();
 
     for (const it of items || []) {
@@ -60,7 +57,6 @@ export const searchDiagnosticContent = createServerFn({ method: "POST" })
       }
       
       const entry = grouped.get(key);
-      // Evita duplicar servidor se houver itens com nomes ligeiramente diferentes mas mesma key
       if (!entry.servers.some((s: any) => s.id === it.server_id)) {
         const srvName = myServers.find(s => s.id === it.server_id)?.name || "Servidor";
         entry.servers.push({
@@ -85,14 +81,15 @@ export const getSeriesSeasons = createServerFn({ method: "POST" })
     serverId: z.string().uuid(),
     seriesId: z.string()
   }).parse(d))
-  .handler(async ({ data, context }) => {
-    // Chamada ao Core AWS para buscar dados reais via Player API Xtream
+  .handler(async ({ data, context }): Promise<any> => {
     const { runOnCore } = await import("./core-api.server");
     const { getSeriesDataOnCore } = await import("./iptv.server");
 
+    if (!context?.userId) throw new Error("Não autenticado");
+
     return await runOnCore(
       "get-series-seasons",
-      data,
+      { serverId: data.serverId, seriesId: data.seriesId },
       () => getSeriesDataOnCore(data.serverId, data.seriesId)
     );
   });
