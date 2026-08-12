@@ -33,7 +33,7 @@ export function sanitizeErrorMessage(input: unknown): string {
   if (!message) return GENERIC_MESSAGE;
   // Se for um erro amigável que já tratamos (como "Servidor inativo"), permite passar
   if (message.length > MAX_SAFE_LENGTH) return GENERIC_MESSAGE;
-  if (message.includes("\n") && !message.includes("HTTP")) return GENERIC_MESSAGE;
+  if (message.includes("\n") && !message.includes("HTTP") && !message.includes("at ")) return GENERIC_MESSAGE;
   if (LEAK_PATTERNS.some((re) => re.test(message))) {
     // Exceção para mensagens de erro comuns que não vazam dados sensíveis
     const isSafeWhitelisted = [
