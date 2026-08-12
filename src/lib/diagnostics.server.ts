@@ -29,7 +29,7 @@ export type DiagnosticResult = {
 const activeProbes = new Map<string, Promise<DiagnosticResult>>();
 
 export async function runContentDiagnostic(
-  userId: string,
+  userId: string | null,
   serverId: string,
   contentId: string,
   contentType: 'live' | 'movie' | 'series' | 'episode'
@@ -52,7 +52,7 @@ export async function runContentDiagnostic(
 }
 
 async function executeDiagnostic(
-  userId: string,
+  userId: string | null,
   serverId: string,
   contentId: string,
   contentType: string
