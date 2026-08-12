@@ -170,12 +170,19 @@ async function executeDiagnostic(
 
     // Persistir e Circuit Breaker
     await (supabaseAdmin.rpc as any)('record_diagnostic_success', { p_server_id: serverId });
-    await (supabaseAdmin.from('content_diagnostics' as any) as any).insert({
+    const { data: contentInfo } = await supabaseAdmin
+      .from("iptv_global_catalog")
+      .select("normalized_name")
+      .eq("tmdb_id", parseInt(contentId))
+      .eq("media_type", contentType === 'series' || contentType === 'episode' ? 'tv' : 'movie')
+      .maybeSingle();
 
+    await (supabaseAdmin.from('content_diagnostics' as any) as any).insert({
       user_id: userId,
       server_id: serverId,
       content_id: contentId,
       content_type: contentType,
+      content_title: contentInfo?.normalized_name || "Conteúdo TMDB",
       status: result.status,
       ttfb_ms: result.ttfb_ms,
       connection_ms: result.connection_ms,
