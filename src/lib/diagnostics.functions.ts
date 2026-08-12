@@ -18,20 +18,32 @@ export const runDiagnostic = createServerFn({ method: "POST" })
     const { runOnCore } = await import("./core-api.server");
 
     // No context (client-side render without session yet)? 
-    // O safeErrorMiddleware vai pegar se o core falhar com 401.
     const userId = context?.userId || null;
 
     // Executa na VPS para medir latência real do datacentro
     try {
-      return await runOnCore(
+      const result = await runOnCore(
         "content-diagnostic",
         data,
         () => runContentDiagnostic(userId, data.serverId, data.contentId, data.contentType)
       );
+
+      if (!result) {
+        throw new Error("O motor de diagnóstico não retornou um resultado válido.");
+      }
+
+      return result;
     } catch (e: any) {
-      console.error("[runDiagnostic] Error:", e);
-      // Se for um erro que o safe-error mascararia como genérico,
-      // vamos tentar ser mais específicos se possível, mas o middleware já faz isso.
+      console.error("[runDiagnostic] Fatal error:", e);
+      const msg = e?.message || String(e);
+      
+      // Se o erro for do Core, ele costuma vir com prefixo "Core content-diagnostic falhou (500): Error: ..."
+      // Vamos tentar extrair a mensagem limpa
+      if (msg.includes("falhou (500): Error:")) {
+        const cleanMsg = msg.split("Error:").pop()?.trim();
+        if (cleanMsg) throw new Error(cleanMsg);
+      }
+      
       throw e;
     }
   });
