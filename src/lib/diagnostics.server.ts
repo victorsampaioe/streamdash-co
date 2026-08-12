@@ -119,7 +119,14 @@ async function executeDiagnostic(
     });
 
     if (!response.ok) {
-      throw new Error(`HTTP ${response.status}`);
+      // Diferenciar erros HTTP para facilitar diagnóstico
+      if (response.status === 401 || response.status === 403) {
+        throw new Error(`HTTP ${response.status}: Acesso negado pelo servidor`);
+      }
+      if (response.status === 404) {
+        throw new Error(`HTTP 404: Conteúdo não encontrado no host`);
+      }
+      throw new Error(`HTTP ${response.status}: Falha na requisição`);
     }
     updateStep(4, 'success');
 
