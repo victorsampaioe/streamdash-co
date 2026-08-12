@@ -19,9 +19,11 @@ export type CoreTask =
   | "radar-job-step"
   | "iptv-ua-test"
   | "content-scan"
+  | "content-diagnostic"
   | "telegram-broadcast"
   | "cron-check"
   | "cron-digest";
+
 
 function normalize(url: string | undefined | null): string | null {
   const raw = (url ?? "").trim();
