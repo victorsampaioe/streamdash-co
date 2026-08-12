@@ -162,7 +162,7 @@ export function ReactivationPanel() {
                         <div className="text-xs text-muted-foreground">{log.profiles?.email}</div>
                       </td>
                       <td className="px-4 py-2">
-                        <Badge variant={log.status === 'success' ? 'success' : 'destructive'} className="capitalize">
+                        <Badge variant={log.status === 'success' ? 'secondary' : 'destructive'} className="capitalize">
                           {log.status === 'success' ? 'Sucesso' : 'Falha'}
                         </Badge>
                       </td>
