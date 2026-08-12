@@ -538,6 +538,71 @@ export type Database = {
           },
         ]
       }
+      content_diagnostics: {
+        Row: {
+          bytes_read: number | null
+          codec: string | null
+          connection_ms: number | null
+          content_id: string
+          content_type: string
+          created_at: string | null
+          duration_ms: number | null
+          error_message: string | null
+          id: string
+          is_cached: boolean | null
+          resolution: string | null
+          server_id: string
+          status: string
+          steps: Json | null
+          ttfb_ms: number | null
+          user_id: string
+        }
+        Insert: {
+          bytes_read?: number | null
+          codec?: string | null
+          connection_ms?: number | null
+          content_id: string
+          content_type: string
+          created_at?: string | null
+          duration_ms?: number | null
+          error_message?: string | null
+          id?: string
+          is_cached?: boolean | null
+          resolution?: string | null
+          server_id: string
+          status: string
+          steps?: Json | null
+          ttfb_ms?: number | null
+          user_id: string
+        }
+        Update: {
+          bytes_read?: number | null
+          codec?: string | null
+          connection_ms?: number | null
+          content_id?: string
+          content_type?: string
+          created_at?: string | null
+          duration_ms?: number | null
+          error_message?: string | null
+          id?: string
+          is_cached?: boolean | null
+          resolution?: string | null
+          server_id?: string
+          status?: string
+          steps?: Json | null
+          ttfb_ms?: number | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "content_diagnostics_server_id_fkey"
+            columns: ["server_id"]
+            isOneToOne: false
+            referencedRelation: "servers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       content_scan_runs: {
         Row: {
           failed: number
@@ -684,6 +749,44 @@ export type Database = {
           price_cents?: number
         }
         Relationships: []
+      }
+      diagnostic_circuit_breakers: {
+        Row: {
+          failure_count: number | null
+          last_failure_at: string | null
+          next_test_at: string | null
+          opened_at: string | null
+          server_id: string
+          state: string
+          updated_at: string | null
+        }
+        Insert: {
+          failure_count?: number | null
+          last_failure_at?: string | null
+          next_test_at?: string | null
+          opened_at?: string | null
+          server_id: string
+          state?: string
+          updated_at?: string | null
+        }
+        Update: {
+          failure_count?: number | null
+          last_failure_at?: string | null
+          next_test_at?: string | null
+          opened_at?: string | null
+          server_id?: string
+          state?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "diagnostic_circuit_breakers_server_id_fkey"
+            columns: ["server_id"]
+            isOneToOne: true
+            referencedRelation: "servers"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       dns_alerts: {
         Row: {
@@ -4316,6 +4419,14 @@ export type Database = {
         Returns: Json
       }
       recalc_iptv_availability: { Args: never; Returns: number }
+      record_diagnostic_failure: {
+        Args: { p_server_id: string }
+        Returns: undefined
+      }
+      record_diagnostic_success: {
+        Args: { p_server_id: string }
+        Returns: undefined
+      }
       region_consensus: {
         Args: { _server_id: string; _window_minutes?: number }
         Returns: Json
