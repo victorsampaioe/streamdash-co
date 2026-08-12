@@ -19,5 +19,5 @@ export const notifySignup = createServerFn({ method: "POST" })
     return notifyAdminSignup(data);
   });
 
-// Compatibility export
-export const notifyAdminSignup = notifySignup;
+// Use the explicit export to avoid shadowing
+export const notifyAdminSignupFn = notifySignup;
