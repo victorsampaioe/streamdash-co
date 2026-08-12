@@ -1,6 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
-import { getReactivationStats, runReactivationCampaign } from "./admin-telegram.server";
+import { getReactivationStats, runReactivationCampaign, notifyAdminSignup } from "./admin-telegram.server";
 
 export const getReactivationInfo = createServerFn({ method: "GET" })
   .handler(async () => {
@@ -12,3 +12,12 @@ export const triggerReactivationCampaign = createServerFn({ method: "POST" })
   .handler(async ({ data }) => {
     return runReactivationCampaign(data.manual ?? false);
   });
+
+export const notifySignup = createServerFn({ method: "POST" })
+  .inputValidator((data) => z.object({ email: z.string(), name: z.string(), phone: z.string(), referralCode: z.string().optional() }).parse(data))
+  .handler(async ({ data }) => {
+    return notifyAdminSignup(data);
+  });
+
+// Compatibility export
+export const notifyAdminSignup = notifySignup;
