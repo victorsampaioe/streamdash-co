@@ -198,7 +198,7 @@ function RadarShowcase() {
   const films = [
     {
       title: "Duna: Parte Dois",
-      image: "https://image.tmdb.org/t/p/w500/8b8R8l3bd9e4SmsqzdA2jyvXIvO.jpg",
+      image: "https://images.tmdb.org/t/p/w600_and_h900_bestv2/8b8R8l3bd9e4SmsqzdA2jyvXIvO.jpg",
       status: "Novo conteúdo detectado",
       detected: "Hoje 14:32",
       servers: 8,
@@ -207,7 +207,7 @@ function RadarShowcase() {
     },
     {
       title: "Godzilla e Kong: O Novo Império",
-      image: "https://image.tmdb.org/t/p/w500/1E4B3OaF0iYwK69x5h0T0X1K7F.jpg",
+      image: "https://images.tmdb.org/t/p/w600_and_h900_bestv2/1E4B3OaF0iYwK69x5h0T0X1K7F.jpg",
       status: "Disponível",
       detected: "Hoje 12:15",
       servers: 12,
@@ -215,7 +215,7 @@ function RadarShowcase() {
     },
     {
       title: "Madame Teia",
-      image: "https://image.tmdb.org/t/p/w500/rulq7o4V84D01r3QJ1rM64XqH1M.jpg",
+      image: "https://images.tmdb.org/t/p/w600_and_h900_bestv2/rulq7o4V84D01r3QJ1rM64XqH1M.jpg",
       status: "Disponível",
       detected: "Ontem",
       servers: 5,
@@ -223,7 +223,7 @@ function RadarShowcase() {
     },
     {
       title: "Planeta dos Macacos: O Reinado",
-      image: "https://image.tmdb.org/t/p/w500/3s9MdiZRyhW2HhT35sW4K0X1J8.jpg",
+      image: "https://images.tmdb.org/t/p/w600_and_h900_bestv2/3s9MdiZRyhW2HhT35sW4K0X1J8.jpg",
       status: "Detectado recentemente",
       detected: "Há 2 horas",
       servers: 15,
@@ -234,7 +234,7 @@ function RadarShowcase() {
   const series = [
     {
       title: "The Boys",
-      image: "https://image.tmdb.org/t/p/w500/mY7hlrYtShorSCpc8gVb21ilnSL.jpg",
+      image: "https://images.tmdb.org/t/p/w600_and_h900_bestv2/mY7hlrYtShorSCpc8gVb21ilnSL.jpg",
       info: "Temporada 4",
       status: "Atualização: Agora",
       servers: 7,
@@ -242,21 +242,21 @@ function RadarShowcase() {
     },
     {
       title: "House of the Dragon",
-      image: "https://image.tmdb.org/t/p/w500/7QMs7u127bT193792q9Jg30dbtO.jpg",
+      image: "https://images.tmdb.org/t/p/w600_and_h900_bestv2/7QMs7u127bT193792q9Jg30dbtO.jpg",
       info: "Temporada 2",
       status: "Nova temporada detectada",
       servers: 11
     },
     {
       title: "The Last of Us",
-      image: "https://image.tmdb.org/t/p/w500/uKVUSmHfs2sSHnBvllBKKu1pPpy.jpg",
+      image: "https://images.tmdb.org/t/p/w600_and_h900_bestv2/uKVUSmHfs2sSHnBvllBKKu1pPpy.jpg",
       info: "S02 E01",
       status: "Novo episódio encontrado",
       servers: 4
     },
     {
       title: "Stranger Things",
-      image: "https://image.tmdb.org/t/p/w500/x2LSRm21uTEx2Pq2SjkRpfYmws3.jpg",
+      image: "https://images.tmdb.org/t/p/w600_and_h900_bestv2/x2LSRm21uTEx2Pq2SjkRpfYmws3.jpg",
       info: "Temporada 5",
       status: "Atualização recente",
       servers: 9
