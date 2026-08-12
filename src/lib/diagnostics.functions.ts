@@ -37,6 +37,19 @@ export const runDiagnostic = createServerFn({ method: "POST" })
       console.error("[runDiagnostic] Fatal error:", e);
       const msg = e?.message || String(e);
       
+      // Se o resultado do diagnóstico vier dentro de um erro (ex: falha do Core que retornou o objeto de erro)
+      if (msg.includes('"steps":') && msg.includes('"status":')) {
+        try {
+          // Tenta extrair o JSON se ele estiver embutido na string de erro
+          const jsonMatch = msg.match(/\{.*\}/s);
+          if (jsonMatch) {
+            return JSON.parse(jsonMatch[0]);
+          }
+        } catch (parseErr) {
+          console.error("[runDiagnostic] Failed to parse diagnostic result from error message", parseErr);
+        }
+      }
+
       // Se for um erro do Core, ele costuma vir com prefixo "Core content-diagnostic falhou (500): Error: ..."
       if (msg.includes("falhou (500): Error:")) {
         const cleanMsg = msg.split("Error:").pop()?.trim();
