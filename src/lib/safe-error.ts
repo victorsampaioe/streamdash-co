@@ -48,7 +48,10 @@ export function sanitizeErrorMessage(input: unknown): string {
       "fetch failed",
       "Unauthorized",
       "Sessão expirada",
-      "Acesso pausado"
+      "Acesso pausado",
+      "IPTV API Error",
+      "Conteúdo não encontrado",
+      "Acesso negado"
     ].some(term => message.toLowerCase().includes(term.toLowerCase()));
     
     if (!isSafeWhitelisted) return GENERIC_MESSAGE;
