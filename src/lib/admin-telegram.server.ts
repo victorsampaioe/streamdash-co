@@ -312,5 +312,18 @@ export async function runReactivationCampaign(manual: boolean = false) {
     } as any)
     .neq("id", "00000000-0000-0000-0000-000000000000"); // Update all rows (should only be one)
 
-  return { sent, failed, noTelegram: userIds.length - channels.length, skipped: alreadySent?.length || 0 };
+  const { data: currentStats } = await (supabaseAdmin
+    .from("reactivation_campaign_settings" as any) as any)
+    .select("total_sent, total_failed")
+    .limit(1)
+    .maybeSingle();
+
+  return { 
+    sent, 
+    failed, 
+    noTelegram: userIds.length - channels.length, 
+    skipped: alreadySent?.length || 0,
+    totalHistorySent: currentStats?.total_sent || 0,
+    totalHistoryFailed: currentStats?.total_failed || 0
+  };
 }
