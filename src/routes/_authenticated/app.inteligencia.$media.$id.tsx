@@ -6,8 +6,11 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ArrowLeft, Bell, BellOff, Clock, Film, Star, Trophy, Tv, Sparkles } from "lucide-react";
+import { ArrowLeft, Bell, BellOff, Clock, Film, Star, Trophy, Tv, Sparkles, Activity } from "lucide-react";
 import { toast } from "sonner";
+import { useState } from "react";
+import { DiagnosticDialog } from "@/components/iptv/diagnostic-dialog";
+
 
 export const Route = createFileRoute("/_authenticated/app/inteligencia/$media/$id")({
   component: TitleDetail,
