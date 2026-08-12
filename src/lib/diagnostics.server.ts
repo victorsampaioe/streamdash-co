@@ -124,7 +124,9 @@ async function executeDiagnostic(
     const globalTimeout = setTimeout(() => controller.abort(), DIAG_TIMEOUT_TOTAL);
     
     const tReq = Date.now();
-    const response = await fetch(streamUrl, {
+    const tReq = Date.now();
+    // Tenta primeiro com User-Agent de Player (padrão)
+    let response = await fetch(streamUrl, {
       headers: {
         'User-Agent': UA_PLAYER,
         'Range': `bytes=0-${MAX_BYTES}`
@@ -132,10 +134,26 @@ async function executeDiagnostic(
       signal: controller.signal
     });
 
+    // Se der 403, tenta com VLC como fallback (alguns painéis bloqueiam UA de Player em certas categorias)
+    if (response.status === 403) {
+      const { UA_VLC } = await import("./iptv.server");
+      response = await fetch(streamUrl, {
+        headers: {
+          'User-Agent': UA_VLC,
+          'Range': `bytes=0-${MAX_BYTES}`
+        },
+        signal: controller.signal
+      });
+    }
+
     if (!response.ok) {
       // Diferenciar erros HTTP para facilitar diagnóstico
       if (response.status === 401 || response.status === 403) {
-        throw new Error(`HTTP ${response.status}: Acesso negado pelo servidor`);
+        const egress = await egressIp();
+        const msg = response.status === 403 
+          ? `HTTP 403: Acesso negado pelo servidor (Bloqueio de IP ou Firewall). IP de saída: ${egress || 'desconhecido'}`
+          : `HTTP 401: Acesso negado (Credenciais inválidas para este conteúdo)`;
+        throw new Error(msg);
       }
       if (response.status === 404) {
         throw new Error(`HTTP 404: Conteúdo não encontrado no host`);
@@ -231,7 +249,7 @@ async function executeDiagnostic(
     }
     
     const result: DiagnosticResult = {
-      status: err.includes('HTTP 5') ? 'server_unavailable' : 'unavailable',
+      status: err.includes('HTTP 403') ? 'server_unavailable' : (err.includes('HTTP 5') ? 'server_unavailable' : 'unavailable'),
       error: err,
       steps: steps.map(s => s.status === 'running' ? { ...s, status: 'error', details: err } : s) as any
     };
