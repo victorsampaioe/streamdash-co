@@ -29,7 +29,7 @@ export type DiagnosticResult = {
 const activeProbes = new Map<string, Promise<DiagnosticResult>>();
 
 export async function runContentDiagnostic(
-  userId: string,
+  userId: string | null,
   serverId: string,
   contentId: string,
   contentType: 'live' | 'movie' | 'series' | 'episode'
@@ -52,7 +52,7 @@ export async function runContentDiagnostic(
 }
 
 async function executeDiagnostic(
-  userId: string,
+  userId: string | null,
   serverId: string,
   contentId: string,
   contentType: string
@@ -169,20 +169,25 @@ async function executeDiagnostic(
     updateStep(9, 'success');
 
     // Persistir e Circuit Breaker
-    await (supabaseAdmin.rpc as any)('record_diagnostic_success', { p_server_id: serverId });
-    const { data: contentInfo } = await supabaseAdmin
-      .from("iptv_global_catalog")
-      .select("normalized_name")
-      .eq("tmdb_id", parseInt(contentId))
-      .eq("media_type", contentType === 'series' || contentType === 'episode' ? 'tv' : 'movie')
+    try {
+      await supabaseAdmin.rpc('record_diagnostic_success', { p_server_id: serverId });
+    } catch (rpcErr) {
+      console.error("[diagnostic] Error calling record_diagnostic_success:", rpcErr);
+    }
+
+    const { data: catalogItem } = await supabaseAdmin
+      .from("iptv_catalog_items")
+      .select("name")
+      .eq("server_id", serverId)
+      .eq("external_id", contentId)
       .maybeSingle();
 
     await (supabaseAdmin.from('content_diagnostics' as any) as any).insert({
-      user_id: userId,
+      user_id: (!userId || userId === 'core-system') ? null : userId,
       server_id: serverId,
       content_id: contentId,
       content_type: contentType,
-      content_title: contentInfo?.normalized_name || "Conteúdo TMDB",
+      content_title: catalogItem?.name || "Conteúdo IPTV",
       status: result.status,
       ttfb_ms: result.ttfb_ms,
       connection_ms: result.connection_ms,
@@ -195,28 +200,31 @@ async function executeDiagnostic(
 
   } catch (e: any) {
     const err = String(e.message || e);
-    await (supabaseAdmin.rpc as any)('record_diagnostic_failure', { p_server_id: serverId });
+    try {
+      await supabaseAdmin.rpc('record_diagnostic_failure', { p_server_id: serverId });
+    } catch (rpcErr) {
+      console.error("[diagnostic] Error calling record_diagnostic_failure:", rpcErr);
+    }
     
     const result: DiagnosticResult = {
-
       status: err.includes('HTTP 5') ? 'server_unavailable' : 'unavailable',
       error: err,
       steps: steps.map(s => s.status === 'running' ? { ...s, status: 'error', details: err } : s) as any
     };
 
-    const { data: contentInfo } = await supabaseAdmin
-      .from("iptv_global_catalog")
-      .select("normalized_name")
-      .eq("tmdb_id", parseInt(contentId))
-      .eq("media_type", contentType === 'series' || contentType === 'episode' ? 'tv' : 'movie')
+    const { data: catalogItem } = await supabaseAdmin
+      .from("iptv_catalog_items")
+      .select("name")
+      .eq("server_id", serverId)
+      .eq("external_id", contentId)
       .maybeSingle();
 
     await (supabaseAdmin.from('content_diagnostics' as any) as any).insert({
-      user_id: userId,
+      user_id: (!userId || userId === 'core-system') ? null : userId,
       server_id: serverId,
       content_id: contentId,
       content_type: contentType,
-      content_title: contentInfo?.normalized_name || "Conteúdo TMDB",
+      content_title: catalogItem?.name || "Conteúdo IPTV",
       status: result.status,
       error: result.error,
       duration_ms: Date.now() - tStart,
