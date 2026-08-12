@@ -201,23 +201,23 @@ export async function notifyAdminSignup(data: { email: string; name: string; pho
 }
 
 export async function getReactivationStats() {
-  const { data: expiredCount } = await supabaseAdmin
-    .from("subscriptions")
+  const { data: expiredCount } = await (supabaseAdmin
+    .from("subscriptions" as any) as any)
     .select("user_id", { count: "exact", head: true })
     .eq("status", "expired");
 
-  const { data: lastCampaign } = await supabaseAdmin
-    .from("reactivation_campaign_settings")
+  const { data: lastCampaign } = await (supabaseAdmin
+    .from("reactivation_campaign_settings" as any) as any)
     .select("*")
     .limit(1)
     .maybeSingle();
 
-  const { count: telegramActiveCount } = await supabaseAdmin
-    .from("alert_channels")
+  const { count: telegramActiveCount } = await (supabaseAdmin
+    .from("alert_channels" as any) as any)
     .select("*", { count: "exact", head: true })
     .eq("kind", "telegram")
     .eq("enabled", true)
-    .in("owner_id", (await supabaseAdmin.from("subscriptions").select("user_id").eq("status", "expired")).data?.map(s => s.user_id) || []);
+    .in("owner_id", (await (supabaseAdmin.from("subscriptions" as any) as any).select("user_id").eq("status", "expired")).data?.map((s: any) => s.user_id) || []);
 
   return {
     expiredWithTelegram: telegramActiveCount || 0,
@@ -232,8 +232,8 @@ export async function runReactivationCampaign(manual: boolean = false) {
   const token = process.env.TELEGRAM_BOT_TOKEN;
   if (!token) throw new Error("TELEGRAM_BOT_TOKEN não configurado");
 
-  const { data: expiredSubs } = await supabaseAdmin
-    .from("subscriptions")
+  const { data: expiredSubs } = await (supabaseAdmin
+    .from("subscriptions" as any) as any)
     .select("user_id")
     .eq("status", "expired");
 
@@ -241,8 +241,8 @@ export async function runReactivationCampaign(manual: boolean = false) {
 
   const userIds = expiredSubs.map(s => s.user_id);
 
-  const { data: channels } = await supabaseAdmin
-    .from("alert_channels")
+  const { data: channels } = await (supabaseAdmin
+    .from("alert_channels" as any) as any)
     .select("owner_id, target")
     .eq("kind", "telegram")
     .eq("enabled", true)
@@ -250,8 +250,8 @@ export async function runReactivationCampaign(manual: boolean = false) {
 
   if (!channels?.length) return { sent: 0, failed: 0, noTelegram: userIds.length };
 
-  const { data: alreadySent } = await supabaseAdmin
-    .from("reactivation_logs")
+  const { data: alreadySent } = await (supabaseAdmin
+    .from("reactivation_logs" as any) as any)
     .select("user_id")
     .eq("status", "success");
   
@@ -279,14 +279,14 @@ export async function runReactivationCampaign(manual: boolean = false) {
 
       if (r.ok) {
         sent++;
-        await supabaseAdmin.from("reactivation_logs").insert({
+        await (supabaseAdmin.from("reactivation_logs" as any) as any).insert({
           user_id: ch.owner_id,
           status: "success",
           message_version: manual ? "manual" : "auto"
         });
       } else {
         failed++;
-        await supabaseAdmin.from("reactivation_logs").insert({
+        await (supabaseAdmin.from("reactivation_logs" as any) as any).insert({
           user_id: ch.owner_id,
           status: "failed",
           error_message: `HTTP ${r.status}`
@@ -294,7 +294,7 @@ export async function runReactivationCampaign(manual: boolean = false) {
       }
     } catch (e: any) {
       failed++;
-      await supabaseAdmin.from("reactivation_logs").insert({
+      await (supabaseAdmin.from("reactivation_logs" as any) as any).insert({
         user_id: ch.owner_id,
         status: "failed",
         error_message: e?.message || "Erro desconhecido"
@@ -302,14 +302,14 @@ export async function runReactivationCampaign(manual: boolean = false) {
     }
   }
 
-  await supabaseAdmin
-    .from("reactivation_campaign_settings")
+  await (supabaseAdmin
+    .from("reactivation_campaign_settings" as any) as any)
     .update({
       last_sent_at: new Date().toISOString(),
       last_message: message,
       total_sent: sent,
       total_failed: failed
-    })
+    } as any)
     .neq("id", "00000000-0000-0000-0000-000000000000"); // Update all rows (should only be one)
 
   return { sent, failed, noTelegram: userIds.length - channels.length, skipped: alreadySent?.length || 0 };
