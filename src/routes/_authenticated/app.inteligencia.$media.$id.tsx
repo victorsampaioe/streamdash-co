@@ -33,6 +33,8 @@ function TitleDetail() {
   const load = useServerFn(getTmdbDetail);
   const follow = useServerFn(toggleTmdbFollow);
   const mediaType = media === "tv" ? "tv" : "movie";
+  const [diag, setDiag] = useState<{ open: boolean; serverId: string; serverName: string } | null>(null);
+
 
   const { data, isLoading, error } = useQuery({
     queryKey: ["tmdb-detail", mediaType, id],
