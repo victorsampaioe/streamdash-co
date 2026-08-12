@@ -193,3 +193,147 @@ function Feature({ icon, title, desc }: { icon: React.ReactNode; title: string; 
     </div>
   );
 }
+
+function RadarShowcase() {
+  return (
+    <section className="relative overflow-hidden border-y border-border/40 bg-card/20 py-20">
+      <div className="absolute inset-0 pointer-events-none overflow-hidden">
+        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-4xl h-px bg-gradient-to-r from-transparent via-primary/50 to-transparent" />
+        <div className="absolute -top-24 left-1/2 -translate-x-1/2 w-[600px] h-[400px] bg-primary/5 blur-[120px] rounded-full" />
+      </div>
+
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 relative text-center">
+        <div className="mb-16">
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-accent text-primary text-xs font-semibold mb-4 border border-primary/20 animate-pulse">
+            <Cpu className="h-3.5 w-3.5" />
+            <span>Inteligência de Conteúdo IPTV</span>
+          </div>
+          <h2 className="text-3xl sm:text-4xl font-bold mb-4 tracking-tight">
+            Radar de Conteúdo IPTV
+          </h2>
+          <p className="text-muted-foreground text-lg max-w-2xl mx-auto">
+            "Descubra novos filmes e séries encontrados na sua rede antes dos seus clientes."
+          </p>
+        </div>
+
+        <div className="grid md:grid-cols-2 gap-8 max-w-5xl mx-auto mb-12 text-left">
+          {/* Filmes Card */}
+          <div className="group relative rounded-2xl border border-border/60 bg-card/40 p-6 overflow-hidden transition-all hover:border-primary/40 hover:bg-card/60">
+            <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+              <Film className="h-24 w-24" />
+            </div>
+            
+            <div className="relative flex items-center gap-3 mb-6">
+              <div className="p-2 rounded-lg bg-primary/10 text-primary">
+                <Film className="h-6 w-6" />
+              </div>
+              <h3 className="text-xl font-bold">🎬 Filmes encontrados recentemente</h3>
+            </div>
+
+            <div className="space-y-4">
+              <div className="relative rounded-xl bg-background/50 border border-border/40 p-4 animate-in fade-in slide-in-from-bottom-2 duration-700">
+                <div className="flex justify-between items-start mb-3">
+                  <div>
+                    <div className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1">Novo Filme Detectado</div>
+                    <div className="font-bold text-lg">Exemplo Filme</div>
+                  </div>
+                  <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-success/10 text-success text-[10px] font-bold">
+                    <CheckCircle2 className="h-3 w-3" /> DISPONÍVEL
+                  </div>
+                </div>
+                
+                <div className="grid grid-cols-2 gap-4 text-sm">
+                  <div>
+                    <div className="text-muted-foreground text-xs">Detectado</div>
+                    <div className="font-medium">Hoje 14:32</div>
+                  </div>
+                  <div>
+                    <div className="text-muted-foreground text-xs">Encontrado em</div>
+                    <div className="font-medium text-primary">8 servidores</div>
+                  </div>
+                </div>
+                
+                <div className="absolute bottom-0 left-0 w-full overflow-hidden h-[1px]">
+                  <div className="h-full w-full bg-primary/50 animate-scan" />
+                </div>
+              </div>
+
+              <div className="text-center py-2 opacity-50 grayscale blur-[1px]">
+                <div className="h-20 border border-dashed border-border/40 rounded-xl flex items-center justify-center italic text-sm">
+                  Varredura inteligente em progresso...
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Séries Card */}
+          <div className="group relative rounded-2xl border border-border/60 bg-card/40 p-6 overflow-hidden transition-all hover:border-primary/40 hover:bg-card/60">
+            <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+              <Tv className="h-24 w-24" />
+            </div>
+
+            <div className="relative flex items-center gap-3 mb-6">
+              <div className="p-2 rounded-lg bg-primary/10 text-primary">
+                <Tv className="h-6 w-6" />
+              </div>
+              <h3 className="text-xl font-bold">📺 Séries atualizadas</h3>
+            </div>
+
+            <div className="space-y-4">
+              <div className="relative rounded-xl bg-background/50 border border-border/40 p-4 animate-in fade-in slide-in-from-bottom-2 duration-1000 delay-150">
+                <div className="flex justify-between items-start mb-3">
+                  <div>
+                    <div className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1">Nova Série Detectada</div>
+                    <div className="font-bold text-lg">Exemplo Série</div>
+                  </div>
+                  <div className="text-[10px] font-bold text-primary bg-primary/10 px-2 py-0.5 rounded-full">
+                    S02 E05
+                  </div>
+                </div>
+                
+                <div className="grid grid-cols-2 gap-4 text-sm">
+                  <div>
+                    <div className="text-muted-foreground text-xs">Atualização</div>
+                    <div className="font-medium text-success">Agora</div>
+                  </div>
+                  <div>
+                    <div className="text-muted-foreground text-xs">Encontrado em</div>
+                    <div className="font-medium text-primary">5 servidores</div>
+                  </div>
+                </div>
+
+                <div className="absolute bottom-0 left-0 w-full overflow-hidden h-[1px]">
+                  <div className="h-full w-full bg-primary/50 animate-[scan_3s_infinite_linear_reverse]" />
+                </div>
+              </div>
+
+              <div className="flex items-center gap-4 justify-center text-xs text-muted-foreground mt-4">
+                <div className="flex items-center gap-1 text-[10px]">
+                  <span className="flex h-1 w-1 rounded-full bg-success animate-pulse" />
+                  Real-time Analysis
+                </div>
+                <div className="flex items-center gap-1 text-[10px]">
+                  <span className="flex h-1 w-1 rounded-full bg-primary animate-pulse" />
+                  Global Search
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div>
+          <Link to="/auth">
+            <Button size="lg" className="glow-primary px-8 gap-2">
+              <Search className="h-4 w-4" />
+              Conhecer Inteligência de Conteúdo
+            </Button>
+          </Link>
+          <p className="mt-4 text-xs text-muted-foreground italic">
+            * Demonstração com dados fictícios para fins de marketing.
+          </p>
+        </div>
+      </div>
+    </section>
+  );
+}
+
