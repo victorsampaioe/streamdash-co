@@ -16,12 +16,25 @@ export const triggerReactivationCampaign = createServerFn({ method: "POST" })
 export const getReactivationHistory = createServerFn({ method: "GET" })
   .handler(async () => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const { data } = await supabaseAdmin
+    
+    // Pegar logs individuais
+    const { data: logs } = await supabaseAdmin
       .from("reactivation_logs" as any)
       .select("*, profiles(full_name, email)")
       .order("created_at", { ascending: false })
       .limit(10);
-    return data || [];
+      
+    // Pegar histórico de campanhas
+    const { data: campaigns } = await supabaseAdmin
+      .from("reactivation_campaigns" as any)
+      .select("*")
+      .order("started_at", { ascending: false })
+      .limit(5);
+
+    return {
+      logs: logs || [],
+      campaigns: campaigns || []
+    };
   });
 
 export const notifySignup = createServerFn({ method: "POST" })

@@ -21,10 +21,13 @@ export function ReactivationPanel() {
     queryFn: () => getStats(),
   });
 
-  const { data: history, isLoading: historyLoading, refetch: refetchHistory } = useQuery({
+  const { data: historyData, isLoading: historyLoading, refetch: refetchHistory } = useQuery({
     queryKey: ["reactivation-history"],
     queryFn: () => getHistory(),
   });
+
+  const logs = historyData?.logs || [];
+  const campaigns = historyData?.campaigns || [];
 
   const mutation = useMutation({
     mutationFn: (manual: boolean) => triggerCampaign({ data: { manual } }),
@@ -141,7 +144,58 @@ export function ReactivationPanel() {
         <div className="space-y-4">
           <h4 className="text-sm font-bold flex items-center gap-2">
             <ListRestart className="h-4 w-4" />
-            Histórico Recente (Logs)
+            Histórico de Campanhas
+          </h4>
+          <div className="border rounded-md overflow-hidden">
+            <table className="w-full text-sm">
+              <thead className="bg-muted">
+                <tr>
+                  <th className="px-4 py-2 text-left font-medium">Data</th>
+                  <th className="px-4 py-2 text-left font-medium">Status</th>
+                  <th className="px-4 py-2 text-left font-medium">Resultados</th>
+                  <th className="px-4 py-2 text-left font-medium">Ação</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y">
+                {campaigns.length > 0 ? (
+                  campaigns.map((camp: any) => (
+                    <tr key={camp.id} className="hover:bg-muted/30">
+                      <td className="px-4 py-2">
+                        {format(new Date(camp.started_at), "dd/MM/yy HH:mm", { locale: ptBR })}
+                      </td>
+                      <td className="px-4 py-2">
+                        <Badge variant={camp.status === 'completed' ? 'secondary' : camp.status === 'running' ? 'outline' : 'destructive'} className="capitalize">
+                          {camp.status === 'completed' ? 'Concluída' : camp.status === 'running' ? 'Enviando...' : 'Falhou'}
+                        </Badge>
+                      </td>
+                      <td className="px-4 py-2">
+                        <div className="flex gap-2">
+                          <span className="text-success font-medium">{camp.total_sent} ✓</span>
+                          <span className="text-destructive font-medium">{camp.total_failed} ✗</span>
+                          <span className="text-muted-foreground">{camp.total_skipped} -</span>
+                        </div>
+                      </td>
+                      <td className="px-4 py-2 text-xs text-muted-foreground">
+                        {camp.error_log || (camp.total_found > 0 ? `${camp.total_found} detectados` : '-')}
+                      </td>
+                    </tr>
+                  ))
+                ) : (
+                  <tr>
+                    <td colSpan={4} className="px-4 py-8 text-center text-muted-foreground">
+                      Nenhuma campanha disparada.
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div className="space-y-4">
+          <h4 className="text-sm font-bold flex items-center gap-2">
+            <History className="h-4 w-4" />
+            Logs Individuais (Últimos 10)
           </h4>
           <div className="border rounded-md overflow-hidden">
             <table className="w-full text-sm">
@@ -150,12 +204,12 @@ export function ReactivationPanel() {
                   <th className="px-4 py-2 text-left font-medium">Usuário</th>
                   <th className="px-4 py-2 text-left font-medium">Status</th>
                   <th className="px-4 py-2 text-left font-medium">Data</th>
-                  <th className="px-4 py-2 text-left font-medium">Detalhes</th>
+                  <th className="px-4 py-2 text-left font-medium">Erro</th>
                 </tr>
               </thead>
               <tbody className="divide-y">
-                {history && history.length > 0 ? (
-                  history.map((log: any) => (
+                {logs.length > 0 ? (
+                  logs.map((log: any) => (
                     <tr key={log.id} className="hover:bg-muted/30">
                       <td className="px-4 py-2">
                         <div className="font-medium">{log.profiles?.full_name || 'Usuário'}</div>
@@ -169,15 +223,15 @@ export function ReactivationPanel() {
                       <td className="px-4 py-2 text-muted-foreground">
                         {format(new Date(log.created_at), "dd/MM/yy HH:mm", { locale: ptBR })}
                       </td>
-                      <td className="px-4 py-2 text-xs truncate max-w-[200px]">
-                        {log.error_message || (log.message_version === 'manual' ? 'Campanha Manual' : 'Automático')}
+                      <td className="px-4 py-2 text-xs text-destructive truncate max-w-[200px]">
+                        {log.error_message || '-'}
                       </td>
                     </tr>
                   ))
                 ) : (
                   <tr>
                     <td colSpan={4} className="px-4 py-8 text-center text-muted-foreground">
-                      Nenhum envio registrado recentemente.
+                      Nenhum envio registrado.
                     </td>
                   </tr>
                 )}

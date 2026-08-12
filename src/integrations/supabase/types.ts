@@ -2898,8 +2898,51 @@ export type Database = {
         }
         Relationships: []
       }
+      reactivation_campaigns: {
+        Row: {
+          created_by: string | null
+          error_log: string | null
+          finished_at: string | null
+          id: string
+          message: string | null
+          started_at: string
+          status: string
+          total_failed: number | null
+          total_found: number | null
+          total_sent: number | null
+          total_skipped: number | null
+        }
+        Insert: {
+          created_by?: string | null
+          error_log?: string | null
+          finished_at?: string | null
+          id?: string
+          message?: string | null
+          started_at?: string
+          status?: string
+          total_failed?: number | null
+          total_found?: number | null
+          total_sent?: number | null
+          total_skipped?: number | null
+        }
+        Update: {
+          created_by?: string | null
+          error_log?: string | null
+          finished_at?: string | null
+          id?: string
+          message?: string | null
+          started_at?: string
+          status?: string
+          total_failed?: number | null
+          total_found?: number | null
+          total_sent?: number | null
+          total_skipped?: number | null
+        }
+        Relationships: []
+      }
       reactivation_logs: {
         Row: {
+          campaign_id: string | null
           created_at: string | null
           error_message: string | null
           id: string
@@ -2908,6 +2951,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          campaign_id?: string | null
           created_at?: string | null
           error_message?: string | null
           id?: string
@@ -2916,6 +2960,7 @@ export type Database = {
           user_id: string
         }
         Update: {
+          campaign_id?: string | null
           created_at?: string | null
           error_message?: string | null
           id?: string
@@ -2923,7 +2968,15 @@ export type Database = {
           status?: string
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "reactivation_logs_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "reactivation_campaigns"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       referrals: {
         Row: {
