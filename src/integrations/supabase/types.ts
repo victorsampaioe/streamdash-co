@@ -2768,6 +2768,60 @@ export type Database = {
           },
         ]
       }
+      reactivation_campaign_settings: {
+        Row: {
+          created_at: string | null
+          id: string
+          last_message: string | null
+          last_sent_at: string | null
+          total_failed: number | null
+          total_sent: number | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          last_message?: string | null
+          last_sent_at?: string | null
+          total_failed?: number | null
+          total_sent?: number | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          last_message?: string | null
+          last_sent_at?: string | null
+          total_failed?: number | null
+          total_sent?: number | null
+        }
+        Relationships: []
+      }
+      reactivation_logs: {
+        Row: {
+          created_at: string | null
+          error_message: string | null
+          id: string
+          message_version: string | null
+          status: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          error_message?: string | null
+          id?: string
+          message_version?: string | null
+          status: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          error_message?: string | null
+          id?: string
+          message_version?: string | null
+          status?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       referrals: {
         Row: {
           approved_at: string | null

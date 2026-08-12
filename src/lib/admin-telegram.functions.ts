@@ -13,11 +13,21 @@ export const triggerReactivationCampaign = createServerFn({ method: "POST" })
     return runReactivationCampaign(data.manual ?? false);
   });
 
+export const getReactivationHistory = createServerFn({ method: "GET" })
+  .handler(async () => {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data } = await supabaseAdmin
+      .from("reactivation_logs" as any)
+      .select("*, profiles(full_name, email)")
+      .order("created_at", { ascending: false })
+      .limit(10);
+    return data || [];
+  });
+
 export const notifySignup = createServerFn({ method: "POST" })
   .inputValidator((data) => z.object({ email: z.string(), name: z.string(), phone: z.string(), referralCode: z.string().optional() }).parse(data))
   .handler(async ({ data }) => {
     return notifyAdminSignup(data);
   });
 
-// Use the explicit export to avoid shadowing
 export const notifyAdminSignupFn = notifySignup;
