@@ -170,7 +170,8 @@ async function executeDiagnostic(
 
     // Persistir e Circuit Breaker
     await (supabaseAdmin.rpc as any)('record_diagnostic_success', { p_server_id: serverId });
-    await (supabaseAdmin.from('content_diagnostics') as any).insert({
+    await (supabaseAdmin.from('content_diagnostics' as any) as any).insert({
+
       user_id: userId,
       server_id: serverId,
       content_id: contentId,
