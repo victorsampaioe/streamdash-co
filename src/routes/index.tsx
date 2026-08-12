@@ -195,6 +195,74 @@ function Feature({ icon, title, desc }: { icon: React.ReactNode; title: string; 
 }
 
 function RadarShowcase() {
+  const films = [
+    {
+      title: "Gladiador 2",
+      image: "https://image.tmdb.org/t/p/w500/2cxhvsy4g7qn195c19pvHrp8xpb.jpg",
+      status: "Novo conteúdo detectado",
+      detected: "Hoje 14:32",
+      servers: 8,
+      available: true,
+      tag: "⚡ Detectado agora"
+    },
+    {
+      title: "Wicked",
+      image: "https://image.tmdb.org/t/p/w500/x26sDeU6lqT5Qnuzp192XG2nO8S.jpg",
+      status: "Disponível",
+      detected: "Hoje 12:15",
+      servers: 12,
+      available: true
+    },
+    {
+      title: "Moana 2",
+      image: "https://image.tmdb.org/t/p/w500/yzH5zvuEa2Yh5tHmgrFbsBcICv6.jpg",
+      status: "Disponível",
+      detected: "Ontem",
+      servers: 5,
+      available: true
+    },
+    {
+      title: "Mufasa: O Rei Leão",
+      image: "https://image.tmdb.org/t/p/w500/b33kgP1t2YFhJaMxSslqpkqjnX9.jpg",
+      status: "Detectado recentemente",
+      detected: "Há 2 horas",
+      servers: 15,
+      available: true
+    }
+  ];
+
+  const series = [
+    {
+      title: "The Last of Us",
+      image: "https://image.tmdb.org/t/p/w500/uKVUSmHfs2sSHnBvllBKKu1pPpy.jpg",
+      info: "S02 E01",
+      status: "Atualização: Agora",
+      servers: 7,
+      tag: "⚡ Detectado agora"
+    },
+    {
+      title: "Arcane",
+      image: "https://image.tmdb.org/t/p/w500/abRq4mq1v24K48T35vNn9V359Wn.jpg",
+      info: "Temporada Final",
+      status: "Nova temporada detectada",
+      servers: 11
+    },
+    {
+      title: "Stranger Things",
+      image: "https://image.tmdb.org/t/p/w500/x2LSRm21uTEx2Pq2SjkRpfYmws3.jpg",
+      info: "S05 E01",
+      status: "Novo episódio encontrado",
+      servers: 4
+    },
+    {
+      title: "Round 6",
+      image: "https://image.tmdb.org/t/p/w500/dDlEmu3EZjPj9erLsQmgzsJa2oW.jpg",
+      info: "Temporada 2",
+      status: "Atualização recente",
+      servers: 9
+    }
+  ];
+
   return (
     <section className="relative overflow-hidden border-y border-border/40 bg-card/20 py-20">
       <div className="absolute inset-0 pointer-events-none overflow-hidden">
@@ -211,124 +279,135 @@ function RadarShowcase() {
           <h2 className="text-3xl sm:text-4xl font-bold mb-4 tracking-tight">
             Radar de Conteúdo IPTV
           </h2>
-          <p className="text-muted-foreground text-lg max-w-2xl mx-auto">
+          <p className="text-muted-foreground text-lg max-w-2xl mx-auto mb-4">
+            "Nossa inteligência analisa milhares de conteúdos e identifica onde novos filmes e séries aparecem primeiro."
+          </p>
+          <p className="text-muted-foreground/80 italic text-sm">
             "Descubra novos filmes e séries encontrados na sua rede antes dos seus clientes."
           </p>
         </div>
 
-        <div className="grid md:grid-cols-2 gap-8 max-w-5xl mx-auto mb-12 text-left">
-          {/* Filmes Card */}
-          <div className="group relative rounded-2xl border border-border/60 bg-card/40 p-6 overflow-hidden transition-all hover:border-primary/40 hover:bg-card/60">
-            <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
-              <Film className="h-24 w-24" />
+        {/* Filmes Section */}
+        <div className="mb-16 text-left">
+          <div className="flex items-center gap-3 mb-8">
+            <div className="p-2 rounded-lg bg-primary/10 text-primary">
+              <Film className="h-6 w-6" />
             </div>
-            
-            <div className="relative flex items-center gap-3 mb-6">
-              <div className="p-2 rounded-lg bg-primary/10 text-primary">
-                <Film className="h-6 w-6" />
-              </div>
-              <h3 className="text-xl font-bold">🎬 Filmes encontrados recentemente</h3>
-            </div>
-
-            <div className="space-y-4">
-              <div className="relative rounded-xl bg-background/50 border border-border/40 p-4 animate-in fade-in slide-in-from-bottom-2 duration-700">
-                <div className="flex justify-between items-start mb-3">
-                  <div>
-                    <div className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1">Novo Filme Detectado</div>
-                    <div className="font-bold text-lg">Exemplo Filme</div>
-                  </div>
-                  <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-success/10 text-success text-[10px] font-bold">
-                    <CheckCircle2 className="h-3 w-3" /> DISPONÍVEL
-                  </div>
-                </div>
-                
-                <div className="grid grid-cols-2 gap-4 text-sm">
-                  <div>
-                    <div className="text-muted-foreground text-xs">Detectado</div>
-                    <div className="font-medium">Hoje 14:32</div>
-                  </div>
-                  <div>
-                    <div className="text-muted-foreground text-xs">Encontrado em</div>
-                    <div className="font-medium text-primary">8 servidores</div>
-                  </div>
-                </div>
-                
-                <div className="absolute bottom-0 left-0 w-full overflow-hidden h-[1px]">
-                  <div className="h-full w-full bg-primary/50 animate-scan" />
-                </div>
-              </div>
-
-              <div className="text-center py-2 opacity-50 grayscale blur-[1px]">
-                <div className="h-20 border border-dashed border-border/40 rounded-xl flex items-center justify-center italic text-sm">
-                  Varredura inteligente em progresso...
-                </div>
-              </div>
-            </div>
+            <h3 className="text-2xl font-bold tracking-tight">🎬 Filmes encontrados recentemente</h3>
           </div>
-
-          {/* Séries Card */}
-          <div className="group relative rounded-2xl border border-border/60 bg-card/40 p-6 overflow-hidden transition-all hover:border-primary/40 hover:bg-card/60">
-            <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
-              <Tv className="h-24 w-24" />
-            </div>
-
-            <div className="relative flex items-center gap-3 mb-6">
-              <div className="p-2 rounded-lg bg-primary/10 text-primary">
-                <Tv className="h-6 w-6" />
-              </div>
-              <h3 className="text-xl font-bold">📺 Séries atualizadas</h3>
-            </div>
-
-            <div className="space-y-4">
-              <div className="relative rounded-xl bg-background/50 border border-border/40 p-4 animate-in fade-in slide-in-from-bottom-2 duration-1000 delay-150">
-                <div className="flex justify-between items-start mb-3">
-                  <div>
-                    <div className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1">Nova Série Detectada</div>
-                    <div className="font-bold text-lg">Exemplo Série</div>
-                  </div>
-                  <div className="text-[10px] font-bold text-primary bg-primary/10 px-2 py-0.5 rounded-full">
-                    S02 E05
-                  </div>
+          
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 sm:gap-6">
+            {films.map((item, idx) => (
+              <div key={idx} className="group relative rounded-xl border border-border/60 bg-card/40 overflow-hidden transition-all hover:border-primary/40 hover:-translate-y-1 hover:shadow-2xl hover:shadow-primary/10">
+                <div className="aspect-[2/3] relative overflow-hidden">
+                  <img src={item.image} alt={item.title} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent opacity-60" />
+                  
+                  {item.tag && (
+                    <div className="absolute top-2 left-2 px-2 py-0.5 rounded bg-primary text-[9px] font-bold text-black animate-pulse uppercase tracking-tighter">
+                      {item.tag}
+                    </div>
+                  )}
+                  
+                  {item.available && (
+                    <div className="absolute bottom-2 left-2 flex items-center gap-1 text-[10px] font-bold text-success drop-shadow-md">
+                      <span className="h-1.5 w-1.5 rounded-full bg-success animate-pulse" />
+                      🟢 DISPONÍVEL
+                    </div>
+                  )}
                 </div>
                 
-                <div className="grid grid-cols-2 gap-4 text-sm">
-                  <div>
-                    <div className="text-muted-foreground text-xs">Atualização</div>
-                    <div className="font-medium text-success">Agora</div>
+                <div className="p-3 sm:p-4">
+                  <h4 className="font-bold text-sm sm:text-base mb-1 truncate">{item.title}</h4>
+                  <div className="text-[10px] text-primary/80 mb-2 font-medium uppercase tracking-wider">{item.status}</div>
+                  
+                  <div className="flex flex-col gap-1.5 text-[10px] text-muted-foreground">
+                    <div className="flex items-center justify-between">
+                      <span>Detectado</span>
+                      <span className="text-foreground">{item.detected}</span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span>Rede</span>
+                      <span className="text-primary font-medium flex items-center gap-1">
+                        <Globe className="h-2.5 w-2.5" /> 🌎 {item.servers} servidores
+                      </span>
+                    </div>
                   </div>
-                  <div>
-                    <div className="text-muted-foreground text-xs">Encontrado em</div>
-                    <div className="font-medium text-primary">5 servidores</div>
+                </div>
+                {idx === 0 && (
+                  <div className="absolute bottom-0 left-0 w-full h-[2px] overflow-hidden">
+                    <div className="h-full w-full bg-primary/50 animate-scan" />
                   </div>
-                </div>
-
-                <div className="absolute bottom-0 left-0 w-full overflow-hidden h-[1px]">
-                  <div className="h-full w-full bg-primary/50 animate-[scan_3s_infinite_linear_reverse]" />
-                </div>
+                )}
               </div>
-
-              <div className="flex items-center gap-4 justify-center text-xs text-muted-foreground mt-4">
-                <div className="flex items-center gap-1 text-[10px]">
-                  <span className="flex h-1 w-1 rounded-full bg-success animate-pulse" />
-                  Real-time Analysis
-                </div>
-                <div className="flex items-center gap-1 text-[10px]">
-                  <span className="flex h-1 w-1 rounded-full bg-primary animate-pulse" />
-                  Global Search
-                </div>
-              </div>
-            </div>
+            ))}
           </div>
         </div>
 
-        <div>
+        {/* Séries Section */}
+        <div className="mb-16 text-left">
+          <div className="flex items-center gap-3 mb-8">
+            <div className="p-2 rounded-lg bg-primary/10 text-primary">
+              <Tv className="h-6 w-6" />
+            </div>
+            <h3 className="text-2xl font-bold tracking-tight">📺 Séries atualizadas</h3>
+          </div>
+
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 sm:gap-6">
+            {series.map((item, idx) => (
+              <div key={idx} className="group relative rounded-xl border border-border/60 bg-card/40 overflow-hidden transition-all hover:border-primary/40 hover:-translate-y-1 hover:shadow-2xl hover:shadow-primary/10">
+                <div className="aspect-[2/3] relative overflow-hidden">
+                  <img src={item.image} alt={item.title} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent opacity-60" />
+                  
+                  {item.tag && (
+                    <div className="absolute top-2 left-2 px-2 py-0.5 rounded bg-primary text-[9px] font-bold text-black animate-pulse uppercase tracking-tighter">
+                      {item.tag}
+                    </div>
+                  )}
+                  
+                  <div className="absolute top-2 right-2 px-1.5 py-0.5 rounded bg-black/60 border border-white/20 text-[10px] font-bold text-white backdrop-blur-md">
+                    {item.info}
+                  </div>
+                  
+                  <div className="absolute bottom-2 left-2 flex items-center gap-1 text-[10px] font-bold text-success drop-shadow-md">
+                    <span className="h-1.5 w-1.5 rounded-full bg-success animate-pulse" />
+                    🟢 DISPONÍVEL
+                  </div>
+                </div>
+                
+                <div className="p-3 sm:p-4">
+                  <h4 className="font-bold text-sm sm:text-base mb-1 truncate">{item.title}</h4>
+                  <div className="text-[10px] text-primary/80 mb-2 font-medium uppercase tracking-wider">{item.status}</div>
+                  
+                  <div className="flex flex-col gap-1.5 text-[10px] text-muted-foreground">
+                    <div className="flex items-center justify-between">
+                      <span>Rede</span>
+                      <span className="text-primary font-medium flex items-center gap-1">
+                        <Globe className="h-2.5 w-2.5" /> 🌎 {item.servers} servidores
+                      </span>
+                    </div>
+                  </div>
+                </div>
+                {idx === 0 && (
+                  <div className="absolute bottom-0 left-0 w-full h-[2px] overflow-hidden">
+                    <div className="h-full w-full bg-primary/50 animate-[scan_3s_infinite_linear_reverse]" />
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className="mt-8">
           <Link to="/auth">
-            <Button size="lg" className="glow-primary px-8 gap-2">
-              <Search className="h-4 w-4" />
+            <Button size="lg" className="glow-primary px-8 gap-2 h-12 text-base">
+              <Search className="h-5 w-5" />
               Conhecer Inteligência de Conteúdo
             </Button>
           </Link>
-          <p className="mt-4 text-xs text-muted-foreground italic">
+          <p className="mt-6 text-xs text-muted-foreground italic flex items-center justify-center gap-2">
+            <ShieldCheck className="h-3 w-3" />
             * Demonstração com dados fictícios para fins de marketing.
           </p>
         </div>
