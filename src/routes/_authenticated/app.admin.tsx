@@ -334,6 +334,11 @@ function AdminPage() {
           <PausedServersPanel />
         </TabsContent>
 
+        <TabsContent value="diagnostics" className="space-y-6">
+          <CircuitBreakerPanel />
+        </TabsContent>
+
+
         <TabsContent value="radar" className="space-y-6">
           <RadarAdminPanel />
           <RadarClustersPanel />
