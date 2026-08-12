@@ -234,7 +234,7 @@ function RadarShowcase() {
   const series = [
     {
       title: "The Boys",
-      image: "https://image.tmdb.org/t/p/w500/7Ns9U1lHjZgW4hT35sW4K0X1J8.jpg", // The Boys poster
+      image: "https://image.tmdb.org/t/p/w500/7Ns9U1lHjZgW4hT35sW4K0X1J8.jpg",
       info: "Temporada 4",
       status: "Atualização: Agora",
       servers: 7,
@@ -242,7 +242,7 @@ function RadarShowcase() {
     },
     {
       title: "House of the Dragon",
-      image: "https://image.tmdb.org/t/p/w500/1X7cXXX9U1lHjZgW4hT35sW4K0X1J8.jpg", // HOTD poster
+      image: "https://image.tmdb.org/t/p/w500/1X7cXXX9U1lHjZgW4hT35sW4K0X1J8.jpg",
       info: "Temporada 2",
       status: "Nova temporada detectada",
       servers: 11
