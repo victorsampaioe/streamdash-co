@@ -30,9 +30,11 @@ export const runDiagnostic = createServerFn({ method: "POST" })
 
 export const getCircuitBreakers = createServerFn({ method: "GET" })
   .handler(async ({ context }) => {
+    if (!context?.supabase) throw new Error("Não autenticado");
     const { data, error } = await context.supabase
-      .from('diagnostic_circuit_breakers')
+      .from('diagnostic_circuit_breakers' as any)
       .select('*, servers(name)');
     if (error) throw error;
     return data;
   });
+
