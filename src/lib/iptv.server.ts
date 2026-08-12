@@ -1498,7 +1498,7 @@ export async function comparePlayerApiUserAgents(
  * Busca dados reais de uma série (temporadas/episódios) via Player API Xtream.
  * Executa no Core AWS para garantir latência real e IP autorizado.
  */
-export async function getSeriesDataOnCore(serverId: string, seriesId: string) {
+export async function getSeriesDataOnCore(serverId: string, seriesId: string, seasonNum?: number) {
   const { getIptvCredentials } = await import("./iptv-credentials.server");
   const { data: server } = await supabaseAdmin.from("servers").select("host").eq("id", serverId).single();
   if (!server) throw new Error("Servidor não encontrado");
@@ -1507,12 +1507,26 @@ export async function getSeriesDataOnCore(serverId: string, seriesId: string) {
   if (!creds.username || !creds.password) throw new Error("Credenciais IPTV não configuradas");
 
   const auth = `username=${encodeURIComponent(creds.username)}&password=${encodeURIComponent(creds.password)}`;
-  const url = `http://${server.host}/player_api.php?${auth}&action=get_series_info&series_id=${seriesId}`;
+  // Se seasonNum for informado, retornamos apenas aquela temporada.
+  // Caso contrário, retornamos os dados básicos da série.
+  const action = seasonNum ? "get_series_info" : "get_series_info"; 
+  const url = `http://${server.host}/player_api.php?${auth}&action=${action}&series_id=${seriesId}`;
   
   const res = await fetch(url, { headers: { "user-agent": UA_PLAYER } });
   if (!res.ok) throw new Error(`IPTV API Error: ${res.status}`);
   
   const data = await res.json();
+  
+  // Se o usuário pediu uma temporada específica, filtramos os episódios no retorno
+  if (seasonNum && data && data.episodes) {
+    const seasonStr = String(seasonNum);
+    const filteredEpisodes: Record<string, any[]> = {};
+    if (data.episodes[seasonStr]) {
+      filteredEpisodes[seasonStr] = data.episodes[seasonStr];
+    }
+    data.episodes = filteredEpisodes;
+  }
+
   return data;
 }
 

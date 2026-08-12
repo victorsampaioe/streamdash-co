@@ -34,6 +34,7 @@ const Body = z.object({
   contentId: z.string().optional(),
   contentType: z.string().optional(),
   seriesId: z.string().optional(),
+  seasonNum: z.number().optional(),
   options: z.record(z.string(), z.unknown()).optional(),
 });
 
@@ -84,7 +85,7 @@ async function execute(input: z.infer<typeof Body>) {
     }
     case "get-series-seasons": {
       const { getSeriesDataOnCore } = await import("@/lib/iptv.server");
-      return await getSeriesDataOnCore(input.serverId!, input.seriesId!);
+      return await getSeriesDataOnCore(input.serverId!, input.seriesId!, input.seasonNum);
     }
     case "radar-job-step": {
       const { runRadarJobStep, enrichTmdbPending, ensureAutoRadarJob } = await import("@/lib/radar-jobs.server");
