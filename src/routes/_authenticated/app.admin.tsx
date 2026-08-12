@@ -40,7 +40,9 @@ import { PausedServersPanel } from "@/components/admin/paused-servers-panel";
 import { RadarAdminPanel } from "@/components/admin/radar-admin-panel";
 import { RadarClustersPanel } from "@/components/admin/radar-clusters-panel";
 import { ReactivationPanel } from "@/components/admin/reactivation-panel";
-import { UserCog, History, PlusCircle, UserCheck, UserRoundCog, Settings2, Trash2, ShoppingBag as StoreIcon, Wallet, ExternalLink } from "lucide-react";
+import { CircuitBreakerPanel } from "@/components/admin/circuit-breaker-panel";
+import { UserCog, History, PlusCircle, UserCheck, UserRoundCog, Settings2, Trash2, ShoppingBag as StoreIcon, Wallet, ExternalLink, Zap } from "lucide-react";
+
 
 
 import { StorageReportCard } from "@/components/storage-report-card";
