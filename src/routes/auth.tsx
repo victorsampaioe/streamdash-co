@@ -2,7 +2,7 @@ import { createFileRoute, Link, useNavigate, useSearch } from "@tanstack/react-r
 import { useEffect, useState } from "react";
 import { z } from "zod";
 import { supabase } from "@/integrations/supabase/client";
-import { notifyAdminSignup } from "@/lib/admin-telegram.functions";
+import { notifyAdminSignupFn as notifyAdminSignup } from "@/lib/admin-telegram.functions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";

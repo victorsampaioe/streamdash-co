@@ -39,6 +39,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { PausedServersPanel } from "@/components/admin/paused-servers-panel";
 import { RadarAdminPanel } from "@/components/admin/radar-admin-panel";
 import { RadarClustersPanel } from "@/components/admin/radar-clusters-panel";
+import { ReactivationPanel } from "@/components/admin/reactivation-panel";
 import { UserCog, History, PlusCircle, UserCheck, UserRoundCog, Settings2, Trash2, ShoppingBag as StoreIcon, Wallet, ExternalLink } from "lucide-react";
 
 
@@ -312,10 +313,11 @@ function AdminPage() {
 
       <Tabs defaultValue="overview" className="space-y-6">
         <div className="overflow-x-auto pb-2 scrollbar-hide">
-          <TabsList className="flex w-max min-w-full sm:grid sm:grid-cols-6 sm:w-full">
+          <TabsList className="flex w-max min-w-full sm:grid sm:grid-cols-7 sm:w-full">
             <TabsTrigger value="overview" className="px-4">Usuários</TabsTrigger>
             <TabsTrigger value="resellers" className="px-4">Revendedores</TabsTrigger>
             <TabsTrigger value="radar" className="px-4">Radar Inteligente</TabsTrigger>
+            <TabsTrigger value="reactivation" className="px-4">Reativação</TabsTrigger>
             <TabsTrigger value="store" className="px-4">Loja & Vendas</TabsTrigger>
             <TabsTrigger value="paused" className="px-4">DNS Pausados</TabsTrigger>
             <TabsTrigger value="storage" className="px-4">Armazenamento</TabsTrigger>
@@ -331,6 +333,10 @@ function AdminPage() {
         <TabsContent value="radar" className="space-y-6">
           <RadarAdminPanel />
           <RadarClustersPanel />
+        </TabsContent>
+
+        <TabsContent value="reactivation" className="space-y-6">
+          <ReactivationPanel />
         </TabsContent>
 
         <TabsContent value="overview" className="space-y-6">

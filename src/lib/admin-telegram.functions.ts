@@ -1,30 +1,23 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
+import { getReactivationStats, runReactivationCampaign, notifyAdminSignup } from "./admin-telegram.server";
 
-// Public server fn: called right after signUp on the client (no session yet).
-// Sends a notification only to the admin chat. Payload is minimal (name/email/phone).
-export const notifyAdminSignup = createServerFn({ method: "POST" })
-  .inputValidator((d: { email: string; name?: string; phone?: string; referralCode?: string }) =>
-    z.object({
-      email: z.string().email(),
-      name: z.string().max(120).optional(),
-      phone: z.string().max(40).optional(),
-      referralCode: z.string().max(20).optional(),
-    }).parse(d)
-  )
-  .handler(async ({ data }) => {
-    const { notifyAdmin } = await import("./admin-telegram.server");
-    const parts = [
-      "🆕 <b>Novo cadastro</b>",
-      `Nome: ${escapeHtml(data.name ?? "-")}`,
-      `E-mail: ${escapeHtml(data.email)}`,
-      `Telefone: ${escapeHtml(data.phone ?? "-")}`,
-    ];
-    if (data.referralCode) parts.push(`Indicação: <code>${escapeHtml(data.referralCode)}</code>`);
-    await notifyAdmin(parts.join("\n"));
-    return { ok: true };
+export const getReactivationInfo = createServerFn({ method: "GET" })
+  .handler(async () => {
+    return getReactivationStats();
   });
 
-function escapeHtml(s: string) {
-  return String(s).replace(/[<>&]/g, (c) => ({ "<": "&lt;", ">": "&gt;", "&": "&amp;" }[c]!));
-}
+export const triggerReactivationCampaign = createServerFn({ method: "POST" })
+  .inputValidator((data) => z.object({ manual: z.boolean().optional() }).parse(data))
+  .handler(async ({ data }) => {
+    return runReactivationCampaign(data.manual ?? false);
+  });
+
+export const notifySignup = createServerFn({ method: "POST" })
+  .inputValidator((data) => z.object({ email: z.string(), name: z.string(), phone: z.string(), referralCode: z.string().optional() }).parse(data))
+  .handler(async ({ data }) => {
+    return notifyAdminSignup(data);
+  });
+
+// Use the explicit export to avoid shadowing
+export const notifyAdminSignupFn = notifySignup;
