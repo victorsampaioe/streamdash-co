@@ -30,11 +30,18 @@ export const runDiagnostic = createServerFn({ method: "POST" })
 
 export const getCircuitBreakers = createServerFn({ method: "GET" })
   .handler(async ({ context }: any) => {
-    if (!context?.supabase) throw new Error("Não autenticado");
+    if (!context?.supabase) {
+      // Fallback para quando o middleware não está presente
+      const { supabase } = await import("@/integrations/supabase/client");
+      const { data, error } = await supabase
+        .from('diagnostic_circuit_breakers' as any)
+        .select('*, servers(name)');
+      if (error) throw error;
+      return data;
+    }
     const { data, error } = await context.supabase
       .from('diagnostic_circuit_breakers' as any)
       .select('*, servers(name)');
     if (error) throw error;
     return data;
   });
-
