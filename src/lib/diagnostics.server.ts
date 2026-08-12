@@ -124,7 +124,6 @@ async function executeDiagnostic(
     const globalTimeout = setTimeout(() => controller.abort(), DIAG_TIMEOUT_TOTAL);
     
     const tReq = Date.now();
-    const tReq = Date.now();
     // Tenta primeiro com User-Agent de Player (padrão)
     let response = await fetch(streamUrl, {
       headers: {
