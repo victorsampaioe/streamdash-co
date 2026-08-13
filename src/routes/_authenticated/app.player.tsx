@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, redirect } from "@tanstack/react-router";
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { getPlayerSettings, savePlayerSettings } from "@/lib/player.functions";
@@ -12,6 +12,21 @@ import { Layout, Palette, Type, Image as ImageIcon, Globe, Loader2, Save } from 
 import { supabase } from "@/integrations/supabase/client";
 
 export const Route = createFileRoute("/_authenticated/app/player")({
+  beforeLoad: async () => {
+    const { supabase } = await import("@/integrations/supabase/client");
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) throw redirect({ to: "/auth" });
+
+    const { data: roles } = await supabase
+      .from("user_roles")
+      .select("role")
+      .eq("user_id", user.id);
+
+    const isAdmin = roles?.some(r => r.role === "admin");
+    if (!isAdmin) {
+      throw redirect({ to: "/app" });
+    }
+  },
   component: PlayerAdminPage,
 });
 
