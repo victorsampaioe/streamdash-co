@@ -247,14 +247,14 @@ function PlayerPage() {
             </div>
           ) : (
             <div className="space-y-6">
-              <div className="flex items-center justify-between border-b border-white/5 pb-4">
+              <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-white/5 pb-4">
                 <h2 className="text-2xl font-bold">
                   {categories.find(c => c.category_id === selectedCategory)?.category_name}
                 </h2>
                 <div className="flex gap-2">
-                   <div className="relative">
+                   <div className="relative flex-1 md:flex-none">
                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-white/40" />
-                     <Input className="bg-white/5 border-white/10 pl-9 w-64 h-9 text-sm" placeholder="Buscar..." />
+                     <Input className="bg-white/5 border-white/10 pl-9 w-full md:w-64 h-9 text-sm" placeholder="Buscar..." />
                    </div>
                 </div>
               </div>
