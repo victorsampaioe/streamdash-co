@@ -338,8 +338,9 @@ function PlayerPage() {
         onClose={() => setIsSearchOpen(false)}
         token={token!}
         primaryColor={primaryColor}
-        onPlay={handlePlay}
+        onPlay={(item, type) => handlePlay(item.stream_id || item.series_id || item.id, type)}
       />
+
       
       {selectedSeriesInfo && (
         <SeriesDetails 
