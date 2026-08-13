@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
-import { Layout, Palette, Type, Image as ImageIcon, Globe, Loader2, Save } from "lucide-react";
+import { Layout, Palette, Type, Image as ImageIcon, Globe, Loader2, Save, Lock } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 
 export const Route = createFileRoute("/_authenticated/app/player")({
