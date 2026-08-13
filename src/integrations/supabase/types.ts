@@ -4110,6 +4110,7 @@ export type Database = {
         Args: { _id: string; _note?: string }
         Returns: undefined
       }
+      check_circuit_breaker: { Args: { p_server_id: string }; Returns: string }
       cleanup_diagnostic_slots: { Args: never; Returns: undefined }
       content_health_overview: { Args: { _server_id?: string }; Returns: Json }
       delete_server: { Args: { _id: string }; Returns: boolean }
