@@ -103,5 +103,5 @@ export const updateReseller = createServerFn({ method: "POST" })
       });
     }
 
-    return { success: true };
+    return { success: true, credits: newBalance };
   });
