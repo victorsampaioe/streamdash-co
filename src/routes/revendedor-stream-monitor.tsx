@@ -39,6 +39,11 @@ function ResellerPage() {
             <h2 className="text-xl font-bold mb-2">Painel Multi-nível</h2>
             <p className="text-muted-foreground text-sm">Gerencie toda a sua árvore de revendedores em uma interface intuitiva, com controle total sobre saldos e permissões.</p>
           </div>
+          <div className="p-6 bg-card/40 border border-border/60 rounded-2xl">
+            <Users className="text-primary h-10 w-10 mb-4" />
+            <h2 className="text-xl font-bold mb-2">Web Player White-label</h2>
+            <p className="text-muted-foreground text-sm">Ofereça para seus clientes finais um player de vídeo completo com sua marca, logo e cores, aumentando o valor percebido do seu serviço.</p>
+          </div>
         </div>
 
         <div className="bg-primary/10 border border-primary/20 rounded-2xl p-8 mb-16 text-center">

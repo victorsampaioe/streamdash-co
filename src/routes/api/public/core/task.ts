@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { z } from "zod";
+import { supabaseAdmin } from "@/integrations/supabase/client.server";
 
 /**
  * Endpoint executado no Core AWS (core.streammonitor.site).
@@ -25,6 +26,7 @@ const Body = z.object({
     "get-series-seasons",
     "telegram-broadcast",
     "radar-job-step",
+    "iptv-player-proxy",
   ]),
   serverId: z.string().uuid().optional(),
   serverIds: z.array(z.string().uuid()).optional(),
@@ -107,6 +109,24 @@ async function execute(input: z.infer<typeof Body>) {
     case "telegram-broadcast": {
       const { broadcastToTelegramSubscribers } = await import("@/lib/telegram-broadcast.server");
       return await broadcastToTelegramSubscribers(input.message!);
+    }
+    case "iptv-player-proxy": {
+      // Proxy de dados Xtream para o Web Player (CORS bypass)
+      const { getIptvCredentials } = await import("@/lib/iptv-credentials.server");
+      const { data: server } = await supabaseAdmin.from("servers").select("host").eq("id", input.serverId!).single();
+      if (!server) throw new Error("Servidor não encontrado");
+      const creds = await getIptvCredentials(input.serverId!);
+      if (!creds.username || !creds.password) throw new Error("Credenciais não configuradas");
+      
+      const auth = `username=${encodeURIComponent(creds.username)}&password=${encodeURIComponent(creds.password)}`;
+      const action = (input.options?.action as string) || "get_live_categories";
+      const extra = input.options?.contentId ? `&series_id=${input.options.contentId}&vod_id=${input.options.contentId}` : "";
+      const url = `http://${server.host}/player_api.php?${auth}&action=${action}${extra}`;
+      
+      const { UA_PLAYER } = await import("@/lib/iptv.server");
+      const res = await fetch(url, { headers: { "user-agent": UA_PLAYER } });
+      if (!res.ok) throw new Error(`IPTV Proxy Error: ${res.status}`);
+      return await res.json();
     }
   }
 }

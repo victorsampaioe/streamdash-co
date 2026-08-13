@@ -14,6 +14,7 @@ import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
 import { Route as RobotsDottxtRouteImport } from './routes/robots[.]txt'
 import { Route as RevendedorStreamMonitorRouteImport } from './routes/revendedor-stream-monitor'
 import { Route as ResetPasswordRouteImport } from './routes/reset-password'
+import { Route as PlayerRouteImport } from './routes/player'
 import { Route as MonitoramentoIptvRouteImport } from './routes/monitoramento-iptv'
 import { Route as MonitoramentoDnsRouteImport } from './routes/monitoramento-dns'
 import { Route as McpRouteImport } from './routes/mcp'
@@ -37,6 +38,7 @@ import { Route as AuthenticatedAppStoreRouteImport } from './routes/_authenticat
 import { Route as AuthenticatedAppResellerRouteImport } from './routes/_authenticated/app.reseller'
 import { Route as AuthenticatedAppRankingRouteImport } from './routes/_authenticated/app.ranking'
 import { Route as AuthenticatedAppRadarRouteImport } from './routes/_authenticated/app.radar'
+import { Route as AuthenticatedAppPlayerRouteImport } from './routes/_authenticated/app.player'
 import { Route as AuthenticatedAppPaginaRouteImport } from './routes/_authenticated/app.pagina'
 import { Route as AuthenticatedAppHubRouteImport } from './routes/_authenticated/app.hub'
 import { Route as AuthenticatedAppDetectorRouteImport } from './routes/_authenticated/app.detector'
@@ -96,6 +98,11 @@ const RevendedorStreamMonitorRoute = RevendedorStreamMonitorRouteImport.update({
 const ResetPasswordRoute = ResetPasswordRouteImport.update({
   id: '/reset-password',
   path: '/reset-password',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PlayerRoute = PlayerRouteImport.update({
+  id: '/player',
+  path: '/player',
   getParentRoute: () => rootRouteImport,
 } as any)
 const MonitoramentoIptvRoute = MonitoramentoIptvRouteImport.update({
@@ -214,6 +221,11 @@ const AuthenticatedAppRankingRoute = AuthenticatedAppRankingRouteImport.update({
 const AuthenticatedAppRadarRoute = AuthenticatedAppRadarRouteImport.update({
   id: '/radar',
   path: '/radar',
+  getParentRoute: () => AuthenticatedAppRoute,
+} as any)
+const AuthenticatedAppPlayerRoute = AuthenticatedAppPlayerRouteImport.update({
+  id: '/player',
+  path: '/player',
   getParentRoute: () => AuthenticatedAppRoute,
 } as any)
 const AuthenticatedAppPaginaRoute = AuthenticatedAppPaginaRouteImport.update({
@@ -423,6 +435,7 @@ export interface FileRoutesByFullPath {
   '/mcp': typeof McpRoute
   '/monitoramento-dns': typeof MonitoramentoDnsRoute
   '/monitoramento-iptv': typeof MonitoramentoIptvRoute
+  '/player': typeof PlayerRoute
   '/reset-password': typeof ResetPasswordRoute
   '/revendedor-stream-monitor': typeof RevendedorStreamMonitorRoute
   '/robots.txt': typeof RobotsDottxtRoute
@@ -443,6 +456,7 @@ export interface FileRoutesByFullPath {
   '/app/detector': typeof AuthenticatedAppDetectorRoute
   '/app/hub': typeof AuthenticatedAppHubRouteWithChildren
   '/app/pagina': typeof AuthenticatedAppPaginaRoute
+  '/app/player': typeof AuthenticatedAppPlayerRoute
   '/app/radar': typeof AuthenticatedAppRadarRoute
   '/app/ranking': typeof AuthenticatedAppRankingRoute
   '/app/reseller': typeof AuthenticatedAppResellerRoute
@@ -487,6 +501,7 @@ export interface FileRoutesByTo {
   '/mcp': typeof McpRoute
   '/monitoramento-dns': typeof MonitoramentoDnsRoute
   '/monitoramento-iptv': typeof MonitoramentoIptvRoute
+  '/player': typeof PlayerRoute
   '/reset-password': typeof ResetPasswordRoute
   '/revendedor-stream-monitor': typeof RevendedorStreamMonitorRoute
   '/robots.txt': typeof RobotsDottxtRoute
@@ -505,6 +520,7 @@ export interface FileRoutesByTo {
   '/app/alerts': typeof AuthenticatedAppAlertsRoute
   '/app/detector': typeof AuthenticatedAppDetectorRoute
   '/app/pagina': typeof AuthenticatedAppPaginaRoute
+  '/app/player': typeof AuthenticatedAppPlayerRoute
   '/app/radar': typeof AuthenticatedAppRadarRoute
   '/app/ranking': typeof AuthenticatedAppRankingRoute
   '/app/reseller': typeof AuthenticatedAppResellerRoute
@@ -551,6 +567,7 @@ export interface FileRoutesById {
   '/mcp': typeof McpRoute
   '/monitoramento-dns': typeof MonitoramentoDnsRoute
   '/monitoramento-iptv': typeof MonitoramentoIptvRoute
+  '/player': typeof PlayerRoute
   '/reset-password': typeof ResetPasswordRoute
   '/revendedor-stream-monitor': typeof RevendedorStreamMonitorRoute
   '/robots.txt': typeof RobotsDottxtRoute
@@ -571,6 +588,7 @@ export interface FileRoutesById {
   '/_authenticated/app/detector': typeof AuthenticatedAppDetectorRoute
   '/_authenticated/app/hub': typeof AuthenticatedAppHubRouteWithChildren
   '/_authenticated/app/pagina': typeof AuthenticatedAppPaginaRoute
+  '/_authenticated/app/player': typeof AuthenticatedAppPlayerRoute
   '/_authenticated/app/radar': typeof AuthenticatedAppRadarRoute
   '/_authenticated/app/ranking': typeof AuthenticatedAppRankingRoute
   '/_authenticated/app/reseller': typeof AuthenticatedAppResellerRoute
@@ -617,6 +635,7 @@ export interface FileRouteTypes {
     | '/mcp'
     | '/monitoramento-dns'
     | '/monitoramento-iptv'
+    | '/player'
     | '/reset-password'
     | '/revendedor-stream-monitor'
     | '/robots.txt'
@@ -637,6 +656,7 @@ export interface FileRouteTypes {
     | '/app/detector'
     | '/app/hub'
     | '/app/pagina'
+    | '/app/player'
     | '/app/radar'
     | '/app/ranking'
     | '/app/reseller'
@@ -681,6 +701,7 @@ export interface FileRouteTypes {
     | '/mcp'
     | '/monitoramento-dns'
     | '/monitoramento-iptv'
+    | '/player'
     | '/reset-password'
     | '/revendedor-stream-monitor'
     | '/robots.txt'
@@ -699,6 +720,7 @@ export interface FileRouteTypes {
     | '/app/alerts'
     | '/app/detector'
     | '/app/pagina'
+    | '/app/player'
     | '/app/radar'
     | '/app/ranking'
     | '/app/reseller'
@@ -744,6 +766,7 @@ export interface FileRouteTypes {
     | '/mcp'
     | '/monitoramento-dns'
     | '/monitoramento-iptv'
+    | '/player'
     | '/reset-password'
     | '/revendedor-stream-monitor'
     | '/robots.txt'
@@ -764,6 +787,7 @@ export interface FileRouteTypes {
     | '/_authenticated/app/detector'
     | '/_authenticated/app/hub'
     | '/_authenticated/app/pagina'
+    | '/_authenticated/app/player'
     | '/_authenticated/app/radar'
     | '/_authenticated/app/ranking'
     | '/_authenticated/app/reseller'
@@ -810,6 +834,7 @@ export interface RootRouteChildren {
   McpRoute: typeof McpRoute
   MonitoramentoDnsRoute: typeof MonitoramentoDnsRoute
   MonitoramentoIptvRoute: typeof MonitoramentoIptvRoute
+  PlayerRoute: typeof PlayerRoute
   ResetPasswordRoute: typeof ResetPasswordRoute
   RevendedorStreamMonitorRoute: typeof RevendedorStreamMonitorRoute
   RobotsDottxtRoute: typeof RobotsDottxtRoute
@@ -869,6 +894,13 @@ declare module '@tanstack/react-router' {
       path: '/reset-password'
       fullPath: '/reset-password'
       preLoaderRoute: typeof ResetPasswordRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/player': {
+      id: '/player'
+      path: '/player'
+      fullPath: '/player'
+      preLoaderRoute: typeof PlayerRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/monitoramento-iptv': {
@@ -1030,6 +1062,13 @@ declare module '@tanstack/react-router' {
       path: '/radar'
       fullPath: '/app/radar'
       preLoaderRoute: typeof AuthenticatedAppRadarRouteImport
+      parentRoute: typeof AuthenticatedAppRoute
+    }
+    '/_authenticated/app/player': {
+      id: '/_authenticated/app/player'
+      path: '/player'
+      fullPath: '/app/player'
+      preLoaderRoute: typeof AuthenticatedAppPlayerRouteImport
       parentRoute: typeof AuthenticatedAppRoute
     }
     '/_authenticated/app/pagina': {
@@ -1316,6 +1355,7 @@ interface AuthenticatedAppRouteChildren {
   AuthenticatedAppDetectorRoute: typeof AuthenticatedAppDetectorRoute
   AuthenticatedAppHubRoute: typeof AuthenticatedAppHubRouteWithChildren
   AuthenticatedAppPaginaRoute: typeof AuthenticatedAppPaginaRoute
+  AuthenticatedAppPlayerRoute: typeof AuthenticatedAppPlayerRoute
   AuthenticatedAppRadarRoute: typeof AuthenticatedAppRadarRoute
   AuthenticatedAppRankingRoute: typeof AuthenticatedAppRankingRoute
   AuthenticatedAppResellerRoute: typeof AuthenticatedAppResellerRoute
@@ -1339,6 +1379,7 @@ const AuthenticatedAppRouteChildren: AuthenticatedAppRouteChildren = {
   AuthenticatedAppDetectorRoute: AuthenticatedAppDetectorRoute,
   AuthenticatedAppHubRoute: AuthenticatedAppHubRouteWithChildren,
   AuthenticatedAppPaginaRoute: AuthenticatedAppPaginaRoute,
+  AuthenticatedAppPlayerRoute: AuthenticatedAppPlayerRoute,
   AuthenticatedAppRadarRoute: AuthenticatedAppRadarRoute,
   AuthenticatedAppRankingRoute: AuthenticatedAppRankingRoute,
   AuthenticatedAppResellerRoute: AuthenticatedAppResellerRoute,
@@ -1390,6 +1431,7 @@ const rootRouteChildren: RootRouteChildren = {
   McpRoute: McpRoute,
   MonitoramentoDnsRoute: MonitoramentoDnsRoute,
   MonitoramentoIptvRoute: MonitoramentoIptvRoute,
+  PlayerRoute: PlayerRoute,
   ResetPasswordRoute: ResetPasswordRoute,
   RevendedorStreamMonitorRoute: RevendedorStreamMonitorRoute,
   RobotsDottxtRoute: RobotsDottxtRoute,

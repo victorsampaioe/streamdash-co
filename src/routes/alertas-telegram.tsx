@@ -32,6 +32,15 @@ function AlertsPage() {
             </p>
           </section>
 
+          <section className="space-y-4">
+            <h2 className="text-2xl font-bold flex items-center gap-2">
+              <Zap className="text-primary" /> Diagnóstico com link de Player
+            </h2>
+            <p className="text-muted-foreground leading-relaxed">
+              Nossos alertas IPTV agora incluem botões de ação rápida para você abrir o Diagnóstico de Conteúdo ou testar o canal diretamente pelo seu Web Player White-label.
+            </p>
+          </section>
+
           <section className="bg-card/40 border border-border/60 rounded-xl p-6">
             <h3 className="font-bold mb-4 flex items-center gap-2 italic">Exemplo de Notificação:</h3>
             <div className="bg-[#1c242d] p-4 rounded-lg text-sm font-mono text-white/90 space-y-2 max-w-sm">

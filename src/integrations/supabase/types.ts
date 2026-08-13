@@ -2812,6 +2812,180 @@ export type Database = {
         }
         Relationships: []
       }
+      player_favorites: {
+        Row: {
+          content_id: string
+          content_type: string
+          created_at: string | null
+          id: string
+          session_id: string
+        }
+        Insert: {
+          content_id: string
+          content_type: string
+          created_at?: string | null
+          id?: string
+          session_id: string
+        }
+        Update: {
+          content_id?: string
+          content_type?: string
+          created_at?: string | null
+          id?: string
+          session_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "player_favorites_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "player_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      player_history: {
+        Row: {
+          content_id: string
+          content_type: string
+          duration_seconds: number | null
+          id: string
+          last_position_seconds: number | null
+          session_id: string
+          watched_at: string | null
+        }
+        Insert: {
+          content_id: string
+          content_type: string
+          duration_seconds?: number | null
+          id?: string
+          last_position_seconds?: number | null
+          session_id: string
+          watched_at?: string | null
+        }
+        Update: {
+          content_id?: string
+          content_type?: string
+          duration_seconds?: number | null
+          id?: string
+          last_position_seconds?: number | null
+          session_id?: string
+          watched_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "player_history_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "player_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      player_sessions: {
+        Row: {
+          created_at: string | null
+          device_info: Json | null
+          expires_at: string
+          id: string
+          last_active_at: string | null
+          last_ip: unknown
+          reseller_id: string
+          server_id: string
+          token: string
+          xtream_user: string
+        }
+        Insert: {
+          created_at?: string | null
+          device_info?: Json | null
+          expires_at: string
+          id?: string
+          last_active_at?: string | null
+          last_ip?: unknown
+          reseller_id: string
+          server_id: string
+          token: string
+          xtream_user: string
+        }
+        Update: {
+          created_at?: string | null
+          device_info?: Json | null
+          expires_at?: string
+          id?: string
+          last_active_at?: string | null
+          last_ip?: unknown
+          reseller_id?: string
+          server_id?: string
+          token?: string
+          xtream_user?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "player_sessions_reseller_id_fkey"
+            columns: ["reseller_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "player_sessions_server_id_fkey"
+            columns: ["server_id"]
+            isOneToOne: false
+            referencedRelation: "servers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      player_settings: {
+        Row: {
+          brand_name: string | null
+          created_at: string | null
+          custom_domain: string | null
+          id: string
+          is_active: boolean | null
+          logo_url: string | null
+          primary_color: string | null
+          profile_id: string
+          secondary_color: string | null
+          updated_at: string | null
+          welcome_message: string | null
+        }
+        Insert: {
+          brand_name?: string | null
+          created_at?: string | null
+          custom_domain?: string | null
+          id?: string
+          is_active?: boolean | null
+          logo_url?: string | null
+          primary_color?: string | null
+          profile_id: string
+          secondary_color?: string | null
+          updated_at?: string | null
+          welcome_message?: string | null
+        }
+        Update: {
+          brand_name?: string | null
+          created_at?: string | null
+          custom_domain?: string | null
+          id?: string
+          is_active?: boolean | null
+          logo_url?: string | null
+          primary_color?: string | null
+          profile_id?: string
+          secondary_color?: string | null
+          updated_at?: string | null
+          welcome_message?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "player_settings_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           avatar_url: string | null

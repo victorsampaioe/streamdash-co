@@ -47,6 +47,12 @@ function DnsPage() {
             </h2>
             <p className="text-muted-foreground">Nunca mais deixe um certificado expirar. Receba avisos com 7, 3 e 1 dia de antecedência.</p>
           </div>
+          <div className="space-y-4">
+            <h2 className="text-2xl font-bold flex items-center gap-2">
+              <CheckCircle2 className="text-primary" /> Hub de Ferramentas
+            </h2>
+            <p className="text-muted-foreground">Acesse ferramentas integradas de WHOIS, DNS Lookup, Ping Global e geradores de segurança diretamente no seu painel.</p>
+          </div>
         </div>
 
         <div className="bg-card/50 rounded-2xl p-8 border border-border/60 mb-16 text-center">
