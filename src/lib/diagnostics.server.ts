@@ -31,9 +31,47 @@ export type DiagnosticResult = {
   cached_at?: string;
 };
 
+/** Item 6 — Sinalização de cancelamento compartilhada entre instâncias (tabela diagnostic_locks). */
+function cancelKeyFor(serverId: string, contentId: string, contentType: string) {
+  return `cancel:diag:${serverId}:${contentId}:${contentType}`;
+}
+
+export async function requestDiagnosticCancel(
+  serverId: string,
+  contentId: string,
+  contentType: string,
+): Promise<{ ok: true }> {
+  const key = cancelKeyFor(serverId, contentId, contentType);
+  await (supabaseAdmin.from('diagnostic_locks') as any)
+    .upsert({ lock_key: key, created_at: new Date().toISOString() }, { onConflict: 'lock_key' });
+  console.log(`[diagnostic] Cancel requested for ${key}`);
+  return { ok: true };
+}
+
+async function isCancelRequested(key: string): Promise<boolean> {
+  const { data } = await supabaseAdmin
+    .from('diagnostic_locks')
+    .select('lock_key')
+    .eq('lock_key', key)
+    .maybeSingle();
+  return !!data;
+}
+
+async function clearCancelFlag(key: string) {
+  await supabaseAdmin.from('diagnostic_locks').delete().eq('lock_key', key);
+}
+
+export class DiagnosticCancelled extends Error {
+  constructor() {
+    super('Diagnóstico cancelado pelo usuário');
+    this.name = 'DiagnosticCancelled';
+  }
+}
+
 /** 
  * Item 4 — Cache e Deduplicação Global
  */
+
 export async function runContentDiagnostic(
   userId: string | null,
   serverId: string,
