@@ -581,6 +581,7 @@ function ResellerManagementSection() {
               value={search} 
               onChange={(e) => setSearch(e.target.value)} 
               className="pl-8" 
+              id="admin-reseller-search"
             />
           </div>
         </div>
