@@ -17,7 +17,8 @@ export type DiagnosticStep = {
 };
 
 export type DiagnosticResult = {
-  status: 'working' | 'slow' | 'unstable' | 'unavailable' | 'server_unavailable' | 'regional_issue' | 'client_issue';
+  status: 'working' | 'slow' | 'unstable' | 'unavailable' | 'server_unavailable' | 'regional_issue' | 'client_issue' | 'cancelled';
+
   ttfb_ms?: number;
   connection_ms?: number;
   bytes_read?: number;
