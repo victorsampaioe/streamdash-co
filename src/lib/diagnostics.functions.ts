@@ -24,7 +24,7 @@ export const runDiagnostic = createServerFn({ method: "POST" })
     try {
       const result = await runOnCore(
         "content-diagnostic",
-        data,
+        { ...data, userId },
         () => runContentDiagnostic(userId, data.serverId, data.contentId, data.contentType)
       );
 

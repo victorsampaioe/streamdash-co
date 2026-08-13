@@ -33,6 +33,7 @@ const Body = z.object({
   message: z.string().min(1).max(3500).optional(),
   contentId: z.string().optional(),
   contentType: z.string().optional(),
+  userId: z.string().uuid().nullable().optional(),
   seriesId: z.string().optional(),
   seasonNum: z.number().optional(),
   options: z.record(z.string(), z.unknown()).optional(),
@@ -80,8 +81,7 @@ async function execute(input: z.infer<typeof Body>) {
     }
     case "content-diagnostic": {
       const { runContentDiagnostic } = await import("@/lib/diagnostics.server");
-      // O Core não tem userId, usamos um placeholder ou permitimos null se a função suportar
-      return await runContentDiagnostic("core-system", input.serverId!, input.contentId!, input.contentType as any);
+      return await runContentDiagnostic(input.userId ?? null, input.serverId!, input.contentId!, input.contentType as any);
     }
     case "get-series-seasons": {
       const { getSeriesDataOnCore } = await import("@/lib/iptv.server");
