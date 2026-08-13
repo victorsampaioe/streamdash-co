@@ -121,28 +121,43 @@ async function executeDiagnostic(
     // 4, 5, 6, 7. Requisição e Streaming
     updateStep(4, 'running');
     const controller = new AbortController();
-    const globalTimeout = setTimeout(() => controller.abort(), DIAG_TIMEOUT_TOTAL);
+    
+    // Timeout de conexão (8s) vs Timeout total (15s)
+    // DIAG_TIMEOUT_TOTAL = 15s (global para o diagnóstico todo)
+    // DIAG_TIMEOUT_CONNECT = 8s (específico para o fetch inicial)
+    
+    const connectTimeout = setTimeout(() => controller.abort(), DIAG_TIMEOUT_CONNECT);
     
     const tReq = Date.now();
-    // Tenta primeiro com User-Agent de Player (padrão)
-    let response = await fetch(streamUrl, {
-      headers: {
-        'User-Agent': UA_PLAYER,
-        'Range': `bytes=0-${MAX_BYTES}`
-      },
-      signal: controller.signal
-    });
-
-    // Se der 403, tenta com VLC como fallback (alguns painéis bloqueiam UA de Player em certas categorias)
-    if (response.status === 403) {
-      const { UA_VLC } = await import("./iptv.server");
+    let response: Response;
+    try {
+      // Tenta primeiro com User-Agent de Player (padrão)
       response = await fetch(streamUrl, {
         headers: {
-          'User-Agent': UA_VLC,
+          'User-Agent': UA_PLAYER,
           'Range': `bytes=0-${MAX_BYTES}`
         },
         signal: controller.signal
       });
+
+      // Se der 403, tenta com VLC como fallback
+      if (response.status === 403) {
+        const { UA_VLC } = await import("./iptv.server");
+        response = await fetch(streamUrl, {
+          headers: {
+            'User-Agent': UA_VLC,
+            'Range': `bytes=0-${MAX_BYTES}`
+          },
+          signal: controller.signal
+        });
+      }
+    } catch (fetchErr: any) {
+      if (fetchErr.name === 'AbortError') {
+        throw new Error(`Timeout de conexão (${DIAG_TIMEOUT_CONNECT/1000}s) excedido ao tentar acessar o stream.`);
+      }
+      throw fetchErr;
+    } finally {
+      clearTimeout(connectTimeout);
     }
 
     if (!response.ok) {
@@ -172,12 +187,32 @@ async function executeDiagnostic(
     let bytesReceived = 0;
     const tStreamStart = Date.now();
     
-    while (bytesReceived < TARGET_BYTES) {
-      const { done, value } = await reader.read();
-      if (done) break;
-      bytesReceived += value.length;
-      if (bytesReceived >= MAX_BYTES) break;
+    // Timer para o timeout total (15s) durante o consumo do corpo
+    const streamController = new AbortController();
+    const remainingTime = Math.max(1000, DIAG_TIMEOUT_TOTAL - (Date.now() - tStart));
+    const streamTimeout = setTimeout(() => streamController.abort(), remainingTime);
+    
+    try {
+      while (bytesReceived < TARGET_BYTES) {
+        // Checagem manual de timeout já que reader.read() não aceita signal diretamente em todos os ambientes
+        if (Date.now() - tStart > DIAG_TIMEOUT_TOTAL) {
+          throw new Error(`Timeout total (${DIAG_TIMEOUT_TOTAL/1000}s) atingido durante a leitura da mídia.`);
+        }
+        
+        const { done, value } = await reader.read();
+        if (done) break;
+        bytesReceived += value.length;
+        if (bytesReceived >= MAX_BYTES) break;
+      }
+    } catch (readErr: any) {
+      if (readErr.name === 'AbortError' || readErr.message.includes('Timeout')) {
+        throw new Error(`Timeout total (${DIAG_TIMEOUT_TOTAL/1000}s) atingido durante a leitura da mídia.`);
+      }
+      throw readErr;
+    } finally {
+      clearTimeout(streamTimeout);
     }
+    
     const connectionTime = Date.now() - tStreamStart;
     updateStep(6, 'success', `${Math.round(bytesReceived / 1024)}KB lidos`);
 
@@ -189,7 +224,6 @@ async function executeDiagnostic(
     // 8. Encerrar
     updateStep(8, 'running');
     await reader.cancel();
-    clearTimeout(globalTimeout);
     updateStep(8, 'success');
 
     // 9. Classificar
