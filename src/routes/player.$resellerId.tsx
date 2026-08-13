@@ -418,7 +418,7 @@ function PlayerPage() {
           <div className="h-16 px-6 flex items-center justify-between bg-gradient-to-b from-black/80 to-transparent absolute top-0 left-0 w-full z-10">
             <div className="flex items-center gap-4">
               <Button variant="ghost" size="icon" onClick={handleClosePlayer} className="text-white hover:bg-white/10">
-                <ChevronLeft className="h-6 w-6" />
+                <X className="h-6 w-6" />
               </Button>
               <h2 className="font-bold">{selectedContent?.name || "Reproduzindo..."}</h2>
             </div>
