@@ -6,7 +6,8 @@ import {
   loginXtreamClient, 
   getPlayerCatalog, 
   validatePlayerSession,
-  getPlayerStreamUrl 
+  getPlayerStreamUrl,
+  getPlayerServers
 } from "@/lib/player.functions";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -512,11 +513,9 @@ function LoginForm({ resellerId, settings, onLogin, primaryColor, secondaryColor
   const [servers, setServers] = useState<any[]>([]);
 
   useEffect(() => {
-    supabase
-      .from("servers")
-      .select("id, name, host")
-      .eq("owner_id", resellerId)
-      .then(({ data }) => setServers(data || []));
+    getPlayerServers({ data: { resellerId } })
+      .then((list: any) => setServers(list || []))
+      .catch(() => setServers([]));
   }, [resellerId]);
 
   const loginMutation = useMutation({
