@@ -272,8 +272,9 @@ function PlayerPage() {
             <HeroBanner 
               item={homeData.featured} 
               primaryColor={primaryColor}
-              onPlay={(item) => handlePlay(item.stream_id || item.series_id, (item.stream_type === "movie" || item.stream_type === "vod") ? "movie" : (item.stream_type === "series" ? "series" : "live"))}
+              onPlay={(item) => handlePlay(item.stream_id || item.series_id, item.stream_type === "series" ? "series" : (item.stream_type === "live" ? "live" : "movie"))}
             />
+
             <ContentRow 
               title="Novidades" 
               items={homeData.newReleases} 
