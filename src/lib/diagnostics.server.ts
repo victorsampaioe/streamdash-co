@@ -94,8 +94,10 @@ export async function runContentDiagnostic(
     .limit(1)
     .maybeSingle();
 
-  if (cached) {
+  // Item 6 — cancelamentos nunca são servidos do cache
+  if (cached && cached.status !== 'cancelled') {
     const isSuccess = ['working', 'slow', 'unstable'].includes(cached.status);
+
     const createdAt = cached.created_at ? new Date(cached.created_at as string).getTime() : Date.now();
     const ageSeconds = Math.floor((Date.now() - createdAt) / 1000);
     
