@@ -34,7 +34,14 @@ export const savePlayerSettings = createServerFn({ method: "POST" })
   }).parse(data))
   .handler(async ({ data, context }) => {
     const userId = (context as any).userId;
-    if (!userId) throw new Error("Não autorizado");
+    const userClaims = (context as any).claims;
+    
+    // Verificar se é admin através dos claims ou de uma consulta rápida
+    const isAdmin = userClaims?.role === 'admin' || userClaims?.app_metadata?.role === 'admin';
+    
+    if (!userId || !isAdmin) {
+      throw new Error("Acesso restrito apenas para administradores durante a fase de testes.");
+    }
 
     // Garantir que o revendedor só edita suas próprias configurações
     const { data: result, error } = await supabaseAdmin
