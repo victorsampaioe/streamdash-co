@@ -16,16 +16,16 @@ import poster_stAsset from "@/assets/radar/st.jpg.asset.json";
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "Stream Monitor | Monitoramento IPTV, DNS e Servidores em Tempo Real" },
-      { name: "description", content: "Monitore servidores IPTV, DNS e infraestrutura 24 horas. Receba alertas inteligentes no Telegram e descubra problemas antes dos seus clientes." },
-      { property: "og:title", content: "Stream Monitor | Monitoramento IPTV, DNS e Servidores em Tempo Real" },
-      { property: "og:description", content: "Monitore servidores IPTV, DNS e infraestrutura 24 horas. Receba alertas inteligentes no Telegram e descubra problemas antes dos seus clientes." },
+      { title: "Stream Monitor | Monitoramento IPTV, DNS e Servidores" },
+      { name: "description", content: "Plataforma de monitoramento 24h para servidores IPTV, DNS e infraestrutura. Receba alertas inteligentes no Telegram e evite reclamações." },
+      { property: "og:title", content: "Stream Monitor | Monitoramento IPTV e DNS" },
+      { property: "og:description", content: "Monitore servidores IPTV e DNS 24 horas. Alertas no Telegram e diagnóstico inteligente." },
       { property: "og:type", content: "website" },
       { property: "og:url", content: "https://streammonitor.site" },
       { property: "og:image", content: "https://storage.googleapis.com/gpt-engineer-file-uploads/zowG5KmEoBQiJwfUQDz2ZUEdQ2a2/social-images/social-1783131758542-ChatGPT_Image_3_de_jul._de_2026,_23_22_19.webp" },
       { name: "twitter:card", content: "summary_large_image" },
-      { name: "twitter:title", content: "Stream Monitor | Monitoramento IPTV, DNS e Servidores em Tempo Real" },
-      { name: "twitter:description", content: "Monitore servidores IPTV, DNS e infraestrutura 24 horas. Receba alertas inteligentes no Telegram e descubra problemas antes dos seus clientes." },
+      { name: "twitter:title", content: "Stream Monitor | Monitoramento Profissional" },
+      { name: "twitter:description", content: "Evite quedas no seu servidor IPTV com nosso monitoramento inteligente." },
       { name: "twitter:image", content: "https://storage.googleapis.com/gpt-engineer-file-uploads/zowG5KmEoBQiJwfUQDz2ZUEdQ2a2/social-images/social-1783131758542-ChatGPT_Image_3_de_jul._de_2026,_23_22_19.webp" },
     ],
   }),
@@ -326,7 +326,7 @@ function RadarShowcase() {
                   )}
                   
                   {item.available && (
-                    <div className="absolute bottom-2 left-2 flex items-center gap-1 text-[10px] font-bold text-success drop-shadow-md">
+                    <div className="absolute bottom-2 left-2 flex items-center gap-1 text-[10px] font-bold text-success drop-shadow-[0_1px_1px_rgba(0,0,0,0.8)]">
                       <span className="h-1.5 w-1.5 rounded-full bg-success animate-pulse" />
                       🟢 DISPONÍVEL
                     </div>
@@ -373,7 +373,7 @@ function RadarShowcase() {
             {series.map((item, idx) => (
               <div key={idx} className="group relative rounded-xl border border-border/60 bg-card/40 overflow-hidden transition-all hover:border-primary/40 hover:-translate-y-1 hover:shadow-2xl hover:shadow-primary/10">
                 <div className="aspect-[2/3] relative overflow-hidden">
-                  <img src={item.image} alt={item.title} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" />
+                  <img src={item.image} alt={item.title} width={300} height={450} loading="lazy" className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" />
                   <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent opacity-60" />
                   
                   {item.tag && (
