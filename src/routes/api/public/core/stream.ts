@@ -1,6 +1,48 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 
+const CORS = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Methods": "GET, OPTIONS",
+  "Access-Control-Allow-Headers": "Range, Content-Type",
+  "Access-Control-Expose-Headers": "Content-Length, Content-Range, Accept-Ranges, Content-Type",
+};
+
+function b64urlEncode(value: string) {
+  return Buffer.from(value, "utf8").toString("base64url");
+}
+function b64urlDecode(value: string) {
+  return Buffer.from(value, "base64url").toString("utf8");
+}
+
+function contentTypeFor(ext: string, upstream: string | null) {
+  if (ext === "m3u8") return "application/vnd.apple.mpegurl";
+  if (ext === "ts") return "video/mp2t";
+  if (ext === "mp4") return "video/mp4";
+  if (ext === "mkv") return "video/x-matroska";
+  return upstream ?? "application/octet-stream";
+}
+
+/** Reescreve as URLs internas de um manifesto HLS para passarem pelo proxy. */
+function rewriteManifest(manifest: string, upstreamUrl: string, token: string) {
+  const baseUrl = new URL(upstreamUrl);
+  const toProxy = (raw: string) => {
+    const abs = new URL(raw, baseUrl).toString();
+    return `/api/public/core/stream?token=${token}&u=${b64urlEncode(abs)}`;
+  };
+  return manifest
+    .split("\n")
+    .map((line) => {
+      const trimmed = line.trim();
+      if (!trimmed) return line;
+      if (trimmed.startsWith("#")) {
+        return line.replace(/URI="([^"]+)"/g, (_m, uri) => `URI="${toProxy(uri)}"`);
+      }
+      return toProxy(trimmed);
+    })
+    .join("\n");
+}
+
 export const Route = createFileRoute("/api/public/core/stream")({
   server: {
     handlers: {
@@ -8,10 +50,13 @@ export const Route = createFileRoute("/api/public/core/stream")({
         const url = new URL(request.url);
         const token = url.searchParams.get("token");
         const sid = url.searchParams.get("sid");
-        const ext = url.searchParams.get("ext") || "ts";
+        const passthrough = url.searchParams.get("u");
+        const ext = (url.searchParams.get("ext") || "ts").toLowerCase();
         const type = url.searchParams.get("type") || "live";
 
-        if (!token || !sid) return new Response("Missing parameters", { status: 400 });
+        if (!token || (!sid && !passthrough)) {
+          return new Response("Missing parameters", { status: 400, headers: CORS });
+        }
 
         // 1. Validar sessão
         const { data: session, error: sessionErr } = await supabaseAdmin
@@ -21,84 +66,118 @@ export const Route = createFileRoute("/api/public/core/stream")({
           .gt("expires_at", new Date().toISOString())
           .single();
 
-        if (sessionErr || !session) return new Response("Unauthorized", { status: 401 });
+        if (sessionErr || !session) return new Response("Unauthorized", { status: 401, headers: CORS });
 
-        // 2. Obter credenciais e host do servidor
+        // 2. Host do servidor
         const { data: server } = await supabaseAdmin
           .from("servers")
           .select("host")
           .eq("id", session.server_id)
           .single();
 
-        if (!server) return new Response("Server not found", { status: 404 });
+        if (!server) return new Response("Server not found", { status: 404, headers: CORS });
 
-        const { getPlayerCredentials } = await import("@/lib/player.server");
-        const creds = await getPlayerCredentials(session as any);
+        const { getPlayerCredentials, hostCandidates } = await import("@/lib/player.server");
+        const { UA_PLAYER, UA_VLC } = await import("@/lib/iptv.server");
 
-        // 3. Montar URL original do Xtream
-        // Live: /live/user/pass/id.ts
-        // Movie: /movie/user/pass/id.mp4 (ou ext)
-        // Series: /series/user/pass/id.mp4
-        const streamPath = type === "live" 
-          ? `live/${creds.username}/${creds.password}/${sid}.${ext}`
-          : `${type === 'movie' ? 'movie' : 'series'}/${creds.username}/${creds.password}/${sid}.${ext}`;
-        
-        const targetUrl = `http://${server.host}/${streamPath}`;
-
-        // 4. Proxy com headers de Player
-        const { UA_PLAYER } = await import("@/lib/iptv.server");
-        
-        try {
-          const response = await fetch(targetUrl, {
-            headers: { "User-Agent": UA_PLAYER }
-          });
-
-          if (!response.ok) {
-            return new Response(`Upstream error: ${response.status}`, { status: response.status });
+        // 3. Montar a lista de URLs candidatas
+        let candidates: string[];
+        if (passthrough) {
+          // Segmento/manifesto interno (HLS): só permitimos o mesmo host do servidor.
+          const abs = b64urlDecode(passthrough);
+          const allowed = hostCandidates(server.host).map((c) => new URL(c).hostname);
+          if (!allowed.includes(new URL(abs).hostname)) {
+            return new Response("Forbidden host", { status: 403, headers: CORS });
           }
-
-          // Repassar stream com headers apropriados
-          const newHeaders = new Headers();
-          
-          // Headers de cache e performance
-          newHeaders.set("Access-Control-Allow-Origin", "*");
-          newHeaders.set("Access-Control-Allow-Methods", "GET, OPTIONS");
-          newHeaders.set("Cache-Control", "no-cache");
-          
-          // Repassar Content-Type original ou forçar se necessário
-          const contentType = response.headers.get("Content-Type");
-          if (ext === "ts") {
-            newHeaders.set("Content-Type", "video/mp2t");
-          } else if (contentType) {
-            newHeaders.set("Content-Type", contentType);
+          candidates = [abs];
+        } else {
+          const creds = await getPlayerCredentials(session as any);
+          if (!creds.username || !creds.password) {
+            return new Response("Credenciais indisponíveis", { status: 401, headers: CORS });
           }
-
-          // Suporte a Range Requests (206 Partial Content) para Filmes/Séries
-          const contentRange = response.headers.get("Content-Range");
-          const contentLength = response.headers.get("Content-Length");
-          const acceptRanges = response.headers.get("Accept-Ranges");
-          
-          if (contentRange) newHeaders.set("Content-Range", contentRange);
-          if (contentLength) newHeaders.set("Content-Length", contentLength);
-          if (acceptRanges) newHeaders.set("Accept-Ranges", acceptRanges);
-
-          return new Response(response.body, {
-            status: response.status,
-            headers: newHeaders
+          const folder = type === "live" ? "live" : type === "movie" ? "movie" : "series";
+          const user = encodeURIComponent(creds.username);
+          const pass = encodeURIComponent(creds.password);
+          candidates = hostCandidates(server.host).flatMap((base) => {
+            const paths = [`${folder}/${user}/${pass}/${sid}.${ext}`];
+            // Live sem pasta é aceito por vários painéis Xtream.
+            if (type === "live") paths.push(`${user}/${pass}/${sid}`);
+            return paths.map((p) => `${base}/${p}`);
           });
-        } catch (e: any) {
-          return new Response(`Proxy error: ${e.message}`, { status: 500 });
         }
-      },
-      OPTIONS: async () => {
-        return new Response(null, {
-          headers: {
-            "Access-Control-Allow-Origin": "*",
-            "Access-Control-Allow-Methods": "GET, OPTIONS",
-            "Access-Control-Allow-Headers": "*"
+
+        const range = request.headers.get("range");
+        const headers: Record<string, string> = {
+          "User-Agent": passthrough || type === "live" ? UA_PLAYER : UA_VLC,
+          Accept: "*/*",
+        };
+        if (range) headers["Range"] = range;
+
+        let upstream: Response | null = null;
+        let usedUrl = "";
+        let lastStatus = 0;
+
+        for (const candidate of candidates) {
+          try {
+            const res = await fetch(candidate, { headers, redirect: "follow" });
+            lastStatus = res.status;
+            console.log(
+              `[stream-proxy] tentativa url=${candidate.replace(/\/\/[^/]+\/[^/]+\/[^/]+\/[^/]+\//, "//***/")} status=${res.status} ct=${res.headers.get("content-type")} len=${res.headers.get("content-length") ?? "chunked"}`
+            );
+            if (res.ok || res.status === 206) {
+              upstream = res;
+              usedUrl = res.url || candidate;
+              break;
+            }
+            await res.body?.cancel();
+          } catch (e) {
+            console.warn(`[stream-proxy] falha de rede: ${(e as Error).message}`);
           }
-        });
-      }
-    }
-  }
+        }
+
+        if (!upstream) {
+          return new Response(`Upstream error: ${lastStatus || "sem resposta"}`, {
+            status: lastStatus || 502,
+            headers: CORS,
+          });
+        }
+
+        const upstreamType = upstream.headers.get("Content-Type");
+        const isManifest =
+          /mpegurl|m3u/i.test(upstreamType ?? "") || /\.m3u8(\?|$)/i.test(usedUrl);
+
+        // 4a. Manifesto HLS → reescreve segmentos para o proxy
+        if (isManifest) {
+          const text = await upstream.text();
+          const rewritten = rewriteManifest(text, usedUrl, token);
+          console.log(`[stream-proxy] manifesto HLS reescrito bytes=${text.length} linhas=${text.split("\n").length}`);
+          return new Response(rewritten, {
+            status: 200,
+            headers: {
+              ...CORS,
+              "Content-Type": "application/vnd.apple.mpegurl",
+              "Cache-Control": "no-cache",
+            },
+          });
+        }
+
+        // 4b. Mídia binária (ts / mp4 / mkv) → repassa com suporte a Range
+        const out = new Headers(CORS);
+        out.set("Cache-Control", "no-cache");
+        out.set("Content-Type", contentTypeFor(ext, upstreamType));
+        for (const h of ["Content-Range", "Content-Length", "Accept-Ranges"]) {
+          const v = upstream.headers.get(h);
+          if (v) out.set(h, v);
+        }
+        if (!out.has("Accept-Ranges") && type !== "live") out.set("Accept-Ranges", "bytes");
+
+        console.log(
+          `[stream-proxy] entregando type=${type} ext=${ext} status=${upstream.status} ct=${out.get("Content-Type")} range=${range ?? "-"} len=${out.get("Content-Length") ?? "stream"}`
+        );
+
+        return new Response(upstream.body, { status: upstream.status, headers: out });
+      },
+      OPTIONS: async () => new Response(null, { status: 204, headers: CORS }),
+    },
+  },
 });

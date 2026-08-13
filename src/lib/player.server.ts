@@ -85,3 +85,83 @@ export async function fetchXtreamCatalog(
     clearTimeout(timer);
   }
 }
+
+/* ------------------------------------------------------------------ */
+/* Login Xtream (reaproveita a inteligência IPTV + fallback)           */
+/* ------------------------------------------------------------------ */
+
+export type XtreamLoginResult = { login_ok: boolean; account: unknown; error: string | null; base: string | null };
+
+/** Bases candidatas para um host cadastrado em qualquer formato. */
+export function hostCandidates(host: string): string[] {
+  const clean = host.trim().replace(/\/+$/, "");
+  if (/^https:\/\//i.test(clean)) return [clean, clean.replace(/^https:/i, "http:")];
+  if (/^http:\/\//i.test(clean)) return [clean, clean.replace(/^http:/i, "https:")];
+  return [`http://${clean}`, `https://${clean}`];
+}
+
+/**
+ * Valida o login Xtream do cliente final.
+ * 1) usa a mesma inteligência já existente (probeXtream: 3 UAs, http/https,
+ *    player_api + panel_api);
+ * 2) se ela não confirmar, tenta um fallback direto em todas as combinações
+ *    de base/rota/User-Agent antes de declarar falha.
+ */
+export async function validateXtreamLogin(
+  host: string,
+  username: string,
+  password: string,
+): Promise<XtreamLoginResult> {
+  const { probeXtream, UA_PLAYER, UA_BROWSER, UA_VLC } = await import("./iptv.server");
+
+  let probeError: string | null = null;
+  try {
+    const probe: any = await probeXtream(host, username, password, { catalogMode: "auth" });
+    if (probe?.login_ok) return { login_ok: true, account: probe.account ?? null, error: null, base: null };
+    probeError = probe?.error ?? null;
+  } catch (e) {
+    probeError = String((e as Error)?.message ?? e);
+  }
+
+  // Fallback: varre bases (http/https), rotas e User-Agents.
+  const auth = `username=${encodeURIComponent(username)}&password=${encodeURIComponent(password)}`;
+  const paths = ["player_api.php", "panel_api.php"];
+  const uas = [UA_PLAYER, UA_BROWSER, UA_VLC];
+  let lastError = probeError;
+
+  for (const base of hostCandidates(host)) {
+    for (const path of paths) {
+      for (const ua of uas) {
+        const url = `${base}/${path}?${auth}`;
+        const ctl = new AbortController();
+        const timer = setTimeout(() => ctl.abort(), 12_000);
+        try {
+          const res = await fetch(url, {
+            headers: { "user-agent": ua, accept: "application/json, text/plain, */*" },
+            redirect: "follow",
+            signal: ctl.signal,
+          });
+          const text = await res.text();
+          if (!res.ok) {
+            lastError = `HTTP ${res.status} em ${base}/${path}`;
+            continue;
+          }
+          let json: any = null;
+          try { json = JSON.parse(text); } catch { lastError = `Resposta não-JSON em ${base}/${path}`; continue; }
+          const ui = json?.user_info ?? json?.user ?? null;
+          if (ui && String(ui.auth ?? "1") !== "0" && String(ui.status ?? "Active").toLowerCase() !== "banned") {
+            console.log(`[player-login] fallback OK base=${base} path=${path}`);
+            return { login_ok: true, account: ui, error: null, base };
+          }
+          lastError = "Usuário ou senha inválidos.";
+        } catch (e) {
+          lastError = String((e as Error)?.message ?? e).slice(0, 160);
+        } finally {
+          clearTimeout(timer);
+        }
+      }
+    }
+  }
+
+  return { login_ok: false, account: null, error: lastError ?? "Falha na autenticação Xtream", base: null };
+}

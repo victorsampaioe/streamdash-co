@@ -83,19 +83,29 @@ export const loginXtreamClient = createServerFn({ method: "POST" })
     if (!server) throw new Error("Servidor não encontrado");
 
     const { runOnCore } = await import("./core-api.server");
-    const { probeXtream } = await import("./iptv.server");
+    const { validateXtreamLogin } = await import("./player.server");
 
-    // Validação de login simples (catalogMode: "auth")
-    const authResult: any = await runOnCore("iptv-validate" as any, {
+    // Reutiliza a inteligência IPTV já existente (probeXtream) com fallback local.
+    const local = () => validateXtreamLogin(server.host, data.username, data.password);
+
+    let authResult: any = await runOnCore("iptv-validate" as any, {
       host: server.host,
       username: data.username,
       password: data.password,
       options: { catalogMode: "auth" }
-    }, () => probeXtream(server.host, data.username, data.password, { catalogMode: "auth" }));
+    }, local);
 
-    if (!authResult || !authResult.login_ok) {
+    // Se o Core respondeu mas não confirmou o login, tenta o fallback local
+    // (bases http/https, player_api/panel_api, múltiplos User-Agents).
+    if (!authResult?.login_ok) {
+      console.warn(`[player-login] core não validou host=${server.host}: ${authResult?.error ?? "sem detalhe"} — tentando fallback local`);
+      authResult = await local();
+    }
+
+    if (!authResult?.login_ok) {
       throw new Error(authResult?.error || "Falha na autenticação Xtream");
     }
+
 
     const token = crypto.randomUUID();
     const expiresAt = new Date();
@@ -240,11 +250,12 @@ export const getPlayerStreamUrl = createServerFn({ method: "POST" })
 
     if (error || !session) throw new Error("Sessão inválida");
 
-    const { coreApiUrl } = await import("./core-api.server");
-    const coreBase = coreApiUrl() ?? "";
+    // Proxy same-origin: evita CORS/mixed-content e resolve host + credenciais
+    // a partir do token da sessão.
+    const url = `/api/public/core/stream?token=${data.token}&sid=${encodeURIComponent(data.streamId)}&ext=${encodeURIComponent(data.extension)}&type=${data.type}`;
+    console.log(`[getPlayerStreamUrl] server=${session.server_id} type=${data.type} sid=${data.streamId} ext=${data.extension} proxy=${url.split("token=")[0]}token=***`);
+    return url;
 
-    // O proxy resolve host e credenciais a partir do token da sessão.
-    return `${coreBase}/api/public/core/stream?token=${data.token}&sid=${data.streamId}&ext=${data.extension}&type=${data.type}`;
   });
 
 /**
