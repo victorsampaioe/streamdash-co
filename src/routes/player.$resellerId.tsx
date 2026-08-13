@@ -270,7 +270,7 @@ function LoginForm({ resellerId, settings, onLogin, primaryColor, secondaryColor
 
   const loginMutation = useMutation({
     mutationFn: loginXtreamClient,
-    onSuccess: onLogin,
+    onSuccess: (data: any) => onLogin(data),
     onError: (err: any) => toast.error(err.message || "Erro ao conectar")
   });
 
