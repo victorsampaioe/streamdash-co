@@ -13,6 +13,7 @@ export const Route = createFileRoute('/blog')({
 
 function BlogPage() {
   const posts = [
+    { slug: 'como-evitar-queda-iptv', title: '🚀 Novo Módulo: Player Inteligente (Web Player do Stream Monitor)', date: '13/08/2026', category: 'Novidade' },
     { slug: 'como-evitar-queda-iptv', title: 'Como evitar queda IPTV: Guia Definitivo', date: '10/08/2026', category: 'IPTV' },
     { slug: 'por-que-monitorar-servidores', title: 'Por que monitorar servidores é vital para seu negócio', date: '08/08/2026', category: 'Negócios' },
     { slug: 'diferenca-dns-servidor', title: 'Diferença entre queda de DNS e queda de Servidor', date: '05/08/2026', category: 'Técnico' },

@@ -32,6 +32,13 @@ function BlogPost() {
           </p>
 
           <section className="space-y-4">
+            <h2 className="text-2xl font-bold flex items-center gap-2">🚀 Novo Módulo: Player Inteligente</h2>
+            <p>
+              O Web Player do Stream Monitor foi reformulado para oferecer uma experiência premium, inspirada em grandes plataformas como Netflix e Prime Video. Com busca global inteligente, Hero banners cinematográficos e carregamento progressivo, ele transforma sua revenda em um serviço de streaming profissional.
+            </p>
+          </section>
+
+          <section className="space-y-4">
             <h2 className="text-2xl font-bold flex items-center gap-2"><Zap className="text-primary" /> 1. O Monitoramento de Latência</h2>
             <p>
               Muitas vezes o servidor não está "off", mas a latência está tão alta que o buffering torna o serviço impossível de usar. Monitorar a latência em tempo real permite que você identifique gargalos de rede antes que eles virem uma queda total.

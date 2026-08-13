@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
-import { Layout, Palette, Type, Image as ImageIcon, Globe, Loader2, Save } from "lucide-react";
+import { Layout, Palette, Type, Image as ImageIcon, Globe, Loader2, Save, Lock } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 
 export const Route = createFileRoute("/_authenticated/app/player")({
@@ -98,9 +98,17 @@ function PlayerAdminPage() {
         <h1 className="text-2xl font-semibold tracking-tight flex items-center gap-2">
           <Layout className="h-6 w-6 text-primary" /> Player Inteligente (White-label)
         </h1>
-        <p className="text-sm text-muted-foreground">
-          Personalize a aparência do Web Player para seus clientes finais.
-        </p>
+          <p className="text-sm text-muted-foreground">
+            Personalize a aparência do Web Player para seus clientes finais.
+          </p>
+          <div className="mt-4 p-4 bg-amber-500/10 border border-amber-500/20 rounded-lg">
+            <p className="text-sm text-amber-500 font-medium flex items-center gap-2">
+              <Lock className="h-4 w-4" /> Acesso restrito
+            </p>
+            <p className="text-xs text-amber-500/80 mt-1">
+              O Web Player está em fase de desenvolvimento e testes internos. Por enquanto, os revendedores não possuem acesso ou visualização desta função no painel deles. Toda a estrutura permanece pronta para futura liberação por plano/permissão.
+            </p>
+          </div>
       </div>
 
       <div className="grid md:grid-cols-2 gap-6">
