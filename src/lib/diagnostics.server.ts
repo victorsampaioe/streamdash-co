@@ -28,7 +28,7 @@ export type DiagnosticResult = {
   steps: DiagnosticStep[];
 };
 
-/** Lógica de Single-Flight / Deduplicação em memória (por worker) */
+/** Lógica de Single-Flight / Deduplicação e Cache (Item 4) */
 const activeProbes = new Map<string, Promise<DiagnosticResult>>();
 
 export async function runContentDiagnostic(
@@ -51,7 +51,7 @@ export async function runContentDiagnostic(
     throw new Error("Circuito Aberto: Este servidor IPTV está instável ou offline no momento. Tente novamente em alguns minutos.");
   }
 
-  // 3. Rate Limit & Concorrência (Item 2)
+  // 3. Histórico, Rate Limit & Concorrência (Item 2 & 3)
   const { data: userProfile } = await supabaseAdmin.from('profiles').select('id').eq('id', effectiveUserId).maybeSingle();
   const isAdmin = effectiveUserId !== 'core-system' && !!userProfile; // Simplificado, ideal seria checar role real
   
