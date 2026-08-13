@@ -94,12 +94,15 @@ export const loginXtreamClient = createServerFn({ method: "POST" })
     const expiresAt = new Date();
     expiresAt.setDate(expiresAt.getDate() + 7);
 
+    const { encryptSecret } = await import("./crypto.server");
+
     const { data: session, error: sessionErr } = await supabaseAdmin
       .from("player_sessions")
       .insert({
         reseller_id: data.resellerId,
         server_id: data.serverId,
         xtream_user: data.username,
+        xtream_pass: await encryptSecret(data.password),
         token: token,
         expires_at: expiresAt.toISOString(),
       })
@@ -166,33 +169,45 @@ export const getPlayerCatalog = createServerFn({ method: "POST" })
     // 1. Validar sessão
     const { data: session, error: sessionErr } = await supabaseAdmin
       .from("player_sessions")
-      .select("id, server_id, token, expires_at")
+      .select("id, server_id, token, expires_at, xtream_user, xtream_pass")
       .eq("token", data.token)
       .gt("expires_at", new Date().toISOString())
       .single();
 
     if (sessionErr || !session) throw new Error("Sessão expirada ou inválida");
 
-    // 2. Delegar ao Core AWS
+    // 2. Credenciais do CLIENTE FINAL (login do player), não as do servidor
+    const { getPlayerCredentials, fetchXtreamCatalog } = await import("./player.server");
+    const creds = await getPlayerCredentials(session as any);
+
+    if (!creds.username || !creds.password) {
+      throw new Error("Credenciais da sessão indisponíveis. Faça login novamente.");
+    }
+
+    // 3. Delegar ao Core AWS (com fallback local)
     const { runOnCore } = await import("./core-api.server");
-    
-    // Buscar credenciais reais (o painel mascara as credenciais do servidor)
-    const { getIptvCredentials } = await import("./iptv-credentials.server");
-    const creds = await getIptvCredentials(session.server_id);
-    
-    if (!creds.username || !creds.password) throw new Error("Credenciais do servidor não disponíveis");
 
     const result = await runOnCore(
-      "iptv-player-proxy" as any, 
+      "iptv-player-proxy" as any,
       {
         serverId: session.server_id,
+        username: creds.username,
+        password: creds.password,
         options: {
           action: data.action,
           categoryId: data.categoryId,
           contentId: data.contentId,
         }
-      }, 
-      () => Promise.reject(new Error("Local execution not implemented for player-proxy"))
+      },
+      () => fetchXtreamCatalog(session.server_id, creds, {
+        action: data.action,
+        categoryId: data.categoryId,
+        contentId: data.contentId,
+      })
+    );
+
+    console.log(
+      `[getPlayerCatalog] server=${session.server_id} user=${creds.username} action=${data.action} category=${data.categoryId ?? "-"} itens=${Array.isArray(result) ? result.length : typeof result}`
     );
 
     return result as any;
@@ -211,35 +226,17 @@ export const getPlayerStreamUrl = createServerFn({ method: "POST" })
   .handler(async ({ data }) => {
     const { data: session, error } = await supabaseAdmin
       .from("player_sessions")
-      .select("id, server_id, xtream_user")
+      .select("id, server_id, xtream_user, xtream_pass")
       .eq("token", data.token)
       .gt("expires_at", new Date().toISOString())
       .single();
 
     if (error || !session) throw new Error("Sessão inválida");
 
-    const { data: server } = await supabaseAdmin
-      .from("servers")
-      .select("host")
-      .eq("id", session.server_id)
-      .single();
-
-    if (!server) throw new Error("Servidor não encontrado");
-
-    // Construir a URL que o proxy do Core deve chamar
-    // No Core, a tarefa "iptv-stream-proxy" vai receber isso
-    const { getIptvCredentials } = await import("./iptv-credentials.server");
-    const creds = await getIptvCredentials(session.server_id);
-
-    const streamPath = data.type === "live" 
-      ? `live/${creds.username}/${creds.password}/${data.streamId}.${data.extension}`
-      : `${data.type === 'movie' ? 'movie' : 'series'}/${creds.username}/${creds.password}/${data.streamId}.${data.extension}`;
-
     const { coreApiUrl } = await import("./core-api.server");
-    const coreBase = coreApiUrl();
+    const coreBase = coreApiUrl() ?? "";
 
-    // Retorna a URL do proxy no Core com um token temporário assinado
-    // Para simplificar agora, usamos o próprio token da sessão do player + streamId
+    // O proxy resolve host e credenciais a partir do token da sessão.
     return `${coreBase}/api/public/core/stream?token=${data.token}&sid=${data.streamId}&ext=${data.extension}&type=${data.type}`;
   });
 

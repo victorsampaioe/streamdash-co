@@ -113,22 +113,44 @@ async function execute(input: z.infer<typeof Body>) {
     }
     case "iptv-player-proxy": {
       // Proxy de dados Xtream para o Web Player (CORS bypass)
-      const { getIptvCredentials } = await import("@/lib/iptv-credentials.server");
       const { data: server } = await supabaseAdmin.from("servers").select("host").eq("id", input.serverId!).single();
       if (!server) throw new Error("Servidor não encontrado");
-      const creds = await getIptvCredentials(input.serverId!);
-      if (!creds.username || !creds.password) throw new Error("Credenciais não configuradas");
-      
-      const auth = `username=${encodeURIComponent(creds.username)}&password=${encodeURIComponent(creds.password)}`;
+
+      // Credenciais do cliente final vêm no payload; senão usa as do servidor.
+      let username = input.username ?? null;
+      let password = input.password ?? null;
+      if (!username || !password) {
+        const { getIptvCredentials } = await import("@/lib/iptv-credentials.server");
+        const creds = await getIptvCredentials(input.serverId!);
+        username = creds.username;
+        password = creds.password;
+      }
+      if (!username || !password) throw new Error("Credenciais não configuradas");
+
+      const { buildXtreamCatalogUrl } = await import("@/lib/player.server");
       const action = (input.options?.action as string) || "get_live_categories";
-      const categoryId = input.options?.categoryId ? `&category_id=${input.options.categoryId}` : "";
-      const contentId = input.options?.contentId ? `&series_id=${input.options.contentId}&vod_id=${input.options.contentId}` : "";
-      const url = `http://${server.host}/player_api.php?${auth}&action=${action}${categoryId}${contentId}`;
-      
+      const url = buildXtreamCatalogUrl(server.host, { username, password }, {
+        action,
+        categoryId: input.options?.categoryId as string | undefined,
+        contentId: input.options?.contentId as string | undefined,
+      });
+
       const { UA_PLAYER } = await import("@/lib/iptv.server");
       const res = await fetch(url, { headers: { "user-agent": UA_PLAYER } });
-      if (!res.ok) throw new Error(`IPTV Proxy Error: ${res.status}`);
-      return await res.json();
+      const text = await res.text();
+      if (!res.ok) {
+        console.error(`[iptv-player-proxy] host=${server.host} action=${action} status=${res.status} body=${text.slice(0, 200)}`);
+        throw new Error(`IPTV Proxy Error: ${res.status}`);
+      }
+      let json: unknown;
+      try {
+        json = JSON.parse(text);
+      } catch {
+        console.error(`[iptv-player-proxy] resposta não-JSON host=${server.host} body=${text.slice(0, 200)}`);
+        throw new Error("Resposta inválida do servidor IPTV");
+      }
+      console.log(`[iptv-player-proxy] host=${server.host} action=${action} itens=${Array.isArray(json) ? json.length : "objeto"}`);
+      return json;
     }
     case "iptv-stream-proxy": {
       // Esta tarefa é tratada por uma rota dedicada em /api/public/core/stream

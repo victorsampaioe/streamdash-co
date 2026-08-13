@@ -16,7 +16,7 @@ export const Route = createFileRoute("/api/public/core/stream")({
         // 1. Validar sessão
         const { data: session, error: sessionErr } = await supabaseAdmin
           .from("player_sessions")
-          .select("id, server_id, token, expires_at")
+          .select("id, server_id, token, expires_at, xtream_user, xtream_pass")
           .eq("token", token)
           .gt("expires_at", new Date().toISOString())
           .single();
@@ -32,8 +32,8 @@ export const Route = createFileRoute("/api/public/core/stream")({
 
         if (!server) return new Response("Server not found", { status: 404 });
 
-        const { getIptvCredentials } = await import("@/lib/iptv-credentials.server");
-        const creds = await getIptvCredentials(session.server_id);
+        const { getPlayerCredentials } = await import("@/lib/player.server");
+        const creds = await getPlayerCredentials(session as any);
 
         // 3. Montar URL original do Xtream
         // Live: /live/user/pass/id.ts
