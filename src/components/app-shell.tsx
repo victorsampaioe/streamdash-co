@@ -114,6 +114,7 @@ function useNavItems() {
     { to: "/app/radar", label: "Radar Brasil", icon: Radio },
     { to: "/app/detector", label: "Detector", icon: ShieldAlert },
     { to: "/app/inteligencia", label: "Inteligência de Conteúdo", icon: Sparkles },
+    { to: "/app/player", label: "Web Player", icon: LayoutDashboard },
     
     
     { to: "/app/ranking", label: "Ranking", icon: Trophy },
