@@ -26,65 +26,106 @@ export type DiagnosticResult = {
   resolution?: string;
   error?: string;
   steps: DiagnosticStep[];
+  is_cached?: boolean;
+  cached_at?: string;
 };
 
-/** Lógica de Single-Flight / Deduplicação e Cache (Item 4) */
-const activeProbes = new Map<string, Promise<DiagnosticResult>>();
-
+/** 
+ * Item 4 — Cache e Deduplicação Global
+ */
 export async function runContentDiagnostic(
   userId: string | null,
   serverId: string,
   contentId: string,
   contentType: 'live' | 'movie' | 'series' | 'episode'
 ): Promise<DiagnosticResult> {
-  const cacheKey = `${serverId}:${contentId}:${contentType}`;
+  const cacheKey = `diag:${serverId}:${contentId}:${contentType}`;
   const effectiveUserId = userId || 'core-system';
 
-  // 1. Deduplicação (Single-Flight)
-  if (activeProbes.has(cacheKey)) {
-    return activeProbes.get(cacheKey)!;
+  // 1. Verificar Cache (Item 4)
+  // TTL: 120s para sucessos, 60s para falhas
+  const { data: cached } = await supabaseAdmin
+    .from('content_diagnostics')
+    .select('*, servers(name)')
+    .eq('server_id', serverId)
+    .eq('content_id', contentId)
+    .eq('content_type', contentType)
+    .gt('created_at', new Date(Date.now() - 120 * 1000).toISOString())
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (cached) {
+    const isSuccess = ['working', 'slow', 'unstable'].includes(cached.status);
+    const createdAt = cached.created_at ? new Date(cached.created_at as string).getTime() : Date.now();
+    const ageSeconds = Math.floor((Date.now() - createdAt) / 1000);
+    
+    // Se for sucesso e tiver menos de 120s, OU se for erro e tiver menos de 60s
+    if ((isSuccess && ageSeconds < 120) || (!isSuccess && ageSeconds < 60)) {
+      console.log(`[diagnostic] Cache hit for ${cacheKey} (${ageSeconds}s ago)`);
+      return {
+        status: cached.status as any,
+        ttfb_ms: cached.ttfb_ms ?? undefined,
+        connection_ms: cached.connection_ms ?? undefined,
+        bytes_read: cached.bytes_read ?? undefined,
+        duration_ms: cached.duration_ms ?? undefined,
+        error: (cached as any).error_message ?? undefined,
+        steps: typeof cached.steps === 'string' ? JSON.parse(cached.steps) : (cached.steps as any),
+        is_cached: true,
+        cached_at: (cached.created_at as string | undefined) || undefined
+      };
+    }
   }
 
-  // 2. Circuit Breaker Check (Item 5)
-  const { data: breakerState } = await (supabaseAdmin.rpc as any)('check_circuit_breaker', { p_server_id: serverId });
-  if (breakerState === 'open') {
-    throw new Error("Circuito Aberto: Este servidor IPTV está instável ou offline no momento. Tente novamente em alguns minutos.");
-  }
-
-  // 3. Histórico, Rate Limit & Concorrência (Item 2 & 3)
-  const { data: userProfile } = await supabaseAdmin.from('profiles').select('id').eq('id', effectiveUserId).maybeSingle();
-  const isAdmin = effectiveUserId !== 'core-system' && !!userProfile; // Simplificado, ideal seria checar role real
+  // 2. Deduplicação Global (Lock via Postgres)
+  const { data: lockAcquired } = await (supabaseAdmin.rpc as any)('acquire_diagnostic_lock', { p_lock_key: cacheKey });
   
-  // No caso real de produção, buscaríamos o papel real do usuário
-  let isActualAdmin = false;
-  if (effectiveUserId !== 'core-system') {
-    const { data: roles } = await supabaseAdmin.rpc('has_role', { _user_id: effectiveUserId, _role: 'admin' });
-    isActualAdmin = !!roles;
+  if (!lockAcquired) {
+    // Se não conseguiu o lock, espera um pouco e tenta ler o cache (pode ser que outro worker acabou de terminar)
+    await new Promise(resolve => setTimeout(resolve, 2000));
+    return runContentDiagnostic(effectiveUserId === 'core-system' ? null : effectiveUserId, serverId, contentId, contentType); // Recursão simples para re-checar cache
   }
-
-  const { data: slotResult } = await (supabaseAdmin.rpc as any)('acquire_diagnostic_slot_v2', { 
-    p_user_id: effectiveUserId === 'core-system' ? '00000000-0000-0000-0000-000000000000' : effectiveUserId, 
-    p_server_id: serverId,
-    p_is_admin: isActualAdmin,
-    p_max_server_concurrent: LIMIT_SERVER_CONCURRENT
-  });
-
-  if (!slotResult || !slotResult.success) {
-    throw new Error(slotResult?.message || "Muitos diagnósticos em execução. Por favor, aguarde.");
-  }
-
-  const probe = executeDiagnostic(userId, serverId, contentId, contentType);
-  activeProbes.set(cacheKey, probe);
 
   try {
-    return await probe;
-  } finally {
-    activeProbes.delete(cacheKey);
-    // Liberar slot (Item 2)
-    await (supabaseAdmin.rpc as any)('release_diagnostic_slot', {
-      p_user_id: effectiveUserId === 'core-system' ? '00000000-0000-0000-0000-000000000000' : effectiveUserId,
-      p_server_id: serverId
+    // 3. Circuit Breaker Check (Item 5)
+    const { data: breakerState } = await (supabaseAdmin.rpc as any)('check_circuit_breaker', { p_server_id: serverId });
+    if (breakerState === 'open') {
+      throw new Error("Circuito Aberto: Este servidor IPTV está instável ou offline no momento. Tente novamente em alguns minutos.");
+    }
+
+    // 4. Rate Limit & Concorrência (Item 2)
+    let isActualAdmin = false;
+    if (effectiveUserId !== 'core-system') {
+    const { data: roles } = await supabaseAdmin.rpc('has_role', { 
+      _user_id: effectiveUserId as any, 
+      _role: 'admin' as any
     });
+      isActualAdmin = !!roles;
+    }
+
+    const { data: slotResult } = await (supabaseAdmin.rpc as any)('acquire_diagnostic_slot_v2', { 
+      p_user_id: effectiveUserId === 'core-system' ? '00000000-0000-0000-0000-000000000000' : effectiveUserId, 
+      p_server_id: serverId,
+      p_is_admin: isActualAdmin,
+      p_max_server_concurrent: LIMIT_SERVER_CONCURRENT
+    });
+
+    if (!slotResult || !slotResult.success) {
+      throw new Error(slotResult?.message || "Muitos diagnósticos em execução. Por favor, aguarde.");
+    }
+
+    try {
+      return await executeDiagnostic(userId, serverId, contentId, contentType);
+    } finally {
+      // Liberar slot de concorrência
+      await (supabaseAdmin.rpc as any)('release_diagnostic_slot', {
+        p_user_id: effectiveUserId === 'core-system' ? '00000000-0000-0000-0000-000000000000' : effectiveUserId,
+        p_server_id: serverId
+      });
+    }
+  } finally {
+    // Liberar Lock Global
+    await (supabaseAdmin.rpc as any)('release_diagnostic_lock', { p_lock_key: cacheKey });
   }
 }
 
@@ -294,18 +335,18 @@ async function executeDiagnostic(
       .eq("external_id", contentId)
       .maybeSingle();
 
-    await (supabaseAdmin.from('content_diagnostics' as any) as any).insert({
+    await (supabaseAdmin.from('content_diagnostics') as any).insert({
       user_id: (!userId || userId === 'core-system') ? null : userId,
       server_id: serverId,
       content_id: contentId,
       content_type: contentType,
-      content_title: catalogItem?.name || "Conteúdo IPTV",
       status: result.status,
       ttfb_ms: result.ttfb_ms,
       connection_ms: result.connection_ms,
       bytes_read: result.bytes_read,
       duration_ms: result.duration_ms,
-      steps: JSON.stringify(steps)
+      steps: JSON.stringify(steps),
+      is_cached: false
     });
 
     return result;
@@ -331,16 +372,16 @@ async function executeDiagnostic(
       .eq("external_id", contentId)
       .maybeSingle();
 
-    await (supabaseAdmin.from('content_diagnostics' as any) as any).insert({
+    await (supabaseAdmin.from('content_diagnostics') as any).insert({
       user_id: (!userId || userId === 'core-system') ? null : userId,
       server_id: serverId,
       content_id: contentId,
       content_type: contentType,
-      content_title: catalogItem?.name || "Conteúdo IPTV",
       status: result.status,
-      error: result.error,
+      error_message: result.error,
       duration_ms: Date.now() - tStart,
-      steps: JSON.stringify(result.steps)
+      steps: JSON.stringify(result.steps),
+      is_cached: false
     });
 
     return result;
