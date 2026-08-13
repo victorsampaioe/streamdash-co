@@ -52,7 +52,8 @@ function PlayerPage() {
   const { resellerId } = Route.useParams();
   const [token, setToken] = useState<string | null>(localStorage.getItem(`stream_player_token_${resellerId}`));
   const [session, setSession] = useState<any>(null);
-  const [activeView, setActiveView] = useState<"home" | "live" | "vod" | "series" | "mylist" | "search" | "settings">("home");
+  const [activeView, setActiveView] = useState<"home" | "live" | "movie" | "series" | "mylist" | "search" | "settings">("home");
+
   const [categories, setCategories] = useState<any[]>([]);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [content, setContent] = useState<any[]>([]);
@@ -147,14 +148,15 @@ function PlayerPage() {
 
   // Carregar categorias conforme a aba ativa
   useEffect(() => {
-    if (session && token && ["live", "vod", "series"].includes(activeView)) {
+    if (session && token && ["live", "movie", "series"].includes(activeView)) {
       const actionMap = {
         live: "get_live_categories",
-        vod: "get_vod_categories",
+        movie: "get_vod_categories",
         series: "get_series_categories"
       } as const;
       
       const action = actionMap[activeView as keyof typeof actionMap];
+
       if (!action) return;
 
       getPlayerCatalog({ data: { token, action } })
@@ -172,7 +174,7 @@ function PlayerPage() {
 
   // Carregar conteúdo por categoria
   useEffect(() => {
-    if (session && token && selectedCategory && ["live", "vod", "series"].includes(activeView)) {
+    if (session && token && selectedCategory && ["live", "movie", "series"].includes(activeView)) {
       setLoadingContent(true);
       if (abortControllerRef.current) abortControllerRef.current.abort();
       const controller = new AbortController();
@@ -180,11 +182,12 @@ function PlayerPage() {
 
       const actionMap = {
         live: "get_live_streams",
-        vod: "get_vod_streams",
+        movie: "get_vod_streams",
         series: "get_series"
       } as const;
       
       const action = actionMap[activeView as keyof typeof actionMap];
+
 
       getPlayerCatalog({ data: { token, action, categoryId: selectedCategory } })
         .then((data: any) => {
@@ -278,7 +281,7 @@ function PlayerPage() {
             <ContentRow 
               title="Novidades" 
               items={homeData.newReleases} 
-              type="vod" 
+              type="movie" 
               primaryColor={primaryColor}
               onPlay={(item) => handlePlay(item.stream_id, "movie")}
             />

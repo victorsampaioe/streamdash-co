@@ -23,7 +23,7 @@ export function Sidebar({ activeView, onChangeView, brandName, logoUrl, onLogout
   const items = [
     { id: "home", label: "Início", icon: Home },
     { id: "live", label: "TV Ao Vivo", icon: Tv },
-    { id: "vod", label: "Filmes", icon: Film },
+    { id: "movie", label: "Filmes", icon: Film },
     { id: "series", label: "Séries", icon: Play },
     { id: "mylist", label: "Minha Lista", icon: Star },
     { id: "search", label: "Buscar", icon: Search },
