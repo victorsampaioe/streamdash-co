@@ -48,6 +48,7 @@ const STATUS_MAP = {
   server_unavailable: { label: 'Servidor OFF', color: 'text-red-600', icon: Server },
   regional_issue: { label: 'Rota/Região', color: 'text-blue-500', icon: Globe },
   client_issue: { label: 'Problema Local', color: 'text-purple-500', icon: User },
+  cancelled: { label: 'Cancelado', color: 'text-muted-foreground', icon: XCircle },
 };
 
 function ContentDiagnosticPage() {
@@ -154,6 +155,12 @@ function ContentDiagnosticPage() {
                 <Button variant="ghost" size="sm" onClick={() => { setQuery(""); setTerm(""); }}>Limpar</Button>
               </div>
 
+              {searchResults.data?.truncated && (
+                <div className="text-xs text-muted-foreground bg-muted/30 border border-dashed rounded-md px-3 py-2">
+                  Mostrando 100 de {searchResults.data.total} resultados — refine a busca para ver os demais.
+                </div>
+              )}
+
               <div className="grid gap-3">
                 {searchResults.isLoading ? (
                   [1, 2, 3].map(i => <div key={i} className="h-16 bg-muted animate-pulse rounded-lg" />)
@@ -175,7 +182,7 @@ function ContentDiagnosticPage() {
                         <div>
                           <div className="font-semibold text-sm">{it.title}</div>
                           <div className="text-[10px] text-muted-foreground uppercase tracking-wider">
-                            {it.kind === 'live' ? 'Canal de TV' : (it.kind === 'series' ? 'Série' : 'Filme')} • {it.category}
+                            {it.kind === 'live' ? 'Canal de TV' : (it.kind === 'series' ? 'Série' : 'Filme')}{it.category ? ` • ${it.category}` : ''}
                           </div>
                         </div>
                       </div>

@@ -19,7 +19,7 @@ export const searchDiagnosticContent = createServerFn({ method: "POST" })
       .from("servers")
       .select("id, name");
 
-    if (!myServers || myServers.length === 0) return { items: [] };
+    if (!myServers || myServers.length === 0) return { items: [], total: 0, truncated: false };
     const myServerIds = myServers.map(s => s.id);
 
     // 2. Busca por nome similar no catálogo
