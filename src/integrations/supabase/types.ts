@@ -4110,6 +4110,7 @@ export type Database = {
         Args: { _id: string; _note?: string }
         Returns: undefined
       }
+      cleanup_diagnostic_slots: { Args: never; Returns: undefined }
       content_health_overview: { Args: { _server_id?: string }; Returns: Json }
       delete_server: { Args: { _id: string }; Returns: boolean }
       evaluate_achievements: { Args: { _user_id: string }; Returns: number }
@@ -4557,6 +4558,10 @@ export type Database = {
       }
       release_diagnostic_lock: {
         Args: { p_lock_key: string }
+        Returns: undefined
+      }
+      release_diagnostic_slot: {
+        Args: { p_server_id: string; p_user_id: string }
         Returns: undefined
       }
       request_payout: {
