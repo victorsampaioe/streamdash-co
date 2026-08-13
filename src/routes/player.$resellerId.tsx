@@ -323,8 +323,9 @@ function PlayerPage() {
                   primaryColor={primaryColor} 
                   onClick={(i) => {
                     if (activeView === "live") handlePlay(i.stream_id, "live");
-                    else if (activeView === "vod") setSelectedContent(i);
+                    else if (activeView === "vod") handlePlay(i.stream_id, "movie");
                     else handleOpenSeries(i);
+
                   }}
                 />
               ))}
