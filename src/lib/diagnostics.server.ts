@@ -6,6 +6,9 @@ const DIAG_TIMEOUT_CONNECT = 8_000;
 const TARGET_BYTES = 256 * 1024;
 const MAX_BYTES = 512 * 1024;
 
+const LIMIT_USER_CONCURRENT = 1; // Máximo 1 diagnóstico simultâneo por usuário
+const LIMIT_SERVER_CONCURRENT = 3; // Máximo 3 diagnósticos simultâneos no mesmo servidor IPTV (proteção)
+
 export type DiagnosticStep = {
   id: number;
   label: string;
