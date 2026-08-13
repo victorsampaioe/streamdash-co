@@ -386,7 +386,7 @@ function RadarShowcase() {
                     {item.info}
                   </div>
                   
-                  <div className="absolute bottom-2 left-2 flex items-center gap-1 text-[10px] font-bold text-success drop-shadow-md">
+                  <div className="absolute bottom-2 left-2 flex items-center gap-1 text-[10px] font-bold text-success drop-shadow-[0_1px_1px_rgba(0,0,0,0.8)]">
                     <span className="h-1.5 w-1.5 rounded-full bg-success animate-pulse" />
                     🟢 DISPONÍVEL
                   </div>
