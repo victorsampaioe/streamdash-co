@@ -1173,7 +1173,10 @@ function EditResellerDialog({ reseller, onDone, isAdminUser, onToggleAdmin }: { 
               <Button 
                 size="sm" 
                 variant={isAdminUser ? "destructive" : "default"}
-                onClick={() => onToggleAdmin(reseller.id, !isAdminUser)}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onToggleAdmin(reseller.id, !isAdminUser);
+                }}
               >
                 {isAdminUser ? "Remover Admin" : "Tornar Admin"}
               </Button>
