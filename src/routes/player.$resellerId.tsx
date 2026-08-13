@@ -441,40 +441,66 @@ function PlayerPage() {
 
   // Efeito para inicializar Hls.js ou Video Nativo
   useEffect(() => {
-    if (isPlaying && streamUrl && videoRef.current) {
-      const video = videoRef.current;
-      
-      // Se for .ts ou HLS, tentamos Hls.js
-      if (Hls.isSupported() && (streamUrl.includes(".ts") || streamUrl.includes(".m3u8") || streamUrl.includes("type=live") || streamUrl.includes("ext=ts"))) {
-        const hls = new Hls({
-          xhrSetup: (xhr) => {
-            xhr.withCredentials = false;
-          }
-        });
-        hls.loadSource(streamUrl);
-        hls.attachMedia(video);
-        hlsRef.current = hls;
-        hls.on(Hls.Events.MANIFEST_PARSED, () => {
-          video.play().catch(e => console.error("Auto-play blocked", e));
-        });
-        hls.on(Hls.Events.ERROR, (event, data) => {
-          if (data.fatal) {
-            console.error("HLS fatal error", data);
-            toast.error("Erro no stream de vídeo");
-          }
-        });
-      } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
-        // Nativo para Safari/iOS
-        video.src = streamUrl;
-        video.addEventListener('loadedmetadata', () => {
-          video.play();
-        });
-      } else {
-        // Fallback direto (Filmes mp4/mkv)
-        video.src = streamUrl;
+    if (!isPlaying || !streamUrl || !videoRef.current) return;
+    const video = videoRef.current;
+    const isHls = streamUrl.includes("ext=m3u8") || streamUrl.includes(".m3u8");
+
+    // Diagnóstico da camada de playback
+    const logMeta = async () => {
+      try {
+        const res = await fetch(streamUrl, { headers: isHls ? {} : { Range: "bytes=0-1023" } });
+        console.log(
+          "[player] proxy status:", res.status,
+          "| Content-Type:", res.headers.get("content-type"),
+          "| Content-Length:", res.headers.get("content-length"),
+          "| Content-Range:", res.headers.get("content-range")
+        );
+        if (!res.ok && res.status !== 206) {
+          toast.error(`Stream indisponível (HTTP ${res.status})`);
+        }
+        await res.body?.cancel();
+      } catch (e) {
+        console.error("[player] falha ao consultar o proxy de stream:", e);
       }
+    };
+    void logMeta();
+
+    if (isHls && Hls.isSupported()) {
+      const hls = new Hls({ enableWorker: true, lowLatencyMode: false });
+      hls.loadSource(streamUrl);
+      hls.attachMedia(video);
+      hlsRef.current = hls;
+      hls.on(Hls.Events.MANIFEST_PARSED, () => {
+        console.log("[player] manifesto HLS carregado, iniciando reprodução");
+        video.play().catch((e) => console.error("Auto-play bloqueado", e));
+      });
+      hls.on(Hls.Events.ERROR, (_event, data) => {
+        console.error("[player] HLS error", data.type, data.details, data.fatal);
+        if (!data.fatal) return;
+        if (data.type === Hls.ErrorTypes.NETWORK_ERROR) hls.startLoad();
+        else if (data.type === Hls.ErrorTypes.MEDIA_ERROR) hls.recoverMediaError();
+        else {
+          toast.error("Erro no stream de vídeo");
+          hls.destroy();
+        }
+      });
+    } else {
+      // Nativo: Safari/iOS (HLS) e Filmes/Séries (mp4/mkv com Range)
+      video.src = streamUrl;
+      const onLoaded = () => video.play().catch((e) => console.error("Auto-play bloqueado", e));
+      const onError = () => {
+        console.error("[player] erro no elemento <video>", video.error);
+        toast.error("Não foi possível reproduzir este conteúdo (formato não suportado pelo navegador).");
+      };
+      video.addEventListener("loadedmetadata", onLoaded);
+      video.addEventListener("error", onError);
+      return () => {
+        video.removeEventListener("loadedmetadata", onLoaded);
+        video.removeEventListener("error", onError);
+      };
     }
   }, [isPlaying, streamUrl]);
+
 
 }
 
