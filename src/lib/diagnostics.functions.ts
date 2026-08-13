@@ -92,7 +92,8 @@ export const cancelDiagnostic = createServerFn({ method: "POST" })
     z.object({
       serverId: z.string().uuid(),
       contentId: z.string(),
-      contentType: z.enum(['live', 'movie', 'series', 'episode']),
+      contentType: z.enum(['live', 'movie', 'series', 'episode', 'vod'])
+        .transform((v) => (v === 'vod' ? 'movie' : v)),
     }).parse(d))
   .handler(async ({ data }) => {
     const { requestDiagnosticCancel } = await import("./diagnostics.server");
