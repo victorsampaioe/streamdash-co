@@ -51,7 +51,7 @@ export async function runContentDiagnostic(
     throw new Error("Circuito Aberto: Este servidor IPTV está instável ou offline no momento. Tente novamente em alguns minutos.");
   }
 
-  // 3. Rate Limit & Concorrência (Item 2)
+  // 3. Histórico, Rate Limit & Concorrência (Item 2 & 3)
   const { data: userProfile } = await supabaseAdmin.from('profiles').select('id').eq('id', effectiveUserId).maybeSingle();
   const isAdmin = effectiveUserId !== 'core-system' && !!userProfile; // Simplificado, ideal seria checar role real
   
