@@ -120,8 +120,9 @@ async function execute(input: z.infer<typeof Body>) {
       
       const auth = `username=${encodeURIComponent(creds.username)}&password=${encodeURIComponent(creds.password)}`;
       const action = (input.options?.action as string) || "get_live_categories";
-      const extra = input.options?.contentId ? `&series_id=${input.options.contentId}&vod_id=${input.options.contentId}` : "";
-      const url = `http://${server.host}/player_api.php?${auth}&action=${action}${extra}`;
+      const categoryId = input.options?.categoryId ? `&category_id=${input.options.categoryId}` : "";
+      const contentId = input.options?.contentId ? `&series_id=${input.options.contentId}&vod_id=${input.options.contentId}` : "";
+      const url = `http://${server.host}/player_api.php?${auth}&action=${action}${categoryId}${contentId}`;
       
       const { UA_PLAYER } = await import("@/lib/iptv.server");
       const res = await fetch(url, { headers: { "user-agent": UA_PLAYER } });
