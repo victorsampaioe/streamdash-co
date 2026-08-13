@@ -1,26 +1,47 @@
-# Plano de Implementação: Web Player Público - Reprodução e Detalhes
+# Plano de Implementação: Player Público e Proxy de Vídeo (Fase Final)
 
-Este plano foca na finalização da rota pública do Web Player (`/player/$resellerId`), implementando a funcionalidade de reprodução de vídeo para TV ao vivo (CORS/TS bypass), filmes e séries, além de modais de detalhes e integração com o Core AWS.
+Este plano detalha a conclusão da rota pública `/player/$resellerId`, focando na reprodução de vídeo funcional e navegação completa do catálogo IPTV via Core AWS.
 
-## Mudanças do Usuário
+## 1. Otimização do Componente Player (Frontend)
+- **Arquivo:** `src/routes/player.$resellerId.tsx`
+- **Ações:**
+  - Corrigir a importação de `getPlayerStreamUrl` (está vindo de `@/lib/player.functions` mas precisa ser importado corretamente no componente).
+  - Implementar navegação de "Séries" para "Temporadas" e "Episódios" (atualmente o catálogo está genérico).
+  - Adicionar suporte a `AbortSignal` no catálogo para evitar race conditions em navegações rápidas.
+  - Implementar o `handleClosePlayer` para garantir a destruição correta da instância do `hls.js`.
 
-- **Reprodução de Vídeo Funcional:** O usuário poderá assistir canais ao vivo (mesmo em formato `.ts`), filmes e séries diretamente no navegador.
-- **Modais de Detalhes:** Informações extras sobre filmes e séries (sinopse, ano, classificação) antes de dar o play.
-- **Interface Fluida:** Seleção de temporadas para séries e navegação intuitiva entre conteúdos.
+## 2. Reforço do Proxy de Streaming (Backend)
+- **Arquivo:** `src/routes/api/public/core/stream.ts`
+- **Ações:**
+  - Validar se o Core AWS está configurado para suportar `Transfer-Encoding: chunked` no proxy de vídeo.
+  - Adicionar suporte a Range Requests (206 Partial Content) para permitir "scrolling" na barra de tempo em Filmes e Séries.
+  - Corrigir o MIME Type para streams `.ts` e `.m3u8` garantindo compatibilidade com o `hls.js`.
 
-## Mudanças Técnicas
+## 3. Delegação de Tarefas no Core AWS
+- **Arquivos:** `src/routes/api/public/core/task.ts` e `src/lib/core-api.server.ts`
+- **Ações:**
+  - Registrar formalmente a tarefa `iptv-stream-proxy` no enum de tarefas.
+  - Implementar a lógica de remux/proxy no Core para injetar os headers de segurança (CORS) e User-Agent.
 
-- **Proxy de Stream (CORS & .ts):** Implementar um endpoint de proxy no Core AWS que recebe a URL do stream IPTV e a repassa para o player com os headers corretos, permitindo que arquivos `.ts` sejam reproduzidos via HLS ou como stream direto (dependendo do suporte do navegador/Hls.js).
-- **Integração Hls.js:** Adicionar a biblioteca `hls.js` dinamicamente para suportar streaming adaptativo e formatos legados no Chrome/Firefox.
-- **Novas Server Functions:** 
-  - `getStreamUrl`: Gera uma URL de proxy assinada para o player.
-  - `getContentInfo`: Busca metadados detalhados de um filme ou série via Xtream.
-- **Componentes de UI:**
-  - `VideoPlayer`: Componente dedicado com controles customizados e suporte a Hls.js.
-  - `ContentDetailsModal`: Exibição de informações e seleção de episódios/filmes.
+## 4. Melhorias na Experiência do Usuário
+- **Ações:**
+  - Persistência da sessão Xtream no `localStorage` por revendedor (evitar logins repetidos).
+  - Fallback visual para conteúdos sem capa usando iniciais ou ícones temáticos.
+  - Mensagens de erro amigáveis para falhas de conexão com o servidor IPTV (ex: 403 Forbidden, 404 Not Found).
 
-## Considerações de Segurança
+## Detalhes Técnicos
+```text
+Fluxo de Reprodução:
+[Navegador] -> [Proxy Core AWS] -> [Servidor IPTV do Cliente]
+1. O Navegador solicita o fragmento via /api/public/core/stream?token=...
+2. O Core AWS valida o token na player_sessions do banco.
+3. O Core AWS busca as credenciais reais (username/password) do servidor.
+4. O Core AWS faz o fetch no servidor IPTV original com User-Agent "VLC" ou "IPTV-Player".
+5. O stream é repassado ao navegador com headers Access-Control-Allow-Origin: *.
+```
 
-- **Tokens de Sessão:** Apenas clientes autenticados via `player_sessions` podem gerar URLs de proxy.
-- **Bypass de CORS:** O proxy no Core AWS ocultará as credenciais do servidor IPTV do cliente final.
-- **Idempotência:** Verificação contínua de expiração de conta/dispositivo.
+## Verificação
+- Testar login em um servidor Xtream real.
+- Verificar se canais ao vivo (.ts) rodam via HLS.js.
+- Verificar se filmes (.mp4) permitem avanço/retrocesso.
+- Validar se as cores do revendedor são aplicadas corretamente na UI.

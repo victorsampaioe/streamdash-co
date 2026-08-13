@@ -27,6 +27,7 @@ const Body = z.object({
     "telegram-broadcast",
     "radar-job-step",
     "iptv-player-proxy",
+    "iptv-stream-proxy",
   ]),
   serverId: z.string().uuid().optional(),
   serverIds: z.array(z.string().uuid()).optional(),

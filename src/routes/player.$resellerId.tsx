@@ -1,14 +1,46 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { getPlayerSettings, loginXtreamClient, getPlayerCatalog, validatePlayerSession } from "@/lib/player.functions";
+import { 
+  getPlayerSettings, 
+  loginXtreamClient, 
+  getPlayerCatalog, 
+  validatePlayerSession,
+  getPlayerStreamUrl 
+} from "@/lib/player.functions";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
+import { 
+  Dialog, 
+  DialogContent, 
+  DialogHeader, 
+  DialogTitle,
+  DialogDescription 
+} from "@/components/ui/dialog";
 import { toast } from "sonner";
-import { Loader2, Play, Tv, Film, Info, User, LogOut, ChevronRight, Search, LayoutGrid, List } from "lucide-react";
+import { 
+  Loader2, 
+  Play, 
+  Tv, 
+  Film, 
+  Info, 
+  User, 
+  LogOut, 
+  ChevronRight, 
+  Search, 
+  LayoutGrid, 
+  List,
+  Calendar,
+  Star,
+  Clock,
+  ChevronLeft,
+  X
+} from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import Hls from "hls.js";
+
 
 export const Route = createFileRoute("/player/$resellerId")({
   component: PlayerPage,
@@ -23,6 +55,11 @@ function PlayerPage() {
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [content, setContent] = useState<any[]>([]);
   const [loadingContent, setLoadingContent] = useState(false);
+  const [selectedContent, setSelectedContent] = useState<any>(null);
+  const [streamUrl, setStreamUrl] = useState<string | null>(null);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const hlsRef = useRef<Hls | null>(null);
   
   // Identidade Visual
   const { data: settings, isLoading: settingsLoading } = useQuery({
@@ -206,7 +243,19 @@ function PlayerPage() {
 
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 gap-4">
                 {content.map((item) => (
-                  <ContentCard key={item.stream_id || item.series_id} item={item} type={activeTab} primaryColor={primaryColor} />
+                  <ContentCard 
+                    key={item.stream_id || item.series_id} 
+                    item={item} 
+                    type={activeTab} 
+                    primaryColor={primaryColor} 
+                    onClick={() => {
+                      if (activeTab === "live") {
+                        handlePlay(item.stream_id, "live");
+                      } else {
+                        setSelectedContent(item);
+                      }
+                    }}
+                  />
                 ))}
               </div>
               
@@ -219,16 +268,163 @@ function PlayerPage() {
           )}
         </main>
       </div>
+
+      {/* Modal de Detalhes (Filmes/Séries) */}
+      <Dialog open={!!selectedContent && !isPlaying} onOpenChange={(open) => !open && setSelectedContent(null)}>
+        <DialogContent className="max-w-3xl bg-neutral-900 border-white/10 text-white p-0 overflow-hidden">
+          {selectedContent && (
+            <div className="flex flex-col md:flex-row">
+              <div className="w-full md:w-1/3 aspect-[2/3] relative">
+                <img 
+                  src={selectedContent.stream_icon || selectedContent.cover} 
+                  alt={selectedContent.name} 
+                  className="w-full h-full object-cover"
+                />
+              </div>
+              <div className="flex-1 p-6 space-y-4">
+                <DialogHeader>
+                  <DialogTitle className="text-2xl font-bold">{selectedContent.name}</DialogTitle>
+                  <div className="flex items-center gap-3 text-sm text-white/60">
+                    <span className="flex items-center gap-1"><Star className="h-3 w-3 text-yellow-500 fill-yellow-500" /> {selectedContent.rating || "N/A"}</span>
+                    {selectedContent.year && <span className="flex items-center gap-1"><Calendar className="h-3 w-3" /> {selectedContent.year}</span>}
+                  </div>
+                </DialogHeader>
+                
+                <p className="text-sm leading-relaxed text-white/80 line-clamp-6">
+                  {selectedContent.plot || "Nenhuma sinopse disponível para este título."}
+                </p>
+
+                <div className="pt-4 flex gap-3">
+                  <Button 
+                    className="flex-1 font-bold h-12" 
+                    style={{ backgroundColor: primaryColor }}
+                    onClick={() => handlePlay(selectedContent.stream_id || selectedContent.series_id, activeTab === "series" ? "series" : "movie")}
+                  >
+                    <Play className="mr-2 h-5 w-5 fill-white" /> Assistir Agora
+                  </Button>
+                </div>
+              </div>
+              <button 
+                onClick={() => setSelectedContent(null)}
+                className="absolute top-4 right-4 h-8 w-8 flex items-center justify-center rounded-full bg-black/40 hover:bg-black/60 transition-colors"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Player de Vídeo Fullscreen Overlay */}
+      {isPlaying && (
+        <div className="fixed inset-0 z-[100] bg-black flex flex-col">
+          <div className="h-16 px-6 flex items-center justify-between bg-gradient-to-b from-black/80 to-transparent absolute top-0 left-0 w-full z-10">
+            <div className="flex items-center gap-4">
+              <Button variant="ghost" size="icon" onClick={handleClosePlayer} className="text-white hover:bg-white/10">
+                <ChevronLeft className="h-6 w-6" />
+              </Button>
+              <h2 className="font-bold">{selectedContent?.name || "Reproduzindo..."}</h2>
+            </div>
+          </div>
+
+          <div className="flex-1 flex items-center justify-center relative group">
+            {!streamUrl ? (
+              <div className="flex flex-col items-center gap-3">
+                <Loader2 className="h-10 w-10 animate-spin text-primary" style={{ color: primaryColor }} />
+                <p className="text-sm opacity-50">Preparando stream...</p>
+              </div>
+            ) : (
+              <video 
+                ref={videoRef}
+                className="w-full h-full object-contain"
+                controls
+                autoPlay
+                playsInline
+              />
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
+
+  function handlePlay(id: string, type: "live" | "movie" | "series") {
+    setIsPlaying(true);
+    setStreamUrl(null);
+    
+    getPlayerStreamUrl({ 
+      data: { 
+        token: token!, 
+        streamId: id, 
+        type, 
+        extension: type === "live" ? "ts" : "mp4" 
+      } 
+    })
+    .then(url => {
+      setStreamUrl(url);
+    })
+    .catch(err => {
+      toast.error("Erro ao carregar vídeo: " + err.message);
+      setIsPlaying(false);
+    });
+  }
+
+  function handleClosePlayer() {
+    setIsPlaying(false);
+    setStreamUrl(null);
+    if (hlsRef.current) {
+      hlsRef.current.destroy();
+      hlsRef.current = null;
+    }
+  }
+
+  // Efeito para inicializar Hls.js ou Video Nativo
+  useEffect(() => {
+    if (isPlaying && streamUrl && videoRef.current) {
+      const video = videoRef.current;
+      
+      // Se for .ts ou HLS, tentamos Hls.js
+      if (Hls.isSupported() && (streamUrl.includes(".ts") || streamUrl.includes(".m3u8") || streamUrl.includes("type=live"))) {
+        const hls = new Hls({
+          xhrSetup: (xhr) => {
+            xhr.withCredentials = false;
+          }
+        });
+        hls.loadSource(streamUrl);
+        hls.attachMedia(video);
+        hlsRef.current = hls;
+        hls.on(Hls.Events.MANIFEST_PARSED, () => {
+          video.play().catch(e => console.error("Auto-play blocked", e));
+        });
+        hls.on(Hls.Events.ERROR, (event, data) => {
+          if (data.fatal) {
+            console.error("HLS fatal error", data);
+            toast.error("Erro no stream de vídeo");
+          }
+        });
+      } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
+        // Nativo para Safari/iOS
+        video.src = streamUrl;
+        video.addEventListener('loadedmetadata', () => {
+          video.play();
+        });
+      } else {
+        // Fallback direto (Filmes mp4/mkv)
+        video.src = streamUrl;
+      }
+    }
+  }, [isPlaying, streamUrl]);
 }
 
-function ContentCard({ item, type, primaryColor }: { item: any, type: string, primaryColor: string }) {
+function ContentCard({ item, type, primaryColor, onClick }: { item: any, type: string, primaryColor: string, onClick: () => void }) {
   const name = item.name || item.title;
   const image = item.stream_icon || item.cover;
   
   return (
-    <div className="group relative aspect-[2/3] bg-white/5 rounded-xl overflow-hidden border border-white/10 hover:border-primary/50 transition-all cursor-pointer">
+    <div 
+      onClick={onClick}
+      className="group relative aspect-[2/3] bg-white/5 rounded-xl overflow-hidden border border-white/10 hover:border-primary/50 transition-all cursor-pointer"
+    >
       {image ? (
         <img src={image} alt={name} className="h-full w-full object-cover group-hover:scale-110 transition-transform duration-500" />
       ) : (
