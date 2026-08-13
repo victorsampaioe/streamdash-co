@@ -321,7 +321,7 @@ function AdminPage() {
             <TabsTrigger value="radar" className="px-4">Radar Inteligente</TabsTrigger>
             <TabsTrigger value="reactivation" className="px-4">Reativação</TabsTrigger>
             <TabsTrigger value="store" className="px-4">Loja & Vendas</TabsTrigger>
-            <TabsTrigger value="diagnostics" className="px-4">Diagnósticos (Servidores)</TabsTrigger>
+            <TabsTrigger value="diagnostics" className="px-4">Servidores</TabsTrigger>
             <TabsTrigger value="paused" className="px-4">DNS Pausados</TabsTrigger>
             <TabsTrigger value="storage" className="px-4">Armazenamento</TabsTrigger>
           </TabsList>
