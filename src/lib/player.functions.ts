@@ -365,3 +365,22 @@ export const updateWatchHistory = createServerFn({ method: "POST" })
   });
 
 
+
+/**
+ * Lista pública (somente id/nome) dos servidores do revendedor para a tela de
+ * login do Web Player. O cliente final é anônimo, então a RLS bloqueia a
+ * consulta direta na tabela `servers`.
+ */
+export const getPlayerServers = createServerFn({ method: "GET" })
+  .inputValidator((data) => z.object({ resellerId: z.string().uuid() }).parse(data))
+  .handler(async ({ data }) => {
+    const { data: servers, error } = await supabaseAdmin
+      .from("servers")
+      .select("id, name, host")
+      .eq("owner_id", data.resellerId)
+      .order("name", { ascending: true });
+
+    if (error) throw new Error(error.message);
+    // Nunca expor o host real ao cliente final.
+    return (servers ?? []).map((s) => ({ id: s.id, name: s.name || "Servidor" }));
+  });
