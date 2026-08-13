@@ -102,8 +102,14 @@ function PlayerPage() {
       
       getPlayerCatalog({ data: { token, action: actionMap[activeTab] } })
         .then((data: any) => {
-          setCategories(Array.isArray(data) ? data : []);
+          const list = Array.isArray(data) ? data : [];
+          setCategories(list);
           setSelectedCategory(null);
+          if (list.length === 0) toast.info("Nenhuma categoria disponível nesta seção.");
+        })
+        .catch((err: any) => {
+          setCategories([]);
+          toast.error(err?.message || "Não foi possível carregar o catálogo");
         });
     }
   }, [session, token, activeTab]);
@@ -127,6 +133,12 @@ function PlayerPage() {
         .then((data: any) => {
           if (!controller.signal.aborted) {
             setContent(Array.isArray(data) ? data : []);
+          }
+        })
+        .catch((err: any) => {
+          if (!controller.signal.aborted) {
+            setContent([]);
+            toast.error(err?.message || "Não foi possível carregar os conteúdos");
           }
         })
         .finally(() => {
