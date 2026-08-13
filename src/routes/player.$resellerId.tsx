@@ -588,9 +588,9 @@ function ContentCard({ item, type, primaryColor, onClick }: { item: any, type: s
 }
 
 function LoginForm({ resellerId, settings, onLogin, primaryColor, secondaryColor }: any) {
-  const [username, setUsername] = useState("");
+  const [username, setUsername] = useState(localStorage.getItem(`stream_player_last_user_${resellerId}`) || "");
   const [password, setPassword] = useState("");
-  const [serverId, setServerId] = useState("");
+  const [serverId, setServerId] = useState(localStorage.getItem(`stream_player_last_server_${resellerId}`) || "");
   const [servers, setServers] = useState<any[]>([]);
 
   useEffect(() => {
@@ -603,7 +603,10 @@ function LoginForm({ resellerId, settings, onLogin, primaryColor, secondaryColor
 
   const loginMutation = useMutation({
     mutationFn: loginXtreamClient,
-    onSuccess: (data: any) => onLogin(data),
+    onSuccess: (data: any) => {
+      onLogin(data);
+      toast.success("Login realizado com sucesso!");
+    },
     onError: (err: any) => toast.error(err.message || "Erro ao conectar")
   });
 
@@ -611,6 +614,8 @@ function LoginForm({ resellerId, settings, onLogin, primaryColor, secondaryColor
     e.preventDefault();
     if (!serverId) return toast.error("Selecione o servidor");
     loginMutation.mutate({ data: { serverId, username, password, resellerId } });
+    localStorage.setItem(`stream_player_last_server_${resellerId}`, serverId);
+    localStorage.setItem(`stream_player_last_user_${resellerId}`, username);
   };
 
   return (
