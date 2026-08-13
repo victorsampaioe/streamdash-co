@@ -82,7 +82,7 @@ export async function runContentDiagnostic(
   if (!lockAcquired) {
     // Se não conseguiu o lock, espera um pouco e tenta ler o cache (pode ser que outro worker acabou de terminar)
     await new Promise(resolve => setTimeout(resolve, 2000));
-    return runContentDiagnostic(userId, serverId, contentId, contentType); // Recursão simples para re-checar cache
+    return runContentDiagnostic(effectiveUserId === 'core-system' ? null : effectiveUserId, serverId, contentId, contentType); // Recursão simples para re-checar cache
   }
 
   try {
@@ -96,7 +96,7 @@ export async function runContentDiagnostic(
     let isActualAdmin = false;
     if (effectiveUserId !== 'core-system') {
     const { data: roles } = await supabaseAdmin.rpc('has_role', { 
-      _user_id: effectiveUserId === 'core-system' ? '00000000-0000-0000-0000-000000000000' : effectiveUserId, 
+      _user_id: effectiveUserId as any, 
       _role: 'admin' as any
     });
       isActualAdmin = !!roles;
