@@ -6,7 +6,8 @@ import {
   loginXtreamClient, 
   getPlayerCatalog, 
   validatePlayerSession,
-  getPlayerStreamUrl 
+  getPlayerStreamUrl,
+  getPlayerServers
 } from "@/lib/player.functions";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
