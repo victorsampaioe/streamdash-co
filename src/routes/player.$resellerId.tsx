@@ -36,7 +36,9 @@ import {
   Star,
   Clock,
   ChevronLeft,
-  X
+  X,
+  Plus,
+  PlayCircle
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import Hls from "hls.js";
@@ -56,10 +58,13 @@ function PlayerPage() {
   const [content, setContent] = useState<any[]>([]);
   const [loadingContent, setLoadingContent] = useState(false);
   const [selectedContent, setSelectedContent] = useState<any>(null);
+  const [selectedSeriesInfo, setSelectedSeriesInfo] = useState<any>(null);
+  const [loadingSeries, setLoadingSeries] = useState(false);
   const [streamUrl, setStreamUrl] = useState<string | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
   const hlsRef = useRef<Hls | null>(null);
+  const abortControllerRef = useRef<AbortController | null>(null);
   
   // Identidade Visual
   const { data: settings, isLoading: settingsLoading } = useQuery({
@@ -106,6 +111,11 @@ function PlayerPage() {
   useEffect(() => {
     if (session && token && selectedCategory) {
       setLoadingContent(true);
+      
+      if (abortControllerRef.current) abortControllerRef.current.abort();
+      const controller = new AbortController();
+      abortControllerRef.current = controller;
+
       const actionMap = {
         live: "get_live_streams",
         vod: "get_vod_streams",
@@ -114,9 +124,17 @@ function PlayerPage() {
       
       getPlayerCatalog({ data: { token, action: actionMap[activeTab], categoryId: selectedCategory } })
         .then((data: any) => {
-          setContent(Array.isArray(data) ? data : []);
+          if (!controller.signal.aborted) {
+            setContent(Array.isArray(data) ? data : []);
+          }
         })
-        .finally(() => setLoadingContent(false));
+        .finally(() => {
+          if (!controller.signal.aborted) {
+            setLoadingContent(false);
+          }
+        });
+        
+      return () => controller.abort();
     } else {
       setContent([]);
     }
@@ -192,11 +210,21 @@ function PlayerPage() {
         </div>
       </header>
 
-      <div className="flex flex-1 overflow-hidden">
+      <div className="flex flex-1 overflow-hidden relative">
+        {/* Sidebar Categorias Mobile (Overlay) */}
+        <div className={`fixed inset-0 z-40 bg-black/60 backdrop-blur-sm md:hidden transition-opacity ${selectedCategory === null ? "opacity-100" : "opacity-0 pointer-events-none"}`} onClick={() => setSelectedCategory('0')}></div>
+        
         {/* Sidebar Categorias */}
-        <aside className="w-64 border-r border-white/5 bg-black/20 overflow-y-auto hidden md:block">
+        <aside className={`w-64 border-r border-white/5 bg-black/20 overflow-y-auto transition-transform md:translate-x-0 z-50 md:static fixed inset-y-0 left-0 ${selectedCategory === null ? "translate-x-0" : "-translate-x-full md:translate-x-0"}`}>
           <div className="p-4 space-y-2">
-            <h3 className="text-xs font-bold text-white/40 uppercase tracking-widest px-2 mb-4">Categorias</h3>
+            <div className="flex items-center justify-between px-2 mb-4">
+              <h3 className="text-xs font-bold text-white/40 uppercase tracking-widest">Categorias</h3>
+              {selectedCategory !== null && (
+                <Button variant="ghost" size="sm" className="h-6 text-[10px] md:hidden" onClick={() => setSelectedCategory(null)}>
+                  <ChevronLeft className="h-3 w-3 mr-1" /> Voltar
+                </Button>
+              )}
+            </div>
             {categories.map((cat) => (
               <button
                 key={cat.category_id}
@@ -206,6 +234,7 @@ function PlayerPage() {
                     ? "bg-primary text-white font-bold" 
                     : "text-white/60 hover:bg-white/5 hover:text-white"
                 }`}
+                style={selectedCategory === cat.category_id ? { backgroundColor: primaryColor } : {}}
               >
                 {cat.category_name}
               </button>
@@ -214,8 +243,19 @@ function PlayerPage() {
         </aside>
 
         {/* Conteúdo Principal */}
-        <main className="flex-1 overflow-y-auto p-6">
-          {!selectedCategory ? (
+        <main className="flex-1 overflow-y-auto p-4 md:p-6">
+          {selectedCategory !== null && (
+             <Button 
+               variant="ghost" 
+               size="sm" 
+               className="mb-4 md:hidden text-white/60" 
+               onClick={() => setSelectedCategory(null)}
+             >
+               <ChevronLeft className="h-4 w-4 mr-1" /> Ver Categorias
+             </Button>
+          )}
+          
+          {selectedCategory === null ? (
             <div className="h-full flex flex-col items-center justify-center text-center space-y-4 opacity-50">
               <LayoutGrid className="h-16 w-16" />
               <div>
@@ -229,14 +269,14 @@ function PlayerPage() {
             </div>
           ) : (
             <div className="space-y-6">
-              <div className="flex items-center justify-between border-b border-white/5 pb-4">
+              <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-white/5 pb-4">
                 <h2 className="text-2xl font-bold">
                   {categories.find(c => c.category_id === selectedCategory)?.category_name}
                 </h2>
                 <div className="flex gap-2">
-                   <div className="relative">
+                   <div className="relative flex-1 md:flex-none">
                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-white/40" />
-                     <Input className="bg-white/5 border-white/10 pl-9 w-64 h-9 text-sm" placeholder="Buscar..." />
+                     <Input className="bg-white/5 border-white/10 pl-9 w-full md:w-64 h-9 text-sm" placeholder="Buscar..." />
                    </div>
                 </div>
               </div>
@@ -251,8 +291,10 @@ function PlayerPage() {
                     onClick={() => {
                       if (activeTab === "live") {
                         handlePlay(item.stream_id, "live");
-                      } else {
+                      } else if (activeTab === "vod") {
                         setSelectedContent(item);
+                      } else if (activeTab === "series") {
+                        handleOpenSeries(item);
                       }
                     }}
                   />
@@ -315,13 +357,90 @@ function PlayerPage() {
         </DialogContent>
       </Dialog>
 
+      {/* Modal de Séries (Temporadas/Episódios) */}
+      <Dialog open={!!selectedSeriesInfo && !isPlaying} onOpenChange={(open) => !open && setSelectedSeriesInfo(null)}>
+        <DialogContent className="max-w-4xl bg-neutral-900 border-white/10 text-white p-0 overflow-hidden flex flex-col h-[80vh]">
+          {selectedSeriesInfo && (
+            <>
+              <div className="flex flex-col md:flex-row border-b border-white/5 bg-black/40">
+                <div className="w-full md:w-48 aspect-[2/3] relative">
+                  <img 
+                    src={selectedSeriesInfo.info?.cover || selectedSeriesInfo.info?.stream_icon} 
+                    alt={selectedSeriesInfo.info?.name} 
+                    className="w-full h-full object-cover"
+                  />
+                </div>
+                <div className="flex-1 p-6">
+                  <DialogHeader>
+                    <div className="flex justify-between items-start">
+                      <DialogTitle className="text-2xl font-bold">{selectedSeriesInfo.info?.name}</DialogTitle>
+                      <button onClick={() => setSelectedSeriesInfo(null)} className="md:hidden text-white/40"><X className="h-5 w-5" /></button>
+                    </div>
+                    <div className="flex items-center gap-3 text-sm text-white/60 mt-2">
+                      <span className="flex items-center gap-1"><Star className="h-3 w-3 text-yellow-500 fill-yellow-500" /> {selectedSeriesInfo.info?.rating || "N/A"}</span>
+                      {selectedSeriesInfo.info?.releaseDate && <span>{selectedSeriesInfo.info.releaseDate}</span>}
+                    </div>
+                  </DialogHeader>
+                  <p className="text-sm text-white/70 mt-4 line-clamp-3">{selectedSeriesInfo.info?.plot}</p>
+                </div>
+              </div>
+              
+              <div className="flex-1 overflow-y-auto p-6">
+                {loadingSeries ? (
+                  <div className="h-full flex items-center justify-center"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>
+                ) : (
+                  <div className="space-y-8">
+                    {Object.keys(selectedSeriesInfo.episodes || {}).map((seasonNum) => (
+                      <div key={seasonNum} className="space-y-4">
+                        <h4 className="text-lg font-bold flex items-center gap-2">
+                          Temporada {seasonNum}
+                          <span className="text-xs font-normal text-white/40">{selectedSeriesInfo.episodes[seasonNum].length} episódios</span>
+                        </h4>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                          {selectedSeriesInfo.episodes[seasonNum].map((ep: any) => (
+                            <button
+                              key={ep.id}
+                              onClick={() => handlePlay(ep.id, "series", ep.container_extension || "mp4")}
+                              className="flex items-center gap-4 p-3 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 hover:border-primary/50 transition-all text-left group"
+                            >
+                              <div className="relative w-24 aspect-video rounded bg-black flex-shrink-0 overflow-hidden">
+                                <img src={ep.info?.movie_image || selectedSeriesInfo.info?.cover} className="w-full h-full object-cover opacity-50 group-hover:opacity-80 transition-opacity" />
+                                <div className="absolute inset-0 flex items-center justify-center">
+                                  <Play className="h-6 w-6 fill-white opacity-0 group-hover:opacity-100 transition-opacity" />
+                                </div>
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <div className="text-sm font-bold truncate">E{ep.episode_num}. {ep.title}</div>
+                                <div className="text-xs text-white/40 flex items-center gap-2 mt-1">
+                                  <Clock className="h-3 w-3" /> {ep.info?.duration || "--:--"}
+                                </div>
+                              </div>
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </>
+          )}
+          <button 
+            onClick={() => setSelectedSeriesInfo(null)}
+            className="absolute top-4 right-4 hidden md:flex h-8 w-8 items-center justify-center rounded-full bg-black/40 hover:bg-black/60 transition-colors"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </DialogContent>
+      </Dialog>
+
       {/* Player de Vídeo Fullscreen Overlay */}
       {isPlaying && (
         <div className="fixed inset-0 z-[100] bg-black flex flex-col">
           <div className="h-16 px-6 flex items-center justify-between bg-gradient-to-b from-black/80 to-transparent absolute top-0 left-0 w-full z-10">
             <div className="flex items-center gap-4">
               <Button variant="ghost" size="icon" onClick={handleClosePlayer} className="text-white hover:bg-white/10">
-                <ChevronLeft className="h-6 w-6" />
+                <X className="h-6 w-6" />
               </Button>
               <h2 className="font-bold">{selectedContent?.name || "Reproduzindo..."}</h2>
             </div>
@@ -348,16 +467,16 @@ function PlayerPage() {
     </div>
   );
 
-  function handlePlay(id: string, type: "live" | "movie" | "series") {
+  function handlePlay(id: string, type: "live" | "movie" | "series", extOverride?: string) {
     setIsPlaying(true);
     setStreamUrl(null);
     
     getPlayerStreamUrl({ 
       data: { 
         token: token!, 
-        streamId: id, 
+        streamId: id.toString(), 
         type, 
-        extension: type === "live" ? "ts" : "mp4" 
+        extension: extOverride || (type === "live" ? "ts" : "mp4") 
       } 
     })
     .then(url => {
@@ -367,6 +486,24 @@ function PlayerPage() {
       toast.error("Erro ao carregar vídeo: " + err.message);
       setIsPlaying(false);
     });
+  }
+
+  function handleOpenSeries(item: any) {
+    setSelectedSeriesInfo({ info: item, episodes: {} });
+    setLoadingSeries(true);
+    
+    getPlayerCatalog({ 
+      data: { 
+        token: token!, 
+        action: "get_series_info", 
+        contentId: item.series_id 
+      } 
+    })
+    .then((data: any) => {
+      setSelectedSeriesInfo(data);
+    })
+    .catch(() => toast.error("Erro ao carregar episódios"))
+    .finally(() => setLoadingSeries(false));
   }
 
   function handleClosePlayer() {
@@ -384,7 +521,7 @@ function PlayerPage() {
       const video = videoRef.current;
       
       // Se for .ts ou HLS, tentamos Hls.js
-      if (Hls.isSupported() && (streamUrl.includes(".ts") || streamUrl.includes(".m3u8") || streamUrl.includes("type=live"))) {
+      if (Hls.isSupported() && (streamUrl.includes(".ts") || streamUrl.includes(".m3u8") || streamUrl.includes("type=live") || streamUrl.includes("ext=ts"))) {
         const hls = new Hls({
           xhrSetup: (xhr) => {
             xhr.withCredentials = false;
@@ -451,9 +588,9 @@ function ContentCard({ item, type, primaryColor, onClick }: { item: any, type: s
 }
 
 function LoginForm({ resellerId, settings, onLogin, primaryColor, secondaryColor }: any) {
-  const [username, setUsername] = useState("");
+  const [username, setUsername] = useState(localStorage.getItem(`stream_player_last_user_${resellerId}`) || "");
   const [password, setPassword] = useState("");
-  const [serverId, setServerId] = useState("");
+  const [serverId, setServerId] = useState(localStorage.getItem(`stream_player_last_server_${resellerId}`) || "");
   const [servers, setServers] = useState<any[]>([]);
 
   useEffect(() => {
@@ -466,7 +603,10 @@ function LoginForm({ resellerId, settings, onLogin, primaryColor, secondaryColor
 
   const loginMutation = useMutation({
     mutationFn: loginXtreamClient,
-    onSuccess: (data: any) => onLogin(data),
+    onSuccess: (data: any) => {
+      onLogin(data);
+      toast.success("Login realizado com sucesso!");
+    },
     onError: (err: any) => toast.error(err.message || "Erro ao conectar")
   });
 
@@ -474,6 +614,8 @@ function LoginForm({ resellerId, settings, onLogin, primaryColor, secondaryColor
     e.preventDefault();
     if (!serverId) return toast.error("Selecione o servidor");
     loginMutation.mutate({ data: { serverId, username, password, resellerId } });
+    localStorage.setItem(`stream_player_last_server_${resellerId}`, serverId);
+    localStorage.setItem(`stream_player_last_user_${resellerId}`, username);
   };
 
   return (
@@ -492,7 +634,7 @@ function LoginForm({ resellerId, settings, onLogin, primaryColor, secondaryColor
               {settings?.logo_url ? (
                 <img src={settings.logo_url} alt="Logo" className="max-h-full max-w-full object-contain" />
               ) : (
-                <Play className="h-10 w-10 text-primary" style={{ color: primaryColor }} />
+                <PlayCircle className="h-10 w-10" style={{ color: primaryColor }} />
               )}
             </div>
             <div>
@@ -541,15 +683,21 @@ function LoginForm({ resellerId, settings, onLogin, primaryColor, secondaryColor
 
           <Button 
             type="submit" 
-            className="w-full h-12 text-lg font-bold"
+            className="w-full h-12 font-bold text-lg" 
             style={{ backgroundColor: primaryColor }}
             disabled={loginMutation.isPending}
           >
-            {loginMutation.isPending ? <Loader2 className="h-5 w-5 animate-spin mr-2" /> : <Play className="h-5 w-5 mr-2" />}
-            Conectar
+            {loginMutation.isPending ? (
+              <Loader2 className="h-5 w-5 animate-spin mr-2" />
+            ) : (
+              <Play className="h-5 w-5 mr-2 fill-white" />
+            )}
+            Acessar Agora
           </Button>
 
-          <p className="text-[10px] text-center text-white/20 uppercase tracking-widest pt-2">Powered by Stream Monitor</p>
+          <p className="text-center text-[10px] text-white/20 uppercase tracking-widest">
+            Powered by StreamMonitor.site
+          </p>
         </form>
       </Card>
     </div>
