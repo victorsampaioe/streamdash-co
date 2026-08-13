@@ -1057,8 +1057,8 @@ function ConvertToResellerDialog({ user, onDone }: { user: AdminUser; onDone: ()
 
 function EditResellerDialog({ reseller, onDone, isAdminUser, onToggleAdmin }: { reseller: AdminReseller; onDone: () => void; isAdminUser?: boolean; onToggleAdmin?: (userId: string, makeAdmin: boolean) => void }) {
   const [open, setOpen] = useState(false);
-  const [fullName, setFullName] = useState(reseller.full_name || "");
-  const [email, setEmail] = useState(reseller.email || "");
+  const [fullName, setFullName] = useState("");
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [creditsChange, setCreditsChange] = useState("0");
   const [status, setStatus] = useState<"active" | "expired" | "trial" | "cancelled">("active");
@@ -1070,31 +1070,49 @@ function EditResellerDialog({ reseller, onDone, isAdminUser, onToggleAdmin }: { 
       setEmail(reseller.email || "");
       setPassword("");
       setCreditsChange("0");
+      // Importante: status também deve ser inicializado
+      setStatus("active");
     }
   }, [open, reseller]);
 
   const updateFn = useServerFn(updateReseller);
   const mut = useMutation({
-    mutationFn: () => updateFn({ data: { 
-      userId: reseller.id, 
-      fullName, 
-      email, 
-      password: password || undefined,
-      status,
-      creditsChange: Number(creditsChange)
-    } }),
+    mutationFn: (data: any) => updateFn({ data }),
     onSuccess: () => {
       toast.success("Dados do revendedor atualizados!");
       setOpen(false);
       onDone();
     },
-    onError: (e: any) => toast.error(e.message)
+    onError: (e: any) => {
+      console.error("Erro ao atualizar revendedor:", e);
+      toast.error(e.message || "Erro ao salvar alterações");
+    }
   });
+
+  const handleSave = () => {
+    const payload = { 
+      userId: reseller.id, 
+      fullName, 
+      email: email || undefined, 
+      password: password || undefined,
+      status,
+      creditsChange: Number(creditsChange)
+    };
+    console.log("Salvando revendedor com payload:", payload);
+    mut.mutate(payload);
+  };
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button size="sm" variant="outline">
+        <Button 
+          size="sm" 
+          variant="outline" 
+          onClick={(e) => {
+            e.stopPropagation();
+            setOpen(true);
+          }}
+        >
           <Settings2 className="h-3.5 w-3.5 mr-1" />
           Editar
         </Button>
