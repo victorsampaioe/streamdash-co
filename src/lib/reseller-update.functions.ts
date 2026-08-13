@@ -36,18 +36,37 @@ export const updateReseller = createServerFn({ method: "POST" })
     const profileUpdate: any = {};
     if (data.fullName) profileUpdate.full_name = data.fullName;
     if (data.email) profileUpdate.email = data.email;
-    
-    if (data.creditsChange !== undefined && data.creditsChange !== 0) {
-      // If adding credits, verify target is not admin (admins don't need credits, but we can set them for display)
-      // The requirement says admin has infinite, but for consistency we let admin set credits to resellers.
-      profileUpdate.credits = (profile.credits || 0) + data.creditsChange;
-      if (profileUpdate.credits < 0) profileUpdate.credits = 0;
-    }
 
     if (Object.keys(profileUpdate).length > 0) {
       const { error: pErr } = await supabaseAdmin.from("profiles").update(profileUpdate).eq("id", data.userId);
       if (pErr) throw pErr;
     }
+
+    // 3b. Credits live in reseller_wallet (source of truth; a trigger mirrors it into profiles.credits)
+    let newBalance: number | null = null;
+    if (data.creditsChange !== undefined && data.creditsChange !== 0) {
+      const { data: wallet } = await supabaseAdmin
+        .from("reseller_wallet")
+        .select("credits")
+        .eq("reseller_id", data.userId)
+        .maybeSingle();
+
+      const current = wallet?.credits ?? profile.credits ?? 0;
+      newBalance = Math.max(0, current + data.creditsChange);
+
+      const { error: wErr } = await supabaseAdmin
+        .from("reseller_wallet")
+        .upsert({ reseller_id: data.userId, credits: newBalance, updated_at: new Date().toISOString() }, { onConflict: "reseller_id" });
+      if (wErr) throw wErr;
+
+      // Keep profiles in sync even if the trigger is absent
+      const { error: pcErr } = await supabaseAdmin
+        .from("profiles")
+        .update({ credits: newBalance })
+        .eq("id", data.userId);
+      if (pcErr) throw pcErr;
+    }
+
 
     // 4. Update Auth (Email, Password)
     const authUpdate: any = {};
