@@ -261,8 +261,8 @@ function PlayerPage() {
           if (v === "search") setIsSearchOpen(true);
           else setActiveView(v);
         }}
-        brandName={settings?.brand_name}
-        logoUrl={settings?.logo_url}
+        brandName={settings?.brand_name ?? undefined}
+        logoUrl={settings?.logo_url ?? undefined}
         onLogout={() => setToken(null)}
       />
 
@@ -272,14 +272,14 @@ function PlayerPage() {
             <HeroBanner 
               item={homeData.featured} 
               primaryColor={primaryColor}
-              onPlay={(item) => handlePlay(item.stream_id || item.series_id, item.stream_type || "vod")}
+              onPlay={(item) => handlePlay(item.stream_id || item.series_id, (item.stream_type === "movie" || item.stream_type === "vod") ? "movie" : (item.stream_type === "series" ? "series" : "live"))}
             />
             <ContentRow 
               title="Novidades" 
               items={homeData.newReleases} 
               type="vod" 
               primaryColor={primaryColor}
-              onPlay={(item) => handlePlay(item.stream_id, "vod")}
+              onPlay={(item) => handlePlay(item.stream_id, "movie")}
             />
             <ContentRow 
               title="Destaques Ao Vivo" 
@@ -290,6 +290,7 @@ function PlayerPage() {
             />
           </div>
         )}
+
 
         {(activeView === "live" || activeView === "vod" || activeView === "series") && (
           <div className="p-6 md:p-12 space-y-8">
