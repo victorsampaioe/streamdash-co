@@ -52,6 +52,7 @@ function PlayerAdminPage() {
       toast.success("Configurações salvas com sucesso!");
     },
     onError: (error) => {
+      console.error("Erro ao salvar configurações do player:", error);
       toast.error(`Erro ao salvar: ${error.message}`);
     },
   });
