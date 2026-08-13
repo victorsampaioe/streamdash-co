@@ -79,7 +79,7 @@ export const loginXtreamClient = createServerFn({ method: "POST" })
     const { probeXtream } = await import("./iptv.server");
 
     // Validação de login simples (catalogMode: "auth")
-    const authResult: any = await runOnCore("iptv-validate", {
+    const authResult: any = await runOnCore("iptv-validate" as any, {
       host: server.host,
       username: data.username,
       password: data.password,
@@ -182,7 +182,6 @@ export const getPlayerCatalog = createServerFn({ method: "POST" })
     
     if (!creds.username || !creds.password) throw new Error("Credenciais do servidor não disponíveis");
 
-    // Forçamos o casting para evitar erro de TS com a enumeração local vs core
     const result = await runOnCore(
       "iptv-player-proxy" as any, 
       {
