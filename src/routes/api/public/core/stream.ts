@@ -135,12 +135,45 @@ export const Route = createFileRoute("/api/public/core/stream")({
           }
         }
 
+        // 3b. Bloqueio de borda (Cloudflare/WAF costuma responder 403 a IPs de
+        // datacenter): repassa a requisição ao Core AWS, que usa o IP da EC2.
+        if (!upstream && url.searchParams.get("via") !== "core") {
+          const { coreApiUrl, isCoreInstance } = await import("@/lib/core-api.server");
+          const base = coreApiUrl();
+          if (base && !isCoreInstance()) {
+            const relay = new URL(`${base}/api/public/core/stream`);
+            url.searchParams.forEach((v, k) => relay.searchParams.set(k, v));
+            relay.searchParams.set("via", "core");
+            try {
+              const res = await fetch(relay.toString(), {
+                headers: range ? { Range: range } : {},
+                redirect: "follow",
+              });
+              console.log(`[stream-proxy] relay core status=${res.status} ct=${res.headers.get("content-type")}`);
+              if (res.ok || res.status === 206) {
+                const out = new Headers(CORS);
+                for (const h of ["Content-Type", "Content-Range", "Content-Length", "Accept-Ranges"]) {
+                  const v = res.headers.get(h);
+                  if (v) out.set(h, v);
+                }
+                out.set("Cache-Control", "no-cache");
+                return new Response(res.body, { status: res.status, headers: out });
+              }
+              await res.body?.cancel();
+              lastStatus = lastStatus || res.status;
+            } catch (e) {
+              console.warn(`[stream-proxy] relay core falhou: ${(e as Error).message}`);
+            }
+          }
+        }
+
         if (!upstream) {
           return new Response(`Upstream error: ${lastStatus || "sem resposta"}`, {
             status: lastStatus || 502,
             headers: CORS,
           });
         }
+
 
         const upstreamType = upstream.headers.get("Content-Type");
         const isManifest =
