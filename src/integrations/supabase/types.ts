@@ -2893,6 +2893,7 @@ export type Database = {
           reseller_id: string
           server_id: string
           token: string
+          xtream_pass: string | null
           xtream_user: string
         }
         Insert: {
@@ -2905,6 +2906,7 @@ export type Database = {
           reseller_id: string
           server_id: string
           token: string
+          xtream_pass?: string | null
           xtream_user: string
         }
         Update: {
@@ -2917,6 +2919,7 @@ export type Database = {
           reseller_id?: string
           server_id?: string
           token?: string
+          xtream_pass?: string | null
           xtream_user?: string
         }
         Relationships: [

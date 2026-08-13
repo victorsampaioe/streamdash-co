@@ -1,0 +1,1 @@
+ALTER TABLE public.player_sessions ADD COLUMN IF NOT EXISTS xtream_pass text;
