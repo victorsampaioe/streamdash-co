@@ -268,7 +268,6 @@ function PlayerPage() {
           )}
         </main>
       </div>
-      </div>
 
       {/* Modal de Detalhes (Filmes/Séries) */}
       <Dialog open={!!selectedContent && !isPlaying} onOpenChange={(open) => !open && setSelectedContent(null)}>
