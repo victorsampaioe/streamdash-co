@@ -4,7 +4,7 @@ import { useState } from "react";
 
 interface ContentCardProps {
   item: any;
-  type: "live" | "vod" | "series";
+  type: "live" | "movie" | "series";
   primaryColor?: string;
   onClick: (item: any) => void;
   onInfoClick?: (item: any) => void;
@@ -97,7 +97,7 @@ export function ContentCard({ item, type, primaryColor, onClick, onInfoClick }: 
             </span>
           )}
           {year && <span>{year}</span>}
-          {type === "vod" && <span>Filme</span>}
+          {type === "movie" && <span>Filme</span>}
           {type === "series" && <span>Série</span>}
         </div>
       </div>

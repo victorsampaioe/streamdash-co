@@ -6,7 +6,7 @@ import { cn } from "@/lib/utils";
 interface ContentRowProps {
   title: string;
   items: any[];
-  type: "live" | "vod" | "series";
+  type: "live" | "movie" | "series";
   primaryColor?: string;
   onPlay: (item: any) => void;
 }
