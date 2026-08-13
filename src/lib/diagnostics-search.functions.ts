@@ -40,6 +40,14 @@ export const searchDiagnosticContent = createServerFn({ method: "POST" })
 
     if (error) throw error;
 
+    // Item 7 — total real para indicar corte em 100 resultados
+    const { count: totalCount } = await context.supabase
+      .from("iptv_catalog_items")
+      .select("id", { count: "exact", head: true })
+      .in("server_id", myServerIds)
+      .is("removed_at", null)
+      .or(`name.ilike.%${term}%,title_key.eq.${tKey}`);
+
     // 3. Agrupar por conteúdo (title_key + kind)
     const grouped = new Map<string, any>();
 
@@ -67,8 +75,31 @@ export const searchDiagnosticContent = createServerFn({ method: "POST" })
       }
     }
 
+    // Item 7 — resolve o ID numérico de categoria para o nome legível
+    const involvedServers = Array.from(new Set((items || []).map((i: any) => i.server_id))).slice(0, 3);
+    const catNames: Record<string, string> = {};
+    if (involvedServers.length) {
+      const { runOnCore } = await import("./core-api.server");
+      const { getCategoryNames } = await import("./diagnostics-categories.server");
+      const maps = await Promise.allSettled(
+        involvedServers.map((sid) =>
+          runOnCore("iptv-categories", { serverId: sid }, () => getCategoryNames(sid as string)),
+        ),
+      );
+      for (const m of maps) {
+        if (m.status === "fulfilled" && m.value) Object.assign(catNames, m.value as Record<string, string>);
+      }
+    }
+
+    const list = Array.from(grouped.values()).map((entry: any) => ({
+      ...entry,
+      category: entry.category ? (catNames[String(entry.category)] ?? (/^\d+$/.test(String(entry.category)) ? null : entry.category)) : null,
+    }));
+
     return {
-      items: Array.from(grouped.values())
+      items: list,
+      total: totalCount ?? list.length,
+      truncated: (items?.length ?? 0) >= 100,
     };
   });
 
