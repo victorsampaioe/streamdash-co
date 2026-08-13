@@ -36,6 +36,8 @@ export const savePlayerSettings = createServerFn({ method: "POST" })
     const userId = (context as any).userId;
     if (!userId) throw new Error("Não autorizado");
 
+    console.log(`[savePlayerSettings] User ID: ${userId}, Data:`, data);
+
     // Garantir que o revendedor só edita suas próprias configurações
     const { data: result, error } = await supabaseAdmin
       .from("player_settings")
@@ -49,7 +51,10 @@ export const savePlayerSettings = createServerFn({ method: "POST" })
       .select()
       .single();
 
-    if (error) throw new Error(error.message);
+    if (error) {
+      console.error("[savePlayerSettings] Error:", error);
+      throw new Error(error.message);
+    }
     return result;
   });
 
