@@ -367,7 +367,7 @@ function AdminPage() {
                     value={search} 
                     onChange={(e) => setSearch(e.target.value)} 
                     className="pl-8 w-full" 
-                    id="admin-user-search"
+                    id="admin-user-search-main"
                   />
                 </div>
               </div>
