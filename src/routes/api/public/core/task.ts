@@ -20,6 +20,8 @@ const Body = z.object({
     "iptv-ua-test",
     "content-scan",
     "content-diagnostic",
+    "content-diagnostic-cancel",
+    "iptv-categories",
     "get-series-seasons",
     "telegram-broadcast",
     "radar-job-step",
@@ -82,6 +84,14 @@ async function execute(input: z.infer<typeof Body>) {
     case "content-diagnostic": {
       const { runContentDiagnostic } = await import("@/lib/diagnostics.server");
       return await runContentDiagnostic(input.userId ?? null, input.serverId!, input.contentId!, input.contentType as any);
+    }
+    case "content-diagnostic-cancel": {
+      const { requestDiagnosticCancel } = await import("@/lib/diagnostics.server");
+      return await requestDiagnosticCancel(input.serverId!, input.contentId!, input.contentType as any);
+    }
+    case "iptv-categories": {
+      const { getCategoryNames } = await import("@/lib/diagnostics-categories.server");
+      return await getCategoryNames(input.serverId!);
     }
     case "get-series-seasons": {
       const { getSeriesDataOnCore } = await import("@/lib/iptv.server");
