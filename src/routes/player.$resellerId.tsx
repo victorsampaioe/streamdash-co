@@ -296,9 +296,9 @@ function PlayerPage() {
         )}
 
 
-        {(activeView === "live" || activeView === "vod" || activeView === "series") && (
+        {(activeView === "live" || activeView === "movie" || activeView === "series") && (
           <div className="p-6 md:p-12 space-y-8">
-            <h1 className="text-3xl font-bold capitalize">{activeView === "live" ? "TV Ao Vivo" : activeView === "vod" ? "Filmes" : "Séries"}</h1>
+            <h1 className="text-3xl font-bold capitalize">{activeView === "live" ? "TV Ao Vivo" : activeView === "movie" ? "Filmes" : "Séries"}</h1>
             
             <div className="flex gap-2 overflow-x-auto pb-4">
               {categories.map((cat) => (
@@ -322,19 +322,19 @@ function PlayerPage() {
                 <ContentCard 
                   key={item.stream_id || item.series_id} 
                   item={item} 
-                  type={activeView as "live" | "vod" | "series"} 
+                  type={activeView as "live" | "movie" | "series"} 
                   primaryColor={primaryColor} 
                   onClick={(i) => {
                     if (activeView === "live") handlePlay(i.stream_id, "live");
-                    else if (activeView === "vod") handlePlay(i.stream_id, "movie");
+                    else if (activeView === "movie") handlePlay(i.stream_id, "movie");
                     else handleOpenSeries(i);
-
                   }}
                 />
               ))}
             </div>
           </div>
         )}
+
       </main>
 
       {/* Overlays */}
