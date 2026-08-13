@@ -333,6 +333,8 @@ async function executeDiagnostic(
     
     try {
       while (bytesReceived < TARGET_BYTES) {
+        // Item 6 — aborta a leitura assim que o cliente fecha o modal
+        if (cancelSignal?.aborted) throw new DiagnosticCancelled();
         // Checagem manual de timeout já que reader.read() não aceita signal diretamente em todos os ambientes
         if (Date.now() - tStart > DIAG_TIMEOUT_TOTAL) {
           throw new Error(`Timeout total (${DIAG_TIMEOUT_TOTAL/1000}s) atingido durante a leitura da mídia.`);
@@ -344,13 +346,18 @@ async function executeDiagnostic(
         if (bytesReceived >= MAX_BYTES) break;
       }
     } catch (readErr: any) {
+      if (readErr instanceof DiagnosticCancelled) throw readErr;
+      if (cancelSignal?.aborted) throw new DiagnosticCancelled();
       if (readErr.name === 'AbortError' || readErr.message.includes('Timeout')) {
         throw new Error(`Timeout total (${DIAG_TIMEOUT_TOTAL/1000}s) atingido durante a leitura da mídia.`);
       }
       throw readErr;
     } finally {
       clearTimeout(streamTimeout);
+      cancelSignal?.removeEventListener('abort', onCancel);
+      try { await reader.cancel(); } catch { /* já encerrado */ }
     }
+
     
     const connectionTime = Date.now() - tStreamStart;
     updateStep(6, 'success', `${Math.round(bytesReceived / 1024)}KB lidos`);
