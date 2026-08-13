@@ -34,7 +34,7 @@ export const Route = createFileRoute("/_authenticated/app/diagnostico/")({
   component: ContentDiagnosticPage,
   head: () => ({
     meta: [
-      { title: "Diagnóstico de Conteúdo | Stream Monitor" },
+      { title: "Diagnóstico de Conteúdo | StreamMonitor" },
       { name: "description", content: "Valide se um conteúdo está funcionando corretamente no servidor ou se é um problema local." },
     ],
   }),
@@ -121,7 +121,7 @@ function ContentDiagnosticPage() {
         <div className="flex items-center gap-2 text-xs uppercase tracking-wider text-primary font-semibold">
           <Activity className="h-4 w-4" /> Diagnóstico de Conteúdo
         </div>
-        <h1 className="text-2xl sm:text-3xl font-bold">Validador Inteligente</h1>
+        <h1 className="text-2xl sm:text-3xl font-bold">Diagnóstico de Conteúdo</h1>
         <p className="text-sm text-muted-foreground max-w-2xl">
           Busca unificada por canais, filmes ou séries. Descubra se o problema está no servidor ou na sua conexão.
         </p>

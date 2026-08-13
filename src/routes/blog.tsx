@@ -20,7 +20,7 @@ function BlogPage() {
   ];
 
   return (
-    <div className="min-h-screen bg-background text-foreground py-16 px-4">
+    <main className="min-h-screen bg-background text-foreground py-16 px-4">
       <div className="max-w-4xl mx-auto">
         <Link to="/" className="text-primary hover:underline mb-8 inline-block">← Voltar para o início</Link>
         <h1 className="text-4xl sm:text-5xl font-bold mb-12">Blog Stream Monitor</h1>
@@ -39,6 +39,6 @@ function BlogPage() {
           ))}
         </div>
       </div>
-    </div>
+    </main>
   );
 }
