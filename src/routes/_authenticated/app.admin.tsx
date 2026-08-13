@@ -327,7 +327,9 @@ function AdminPage() {
             <TabsTrigger value="storage" className="px-4">Armazenamento</TabsTrigger>
           </TabsList>
 
-        </div>
+          <TabsContent value="alerts" className="space-y-6">
+            <AdminAlertsPanel />
+          </TabsContent>
 
 
 
