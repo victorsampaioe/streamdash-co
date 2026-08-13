@@ -71,7 +71,7 @@ export async function runContentDiagnostic(
         error: (cached as any).error_message ?? undefined,
         steps: typeof cached.steps === 'string' ? JSON.parse(cached.steps) : (cached.steps as any),
         is_cached: true,
-        cached_at: cached.created_at
+        cached_at: (cached.created_at as string | undefined) || undefined
       };
     }
   }
@@ -96,7 +96,7 @@ export async function runContentDiagnostic(
     let isActualAdmin = false;
     if (effectiveUserId !== 'core-system') {
     const { data: roles } = await supabaseAdmin.rpc('has_role', { 
-      _user_id: effectiveUserId === 'core-system' ? '00000000-0000-0000-0000-000000000000' : effectiveUserId, 
+      _user_id: (effectiveUserId === 'core-system' ? '00000000-0000-0000-0000-000000000000' : effectiveUserId) as string, 
       _role: 'admin' 
     });
       isActualAdmin = !!roles;
@@ -334,18 +334,18 @@ async function executeDiagnostic(
       .eq("external_id", contentId)
       .maybeSingle();
 
-    await (supabaseAdmin.from('content_diagnostics' as any) as any).insert({
+    await (supabaseAdmin.from('content_diagnostics') as any).insert({
       user_id: (!userId || userId === 'core-system') ? null : userId,
       server_id: serverId,
       content_id: contentId,
       content_type: contentType,
-      content_title: catalogItem?.name || "Conteúdo IPTV",
       status: result.status,
       ttfb_ms: result.ttfb_ms,
       connection_ms: result.connection_ms,
       bytes_read: result.bytes_read,
       duration_ms: result.duration_ms,
-      steps: JSON.stringify(steps)
+      steps: JSON.stringify(steps),
+      is_cached: false
     });
 
     return result;
@@ -371,16 +371,16 @@ async function executeDiagnostic(
       .eq("external_id", contentId)
       .maybeSingle();
 
-    await (supabaseAdmin.from('content_diagnostics' as any) as any).insert({
+    await (supabaseAdmin.from('content_diagnostics') as any).insert({
       user_id: (!userId || userId === 'core-system') ? null : userId,
       server_id: serverId,
       content_id: contentId,
       content_type: contentType,
-      content_title: catalogItem?.name || "Conteúdo IPTV",
       status: result.status,
-      error: result.error,
+      error_message: result.error,
       duration_ms: Date.now() - tStart,
-      steps: JSON.stringify(result.steps)
+      steps: JSON.stringify(result.steps),
+      is_cached: false
     });
 
     return result;
