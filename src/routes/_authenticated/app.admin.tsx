@@ -527,9 +527,6 @@ function AdminPage() {
         <TabsContent value="store" className="space-y-6">
           <StoreManagementSection />
         </TabsContent>
-        <TabsContent value="alerts" className="space-y-6">
-          <AdminAlertsPanel />
-        </TabsContent>
       </Tabs>
 
     </div>
