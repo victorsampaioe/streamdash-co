@@ -36,7 +36,9 @@ import {
   Star,
   Clock,
   ChevronLeft,
-  X
+  X,
+  Plus,
+  PlayCircle
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import Hls from "hls.js";
