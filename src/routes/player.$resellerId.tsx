@@ -499,7 +499,7 @@ function PlayerPage() {
       const video = videoRef.current;
       
       // Se for .ts ou HLS, tentamos Hls.js
-      if (Hls.isSupported() && (streamUrl.includes(".ts") || streamUrl.includes(".m3u8") || streamUrl.includes("type=live"))) {
+      if (Hls.isSupported() && (streamUrl.includes(".ts") || streamUrl.includes(".m3u8") || streamUrl.includes("type=live") || streamUrl.includes("ext=ts"))) {
         const hls = new Hls({
           xhrSetup: (xhr) => {
             xhr.withCredentials = false;
