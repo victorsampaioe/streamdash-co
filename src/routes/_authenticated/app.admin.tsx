@@ -326,10 +326,11 @@ function AdminPage() {
             <TabsTrigger value="paused" className="px-4">DNS Pausados</TabsTrigger>
             <TabsTrigger value="storage" className="px-4">Armazenamento</TabsTrigger>
           </TabsList>
+        </div>
 
-          <TabsContent value="alerts" className="space-y-6">
-            <AdminAlertsPanel />
-          </TabsContent>
+        <TabsContent value="alerts" className="space-y-6">
+          <AdminAlertsPanel />
+        </TabsContent>
 
 
 
