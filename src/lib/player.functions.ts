@@ -94,12 +94,15 @@ export const loginXtreamClient = createServerFn({ method: "POST" })
     const expiresAt = new Date();
     expiresAt.setDate(expiresAt.getDate() + 7);
 
+    const { encryptSecret } = await import("./crypto.server");
+
     const { data: session, error: sessionErr } = await supabaseAdmin
       .from("player_sessions")
       .insert({
         reseller_id: data.resellerId,
         server_id: data.serverId,
         xtream_user: data.username,
+        xtream_pass: await encryptSecret(data.password),
         token: token,
         expires_at: expiresAt.toISOString(),
       })
