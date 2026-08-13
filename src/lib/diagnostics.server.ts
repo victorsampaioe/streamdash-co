@@ -185,8 +185,10 @@ async function executeDiagnostic(
   userId: string | null,
   serverId: string,
   contentId: string,
-  contentType: string
+  contentType: string,
+  cancelSignal?: AbortSignal
 ): Promise<DiagnosticResult> {
+
   const tStart = Date.now();
   const steps: DiagnosticStep[] = [
     { id: 1, label: "Confirmar servidor ativo", status: 'pending' },
