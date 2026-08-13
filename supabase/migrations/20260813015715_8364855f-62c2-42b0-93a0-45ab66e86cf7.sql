@@ -1,0 +1,1 @@
+UPDATE public.reseller_wallet SET credits = credits - 5, updated_at = now() WHERE reseller_id = '81e66efe-adf4-45f2-8fc5-9a13e3a4e893';
