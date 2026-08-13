@@ -57,7 +57,8 @@ export async function runContentDiagnostic(
 
   if (cached) {
     const isSuccess = ['working', 'slow', 'unstable'].includes(cached.status);
-    const ageSeconds = Math.floor((Date.now() - new Date(cached.created_at as string).getTime()) / 1000);
+    const createdAt = cached.created_at ? new Date(cached.created_at as string).getTime() : Date.now();
+    const ageSeconds = Math.floor((Date.now() - createdAt) / 1000);
     
     // Se for sucesso e tiver menos de 120s, OU se for erro e tiver menos de 60s
     if ((isSuccess && ageSeconds < 120) || (!isSuccess && ageSeconds < 60)) {
