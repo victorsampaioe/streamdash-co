@@ -788,6 +788,45 @@ export type Database = {
           },
         ]
       }
+      diagnostic_concurrency_control: {
+        Row: {
+          active_count: number | null
+          count_10m: number | null
+          count_1h: number | null
+          count_20s: number | null
+          key: string
+          last_request_at: string | null
+          last_window_reset_10m: string | null
+          last_window_reset_1h: string | null
+          last_window_reset_20s: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          active_count?: number | null
+          count_10m?: number | null
+          count_1h?: number | null
+          count_20s?: number | null
+          key: string
+          last_request_at?: string | null
+          last_window_reset_10m?: string | null
+          last_window_reset_1h?: string | null
+          last_window_reset_20s?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          active_count?: number | null
+          count_10m?: number | null
+          count_1h?: number | null
+          count_20s?: number | null
+          key?: string
+          last_request_at?: string | null
+          last_window_reset_10m?: string | null
+          last_window_reset_1h?: string | null
+          last_window_reset_20s?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       dns_alerts: {
         Row: {
           acknowledged_at: string | null
@@ -4003,6 +4042,15 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      acquire_diagnostic_slot_v2: {
+        Args: {
+          p_is_admin: boolean
+          p_max_server_concurrent?: number
+          p_server_id: string
+          p_user_id: string
+        }
+        Returns: Json
+      }
       activate_free_trial: { Args: never; Returns: Json }
       admin_add_credits: {
         Args: { _amount: number; _description?: string; _user_id: string }
@@ -4269,6 +4317,10 @@ export type Database = {
         Returns: Json
       }
       get_reseller_page: { Args: { _slug: string }; Returns: Json }
+      get_server_concurrency_limit: {
+        Args: { p_base_limit: number; p_server_id: string }
+        Returns: number
+      }
       get_stability_ranking: {
         Args: { _limit?: number }
         Returns: {

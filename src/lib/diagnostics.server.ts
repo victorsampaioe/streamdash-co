@@ -6,8 +6,8 @@ const DIAG_TIMEOUT_CONNECT = 8_000;
 const TARGET_BYTES = 256 * 1024;
 const MAX_BYTES = 512 * 1024;
 
-const LIMIT_USER_CONCURRENT = 1; // Máximo 1 diagnóstico simultâneo por usuário
-const LIMIT_SERVER_CONCURRENT = 3; // Máximo 3 diagnósticos simultâneos no mesmo servidor IPTV (proteção)
+const LIMIT_USER_CONCURRENT = 1; 
+const LIMIT_SERVER_CONCURRENT = 2; // Máximo 2 diagnósticos simultâneos no mesmo servidor IPTV (conforme especificação)
 
 export type DiagnosticStep = {
   id: number;
@@ -52,15 +52,25 @@ export async function runContentDiagnostic(
   }
 
   // 3. Rate Limit & Concorrência (Item 2)
-  const { data: slotAcquired } = await (supabaseAdmin.rpc as any)('acquire_diagnostic_slot', { 
+  const { data: userProfile } = await supabaseAdmin.from('profiles').select('id').eq('id', effectiveUserId).maybeSingle();
+  const isAdmin = effectiveUserId !== 'core-system' && !!userProfile; // Simplificado, ideal seria checar role real
+  
+  // No caso real de produção, buscaríamos o papel real do usuário
+  let isActualAdmin = false;
+  if (effectiveUserId !== 'core-system') {
+    const { data: roles } = await supabaseAdmin.rpc('has_role', { _user_id: effectiveUserId, _role: 'admin' });
+    isActualAdmin = !!roles;
+  }
+
+  const { data: slotResult } = await (supabaseAdmin.rpc as any)('acquire_diagnostic_slot_v2', { 
     p_user_id: effectiveUserId === 'core-system' ? '00000000-0000-0000-0000-000000000000' : effectiveUserId, 
     p_server_id: serverId,
-    p_max_user_concurrent: LIMIT_USER_CONCURRENT,
+    p_is_admin: isActualAdmin,
     p_max_server_concurrent: LIMIT_SERVER_CONCURRENT
   });
 
-  if (!slotAcquired) {
-    throw new Error("Muitos diagnósticos em execução. Por favor, aguarde o teste anterior terminar.");
+  if (!slotResult || !slotResult.success) {
+    throw new Error(slotResult?.message || "Muitos diagnósticos em execução. Por favor, aguarde.");
   }
 
   const probe = executeDiagnostic(userId, serverId, contentId, contentType);
