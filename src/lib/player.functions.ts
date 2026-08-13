@@ -169,33 +169,45 @@ export const getPlayerCatalog = createServerFn({ method: "POST" })
     // 1. Validar sessão
     const { data: session, error: sessionErr } = await supabaseAdmin
       .from("player_sessions")
-      .select("id, server_id, token, expires_at")
+      .select("id, server_id, token, expires_at, xtream_user, xtream_pass")
       .eq("token", data.token)
       .gt("expires_at", new Date().toISOString())
       .single();
 
     if (sessionErr || !session) throw new Error("Sessão expirada ou inválida");
 
-    // 2. Delegar ao Core AWS
+    // 2. Credenciais do CLIENTE FINAL (login do player), não as do servidor
+    const { getPlayerCredentials, fetchXtreamCatalog } = await import("./player.server");
+    const creds = await getPlayerCredentials(session as any);
+
+    if (!creds.username || !creds.password) {
+      throw new Error("Credenciais da sessão indisponíveis. Faça login novamente.");
+    }
+
+    // 3. Delegar ao Core AWS (com fallback local)
     const { runOnCore } = await import("./core-api.server");
-    
-    // Buscar credenciais reais (o painel mascara as credenciais do servidor)
-    const { getIptvCredentials } = await import("./iptv-credentials.server");
-    const creds = await getIptvCredentials(session.server_id);
-    
-    if (!creds.username || !creds.password) throw new Error("Credenciais do servidor não disponíveis");
 
     const result = await runOnCore(
-      "iptv-player-proxy" as any, 
+      "iptv-player-proxy" as any,
       {
         serverId: session.server_id,
+        username: creds.username,
+        password: creds.password,
         options: {
           action: data.action,
           categoryId: data.categoryId,
           contentId: data.contentId,
         }
-      }, 
-      () => Promise.reject(new Error("Local execution not implemented for player-proxy"))
+      },
+      () => fetchXtreamCatalog(session.server_id, creds, {
+        action: data.action,
+        categoryId: data.categoryId,
+        contentId: data.contentId,
+      })
+    );
+
+    console.log(
+      `[getPlayerCatalog] server=${session.server_id} user=${creds.username} action=${data.action} category=${data.categoryId ?? "-"} itens=${Array.isArray(result) ? result.length : typeof result}`
     );
 
     return result as any;
