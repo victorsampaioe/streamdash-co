@@ -149,7 +149,16 @@ export const validatePlayerSession = createServerFn({ method: "GET" })
 export const getPlayerCatalog = createServerFn({ method: "POST" })
   .inputValidator((data) => z.object({
     token: z.string().uuid(),
-    action: z.enum(["get_live_categories", "get_vod_categories", "get_series_categories", "get_live_streams", "get_vod_streams", "get_series", "get_series_info", "get_vod_info"]),
+    action: z.enum([
+      "get_live_categories", 
+      "get_vod_categories", 
+      "get_series_categories", 
+      "get_live_streams", 
+      "get_vod_streams", 
+      "get_series", 
+      "get_series_info", 
+      "get_vod_info"
+    ]),
     categoryId: z.string().optional(),
     contentId: z.string().optional(),
   }).parse(data))
@@ -173,14 +182,19 @@ export const getPlayerCatalog = createServerFn({ method: "POST" })
     
     if (!creds.username || !creds.password) throw new Error("Credenciais do servidor não disponíveis");
 
-    const result = await runOnCore("iptv-player-proxy", {
-      serverId: session.server_id,
-      options: {
-        action: data.action,
-        categoryId: data.categoryId,
-        contentId: data.contentId,
-      }
-    }, () => Promise.reject(new Error("Local execution not implemented for player-proxy")));
+    // Forçamos o casting para evitar erro de TS com a enumeração local vs core
+    const result = await runOnCore(
+      "iptv-player-proxy" as any, 
+      {
+        serverId: session.server_id,
+        options: {
+          action: data.action,
+          categoryId: data.categoryId,
+          contentId: data.contentId,
+        }
+      }, 
+      () => Promise.reject(new Error("Local execution not implemented for player-proxy"))
+    );
 
     return result as any;
   });
