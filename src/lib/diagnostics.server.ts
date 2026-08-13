@@ -26,6 +26,8 @@ export type DiagnosticResult = {
   resolution?: string;
   error?: string;
   steps: DiagnosticStep[];
+  is_cached?: boolean;
+  cached_at?: string;
 };
 
 /** 
@@ -93,10 +95,10 @@ export async function runContentDiagnostic(
     // 4. Rate Limit & Concorrência (Item 2)
     let isActualAdmin = false;
     if (effectiveUserId !== 'core-system') {
-      const { data: roles } = await supabaseAdmin.rpc('has_role', { 
-        _user_id: effectiveUserId, 
-        _role: 'admin' 
-      });
+    const { data: roles } = await supabaseAdmin.rpc('has_role', { 
+      _user_id: effectiveUserId === 'core-system' ? '00000000-0000-0000-0000-000000000000' : effectiveUserId, 
+      _role: 'admin' 
+    });
       isActualAdmin = !!roles;
     }
 
