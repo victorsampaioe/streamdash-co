@@ -96,8 +96,8 @@ export async function runContentDiagnostic(
     let isActualAdmin = false;
     if (effectiveUserId !== 'core-system') {
     const { data: roles } = await supabaseAdmin.rpc('has_role', { 
-      _user_id: (effectiveUserId === 'core-system' ? '00000000-0000-0000-0000-000000000000' : effectiveUserId) as string, 
-      _role: 'admin' 
+      _user_id: effectiveUserId === 'core-system' ? '00000000-0000-0000-0000-000000000000' : effectiveUserId, 
+      _role: 'admin' as any
     });
       isActualAdmin = !!roles;
     }

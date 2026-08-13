@@ -10,7 +10,7 @@ import {
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { CheckCircle2, Circle, Loader2, XCircle, AlertCircle, User, Globe, Server, Activity } from 'lucide-react';
+import { CheckCircle2, Circle, Loader2, XCircle, AlertCircle, User, Globe, Server, Activity, Clock } from 'lucide-react';
 import { toast } from 'sonner';
 
 type Props = {
@@ -141,6 +141,13 @@ export function DiagnosticDialog({ isOpen, onClose, serverId, serverName, conten
                   ERRO: {result.error}
                 </div>
               )}
+            </div>
+          )}
+
+          {result?.is_cached && (
+            <div className="flex items-center gap-2 text-[10px] text-muted-foreground px-1 py-0.5 bg-muted/30 rounded w-fit mx-auto mt-2">
+              <Clock className="h-3 w-3" />
+              Resultado recuperado do cache ({new Date(result.cached_at).toLocaleTimeString()})
             </div>
           )}
         </div>
