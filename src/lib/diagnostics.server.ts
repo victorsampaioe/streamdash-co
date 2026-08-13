@@ -71,7 +71,7 @@ export async function runContentDiagnostic(
   } finally {
     activeProbes.delete(cacheKey);
     // Liberar slot (Item 2)
-    await supabaseAdmin.rpc('release_diagnostic_slot', {
+    await (supabaseAdmin.rpc as any)('release_diagnostic_slot', {
       p_user_id: effectiveUserId === 'core-system' ? '00000000-0000-0000-0000-000000000000' : effectiveUserId,
       p_server_id: serverId
     });
