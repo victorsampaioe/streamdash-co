@@ -83,3 +83,21 @@ export const getCircuitBreakers = createServerFn({ method: "GET" })
     if (error) throw error;
     return data;
   });
+
+/** Item 6 — Cancela um diagnóstico em andamento (fechamento do modal). */
+export const cancelDiagnostic = createServerFn({ method: "POST" })
+  .inputValidator((d: { serverId: string; contentId: string; contentType: string }) =>
+    z.object({
+      serverId: z.string().uuid(),
+      contentId: z.string(),
+      contentType: z.enum(['live', 'movie', 'series', 'episode']),
+    }).parse(d))
+  .handler(async ({ data }) => {
+    const { requestDiagnosticCancel } = await import("./diagnostics.server");
+    const { runOnCore } = await import("./core-api.server");
+    return await runOnCore(
+      "content-diagnostic-cancel",
+      data,
+      () => requestDiagnosticCancel(data.serverId, data.contentId, data.contentType),
+    );
+  });

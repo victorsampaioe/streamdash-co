@@ -20,6 +20,8 @@ export type CoreTask =
   | "iptv-ua-test"
   | "content-scan"
   | "content-diagnostic"
+  | "content-diagnostic-cancel"
+  | "iptv-categories"
   | "get-series-seasons"
 
   | "telegram-broadcast"

@@ -17,7 +17,8 @@ export type DiagnosticStep = {
 };
 
 export type DiagnosticResult = {
-  status: 'working' | 'slow' | 'unstable' | 'unavailable' | 'server_unavailable' | 'regional_issue' | 'client_issue';
+  status: 'working' | 'slow' | 'unstable' | 'unavailable' | 'server_unavailable' | 'regional_issue' | 'client_issue' | 'cancelled';
+
   ttfb_ms?: number;
   connection_ms?: number;
   bytes_read?: number;
@@ -30,9 +31,47 @@ export type DiagnosticResult = {
   cached_at?: string;
 };
 
+/** Item 6 — Sinalização de cancelamento compartilhada entre instâncias (tabela diagnostic_locks). */
+function cancelKeyFor(serverId: string, contentId: string, contentType: string) {
+  return `cancel:diag:${serverId}:${contentId}:${contentType}`;
+}
+
+export async function requestDiagnosticCancel(
+  serverId: string,
+  contentId: string,
+  contentType: string,
+): Promise<{ ok: true }> {
+  const key = cancelKeyFor(serverId, contentId, contentType);
+  await (supabaseAdmin.from('diagnostic_locks') as any)
+    .upsert({ lock_key: key, created_at: new Date().toISOString() }, { onConflict: 'lock_key' });
+  console.log(`[diagnostic] Cancel requested for ${key}`);
+  return { ok: true };
+}
+
+async function isCancelRequested(key: string): Promise<boolean> {
+  const { data } = await supabaseAdmin
+    .from('diagnostic_locks')
+    .select('lock_key')
+    .eq('lock_key', key)
+    .maybeSingle();
+  return !!data;
+}
+
+async function clearCancelFlag(key: string) {
+  await supabaseAdmin.from('diagnostic_locks').delete().eq('lock_key', key);
+}
+
+export class DiagnosticCancelled extends Error {
+  constructor() {
+    super('Diagnóstico cancelado pelo usuário');
+    this.name = 'DiagnosticCancelled';
+  }
+}
+
 /** 
  * Item 4 — Cache e Deduplicação Global
  */
+
 export async function runContentDiagnostic(
   userId: string | null,
   serverId: string,
@@ -55,8 +94,10 @@ export async function runContentDiagnostic(
     .limit(1)
     .maybeSingle();
 
-  if (cached) {
+  // Item 6 — cancelamentos nunca são servidos do cache
+  if (cached && cached.status !== 'cancelled') {
     const isSuccess = ['working', 'slow', 'unstable'].includes(cached.status);
+
     const createdAt = cached.created_at ? new Date(cached.created_at as string).getTime() : Date.now();
     const ageSeconds = Math.floor((Date.now() - createdAt) / 1000);
     
@@ -114,9 +155,21 @@ export async function runContentDiagnostic(
       throw new Error(slotResult?.message || "Muitos diagnósticos em execução. Por favor, aguarde.");
     }
 
+    // Item 6 — cancelamento cooperativo: limpa flag antiga e observa pedidos novos
+    const cKey = cancelKeyFor(serverId, contentId, contentType);
+    await clearCancelFlag(cKey);
+    const cancelCtl = new AbortController();
+    const poller = setInterval(() => {
+      isCancelRequested(cKey)
+        .then((c) => { if (c) cancelCtl.abort(); })
+        .catch(() => {});
+    }, 700);
+
     try {
-      return await executeDiagnostic(userId, serverId, contentId, contentType);
+      return await executeDiagnostic(userId, serverId, contentId, contentType, cancelCtl.signal);
     } finally {
+      clearInterval(poller);
+      await clearCancelFlag(cKey);
       // Liberar slot de concorrência
       await (supabaseAdmin.rpc as any)('release_diagnostic_slot', {
         p_user_id: effectiveUserId === 'core-system' ? '00000000-0000-0000-0000-000000000000' : effectiveUserId,
@@ -129,12 +182,15 @@ export async function runContentDiagnostic(
   }
 }
 
+
 async function executeDiagnostic(
   userId: string | null,
   serverId: string,
   contentId: string,
-  contentType: string
+  contentType: string,
+  cancelSignal?: AbortSignal
 ): Promise<DiagnosticResult> {
+
   const tStart = Date.now();
   const steps: DiagnosticStep[] = [
     { id: 1, label: "Confirmar servidor ativo", status: 'pending' },
@@ -199,6 +255,11 @@ async function executeDiagnostic(
     // 4, 5, 6, 7. Requisição e Streaming
     updateStep(4, 'running');
     const controller = new AbortController();
+
+    // Item 6 — cancelamento do cliente aborta a conexão imediatamente
+    if (cancelSignal?.aborted) throw new DiagnosticCancelled();
+    const onCancel = () => controller.abort();
+    cancelSignal?.addEventListener('abort', onCancel);
     
     // Timeout de conexão (8s) vs Timeout total (15s)
     // DIAG_TIMEOUT_TOTAL = 15s (global para o diagnóstico todo)
@@ -230,6 +291,7 @@ async function executeDiagnostic(
         });
       }
     } catch (fetchErr: any) {
+      if (cancelSignal?.aborted) throw new DiagnosticCancelled();
       if (fetchErr.name === 'AbortError') {
         throw new Error(`Timeout de conexão (${DIAG_TIMEOUT_CONNECT/1000}s) excedido ao tentar acessar o stream.`);
       }
@@ -237,6 +299,7 @@ async function executeDiagnostic(
     } finally {
       clearTimeout(connectTimeout);
     }
+
 
     if (!response.ok) {
       // Diferenciar erros HTTP para facilitar diagnóstico
@@ -272,6 +335,8 @@ async function executeDiagnostic(
     
     try {
       while (bytesReceived < TARGET_BYTES) {
+        // Item 6 — aborta a leitura assim que o cliente fecha o modal
+        if (cancelSignal?.aborted) throw new DiagnosticCancelled();
         // Checagem manual de timeout já que reader.read() não aceita signal diretamente em todos os ambientes
         if (Date.now() - tStart > DIAG_TIMEOUT_TOTAL) {
           throw new Error(`Timeout total (${DIAG_TIMEOUT_TOTAL/1000}s) atingido durante a leitura da mídia.`);
@@ -283,13 +348,18 @@ async function executeDiagnostic(
         if (bytesReceived >= MAX_BYTES) break;
       }
     } catch (readErr: any) {
+      if (readErr instanceof DiagnosticCancelled) throw readErr;
+      if (cancelSignal?.aborted) throw new DiagnosticCancelled();
       if (readErr.name === 'AbortError' || readErr.message.includes('Timeout')) {
         throw new Error(`Timeout total (${DIAG_TIMEOUT_TOTAL/1000}s) atingido durante a leitura da mídia.`);
       }
       throw readErr;
     } finally {
       clearTimeout(streamTimeout);
+      cancelSignal?.removeEventListener('abort', onCancel);
+      try { await reader.cancel(); } catch { /* já encerrado */ }
     }
+
     
     const connectionTime = Date.now() - tStreamStart;
     updateStep(6, 'success', `${Math.round(bytesReceived / 1024)}KB lidos`);
@@ -352,25 +422,29 @@ async function executeDiagnostic(
     return result;
 
   } catch (e: any) {
-    const err = String(e.message || e);
-    try {
-      await supabaseAdmin.rpc('record_diagnostic_failure', { p_server_id: serverId });
-    } catch (rpcErr) {
-      console.error("[diagnostic] Error calling record_diagnostic_failure:", rpcErr);
+    const cancelled = e instanceof DiagnosticCancelled;
+    const err = cancelled ? 'Diagnóstico cancelado pelo usuário' : String(e.message || e);
+    const durationMs = Date.now() - tStart;
+
+    if (!cancelled) {
+      try {
+        await supabaseAdmin.rpc('record_diagnostic_failure', { p_server_id: serverId });
+      } catch (rpcErr) {
+        console.error("[diagnostic] Error calling record_diagnostic_failure:", rpcErr);
+      }
     }
     
     const result: DiagnosticResult = {
-      status: err.includes('HTTP 403') ? 'server_unavailable' : (err.includes('HTTP 5') ? 'server_unavailable' : 'unavailable'),
+      status: cancelled
+        ? 'cancelled'
+        : (err.includes('HTTP 403') ? 'server_unavailable' : (err.includes('HTTP 5') ? 'server_unavailable' : 'unavailable')),
       error: err,
-      steps: steps.map(s => s.status === 'running' ? { ...s, status: 'error', details: err } : s) as any
+      // Item 7 — duração também no caminho de erro/cancelamento
+      duration_ms: durationMs,
+      steps: steps.map(s => s.status === 'running'
+        ? { ...s, status: cancelled ? 'pending' : 'error', details: err }
+        : s) as any
     };
-
-    const { data: catalogItem } = await supabaseAdmin
-      .from("iptv_catalog_items")
-      .select("name")
-      .eq("server_id", serverId)
-      .eq("external_id", contentId)
-      .maybeSingle();
 
     await (supabaseAdmin.from('content_diagnostics') as any).insert({
       user_id: (!userId || userId === 'core-system') ? null : userId,
@@ -379,11 +453,12 @@ async function executeDiagnostic(
       content_type: contentType,
       status: result.status,
       error_message: result.error,
-      duration_ms: Date.now() - tStart,
+      duration_ms: durationMs,
       steps: JSON.stringify(result.steps),
       is_cached: false
     });
 
     return result;
   }
+
 }
