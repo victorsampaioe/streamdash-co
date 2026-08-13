@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useServerFn } from '@tanstack/react-start';
-import { runDiagnostic } from '@/lib/diagnostics.functions';
+import { runDiagnostic, cancelDiagnostic } from '@/lib/diagnostics.functions';
 import {
   Dialog,
   DialogContent,
@@ -31,12 +31,22 @@ const STATUS_MAP = {
   server_unavailable: { label: 'Servidor indisponível', color: 'text-red-600', icon: Server, bg: 'bg-red-600/10' },
   regional_issue: { label: 'Problema regional/rota', color: 'text-blue-500', icon: Globe, bg: 'bg-blue-500/10' },
   client_issue: { label: 'Provável problema no cliente', color: 'text-purple-500', icon: User, bg: 'bg-purple-500/10' },
+  cancelled: { label: 'Teste cancelado', color: 'text-muted-foreground', icon: XCircle, bg: 'bg-muted/40' },
 };
 
 export function DiagnosticDialog({ isOpen, onClose, serverId, serverName, contentId, contentTitle, contentType }: Props) {
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<any>(null);
   const runner = useServerFn(runDiagnostic);
+  const canceller = useServerFn(cancelDiagnostic);
+
+  // Item 6 — fechar o modal cancela a execução no backend (libera slot e lock)
+  const handleClose = () => {
+    if (loading) {
+      canceller({ data: { serverId, contentId, contentType } }).catch(() => {});
+    }
+    onClose();
+  };
 
   const startTest = async () => {
     setLoading(true);
@@ -70,7 +80,7 @@ export function DiagnosticDialog({ isOpen, onClose, serverId, serverName, conten
   const statusInfo = result ? STATUS_MAP[result.status as keyof typeof STATUS_MAP] : null;
 
   return (
-    <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
+    <Dialog open={isOpen} onOpenChange={(open) => !open && handleClose()}>
       <DialogContent className="sm:max-w-[500px] overflow-hidden">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
@@ -157,7 +167,7 @@ export function DiagnosticDialog({ isOpen, onClose, serverId, serverName, conten
             Este teste faz uma sondagem curta de até 512KB. O stream é encerrado imediatamente após a confirmação.
           </div>
           <div className="flex gap-2">
-            <Button variant="outline" size="sm" onClick={onClose}>Fechar</Button>
+            <Button variant="outline" size="sm" onClick={handleClose}>Fechar</Button>
             <Button size="sm" onClick={startTest} disabled={loading}>
               {loading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Activity className="h-4 w-4 mr-2" />}
               Re-testar
