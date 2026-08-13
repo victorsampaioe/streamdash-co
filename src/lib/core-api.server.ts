@@ -23,6 +23,7 @@ export type CoreTask =
   | "content-diagnostic-cancel"
   | "iptv-categories"
   | "get-series-seasons"
+  | "iptv-player-proxy"
 
   | "telegram-broadcast"
   | "cron-check"
