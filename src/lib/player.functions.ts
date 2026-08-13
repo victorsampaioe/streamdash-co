@@ -1,11 +1,13 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
+import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
 /**
  * Busca as configurações de marca de um revendedor pelo ID do perfil.
  */
 export const getPlayerSettings = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
   .inputValidator((data) => z.object({ profileId: z.string().uuid() }).parse(data))
   .handler(async ({ data }) => {
     const { data: settings, error } = await supabaseAdmin
@@ -22,6 +24,7 @@ export const getPlayerSettings = createServerFn({ method: "GET" })
  * Salva ou atualiza as configurações de marca do revendedor.
  */
 export const savePlayerSettings = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
   .inputValidator((data) => z.object({
     brand_name: z.string().min(2).max(50),
     logo_url: z.string().url().optional().nullable(),
@@ -33,17 +36,23 @@ export const savePlayerSettings = createServerFn({ method: "POST" })
     const userId = (context as any).userId;
     if (!userId) throw new Error("Não autorizado");
 
+    // Garantir que o revendedor só edita suas próprias configurações
     const { data: result, error } = await supabaseAdmin
       .from("player_settings")
       .upsert({
         profile_id: userId,
         ...data,
         updated_at: new Date().toISOString(),
+      }, {
+        onConflict: 'profile_id'
       })
       .select()
       .single();
 
-    if (error) throw new Error(error.message);
+    if (error) {
+      console.error("[savePlayerSettings] Error:", error);
+      throw new Error(error.message);
+    }
     return result;
   });
 
