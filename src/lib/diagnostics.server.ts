@@ -6,6 +6,9 @@ const DIAG_TIMEOUT_CONNECT = 8_000;
 const TARGET_BYTES = 256 * 1024;
 const MAX_BYTES = 512 * 1024;
 
+const LIMIT_USER_CONCURRENT = 1; // Máximo 1 diagnóstico simultâneo por usuário
+const LIMIT_SERVER_CONCURRENT = 3; // Máximo 3 diagnósticos simultâneos no mesmo servidor IPTV (proteção)
+
 export type DiagnosticStep = {
   id: number;
   label: string;
@@ -35,10 +38,29 @@ export async function runContentDiagnostic(
   contentType: 'live' | 'movie' | 'series' | 'episode'
 ): Promise<DiagnosticResult> {
   const cacheKey = `${serverId}:${contentId}:${contentType}`;
+  const effectiveUserId = userId || 'core-system';
 
   // 1. Deduplicação (Single-Flight)
   if (activeProbes.has(cacheKey)) {
     return activeProbes.get(cacheKey)!;
+  }
+
+  // 2. Circuit Breaker Check (Item 5)
+  const { data: breakerState } = await (supabaseAdmin.rpc as any)('check_circuit_breaker', { p_server_id: serverId });
+  if (breakerState === 'open') {
+    throw new Error("Circuito Aberto: Este servidor IPTV está instável ou offline no momento. Tente novamente em alguns minutos.");
+  }
+
+  // 3. Rate Limit & Concorrência (Item 2)
+  const { data: slotAcquired } = await (supabaseAdmin.rpc as any)('acquire_diagnostic_slot', { 
+    p_user_id: effectiveUserId === 'core-system' ? '00000000-0000-0000-0000-000000000000' : effectiveUserId, 
+    p_server_id: serverId,
+    p_max_user_concurrent: LIMIT_USER_CONCURRENT,
+    p_max_server_concurrent: LIMIT_SERVER_CONCURRENT
+  });
+
+  if (!slotAcquired) {
+    throw new Error("Muitos diagnósticos em execução. Por favor, aguarde o teste anterior terminar.");
   }
 
   const probe = executeDiagnostic(userId, serverId, contentId, contentType);
@@ -48,6 +70,11 @@ export async function runContentDiagnostic(
     return await probe;
   } finally {
     activeProbes.delete(cacheKey);
+    // Liberar slot (Item 2)
+    await (supabaseAdmin.rpc as any)('release_diagnostic_slot', {
+      p_user_id: effectiveUserId === 'core-system' ? '00000000-0000-0000-0000-000000000000' : effectiveUserId,
+      p_server_id: serverId
+    });
   }
 }
 
