@@ -24,7 +24,7 @@ export type CoreTask =
   | "iptv-categories"
   | "get-series-seasons"
   | "iptv-player-proxy"
-
+  | "iptv-stream-proxy"
   | "telegram-broadcast"
   | "cron-check"
   | "cron-digest";

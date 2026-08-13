@@ -58,14 +58,29 @@ export const Route = createFileRoute("/api/public/core/stream")({
           }
 
           // Repassar stream com headers apropriados
-          const newHeaders = new Headers(response.headers);
+          const newHeaders = new Headers();
+          
+          // Headers de cache e performance
           newHeaders.set("Access-Control-Allow-Origin", "*");
           newHeaders.set("Access-Control-Allow-Methods", "GET, OPTIONS");
+          newHeaders.set("Cache-Control", "no-cache");
           
-          // Se for .ts, alguns navegadores podem precisar de content-type específico
+          // Repassar Content-Type original ou forçar se necessário
+          const contentType = response.headers.get("Content-Type");
           if (ext === "ts") {
             newHeaders.set("Content-Type", "video/mp2t");
+          } else if (contentType) {
+            newHeaders.set("Content-Type", contentType);
           }
+
+          // Suporte a Range Requests (206 Partial Content) para Filmes/Séries
+          const contentRange = response.headers.get("Content-Range");
+          const contentLength = response.headers.get("Content-Length");
+          const acceptRanges = response.headers.get("Accept-Ranges");
+          
+          if (contentRange) newHeaders.set("Content-Range", contentRange);
+          if (contentLength) newHeaders.set("Content-Length", contentLength);
+          if (acceptRanges) newHeaders.set("Accept-Ranges", acceptRanges);
 
           return new Response(response.body, {
             status: response.status,

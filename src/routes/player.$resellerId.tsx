@@ -56,10 +56,13 @@ function PlayerPage() {
   const [content, setContent] = useState<any[]>([]);
   const [loadingContent, setLoadingContent] = useState(false);
   const [selectedContent, setSelectedContent] = useState<any>(null);
+  const [selectedSeriesInfo, setSelectedSeriesInfo] = useState<any>(null);
+  const [loadingSeries, setLoadingSeries] = useState(false);
   const [streamUrl, setStreamUrl] = useState<string | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
   const hlsRef = useRef<Hls | null>(null);
+  const abortControllerRef = useRef<AbortController | null>(null);
   
   // Identidade Visual
   const { data: settings, isLoading: settingsLoading } = useQuery({
@@ -106,6 +109,11 @@ function PlayerPage() {
   useEffect(() => {
     if (session && token && selectedCategory) {
       setLoadingContent(true);
+      
+      if (abortControllerRef.current) abortControllerRef.current.abort();
+      const controller = new AbortController();
+      abortControllerRef.current = controller;
+
       const actionMap = {
         live: "get_live_streams",
         vod: "get_vod_streams",
@@ -114,9 +122,17 @@ function PlayerPage() {
       
       getPlayerCatalog({ data: { token, action: actionMap[activeTab], categoryId: selectedCategory } })
         .then((data: any) => {
-          setContent(Array.isArray(data) ? data : []);
+          if (!controller.signal.aborted) {
+            setContent(Array.isArray(data) ? data : []);
+          }
         })
-        .finally(() => setLoadingContent(false));
+        .finally(() => {
+          if (!controller.signal.aborted) {
+            setLoadingContent(false);
+          }
+        });
+        
+      return () => controller.abort();
     } else {
       setContent([]);
     }
@@ -251,8 +267,10 @@ function PlayerPage() {
                     onClick={() => {
                       if (activeTab === "live") {
                         handlePlay(item.stream_id, "live");
-                      } else {
+                      } else if (activeTab === "vod") {
                         setSelectedContent(item);
+                      } else if (activeTab === "series") {
+                        handleOpenSeries(item);
                       }
                     }}
                   />
@@ -315,6 +333,83 @@ function PlayerPage() {
         </DialogContent>
       </Dialog>
 
+      {/* Modal de Séries (Temporadas/Episódios) */}
+      <Dialog open={!!selectedSeriesInfo && !isPlaying} onOpenChange={(open) => !open && setSelectedSeriesInfo(null)}>
+        <DialogContent className="max-w-4xl bg-neutral-900 border-white/10 text-white p-0 overflow-hidden flex flex-col h-[80vh]">
+          {selectedSeriesInfo && (
+            <>
+              <div className="flex flex-col md:flex-row border-b border-white/5 bg-black/40">
+                <div className="w-full md:w-48 aspect-[2/3] relative">
+                  <img 
+                    src={selectedSeriesInfo.info?.cover || selectedSeriesInfo.info?.stream_icon} 
+                    alt={selectedSeriesInfo.info?.name} 
+                    className="w-full h-full object-cover"
+                  />
+                </div>
+                <div className="flex-1 p-6">
+                  <DialogHeader>
+                    <div className="flex justify-between items-start">
+                      <DialogTitle className="text-2xl font-bold">{selectedSeriesInfo.info?.name}</DialogTitle>
+                      <button onClick={() => setSelectedSeriesInfo(null)} className="md:hidden text-white/40"><X className="h-5 w-5" /></button>
+                    </div>
+                    <div className="flex items-center gap-3 text-sm text-white/60 mt-2">
+                      <span className="flex items-center gap-1"><Star className="h-3 w-3 text-yellow-500 fill-yellow-500" /> {selectedSeriesInfo.info?.rating || "N/A"}</span>
+                      {selectedSeriesInfo.info?.releaseDate && <span>{selectedSeriesInfo.info.releaseDate}</span>}
+                    </div>
+                  </DialogHeader>
+                  <p className="text-sm text-white/70 mt-4 line-clamp-3">{selectedSeriesInfo.info?.plot}</p>
+                </div>
+              </div>
+              
+              <div className="flex-1 overflow-y-auto p-6">
+                {loadingSeries ? (
+                  <div className="h-full flex items-center justify-center"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>
+                ) : (
+                  <div className="space-y-8">
+                    {Object.keys(selectedSeriesInfo.episodes || {}).map((seasonNum) => (
+                      <div key={seasonNum} className="space-y-4">
+                        <h4 className="text-lg font-bold flex items-center gap-2">
+                          Temporada {seasonNum}
+                          <span className="text-xs font-normal text-white/40">{selectedSeriesInfo.episodes[seasonNum].length} episódios</span>
+                        </h4>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                          {selectedSeriesInfo.episodes[seasonNum].map((ep: any) => (
+                            <button
+                              key={ep.id}
+                              onClick={() => handlePlay(ep.id, "series", ep.container_extension || "mp4")}
+                              className="flex items-center gap-4 p-3 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 hover:border-primary/50 transition-all text-left group"
+                            >
+                              <div className="relative w-24 aspect-video rounded bg-black flex-shrink-0 overflow-hidden">
+                                <img src={ep.info?.movie_image || selectedSeriesInfo.info?.cover} className="w-full h-full object-cover opacity-50 group-hover:opacity-80 transition-opacity" />
+                                <div className="absolute inset-0 flex items-center justify-center">
+                                  <Play className="h-6 w-6 fill-white opacity-0 group-hover:opacity-100 transition-opacity" />
+                                </div>
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <div className="text-sm font-bold truncate">E{ep.episode_num}. {ep.title}</div>
+                                <div className="text-xs text-white/40 flex items-center gap-2 mt-1">
+                                  <Clock className="h-3 w-3" /> {ep.info?.duration || "--:--"}
+                                </div>
+                              </div>
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </>
+          )}
+          <button 
+            onClick={() => setSelectedSeriesInfo(null)}
+            className="absolute top-4 right-4 hidden md:flex h-8 w-8 items-center justify-center rounded-full bg-black/40 hover:bg-black/60 transition-colors"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </DialogContent>
+      </Dialog>
+
       {/* Player de Vídeo Fullscreen Overlay */}
       {isPlaying && (
         <div className="fixed inset-0 z-[100] bg-black flex flex-col">
@@ -348,16 +443,16 @@ function PlayerPage() {
     </div>
   );
 
-  function handlePlay(id: string, type: "live" | "movie" | "series") {
+  function handlePlay(id: string, type: "live" | "movie" | "series", extOverride?: string) {
     setIsPlaying(true);
     setStreamUrl(null);
     
     getPlayerStreamUrl({ 
       data: { 
         token: token!, 
-        streamId: id, 
+        streamId: id.toString(), 
         type, 
-        extension: type === "live" ? "ts" : "mp4" 
+        extension: extOverride || (type === "live" ? "ts" : "mp4") 
       } 
     })
     .then(url => {
@@ -367,6 +462,24 @@ function PlayerPage() {
       toast.error("Erro ao carregar vídeo: " + err.message);
       setIsPlaying(false);
     });
+  }
+
+  function handleOpenSeries(item: any) {
+    setSelectedSeriesInfo({ info: item, episodes: {} });
+    setLoadingSeries(true);
+    
+    getPlayerCatalog({ 
+      data: { 
+        token: token!, 
+        action: "get_series_info", 
+        contentId: item.series_id 
+      } 
+    })
+    .then((data: any) => {
+      setSelectedSeriesInfo(data);
+    })
+    .catch(() => toast.error("Erro ao carregar episódios"))
+    .finally(() => setLoadingSeries(false));
   }
 
   function handleClosePlayer() {

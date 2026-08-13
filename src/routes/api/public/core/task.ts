@@ -130,6 +130,11 @@ async function execute(input: z.infer<typeof Body>) {
       if (!res.ok) throw new Error(`IPTV Proxy Error: ${res.status}`);
       return await res.json();
     }
+    case "iptv-stream-proxy": {
+      // Esta tarefa é tratada por uma rota dedicada em /api/public/core/stream
+      // para suportar streaming de dados binários grandes que não cabem em JSON.
+      return { info: "Use /api/public/core/stream for streaming" };
+    }
   }
 }
 
