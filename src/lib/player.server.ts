@@ -114,12 +114,13 @@ export async function validateXtreamLogin(
 ): Promise<XtreamLoginResult> {
   const { probeXtream, UA_PLAYER, UA_BROWSER, UA_VLC } = await import("./iptv.server");
 
+  let probeError: string | null = null;
   try {
     const probe: any = await probeXtream(host, username, password, { catalogMode: "auth" });
     if (probe?.login_ok) return { login_ok: true, account: probe.account ?? null, error: null, base: null };
-    var probeError: string | null = probe?.error ?? null;
+    probeError = probe?.error ?? null;
   } catch (e) {
-    var probeError: string | null = String((e as Error)?.message ?? e);
+    probeError = String((e as Error)?.message ?? e);
   }
 
   // Fallback: varre bases (http/https), rotas e User-Agents.
