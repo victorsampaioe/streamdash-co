@@ -315,12 +315,13 @@ function AdminPage() {
 
       <Tabs defaultValue="overview" className="space-y-6">
         <div className="overflow-x-auto pb-2 scrollbar-hide">
-          <TabsList className="flex w-max min-w-full sm:grid sm:grid-cols-8 sm:w-full">
+          <TabsList className="flex w-max min-full sm:grid sm:grid-cols-9 sm:w-full">
             <TabsTrigger value="overview" className="px-4">Usuários</TabsTrigger>
             <TabsTrigger value="resellers" className="px-4">Revendedores</TabsTrigger>
             <TabsTrigger value="radar" className="px-4">Radar Inteligente</TabsTrigger>
             <TabsTrigger value="reactivation" className="px-4">Reativação</TabsTrigger>
             <TabsTrigger value="store" className="px-4">Loja & Vendas</TabsTrigger>
+            <TabsTrigger value="alerts" className="px-4">Alertas</TabsTrigger>
             <TabsTrigger value="diagnostics" className="px-4">Servidores</TabsTrigger>
             <TabsTrigger value="paused" className="px-4">DNS Pausados</TabsTrigger>
             <TabsTrigger value="storage" className="px-4">Armazenamento</TabsTrigger>
