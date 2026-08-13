@@ -62,12 +62,12 @@ export async function runContentDiagnostic(
       console.log(`[diagnostic] Cache hit for ${cacheKey} (${ageSeconds}s ago)`);
       return {
         status: cached.status as any,
-        ttfb_ms: cached.ttfb_ms,
-        connection_ms: cached.connection_ms,
-        bytes_read: cached.bytes_read,
-        duration_ms: cached.duration_ms,
-        error: cached.error_message,
-        steps: typeof cached.steps === 'string' ? JSON.parse(cached.steps) : cached.steps,
+        ttfb_ms: cached.ttfb_ms ?? undefined,
+        connection_ms: cached.connection_ms ?? undefined,
+        bytes_read: cached.bytes_read ?? undefined,
+        duration_ms: cached.duration_ms ?? undefined,
+        error: (cached as any).error_message ?? undefined,
+        steps: typeof cached.steps === 'string' ? JSON.parse(cached.steps) : (cached.steps as any),
         is_cached: true,
         cached_at: cached.created_at
       };
@@ -75,7 +75,7 @@ export async function runContentDiagnostic(
   }
 
   // 2. Deduplicação Global (Lock via Postgres)
-  const { data: lockAcquired } = await supabaseAdmin.rpc('acquire_diagnostic_lock', { p_lock_key: cacheKey });
+  const { data: lockAcquired } = await (supabaseAdmin.rpc as any)('acquire_diagnostic_lock', { p_lock_key: cacheKey });
   
   if (!lockAcquired) {
     // Se não conseguiu o lock, espera um pouco e tenta ler o cache (pode ser que outro worker acabou de terminar)
@@ -93,7 +93,10 @@ export async function runContentDiagnostic(
     // 4. Rate Limit & Concorrência (Item 2)
     let isActualAdmin = false;
     if (effectiveUserId !== 'core-system') {
-      const { data: roles } = await supabaseAdmin.rpc('has_role', { _user_id: effectiveUserId, _role: 'admin' });
+      const { data: roles } = await supabaseAdmin.rpc('has_role', { 
+        _user_id: effectiveUserId, 
+        _role: 'admin' 
+      });
       isActualAdmin = !!roles;
     }
 
@@ -119,7 +122,7 @@ export async function runContentDiagnostic(
     }
   } finally {
     // Liberar Lock Global
-    await supabaseAdmin.rpc('release_diagnostic_lock', { p_lock_key: cacheKey });
+    await (supabaseAdmin.rpc as any)('release_diagnostic_lock', { p_lock_key: cacheKey });
   }
 }
 

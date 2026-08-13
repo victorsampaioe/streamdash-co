@@ -555,7 +555,7 @@ export type Database = {
           status: string
           steps: Json | null
           ttfb_ms: number | null
-          user_id: string
+          user_id: string | null
         }
         Insert: {
           bytes_read?: number | null
@@ -573,7 +573,7 @@ export type Database = {
           status: string
           steps?: Json | null
           ttfb_ms?: number | null
-          user_id: string
+          user_id?: string | null
         }
         Update: {
           bytes_read?: number | null
@@ -591,7 +591,7 @@ export type Database = {
           status?: string
           steps?: Json | null
           ttfb_ms?: number | null
-          user_id?: string
+          user_id?: string | null
         }
         Relationships: [
           {
@@ -824,6 +824,21 @@ export type Database = {
           last_window_reset_1h?: string | null
           last_window_reset_20s?: string | null
           updated_at?: string | null
+        }
+        Relationships: []
+      }
+      diagnostic_locks: {
+        Row: {
+          created_at: string | null
+          lock_key: string
+        }
+        Insert: {
+          created_at?: string | null
+          lock_key: string
+        }
+        Update: {
+          created_at?: string | null
+          lock_key?: string
         }
         Relationships: []
       }
@@ -4042,6 +4057,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      acquire_diagnostic_lock: {
+        Args: { p_lock_key: string }
+        Returns: boolean
+      }
       acquire_diagnostic_slot_v2: {
         Args: {
           p_is_admin: boolean
@@ -4535,6 +4554,10 @@ export type Database = {
       region_consensus: {
         Args: { _server_id: string; _window_minutes?: number }
         Returns: Json
+      }
+      release_diagnostic_lock: {
+        Args: { p_lock_key: string }
+        Returns: undefined
       }
       request_payout: {
         Args: { _pix_key: string; _pix_name: string; _pix_type: string }
