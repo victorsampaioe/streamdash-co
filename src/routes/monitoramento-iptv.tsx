@@ -49,6 +49,25 @@ function IptvPage() {
           </div>
         </div>
 
+        <div className="grid md:grid-cols-2 gap-8 mb-16">
+          <div className="space-y-4">
+            <h2 className="text-2xl font-bold flex items-center gap-2">
+              <Zap className="text-primary" /> Web Player White-label
+            </h2>
+            <p className="text-muted-foreground text-sm leading-relaxed">
+              Agora você pode oferecer um Web Player completo com sua própria marca para seus clientes finais. Configure logos, cores e mensagens de boas-vindas diretamente no seu painel de revendedor.
+            </p>
+          </div>
+          <div className="space-y-4">
+            <h2 className="text-2xl font-bold flex items-center gap-2">
+              <Bell className="text-primary" /> Diagnóstico Avançado
+            </h2>
+            <p className="text-muted-foreground text-sm leading-relaxed">
+              Realize testes profundos nos seus conteúdos (filmes e séries) simulando o comportamento de players reais, verificando TTFB, velocidade de leitura e integridade de streams.
+            </p>
+          </div>
+        </div>
+
         <div className="bg-card/50 rounded-2xl p-8 border border-border/60 mb-16 text-center">
           <h2 className="text-2xl font-bold mb-4">Pronto para ter controle total do seu IPTV?</h2>
           <Link to="/auth"><Button size="lg" className="glow-primary">Começar agora</Button></Link>
