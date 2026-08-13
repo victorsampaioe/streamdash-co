@@ -110,7 +110,7 @@ function Landing() {
           <Feature icon={<Activity className="h-5 w-5" />} title="✅ Monitoramento IPTV real" desc="Monitoramento dedicado de painéis IPTV com Health Score exclusivo e verificação de fluxo." />
           <Feature icon={<Globe className="h-5 w-5" />} title="✅ Análise de conteúdo" desc="Acompanhe conteúdos recentes e status de servidores IPTV com integração TMDB." />
           <Feature icon={<LineChart className="h-5 w-5" />} title="✅ Sistema para revendedores" desc="Estrutura completa para gerenciar sub-revendas com sistema de créditos independente." />
-          <Feature icon={<PlayCircle className="h-5 w-5" />} title="✅ Web Player White-label" desc="Ofereça um player de vídeo personalizado para seus clientes com sua marca e cores." />
+          <Feature icon={<PlayCircle className="h-5 w-5" />} title="✅ Web Player White-label" desc="Ofereça um player de vídeo personalizado para seus clientes com sua marca e cores exclusivas." />
         </div>
       </section>
 
