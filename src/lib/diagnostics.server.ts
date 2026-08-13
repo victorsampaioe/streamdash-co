@@ -253,6 +253,11 @@ async function executeDiagnostic(
     // 4, 5, 6, 7. Requisição e Streaming
     updateStep(4, 'running');
     const controller = new AbortController();
+
+    // Item 6 — cancelamento do cliente aborta a conexão imediatamente
+    if (cancelSignal?.aborted) throw new DiagnosticCancelled();
+    const onCancel = () => controller.abort();
+    cancelSignal?.addEventListener('abort', onCancel);
     
     // Timeout de conexão (8s) vs Timeout total (15s)
     // DIAG_TIMEOUT_TOTAL = 15s (global para o diagnóstico todo)
@@ -284,6 +289,7 @@ async function executeDiagnostic(
         });
       }
     } catch (fetchErr: any) {
+      if (cancelSignal?.aborted) throw new DiagnosticCancelled();
       if (fetchErr.name === 'AbortError') {
         throw new Error(`Timeout de conexão (${DIAG_TIMEOUT_CONNECT/1000}s) excedido ao tentar acessar o stream.`);
       }
@@ -291,6 +297,7 @@ async function executeDiagnostic(
     } finally {
       clearTimeout(connectTimeout);
     }
+
 
     if (!response.ok) {
       // Diferenciar erros HTTP para facilitar diagnóstico
