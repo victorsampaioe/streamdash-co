@@ -226,35 +226,17 @@ export const getPlayerStreamUrl = createServerFn({ method: "POST" })
   .handler(async ({ data }) => {
     const { data: session, error } = await supabaseAdmin
       .from("player_sessions")
-      .select("id, server_id, xtream_user")
+      .select("id, server_id, xtream_user, xtream_pass")
       .eq("token", data.token)
       .gt("expires_at", new Date().toISOString())
       .single();
 
     if (error || !session) throw new Error("Sessão inválida");
 
-    const { data: server } = await supabaseAdmin
-      .from("servers")
-      .select("host")
-      .eq("id", session.server_id)
-      .single();
-
-    if (!server) throw new Error("Servidor não encontrado");
-
-    // Construir a URL que o proxy do Core deve chamar
-    // No Core, a tarefa "iptv-stream-proxy" vai receber isso
-    const { getIptvCredentials } = await import("./iptv-credentials.server");
-    const creds = await getIptvCredentials(session.server_id);
-
-    const streamPath = data.type === "live" 
-      ? `live/${creds.username}/${creds.password}/${data.streamId}.${data.extension}`
-      : `${data.type === 'movie' ? 'movie' : 'series'}/${creds.username}/${creds.password}/${data.streamId}.${data.extension}`;
-
     const { coreApiUrl } = await import("./core-api.server");
-    const coreBase = coreApiUrl();
+    const coreBase = coreApiUrl() ?? "";
 
-    // Retorna a URL do proxy no Core com um token temporário assinado
-    // Para simplificar agora, usamos o próprio token da sessão do player + streamId
+    // O proxy resolve host e credenciais a partir do token da sessão.
     return `${coreBase}/api/public/core/stream?token=${data.token}&sid=${data.streamId}&ext=${data.extension}&type=${data.type}`;
   });
 
