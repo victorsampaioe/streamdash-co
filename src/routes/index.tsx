@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { lazy, Suspense } from "react";
-import { Activity, Bell, Globe, Zap, ShieldCheck, LineChart, Send, BookOpen, UserCheck, TrendingUp, Search, Film, Tv, CheckCircle2, Cpu } from "lucide-react";
+import { Activity, Bell, Globe, Zap, ShieldCheck, LineChart, Send, BookOpen, UserCheck, TrendingUp, Search, Film, Tv, CheckCircle2, Cpu, PlayCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 const SupportFab = lazy(() => import("@/components/support-fab").then(m => ({ default: m.SupportFab })));
 import poster_duneAsset from "@/assets/radar/dune.jpg.asset.json";
@@ -110,6 +110,7 @@ function Landing() {
           <Feature icon={<Activity className="h-5 w-5" />} title="✅ Monitoramento IPTV real" desc="Monitoramento dedicado de painéis IPTV com Health Score exclusivo e verificação de fluxo." />
           <Feature icon={<Globe className="h-5 w-5" />} title="✅ Análise de conteúdo" desc="Acompanhe conteúdos recentes e status de servidores IPTV com integração TMDB." />
           <Feature icon={<LineChart className="h-5 w-5" />} title="✅ Sistema para revendedores" desc="Estrutura completa para gerenciar sub-revendas com sistema de créditos independente." />
+          <Feature icon={<PlayCircle className="h-5 w-5" />} title="✅ Web Player White-label" desc="Ofereça um player de vídeo personalizado para seus clientes com sua marca e cores." />
         </div>
       </section>
 
