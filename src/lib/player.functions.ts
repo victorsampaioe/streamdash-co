@@ -103,14 +103,14 @@ export const loginXtreamClient = createServerFn({ method: "POST" })
         token: token,
         expires_at: expiresAt.toISOString(),
       })
-      .select()
+      .select("id, reseller_id, server_id, xtream_user, token, expires_at")
       .single();
 
     if (sessionErr) throw new Error(sessionErr.message);
 
     return {
-      token,
-      expiresAt: expiresAt.toISOString(),
+      token: session.token,
+      expiresAt: session.expires_at,
       user: authResult.account,
       server: {
         id: server.id,
@@ -127,7 +127,7 @@ export const validatePlayerSession = createServerFn({ method: "GET" })
   .handler(async ({ data }) => {
     const { data: session, error } = await supabaseAdmin
       .from("player_sessions")
-      .select("*, servers(host, name)")
+      .select("id, reseller_id, server_id, xtream_user, token, expires_at")
       .eq("token", data.token)
       .gt("expires_at", new Date().toISOString())
       .single();
@@ -157,7 +157,7 @@ export const getPlayerCatalog = createServerFn({ method: "POST" })
     // 1. Validar sessão
     const { data: session, error: sessionErr } = await supabaseAdmin
       .from("player_sessions")
-      .select("*, servers(host, name)")
+      .select("id, server_id, token, expires_at")
       .eq("token", data.token)
       .gt("expires_at", new Date().toISOString())
       .single();
@@ -166,7 +166,6 @@ export const getPlayerCatalog = createServerFn({ method: "POST" })
 
     // 2. Delegar ao Core AWS
     const { runOnCore } = await import("./core-api.server");
-    const server = session.servers as any;
     
     // Buscar credenciais reais (o painel mascara as credenciais do servidor)
     const { getIptvCredentials } = await import("./iptv-credentials.server");
@@ -181,7 +180,7 @@ export const getPlayerCatalog = createServerFn({ method: "POST" })
         categoryId: data.categoryId,
         contentId: data.contentId,
       }
-    });
+    }, () => Promise.reject(new Error("Local execution not implemented for player-proxy")));
 
-    return result;
+    return result as any;
   });
