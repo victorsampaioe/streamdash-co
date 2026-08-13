@@ -7,7 +7,7 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
  * Busca as configurações de marca de um revendedor pelo ID do perfil.
  */
 export const getPlayerSettings = createServerFn({ method: "GET" })
-  .middleware([requireSupabaseAuth])
+  // Acesso público necessário para a tela de login do cliente final
   .inputValidator((data) => z.object({ profileId: z.string().uuid() }).parse(data))
   .handler(async ({ data }) => {
     const { data: settings, error } = await supabaseAdmin
@@ -69,7 +69,7 @@ export const loginXtreamClient = createServerFn({ method: "POST" })
   .handler(async ({ data }) => {
     const { data: server } = await supabaseAdmin
       .from("servers")
-      .select("id, host")
+      .select("id, host, name")
       .eq("id", data.serverId)
       .single();
 
@@ -78,11 +78,12 @@ export const loginXtreamClient = createServerFn({ method: "POST" })
     const { runOnCore } = await import("./core-api.server");
     const { probeXtream } = await import("./iptv.server");
 
-    const authResult: any = await runOnCore("iptv-validate", {
+    // Validação de login simples (catalogMode: "auth")
+    const authResult: any = await runOnCore("iptv-validate" as any, {
       host: server.host,
       username: data.username,
       password: data.password,
-      opts: { catalogMode: "auth" }
+      options: { catalogMode: "auth" }
     }, () => probeXtream(server.host, data.username, data.password, { catalogMode: "auth" }));
 
     if (!authResult || !authResult.login_ok) {
@@ -102,18 +103,97 @@ export const loginXtreamClient = createServerFn({ method: "POST" })
         token: token,
         expires_at: expiresAt.toISOString(),
       })
-      .select()
+      .select("id, reseller_id, server_id, xtream_user, token, expires_at")
       .single();
 
     if (sessionErr) throw new Error(sessionErr.message);
 
     return {
-      token,
-      expiresAt: expiresAt.toISOString(),
+      token: session.token,
+      expiresAt: session.expires_at,
       user: authResult.account,
       server: {
         id: server.id,
-        name: (server as any).name || server.host
+        name: server.name || server.host
       }
     };
+  });
+
+/**
+ * Valida o token de sessão do player.
+ */
+export const validatePlayerSession = createServerFn({ method: "GET" })
+  .inputValidator((data) => z.object({ token: z.string().uuid() }).parse(data))
+  .handler(async ({ data }) => {
+    const { data: session, error } = await supabaseAdmin
+      .from("player_sessions")
+      .select("id, reseller_id, server_id, xtream_user, token, expires_at")
+      .eq("token", data.token)
+      .gt("expires_at", new Date().toISOString())
+      .single();
+
+    if (error || !session) return null;
+
+    // Atualizar último acesso
+    await supabaseAdmin
+      .from("player_sessions")
+      .update({ last_active_at: new Date().toISOString() })
+      .eq("id", session.id);
+
+    return session;
+  });
+
+/**
+ * Busca dados do catálogo IPTV via Core AWS.
+ */
+export const getPlayerCatalog = createServerFn({ method: "POST" })
+  .inputValidator((data) => z.object({
+    token: z.string().uuid(),
+    action: z.enum([
+      "get_live_categories", 
+      "get_vod_categories", 
+      "get_series_categories", 
+      "get_live_streams", 
+      "get_vod_streams", 
+      "get_series", 
+      "get_series_info", 
+      "get_vod_info"
+    ]),
+    categoryId: z.string().optional(),
+    contentId: z.string().optional(),
+  }).parse(data))
+  .handler(async ({ data }) => {
+    // 1. Validar sessão
+    const { data: session, error: sessionErr } = await supabaseAdmin
+      .from("player_sessions")
+      .select("id, server_id, token, expires_at")
+      .eq("token", data.token)
+      .gt("expires_at", new Date().toISOString())
+      .single();
+
+    if (sessionErr || !session) throw new Error("Sessão expirada ou inválida");
+
+    // 2. Delegar ao Core AWS
+    const { runOnCore } = await import("./core-api.server");
+    
+    // Buscar credenciais reais (o painel mascara as credenciais do servidor)
+    const { getIptvCredentials } = await import("./iptv-credentials.server");
+    const creds = await getIptvCredentials(session.server_id);
+    
+    if (!creds.username || !creds.password) throw new Error("Credenciais do servidor não disponíveis");
+
+    const result = await runOnCore(
+      "iptv-player-proxy" as any, 
+      {
+        serverId: session.server_id,
+        options: {
+          action: data.action,
+          categoryId: data.categoryId,
+          contentId: data.contentId,
+        }
+      }, 
+      () => Promise.reject(new Error("Local execution not implemented for player-proxy"))
+    );
+
+    return result as any;
   });

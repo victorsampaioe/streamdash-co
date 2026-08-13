@@ -240,10 +240,21 @@ function PlayerAdminPage() {
             </CardContent>
             <CardFooter className="flex flex-col gap-2">
               <p className="text-xs text-center text-muted-foreground w-full">
-                Link de acesso público (em breve):
+                Link de acesso público:
               </p>
-              <div className="bg-muted p-2 rounded text-xs font-mono w-full break-all">
-                https://streammonitor.site/player/{user?.id?.slice(0, 8)}
+              <div className="bg-muted p-2 rounded text-xs font-mono w-full break-all flex items-center justify-between gap-2">
+                <span className="truncate">{window.location.origin}/player/{user?.id}</span>
+                <Button 
+                  variant="ghost" 
+                  size="icon" 
+                  className="h-6 w-6" 
+                  onClick={() => {
+                    navigator.clipboard.writeText(`${window.location.origin}/player/${user?.id}`);
+                    toast.success("Link copiado!");
+                  }}
+                >
+                  <Globe className="h-3 w-3" />
+                </Button>
               </div>
             </CardFooter>
           </Card>

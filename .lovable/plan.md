@@ -1,33 +1,26 @@
-# Plano de Implementação: Web Player White-label (Rota Pública /player/$resellerId)
+# Plano de Implementação: Web Player Público - Reprodução e Detalhes
 
-Implementação da rota pública do Web Player funcional, permitindo que clientes finais acessem o catálogo IPTV com a identidade visual do revendedor.
+Este plano foca na finalização da rota pública do Web Player (`/player/$resellerId`), implementando a funcionalidade de reprodução de vídeo para TV ao vivo (CORS/TS bypass), filmes e séries, além de modais de detalhes e integração com o Core AWS.
 
-## Alterações de Infraestrutura (Backend)
+## Mudanças do Usuário
 
-1.  **Refatoração das Server Functions (`src/lib/player.functions.ts`):**
-    *   Remover `requireSupabaseAuth` da `getPlayerSettings` para permitir acesso público (necessário para a tela de login do cliente final).
-    *   Implementar `validatePlayerSession` para verificar o token de sessão do cliente.
-    *   Implementar `getPlayerCatalog` que atua como proxy para o Core AWS, buscando categorias e conteúdos.
+- **Reprodução de Vídeo Funcional:** O usuário poderá assistir canais ao vivo (mesmo em formato `.ts`), filmes e séries diretamente no navegador.
+- **Modais de Detalhes:** Informações extras sobre filmes e séries (sinopse, ano, classificação) antes de dar o play.
+- **Interface Fluida:** Seleção de temporadas para séries e navegação intuitiva entre conteúdos.
 
-2.  **Extensão do Core AWS API (`src/routes/api/public/core/task.ts`):**
-    *   Garantir que a tarefa `iptv-player-proxy` suporte todas as ações necessárias (live, vod, series, categories).
+## Mudanças Técnicas
 
-## Alterações de Roteamento e UI
+- **Proxy de Stream (CORS & .ts):** Implementar um endpoint de proxy no Core AWS que recebe a URL do stream IPTV e a repassa para o player com os headers corretos, permitindo que arquivos `.ts` sejam reproduzidos via HLS ou como stream direto (dependendo do suporte do navegador/Hls.js).
+- **Integração Hls.js:** Adicionar a biblioteca `hls.js` dinamicamente para suportar streaming adaptativo e formatos legados no Chrome/Firefox.
+- **Novas Server Functions:** 
+  - `getStreamUrl`: Gera uma URL de proxy assinada para o player.
+  - `getContentInfo`: Busca metadados detalhados de um filme ou série via Xtream.
+- **Componentes de UI:**
+  - `VideoPlayer`: Componente dedicado com controles customizados e suporte a Hls.js.
+  - `ContentDetailsModal`: Exibição de informações e seleção de episódios/filmes.
 
-1.  **Novo Layout de Roteamento:**
-    *   Criar `src/routes/player.$resellerId.tsx` para lidar com a rota dinâmica (atualmente `/player` é estática e sem ID).
-    *   Implementar a tela de login Xtream com campos de usuário, senha e seleção de servidor (filtrando servidores vinculados ao revendedor).
+## Considerações de Segurança
 
-2.  **Funcionalidades do Player:**
-    *   **Navegação:** Abas para TV Ao Vivo, Filmes e Séries.
-    *   **Catálogo:** Listagem de categorias e itens com busca.
-    *   **Reprodução:** Integração com um player de vídeo (ex: `video.js` ou nativo) tratando links `.ts` via proxy/remux no Core AWS quando necessário.
-
-3.  **Identidade Visual:**
-    *   Aplicação dinâmica de cores, logo e mensagens recuperadas via `getPlayerSettings(resellerId)`.
-
-## Detalhes Técnicos
-
-*   **Segurança:** Sessões de clientes finais são armazenadas em `player_sessions` com validade de 7 dias.
-*   **Performance:** Uso de cache no Core AWS para respostas da Player API para evitar rate limit nos servidores IPTV.
-*   **Compatibilidade:** Fallback de reprodução para formatos não suportados nativamente pelo navegador.
+- **Tokens de Sessão:** Apenas clientes autenticados via `player_sessions` podem gerar URLs de proxy.
+- **Bypass de CORS:** O proxy no Core AWS ocultará as credenciais do servidor IPTV do cliente final.
+- **Idempotência:** Verificação contínua de expiração de conta/dispositivo.

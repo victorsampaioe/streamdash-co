@@ -14,7 +14,6 @@ import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
 import { Route as RobotsDottxtRouteImport } from './routes/robots[.]txt'
 import { Route as RevendedorStreamMonitorRouteImport } from './routes/revendedor-stream-monitor'
 import { Route as ResetPasswordRouteImport } from './routes/reset-password'
-import { Route as PlayerRouteImport } from './routes/player'
 import { Route as MonitoramentoIptvRouteImport } from './routes/monitoramento-iptv'
 import { Route as MonitoramentoDnsRouteImport } from './routes/monitoramento-dns'
 import { Route as McpRouteImport } from './routes/mcp'
@@ -26,6 +25,7 @@ import { Route as SlugRouteImport } from './routes/$slug'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as StatusSlugRouteImport } from './routes/status.$slug'
+import { Route as PlayerResellerIdRouteImport } from './routes/player.$resellerId'
 import { Route as BlogComoEvitarQuedaIptvRouteImport } from './routes/blog.como-evitar-queda-iptv'
 import { Route as AuthenticatedAppRouteImport } from './routes/_authenticated/app'
 import { Route as Char91DotwellKnownChar93OauthProtectedResourceRouteImport } from './routes/[.well-known]/oauth-protected-resource'
@@ -100,11 +100,6 @@ const ResetPasswordRoute = ResetPasswordRouteImport.update({
   path: '/reset-password',
   getParentRoute: () => rootRouteImport,
 } as any)
-const PlayerRoute = PlayerRouteImport.update({
-  id: '/player',
-  path: '/player',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const MonitoramentoIptvRoute = MonitoramentoIptvRouteImport.update({
   id: '/monitoramento-iptv',
   path: '/monitoramento-iptv',
@@ -157,6 +152,11 @@ const IndexRoute = IndexRouteImport.update({
 const StatusSlugRoute = StatusSlugRouteImport.update({
   id: '/status/$slug',
   path: '/status/$slug',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PlayerResellerIdRoute = PlayerResellerIdRouteImport.update({
+  id: '/player/$resellerId',
+  path: '/player/$resellerId',
   getParentRoute: () => rootRouteImport,
 } as any)
 const BlogComoEvitarQuedaIptvRoute = BlogComoEvitarQuedaIptvRouteImport.update({
@@ -435,7 +435,6 @@ export interface FileRoutesByFullPath {
   '/mcp': typeof McpRoute
   '/monitoramento-dns': typeof MonitoramentoDnsRoute
   '/monitoramento-iptv': typeof MonitoramentoIptvRoute
-  '/player': typeof PlayerRoute
   '/reset-password': typeof ResetPasswordRoute
   '/revendedor-stream-monitor': typeof RevendedorStreamMonitorRoute
   '/robots.txt': typeof RobotsDottxtRoute
@@ -445,6 +444,7 @@ export interface FileRoutesByFullPath {
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   '/app': typeof AuthenticatedAppRouteWithChildren
   '/blog/como-evitar-queda-iptv': typeof BlogComoEvitarQuedaIptvRoute
+  '/player/$resellerId': typeof PlayerResellerIdRoute
   '/status/$slug': typeof StatusSlugRoute
   '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
@@ -501,7 +501,6 @@ export interface FileRoutesByTo {
   '/mcp': typeof McpRoute
   '/monitoramento-dns': typeof MonitoramentoDnsRoute
   '/monitoramento-iptv': typeof MonitoramentoIptvRoute
-  '/player': typeof PlayerRoute
   '/reset-password': typeof ResetPasswordRoute
   '/revendedor-stream-monitor': typeof RevendedorStreamMonitorRoute
   '/robots.txt': typeof RobotsDottxtRoute
@@ -510,6 +509,7 @@ export interface FileRoutesByTo {
   '/.mcp/list-tools': typeof Char91DotmcpChar93ListToolsRoute
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   '/blog/como-evitar-queda-iptv': typeof BlogComoEvitarQuedaIptvRoute
+  '/player/$resellerId': typeof PlayerResellerIdRoute
   '/status/$slug': typeof StatusSlugRoute
   '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
@@ -567,7 +567,6 @@ export interface FileRoutesById {
   '/mcp': typeof McpRoute
   '/monitoramento-dns': typeof MonitoramentoDnsRoute
   '/monitoramento-iptv': typeof MonitoramentoIptvRoute
-  '/player': typeof PlayerRoute
   '/reset-password': typeof ResetPasswordRoute
   '/revendedor-stream-monitor': typeof RevendedorStreamMonitorRoute
   '/robots.txt': typeof RobotsDottxtRoute
@@ -577,6 +576,7 @@ export interface FileRoutesById {
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   '/_authenticated/app': typeof AuthenticatedAppRouteWithChildren
   '/blog/como-evitar-queda-iptv': typeof BlogComoEvitarQuedaIptvRoute
+  '/player/$resellerId': typeof PlayerResellerIdRoute
   '/status/$slug': typeof StatusSlugRoute
   '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
@@ -635,7 +635,6 @@ export interface FileRouteTypes {
     | '/mcp'
     | '/monitoramento-dns'
     | '/monitoramento-iptv'
-    | '/player'
     | '/reset-password'
     | '/revendedor-stream-monitor'
     | '/robots.txt'
@@ -645,6 +644,7 @@ export interface FileRouteTypes {
     | '/.well-known/oauth-protected-resource'
     | '/app'
     | '/blog/como-evitar-queda-iptv'
+    | '/player/$resellerId'
     | '/status/$slug'
     | '/.lovable/oauth/consent'
     | '/.mcp/invoke-tool/$tool'
@@ -701,7 +701,6 @@ export interface FileRouteTypes {
     | '/mcp'
     | '/monitoramento-dns'
     | '/monitoramento-iptv'
-    | '/player'
     | '/reset-password'
     | '/revendedor-stream-monitor'
     | '/robots.txt'
@@ -710,6 +709,7 @@ export interface FileRouteTypes {
     | '/.mcp/list-tools'
     | '/.well-known/oauth-protected-resource'
     | '/blog/como-evitar-queda-iptv'
+    | '/player/$resellerId'
     | '/status/$slug'
     | '/.lovable/oauth/consent'
     | '/.mcp/invoke-tool/$tool'
@@ -766,7 +766,6 @@ export interface FileRouteTypes {
     | '/mcp'
     | '/monitoramento-dns'
     | '/monitoramento-iptv'
-    | '/player'
     | '/reset-password'
     | '/revendedor-stream-monitor'
     | '/robots.txt'
@@ -776,6 +775,7 @@ export interface FileRouteTypes {
     | '/.well-known/oauth-protected-resource'
     | '/_authenticated/app'
     | '/blog/como-evitar-queda-iptv'
+    | '/player/$resellerId'
     | '/status/$slug'
     | '/.lovable/oauth/consent'
     | '/.mcp/invoke-tool/$tool'
@@ -834,7 +834,6 @@ export interface RootRouteChildren {
   McpRoute: typeof McpRoute
   MonitoramentoDnsRoute: typeof MonitoramentoDnsRoute
   MonitoramentoIptvRoute: typeof MonitoramentoIptvRoute
-  PlayerRoute: typeof PlayerRoute
   ResetPasswordRoute: typeof ResetPasswordRoute
   RevendedorStreamMonitorRoute: typeof RevendedorStreamMonitorRoute
   RobotsDottxtRoute: typeof RobotsDottxtRoute
@@ -842,6 +841,7 @@ export interface RootRouteChildren {
   VerifyEmailRoute: typeof VerifyEmailRoute
   Char91DotmcpChar93ListToolsRoute: typeof Char91DotmcpChar93ListToolsRoute
   Char91DotwellKnownChar93OauthProtectedResourceRoute: typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
+  PlayerResellerIdRoute: typeof PlayerResellerIdRoute
   StatusSlugRoute: typeof StatusSlugRoute
   DotlovableOauthConsentRoute: typeof DotlovableOauthConsentRoute
   Char91DotmcpChar93InvokeToolToolRoute: typeof Char91DotmcpChar93InvokeToolToolRoute
@@ -894,13 +894,6 @@ declare module '@tanstack/react-router' {
       path: '/reset-password'
       fullPath: '/reset-password'
       preLoaderRoute: typeof ResetPasswordRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/player': {
-      id: '/player'
-      path: '/player'
-      fullPath: '/player'
-      preLoaderRoute: typeof PlayerRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/monitoramento-iptv': {
@@ -978,6 +971,13 @@ declare module '@tanstack/react-router' {
       path: '/status/$slug'
       fullPath: '/status/$slug'
       preLoaderRoute: typeof StatusSlugRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/player/$resellerId': {
+      id: '/player/$resellerId'
+      path: '/player/$resellerId'
+      fullPath: '/player/$resellerId'
+      preLoaderRoute: typeof PlayerResellerIdRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/blog/como-evitar-queda-iptv': {
@@ -1431,7 +1431,6 @@ const rootRouteChildren: RootRouteChildren = {
   McpRoute: McpRoute,
   MonitoramentoDnsRoute: MonitoramentoDnsRoute,
   MonitoramentoIptvRoute: MonitoramentoIptvRoute,
-  PlayerRoute: PlayerRoute,
   ResetPasswordRoute: ResetPasswordRoute,
   RevendedorStreamMonitorRoute: RevendedorStreamMonitorRoute,
   RobotsDottxtRoute: RobotsDottxtRoute,
@@ -1440,6 +1439,7 @@ const rootRouteChildren: RootRouteChildren = {
   Char91DotmcpChar93ListToolsRoute: Char91DotmcpChar93ListToolsRoute,
   Char91DotwellKnownChar93OauthProtectedResourceRoute:
     Char91DotwellKnownChar93OauthProtectedResourceRoute,
+  PlayerResellerIdRoute: PlayerResellerIdRoute,
   StatusSlugRoute: StatusSlugRoute,
   DotlovableOauthConsentRoute: DotlovableOauthConsentRoute,
   Char91DotmcpChar93InvokeToolToolRoute: Char91DotmcpChar93InvokeToolToolRoute,
