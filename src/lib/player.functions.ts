@@ -243,38 +243,3 @@ export const getPlayerStreamUrl = createServerFn({ method: "POST" })
     return `${coreBase}/api/public/core/stream?token=${data.token}&sid=${data.streamId}&ext=${data.extension}&type=${data.type}`;
   });
 
-  .handler(async ({ data }) => {
-    // 1. Validar sessão
-    const { data: session, error: sessionErr } = await supabaseAdmin
-      .from("player_sessions")
-      .select("id, server_id, token, expires_at")
-      .eq("token", data.token)
-      .gt("expires_at", new Date().toISOString())
-      .single();
-
-    if (sessionErr || !session) throw new Error("Sessão expirada ou inválida");
-
-    // 2. Delegar ao Core AWS
-    const { runOnCore } = await import("./core-api.server");
-    
-    // Buscar credenciais reais (o painel mascara as credenciais do servidor)
-    const { getIptvCredentials } = await import("./iptv-credentials.server");
-    const creds = await getIptvCredentials(session.server_id);
-    
-    if (!creds.username || !creds.password) throw new Error("Credenciais do servidor não disponíveis");
-
-    const result = await runOnCore(
-      "iptv-player-proxy" as any, 
-      {
-        serverId: session.server_id,
-        options: {
-          action: data.action,
-          categoryId: data.categoryId,
-          contentId: data.contentId,
-        }
-      }, 
-      () => Promise.reject(new Error("Local execution not implemented for player-proxy"))
-    );
-
-    return result as any;
-  });
