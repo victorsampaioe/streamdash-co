@@ -14,7 +14,6 @@ import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
 import { Route as RobotsDottxtRouteImport } from './routes/robots[.]txt'
 import { Route as RevendedorStreamMonitorRouteImport } from './routes/revendedor-stream-monitor'
 import { Route as ResetPasswordRouteImport } from './routes/reset-password'
-import { Route as PlayerRouteImport } from './routes/player'
 import { Route as MonitoramentoIptvRouteImport } from './routes/monitoramento-iptv'
 import { Route as MonitoramentoDnsRouteImport } from './routes/monitoramento-dns'
 import { Route as McpRouteImport } from './routes/mcp'
@@ -101,11 +100,6 @@ const ResetPasswordRoute = ResetPasswordRouteImport.update({
   path: '/reset-password',
   getParentRoute: () => rootRouteImport,
 } as any)
-const PlayerRoute = PlayerRouteImport.update({
-  id: '/player',
-  path: '/player',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const MonitoramentoIptvRoute = MonitoramentoIptvRouteImport.update({
   id: '/monitoramento-iptv',
   path: '/monitoramento-iptv',
@@ -161,9 +155,9 @@ const StatusSlugRoute = StatusSlugRouteImport.update({
   getParentRoute: () => rootRouteImport,
 } as any)
 const PlayerResellerIdRoute = PlayerResellerIdRouteImport.update({
-  id: '/$resellerId',
-  path: '/$resellerId',
-  getParentRoute: () => PlayerRoute,
+  id: '/player/$resellerId',
+  path: '/player/$resellerId',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const BlogComoEvitarQuedaIptvRoute = BlogComoEvitarQuedaIptvRouteImport.update({
   id: '/como-evitar-queda-iptv',
@@ -441,7 +435,6 @@ export interface FileRoutesByFullPath {
   '/mcp': typeof McpRoute
   '/monitoramento-dns': typeof MonitoramentoDnsRoute
   '/monitoramento-iptv': typeof MonitoramentoIptvRoute
-  '/player': typeof PlayerRouteWithChildren
   '/reset-password': typeof ResetPasswordRoute
   '/revendedor-stream-monitor': typeof RevendedorStreamMonitorRoute
   '/robots.txt': typeof RobotsDottxtRoute
@@ -508,7 +501,6 @@ export interface FileRoutesByTo {
   '/mcp': typeof McpRoute
   '/monitoramento-dns': typeof MonitoramentoDnsRoute
   '/monitoramento-iptv': typeof MonitoramentoIptvRoute
-  '/player': typeof PlayerRouteWithChildren
   '/reset-password': typeof ResetPasswordRoute
   '/revendedor-stream-monitor': typeof RevendedorStreamMonitorRoute
   '/robots.txt': typeof RobotsDottxtRoute
@@ -575,7 +567,6 @@ export interface FileRoutesById {
   '/mcp': typeof McpRoute
   '/monitoramento-dns': typeof MonitoramentoDnsRoute
   '/monitoramento-iptv': typeof MonitoramentoIptvRoute
-  '/player': typeof PlayerRouteWithChildren
   '/reset-password': typeof ResetPasswordRoute
   '/revendedor-stream-monitor': typeof RevendedorStreamMonitorRoute
   '/robots.txt': typeof RobotsDottxtRoute
@@ -644,7 +635,6 @@ export interface FileRouteTypes {
     | '/mcp'
     | '/monitoramento-dns'
     | '/monitoramento-iptv'
-    | '/player'
     | '/reset-password'
     | '/revendedor-stream-monitor'
     | '/robots.txt'
@@ -711,7 +701,6 @@ export interface FileRouteTypes {
     | '/mcp'
     | '/monitoramento-dns'
     | '/monitoramento-iptv'
-    | '/player'
     | '/reset-password'
     | '/revendedor-stream-monitor'
     | '/robots.txt'
@@ -777,7 +766,6 @@ export interface FileRouteTypes {
     | '/mcp'
     | '/monitoramento-dns'
     | '/monitoramento-iptv'
-    | '/player'
     | '/reset-password'
     | '/revendedor-stream-monitor'
     | '/robots.txt'
@@ -846,7 +834,6 @@ export interface RootRouteChildren {
   McpRoute: typeof McpRoute
   MonitoramentoDnsRoute: typeof MonitoramentoDnsRoute
   MonitoramentoIptvRoute: typeof MonitoramentoIptvRoute
-  PlayerRoute: typeof PlayerRouteWithChildren
   ResetPasswordRoute: typeof ResetPasswordRoute
   RevendedorStreamMonitorRoute: typeof RevendedorStreamMonitorRoute
   RobotsDottxtRoute: typeof RobotsDottxtRoute
@@ -854,6 +841,7 @@ export interface RootRouteChildren {
   VerifyEmailRoute: typeof VerifyEmailRoute
   Char91DotmcpChar93ListToolsRoute: typeof Char91DotmcpChar93ListToolsRoute
   Char91DotwellKnownChar93OauthProtectedResourceRoute: typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
+  PlayerResellerIdRoute: typeof PlayerResellerIdRoute
   StatusSlugRoute: typeof StatusSlugRoute
   DotlovableOauthConsentRoute: typeof DotlovableOauthConsentRoute
   Char91DotmcpChar93InvokeToolToolRoute: typeof Char91DotmcpChar93InvokeToolToolRoute
@@ -906,13 +894,6 @@ declare module '@tanstack/react-router' {
       path: '/reset-password'
       fullPath: '/reset-password'
       preLoaderRoute: typeof ResetPasswordRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/player': {
-      id: '/player'
-      path: '/player'
-      fullPath: '/player'
-      preLoaderRoute: typeof PlayerRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/monitoramento-iptv': {
@@ -994,10 +975,10 @@ declare module '@tanstack/react-router' {
     }
     '/player/$resellerId': {
       id: '/player/$resellerId'
-      path: '/$resellerId'
+      path: '/player/$resellerId'
       fullPath: '/player/$resellerId'
       preLoaderRoute: typeof PlayerResellerIdRouteImport
-      parentRoute: typeof PlayerRoute
+      parentRoute: typeof rootRouteImport
     }
     '/blog/como-evitar-queda-iptv': {
       id: '/blog/como-evitar-queda-iptv'
@@ -1439,17 +1420,6 @@ const BlogRouteChildren: BlogRouteChildren = {
 
 const BlogRouteWithChildren = BlogRoute._addFileChildren(BlogRouteChildren)
 
-interface PlayerRouteChildren {
-  PlayerResellerIdRoute: typeof PlayerResellerIdRoute
-}
-
-const PlayerRouteChildren: PlayerRouteChildren = {
-  PlayerResellerIdRoute: PlayerResellerIdRoute,
-}
-
-const PlayerRouteWithChildren =
-  PlayerRoute._addFileChildren(PlayerRouteChildren)
-
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
@@ -1461,7 +1431,6 @@ const rootRouteChildren: RootRouteChildren = {
   McpRoute: McpRoute,
   MonitoramentoDnsRoute: MonitoramentoDnsRoute,
   MonitoramentoIptvRoute: MonitoramentoIptvRoute,
-  PlayerRoute: PlayerRouteWithChildren,
   ResetPasswordRoute: ResetPasswordRoute,
   RevendedorStreamMonitorRoute: RevendedorStreamMonitorRoute,
   RobotsDottxtRoute: RobotsDottxtRoute,
@@ -1470,6 +1439,7 @@ const rootRouteChildren: RootRouteChildren = {
   Char91DotmcpChar93ListToolsRoute: Char91DotmcpChar93ListToolsRoute,
   Char91DotwellKnownChar93OauthProtectedResourceRoute:
     Char91DotwellKnownChar93OauthProtectedResourceRoute,
+  PlayerResellerIdRoute: PlayerResellerIdRoute,
   StatusSlugRoute: StatusSlugRoute,
   DotlovableOauthConsentRoute: DotlovableOauthConsentRoute,
   Char91DotmcpChar93InvokeToolToolRoute: Char91DotmcpChar93InvokeToolToolRoute,
