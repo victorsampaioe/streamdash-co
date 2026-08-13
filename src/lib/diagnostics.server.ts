@@ -46,7 +46,7 @@ export async function runContentDiagnostic(
   }
 
   // 2. Circuit Breaker Check (Item 5)
-  const { data: breakerState } = await supabaseAdmin.rpc('check_circuit_breaker', { p_server_id: serverId });
+  const { data: breakerState } = await (supabaseAdmin.rpc as any)('check_circuit_breaker', { p_server_id: serverId });
   if (breakerState === 'open') {
     throw new Error("Circuito Aberto: Este servidor IPTV está instável ou offline no momento. Tente novamente em alguns minutos.");
   }
