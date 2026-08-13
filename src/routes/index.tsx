@@ -34,6 +34,7 @@ export const Route = createFileRoute("/")({
 function Landing() {
   return (
     <div className="min-h-screen bg-background text-foreground">
+      <main>
       <header className="border-b border-border/60 backdrop-blur bg-background/70 sticky top-0 z-40">
         <div className="max-w-6xl mx-auto flex items-center justify-between px-4 sm:px-6 py-4 gap-2">
           <div className="flex items-center gap-2">
@@ -163,6 +164,7 @@ function Landing() {
         </div>
       </footer>
 
+      </main>
       <SupportFab />
     </div>
   );
@@ -308,7 +310,7 @@ function RadarShowcase() {
             {films.map((item, idx) => (
               <div key={idx} className="group relative rounded-xl border border-border/60 bg-card/40 overflow-hidden transition-all hover:border-primary/40 hover:-translate-y-1 hover:shadow-2xl hover:shadow-primary/10">
                 <div className="aspect-[2/3] relative overflow-hidden">
-                  <img src={item.image} alt={item.title} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" />
+                  <img src={item.image} alt={item.title} width={300} height={450} loading="lazy" className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" />
                   <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent opacity-60" />
                   
                   {item.tag && (

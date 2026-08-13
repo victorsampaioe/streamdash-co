@@ -1,0 +1,27 @@
+# Stream Monitor - LLM Guidance
+
+Stream Monitor is a professional 24/7 infrastructure monitoring platform specializing in IPTV, DNS, and server availability.
+
+## Purpose
+- Real-time monitoring of IPTV panels, DNS records, HTTP/HTTPS endpoints, and SSL certificates.
+- Intelligent diagnostic motor to prevent false positives.
+- Instant Telegram alerts for infrastructure failures.
+- Multi-region global checks (SP, Ashburn, Frankfurt, Tokyo).
+
+## Key Features
+- **IPTV Health Score**: 0-100% exclusive metric for stream quality and API availability.
+- **Content Radar**: Automatic detection of new movies and series on monitored IPTV networks.
+- **Reseller System**: Credit-based hierarchy for managing sub-accounts.
+- **Diagnostic Hub**: Tools for DNS, WHOIS, Ping, and IPTV Player API analysis.
+
+## Site Structure
+- `/`: Public landing page with features and social proof.
+- `/auth`: Authentication gateway.
+- `/app/*`: Protected dashboard and monitoring tools (requires login).
+- `/blog`: Educational content about infrastructure and IPTV.
+- `/status/$slug`: Public status pages for specific monitors.
+
+## Technical Stack
+- Frontend: React 19, TanStack Start v1, Tailwind CSS v4.
+- Backend: Lovable Cloud (Supabase), AWS EC2 (Core processing).
+- Communication: Supabase Realtime, Telegram Bot API.
