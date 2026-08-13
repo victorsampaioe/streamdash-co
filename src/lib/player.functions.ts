@@ -240,3 +240,110 @@ export const getPlayerStreamUrl = createServerFn({ method: "POST" })
     return `${coreBase}/api/public/core/stream?token=${data.token}&sid=${data.streamId}&ext=${data.extension}&type=${data.type}`;
   });
 
+/**
+ * Adiciona ou remove um conteúdo da lista de favoritos do player.
+ */
+export const toggleFavorite = createServerFn({ method: "POST" })
+  .inputValidator((data) => z.object({
+    token: z.string().uuid(),
+    contentId: z.string(),
+    contentType: z.enum(["live", "movie", "series"]),
+    isFavorite: z.boolean()
+  }).parse(data))
+  .handler(async ({ data }) => {
+    const { data: session, error: sessionErr } = await supabaseAdmin
+      .from("player_sessions")
+      .select("id")
+      .eq("token", data.token)
+      .gt("expires_at", new Date().toISOString())
+      .single();
+
+    if (sessionErr || !session) throw new Error("Sessão inválida");
+
+    if (data.isFavorite) {
+      const { error } = await supabaseAdmin
+        .from("player_favorites")
+        .upsert({
+          session_id: session.id,
+          content_id: data.contentId,
+          content_type: data.contentType
+        }, { onConflict: 'session_id, content_id, content_type' });
+      
+      if (error) throw new Error(error.message);
+    } else {
+      const { error } = await supabaseAdmin
+        .from("player_favorites")
+        .delete()
+        .match({
+          session_id: session.id,
+          content_id: data.contentId,
+          content_type: data.contentType
+        });
+      
+      if (error) throw new Error(error.message);
+    }
+
+    return { success: true };
+  });
+
+/**
+ * Retorna a lista de favoritos da sessão.
+ */
+export const getFavorites = createServerFn({ method: "GET" })
+  .inputValidator((data) => z.object({ token: z.string().uuid() }).parse(data))
+  .handler(async ({ data }) => {
+    const { data: session, error: sessionErr } = await supabaseAdmin
+      .from("player_sessions")
+      .select("id")
+      .eq("token", data.token)
+      .gt("expires_at", new Date().toISOString())
+      .single();
+
+    if (sessionErr || !session) throw new Error("Sessão inválida");
+
+    const { data: favorites, error } = await supabaseAdmin
+      .from("player_favorites")
+      .select("content_id, content_type")
+      .eq("session_id", session.id);
+
+    if (error) throw new Error(error.message);
+    return favorites;
+  });
+
+/**
+ * Atualiza o progresso de visualização de um conteúdo.
+ */
+export const updateWatchHistory = createServerFn({ method: "POST" })
+  .inputValidator((data) => z.object({
+    token: z.string().uuid(),
+    contentId: z.string(),
+    contentType: z.enum(["live", "movie", "series"]),
+    position: z.number(),
+    duration: z.number()
+  }).parse(data))
+  .handler(async ({ data }) => {
+    const { data: session, error: sessionErr } = await supabaseAdmin
+      .from("player_sessions")
+      .select("id")
+      .eq("token", data.token)
+      .gt("expires_at", new Date().toISOString())
+      .single();
+
+    if (sessionErr || !session) throw new Error("Sessão inválida");
+
+    const { error } = await supabaseAdmin
+      .from("player_history")
+      .upsert({
+        session_id: session.id,
+        content_id: data.contentId,
+        content_type: data.contentType,
+        last_position_seconds: data.position,
+        duration_seconds: data.duration,
+        watched_at: new Date().toISOString()
+      }, { onConflict: 'id' }); // Consider adding a unique constraint if we want one entry per content per session
+
+    if (error) throw new Error(error.message);
+    return { success: true };
+  });
+
+
