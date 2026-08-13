@@ -153,9 +153,21 @@ export async function runContentDiagnostic(
       throw new Error(slotResult?.message || "Muitos diagnósticos em execução. Por favor, aguarde.");
     }
 
+    // Item 6 — cancelamento cooperativo: limpa flag antiga e observa pedidos novos
+    const cKey = cancelKeyFor(serverId, contentId, contentType);
+    await clearCancelFlag(cKey);
+    const cancelCtl = new AbortController();
+    const poller = setInterval(() => {
+      isCancelRequested(cKey)
+        .then((c) => { if (c) cancelCtl.abort(); })
+        .catch(() => {});
+    }, 700);
+
     try {
-      return await executeDiagnostic(userId, serverId, contentId, contentType);
+      return await executeDiagnostic(userId, serverId, contentId, contentType, cancelCtl.signal);
     } finally {
+      clearInterval(poller);
+      await clearCancelFlag(cKey);
       // Liberar slot de concorrência
       await (supabaseAdmin.rpc as any)('release_diagnostic_slot', {
         p_user_id: effectiveUserId === 'core-system' ? '00000000-0000-0000-0000-000000000000' : effectiveUserId,
@@ -167,6 +179,7 @@ export async function runContentDiagnostic(
     await (supabaseAdmin.rpc as any)('release_diagnostic_lock', { p_lock_key: cacheKey });
   }
 }
+
 
 async function executeDiagnostic(
   userId: string | null,
