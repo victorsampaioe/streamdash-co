@@ -31,7 +31,7 @@ export function AppShell({ children }: { children: ReactNode }) {
         <Topbar />
         <SubscriptionBanner />
         <TelegramBanner />
-        <main className="flex-1 p-4 sm:p-6 md:p-8 max-w-[1600px] w-full mx-auto">{children}</main>
+        <main id="main-content" className="flex-1 p-4 sm:p-6 md:p-8 max-w-[1600px] w-full mx-auto">{children}</main>
       </div>
       <SupportFab />
     </div>

@@ -1,7 +1,8 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { lazy, Suspense } from "react";
 import { Activity, Bell, Globe, Zap, ShieldCheck, LineChart, Send, BookOpen, UserCheck, TrendingUp, Search, Film, Tv, CheckCircle2, Cpu } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { SupportFab } from "@/components/support-fab";
+const SupportFab = lazy(() => import("@/components/support-fab").then(m => ({ default: m.SupportFab })));
 import poster_duneAsset from "@/assets/radar/dune.jpg.asset.json";
 import poster_godzillaAsset from "@/assets/radar/godzilla.jpg.asset.json";
 import poster_madamewebAsset from "@/assets/radar/madameweb.jpg.asset.json";
@@ -29,6 +30,9 @@ export const Route = createFileRoute("/")({
     ],
   }),
   component: Landing,
+  loader: async ({ context }) => {
+    // Pré-carrega dados críticos se necessário no futuro
+  }
 });
 
 function Landing() {
@@ -38,7 +42,7 @@ function Landing() {
       <header className="border-b border-border/60 backdrop-blur bg-background/70 sticky top-0 z-40">
         <div className="max-w-6xl mx-auto flex items-center justify-between px-4 sm:px-6 py-4 gap-2">
           <div className="flex items-center gap-2">
-            <Activity className="h-5 w-5 text-primary" />
+            <Activity className="h-5 w-5 text-primary" aria-hidden="true" />
             <span className="font-bold tracking-tight">stream<span className="text-primary">monitor</span></span>
           </div>
           <div className="flex items-center gap-2">
@@ -165,7 +169,9 @@ function Landing() {
       </footer>
 
       </main>
-      <SupportFab />
+      <Suspense fallback={<div className="h-20" />}>
+        <SupportFab />
+      </Suspense>
     </div>
   );
 }
