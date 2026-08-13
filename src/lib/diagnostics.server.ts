@@ -40,13 +40,22 @@ export async function requestDiagnosticCancel(
   serverId: string,
   contentId: string,
   contentType: string,
-): Promise<{ ok: true }> {
+): Promise<{ ok: true; active: boolean }> {
   const key = cancelKeyFor(serverId, contentId, contentType);
+  // Só sinaliza se existir uma execução em andamento (lock de dedupe ativo);
+  // caso contrário a flag ficaria órfã na tabela.
+  const { data: running } = await supabaseAdmin
+    .from('diagnostic_locks')
+    .select('lock_key')
+    .eq('lock_key', `diag:${serverId}:${contentId}:${contentType}`)
+    .maybeSingle();
+  if (!running) return { ok: true, active: false };
   await (supabaseAdmin.from('diagnostic_locks') as any)
     .upsert({ lock_key: key, created_at: new Date().toISOString() }, { onConflict: 'lock_key' });
   console.log(`[diagnostic] Cancel requested for ${key}`);
-  return { ok: true };
+  return { ok: true, active: true };
 }
+
 
 async function isCancelRequested(key: string): Promise<boolean> {
   const { data } = await supabaseAdmin
