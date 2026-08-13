@@ -420,25 +420,29 @@ async function executeDiagnostic(
     return result;
 
   } catch (e: any) {
-    const err = String(e.message || e);
-    try {
-      await supabaseAdmin.rpc('record_diagnostic_failure', { p_server_id: serverId });
-    } catch (rpcErr) {
-      console.error("[diagnostic] Error calling record_diagnostic_failure:", rpcErr);
+    const cancelled = e instanceof DiagnosticCancelled;
+    const err = cancelled ? 'Diagnóstico cancelado pelo usuário' : String(e.message || e);
+    const durationMs = Date.now() - tStart;
+
+    if (!cancelled) {
+      try {
+        await supabaseAdmin.rpc('record_diagnostic_failure', { p_server_id: serverId });
+      } catch (rpcErr) {
+        console.error("[diagnostic] Error calling record_diagnostic_failure:", rpcErr);
+      }
     }
     
     const result: DiagnosticResult = {
-      status: err.includes('HTTP 403') ? 'server_unavailable' : (err.includes('HTTP 5') ? 'server_unavailable' : 'unavailable'),
+      status: cancelled
+        ? 'cancelled'
+        : (err.includes('HTTP 403') ? 'server_unavailable' : (err.includes('HTTP 5') ? 'server_unavailable' : 'unavailable')),
       error: err,
-      steps: steps.map(s => s.status === 'running' ? { ...s, status: 'error', details: err } : s) as any
+      // Item 7 — duração também no caminho de erro/cancelamento
+      duration_ms: durationMs,
+      steps: steps.map(s => s.status === 'running'
+        ? { ...s, status: cancelled ? 'pending' : 'error', details: err }
+        : s) as any
     };
-
-    const { data: catalogItem } = await supabaseAdmin
-      .from("iptv_catalog_items")
-      .select("name")
-      .eq("server_id", serverId)
-      .eq("external_id", contentId)
-      .maybeSingle();
 
     await (supabaseAdmin.from('content_diagnostics') as any).insert({
       user_id: (!userId || userId === 'core-system') ? null : userId,
@@ -447,11 +451,12 @@ async function executeDiagnostic(
       content_type: contentType,
       status: result.status,
       error_message: result.error,
-      duration_ms: Date.now() - tStart,
+      duration_ms: durationMs,
       steps: JSON.stringify(result.steps),
       is_cached: false
     });
 
     return result;
   }
+
 }
