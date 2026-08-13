@@ -250,11 +250,12 @@ export const getPlayerStreamUrl = createServerFn({ method: "POST" })
 
     if (error || !session) throw new Error("Sessão inválida");
 
-    const { coreApiUrl } = await import("./core-api.server");
-    const coreBase = coreApiUrl() ?? "";
+    // Proxy same-origin: evita CORS/mixed-content e resolve host + credenciais
+    // a partir do token da sessão.
+    const url = `/api/public/core/stream?token=${data.token}&sid=${encodeURIComponent(data.streamId)}&ext=${encodeURIComponent(data.extension)}&type=${data.type}`;
+    console.log(`[getPlayerStreamUrl] server=${session.server_id} type=${data.type} sid=${data.streamId} ext=${data.extension} proxy=${url.split("token=")[0]}token=***`);
+    return url;
 
-    // O proxy resolve host e credenciais a partir do token da sessão.
-    return `${coreBase}/api/public/core/stream?token=${data.token}&sid=${data.streamId}&ext=${data.extension}&type=${data.type}`;
   });
 
 /**
