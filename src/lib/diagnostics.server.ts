@@ -52,7 +52,7 @@ export async function runContentDiagnostic(
   }
 
   // 3. Rate Limit & Concorrência (Item 2)
-  const { data: slotAcquired } = await supabaseAdmin.rpc('acquire_diagnostic_slot', { 
+  const { data: slotAcquired } = await (supabaseAdmin.rpc as any)('acquire_diagnostic_slot', { 
     p_user_id: effectiveUserId === 'core-system' ? '00000000-0000-0000-0000-000000000000' : effectiveUserId, 
     p_server_id: serverId,
     p_max_user_concurrent: LIMIT_USER_CONCURRENT,
