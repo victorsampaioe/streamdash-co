@@ -28,7 +28,7 @@ export type DiagnosticResult = {
   steps: DiagnosticStep[];
 };
 
-/** Lógica de Single-Flight / Deduplicação em memória (por worker) */
+/** Lógica de Single-Flight / Deduplicação e Cache (Item 4) */
 const activeProbes = new Map<string, Promise<DiagnosticResult>>();
 
 export async function runContentDiagnostic(
