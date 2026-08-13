@@ -7,11 +7,13 @@ export const runDiagnostic = createServerFn({ method: "POST" })
   .inputValidator((d: { 
     serverId: string, 
     contentId: string, 
-    contentType: 'live' | 'movie' | 'series' | 'episode' 
+    contentType: 'live' | 'movie' | 'series' | 'episode' | 'vod'
   }) => z.object({ 
     serverId: z.string().uuid(),
     contentId: z.string(),
-    contentType: z.enum(['live', 'movie', 'series', 'episode'])
+    // "vod" é o valor usado no catálogo IPTV; normalizamos para "movie".
+    contentType: z.enum(['live', 'movie', 'series', 'episode', 'vod'])
+      .transform((v) => (v === 'vod' ? 'movie' : v))
   }).parse(d))
   .handler(async ({ data, context }: any) => {
     const { runContentDiagnostic } = await import("./diagnostics.server");
