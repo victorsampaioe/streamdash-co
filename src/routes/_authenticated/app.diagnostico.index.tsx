@@ -396,7 +396,13 @@ function ContentDiagnosticPage() {
               ? `${selectedContent.title} - S${selectedSeason}E${selectedEpisode?.episode_num}: ${selectedEpisode?.title}`
               : (selectedContent?.title || 'Diagnóstico')
           }
-          contentType={(selectedContent?.kind === 'series' ? 'episode' : selectedContent?.kind) || 'movie'}
+          contentType={
+            selectedContent?.kind === 'series'
+              ? 'episode'
+              : selectedContent?.kind === 'live'
+                ? 'live'
+                : 'movie'
+          }
         />
       )}
     </div>
