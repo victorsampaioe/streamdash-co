@@ -100,7 +100,7 @@ function PlayerPage() {
     return <LoginForm 
       resellerId={resellerId} 
       settings={settings} 
-      onLogin={(data) => {
+      onLogin={(data: any) => {
         setToken(data.token);
         setSession(data);
       }}
