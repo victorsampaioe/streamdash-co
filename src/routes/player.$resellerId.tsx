@@ -634,7 +634,7 @@ function LoginForm({ resellerId, settings, onLogin, primaryColor, secondaryColor
               {settings?.logo_url ? (
                 <img src={settings.logo_url} alt="Logo" className="max-h-full max-w-full object-contain" />
               ) : (
-                <Play className="h-10 w-10 text-primary" style={{ color: primaryColor }} />
+                <PlayCircle className="h-10 w-10" style={{ color: primaryColor }} />
               )}
             </div>
             <div>
@@ -683,15 +683,21 @@ function LoginForm({ resellerId, settings, onLogin, primaryColor, secondaryColor
 
           <Button 
             type="submit" 
-            className="w-full h-12 text-lg font-bold"
+            className="w-full h-12 font-bold text-lg" 
             style={{ backgroundColor: primaryColor }}
             disabled={loginMutation.isPending}
           >
-            {loginMutation.isPending ? <Loader2 className="h-5 w-5 animate-spin mr-2" /> : <Play className="h-5 w-5 mr-2" />}
-            Conectar
+            {loginMutation.isPending ? (
+              <Loader2 className="h-5 w-5 animate-spin mr-2" />
+            ) : (
+              <Play className="h-5 w-5 mr-2 fill-white" />
+            )}
+            Acessar Agora
           </Button>
 
-          <p className="text-[10px] text-center text-white/20 uppercase tracking-widest pt-2">Powered by Stream Monitor</p>
+          <p className="text-center text-[10px] text-white/20 uppercase tracking-widest">
+            Powered by StreamMonitor.site
+          </p>
         </form>
       </Card>
     </div>
