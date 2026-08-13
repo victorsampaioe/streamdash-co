@@ -387,23 +387,30 @@ function PlayerPage() {
   function handlePlay(id: string, type: "live" | "movie" | "series", extOverride?: string) {
     setIsPlaying(true);
     setStreamUrl(null);
-    
-    getPlayerStreamUrl({ 
-      data: { 
-        token: token!, 
-        streamId: id.toString(), 
-        type, 
-        extension: extOverride || (type === "live" ? "ts" : "mp4") 
-      } 
+
+    // Live → HLS (.m3u8) é o formato reproduzível no navegador.
+    // Filmes/Séries → extensão real do container (mp4 por padrão) com Range.
+    const extension = type === "live" ? "m3u8" : (extOverride || "mp4");
+
+    getPlayerStreamUrl({
+      data: {
+        token: token!,
+        streamId: id.toString(),
+        type,
+        extension,
+      }
     })
     .then(url => {
+      console.log("[player] URL de reprodução (proxy):", url, "| tipo:", type, "| ext:", extension);
       setStreamUrl(url);
     })
     .catch(err => {
+      console.error("[player] falha ao gerar URL de stream:", err);
       toast.error("Erro ao carregar vídeo: " + err.message);
       setIsPlaying(false);
     });
   }
+
 
   function handleOpenSeries(item: any) {
     setSelectedSeriesInfo({ info: item, episodes: {} });
