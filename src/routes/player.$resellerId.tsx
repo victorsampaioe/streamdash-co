@@ -210,11 +210,21 @@ function PlayerPage() {
         </div>
       </header>
 
-      <div className="flex flex-1 overflow-hidden">
+      <div className="flex flex-1 overflow-hidden relative">
+        {/* Sidebar Categorias Mobile (Overlay) */}
+        <div className={`fixed inset-0 z-40 bg-black/60 backdrop-blur-sm md:hidden transition-opacity ${selectedCategory === null ? "opacity-100" : "opacity-0 pointer-events-none"}`} onClick={() => setSelectedCategory('0')}></div>
+        
         {/* Sidebar Categorias */}
-        <aside className="w-64 border-r border-white/5 bg-black/20 overflow-y-auto hidden md:block">
+        <aside className={`w-64 border-r border-white/5 bg-black/20 overflow-y-auto transition-transform md:translate-x-0 z-50 md:static fixed inset-y-0 left-0 ${selectedCategory === null ? "translate-x-0" : "-translate-x-full md:translate-x-0"}`}>
           <div className="p-4 space-y-2">
-            <h3 className="text-xs font-bold text-white/40 uppercase tracking-widest px-2 mb-4">Categorias</h3>
+            <div className="flex items-center justify-between px-2 mb-4">
+              <h3 className="text-xs font-bold text-white/40 uppercase tracking-widest">Categorias</h3>
+              {selectedCategory !== null && (
+                <Button variant="ghost" size="sm" className="h-6 text-[10px] md:hidden" onClick={() => setSelectedCategory(null)}>
+                  <ChevronLeft className="h-3 w-3 mr-1" /> Voltar
+                </Button>
+              )}
+            </div>
             {categories.map((cat) => (
               <button
                 key={cat.category_id}
@@ -224,6 +234,7 @@ function PlayerPage() {
                     ? "bg-primary text-white font-bold" 
                     : "text-white/60 hover:bg-white/5 hover:text-white"
                 }`}
+                style={selectedCategory === cat.category_id ? { backgroundColor: primaryColor } : {}}
               >
                 {cat.category_name}
               </button>
@@ -232,8 +243,19 @@ function PlayerPage() {
         </aside>
 
         {/* Conteúdo Principal */}
-        <main className="flex-1 overflow-y-auto p-6">
-          {!selectedCategory ? (
+        <main className="flex-1 overflow-y-auto p-4 md:p-6">
+          {selectedCategory !== null && (
+             <Button 
+               variant="ghost" 
+               size="sm" 
+               className="mb-4 md:hidden text-white/60" 
+               onClick={() => setSelectedCategory(null)}
+             >
+               <ChevronLeft className="h-4 w-4 mr-1" /> Ver Categorias
+             </Button>
+          )}
+          
+          {selectedCategory === null ? (
             <div className="h-full flex flex-col items-center justify-center text-center space-y-4 opacity-50">
               <LayoutGrid className="h-16 w-16" />
               <div>
