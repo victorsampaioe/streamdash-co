@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useState, useEffect, useRef } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { 
@@ -49,6 +49,7 @@ export const Route = createFileRoute("/player/$resellerId")({
 });
 
 function PlayerPage() {
+  const navigate = useNavigate();
   const { resellerId } = Route.useParams();
   const [token, setToken] = useState<string | null>(localStorage.getItem(`stream_player_token_${resellerId}`));
   const [session, setSession] = useState<any>(null);
@@ -147,6 +148,23 @@ function PlayerPage() {
     return (
       <div className="min-h-screen bg-neutral-950 flex items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  if (!settings) {
+    return (
+      <div className="min-h-screen bg-neutral-950 flex flex-col items-center justify-center p-6 text-center">
+        <div className="w-20 h-20 bg-red-500/10 rounded-full flex items-center justify-center mb-6">
+          <X className="h-10 w-10 text-red-500" />
+        </div>
+        <h1 className="text-2xl font-bold text-white mb-2">Revendedor não encontrado</h1>
+        <p className="text-white/60 max-w-md mb-8">
+          O link que você acessou parece estar incorreto ou o revendedor não possui o módulo de Web Player ativo.
+        </p>
+        <Button onClick={() => navigate({ to: "/" })} variant="outline" className="border-white/10 text-white">
+          Voltar para o Início
+        </Button>
       </div>
     );
   }
