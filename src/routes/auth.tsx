@@ -70,7 +70,7 @@ function AuthPage() {
     } catch { /* ignore */ }
     
     if (!data.session) {
-      toast.success("Conta criada! Verifique seu e-mail para continuar.");
+      toast.success("Conta criada! Verifique seu e-mail para continuar");
       navigate({ to: "/verify-email", search: { email } });
     } else {
       toast.success("Conta criada!");
