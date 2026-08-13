@@ -14,6 +14,7 @@ import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
 import { Route as RobotsDottxtRouteImport } from './routes/robots[.]txt'
 import { Route as RevendedorStreamMonitorRouteImport } from './routes/revendedor-stream-monitor'
 import { Route as ResetPasswordRouteImport } from './routes/reset-password'
+import { Route as PlayerRouteImport } from './routes/player'
 import { Route as MonitoramentoIptvRouteImport } from './routes/monitoramento-iptv'
 import { Route as MonitoramentoDnsRouteImport } from './routes/monitoramento-dns'
 import { Route as McpRouteImport } from './routes/mcp'
@@ -97,6 +98,11 @@ const RevendedorStreamMonitorRoute = RevendedorStreamMonitorRouteImport.update({
 const ResetPasswordRoute = ResetPasswordRouteImport.update({
   id: '/reset-password',
   path: '/reset-password',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PlayerRoute = PlayerRouteImport.update({
+  id: '/player',
+  path: '/player',
   getParentRoute: () => rootRouteImport,
 } as any)
 const MonitoramentoIptvRoute = MonitoramentoIptvRouteImport.update({
@@ -429,6 +435,7 @@ export interface FileRoutesByFullPath {
   '/mcp': typeof McpRoute
   '/monitoramento-dns': typeof MonitoramentoDnsRoute
   '/monitoramento-iptv': typeof MonitoramentoIptvRoute
+  '/player': typeof PlayerRoute
   '/reset-password': typeof ResetPasswordRoute
   '/revendedor-stream-monitor': typeof RevendedorStreamMonitorRoute
   '/robots.txt': typeof RobotsDottxtRoute
@@ -494,6 +501,7 @@ export interface FileRoutesByTo {
   '/mcp': typeof McpRoute
   '/monitoramento-dns': typeof MonitoramentoDnsRoute
   '/monitoramento-iptv': typeof MonitoramentoIptvRoute
+  '/player': typeof PlayerRoute
   '/reset-password': typeof ResetPasswordRoute
   '/revendedor-stream-monitor': typeof RevendedorStreamMonitorRoute
   '/robots.txt': typeof RobotsDottxtRoute
@@ -559,6 +567,7 @@ export interface FileRoutesById {
   '/mcp': typeof McpRoute
   '/monitoramento-dns': typeof MonitoramentoDnsRoute
   '/monitoramento-iptv': typeof MonitoramentoIptvRoute
+  '/player': typeof PlayerRoute
   '/reset-password': typeof ResetPasswordRoute
   '/revendedor-stream-monitor': typeof RevendedorStreamMonitorRoute
   '/robots.txt': typeof RobotsDottxtRoute
@@ -626,6 +635,7 @@ export interface FileRouteTypes {
     | '/mcp'
     | '/monitoramento-dns'
     | '/monitoramento-iptv'
+    | '/player'
     | '/reset-password'
     | '/revendedor-stream-monitor'
     | '/robots.txt'
@@ -691,6 +701,7 @@ export interface FileRouteTypes {
     | '/mcp'
     | '/monitoramento-dns'
     | '/monitoramento-iptv'
+    | '/player'
     | '/reset-password'
     | '/revendedor-stream-monitor'
     | '/robots.txt'
@@ -755,6 +766,7 @@ export interface FileRouteTypes {
     | '/mcp'
     | '/monitoramento-dns'
     | '/monitoramento-iptv'
+    | '/player'
     | '/reset-password'
     | '/revendedor-stream-monitor'
     | '/robots.txt'
@@ -822,6 +834,7 @@ export interface RootRouteChildren {
   McpRoute: typeof McpRoute
   MonitoramentoDnsRoute: typeof MonitoramentoDnsRoute
   MonitoramentoIptvRoute: typeof MonitoramentoIptvRoute
+  PlayerRoute: typeof PlayerRoute
   ResetPasswordRoute: typeof ResetPasswordRoute
   RevendedorStreamMonitorRoute: typeof RevendedorStreamMonitorRoute
   RobotsDottxtRoute: typeof RobotsDottxtRoute
@@ -881,6 +894,13 @@ declare module '@tanstack/react-router' {
       path: '/reset-password'
       fullPath: '/reset-password'
       preLoaderRoute: typeof ResetPasswordRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/player': {
+      id: '/player'
+      path: '/player'
+      fullPath: '/player'
+      preLoaderRoute: typeof PlayerRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/monitoramento-iptv': {
@@ -1411,6 +1431,7 @@ const rootRouteChildren: RootRouteChildren = {
   McpRoute: McpRoute,
   MonitoramentoDnsRoute: MonitoramentoDnsRoute,
   MonitoramentoIptvRoute: MonitoramentoIptvRoute,
+  PlayerRoute: PlayerRoute,
   ResetPasswordRoute: ResetPasswordRoute,
   RevendedorStreamMonitorRoute: RevendedorStreamMonitorRoute,
   RobotsDottxtRoute: RobotsDottxtRoute,
