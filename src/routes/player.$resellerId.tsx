@@ -1,14 +1,46 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { getPlayerSettings, loginXtreamClient, getPlayerCatalog, validatePlayerSession } from "@/lib/player.functions";
+import { 
+  getPlayerSettings, 
+  loginXtreamClient, 
+  getPlayerCatalog, 
+  validatePlayerSession,
+  getPlayerStreamUrl 
+} from "@/lib/player.functions";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
+import { 
+  Dialog, 
+  DialogContent, 
+  DialogHeader, 
+  DialogTitle,
+  DialogDescription 
+} from "@/components/ui/dialog";
 import { toast } from "sonner";
-import { Loader2, Play, Tv, Film, Info, User, LogOut, ChevronRight, Search, LayoutGrid, List } from "lucide-react";
+import { 
+  Loader2, 
+  Play, 
+  Tv, 
+  Film, 
+  Info, 
+  User, 
+  LogOut, 
+  ChevronRight, 
+  Search, 
+  LayoutGrid, 
+  List,
+  Calendar,
+  Star,
+  Clock,
+  ChevronLeft,
+  X
+} from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import Hls from "hls.js";
+
 
 export const Route = createFileRoute("/player/$resellerId")({
   component: PlayerPage,
