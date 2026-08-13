@@ -1185,7 +1185,7 @@ function EditResellerDialog({ reseller, onDone, isAdminUser, onToggleAdmin }: { 
             <div className="text-lg font-bold">{reseller.credits} créditos</div>
           </div>
 
-          <Button className="w-full" onClick={() => mut.mutate()} disabled={mut.isPending}>
+          <Button className="w-full" onClick={handleSave} disabled={mut.isPending}>
             {mut.isPending ? "Salvando..." : "Salvar Alterações"}
           </Button>
         </div>
