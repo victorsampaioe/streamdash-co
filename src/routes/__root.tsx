@@ -43,11 +43,18 @@ function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
     reportLovableError(error, { boundary: "tanstack_root_error_component" });
   }, [error]);
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background px-4">
-      <div className="max-w-md text-center">
-        <h1 className="text-xl font-semibold">Algo deu errado</h1>
-        <p className="mt-2 text-sm text-muted-foreground">Tente novamente em instantes.</p>
-        <div className="mt-6 flex flex-wrap justify-center gap-2">
+    <div className="flex min-h-screen items-center justify-center bg-background px-4 py-10">
+      <div className="w-full max-w-2xl text-left">
+        <h1 className="text-xl font-semibold">Erro real</h1>
+        <div className="mt-4 space-y-1 text-sm">
+          <p><span className="text-muted-foreground">endpoint:</span> {typeof window !== "undefined" ? window.location.pathname : "-"}</p>
+          <p><span className="text-muted-foreground">status:</span> {(error as any)?.status ?? (error as any)?.statusCode ?? "-"}</p>
+          <p><span className="text-muted-foreground">mensagem:</span> {error?.message ?? "-"}</p>
+        </div>
+        <pre className="mt-4 max-h-80 overflow-auto rounded-md border border-border bg-muted p-4 text-xs whitespace-pre-wrap">
+{error?.stack ?? "sem stack"}
+        </pre>
+        <div className="mt-6 flex flex-wrap gap-2">
           <button
             onClick={() => { router.invalidate(); reset(); }}
             className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90"
@@ -62,6 +69,7 @@ function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
     </div>
   );
 }
+
 
 export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()({
   head: () => ({

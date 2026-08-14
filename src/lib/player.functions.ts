@@ -205,37 +205,134 @@ export const getPlayerCatalog = createServerFn({ method: "POST" })
     }
 
     // 3. Delegar ao Core AWS (com fallback local)
-    const { runOnCore } = await import("./core-api.server");
+    const { runOnCore, coreApiUrl, useCore } = await import("./core-api.server");
+    const via = useCore() ? `Core AWS (${coreApiUrl()})` : "Painel (direto no IPTV)";
+    const started = Date.now();
 
-    const result = await runOnCore(
-      "iptv-player-proxy" as any,
-      {
-        serverId: session.server_id,
-        username: creds.username,
-        password: creds.password,
-        options: {
+    console.log(
+      `[CATALOG_DEBUG] inicio | tipo=${data.action.includes("series") ? "series" : data.action.includes("vod") ? "movie" : "live"} servidor=${session.server_id} usuario_iptv=${creds.username} action=${data.action} categoria=${data.categoryId ?? "-"} contentId=${data.contentId ?? "-"} fluxo=Frontend -> ${via} -> Servidor IPTV`
+    );
+
+    try {
+      const result = await runOnCore(
+        "iptv-player-proxy" as any,
+        {
+          serverId: session.server_id,
+          username: creds.username,
+          password: creds.password,
+          options: {
+            action: data.action,
+            categoryId: data.categoryId,
+            contentId: data.contentId,
+            offset: data.offset,
+            limit: data.limit,
+          }
+        },
+        () => fetchXtreamCatalog(session.server_id, creds, {
           action: data.action,
           categoryId: data.categoryId,
           contentId: data.contentId,
           offset: data.offset,
           limit: data.limit,
-        }
-      },
-      () => fetchXtreamCatalog(session.server_id, creds, {
-        action: data.action,
-        categoryId: data.categoryId,
-        contentId: data.contentId,
-        offset: data.offset,
-        limit: data.limit,
-      })
-    );
+        })
+      );
 
-    console.log(
-      `[getPlayerCatalog] server=${session.server_id} user=${creds.username} action=${data.action} category=${data.categoryId ?? "-"} itens=${Array.isArray(result) ? result.length : typeof result}`
-    );
+      const quantidade = Array.isArray(result)
+        ? result.length
+        : result && typeof result === "object"
+          ? Object.keys(result as any).length
+          : 0;
 
-    return result as any;
+      console.log(
+        `[CATALOG_DEBUG] resposta | action=${data.action} via=${via} ms=${Date.now() - started} tipo_resposta=${Array.isArray(result) ? "array" : typeof result} quantidade=${quantidade} erro=null`
+      );
+
+      return result as any;
+    } catch (e: any) {
+      console.error(
+        `[CATALOG_DEBUG] resposta | action=${data.action} via=${via} ms=${Date.now() - started} quantidade=0 erro=${e?.message ?? e}`
+      );
+      throw new Error(`[${data.action}] ${e?.message ?? "falha desconhecida no catálogo"}`);
+    }
   });
+
+/**
+ * ETAPA 3/4 — Diagnóstico completo dos endpoints Xtream para a sessão atual.
+ * Mostra qual action realmente retorna dados e por onde a chamada trafega.
+ */
+export const diagnosePlayerCatalog = createServerFn({ method: "POST" })
+  .inputValidator((data) => z.object({
+    token: z.string().uuid(),
+    seriesId: z.string().optional(),
+  }).parse(data))
+  .handler(async ({ data }) => {
+    const { data: session, error } = await supabaseAdmin
+      .from("player_sessions")
+      .select("id, server_id, xtream_user, xtream_pass")
+      .eq("token", data.token)
+      .gt("expires_at", new Date().toISOString())
+      .single();
+
+    if (error || !session) throw new Error("Sessão expirada ou inválida");
+
+    const { getPlayerCredentials, probeXtreamEndpoints } = await import("./player.server");
+    const creds = await getPlayerCredentials(session as any);
+    if (!creds.username || !creds.password) throw new Error("Credenciais da sessão indisponíveis");
+
+    const { coreApiUrl, useCore, callCore } = await import("./core-api.server");
+    const report = await probeXtreamEndpoints(session.server_id, creds, data.seriesId);
+
+    // ETAPA 4 — saúde do Core AWS (confirma se o domínio realmente aponta para a VPS)
+    let coreSaude: any = { alcancavel: false };
+    const coreBase = coreApiUrl();
+    if (coreBase) {
+      try {
+        const res = await fetch(`${coreBase}/api/public/core/task`, { signal: AbortSignal.timeout(10_000) });
+        coreSaude = { alcancavel: true, status: res.status, ...(await res.json().catch(() => ({}))) };
+      } catch (e: any) {
+        coreSaude = { alcancavel: false, erro: String(e?.message ?? e) };
+      }
+    }
+
+
+    // ETAPA 4 — mesmo teste, porém passando pelo Core AWS (IP da VPS)
+    const viaCore: any[] = [];
+    if (useCore()) {
+      for (const action of ["get_series_categories", "get_series", "get_vod_streams", "get_live_streams"]) {
+        const started = Date.now();
+        try {
+          const r: any = await callCore("iptv-player-proxy" as any, {
+            serverId: session.server_id,
+            username: creds.username,
+            password: creds.password,
+            options: { action, limit: 5 },
+          });
+          const quantidade = Array.isArray(r) ? r.length : r && typeof r === "object" ? Object.keys(r).length : 0;
+          viaCore.push({ action, ms: Date.now() - started, quantidade, erro: null });
+        } catch (e: any) {
+          viaCore.push({ action, ms: Date.now() - started, quantidade: 0, erro: String(e?.message ?? e).slice(0, 300) });
+        }
+      }
+    }
+
+    return {
+      core: {
+        core_api_url: coreApiUrl(),
+        usando_core: useCore(),
+        fluxo: useCore() ? "Frontend -> Core AWS -> Servidor IPTV" : "Frontend -> Painel -> Servidor IPTV",
+        saude_do_core: coreSaude,
+      },
+
+      servidor: session.server_id,
+      teste_direto_do_painel: report.resultados,
+      teste_via_core_aws: viaCore,
+      host: report.host,
+      usuario: report.usuario,
+      urls_de_stream: report.urls_de_stream,
+    };
+
+  });
+
 
 /**
  * Gera a URL de stream IPTV através do proxy do Core AWS.
