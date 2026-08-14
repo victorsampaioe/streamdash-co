@@ -111,6 +111,7 @@ function PlayerPage() {
   const toggleFavoriteMutation = useMutation({
     mutationFn: toggleFavorite,
     onSuccess: (_, variables) => {
+      if (!variables) return;
       const data = variables.data as any;
       const { contentId, contentType, isFavorite } = data;
       if (isFavorite) {
