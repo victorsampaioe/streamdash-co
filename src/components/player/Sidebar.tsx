@@ -87,7 +87,53 @@ export function Sidebar({ activeView, onChangeView, brandName, logoUrl, onLogout
           })}
         </nav>
 
-        <div className="p-4 mt-auto space-y-2">
+        <div className="px-4 py-2 mt-auto">
+          {serverStatus && (
+            <div className="bg-white/5 rounded-xl p-4 border border-white/5 space-y-3">
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] uppercase tracking-widest text-white/40 font-bold">Status do Servidor</span>
+                <div className={cn(
+                  "flex items-center gap-1.5 text-[10px] font-bold uppercase",
+                  serverStatus.current_status === 'up' ? "text-emerald-400" : (serverStatus.current_status === 'degraded' ? "text-amber-400" : "text-red-400")
+                )}>
+                  <span className={cn(
+                    "h-1.5 w-1.5 rounded-full animate-pulse",
+                    serverStatus.current_status === 'up' ? "bg-emerald-400" : (serverStatus.current_status === 'degraded' ? "bg-amber-400" : "bg-red-400")
+                  )} />
+                  {serverStatus.current_status === 'up' ? "Estável" : (serverStatus.current_status === 'degraded' ? "Instável" : "Offline")}
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <div className="flex items-center justify-between text-xs">
+                  <div className="flex items-center gap-2 text-white/60">
+                    <Zap className="h-3 w-3 text-primary" />
+                    <span>Saúde</span>
+                  </div>
+                  <span className="font-bold">{serverStatus.health_score ?? 100}%</span>
+                </div>
+                
+                <div className="flex items-center justify-between text-xs">
+                  <div className="flex items-center gap-2 text-white/60">
+                    <Wifi className="h-3 w-3 text-primary" />
+                    <span>Latência</span>
+                  </div>
+                  <span className="font-bold">{serverStatus.last_latency_ms ? `${serverStatus.last_latency_ms}ms` : '--'}</span>
+                </div>
+
+                <div className="flex items-center justify-between text-[10px] text-white/30 pt-1 border-t border-white/5">
+                  <div className="flex items-center gap-1">
+                    <Clock className="h-2.5 w-2.5" />
+                    <span>Análise</span>
+                  </div>
+                  <span>{serverStatus.last_checked_at ? formatDistanceToNow(new Date(serverStatus.last_checked_at), { addSuffix: true, locale: ptBR }) : 'agora'}</span>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+
+        <nav className="px-4 py-4 space-y-2">
           <button
             onClick={() => onChangeView("settings")}
             className={cn(
@@ -106,7 +152,7 @@ export function Sidebar({ activeView, onChangeView, brandName, logoUrl, onLogout
             <LogOut className="h-5 w-5" />
             <span className="font-medium">Sair</span>
           </button>
-        </div>
+        </nav>
       </aside>
 
       {/* Mobile Navigation Bar */}
