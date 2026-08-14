@@ -40,7 +40,7 @@ function authorized(request: Request): boolean {
   return Boolean(secret && given && given === secret);
 }
 
-function truncate(value: unknown, max = 40_000) {
+function truncate(value: unknown, max = 40_000): any {
   try {
     const json = JSON.stringify(value ?? null);
     if (json && json.length > max) return { truncated: true, preview: json.slice(0, max) };
