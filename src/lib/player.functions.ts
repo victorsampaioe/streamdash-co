@@ -428,6 +428,6 @@ export const checkServerHealth = createServerFn({ method: "POST" })
     return {
       availability: server.current_status,
       healthScore: server.health_score,
-      status: server.current_status === 'online' ? 'stable' : (server.current_status === 'degraded' ? 'unstable' : 'offline')
+      status: server.current_status === 'up' ? 'stable' : (server.current_status === 'degraded' ? 'unstable' : 'offline')
     };
   });

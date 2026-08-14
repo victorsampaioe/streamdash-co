@@ -511,12 +511,27 @@ function LoginForm({ resellerId, settings, onLogin, primaryColor, secondaryColor
   const [password, setPassword] = useState("");
   const [serverId, setServerId] = useState(localStorage.getItem(`stream_player_last_server_${resellerId}`) || "");
   const [servers, setServers] = useState<any[]>([]);
+  const [diagnosing, setDiagnosing] = useState(false);
+  const [healthInfo, setHealthInfo] = useState<any>(null);
 
   useEffect(() => {
     getPlayerServers({ data: { resellerId } })
       .then((list: any) => setServers(list || []))
       .catch(() => setServers([]));
   }, [resellerId]);
+
+  // Diagnóstico automático ao trocar de servidor
+  useEffect(() => {
+    if (serverId) {
+      setDiagnosing(true);
+      setHealthInfo(null);
+      import("@/lib/player.functions").then(({ checkServerHealth }) => {
+        checkServerHealth({ data: { serverId } })
+          .then(info => setHealthInfo(info))
+          .finally(() => setDiagnosing(false));
+      });
+    }
+  }, [serverId]);
 
   const loginMutation = useMutation({
     mutationFn: loginXtreamClient,
