@@ -119,7 +119,7 @@ function PlayerPage() {
       const data = variables.data as any;
       const { contentId, contentType, isFavorite } = data;
       if (isFavorite) {
-        setFavorites(prev => [...prev, { content_id: contentId, content_type: contentType }]);
+        setFavorites(prev => [...prev, { content_id: contentId, content_type: contentType, name: selectedItem?.name || selectedItem?.title }]);
         toast.success("Adicionado à Minha Lista");
       } else {
         setFavorites(prev => prev.filter(f => f.content_id !== contentId));
