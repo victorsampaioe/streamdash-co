@@ -587,6 +587,27 @@ function LoginForm({ resellerId, settings, onLogin, primaryColor, secondaryColor
                  <option value="" className="bg-neutral-900">Escolha o servidor...</option>
                  {servers.map(s => <option key={s.id} value={s.id} className="bg-neutral-900">{s.name || s.host}</option>)}
                </select>
+
+               {serverId && (
+                 <div className="flex items-center gap-2 px-1">
+                   {diagnosing ? (
+                     <div className="flex items-center gap-2 text-[10px] text-white/40 animate-pulse">
+                       <Loader2 className="h-3 w-3 animate-spin" /> Verificando conexão...
+                     </div>
+                   ) : healthInfo ? (
+                     <div className={cn(
+                       "flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider",
+                       healthInfo.status === 'stable' ? "text-emerald-400" : (healthInfo.status === 'unstable' ? "text-amber-400" : "text-red-400")
+                     )}>
+                       <span className={cn("h-1.5 w-1.5 rounded-full", 
+                         healthInfo.status === 'stable' ? "bg-emerald-400" : (healthInfo.status === 'unstable' ? "bg-amber-400" : "bg-red-400")
+                       )} />
+                       {healthInfo.status === 'stable' ? "Conexão normal" : (healthInfo.status === 'unstable' ? "Instabilidade detectada" : "Servidor indisponível")}
+                       {healthInfo.healthScore !== null && <span className="opacity-50">| Saúde: {healthInfo.healthScore}%</span>}
+                     </div>
+                   ) : null}
+                 </div>
+               )}
              </div>
              
              <div className="space-y-2">
