@@ -1,4 +1,4 @@
-import { X, Play, Plus, Star, Clock, Calendar, Info } from "lucide-react";
+import { X, Play, Plus, Star, Clock, Calendar, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useQuery } from "@tanstack/react-query";
@@ -11,6 +11,8 @@ interface ContentDetailsOverlayProps {
   onClose: () => void;
   onPlay: (item: any) => void;
   primaryColor: string;
+  isFavorite?: boolean;
+  onToggleFavorite?: () => void;
 }
 
 export function ContentDetailsOverlay({ 
@@ -138,9 +140,10 @@ export function ContentDetailsOverlay({
               <Button 
                 variant="outline"
                 className="h-14 px-8 rounded-xl font-black text-lg gap-2 bg-white/5 border-white/10 hover:bg-white/10 transition-all"
+                onClick={onToggleFavorite}
               >
-                <Plus className="h-6 w-6" />
-                Minha Lista
+                {isFavorite ? <Check className="h-6 w-6 text-green-500" /> : <Plus className="h-6 w-6" />}
+                {isFavorite ? "Na Minha Lista" : "Minha Lista"}
               </Button>
             </div>
 

@@ -8,7 +8,9 @@ import {
   validatePlayerSession,
   getPlayerStreamUrl,
   getPlayerServers,
-  logoutPlayer
+  logoutPlayer,
+  getFavorites,
+  toggleFavorite
 } from "@/lib/player.functions";
 
 import { Card } from "@/components/ui/card";
@@ -94,6 +96,46 @@ function PlayerPage() {
 
   const [selectedItem, setSelectedItem] = useState<any>(null);
   const [isDetailsOpen, setIsDetailsOpen] = useState(false);
+  const [favorites, setFavorites] = useState<any[]>([]);
+  const [history, setHistory] = useState<any[]>([]);
+
+  // Carregar favoritos
+  useEffect(() => {
+    if (token) {
+      getFavorites({ data: { token } })
+        .then(setFavorites)
+        .catch(console.error);
+    }
+  }, [token]);
+
+  const toggleFavoriteMutation = useMutation({
+    mutationFn: toggleFavorite,
+    onSuccess: (_, variables) => {
+      if (variables.data.isFavorite) {
+        setFavorites(prev => [...prev, { content_id: variables.data.contentId, content_type: variables.data.contentType }]);
+        toast.success("Adicionado à Minha Lista");
+      } else {
+        setFavorites(prev => prev.filter(f => f.content_id !== variables.data.contentId));
+        toast.success("Removido da Minha Lista");
+      }
+    }
+  });
+
+  const handleToggleFavorite = (item: any) => {
+    if (!token) return;
+    const contentId = (item.stream_id || item.series_id || item.id).toString();
+    const contentType = item.stream_type === "live" ? "live" : (item.series_id ? "series" : "movie");
+    const isFavorite = favorites.some(f => f.content_id === contentId);
+    
+    toggleFavoriteMutation.mutate({
+      data: {
+        token,
+        contentId,
+        contentType,
+        isFavorite: !isFavorite
+      }
+    });
+  };
 
 
   // Identidade Visual
