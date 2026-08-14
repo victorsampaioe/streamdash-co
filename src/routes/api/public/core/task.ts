@@ -28,6 +28,10 @@ const Body = z.object({
     "radar-job-step",
     "iptv-player-proxy",
     "iptv-stream-proxy",
+    // Sondas STATELESS (worker externo, sem banco)
+    "probe-http",
+    "probe-dns",
+    "probe-iptv-login",
   ]),
   serverId: z.string().uuid().optional(),
   serverIds: z.array(z.string().uuid()).optional(),
@@ -52,6 +56,19 @@ function authorized(request: Request): boolean {
 
 async function execute(input: z.infer<typeof Body>) {
   switch (input.task) {
+    // ---- Sondas stateless: não tocam o banco, devolvem JSON puro ----
+    case "probe-http": {
+      const { probeHostStateless } = await import("@/lib/core-probes.server");
+      return await probeHostStateless(input.host!);
+    }
+    case "probe-dns": {
+      const { probeDnsStateless } = await import("@/lib/core-probes.server");
+      return await probeDnsStateless(input.host!, Number(input.options?.["recentChanges"] ?? 0));
+    }
+    case "probe-iptv-login": {
+      const { probeIptvLoginStateless } = await import("@/lib/core-probes.server");
+      return await probeIptvLoginStateless(input.host!, input.username!, input.password!);
+    }
     case "check": {
       const { runCheckForServer } = await import("@/lib/monitoring.server");
       return await runCheckForServer(input.serverId!);
@@ -179,9 +196,13 @@ export const Route = createFileRoute("/api/public/core/task")({
           return new Response("Bad Request", { status: 400 });
         }
         try {
-          return Response.json(await execute(input));
+          const result = await execute(input);
+          return Response.json({ success: true, result });
         } catch (e: any) {
-          return new Response(`Error: ${e?.message ?? "unknown"}`, { status: 500 });
+          return Response.json(
+            { success: false, error: e?.message ?? "unknown" },
+            { status: 500 },
+          );
         }
       },
     },
