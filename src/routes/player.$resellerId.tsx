@@ -268,6 +268,7 @@ function PlayerPage() {
         brandName={settings?.brand_name ?? undefined}
         logoUrl={settings?.logo_url ?? undefined}
         onLogout={() => setToken(null)}
+        token={token!}
       />
 
       <main className="flex-1 overflow-y-auto">
@@ -407,7 +408,14 @@ function PlayerPage() {
     })
     .catch(err => {
       console.error("[player] falha ao gerar URL de stream:", err);
-      toast.error("Erro ao carregar vídeo: " + err.message);
+      const msg = err.message || "";
+      if (msg.includes("403")) {
+        toast.error("Acesso bloqueado pelo servidor (Cloudflare/WAF).");
+      } else if (msg.includes("timeout") || msg.includes("504")) {
+        toast.error("O servidor demorou muito para responder. Tente novamente.");
+      } else {
+        toast.error("Identificamos instabilidade no servidor. Nossa equipe já foi informada.");
+      }
       setIsPlaying(false);
     });
   }
@@ -511,12 +519,27 @@ function LoginForm({ resellerId, settings, onLogin, primaryColor, secondaryColor
   const [password, setPassword] = useState("");
   const [serverId, setServerId] = useState(localStorage.getItem(`stream_player_last_server_${resellerId}`) || "");
   const [servers, setServers] = useState<any[]>([]);
+  const [diagnosing, setDiagnosing] = useState(false);
+  const [healthInfo, setHealthInfo] = useState<any>(null);
 
   useEffect(() => {
     getPlayerServers({ data: { resellerId } })
       .then((list: any) => setServers(list || []))
       .catch(() => setServers([]));
   }, [resellerId]);
+
+  // Diagnóstico automático ao trocar de servidor
+  useEffect(() => {
+    if (serverId) {
+      setDiagnosing(true);
+      setHealthInfo(null);
+      import("@/lib/player.functions").then(({ checkServerHealth }) => {
+        checkServerHealth({ data: { serverId } })
+          .then(info => setHealthInfo(info))
+          .finally(() => setDiagnosing(false));
+      });
+    }
+  }, [serverId]);
 
   const loginMutation = useMutation({
     mutationFn: loginXtreamClient,
@@ -572,6 +595,27 @@ function LoginForm({ resellerId, settings, onLogin, primaryColor, secondaryColor
                  <option value="" className="bg-neutral-900">Escolha o servidor...</option>
                  {servers.map(s => <option key={s.id} value={s.id} className="bg-neutral-900">{s.name || s.host}</option>)}
                </select>
+
+               {serverId && (
+                 <div className="flex items-center gap-2 px-1">
+                   {diagnosing ? (
+                     <div className="flex items-center gap-2 text-[10px] text-white/40 animate-pulse">
+                       <Loader2 className="h-3 w-3 animate-spin" /> Verificando conexão...
+                     </div>
+                   ) : healthInfo ? (
+                     <div className={cn(
+                       "flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider",
+                       healthInfo.status === 'stable' ? "text-emerald-400" : (healthInfo.status === 'unstable' ? "text-amber-400" : "text-red-400")
+                     )}>
+                       <span className={cn("h-1.5 w-1.5 rounded-full", 
+                         healthInfo.status === 'stable' ? "bg-emerald-400" : (healthInfo.status === 'unstable' ? "bg-amber-400" : "bg-red-400")
+                       )} />
+                       {healthInfo.status === 'stable' ? "Conexão normal" : (healthInfo.status === 'unstable' ? "Instabilidade detectada" : "Servidor indisponível")}
+                       {healthInfo.healthScore !== null && <span className="opacity-50">| Saúde: {healthInfo.healthScore}%</span>}
+                     </div>
+                   ) : null}
+                 </div>
+               )}
              </div>
              
              <div className="space-y-2">
