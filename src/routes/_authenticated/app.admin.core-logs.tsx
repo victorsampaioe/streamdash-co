@@ -254,7 +254,7 @@ function CoreLogsPage() {
                                 </div>
                                 <div className="space-y-1">
                                   <span className="text-xs text-muted-foreground uppercase">Horário</span>
-                                  <p className="text-sm">{format(new Date(log.created_at), "PPPP 'às' HH:mm:ss", { locale: ptBR })}</p>
+                                  <p className="text-sm">{log.created_at ? format(new Date(log.created_at), "PPPP 'às' HH:mm:ss", { locale: ptBR }) : "-"}</p>
                                 </div>
                               </div>
 
