@@ -9,7 +9,7 @@ import {
   Loader2
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { cn } from "@/lib/utils";
 
 interface SeriesDetailsProps {
@@ -111,7 +111,7 @@ export function SeriesDetails({ series, info, loading, onClose, onPlay, primaryC
           <div className="flex items-center gap-6">
             <h2 className="text-2xl font-bold">Episódios</h2>
             <div className="flex gap-2">
-              {seasons.map(season => (
+              {seasons.map((season: number) => (
                 <button
                   key={season}
                   onClick={() => setSelectedSeason(season)}
