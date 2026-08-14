@@ -7,8 +7,6 @@ import { createFileRoute } from "@tanstack/react-router";
  * apenas booleanos/prefixos — nunca o valor das chaves.
  */
 async function deepCheck() {
-  const url = process.env.SUPABASE_URL ?? "";
-  const service = process.env.SUPABASE_SERVICE_ROLE_KEY ?? "";
   const isCore = process.env.IS_CORE === "true";
 
   // Modo worker: o Core AWS NÃO acessa o banco. Ele apenas executa tarefas
@@ -18,23 +16,28 @@ async function deepCheck() {
   const env = {
     IS_CORE: isCore,
     WORKER: workerMode,
-    DATABASE: workerMode ? false : Boolean(url && service),
+    DATABASE: false,
     CRON_SECRET: Boolean(process.env.CRON_SECRET),
     CORE_API_URL: process.env.CORE_API_URL ?? null,
     PUBLIC_BASE_URL: process.env.PUBLIC_BASE_URL ?? null,
   };
 
-  const missing = [
-    ...(!process.env.CRON_SECRET ? ["CRON_SECRET"] : []),
-    ...(!workerMode && !url ? ["SUPABASE_URL"] : []),
-    ...(!workerMode && !service ? ["SUPABASE_SERVICE_ROLE_KEY"] : []),
-  ];
+  const missing = workerMode
+    ? [
+        ...(!process.env.CRON_SECRET ? ["CRON_SECRET"] : []),
+        ...(!process.env.CORE_API_URL ? ["CORE_API_URL"] : []),
+      ]
+    : [
+        ...(!process.env.CRON_SECRET ? ["CRON_SECRET"] : []),
+        ...(!process.env.SUPABASE_URL ? ["SUPABASE_URL"] : []),
+        ...(!process.env.SUPABASE_SERVICE_ROLE_KEY ? ["SUPABASE_SERVICE_ROLE_KEY"] : []),
+      ];
 
   const database: Record<string, unknown> = workerMode
     ? { required: false, note: "Worker externo: nenhuma credencial de banco é necessária." }
     : { required: true, ok: false, client: "service_role" };
 
-  if (!workerMode && !missing.length) {
+  if (!workerMode) {
     try {
       const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
       const { count, error } = await supabaseAdmin
