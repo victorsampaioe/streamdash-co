@@ -94,9 +94,9 @@ function CoreLogsPage() {
     failures: logs?.filter(l => l.status === "failed" || l.status === "timeout").length || 0
   };
 
-  const filteredLogs = logs?.filter(l => 
-    l.task_type.toLowerCase().includes(search.toLowerCase()) ||
-    l.error_message?.toLowerCase().includes(search.toLowerCase())
+  const filteredLogs = logs?.filter(l =>
+    (l.task_type ?? "").toLowerCase().includes(search.toLowerCase()) ||
+    (l.error_message ?? "").toLowerCase().includes(search.toLowerCase())
   );
 
   return (
@@ -221,11 +221,11 @@ function CoreLogsPage() {
                       </TableCell>
                       <TableCell>
                         <Badge variant="outline" className="font-mono bg-blue-500/10 text-blue-400 border-blue-500/20">
-                          {log.task_type}
+                          {log.task_type ?? "-"}
                         </Badge>
                       </TableCell>
                       <TableCell className="text-xs max-w-[200px] truncate text-muted-foreground">
-                        {log.endpoint.replace("https://", "")}
+                        {(log.endpoint ?? "-").replace("https://", "")}
                       </TableCell>
                       <TableCell>
                         <StatusBadge status={log.status} />
