@@ -371,6 +371,8 @@ function PlayerPage() {
                 }
               }}
               onMyList={(item: any) => handleToggleFavorite(item)}
+              isFavorite={favorites.some(f => f.content_id === (homeData.featured?.stream_id || homeData.featured?.series_id || homeData.featured?.id)?.toString())}
+
             />
 
             <ContentRow 
