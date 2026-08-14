@@ -5,7 +5,7 @@ import { useMemo, useState, useEffect } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { supabase } from "@/integrations/supabase/client";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -337,7 +337,7 @@ function AdminPage() {
                   <ShieldCheck className="h-5 w-5 text-primary" />
                   Auditoria Core AWS
                 </CardTitle>
-                <DialogDescription>Monitoramento das tarefas delegadas para a infraestrutura VPS.</DialogDescription>
+                <CardDescription>Monitoramento das tarefas delegadas para a infraestrutura VPS.</CardDescription>
               </div>
               <Button asChild variant="outline" size="sm" className="gap-2">
                 <Link to="/app/admin/core-logs">

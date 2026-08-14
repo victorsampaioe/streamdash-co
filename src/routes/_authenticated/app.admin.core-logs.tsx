@@ -94,9 +94,9 @@ function CoreLogsPage() {
     failures: logs?.filter(l => l.status === "failed" || l.status === "timeout").length || 0
   };
 
-  const filteredLogs = logs?.filter(l => 
-    l.task_type.toLowerCase().includes(search.toLowerCase()) ||
-    l.error_message?.toLowerCase().includes(search.toLowerCase())
+  const filteredLogs = logs?.filter(l =>
+    (l.task_type ?? "").toLowerCase().includes(search.toLowerCase()) ||
+    (l.error_message ?? "").toLowerCase().includes(search.toLowerCase())
   );
 
   return (
@@ -221,11 +221,11 @@ function CoreLogsPage() {
                       </TableCell>
                       <TableCell>
                         <Badge variant="outline" className="font-mono bg-blue-500/10 text-blue-400 border-blue-500/20">
-                          {log.task_type}
+                          {log.task_type ?? "-"}
                         </Badge>
                       </TableCell>
                       <TableCell className="text-xs max-w-[200px] truncate text-muted-foreground">
-                        {log.endpoint.replace("https://", "")}
+                        {(log.endpoint ?? "-").replace("https://", "")}
                       </TableCell>
                       <TableCell>
                         <StatusBadge status={log.status} />
@@ -266,8 +266,8 @@ function CoreLogsPage() {
                                 <span className="text-xs text-muted-foreground uppercase font-bold flex items-center gap-2">
                                   <RefreshCcw className="h-3 w-3" /> Payload de Entrada
                                 </span>
-                                <pre className="bg-black/50 p-4 rounded-lg border border-white/5 text-xs overflow-x-auto text-blue-300">
-                                  {JSON.stringify(log.request_payload, null, 2)}
+                                <pre className="bg-black/50 p-4 rounded-lg border border-white/5 text-xs overflow-x-auto text-blue-300 whitespace-pre-wrap break-all">
+                                  {safeJson(log.request_payload, "Sem payload registrado")}
                                 </pre>
                               </div>
 
@@ -282,10 +282,10 @@ function CoreLogsPage() {
                                   </div>
                                 </div>
                                 <pre className={cn(
-                                  "bg-black/50 p-4 rounded-lg border border-white/5 text-xs overflow-x-auto",
+                                  "bg-black/50 p-4 rounded-lg border border-white/5 text-xs overflow-x-auto whitespace-pre-wrap break-all",
                                   log.status === "success" ? "text-green-300" : "text-red-300"
                                 )}>
-                                  {JSON.stringify(log.response_data, null, 2)}
+                                  {safeJson(log.response_data, "Sem resposta registrada")}
                                 </pre>
                               </div>
 
@@ -342,4 +342,14 @@ function StatusBadge({ status }: { status: string }) {
 
 function cn(...inputs: any[]) {
   return inputs.filter(Boolean).join(" ");
+}
+
+function safeJson(value: unknown, fallback: string) {
+  if (value === null || value === undefined || value === "") return fallback;
+  try {
+    const out = typeof value === "string" ? value : JSON.stringify(value, null, 2);
+    return out && out !== "{}" && out !== "[]" ? out : fallback;
+  } catch {
+    return fallback;
+  }
 }
