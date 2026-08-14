@@ -1,12 +1,11 @@
+import { supabaseAdmin } from "@/integrations/supabase/client.server";
+
 /**
  * Ponte com o Core AWS (https://core.streammonitor.site).
  *
  * O painel Lovable é apenas frontend: todas as verificações pesadas
  * (DNS, HTTP, IPTV, conteúdos, alertas Telegram e o scheduler) são
  * executadas pelo Core hospedado na VPS AWS, que usa o IP próprio da EC2.
- *
- * Quando a variável não está configurada — ou quando o próprio Core está
- * executando este código — a execução acontece localmente (fallback).
  */
 
 export type CoreTask =
@@ -28,7 +27,6 @@ export type CoreTask =
   | "telegram-broadcast"
   | "cron-check"
   | "cron-digest";
-
 
 function normalize(url: string | undefined | null): string | null {
   const raw = (url ?? "").trim();
@@ -57,18 +55,67 @@ export function useCore(): boolean {
   return Boolean(coreApiUrl()) && !isCoreInstance();
 }
 
-/** Executa uma tarefa de monitoramento no Core AWS. */
+/** 
+ * Cria um registro de auditoria na tabela core_execution_logs.
+ * Somente no Painel (process.env.IS_CORE !== "true").
+ */
+async function logCoreExecution(data: {
+  task_type: string;
+  endpoint: string;
+  request_payload: any;
+  status: "running" | "success" | "failed" | "timeout";
+  response_status?: number;
+  response_data?: any;
+  execution_time_ms?: number;
+  error_message?: string;
+  id?: string;
+}) {
+  if (process.env.IS_CORE === "true") return null;
+
+  try {
+    const { id, ...payload } = data;
+    if (id) {
+      await supabaseAdmin
+        .from("core_execution_logs")
+        .update(payload)
+        .eq("id", id);
+      return id;
+    } else {
+      const { data: inserted, error } = await supabaseAdmin
+        .from("core_execution_logs")
+        .insert(payload)
+        .select("id")
+        .single();
+      if (error) console.error("[core-audit] Error inserting log:", error);
+      return inserted?.id;
+    }
+  } catch (e) {
+    console.error("[core-audit] Critical logging failure:", e);
+    return null;
+  }
+}
+
+/** Executa uma tarefa de monitoramento no Core AWS com auditoria. */
 export async function callCore<T>(task: CoreTask, payload: Record<string, unknown> = {}): Promise<T> {
   const base = coreApiUrl();
   if (!base) throw new Error("CORE_API_URL não configurada");
   
-  // Timeout estendido para sincronização em lote (2 minutos)
+  const endpoint = `${base}/api/public/core/task`;
   const isBatch = task === "iptv-batch-sync";
   const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), isBatch ? 120_000 : 30_000);
+  const timeoutMs = isBatch ? 120_000 : 30_000;
+  const timeout = setTimeout(() => controller.abort(), timeoutMs);
 
+  const logId = await logCoreExecution({
+    task_type: task,
+    endpoint,
+    request_payload: payload,
+    status: "running"
+  });
+
+  const start = Date.now();
   try {
-    const res = await fetch(`${base}/api/public/core/task`, {
+    const res = await fetch(endpoint, {
       method: "POST",
       headers: {
         "content-type": "application/json",
@@ -77,8 +124,58 @@ export async function callCore<T>(task: CoreTask, payload: Record<string, unknow
       body: JSON.stringify({ task, ...payload }),
       signal: controller.signal,
     });
-    if (!res.ok) throw new Error(`Core ${task} falhou (${res.status}): ${await res.text()}`);
-    return (await res.json()) as T;
+
+    const elapsed = Date.now() - start;
+    const text = await res.text();
+    let json: any = null;
+    try { json = JSON.parse(text); } catch { /* ignore */ }
+
+    if (!res.ok) {
+      if (logId) {
+        await logCoreExecution({
+          id: logId,
+          task_type: task,
+          endpoint,
+          request_payload: payload,
+          status: "failed",
+          response_status: res.status,
+          response_data: json || { raw: text.slice(0, 1000) },
+          execution_time_ms: elapsed,
+          error_message: `HTTP ${res.status}`
+        });
+      }
+      throw new Error(`Core ${task} falhou (${res.status}): ${text}`);
+    }
+
+    if (logId) {
+      await logCoreExecution({
+        id: logId,
+        task_type: task,
+        endpoint,
+        request_payload: payload,
+        status: "success",
+        response_status: res.status,
+        response_data: json,
+        execution_time_ms: elapsed
+      });
+    }
+
+    return json as T;
+  } catch (e: any) {
+    const elapsed = Date.now() - start;
+    const isTimeout = e.name === "AbortError";
+    if (logId) {
+      await logCoreExecution({
+        id: logId,
+        task_type: task,
+        endpoint,
+        request_payload: payload,
+        status: isTimeout ? "timeout" : "failed",
+        execution_time_ms: elapsed,
+        error_message: e.message
+      });
+    }
+    throw e;
   } finally {
     clearTimeout(timeout);
   }
@@ -104,30 +201,85 @@ export async function runOnCore<T>(
 
 /**
  * POST em um endpoint do Core exigindo resposta JSON.
- *
- * O Core roda a mesma aplicação; quando ele está com um build antigo a rota
- * não existe e o catch-all devolve HTML com status 200 — o que fazia o painel
- * acreditar que a tarefa tinha sido aceita. Aqui isso é tratado como falha.
  */
 export async function coreJsonPost<T>(path: string, timeoutMs = 20_000): Promise<T> {
   const base = coreApiUrl();
   if (!base) throw new Error("CORE_API_URL não configurada");
+  
+  const endpoint = `${base}${path}`;
+  const logId = await logCoreExecution({
+    task_type: path.split("/").pop() || "cron",
+    endpoint,
+    request_payload: {},
+    status: "running"
+  });
+
+  const start = Date.now();
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
+  
   try {
-    const res = await fetch(`${base}${path}`, {
+    const res = await fetch(endpoint, {
       method: "POST",
       headers: { "x-cron-secret": process.env.CRON_SECRET ?? "" },
       signal: controller.signal,
     });
+    
+    const elapsed = Date.now() - start;
     const ct = res.headers.get("content-type") ?? "";
-    if (!res.ok) throw new Error(`Core ${path} HTTP ${res.status}`);
-    if (!ct.includes("application/json")) {
-      throw new Error(`Core ${path} respondeu ${ct || "sem content-type"} (rota inexistente no build do Core)`);
+    const text = await res.text();
+    let json: any = null;
+    try { json = JSON.parse(text); } catch { /* ignore */ }
+
+    if (!res.ok || !ct.includes("application/json")) {
+      const err = !res.ok ? `HTTP ${res.status}` : "Invalid Content-Type";
+      if (logId) {
+        await logCoreExecution({
+          id: logId,
+          task_type: path.split("/").pop() || "cron",
+          endpoint,
+          request_payload: {},
+          status: "failed",
+          response_status: res.status,
+          response_data: json || { raw: text.slice(0, 1000) },
+          execution_time_ms: elapsed,
+          error_message: err
+        });
+      }
+      throw new Error(`Core ${path} falhou: ${err}`);
     }
-    return (await res.json()) as T;
+
+    if (logId) {
+      await logCoreExecution({
+        id: logId,
+        task_type: path.split("/").pop() || "cron",
+        endpoint,
+        request_payload: {},
+        status: "success",
+        response_status: res.status,
+        response_data: json,
+        execution_time_ms: elapsed
+      });
+    }
+
+    return json as T;
+  } catch (e: any) {
+    const elapsed = Date.now() - start;
+    if (logId) {
+      await logCoreExecution({
+        id: logId,
+        task_type: path.split("/").pop() || "cron",
+        endpoint,
+        request_payload: {},
+        status: e.name === "AbortError" ? "timeout" : "failed",
+        execution_time_ms: elapsed,
+        error_message: e.message
+      });
+    }
+    throw e;
   } finally {
     clearTimeout(timer);
   }
 }
+
 
