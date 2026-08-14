@@ -431,3 +431,19 @@ export const checkServerHealth = createServerFn({ method: "POST" })
       status: server.current_status === 'up' ? 'stable' : (server.current_status === 'degraded' ? 'unstable' : 'offline')
     };
   });
+
+/**
+ * Encerra uma sessão do player no servidor.
+ */
+export const logoutPlayer = createServerFn({ method: "POST" })
+  .inputValidator((data) => z.object({ token: z.string().uuid() }).parse(data))
+  .handler(async ({ data }) => {
+    const { error } = await supabaseAdmin
+      .from("player_sessions")
+      .delete()
+      .eq("token", data.token);
+
+    if (error) throw new Error(error.message);
+    return { success: true };
+  });
+

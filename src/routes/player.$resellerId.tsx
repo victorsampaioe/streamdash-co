@@ -257,6 +257,22 @@ function PlayerPage() {
     />;
   }
 
+  const handleLogout = async () => {
+    if (token) {
+      try {
+        const { logoutPlayer } = await import("@/lib/player.functions");
+        await logoutPlayer({ data: { token } });
+      } catch (err) {
+        console.error("Erro ao encerrar sessão no servidor:", err);
+      }
+    }
+    setToken(null);
+    setSession(null);
+    localStorage.removeItem(`stream_player_token_${resellerId}`);
+    // Limpar outros dados locais se houver
+    toast.success("Sessão encerrada");
+  };
+
   return (
     <div className="min-h-screen bg-neutral-950 text-white flex font-sans">
       <Sidebar 
@@ -267,9 +283,10 @@ function PlayerPage() {
         }}
         brandName={settings?.brand_name ?? undefined}
         logoUrl={settings?.logo_url ?? undefined}
-        onLogout={() => setToken(null)}
+        onLogout={handleLogout}
         token={token!}
       />
+
 
       <main className="flex-1 overflow-y-auto">
         {activeView === "home" && (
