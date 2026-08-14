@@ -268,7 +268,12 @@ function PlayerPage() {
           if (activeView === ("mylist" as any)) {
             const favs = await getFavorites({ data: { token } });
             // Buscar metadados básicos para os favoritos se necessário
-            setContent(Array.isArray(favs) ? favs.map((f: any) => ({ ...f, name: f.name || `Item ${f.content_id}`, stream_id: f.content_id })) : []); 
+            setContent(Array.isArray(favs) ? favs.map((f: any) => ({ 
+              ...f, 
+              name: f.name || `Item ${f.content_id}`, 
+              stream_id: f.content_id,
+              series_id: f.content_type === "series" ? f.content_id : undefined
+            })) : []); 
             setLoadingContent(false);
             return;
           }
