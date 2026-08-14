@@ -30,8 +30,12 @@ import {
   Clock,
   ChevronLeft,
   X,
-  PlayCircle
+  PlayCircle,
+  Clock,
+  Settings as SettingsIcon,
+  Plus
 } from "lucide-react";
+
 import { supabase } from "@/integrations/supabase/client";
 import Hls from "hls.js";
 
