@@ -677,23 +677,23 @@ function PlayerPage() {
       {selectedItem && (
         <ContentDetailsOverlay 
           item={selectedItem}
-          type={activeView === "series" || selectedItem.series_id ? "series" : "movie"}
+          type={(selectedItem.series_id || selectedItem.content_type === "series" || activeView === "series") ? "series" : "movie"}
           isOpen={isDetailsOpen}
           onClose={() => {
             setIsDetailsOpen(false);
             setSelectedItem(null);
           }}
           onPlay={(i: any) => {
-            const isSeries = activeView === "series" || i.series_id || selectedItem.series_id;
+            const isSeries = i.series_id || i.content_type === "series" || activeView === "series" || selectedItem.series_id;
+            setIsDetailsOpen(false);
             if (isSeries) {
               handleOpenSeries(i);
             } else {
-              handlePlay(i.stream_id || i.id, "movie");
+              handlePlay(i.stream_id || i.id || i.content_id, "movie");
             }
-            setIsDetailsOpen(false);
           }}
           primaryColor={primaryColor}
-          isFavorite={favorites.some(f => f.content_id === (selectedItem.stream_id || selectedItem.series_id || selectedItem.id).toString())}
+          isFavorite={favorites.some(f => f.content_id === (selectedItem.stream_id || selectedItem.series_id || selectedItem.id || selectedItem.content_id).toString())}
           onToggleFavorite={() => handleToggleFavorite(selectedItem)}
         />
       )}
