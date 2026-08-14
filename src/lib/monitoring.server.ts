@@ -195,7 +195,7 @@ async function probeViaCore(host: string): Promise<ProbeResult & { sslDays: numb
 
 /** Modo "Confirmação": novas verificações a cada ~20s, gravando cada uma no histórico. */
 async function confirmationBurst(server: ServerRow, probes: number, sslDays: number | null) {
-  const results: ProbeResult[] = [];
+  const results: Array<ProbeResult & { sslDays: number | null }> = [];
   for (let i = 0; i < probes; i++) {
     await sleep(CONFIRM_PROBE_INTERVAL_MS);
     const p = await probeViaCore(server.host);
