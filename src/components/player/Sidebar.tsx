@@ -10,7 +10,8 @@ import {
   Activity,
   Zap,
   Clock,
-  Wifi
+  Wifi,
+  LayoutGrid
 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { getServerStatus } from "@/lib/player.functions";
@@ -51,6 +52,7 @@ export function Sidebar({ activeView, onChangeView, brandName, logoUrl, onLogout
     { id: "live", label: "TV Ao Vivo", icon: Tv },
     { id: "movie", label: "Filmes", icon: Film },
     { id: "series", label: "Séries", icon: Play },
+    { id: "categories", label: "Categorias", icon: LayoutGrid },
     { id: "mylist", label: "Minha Lista", icon: Star },
     { id: "search", label: "Buscar", icon: Search },
   ];
@@ -167,7 +169,7 @@ export function Sidebar({ activeView, onChangeView, brandName, logoUrl, onLogout
           
           <button
             onClick={onLogout}
-            className="w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all text-white/40 hover:text-red-500 hover:bg-red-500/5"
+            className="w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all text-white/40 hover:text-red-500 hover:bg-red-500/5 cursor-pointer"
           >
             <LogOut className="h-5 w-5" />
             <span className="font-medium">Sair</span>
