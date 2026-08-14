@@ -384,3 +384,50 @@ export const getPlayerServers = createServerFn({ method: "GET" })
     // Nunca expor o host real ao cliente final.
     return (servers ?? []).map((s) => ({ id: s.id, name: s.name || "Servidor" }));
   });
+
+/**
+ * Retorna o status de saúde de um servidor de forma segura para o player.
+ */
+export const getServerStatus = createServerFn({ method: "GET" })
+  .inputValidator((data) => z.object({ token: z.string().uuid() }).parse(data))
+  .handler(async ({ data }) => {
+    const { data: session, error: sessionErr } = await supabaseAdmin
+      .from("player_sessions")
+      .select("server_id")
+      .eq("token", data.token)
+      .gt("expires_at", new Date().toISOString())
+      .single();
+
+    if (sessionErr || !session) throw new Error("Sessão inválida");
+
+    const { data: server, error } = await supabaseAdmin
+      .from("servers")
+      .select("name, availability, health_score, latency, last_checked_at")
+      .eq("id", session.server_id)
+      .single();
+
+    if (error) throw new Error(error.message);
+    return server;
+  });
+
+/**
+ * Realiza uma checagem rápida de saúde em um servidor específico.
+ * Usado na tela de login para diagnóstico prévio.
+ */
+export const checkServerHealth = createServerFn({ method: "POST" })
+  .inputValidator((data) => z.object({ serverId: z.string().uuid() }).parse(data))
+  .handler(async ({ data }) => {
+    const { data: server } = await supabaseAdmin
+      .from("servers")
+      .select("id, host, availability, health_score")
+      .eq("id", data.serverId)
+      .single();
+
+    if (!server) throw new Error("Servidor não encontrado");
+
+    return {
+      availability: server.availability,
+      healthScore: server.health_score,
+      status: server.availability === 'online' ? 'stable' : (server.availability === 'warning' ? 'unstable' : 'offline')
+    };
+  });
