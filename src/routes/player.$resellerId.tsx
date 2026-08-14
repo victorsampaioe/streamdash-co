@@ -372,8 +372,32 @@ function PlayerPage() {
               }}
               onMyList={(item: any) => handleToggleFavorite(item)}
               isFavorite={favorites.some(f => f.content_id === (homeData.featured?.stream_id || homeData.featured?.series_id || homeData.featured?.id)?.toString())}
-
             />
+
+            <ContentRow 
+              title="Continuar Assistindo" 
+              items={[]} 
+              type="movie" 
+              primaryColor={primaryColor}
+              onPlay={(item: any) => {
+                setSelectedItem(item);
+                setIsDetailsOpen(true);
+              }}
+            />
+
+            {favorites.length > 0 && (
+               <ContentRow 
+                title="Minha Lista" 
+                items={[]} // TODO: Carregar metadados dos favoritos
+                type="movie" 
+                primaryColor={primaryColor}
+                onPlay={(item: any) => {
+                  setSelectedItem(item);
+                  setIsDetailsOpen(true);
+                }}
+              />
+            )}
+
 
             <ContentRow 
               title="Novidades" 
