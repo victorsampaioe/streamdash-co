@@ -1,4 +1,4 @@
-import { Search, X, Play, Tv, Film } from "lucide-react";
+import { Search, X, Play, Tv, Film, Loader2 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { Input } from "@/components/ui/input";
 import { ContentCard } from "./ContentCard";
@@ -30,25 +30,42 @@ export function SearchOverlay({ isOpen, onClose, token, primaryColor, onPlay }: 
     const timer = setTimeout(async () => {
       setLoading(true);
       try {
-        // En um cenário real, teríamos um endpoint de busca global.
-        // Aqui simulamos buscando em algumas categorias ou usando a lógica de filtro se já tivéssemos o catálogo completo.
-        // Por agora, como o catálogo é paginado/por categoria, vamos apenas filtrar se tivermos algo ou mostrar placeholder.
+        // Como o catálogo xtream não tem busca global eficiente sem carregar tudo,
+        // simulamos buscando nas principais categorias ou o usuário pode implementar busca no server
+        // Por enquanto, vamos buscar uma pequena amostra de cada tipo
+        
+        const [live, vod, series] = await Promise.all([
+          getPlayerCatalog({ data: { token, action: "get_live_streams", limit: 50 } }).catch(() => []),
+          getPlayerCatalog({ data: { token, action: "get_vod_streams", limit: 50 } }).catch(() => []),
+          getPlayerCatalog({ data: { token, action: "get_series", limit: 50 } }).catch(() => [])
+        ]);
+
+        const filter = (list: any[]) => 
+          Array.isArray(list) ? list.filter(i => (i.name || i.title || "").toLowerCase().includes(query.toLowerCase())) : [];
+
+        setResults({
+          live: filter(live as any[]),
+          vod: filter(vod as any[]),
+          series: filter(series as any[])
+        });
       } catch (err) {
         console.error(err);
       } finally {
         setLoading(false);
       }
-    }, 500);
+    }, 600);
 
     return () => clearTimeout(timer);
-  }, [query]);
+  }, [query, token]);
 
   if (!isOpen) return null;
 
+  const totalResults = results.live.length + results.vod.length + results.series.length;
+
   return (
     <div className="fixed inset-0 z-[100] bg-neutral-950/95 backdrop-blur-2xl animate-in fade-in duration-300 overflow-y-auto">
-      <div className="container max-w-6xl mx-auto px-6 py-12">
-        <div className="flex items-center justify-between mb-12">
+      <div className="container max-w-6xl mx-auto px-6 py-12 pb-32">
+        <div className="flex items-center justify-between mb-12 sticky top-0 bg-neutral-950/95 py-4 z-10">
           <div className="relative flex-1 max-w-2xl">
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-6 w-6 text-white/40" />
             <Input 
@@ -56,23 +73,30 @@ export function SearchOverlay({ isOpen, onClose, token, primaryColor, onPlay }: 
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               placeholder="Busque por filmes, séries ou canais..."
-              className="w-full h-16 bg-white/5 border-white/10 pl-14 pr-6 text-xl rounded-2xl focus:ring-primary/20 transition-all"
+              className="w-full h-16 bg-white/5 border-white/10 pl-14 pr-6 text-xl rounded-2xl focus:ring-primary/20 transition-all text-white"
             />
           </div>
           <button 
             onClick={onClose}
-            className="h-12 w-12 rounded-full bg-white/5 border border-white/10 flex items-center justify-center hover:bg-white/10 transition-colors ml-4"
+            className="h-12 w-12 rounded-full bg-white/5 border border-white/10 flex items-center justify-center hover:bg-white/10 transition-colors ml-4 text-white"
           >
             <X className="h-6 w-6" />
           </button>
         </div>
 
-        {!query && (
+        {loading && (
+          <div className="flex flex-col items-center justify-center py-20 text-white/40">
+            <Loader2 className="h-12 w-12 animate-spin mb-4" />
+            <p className="text-lg">Buscando no catálogo...</p>
+          </div>
+        )}
+
+        {!loading && !query && (
           <div className="space-y-12 animate-in slide-in-from-bottom-4 duration-500">
             <div>
               <h3 className="text-white/40 text-sm font-bold uppercase tracking-widest mb-6">Sugestões de busca</h3>
               <div className="flex flex-wrap gap-3">
-                {["Filmes de Ação", "Canais de Esporte", "Séries Premium", "Documentários", "Infantil"].map(tag => (
+                {["Filmes de Ação", "Esporte", "Premium", "Documentários", "Infantil"].map(tag => (
                   <button 
                     key={tag}
                     onClick={() => setQuery(tag)}
@@ -86,12 +110,57 @@ export function SearchOverlay({ isOpen, onClose, token, primaryColor, onPlay }: 
           </div>
         )}
 
-        {query && query.length >= 3 && (
+        {!loading && query && query.length >= 3 && totalResults === 0 && (
+          <div className="text-center py-20 text-white/40">
+            <Search className="h-16 w-16 mx-auto mb-4" />
+            <p className="text-lg font-medium text-white">Nenhum resultado para "{query}"</p>
+            <p className="text-sm">Tente termos mais genéricos.</p>
+          </div>
+        )}
+
+        {!loading && query && query.length >= 3 && totalResults > 0 && (
           <div className="space-y-12">
-             <div className="text-center py-20 opacity-40">
-                <Search className="h-16 w-16 mx-auto mb-4" />
-                <p className="text-lg">Nenhum resultado encontrado para "{query}"</p>
-             </div>
+            {results.live.length > 0 && (
+              <div className="space-y-6">
+                <h3 className="text-xl font-bold text-white flex items-center gap-2">
+                  <Tv className="h-5 w-5 text-primary" style={{ color: primaryColor }} />
+                  Canais ({results.live.length})
+                </h3>
+                <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-6">
+                  {results.live.map(item => (
+                    <ContentCard key={item.stream_id} item={item} type="live" primaryColor={primaryColor} onClick={(i) => onPlay(i, "live")} />
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {results.vod.length > 0 && (
+              <div className="space-y-6">
+                <h3 className="text-xl font-bold text-white flex items-center gap-2">
+                  <Film className="h-5 w-5 text-primary" style={{ color: primaryColor }} />
+                  Filmes ({results.vod.length})
+                </h3>
+                <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-6">
+                  {results.vod.map(item => (
+                    <ContentCard key={item.stream_id} item={item} type="movie" primaryColor={primaryColor} onClick={(i) => onPlay(i, "movie")} />
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {results.series.length > 0 && (
+              <div className="space-y-6">
+                <h3 className="text-xl font-bold text-white flex items-center gap-2">
+                  <Play className="h-5 w-5 text-primary" style={{ color: primaryColor }} />
+                  Séries ({results.series.length})
+                </h3>
+                <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-6">
+                  {results.series.map(item => (
+                    <ContentCard key={item.series_id} item={item} type="series" primaryColor={primaryColor} onClick={(i) => onPlay(i, "series")} />
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         )}
       </div>

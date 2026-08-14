@@ -29,7 +29,7 @@ export async function getPlayerCredentials(session: SessionRow): Promise<PlayerC
 export function buildXtreamCatalogUrl(
   host: string,
   creds: PlayerCreds,
-  opts: { action: string; categoryId?: string; contentId?: string }
+  opts: { action: string; categoryId?: string; contentId?: string; offset?: number; limit?: number }
 ): string {
   const base = /^https?:\/\//i.test(host) ? host.replace(/\/+$/, "") : `http://${host}`;
   const params = new URLSearchParams({
@@ -39,7 +39,7 @@ export function buildXtreamCatalogUrl(
   });
   if (opts.categoryId) params.set("category_id", opts.categoryId);
   if (opts.contentId) {
-    if (opts.action === "get_series_info") params.set("series_id", opts.contentId);
+    if (opts.action === "get_series_info" || opts.action === "get_series_episodes") params.set("series_id", opts.contentId);
     else params.set("vod_id", opts.contentId);
   }
   return `${base}/player_api.php?${params.toString()}`;
@@ -49,7 +49,7 @@ export function buildXtreamCatalogUrl(
 export async function fetchXtreamCatalog(
   serverId: string,
   creds: PlayerCreds,
-  opts: { action: string; categoryId?: string; contentId?: string }
+  opts: { action: string; categoryId?: string; contentId?: string; offset?: number; limit?: number }
 ): Promise<unknown> {
   const { data: server } = await supabaseAdmin
     .from("servers")
@@ -77,6 +77,13 @@ export async function fetchXtreamCatalog(
       console.error(`[player-catalog] resposta não-JSON host=${server.host} body=${text.slice(0, 200)}`);
       throw new Error("Resposta inválida do servidor IPTV");
     }
+    // Paginação local se for array
+    if (Array.isArray(json) && opts.limit !== undefined) {
+      const start = opts.offset || 0;
+      const end = start + opts.limit;
+      json = json.slice(start, end);
+    }
+    
     console.log(
       `[player-catalog] host=${server.host} action=${opts.action} itens=${Array.isArray(json) ? json.length : "objeto"}`
     );

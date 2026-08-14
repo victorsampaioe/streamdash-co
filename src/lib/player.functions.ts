@@ -177,10 +177,13 @@ export const getPlayerCatalog = createServerFn({ method: "POST" })
       "get_vod_streams", 
       "get_series", 
       "get_series_info", 
-      "get_vod_info"
+      "get_vod_info",
+      "get_series_episodes"
     ]),
     categoryId: z.string().optional(),
     contentId: z.string().optional(),
+    offset: z.number().default(0),
+    limit: z.number().default(100),
   }).parse(data))
   .handler(async ({ data }) => {
     // 1. Validar sessão
@@ -214,12 +217,16 @@ export const getPlayerCatalog = createServerFn({ method: "POST" })
           action: data.action,
           categoryId: data.categoryId,
           contentId: data.contentId,
+          offset: data.offset,
+          limit: data.limit,
         }
       },
       () => fetchXtreamCatalog(session.server_id, creds, {
         action: data.action,
         categoryId: data.categoryId,
         contentId: data.contentId,
+        offset: data.offset,
+        limit: data.limit,
       })
     );
 
