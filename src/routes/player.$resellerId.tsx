@@ -399,10 +399,14 @@ function PlayerPage() {
                     type={activeView as "live" | "movie" | "series"} 
                     primaryColor={primaryColor} 
                     onClick={(i) => {
-                      if (activeView === "live") handlePlay(i.stream_id, "live");
-                      else if (activeView === "movie") handlePlay(i.stream_id, "movie");
-                      else handleOpenSeries(i);
+                      if (activeView === "live") {
+                        handlePlay(i.stream_id, "live");
+                      } else {
+                        setSelectedItem(i);
+                        setIsDetailsOpen(true);
+                      }
                     }}
+
                   />
                 ))}
               </div>
