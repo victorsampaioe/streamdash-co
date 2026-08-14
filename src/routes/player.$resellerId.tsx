@@ -307,7 +307,15 @@ function PlayerPage() {
             <HeroBanner 
               item={homeData.featured} 
               primaryColor={primaryColor}
-              onPlay={(item) => handlePlay(item.stream_id || item.series_id, item.stream_type === "series" ? "series" : (item.stream_type === "live" ? "live" : "movie"))}
+              onPlay={(item: any) => {
+                const type = item.stream_type === "series" ? "series" : (item.stream_type === "live" ? "live" : "movie");
+                if (type === "live") {
+                  handlePlay(item.stream_id || item.series_id, "live");
+                } else {
+                  setSelectedItem(item);
+                  setIsDetailsOpen(true);
+                }
+              }}
             />
 
             <ContentRow 
@@ -315,15 +323,19 @@ function PlayerPage() {
               items={homeData.newReleases} 
               type="movie" 
               primaryColor={primaryColor}
-              onPlay={(item) => handlePlay(item.stream_id, "movie")}
+              onPlay={(item: any) => {
+                setSelectedItem(item);
+                setIsDetailsOpen(true);
+              }}
             />
             <ContentRow 
               title="Destaques Ao Vivo" 
               items={homeData.liveHighlights} 
               type="live" 
               primaryColor={primaryColor}
-              onPlay={(item) => handlePlay(item.stream_id, "live")}
+              onPlay={(item: any) => handlePlay(item.stream_id, "live")}
             />
+
           </div>
         )}
 
