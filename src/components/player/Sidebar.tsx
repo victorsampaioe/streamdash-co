@@ -25,9 +25,17 @@ interface SidebarProps {
   brandName?: string;
   logoUrl?: string;
   onLogout: () => void;
+  token?: string;
 }
 
-export function Sidebar({ activeView, onChangeView, brandName, logoUrl, onLogout }: SidebarProps) {
+export function Sidebar({ activeView, onChangeView, brandName, logoUrl, onLogout, token }: SidebarProps) {
+  const { data: serverStatus } = useQuery({
+    queryKey: ["player-server-status", token],
+    queryFn: () => getServerStatus({ data: { token: token! } }),
+    enabled: !!token,
+    refetchInterval: 60000, // Atualiza a cada 1 minuto
+  });
+
   const items = [
     { id: "home", label: "Início", icon: Home },
     { id: "live", label: "TV Ao Vivo", icon: Tv },
