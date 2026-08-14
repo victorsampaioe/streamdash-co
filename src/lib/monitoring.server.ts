@@ -115,7 +115,7 @@ function classifyHttp(code: number, latency: number | null): string | null {
 }
 
 /** Uma verificação isolada (DNS + HTTP porta 80). */
-async function probe(host: string): Promise<ProbeResult> {
+export async function probe(host: string): Promise<ProbeResult> {
   const startedAt = Date.now();
   let status: ProbeResult["status"] = "unknown";
   let httpStatus: number | null = null;
@@ -331,7 +331,7 @@ async function performCheck(server: ServerRow) {
 
 
 
-async function getSslDaysRemaining(host: string): Promise<number | null> {
+export async function getSslDaysRemaining(host: string): Promise<number | null> {
   return await new Promise((resolve) => {
     // dynamic import to avoid bundling in client
     import("node:tls").then((tls) => {
