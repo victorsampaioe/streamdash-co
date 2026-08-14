@@ -385,6 +385,22 @@ function PlayerPage() {
           </div>
         )}
 
+        {activeView === "favorites" && (
+          <div className="p-6 md:p-12 space-y-8">
+            <h1 className="text-3xl font-bold">Minha Lista</h1>
+            <div className="flex flex-col items-center justify-center py-20 text-center space-y-4">
+              <div className="h-20 w-20 rounded-full bg-white/5 flex items-center justify-center">
+                <Plus className="h-10 w-10 text-white/20" />
+              </div>
+              <div>
+                <h2 className="text-xl font-bold">Em breve</h2>
+                <p className="text-white/40">Estamos finalizando a sincronização da sua lista.</p>
+              </div>
+            </div>
+          </div>
+        )}
+
+
 
         {activeView === "settings" && (
           <div className="p-6 md:p-12 max-w-2xl mx-auto space-y-8">
