@@ -526,18 +526,45 @@ export async function sendRegionAlert(args: {
   const total = latest.size;
   const at = new Date().toLocaleTimeString("pt-BR", { timeZone: "America/Sao_Paulo", hour: "2-digit", minute: "2-digit" });
 
-  const header = args.event === "down"
-    ? `🚨 OFFLINE CONFIRMADO — ${downs} de ${total} regiões detectaram falha`
-    : `✅ SERVIÇO RESTABELECIDO — confirmado por ${total - downs} de ${total} regiões`;
+  const regionLabels = (regions ?? []).map((r) => `${r.flag} ${r.city}`);
+  const { openOfflineIncident, closeOfflineIncident, claimFloodSummary } =
+    await import("./alert-gate.server");
 
+  // Estado persistente: enquanto o incidente estiver aberto, nada é reenviado.
+  if (args.event === "down") {
+    const gate = await openOfflineIncident(args.serverId, args.error ?? "Falha confirmada por regiões", regionLabels);
+    if (!gate.notify) return;
+    if (gate.grouped) {
+      if (await claimFloodSummary()) {
+        try {
+          const { notifyAdmin } = await import("./admin-telegram.server");
+          await notifyAdmin(
+            `🚨 <b>ALERTA DE INSTABILIDADE</b>\n\n${gate.floodCount} servidores apresentaram falha nos últimos minutos.\n` +
+              `Consulte os detalhes no painel.`,
+          );
+        } catch { /* ignore */ }
+      }
+      return;
+    }
+    const message =
+      `🚨 OFFLINE CONFIRMADO — ${downs} de ${total} regiões detectaram falha\n\n` +
+      `Servidor: ${server.name}\n\n` +
+      `Confirmação:\n${lines.join("\n")}\n\n` +
+      (args.error ? `Motivo: ${args.error}\n` : "") +
+      `Detectado às ${at}`;
+    await sendAlerts(server as ServerRow, "down", message, gate.incidentId);
+    return;
+  }
+
+  const gate = await closeOfflineIncident(args.serverId);
+  if (!gate.notify) return;
   const message =
-    `${header}\n\n` +
+    `✅ SERVIÇO RESTABELECIDO — confirmado por ${total - downs} de ${total} regiões\n\n` +
     `Servidor: ${server.name}\n\n` +
     `Confirmação:\n${lines.join("\n")}\n\n` +
-    (args.error && args.event === "down" ? `Motivo: ${args.error}\n` : "") +
+    `Tempo offline: ${gate.downtimeLabel}\n` +
     `Detectado às ${at}`;
-
-  await sendAlerts(server as ServerRow, args.event, message, null);
+  await sendAlerts(server as ServerRow, "up", message, gate.incidentId);
 }
 
 
