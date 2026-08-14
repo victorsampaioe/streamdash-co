@@ -87,6 +87,10 @@ function PlayerPage() {
     liveHighlights: []
   });
 
+  const [selectedItem, setSelectedItem] = useState<any>(null);
+  const [isDetailsOpen, setIsDetailsOpen] = useState(false);
+
+
   // Identidade Visual
   const { data: settings, isLoading: settingsLoading } = useQuery({
     queryKey: ["public-player-settings", resellerId],
