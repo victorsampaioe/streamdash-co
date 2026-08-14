@@ -20,15 +20,21 @@ async function deepCheck() {
     CORE_API_URL: process.env.CORE_API_URL ?? null,
   };
 
-  const missing = [
+  // O acesso ao banco no Core é sempre feito com a SERVICE ROLE (ignora RLS).
+  // A publishable key só é usada para autenticação de chamadas do painel,
+  // portanto não deve bloquear a checagem de banco/RPC.
+  const dbMissing = [
     ...(!url ? ["SUPABASE_URL"] : []),
     ...(!service ? ["SUPABASE_SERVICE_ROLE_KEY"] : []),
+  ];
+  const missing = [
+    ...dbMissing,
     ...(!publishable ? ["SUPABASE_PUBLISHABLE_KEY"] : []),
     ...(!process.env.CRON_SECRET ? ["CRON_SECRET"] : []),
   ];
 
-  const database: Record<string, unknown> = { ok: false };
-  if (!missing.length) {
+  const database: Record<string, unknown> = { ok: false, client: "service_role" };
+  if (!dbMissing.length) {
     try {
       const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
       const { count, error } = await supabaseAdmin
@@ -39,15 +45,16 @@ async function deepCheck() {
         database.ok = true;
         database.servers = count ?? 0;
       }
-      // RPCs usadas pelo monitoramento
+      // RPCs usadas pelo monitoramento — executadas com service role
       const rpc = await supabaseAdmin.rpc("get_admin_stats");
       database.rpc_get_admin_stats = rpc.error ? rpc.error.message : "ok";
     } catch (e: any) {
       database.error = e?.message ?? "unknown";
     }
   } else {
-    database.error = `Variáveis ausentes: ${missing.join(", ")}`;
+    database.error = `Variáveis ausentes: ${dbMissing.join(", ")}`;
   }
+
 
   return {
     status: missing.length === 0 && database.ok ? "ok" : "degraded",
