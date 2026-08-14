@@ -6,8 +6,16 @@ import {
   Star, 
   Search, 
   Settings,
-  LogOut
+  LogOut,
+  Activity,
+  Zap,
+  Clock,
+  Wifi
 } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+import { getServerStatus } from "@/lib/player.functions";
+import { formatDistanceToNow } from "date-fns";
+import { ptBR } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 
