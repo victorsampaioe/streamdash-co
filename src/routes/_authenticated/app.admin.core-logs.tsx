@@ -266,8 +266,8 @@ function CoreLogsPage() {
                                 <span className="text-xs text-muted-foreground uppercase font-bold flex items-center gap-2">
                                   <RefreshCcw className="h-3 w-3" /> Payload de Entrada
                                 </span>
-                                <pre className="bg-black/50 p-4 rounded-lg border border-white/5 text-xs overflow-x-auto text-blue-300">
-                                  {JSON.stringify(log.request_payload, null, 2)}
+                                <pre className="bg-black/50 p-4 rounded-lg border border-white/5 text-xs overflow-x-auto text-blue-300 whitespace-pre-wrap break-all">
+                                  {safeJson(log.request_payload, "Sem payload registrado")}
                                 </pre>
                               </div>
 
