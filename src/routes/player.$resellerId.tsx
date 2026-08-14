@@ -408,7 +408,14 @@ function PlayerPage() {
     })
     .catch(err => {
       console.error("[player] falha ao gerar URL de stream:", err);
-      toast.error("Erro ao carregar vídeo: " + err.message);
+      const msg = err.message || "";
+      if (msg.includes("403")) {
+        toast.error("Acesso bloqueado pelo servidor (Cloudflare/WAF).");
+      } else if (msg.includes("timeout") || msg.includes("504")) {
+        toast.error("O servidor demorou muito para responder. Tente novamente.");
+      } else {
+        toast.error("Identificamos instabilidade no servidor. Nossa equipe já foi informada.");
+      }
       setIsPlaying(false);
     });
   }
