@@ -48,6 +48,11 @@ export function buildXtreamCatalogUrl(
   return `${base}/player_api.php?${params.toString()}`;
 }
 
+/** Remove credenciais de qualquer URL antes de logar. */
+export function maskUrl(url: string): string {
+  return url.replace(/(username|password)=[^&]*/gi, (_m, k) => `${k}=***`);
+}
+
 /** Execução local (fallback quando o Core AWS não está configurado). */
 export async function fetchXtreamCatalog(
   serverId: string,
@@ -67,10 +72,14 @@ export async function fetchXtreamCatalog(
     const url = buildXtreamCatalogUrl(server.host, creds, { ...opts, action });
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), 20_000);
+    const started = Date.now();
     try {
       const res = await fetch(url, { headers: { "user-agent": UA_PLAYER }, signal: controller.signal });
       const text = await res.text();
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      console.log(
+        `[CATALOG_DEBUG] fluxo=Painel->IPTV(direto) servidor=${serverId} host=${server.host} usuario=${creds.username} action=${action} endpoint=${maskUrl(url)} status=${res.status} ms=${Date.now() - started} tamanho=${text.length} amostra=${text.slice(0, 200)}`
+      );
+      if (!res.ok) throw new Error(`HTTP ${res.status} em ${maskUrl(url)}`);
       return JSON.parse(text);
     } finally {
       clearTimeout(timer);
@@ -82,19 +91,41 @@ export async function fetchXtreamCatalog(
 
     // Fallback para séries: se get_episodes_list falhar ou for vazio, tenta get_series_info
     if (opts.action === "get_episodes_list" && (!json || (typeof json === "object" && Object.keys(json).length === 0))) {
-      console.log(`[player-catalog] fallback para get_series_info para id=${opts.contentId}`);
+      console.log(`[CATALOG_DEBUG] fallback get_episodes_list -> get_series_info id=${opts.contentId}`);
       json = await runRequest("get_series_info");
+    }
+
+    // Fallback para séries vazias: alguns painéis só respondem em get_series_categories+category_id
+    if (opts.action === "get_series" && Array.isArray(json) && json.length === 0 && !opts.categoryId) {
+      console.log("[CATALOG_DEBUG] get_series retornou 0 sem categoria — tentando get_series com category_id das categorias");
+      try {
+        const cats: any = await runRequest("get_series_categories");
+        if (Array.isArray(cats) && cats.length > 0) {
+          const merged: any[] = [];
+          for (const cat of cats.slice(0, 5)) {
+            const url = buildXtreamCatalogUrl(server.host, creds, { action: "get_series", categoryId: String(cat.category_id) });
+            const res = await fetch(url, { headers: { "user-agent": UA_PLAYER } });
+            const text = await res.text();
+            try {
+              const part = JSON.parse(text);
+              if (Array.isArray(part)) merged.push(...part);
+            } catch { /* ignore */ }
+          }
+          console.log(`[CATALOG_DEBUG] get_series por categoria retornou ${merged.length} itens`);
+          if (merged.length > 0) json = merged;
+        }
+      } catch (e) {
+        console.warn("[CATALOG_DEBUG] falha no fallback por categoria:", (e as Error)?.message);
+      }
     }
 
     // Normalização para o componente SeriesDetails
     if (opts.action === "get_episodes_list" || opts.action === "get_series_info") {
-      // Garantir estrutura: { info: {}, episodes: { "1": [], "2": [] } }
       if (json && !json.episodes && json.info) {
         // Já está no formato correto mas talvez sem episódios?
       } else if (json && json.episodes) {
         // OK
       } else if (json && typeof json === "object" && !json.info) {
-        // Pode ser a resposta direta de get_series_info que às vezes vem diferente
         json = { info: json, episodes: json.episodes || {} };
       }
     }
@@ -108,10 +139,90 @@ export async function fetchXtreamCatalog(
     
     return json;
   } catch (err) {
-    console.error(`[player-catalog] falha na action=${opts.action}:`, err);
+    console.error(`[CATALOG_DEBUG] ERRO action=${opts.action} servidor=${serverId} erro=${(err as Error)?.message}`);
     throw err;
   }
 }
+
+/**
+ * ETAPA 3 — testa cada endpoint Xtream diretamente e informa qual retorna dados.
+ */
+export async function probeXtreamEndpoints(
+  serverId: string,
+  creds: PlayerCreds,
+  seriesId?: string,
+): Promise<any> {
+  const { data: server } = await supabaseAdmin
+    .from("servers")
+    .select("host")
+    .eq("id", serverId)
+    .maybeSingle();
+  if (!server) throw new Error("Servidor não encontrado");
+
+  const { UA_PLAYER } = await import("./iptv.server");
+
+  const call = async (action: string, extra?: { categoryId?: string; contentId?: string }) => {
+    const url = buildXtreamCatalogUrl(server.host, creds, { action, ...extra });
+    const started = Date.now();
+    const ctl = new AbortController();
+    const timer = setTimeout(() => ctl.abort(), 20_000);
+    try {
+      const res = await fetch(url, { headers: { "user-agent": UA_PLAYER }, signal: ctl.signal });
+      const text = await res.text();
+      let json: any = null;
+      try { json = JSON.parse(text); } catch { /* ignore */ }
+      const count = Array.isArray(json) ? json.length : json && typeof json === "object" ? Object.keys(json).length : 0;
+      const out = {
+        action,
+        endpoint: maskUrl(url),
+        status: res.status,
+        ms: Date.now() - started,
+        tipo: Array.isArray(json) ? "array" : typeof json,
+        quantidade: count,
+        amostra: text.slice(0, 240),
+        erro: res.ok ? null : `HTTP ${res.status}`,
+      };
+      console.log(`[CATALOG_DEBUG][probe] ${JSON.stringify({ ...out, amostra: out.amostra.slice(0, 120) })}`);
+      return out;
+    } catch (e: any) {
+      const out = { action, endpoint: maskUrl(url), status: 0, ms: Date.now() - started, tipo: "erro", quantidade: 0, amostra: "", erro: String(e?.message ?? e) };
+      console.error(`[CATALOG_DEBUG][probe] ${JSON.stringify(out)}`);
+      return out;
+    }
+  };
+
+  const seriesCats = await call("get_series_categories");
+  let firstSeriesCat: string | undefined;
+  try {
+    const parsed = JSON.parse(seriesCats.amostra.startsWith("[") ? seriesCats.amostra : "[]");
+    firstSeriesCat = parsed?.[0]?.category_id != null ? String(parsed[0].category_id) : undefined;
+  } catch { /* ignore */ }
+
+  const results = [
+    seriesCats,
+    await call("get_series"),
+    ...(firstSeriesCat ? [await call("get_series", { categoryId: firstSeriesCat })] : []),
+    await call("get_vod_categories"),
+    await call("get_vod_streams"),
+    await call("get_live_categories"),
+    await call("get_live_streams"),
+  ];
+
+  if (seriesId) {
+    results.push(await call("get_series_info", { contentId: seriesId }));
+    results.push(await call("get_episodes_list", { contentId: seriesId }));
+  }
+
+  const base = /^https?:\/\//i.test(server.host) ? server.host.replace(/\/+$/, "") : `http://${server.host}`;
+  const urls = {
+    live: maskUrl(`${base}/live/${creds.username}/${creds.password}/<stream_id>.m3u8`),
+    movie: maskUrl(`${base}/movie/${creds.username}/${creds.password}/<stream_id>.mp4`),
+    series: maskUrl(`${base}/series/${creds.username}/${creds.password}/<episode_id>.mp4`),
+  };
+
+  return { host: server.host, usuario: creds.username, resultados: results, urls_de_stream: urls };
+}
+
 
 /* ------------------------------------------------------------------ */
 /* Login Xtream (reaproveita a inteligência IPTV + fallback)           */
