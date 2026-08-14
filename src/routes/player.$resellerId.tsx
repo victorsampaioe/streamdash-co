@@ -43,7 +43,8 @@ import {
   ArrowRight,
   TrendingUp,
   History,
-  CheckCircle2
+  CheckCircle2,
+  ShieldCheck
 } from "lucide-react";
 
 
