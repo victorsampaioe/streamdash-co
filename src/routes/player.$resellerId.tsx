@@ -47,6 +47,19 @@ import { ContentCard } from "@/components/player/ContentCard";
 import { SearchOverlay } from "@/components/player/SearchOverlay";
 import { SeriesDetails } from "@/components/player/SeriesDetails";
 import { cn } from "@/lib/utils";
+import { ContentDetailsOverlay } from "@/components/player/ContentDetailsOverlay";
+import { 
+  getServerStatus, 
+  getHomeData, 
+  getCategories, 
+  getCategoryContent, 
+  getSeriesInfo,
+  logoutPlayer,
+  getPlayerSettings,
+  validatePlayerSession,
+  getPlayerCatalog
+} from "@/lib/player.functions";
+
 
 export const Route = createFileRoute("/player/$resellerId")({
   component: PlayerPage,
