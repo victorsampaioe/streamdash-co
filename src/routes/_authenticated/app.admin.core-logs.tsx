@@ -282,10 +282,10 @@ function CoreLogsPage() {
                                   </div>
                                 </div>
                                 <pre className={cn(
-                                  "bg-black/50 p-4 rounded-lg border border-white/5 text-xs overflow-x-auto",
+                                  "bg-black/50 p-4 rounded-lg border border-white/5 text-xs overflow-x-auto whitespace-pre-wrap break-all",
                                   log.status === "success" ? "text-green-300" : "text-red-300"
                                 )}>
-                                  {JSON.stringify(log.response_data, null, 2)}
+                                  {safeJson(log.response_data, "Sem resposta registrada")}
                                 </pre>
                               </div>
 
@@ -342,4 +342,14 @@ function StatusBadge({ status }: { status: string }) {
 
 function cn(...inputs: any[]) {
   return inputs.filter(Boolean).join(" ");
+}
+
+function safeJson(value: unknown, fallback: string) {
+  if (value === null || value === undefined || value === "") return fallback;
+  try {
+    const out = typeof value === "string" ? value : JSON.stringify(value, null, 2);
+    return out && out !== "{}" && out !== "[]" ? out : fallback;
+  } catch {
+    return fallback;
+  }
 }
