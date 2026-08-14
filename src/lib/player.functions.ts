@@ -177,8 +177,8 @@ export const getPlayerCatalog = createServerFn({ method: "POST" })
       "get_vod_streams", 
       "get_series", 
       "get_series_info", 
-      "get_vod_info",
-      "get_series_episodes"
+      "get_episodes_list",
+      "get_vod_info"
     ]),
     categoryId: z.string().optional(),
     contentId: z.string().optional(),
