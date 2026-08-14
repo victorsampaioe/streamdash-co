@@ -127,31 +127,29 @@ async function execute(input: z.infer<typeof Body>) {
       }
       if (!username || !password) throw new Error("Credenciais não configuradas");
 
-      const { buildXtreamCatalogUrl } = await import("@/lib/player.server");
+      const { fetchXtreamCatalog } = await import("@/lib/player.server");
       const action = (input.options?.action as string) || "get_live_categories";
-      const url = buildXtreamCatalogUrl(server.host, { username, password }, {
-        action,
-        categoryId: input.options?.categoryId as string | undefined,
-        contentId: input.options?.contentId as string | undefined,
-      });
+      const started = Date.now();
+      console.log(`[CATALOG_DEBUG][core] servidor=${input.serverId} host=${server.host} usuario=${username} action=${action}`);
 
-      const { UA_PLAYER } = await import("@/lib/iptv.server");
-      const res = await fetch(url, { headers: { "user-agent": UA_PLAYER } });
-      const text = await res.text();
-      if (!res.ok) {
-        console.error(`[iptv-player-proxy] host=${server.host} action=${action} status=${res.status} body=${text.slice(0, 200)}`);
-        throw new Error(`IPTV Proxy Error: ${res.status}`);
-      }
-      let json: unknown;
       try {
-        json = JSON.parse(text);
-      } catch {
-        console.error(`[iptv-player-proxy] resposta não-JSON host=${server.host} body=${text.slice(0, 200)}`);
-        throw new Error("Resposta inválida do servidor IPTV");
+        const json = await fetchXtreamCatalog(input.serverId!, { username, password }, {
+          action,
+          categoryId: input.options?.categoryId as string | undefined,
+          contentId: input.options?.contentId as string | undefined,
+          offset: input.options?.offset as number | undefined,
+          limit: input.options?.limit as number | undefined,
+        });
+        console.log(
+          `[CATALOG_DEBUG][core] OK action=${action} ms=${Date.now() - started} quantidade=${Array.isArray(json) ? json.length : json && typeof json === "object" ? Object.keys(json).length : 0}`
+        );
+        return json;
+      } catch (e: any) {
+        console.error(`[CATALOG_DEBUG][core] ERRO action=${action} ms=${Date.now() - started} erro=${e?.message ?? e}`);
+        throw e;
       }
-      console.log(`[iptv-player-proxy] host=${server.host} action=${action} itens=${Array.isArray(json) ? json.length : "objeto"}`);
-      return json;
     }
+
     case "iptv-stream-proxy": {
       // Esta tarefa é tratada por uma rota dedicada em /api/public/core/stream
       // para suportar streaming de dados binários grandes que não cabem em JSON.
