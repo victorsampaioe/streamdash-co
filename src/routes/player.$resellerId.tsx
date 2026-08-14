@@ -10,7 +10,8 @@ import {
   getPlayerServers,
   logoutPlayer,
   getFavorites,
-  toggleFavorite
+  toggleFavorite,
+  getTMDBMetadata
 } from "@/lib/player.functions";
 
 import { Card } from "@/components/ui/card";
@@ -68,7 +69,7 @@ function PlayerPage() {
   const { resellerId } = Route.useParams();
   const [token, setToken] = useState<string | null>(localStorage.getItem(`stream_player_token_${resellerId}`));
   const [session, setSession] = useState<any>(null);
-  const [activeView, setActiveView] = useState<"home" | "live" | "movie" | "series" | "mylist" | "search" | "settings">("home");
+  const [activeView, setActiveView] = useState<"home" | "live" | "movie" | "series" | "mylist" | "search" | "settings" | "categories">("home");
 
   const [categories, setCategories] = useState<any[]>([]);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
@@ -258,7 +259,7 @@ function PlayerPage() {
 
   useEffect(() => {
     if (session && token) {
-      if (activeView === "search" || activeView === "settings") return;
+      if (activeView === "search" || activeView === "settings" || activeView === "categories") return;
       
       setLoadingContent(true);
       const controller = new AbortController();
@@ -474,6 +475,45 @@ function PlayerPage() {
               onPlay={(item: any) => handlePlay(item.stream_id, "live")}
             />
 
+          </div>
+        )}
+
+        {activeView === "categories" && (
+          <div className="p-6 md:p-12 space-y-8 animate-in fade-in duration-500">
+            <h1 className="text-3xl font-black tracking-tight flex items-center gap-3">
+              <LayoutGrid className="h-8 w-8 text-primary" style={{ color: primaryColor }} />
+              Plataformas e Categorias
+            </h1>
+            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-6">
+              {[
+                { name: "Netflix", logo: "https://upload.wikimedia.org/wikipedia/commons/0/08/Netflix_2015_logo.svg", color: "#E50914" },
+                { name: "Prime Video", logo: "https://upload.wikimedia.org/wikipedia/commons/f/f1/Prime_Video.png", color: "#00A8E1" },
+                { name: "HBO Max", logo: "https://upload.wikimedia.org/wikipedia/commons/1/17/HBO_Max_Logo.svg", color: "#5822b4" },
+                { name: "Disney+", logo: "https://upload.wikimedia.org/wikipedia/commons/3/3e/Disney%2B_logo.svg", color: "#0063e5" },
+                { name: "Apple TV+", logo: "https://upload.wikimedia.org/wikipedia/commons/a/a2/Apple_TV%2B_logo.svg", color: "#ffffff" },
+              ].map((brand) => (
+                <Card 
+                  key={brand.name} 
+                  className="bg-neutral-900/50 border-white/5 hover:border-white/20 transition-all cursor-pointer group overflow-hidden"
+                  onClick={() => {
+                    setActiveView("movie");
+                    setSelectedCategory(null);
+                    toast.info(`Explorando catálogo ${brand.name}`);
+                  }}
+                >
+                  <div className="aspect-video p-6 flex items-center justify-center relative">
+                    <div 
+                      className="absolute inset-0 opacity-0 group-hover:opacity-10 transition-opacity" 
+                      style={{ backgroundColor: brand.color }}
+                    />
+                    <img src={brand.logo} alt={brand.name} className="h-8 md:h-12 w-auto object-contain brightness-0 invert group-hover:brightness-100 group-hover:invert-0 transition-all" />
+                  </div>
+                  <div className="p-4 text-center border-t border-white/5 font-bold text-sm text-white/40 group-hover:text-white transition-colors">
+                    {brand.name}
+                  </div>
+                </Card>
+              ))}
+            </div>
           </div>
         )}
 
