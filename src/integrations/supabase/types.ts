@@ -109,6 +109,21 @@ export type Database = {
         }
         Relationships: []
       }
+      alert_idempotency: {
+        Row: {
+          created_at: string
+          id: string
+        }
+        Insert: {
+          created_at?: string
+          id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+        }
+        Relationships: []
+      }
       app_settings: {
         Row: {
           key: string
@@ -1245,26 +1260,38 @@ export type Database = {
       }
       incidents: {
         Row: {
+          alert_sent: boolean
           ended_at: string | null
+          failure_count: number
           id: string
+          last_check_at: string | null
           notified: boolean
           reason: string | null
+          regions: string | null
           server_id: string
           started_at: string
         }
         Insert: {
+          alert_sent?: boolean
           ended_at?: string | null
+          failure_count?: number
           id?: string
+          last_check_at?: string | null
           notified?: boolean
           reason?: string | null
+          regions?: string | null
           server_id: string
           started_at?: string
         }
         Update: {
+          alert_sent?: boolean
           ended_at?: string | null
+          failure_count?: number
           id?: string
+          last_check_at?: string | null
           notified?: boolean
           reason?: string | null
+          regions?: string | null
           server_id?: string
           started_at?: string
         }

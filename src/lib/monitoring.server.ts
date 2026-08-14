@@ -248,87 +248,72 @@ async function performCheck(server: ServerRow) {
     consecutive_failures: newConsecutive,
   }).eq("id", server.id);
 
-  // Busca incidente aberto
-  const { data: openIncident } = await supabaseAdmin
-    .from("incidents")
-    .select("id")
-    .eq("server_id", server.id)
-    .is("ended_at", null)
-    .order("started_at", { ascending: false })
-    .limit(1)
-    .maybeSingle();
-
   const reason = final.error ?? first.error ?? `HTTP ${final.httpStatus ?? "-"}`;
 
-  // LÓGICA DE TRANSIÇÃO DE ESTADO REAL
-  if (downConfirmed && !openIncident) {
-    // Transição: QUALQUER -> OFFLINE_CONFIRMED
-    const { data: inc } = await supabaseAdmin.from("incidents").insert({
-      server_id: server.id,
-      reason,
-    }).select("id").single();
-    
-    if (inc) {
-      const idempotencyKey = `${server.id}_${inc.id}_down`;
-      const { error: idError } = await supabaseAdmin.from("alert_idempotency" as any).insert({ id: idempotencyKey });
-      
-      if (!idError) {
-        // NOVO SISTEMA DE ALERTAS TELEGRAM
-        const { processTelegramAlert } = await import("./telegram-alerts.server");
-        
-        let confirmDetails = confirmNote || "Confirmado via múltiplas regiões";
-        try {
-          const { analyzeCorrelation, recordCorrelationEvent } = await import("./correlation.server");
-          const corr = await analyzeCorrelation(server as any);
-          await recordCorrelationEvent(server as any, corr);
-          if (corr.verdict === "server_down") confirmDetails = "Queda Total Confirmada (Diagnóstico Inteligente)";
-        } catch { /* ignore */ }
+  const { openOfflineIncident, closeOfflineIncident, claimFloodSummary } =
+    await import("./alert-gate.server");
 
+  // LÓGICA DE TRANSIÇÃO DE ESTADO REAL (um único ponto de decisão)
+  if (displayStatus === "down") {
+    // Abre ou apenas atualiza o incidente aberto — só notifica na transição real.
+    const gate = await openOfflineIncident(server.id, reason, ["🇧🇷 São Paulo (VPS)"]);
+    if (gate.notify) {
+      let confirmDetails = confirmNote || "Confirmado via múltiplas regiões";
+      try {
+        const { analyzeCorrelation, recordCorrelationEvent } = await import("./correlation.server");
+        const corr = await analyzeCorrelation(server as any);
+        await recordCorrelationEvent(server as any, corr);
+        if (corr.verdict === "server_down") confirmDetails = "Queda Total Confirmada (Diagnóstico Inteligente)";
+      } catch { /* ignore */ }
+
+      if (gate.grouped) {
+        // Anti-flood: muitas quedas simultâneas -> um único resumo por janela.
+        if (await claimFloodSummary()) {
+          try {
+            const { notifyAdmin } = await import("./admin-telegram.server");
+            await notifyAdmin(
+              `🚨 <b>ALERTA DE INSTABILIDADE</b>\n\n${gate.floodCount} servidores apresentaram falha nos últimos minutos.\n` +
+                `Consulte os detalhes no painel.`,
+            );
+          } catch { /* ignore */ }
+        }
+      } else {
+        const { processTelegramAlert } = await import("./telegram-alerts.server");
         await processTelegramAlert({
           serverId: server.id,
-          incidentId: inc.id,
+          incidentId: gate.incidentId,
           event: "OFFLINE",
-          reason: reason,
+          reason,
           confirmNote: confirmDetails,
-          regions: ["🇧🇷 São Paulo (VPS)"]
+          regions: ["🇧🇷 São Paulo (VPS)"],
         });
-        
-        // Outros canais (Discord/Email) mantidos via função legada ou migrados futuramente
-        await sendAlerts(server, "down", `🚨 ${server.name} está OFFLINE\n${reason}`, inc.id);
+        await sendAlerts(server, "down", `🚨 ${server.name} está OFFLINE\n${reason}`, gate.incidentId);
       }
     }
-  } else if (upConfirmed && openIncident) {
-    // Transição: OFFLINE_CONFIRMED -> ONLINE
-    // Apenas se o status anterior no banco fosse REALMENTE down
-    if (wasDown) {
-      const idempotencyKey = `${server.id}_${openIncident.id}_up`;
-      const { error: idError } = await supabaseAdmin.from("alert_idempotency" as any).insert({ id: idempotencyKey });
+  } else if (upConfirmed || wasDown) {
+    // Transição: OFFLINE -> ONLINE (uma única mensagem de recuperação)
+    const gate = await closeOfflineIncident(server.id);
+    if (gate.notify) {
+      try {
+        const { closeCorrelationEvent } = await import("./correlation.server");
+        await closeCorrelationEvent(server.id);
+      } catch { /* ignore */ }
 
-      if (!idError) {
-        const now = new Date();
-        await supabaseAdmin.from("incidents").update({ ended_at: now.toISOString() }).eq("id", openIncident.id);
-        
-        let recoveryTime = "";
-        try {
-          const { closeCorrelationEvent } = await import("./correlation.server");
-          const secs = await closeCorrelationEvent(server.id);
-          if (secs != null) recoveryTime = `${secs < 60 ? `${secs}s` : `${Math.round(secs / 60)}min`}`;
-        } catch { /* ignore */ }
+      const { processTelegramAlert } = await import("./telegram-alerts.server");
+      await processTelegramAlert({
+        serverId: server.id,
+        incidentId: gate.incidentId,
+        event: "ONLINE",
+        timeOffline: gate.downtimeLabel,
+      });
 
-        // NOVO SISTEMA DE ALERTAS TELEGRAM
-        const { processTelegramAlert } = await import("./telegram-alerts.server");
-        await processTelegramAlert({
-          serverId: server.id,
-          incidentId: openIncident.id,
-          event: "ONLINE",
-          timeOffline: recoveryTime || "Desconhecido"
-        });
-
-        // Legado (opcional)
-        const timeStr = now.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
-        const legacyMessage = `✅ <b>${server.name} RESTABELECIDO</b>\nTempo: ${recoveryTime}\nDetectado: ${timeStr}`;
-        await sendAlerts(server, "up", legacyMessage, openIncident.id);
-      }
+      const timeStr = new Date().toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
+      await sendAlerts(
+        server,
+        "up",
+        `✅ <b>${server.name} RESTABELECIDO</b>\nTempo: ${gate.downtimeLabel}\nDetectado: ${timeStr}`,
+        gate.incidentId,
+      );
     }
   }
 
@@ -541,18 +526,45 @@ export async function sendRegionAlert(args: {
   const total = latest.size;
   const at = new Date().toLocaleTimeString("pt-BR", { timeZone: "America/Sao_Paulo", hour: "2-digit", minute: "2-digit" });
 
-  const header = args.event === "down"
-    ? `🚨 OFFLINE CONFIRMADO — ${downs} de ${total} regiões detectaram falha`
-    : `✅ SERVIÇO RESTABELECIDO — confirmado por ${total - downs} de ${total} regiões`;
+  const regionLabels = (regions ?? []).map((r) => `${r.flag} ${r.city}`);
+  const { openOfflineIncident, closeOfflineIncident, claimFloodSummary } =
+    await import("./alert-gate.server");
 
+  // Estado persistente: enquanto o incidente estiver aberto, nada é reenviado.
+  if (args.event === "down") {
+    const gate = await openOfflineIncident(args.serverId, args.error ?? "Falha confirmada por regiões", regionLabels);
+    if (!gate.notify) return;
+    if (gate.grouped) {
+      if (await claimFloodSummary()) {
+        try {
+          const { notifyAdmin } = await import("./admin-telegram.server");
+          await notifyAdmin(
+            `🚨 <b>ALERTA DE INSTABILIDADE</b>\n\n${gate.floodCount} servidores apresentaram falha nos últimos minutos.\n` +
+              `Consulte os detalhes no painel.`,
+          );
+        } catch { /* ignore */ }
+      }
+      return;
+    }
+    const message =
+      `🚨 OFFLINE CONFIRMADO — ${downs} de ${total} regiões detectaram falha\n\n` +
+      `Servidor: ${server.name}\n\n` +
+      `Confirmação:\n${lines.join("\n")}\n\n` +
+      (args.error ? `Motivo: ${args.error}\n` : "") +
+      `Detectado às ${at}`;
+    await sendAlerts(server as ServerRow, "down", message, gate.incidentId);
+    return;
+  }
+
+  const gate = await closeOfflineIncident(args.serverId);
+  if (!gate.notify) return;
   const message =
-    `${header}\n\n` +
+    `✅ SERVIÇO RESTABELECIDO — confirmado por ${total - downs} de ${total} regiões\n\n` +
     `Servidor: ${server.name}\n\n` +
     `Confirmação:\n${lines.join("\n")}\n\n` +
-    (args.error && args.event === "down" ? `Motivo: ${args.error}\n` : "") +
+    `Tempo offline: ${gate.downtimeLabel}\n` +
     `Detectado às ${at}`;
-
-  await sendAlerts(server as ServerRow, args.event, message, null);
+  await sendAlerts(server as ServerRow, "up", message, gate.incidentId);
 }
 
 
