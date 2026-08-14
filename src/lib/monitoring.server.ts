@@ -290,7 +290,7 @@ async function performCheck(server: ServerRow) {
         await sendAlerts(server, "down", `🚨 ${server.name} está OFFLINE\n${reason}`, gate.incidentId);
       }
     }
-  } else if (upConfirmed || (wasDown && displayStatus !== "down")) {
+  } else if (upConfirmed || wasDown) {
     // Transição: OFFLINE -> ONLINE (uma única mensagem de recuperação)
     const gate = await closeOfflineIncident(server.id);
     if (gate.notify) {
