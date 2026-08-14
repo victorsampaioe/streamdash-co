@@ -9,7 +9,7 @@ import {
   Loader2
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { cn } from "@/lib/utils";
 
 interface SeriesDetailsProps {
@@ -23,7 +23,20 @@ interface SeriesDetailsProps {
 
 export function SeriesDetails({ series, info, loading, onClose, onPlay, primaryColor }: SeriesDetailsProps) {
   const [selectedSeason, setSelectedSeason] = useState<number>(1);
-  const seasons = info?.episodes ? Object.keys(info.episodes).map(Number).sort((a, b) => a - b) : [];
+  
+  // Normalização segura das temporadas
+  const seasons = useMemo(() => {
+    if (!info?.episodes) return [];
+    try {
+      return Object.keys(info.episodes)
+        .map(Number)
+        .filter(n => !isNaN(n))
+        .sort((a, b) => a - b);
+    } catch (e) {
+      console.error("[SeriesDetails] Erro ao processar temporadas:", e);
+      return [];
+    }
+  }, [info?.episodes]);
   
   useEffect(() => {
     if (seasons.length > 0 && !seasons.includes(selectedSeason)) {
@@ -31,7 +44,10 @@ export function SeriesDetails({ series, info, loading, onClose, onPlay, primaryC
     }
   }, [seasons, selectedSeason]);
 
-  const episodes = info?.episodes?.[selectedSeason] || [];
+  const episodes = useMemo(() => {
+    const list = info?.episodes?.[selectedSeason.toString()] || info?.episodes?.[selectedSeason] || [];
+    return Array.isArray(list) ? list : [];
+  }, [info?.episodes, selectedSeason]);
 
   return (
     <div className="fixed inset-0 z-[100] bg-neutral-950 overflow-y-auto animate-in fade-in zoom-in-95 duration-300">
@@ -95,7 +111,7 @@ export function SeriesDetails({ series, info, loading, onClose, onPlay, primaryC
           <div className="flex items-center gap-6">
             <h2 className="text-2xl font-bold">Episódios</h2>
             <div className="flex gap-2">
-              {seasons.map(season => (
+              {seasons.map((season: number) => (
                 <button
                   key={season}
                   onClick={() => setSelectedSeason(season)}

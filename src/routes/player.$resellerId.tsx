@@ -791,9 +791,16 @@ function PlayerPage() {
 
 
   async function handleOpenSeries(item: any) {
-    const seriesId = item.series_id || item.id || item.content_id;
-    if (!seriesId) return;
+    const seriesId = (item.series_id || item.id || item.content_id)?.toString();
+    if (!seriesId) {
+      console.error("[SERIES_DEBUG] ID da série não encontrado no item:", item);
+      toast.error("Identificador da série inválido.");
+      return;
+    }
 
+    const start = Date.now();
+    console.log(`[SERIES_DEBUG] Abrindo série: ${item.name || item.title} (ID: ${seriesId})`);
+    
     setSelectedSeriesInfo({ info: item, episodes: {} });
     setLoadingSeries(true);
     setIsDetailsOpen(false);
@@ -803,13 +810,23 @@ function PlayerPage() {
         data: { 
           token: token!, 
           action: "get_episodes_list", 
-          contentId: seriesId.toString()
+          contentId: seriesId
         } 
       });
-      console.log("[handleOpenSeries] Data:", data);
+
+      console.log(`[SERIES_DEBUG] Resposta recebida em ${Date.now() - start}ms:`, {
+        tem_info: !!data?.info,
+        tem_episodes: !!data?.episodes,
+        num_temporadas: data?.episodes ? Object.keys(data.episodes).length : 0
+      });
+
+      if (!data || (!data.episodes && !data.info)) {
+        throw new Error("Resposta da API vazia ou inválida");
+      }
+
       setSelectedSeriesInfo(data);
-    } catch (err) {
-      console.error("Error loading series episodes", err);
+    } catch (err: any) {
+      console.error(`[SERIES_DEBUG] Erro ao carregar série ${seriesId}:`, err);
       toast.error("Não foi possível carregar os episódios desta série.");
     } finally {
       setLoadingSeries(false);
