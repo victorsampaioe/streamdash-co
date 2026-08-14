@@ -402,7 +402,7 @@ export const getServerStatus = createServerFn({ method: "GET" })
 
     const { data: server, error } = await supabaseAdmin
       .from("servers")
-      .select("name, availability, health_score, latency, last_checked_at")
+      .select("name, current_status, health_score, last_latency_ms, last_checked_at")
       .eq("id", session.server_id)
       .single();
 
@@ -419,15 +419,15 @@ export const checkServerHealth = createServerFn({ method: "POST" })
   .handler(async ({ data }) => {
     const { data: server } = await supabaseAdmin
       .from("servers")
-      .select("id, host, availability, health_score")
+      .select("id, host, current_status, health_score")
       .eq("id", data.serverId)
       .single();
 
     if (!server) throw new Error("Servidor não encontrado");
 
     return {
-      availability: server.availability,
+      availability: server.current_status,
       healthScore: server.health_score,
-      status: server.availability === 'online' ? 'stable' : (server.availability === 'warning' ? 'unstable' : 'offline')
+      status: server.current_status === 'online' ? 'stable' : (server.current_status === 'degraded' ? 'unstable' : 'offline')
     };
   });
