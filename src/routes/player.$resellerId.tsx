@@ -755,6 +755,16 @@ function PlayerPage() {
     </div>
   );
 
+  function debugClick(item: any, type: "live" | "movie" | "series") {
+    console.log("[PLAYER_DEBUG] clique", {
+      tipo: type,
+      content_id: (item?.stream_id ?? item?.series_id ?? item?.id ?? item?.content_id) ?? null,
+      server_id: session?.server_id ?? null,
+      nome: item?.name ?? item?.title ?? null,
+      item,
+    });
+  }
+
   function handlePlay(id: string, type: "live" | "movie" | "series", extOverride?: string) {
     setIsPlaying(true);
     setStreamUrl(null);
@@ -762,6 +772,15 @@ function PlayerPage() {
     // Live → HLS (.m3u8) é o formato reproduzível no navegador.
     // Filmes/Séries → extensão real do container (mp4 por padrão) com Range.
     const extension = type === "live" ? "m3u8" : (extOverride || "mp4");
+
+    console.log("[PLAYER_DEBUG] play", {
+      tipo: type,
+      content_id: id,
+      server_id: session?.server_id ?? null,
+      extensao: extension,
+      endpoint: "server fn getPlayerStreamUrl -> /api/public/core/stream",
+      core_aws: "definido no servidor (CORE_API_URL)",
+    });
 
     getPlayerStreamUrl({
       data: {
@@ -772,19 +791,18 @@ function PlayerPage() {
       }
     })
     .then(url => {
-      console.log("[player] URL de reprodução (proxy):", url, "| tipo:", type, "| ext:", extension);
+      console.log("[PLAYER_DEBUG] URL de reprodução (proxy):", url, "| tipo:", type, "| ext:", extension, "| status: ok");
       setStreamUrl(url);
     })
     .catch(err => {
-      console.error("[player] falha ao gerar URL de stream:", err);
-      const msg = err.message || "";
-      if (msg.includes("403")) {
-        toast.error("Acesso bloqueado pelo servidor (Cloudflare/WAF).");
-      } else if (msg.includes("timeout") || msg.includes("504")) {
-        toast.error("O servidor demorou muito para responder. Tente novamente.");
-      } else {
-        toast.error("Identificamos instabilidade no servidor. Nossa equipe já foi informada.");
-      }
+      console.error("[PLAYER_DEBUG] falha ao gerar URL de stream", {
+        tipo: type,
+        content_id: id,
+        endpoint: "getPlayerStreamUrl",
+        mensagem: err?.message,
+        stack: err?.stack,
+      });
+      toast.error(`Erro real ao reproduzir: ${err?.message ?? "desconhecido"}`);
       setIsPlaying(false);
     });
   }
@@ -793,13 +811,19 @@ function PlayerPage() {
   async function handleOpenSeries(item: any) {
     const seriesId = (item.series_id || item.id || item.content_id)?.toString();
     if (!seriesId) {
-      console.error("[SERIES_DEBUG] ID da série não encontrado no item:", item);
+      console.error("[PLAYER_DEBUG] ID da série não encontrado no item:", item);
       toast.error("Identificador da série inválido.");
       return;
     }
 
     const start = Date.now();
-    console.log(`[SERIES_DEBUG] Abrindo série: ${item.name || item.title} (ID: ${seriesId})`);
+    console.log("[PLAYER_DEBUG] abrir série", {
+      tipo: "series",
+      content_id: seriesId,
+      server_id: session?.server_id ?? null,
+      nome: item.name || item.title,
+      endpoint: "getPlayerCatalog(action=get_episodes_list)",
+    });
     
     setSelectedSeriesInfo({ info: item, episodes: {} });
     setLoadingSeries(true);
@@ -814,24 +838,30 @@ function PlayerPage() {
         } 
       });
 
-      console.log(`[SERIES_DEBUG] Resposta recebida em ${Date.now() - start}ms:`, {
+      console.log(`[PLAYER_DEBUG] resposta série em ${Date.now() - start}ms:`, {
         tem_info: !!data?.info,
         tem_episodes: !!data?.episodes,
-        num_temporadas: data?.episodes ? Object.keys(data.episodes).length : 0
+        num_temporadas: data?.episodes ? Object.keys(data.episodes).length : 0,
+        resposta: data,
       });
 
       if (!data || (!data.episodes && !data.info)) {
-        throw new Error("Resposta da API vazia ou inválida");
+        throw new Error("Resposta da API vazia ou inválida (get_episodes_list/get_series_info)");
       }
 
       setSelectedSeriesInfo(data);
     } catch (err: any) {
-      console.error(`[SERIES_DEBUG] Erro ao carregar série ${seriesId}:`, err);
-      toast.error("Não foi possível carregar os episódios desta série.");
+      console.error("[PLAYER_DEBUG] erro ao carregar série", {
+        content_id: seriesId,
+        mensagem: err?.message,
+        stack: err?.stack,
+      });
+      toast.error(`Erro real: ${err?.message ?? "falha ao carregar episódios"}`);
     } finally {
       setLoadingSeries(false);
     }
   }
+
 
   function handleClosePlayer() {
     setIsPlaying(false);
