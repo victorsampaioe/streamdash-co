@@ -231,41 +231,50 @@ function PlayerPage() {
     }
   }, [session, token, activeView]);
 
-  // Carregar conteúdo por categoria
   useEffect(() => {
-    if (session && token && selectedCategory && ["live", "movie", "series"].includes(activeView)) {
-      setLoadingContent(true);
-      if (abortControllerRef.current) abortControllerRef.current.abort();
-      const controller = new AbortController();
-      abortControllerRef.current = controller;
-
-      const actionMap = {
-        live: "get_live_streams",
-        movie: "get_vod_streams",
-        series: "get_series"
-      } as const;
+    if (session && token) {
+      if (activeView === "search" || activeView === "settings") return;
       
-      const action = actionMap[activeView as keyof typeof actionMap];
-
-
-      getPlayerCatalog({ data: { token, action, categoryId: selectedCategory } })
-        .then((data: any) => {
-          if (!controller.signal.aborted) {
-            setContent(Array.isArray(data) ? data : []);
+      setLoadingContent(true);
+      const controller = new AbortController();
+      
+      const fetchData = async () => {
+        try {
+          if (activeView === ("mylist" as any)) {
+            const favs = await getFavorites({ data: { token } });
+            // TODO: Implementar busca de metadados para favoritos
+            setContent([]); 
+            setLoadingContent(false);
+            return;
           }
-        })
-        .catch((err: any) => {
+
+          if (["live", "movie", "series"].includes(activeView)) {
+            const actionMap = {
+              live: "get_live_streams",
+              movie: "get_vod_streams",
+              series: "get_series"
+            } as const;
+            
+            const action = actionMap[activeView as keyof typeof actionMap];
+            const data = await getPlayerCatalog({ data: { token, action, categoryId: selectedCategory || undefined } });
+            
+            if (!controller.signal.aborted) {
+              setContent(Array.isArray(data) ? data : []);
+            }
+          }
+        } catch (err: any) {
           if (!controller.signal.aborted) {
             setContent([]);
             toast.error(err?.message || "Não foi possível carregar os conteúdos");
           }
-        })
-        .finally(() => {
+        } finally {
           if (!controller.signal.aborted) {
             setLoadingContent(false);
           }
-        });
-        
+        }
+      };
+
+      fetchData();
       return () => controller.abort();
     }
   }, [session, token, activeView, selectedCategory]);
@@ -385,7 +394,7 @@ function PlayerPage() {
           </div>
         )}
 
-        {activeView === "favorites" && (
+        {activeView === ("mylist" as any) && (
           <div className="p-6 md:p-12 space-y-8">
             <h1 className="text-3xl font-bold">Minha Lista</h1>
             <div className="flex flex-col items-center justify-center py-20 text-center space-y-4">
