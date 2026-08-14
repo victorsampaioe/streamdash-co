@@ -367,7 +367,7 @@ function PlayerPage() {
 
             <h1 className="text-3xl font-bold capitalize">{activeView === "live" ? "TV Ao Vivo" : activeView === "movie" ? "Filmes" : "Séries"}</h1>
             
-            <div className="flex gap-2 overflow-x-auto pb-4">
+            <div className="flex gap-2 overflow-x-auto pb-4 scrollbar-hide">
               {categories.map((cat) => (
                 <button
                   key={cat.category_id}
