@@ -320,7 +320,9 @@ export const diagnosePlayerCatalog = createServerFn({ method: "POST" })
         core_api_url: coreApiUrl(),
         usando_core: useCore(),
         fluxo: useCore() ? "Frontend -> Core AWS -> Servidor IPTV" : "Frontend -> Painel -> Servidor IPTV",
+        saude_do_core: coreSaude,
       },
+
       servidor: session.server_id,
       teste_direto_do_painel: report.resultados,
       teste_via_core_aws: viaCore,
