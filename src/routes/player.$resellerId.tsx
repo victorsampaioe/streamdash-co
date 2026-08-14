@@ -7,8 +7,10 @@ import {
   getPlayerCatalog, 
   validatePlayerSession,
   getPlayerStreamUrl,
-  getPlayerServers
+  getPlayerServers,
+  logoutPlayer
 } from "@/lib/player.functions";
+
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -48,17 +50,7 @@ import { SearchOverlay } from "@/components/player/SearchOverlay";
 import { SeriesDetails } from "@/components/player/SeriesDetails";
 import { cn } from "@/lib/utils";
 import { ContentDetailsOverlay } from "@/components/player/ContentDetailsOverlay";
-import { 
-  getServerStatus, 
-  getHomeData, 
-  getCategories, 
-  getCategoryContent, 
-  getSeriesInfo,
-  logoutPlayer,
-  getPlayerSettings,
-  validatePlayerSession,
-  getPlayerCatalog
-} from "@/lib/player.functions";
+
 
 
 export const Route = createFileRoute("/player/$resellerId")({
@@ -443,7 +435,7 @@ function PlayerPage() {
             setIsDetailsOpen(false);
             setSelectedItem(null);
           }}
-          onPlay={(i) => {
+          onPlay={(i: any) => {
             if (activeView === "series") {
               handleOpenSeries(i);
             } else {
