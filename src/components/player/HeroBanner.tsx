@@ -1,4 +1,4 @@
-import { Play, Plus, Info, Star } from "lucide-react";
+import { Play, Plus, Info, Star, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 interface HeroBannerProps {
@@ -6,9 +6,10 @@ interface HeroBannerProps {
   onPlay: (item: any) => void;
   onMyList?: (item: any) => void;
   primaryColor?: string;
+  isFavorite?: boolean;
 }
 
-export function HeroBanner({ item, onPlay, onMyList, primaryColor }: HeroBannerProps) {
+export function HeroBanner({ item, onPlay, onMyList, primaryColor, isFavorite }: HeroBannerProps) {
   if (!item) return null;
 
   const title = item.name || item.title;
@@ -71,7 +72,8 @@ export function HeroBanner({ item, onPlay, onMyList, primaryColor }: HeroBannerP
             className="h-14 px-8 text-lg font-bold rounded-xl bg-white/5 border-white/10 hover:bg-white/10 transition-all text-white"
             onClick={() => onMyList?.(item)}
           >
-            <Plus className="mr-2 h-6 w-6" /> Minha Lista
+            {isFavorite ? <Check className="h-6 w-6 text-green-500" /> : <Plus className="h-6 w-6" />}
+            {isFavorite ? "Na Minha Lista" : "Minha Lista"}
           </Button>
 
           <Button 

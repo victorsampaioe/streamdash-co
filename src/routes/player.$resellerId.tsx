@@ -8,7 +8,9 @@ import {
   validatePlayerSession,
   getPlayerStreamUrl,
   getPlayerServers,
-  logoutPlayer
+  logoutPlayer,
+  getFavorites,
+  toggleFavorite
 } from "@/lib/player.functions";
 
 import { Card } from "@/components/ui/card";
@@ -94,6 +96,49 @@ function PlayerPage() {
 
   const [selectedItem, setSelectedItem] = useState<any>(null);
   const [isDetailsOpen, setIsDetailsOpen] = useState(false);
+  const [favorites, setFavorites] = useState<any[]>([]);
+  const [history, setHistory] = useState<any[]>([]);
+
+  // Carregar favoritos
+  useEffect(() => {
+    if (token) {
+      getFavorites({ data: { token } })
+        .then(setFavorites)
+        .catch(console.error);
+    }
+  }, [token]);
+
+  const toggleFavoriteMutation = useMutation({
+    mutationFn: toggleFavorite,
+    onSuccess: (_, variables) => {
+      if (!variables) return;
+      const data = variables.data as any;
+      const { contentId, contentType, isFavorite } = data;
+      if (isFavorite) {
+        setFavorites(prev => [...prev, { content_id: contentId, content_type: contentType }]);
+        toast.success("Adicionado à Minha Lista");
+      } else {
+        setFavorites(prev => prev.filter(f => f.content_id !== contentId));
+        toast.success("Removido da Minha Lista");
+      }
+    }
+  });
+
+  const handleToggleFavorite = (item: any) => {
+    if (!token) return;
+    const contentId = (item.stream_id || item.series_id || item.id).toString();
+    const contentType = item.stream_type === "live" ? "live" : (item.series_id ? "series" : "movie");
+    const isFavorite = favorites.some(f => f.content_id === contentId);
+    
+    toggleFavoriteMutation.mutate({
+      data: {
+        token,
+        contentId,
+        contentType,
+        isFavorite: !isFavorite
+      }
+    });
+  };
 
 
   // Identidade Visual
@@ -186,41 +231,50 @@ function PlayerPage() {
     }
   }, [session, token, activeView]);
 
-  // Carregar conteúdo por categoria
   useEffect(() => {
-    if (session && token && selectedCategory && ["live", "movie", "series"].includes(activeView)) {
-      setLoadingContent(true);
-      if (abortControllerRef.current) abortControllerRef.current.abort();
-      const controller = new AbortController();
-      abortControllerRef.current = controller;
-
-      const actionMap = {
-        live: "get_live_streams",
-        movie: "get_vod_streams",
-        series: "get_series"
-      } as const;
+    if (session && token) {
+      if (activeView === "search" || activeView === "settings") return;
       
-      const action = actionMap[activeView as keyof typeof actionMap];
-
-
-      getPlayerCatalog({ data: { token, action, categoryId: selectedCategory } })
-        .then((data: any) => {
-          if (!controller.signal.aborted) {
-            setContent(Array.isArray(data) ? data : []);
+      setLoadingContent(true);
+      const controller = new AbortController();
+      
+      const fetchData = async () => {
+        try {
+          if (activeView === ("mylist" as any)) {
+            const favs = await getFavorites({ data: { token } });
+            // TODO: Implementar busca de metadados para favoritos
+            setContent([]); 
+            setLoadingContent(false);
+            return;
           }
-        })
-        .catch((err: any) => {
+
+          if (["live", "movie", "series"].includes(activeView)) {
+            const actionMap = {
+              live: "get_live_streams",
+              movie: "get_vod_streams",
+              series: "get_series"
+            } as const;
+            
+            const action = actionMap[activeView as keyof typeof actionMap];
+            const data = await getPlayerCatalog({ data: { token, action, categoryId: selectedCategory || undefined } });
+            
+            if (!controller.signal.aborted) {
+              setContent(Array.isArray(data) ? data : []);
+            }
+          }
+        } catch (err: any) {
           if (!controller.signal.aborted) {
             setContent([]);
             toast.error(err?.message || "Não foi possível carregar os conteúdos");
           }
-        })
-        .finally(() => {
+        } finally {
           if (!controller.signal.aborted) {
             setLoadingContent(false);
           }
-        });
-        
+        }
+      };
+
+      fetchData();
       return () => controller.abort();
     }
   }, [session, token, activeView, selectedCategory]);
@@ -316,7 +370,34 @@ function PlayerPage() {
                   setIsDetailsOpen(true);
                 }
               }}
+              onMyList={(item: any) => handleToggleFavorite(item)}
+              isFavorite={favorites.some(f => f.content_id === (homeData.featured?.stream_id || homeData.featured?.series_id || homeData.featured?.id)?.toString())}
             />
+
+            <ContentRow 
+              title="Continuar Assistindo" 
+              items={[]} 
+              type="movie" 
+              primaryColor={primaryColor}
+              onPlay={(item: any) => {
+                setSelectedItem(item);
+                setIsDetailsOpen(true);
+              }}
+            />
+
+            {favorites.length > 0 && (
+               <ContentRow 
+                title="Minha Lista" 
+                items={[]} // TODO: Carregar metadados dos favoritos
+                type="movie" 
+                primaryColor={primaryColor}
+                onPlay={(item: any) => {
+                  setSelectedItem(item);
+                  setIsDetailsOpen(true);
+                }}
+              />
+            )}
+
 
             <ContentRow 
               title="Novidades" 
@@ -338,6 +419,22 @@ function PlayerPage() {
 
           </div>
         )}
+
+        {activeView === ("mylist" as any) && (
+          <div className="p-6 md:p-12 space-y-8">
+            <h1 className="text-3xl font-bold">Minha Lista</h1>
+            <div className="flex flex-col items-center justify-center py-20 text-center space-y-4">
+              <div className="h-20 w-20 rounded-full bg-white/5 flex items-center justify-center">
+                <Plus className="h-10 w-10 text-white/20" />
+              </div>
+              <div>
+                <h2 className="text-xl font-bold">Em breve</h2>
+                <p className="text-white/40">Estamos finalizando a sincronização da sua lista.</p>
+              </div>
+            </div>
+          </div>
+        )}
+
 
 
         {activeView === "settings" && (
@@ -441,21 +538,24 @@ function PlayerPage() {
       {selectedItem && (
         <ContentDetailsOverlay 
           item={selectedItem}
-          type={activeView === "series" ? "series" : "movie"}
+          type={activeView === "series" || selectedItem.series_id ? "series" : "movie"}
           isOpen={isDetailsOpen}
           onClose={() => {
             setIsDetailsOpen(false);
             setSelectedItem(null);
           }}
           onPlay={(i: any) => {
-            if (activeView === "series") {
+            const isSeries = activeView === "series" || i.series_id || selectedItem.series_id;
+            if (isSeries) {
               handleOpenSeries(i);
             } else {
-              handlePlay(i.stream_id, "movie");
+              handlePlay(i.stream_id || i.id, "movie");
             }
             setIsDetailsOpen(false);
           }}
           primaryColor={primaryColor}
+          isFavorite={favorites.some(f => f.content_id === (selectedItem.stream_id || selectedItem.series_id || selectedItem.id).toString())}
+          onToggleFavorite={() => handleToggleFavorite(selectedItem)}
         />
       )}
 
