@@ -105,6 +105,9 @@ function PlayerPage() {
   const [isDetailsOpen, setIsDetailsOpen] = useState(false);
   const [favorites, setFavorites] = useState<any[]>([]);
   const [history, setHistory] = useState<any[]>([]);
+  const [diag, setDiag] = useState<any>(null);
+  const [diagLoading, setDiagLoading] = useState(false);
+
 
   // Carregar favoritos
   useEffect(() => {
