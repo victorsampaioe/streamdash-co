@@ -581,7 +581,46 @@ function PlayerPage() {
                 </div>
               </div>
 
+              <div className="pt-6 border-t border-white/5 space-y-3">
+                <h2 className="text-lg font-semibold">Diagnóstico técnico</h2>
+                <p className="text-xs text-white/40">
+                  Testa cada endpoint Xtream (séries, filmes, TV) e mostra o caminho Frontend → Core AWS → Servidor IPTV.
+                </p>
+                <Button
+                  variant="outline"
+                  className="w-full h-11 rounded-xl border-white/10 bg-white/5 text-white hover:bg-white/10"
+                  disabled={diagLoading}
+                  onClick={async () => {
+                    if (!token) return;
+                    setDiagLoading(true);
+                    setDiag(null);
+                    try {
+                      const r = await diagnosePlayerCatalog({ data: { token } });
+                      console.log("[CATALOG_DEBUG] relatório completo:", r);
+                      setDiag(r);
+                    } catch (e: any) {
+                      console.error("[CATALOG_DEBUG] falha no diagnóstico", e);
+                      setDiag({ erro: e?.message, stack: e?.stack });
+                    } finally {
+                      setDiagLoading(false);
+                    }
+                  }}
+                >
+                  {diagLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                  Rodar diagnóstico de catálogo
+                </Button>
+                {diag && (
+                  <pre
+                    data-testid="player-diagnostic"
+                    className="max-h-96 overflow-auto rounded-xl bg-black/60 p-4 text-[11px] leading-relaxed text-emerald-300"
+                  >
+{JSON.stringify(diag, null, 2)}
+                  </pre>
+                )}
+              </div>
+
               <div className="pt-6 border-t border-white/5">
+
                 <Button 
                   variant="destructive" 
                   className="w-full h-12 rounded-xl font-bold"
