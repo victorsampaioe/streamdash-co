@@ -64,6 +64,7 @@ import { Route as ApiPublicCronDigestRouteImport } from './routes/api/public/cro
 import { Route as ApiPublicCronCheckRouteImport } from './routes/api/public/cron/check'
 import { Route as ApiPublicCoreTaskRouteImport } from './routes/api/public/core/task'
 import { Route as ApiPublicCoreStreamRouteImport } from './routes/api/public/core/stream'
+import { Route as ApiPublicCoreReportRouteImport } from './routes/api/public/core/report'
 import { Route as AuthenticatedAppServersNewRouteImport } from './routes/_authenticated/app.servers.new'
 import { Route as AuthenticatedAppServersIdRouteImport } from './routes/_authenticated/app.servers.$id'
 import { Route as AuthenticatedAppHubVerificationRouteImport } from './routes/_authenticated/app.hub.verification'
@@ -367,6 +368,11 @@ const ApiPublicCoreStreamRoute = ApiPublicCoreStreamRouteImport.update({
   path: '/api/public/core/stream',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicCoreReportRoute = ApiPublicCoreReportRouteImport.update({
+  id: '/api/public/core/report',
+  path: '/api/public/core/report',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AuthenticatedAppServersNewRoute =
   AuthenticatedAppServersNewRouteImport.update({
     id: '/servers/new',
@@ -487,6 +493,7 @@ export interface FileRoutesByFullPath {
   '/app/hub/verification': typeof AuthenticatedAppHubVerificationRoute
   '/app/servers/$id': typeof AuthenticatedAppServersIdRoute
   '/app/servers/new': typeof AuthenticatedAppServersNewRoute
+  '/api/public/core/report': typeof ApiPublicCoreReportRoute
   '/api/public/core/stream': typeof ApiPublicCoreStreamRoute
   '/api/public/core/task': typeof ApiPublicCoreTaskRoute
   '/api/public/cron/check': typeof ApiPublicCronCheckRoute
@@ -553,6 +560,7 @@ export interface FileRoutesByTo {
   '/app/hub/verification': typeof AuthenticatedAppHubVerificationRoute
   '/app/servers/$id': typeof AuthenticatedAppServersIdRoute
   '/app/servers/new': typeof AuthenticatedAppServersNewRoute
+  '/api/public/core/report': typeof ApiPublicCoreReportRoute
   '/api/public/core/stream': typeof ApiPublicCoreStreamRoute
   '/api/public/core/task': typeof ApiPublicCoreTaskRoute
   '/api/public/cron/check': typeof ApiPublicCronCheckRoute
@@ -623,6 +631,7 @@ export interface FileRoutesById {
   '/_authenticated/app/hub/verification': typeof AuthenticatedAppHubVerificationRoute
   '/_authenticated/app/servers/$id': typeof AuthenticatedAppServersIdRoute
   '/_authenticated/app/servers/new': typeof AuthenticatedAppServersNewRoute
+  '/api/public/core/report': typeof ApiPublicCoreReportRoute
   '/api/public/core/stream': typeof ApiPublicCoreStreamRoute
   '/api/public/core/task': typeof ApiPublicCoreTaskRoute
   '/api/public/cron/check': typeof ApiPublicCronCheckRoute
@@ -693,6 +702,7 @@ export interface FileRouteTypes {
     | '/app/hub/verification'
     | '/app/servers/$id'
     | '/app/servers/new'
+    | '/api/public/core/report'
     | '/api/public/core/stream'
     | '/api/public/core/task'
     | '/api/public/cron/check'
@@ -759,6 +769,7 @@ export interface FileRouteTypes {
     | '/app/hub/verification'
     | '/app/servers/$id'
     | '/app/servers/new'
+    | '/api/public/core/report'
     | '/api/public/core/stream'
     | '/api/public/core/task'
     | '/api/public/cron/check'
@@ -828,6 +839,7 @@ export interface FileRouteTypes {
     | '/_authenticated/app/hub/verification'
     | '/_authenticated/app/servers/$id'
     | '/_authenticated/app/servers/new'
+    | '/api/public/core/report'
     | '/api/public/core/stream'
     | '/api/public/core/task'
     | '/api/public/cron/check'
@@ -872,6 +884,7 @@ export interface RootRouteChildren {
   Char91DotmcpChar93InvokeToolToolRoute: typeof Char91DotmcpChar93InvokeToolToolRoute
   ApiPublicHealthRoute: typeof ApiPublicHealthRoute
   ApiPublicRadarRoute: typeof ApiPublicRadarRoute
+  ApiPublicCoreReportRoute: typeof ApiPublicCoreReportRoute
   ApiPublicCoreStreamRoute: typeof ApiPublicCoreStreamRoute
   ApiPublicCoreTaskRoute: typeof ApiPublicCoreTaskRoute
   ApiPublicCronCheckRoute: typeof ApiPublicCronCheckRoute
@@ -1272,6 +1285,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicCoreStreamRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/core/report': {
+      id: '/api/public/core/report'
+      path: '/api/public/core/report'
+      fullPath: '/api/public/core/report'
+      preLoaderRoute: typeof ApiPublicCoreReportRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/_authenticated/app/servers/new': {
       id: '/_authenticated/app/servers/new'
       path: '/servers/new'
@@ -1487,6 +1507,7 @@ const rootRouteChildren: RootRouteChildren = {
   Char91DotmcpChar93InvokeToolToolRoute: Char91DotmcpChar93InvokeToolToolRoute,
   ApiPublicHealthRoute: ApiPublicHealthRoute,
   ApiPublicRadarRoute: ApiPublicRadarRoute,
+  ApiPublicCoreReportRoute: ApiPublicCoreReportRoute,
   ApiPublicCoreStreamRoute: ApiPublicCoreStreamRoute,
   ApiPublicCoreTaskRoute: ApiPublicCoreTaskRoute,
   ApiPublicCronCheckRoute: ApiPublicCronCheckRoute,
