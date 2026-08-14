@@ -11,7 +11,9 @@ import {
   logoutPlayer,
   getFavorites,
   toggleFavorite,
-  getTMDBMetadata
+  getTMDBMetadata,
+  diagnosePlayerCatalog
+
 } from "@/lib/player.functions";
 
 import { Card } from "@/components/ui/card";
