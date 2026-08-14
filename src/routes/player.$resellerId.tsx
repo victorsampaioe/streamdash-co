@@ -421,7 +421,29 @@ function PlayerPage() {
 
       </main>
 
+      {selectedItem && (
+        <ContentDetailsOverlay 
+          item={selectedItem}
+          type={activeView === "series" ? "series" : "movie"}
+          isOpen={isDetailsOpen}
+          onClose={() => {
+            setIsDetailsOpen(false);
+            setSelectedItem(null);
+          }}
+          onPlay={(i) => {
+            if (activeView === "series") {
+              handleOpenSeries(i);
+            } else {
+              handlePlay(i.stream_id, "movie");
+            }
+            setIsDetailsOpen(false);
+          }}
+          primaryColor={primaryColor}
+        />
+      )}
+
       {/* Overlays */}
+
       <SearchOverlay 
         isOpen={isSearchOpen} 
         onClose={() => setIsSearchOpen(false)}
