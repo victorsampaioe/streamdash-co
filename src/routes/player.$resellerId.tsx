@@ -454,7 +454,16 @@ function PlayerPage() {
         onClose={() => setIsSearchOpen(false)}
         token={token!}
         primaryColor={primaryColor}
-        onPlay={(item, type) => handlePlay(item.stream_id || item.series_id || item.id, type)}
+        onPlay={(item: any, type: "live" | "movie" | "series") => {
+          if (type === "live") {
+            handlePlay(item.stream_id || item.id, "live");
+          } else {
+            setSelectedItem(item);
+            setIsDetailsOpen(true);
+            setIsSearchOpen(false);
+          }
+        }}
+
       />
 
       
