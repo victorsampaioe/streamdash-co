@@ -790,23 +790,30 @@ function PlayerPage() {
   }
 
 
-  function handleOpenSeries(item: any) {
+  async function handleOpenSeries(item: any) {
+    const seriesId = item.series_id || item.id || item.content_id;
+    if (!seriesId) return;
+
     setSelectedSeriesInfo({ info: item, episodes: {} });
     setLoadingSeries(true);
     setIsDetailsOpen(false);
     
-    getPlayerCatalog({ 
-      data: { 
-        token: token!, 
-        action: "get_series_info", 
-        contentId: (item.series_id || item.id).toString()
-      } 
-    })
-    .then((data: any) => {
+    try {
+      const data = await getPlayerCatalog({ 
+        data: { 
+          token: token!, 
+          action: "get_episodes_list", 
+          contentId: seriesId.toString()
+        } 
+      });
+      console.log("[handleOpenSeries] Data:", data);
       setSelectedSeriesInfo(data);
-    })
-    .catch(() => toast.error("Erro ao carregar episódios"))
-    .finally(() => setLoadingSeries(false));
+    } catch (err) {
+      console.error("Error loading series episodes", err);
+      toast.error("Não foi possível carregar os episódios desta série.");
+    } finally {
+      setLoadingSeries(false);
+    }
   }
 
   function handleClosePlayer() {
