@@ -361,6 +361,7 @@ function PlayerPage() {
                   setIsDetailsOpen(true);
                 }
               }}
+              onMyList={(item: any) => handleToggleFavorite(item)}
             />
 
             <ContentRow 
