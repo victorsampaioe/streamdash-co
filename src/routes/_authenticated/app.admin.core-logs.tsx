@@ -28,6 +28,7 @@ import { useState } from "react";
 import { 
   Dialog, 
   DialogContent, 
+  DialogDescription,
   DialogHeader, 
   DialogTitle, 
   DialogTrigger 
@@ -245,6 +246,9 @@ function CoreLogsPage() {
                                 <Zap className="h-5 w-5 text-primary" />
                                 Detalhes da Execução: {log.task_type}
                               </DialogTitle>
+                              <DialogDescription>
+                                Informações técnicas da chamada realizada ao Core AWS.
+                              </DialogDescription>
                             </DialogHeader>
                             <div className="space-y-6 py-4">
                               <div className="grid grid-cols-2 gap-4">

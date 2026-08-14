@@ -39,7 +39,7 @@ export function buildXtreamCatalogUrl(
   });
   if (opts.categoryId) params.set("category_id", opts.categoryId);
   if (opts.contentId) {
-    if (opts.action === "get_series_info" || opts.action === "get_series_episodes") params.set("series_id", opts.contentId);
+    if (opts.action === "get_series_info" || opts.action === "get_episodes_list") params.set("series_id", opts.contentId);
     else params.set("vod_id", opts.contentId);
   }
   return `${base}/player_api.php?${params.toString()}`;
