@@ -215,10 +215,11 @@ export async function probeXtreamEndpoints(
 
   const base = /^https?:\/\//i.test(server.host) ? server.host.replace(/\/+$/, "") : `http://${server.host}`;
   const urls = {
-    live: maskUrl(`${base}/live/${creds.username}/${creds.password}/<stream_id>.m3u8`),
-    movie: maskUrl(`${base}/movie/${creds.username}/${creds.password}/<stream_id>.mp4`),
-    series: maskUrl(`${base}/series/${creds.username}/${creds.password}/<episode_id>.mp4`),
+    live: `${base}/live/${creds.username}/***/<stream_id>.m3u8`,
+    movie: `${base}/movie/${creds.username}/***/<stream_id>.mp4`,
+    series: `${base}/series/${creds.username}/***/<episode_id>.mp4`,
   };
+
 
   return { host: server.host, usuario: creds.username, resultados: results, urls_de_stream: urls };
 }
