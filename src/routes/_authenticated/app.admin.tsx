@@ -337,7 +337,7 @@ function AdminPage() {
                   <ShieldCheck className="h-5 w-5 text-primary" />
                   Auditoria Core AWS
                 </CardTitle>
-                <DialogDescription>Monitoramento das tarefas delegadas para a infraestrutura VPS.</DialogDescription>
+                <CardDescription>Monitoramento das tarefas delegadas para a infraestrutura VPS.</CardDescription>
               </div>
               <Button asChild variant="outline" size="sm" className="gap-2">
                 <Link to="/app/admin/core-logs">
