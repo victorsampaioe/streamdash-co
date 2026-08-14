@@ -411,6 +411,65 @@ export const getServerStatus = createServerFn({ method: "GET" })
   });
 
 /**
+ * Busca metadados do TMDB para um título (filme ou série).
+ */
+export const getTMDBMetadata = createServerFn({ method: "GET" })
+  .inputValidator((data) => z.object({ 
+    title: z.string(), 
+    type: z.enum(["movie", "tv"]),
+    year: z.string().optional()
+  }).parse(data))
+  .handler(async ({ data }) => {
+    const TMDB_API_KEY = process.env['TMDB_API_KEY'];
+    if (!TMDB_API_KEY) {
+      console.warn("TMDB_API_KEY não configurada.");
+      return null;
+    }
+
+    try {
+      const searchUrl = new URL(`https://api.themoviedb.org/3/search/${data.type}`);
+      searchUrl.searchParams.append('api_key', TMDB_API_KEY);
+      searchUrl.searchParams.append('query', data.title);
+      searchUrl.searchParams.append('language', 'pt-BR');
+      if (data.year) searchUrl.searchParams.append('year', data.year);
+
+      const response = await fetch(searchUrl.toString());
+      const searchData = await response.json();
+
+      if (!searchData.results || searchData.results.length === 0) return null;
+
+      const bestMatch = searchData.results[0];
+      
+      // Busca detalhes adicionais (incluindo vídeos/trailers)
+      const detailsUrl = new URL(`https://api.themoviedb.org/3/${data.type}/${bestMatch.id}`);
+      detailsUrl.searchParams.append('api_key', TMDB_API_KEY);
+      detailsUrl.searchParams.append('language', 'pt-BR');
+      detailsUrl.searchParams.append('append_to_response', 'videos,credits,images');
+
+      const detailsResponse = await fetch(detailsUrl.toString());
+      const detailsData = await detailsResponse.json();
+
+      return {
+        id: detailsData.id,
+        title: detailsData.title || detailsData.name,
+        overview: detailsData.overview,
+        poster_path: detailsData.poster_path,
+        backdrop_path: detailsData.backdrop_path,
+        vote_average: detailsData.vote_average,
+        release_date: detailsData.release_date || detailsData.first_air_date,
+        genres: detailsData.genres?.map((g: any) => g.name) || [],
+        runtime: detailsData.runtime || (detailsData.episode_run_time ? detailsData.episode_run_time[0] : null),
+        cast: detailsData.credits?.cast?.slice(0, 5).map((c: any) => c.name) || [],
+        trailer_key: detailsData.videos?.results?.find((v: any) => v.type === 'Trailer' && v.site === 'YouTube')?.key
+      };
+    } catch (error) {
+      console.error("Erro ao buscar metadados TMDB:", error);
+      return null;
+    }
+  });
+
+
+/**
  * Realiza uma checagem rápida de saúde em um servidor específico.
  * Usado na tela de login para diagnóstico prévio.
  */
