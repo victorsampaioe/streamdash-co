@@ -631,6 +631,7 @@ function PlayerPage() {
                     type={activeView as "live" | "movie" | "series"} 
                     primaryColor={primaryColor} 
                     onClick={(i) => {
+                      debugClick(i, activeView as "live" | "movie" | "series");
                       if (activeView === "live") {
                         handlePlay(i.stream_id, "live");
                       } else {
@@ -641,6 +642,7 @@ function PlayerPage() {
 
                   />
                 ))}
+
               </div>
             )}
             {!loadingContent && content.length >= 40 && (
