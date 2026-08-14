@@ -588,41 +588,60 @@ function PlayerPage() {
               </div>
 
               <div className="pt-6 border-t border-white/5 space-y-3">
+                <h2 className="text-lg font-semibold">Localizar e validar a SUPABASE_SERVICE_ROLE_KEY correta do projeto de produção</h2>
                 <div className="p-4 bg-yellow-500/10 border border-yellow-500/20 rounded-lg">
                   <h4 className="text-yellow-400 font-bold mb-2 flex items-center gap-2">
-                    <ShieldCheck className="h-4 w-4" /> Localizar projeto Supabase correto usado pelo Core AWS (diagnóstico completo)
+                    <ShieldCheck className="h-4 w-4" /> Diagnóstico do Core AWS
                   </h4>
                   <p className="text-xs text-yellow-200/80 leading-relaxed whitespace-pre-wrap">
-                    Preciso localizar a origem do projeto Supabase que o Core AWS está usando atualmente.
+                    O diagnóstico já confirmou:
 
-                    O diagnóstico da VPS mostrou:
+                    Projeto correto:
+                    yiwyfiaqehhmngqngxvx
+
+                    URL:
+                    https://yiwyfiaqehhmngqngxvx.supabase.co
+
+                    Esse é o banco oficial de produção do Stream Monitor e contém as tabelas utilizadas pelo sistema.
+
+                    Porém a VPS Core AWS apresenta:
+                    rpc_get_admin_stats: Invalid API key
+
+                    A variável existe no ambiente:
+                    SUPABASE_SERVICE_ROLE_KEY
+
+                    mas a chave atual não pertence ao projeto correto ou está inválida.
+
+                    Preciso que você faça uma validação completa:
+
+                    1. Confirmar a origem da chave correta
+                    Localizar no ambiente Lovable Cloud/Supabase:
+                    Projeto: yiwyfiaqehhmngqngxvx
+                    Encontrar a chave correta usada pelo backend: SUPABASE_SERVICE_ROLE_KEY
+                    Confirmar: Essa chave pertence ao projeto yiwyfiaqehhmngqngxvx? Ela é a chave administrativa de backend? Ela permite chamadas RPC? Ela permite acesso às tabelas de produção?
+
+                    2. Validar se existe diferença entre chaves
+                    Verificar se o projeto possui: Publishable key; Anon key; Service Role Key; Secret Key. Informar qual delas o Core AWS deve usar. Não quero a chave pública. O Core precisa de uma chave com permissão de servidor: SUPABASE_SERVICE_ROLE_KEY.
+
+                    3. Confirmar compatibilidade com o Core AWS
+                    O Core utiliza chamadas administrativas como: rpc_get_admin_stats. Então validar se a chave consegue executar: /rest/v1/rpc/get_admin_stats com sucesso.
+
+                    4. Verificar se a chave foi alterada/revogada
+                    Checar se: a service role antiga foi rotacionada; o projeto mudou de chave; existe alguma chave antiga salva no Core; o Lovable Cloud usa uma chave diferente da exibida no painel.
+
+                    5. Me informar exatamente onde pegar
+                    Preciso do caminho: Exemplo: Lovable Cloud → Backend → Supabase → API Keys → Service Role ou: Supabase Dashboard → Projeto yiwyfiaqehhmngqngxvx → Settings → API → Legacy service_role.
+
+                    6. Não criar outro projeto
+                    Importante: Não criar novo projeto. Não alterar banco. Não migrar nada. Somente localizar a credencial correta do projeto existente.
+
+                    Objetivo:
+                    A VPS AWS precisa ficar assim:
                     SUPABASE_URL=https://yiwyfiaqehhmngqngxvx.supabase.co
-                    SUPABASE_PROJECT_ID=yiwyfiaqehhmngqngxvx
+                    SUPABASE_SERVICE_ROLE_KEY=CHAVE_CORRETA_DO_PROJETO
 
-                    Porém não consigo localizar esse projeto no meu painel Supabase.
-
-                    Preciso que você faça uma auditoria e informe:
-
-                    1. Identificação do projeto
-                    Encontrar qual projeto Supabase corresponde a: yiwyfiaqehhmngqngxvx
-                    Informar: Nome do projeto; Organização onde está; Se pertence ao Lovable Cloud; Data aproximada de criação (se disponível).
-
-                    2. Confirmar se esse é o banco oficial do Stream Monitor
-                    Verificar se esse projeto contém as tabelas utilizadas pelo sistema: servers, incidents, core_execution_logs, alertas, usuários, revendedores, permissões, dados do monitoramento.
-                    Preciso saber se esse é: ✅ banco principal atual ou ❌ banco antigo/teste.
-
-                    3. Localizar as credenciais corretas
-                    Preciso saber onde pegar as chaves desse projeto.
-                    Informar exatamente: URL do Supabase; Project ID; Publishable/anon key; Service Role Key (Legacy) correta para o backend/Core AWS.
-
-                    4. Verificar por que existe conflito
-                    O Core AWS está apresentando: rpc_get_admin_stats: Invalid API key.
-                    Confirmar: Qual chave o projeto espera; Se houve troca de Supabase; Se o sistema migrou para outro projeto.
-
-                    5. Não criar novo Supabase
-                    Importante: Não criar novo projeto. Não alterar banco. Não migrar nada. Apenas localizar o projeto existente e informar as credenciais corretas.
-
-                    Objetivo: Deixar o Core AWS conectado ao banco correto.
+                    Depois disso o Core AWS deve voltar a:
+                    acessar banco; executar RPCs; processar monitoramento; executar Radar; liberar Web Player.
                   </p>
                 </div>
                 <Button
