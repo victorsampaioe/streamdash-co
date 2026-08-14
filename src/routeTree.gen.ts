@@ -72,7 +72,7 @@ import { Route as AuthenticatedAppHubRankingRouteImport } from './routes/_authen
 import { Route as AuthenticatedAppHubNewRouteImport } from './routes/_authenticated/app.hub.new'
 import { Route as AuthenticatedAppHubMessagesRouteImport } from './routes/_authenticated/app.hub.messages'
 import { Route as AuthenticatedAppHubDemandRouteImport } from './routes/_authenticated/app.hub.demand'
-import { Route as AuthenticatedAppAdminCoreLogsRouteImport } from './routes/_authenticated/app.admin.core-logs'
+import { Route as AuthenticatedAppAdminCoreLogsRouteImport } from './routes/_authenticated/app.admin_.core-logs'
 import { Route as AuthenticatedAppInteligenciaMediaIdRouteImport } from './routes/_authenticated/app.inteligencia.$media.$id'
 import { Route as AuthenticatedAppHubUHandleRouteImport } from './routes/_authenticated/app.hub.u.$handle'
 import { Route as AuthenticatedAppHubLIdRouteImport } from './routes/_authenticated/app.hub.l.$id'
@@ -416,9 +416,9 @@ const AuthenticatedAppHubDemandRoute =
   } as any)
 const AuthenticatedAppAdminCoreLogsRoute =
   AuthenticatedAppAdminCoreLogsRouteImport.update({
-    id: '/core-logs',
-    path: '/core-logs',
-    getParentRoute: () => AuthenticatedAppAdminRoute,
+    id: '/admin_/core-logs',
+    path: '/admin/core-logs',
+    getParentRoute: () => AuthenticatedAppRoute,
   } as any)
 const AuthenticatedAppInteligenciaMediaIdRoute =
   AuthenticatedAppInteligenciaMediaIdRouteImport.update({
@@ -462,7 +462,7 @@ export interface FileRoutesByFullPath {
   '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
   '/app/achievements': typeof AuthenticatedAppAchievementsRoute
-  '/app/admin': typeof AuthenticatedAppAdminRouteWithChildren
+  '/app/admin': typeof AuthenticatedAppAdminRoute
   '/app/ai-integration': typeof AuthenticatedAppAiIntegrationRoute
   '/app/ajuda': typeof AuthenticatedAppAjudaRoute
   '/app/alerts': typeof AuthenticatedAppAlertsRoute
@@ -529,7 +529,7 @@ export interface FileRoutesByTo {
   '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
   '/app/achievements': typeof AuthenticatedAppAchievementsRoute
-  '/app/admin': typeof AuthenticatedAppAdminRouteWithChildren
+  '/app/admin': typeof AuthenticatedAppAdminRoute
   '/app/ai-integration': typeof AuthenticatedAppAiIntegrationRoute
   '/app/ajuda': typeof AuthenticatedAppAjudaRoute
   '/app/alerts': typeof AuthenticatedAppAlertsRoute
@@ -598,7 +598,7 @@ export interface FileRoutesById {
   '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
   '/_authenticated/app/achievements': typeof AuthenticatedAppAchievementsRoute
-  '/_authenticated/app/admin': typeof AuthenticatedAppAdminRouteWithChildren
+  '/_authenticated/app/admin': typeof AuthenticatedAppAdminRoute
   '/_authenticated/app/ai-integration': typeof AuthenticatedAppAiIntegrationRoute
   '/_authenticated/app/ajuda': typeof AuthenticatedAppAjudaRoute
   '/_authenticated/app/alerts': typeof AuthenticatedAppAlertsRoute
@@ -614,7 +614,7 @@ export interface FileRoutesById {
   '/api/public/health': typeof ApiPublicHealthRoute
   '/api/public/radar': typeof ApiPublicRadarRoute
   '/_authenticated/app/': typeof AuthenticatedAppIndexRoute
-  '/_authenticated/app/admin/core-logs': typeof AuthenticatedAppAdminCoreLogsRoute
+  '/_authenticated/app/admin_/core-logs': typeof AuthenticatedAppAdminCoreLogsRoute
   '/_authenticated/app/hub/demand': typeof AuthenticatedAppHubDemandRoute
   '/_authenticated/app/hub/messages': typeof AuthenticatedAppHubMessagesRoute
   '/_authenticated/app/hub/new': typeof AuthenticatedAppHubNewRoute
@@ -819,7 +819,7 @@ export interface FileRouteTypes {
     | '/api/public/health'
     | '/api/public/radar'
     | '/_authenticated/app/'
-    | '/_authenticated/app/admin/core-logs'
+    | '/_authenticated/app/admin_/core-logs'
     | '/_authenticated/app/hub/demand'
     | '/_authenticated/app/hub/messages'
     | '/_authenticated/app/hub/new'
@@ -1328,12 +1328,12 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAppHubDemandRouteImport
       parentRoute: typeof AuthenticatedAppHubRoute
     }
-    '/_authenticated/app/admin/core-logs': {
-      id: '/_authenticated/app/admin/core-logs'
-      path: '/core-logs'
+    '/_authenticated/app/admin_/core-logs': {
+      id: '/_authenticated/app/admin_/core-logs'
+      path: '/admin/core-logs'
       fullPath: '/app/admin/core-logs'
       preLoaderRoute: typeof AuthenticatedAppAdminCoreLogsRouteImport
-      parentRoute: typeof AuthenticatedAppAdminRoute
+      parentRoute: typeof AuthenticatedAppRoute
     }
     '/_authenticated/app/inteligencia/$media/$id': {
       id: '/_authenticated/app/inteligencia/$media/$id'
@@ -1358,19 +1358,6 @@ declare module '@tanstack/react-router' {
     }
   }
 }
-
-interface AuthenticatedAppAdminRouteChildren {
-  AuthenticatedAppAdminCoreLogsRoute: typeof AuthenticatedAppAdminCoreLogsRoute
-}
-
-const AuthenticatedAppAdminRouteChildren: AuthenticatedAppAdminRouteChildren = {
-  AuthenticatedAppAdminCoreLogsRoute: AuthenticatedAppAdminCoreLogsRoute,
-}
-
-const AuthenticatedAppAdminRouteWithChildren =
-  AuthenticatedAppAdminRoute._addFileChildren(
-    AuthenticatedAppAdminRouteChildren,
-  )
 
 interface AuthenticatedAppHubRouteChildren {
   AuthenticatedAppHubDemandRoute: typeof AuthenticatedAppHubDemandRoute
@@ -1401,7 +1388,7 @@ const AuthenticatedAppHubRouteWithChildren =
 
 interface AuthenticatedAppRouteChildren {
   AuthenticatedAppAchievementsRoute: typeof AuthenticatedAppAchievementsRoute
-  AuthenticatedAppAdminRoute: typeof AuthenticatedAppAdminRouteWithChildren
+  AuthenticatedAppAdminRoute: typeof AuthenticatedAppAdminRoute
   AuthenticatedAppAiIntegrationRoute: typeof AuthenticatedAppAiIntegrationRoute
   AuthenticatedAppAjudaRoute: typeof AuthenticatedAppAjudaRoute
   AuthenticatedAppAlertsRoute: typeof AuthenticatedAppAlertsRoute
@@ -1415,6 +1402,7 @@ interface AuthenticatedAppRouteChildren {
   AuthenticatedAppStoreRoute: typeof AuthenticatedAppStoreRoute
   AuthenticatedAppSubscriptionRoute: typeof AuthenticatedAppSubscriptionRoute
   AuthenticatedAppIndexRoute: typeof AuthenticatedAppIndexRoute
+  AuthenticatedAppAdminCoreLogsRoute: typeof AuthenticatedAppAdminCoreLogsRoute
   AuthenticatedAppServersIdRoute: typeof AuthenticatedAppServersIdRoute
   AuthenticatedAppServersNewRoute: typeof AuthenticatedAppServersNewRoute
   AuthenticatedAppDiagnosticoIndexRoute: typeof AuthenticatedAppDiagnosticoIndexRoute
@@ -1425,7 +1413,7 @@ interface AuthenticatedAppRouteChildren {
 
 const AuthenticatedAppRouteChildren: AuthenticatedAppRouteChildren = {
   AuthenticatedAppAchievementsRoute: AuthenticatedAppAchievementsRoute,
-  AuthenticatedAppAdminRoute: AuthenticatedAppAdminRouteWithChildren,
+  AuthenticatedAppAdminRoute: AuthenticatedAppAdminRoute,
   AuthenticatedAppAiIntegrationRoute: AuthenticatedAppAiIntegrationRoute,
   AuthenticatedAppAjudaRoute: AuthenticatedAppAjudaRoute,
   AuthenticatedAppAlertsRoute: AuthenticatedAppAlertsRoute,
@@ -1439,6 +1427,7 @@ const AuthenticatedAppRouteChildren: AuthenticatedAppRouteChildren = {
   AuthenticatedAppStoreRoute: AuthenticatedAppStoreRoute,
   AuthenticatedAppSubscriptionRoute: AuthenticatedAppSubscriptionRoute,
   AuthenticatedAppIndexRoute: AuthenticatedAppIndexRoute,
+  AuthenticatedAppAdminCoreLogsRoute: AuthenticatedAppAdminCoreLogsRoute,
   AuthenticatedAppServersIdRoute: AuthenticatedAppServersIdRoute,
   AuthenticatedAppServersNewRoute: AuthenticatedAppServersNewRoute,
   AuthenticatedAppDiagnosticoIndexRoute: AuthenticatedAppDiagnosticoIndexRoute,
