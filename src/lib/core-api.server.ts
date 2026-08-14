@@ -1,4 +1,3 @@
-import { supabaseAdmin } from "@/integrations/supabase/client.server";
 
 /**
  * Ponte com o Core AWS (https://core.streammonitor.site).
@@ -26,7 +25,11 @@ export type CoreTask =
   | "iptv-stream-proxy"
   | "telegram-broadcast"
   | "cron-check"
-  | "cron-digest";
+  | "cron-digest"
+  // Sondas stateless executadas pelo worker externo (sem banco)
+  | "probe-http"
+  | "probe-dns"
+  | "probe-iptv-login";
 
 function normalize(url: string | undefined | null): string | null {
   const raw = (url ?? "").trim();
@@ -73,6 +76,7 @@ async function logCoreExecution(data: {
   if (process.env.IS_CORE === "true") return null;
 
   try {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { id, ...payload } = data;
     if (id) {
       await supabaseAdmin
