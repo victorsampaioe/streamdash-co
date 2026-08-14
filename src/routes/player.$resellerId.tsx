@@ -384,21 +384,30 @@ function PlayerPage() {
               ))}
             </div>
 
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-6">
-              {content.map((item) => (
-                <ContentCard 
-                  key={item.stream_id || item.series_id} 
-                  item={item} 
-                  type={activeView as "live" | "movie" | "series"} 
-                  primaryColor={primaryColor} 
-                  onClick={(i) => {
-                    if (activeView === "live") handlePlay(i.stream_id, "live");
-                    else if (activeView === "movie") handlePlay(i.stream_id, "movie");
-                    else handleOpenSeries(i);
-                  }}
-                />
-              ))}
-            </div>
+            {loadingContent ? (
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-6">
+                {[...Array(12)].map((_, i) => (
+                  <div key={i} className="aspect-[2/3] bg-white/5 rounded-xl animate-pulse" />
+                ))}
+              </div>
+            ) : (
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-6">
+                {content.map((item) => (
+                  <ContentCard 
+                    key={item.stream_id || item.series_id} 
+                    item={item} 
+                    type={activeView as "live" | "movie" | "series"} 
+                    primaryColor={primaryColor} 
+                    onClick={(i) => {
+                      if (activeView === "live") handlePlay(i.stream_id, "live");
+                      else if (activeView === "movie") handlePlay(i.stream_id, "movie");
+                      else handleOpenSeries(i);
+                    }}
+                  />
+                ))}
+              </div>
+            )}
+
           </div>
         )}
 
