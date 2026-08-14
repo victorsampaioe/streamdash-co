@@ -712,6 +712,48 @@ export type Database = {
           },
         ]
       }
+      core_execution_logs: {
+        Row: {
+          created_at: string | null
+          endpoint: string
+          error_message: string | null
+          execution_time_ms: number | null
+          id: string
+          request_payload: Json | null
+          response_data: Json | null
+          response_status: number | null
+          status: string
+          task_type: string
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          endpoint: string
+          error_message?: string | null
+          execution_time_ms?: number | null
+          id?: string
+          request_payload?: Json | null
+          response_data?: Json | null
+          response_status?: number | null
+          status: string
+          task_type: string
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          endpoint?: string
+          error_message?: string | null
+          execution_time_ms?: number | null
+          id?: string
+          request_payload?: Json | null
+          response_data?: Json | null
+          response_status?: number | null
+          status?: string
+          task_type?: string
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       credit_history: {
         Row: {
           amount: number
