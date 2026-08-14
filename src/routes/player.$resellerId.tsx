@@ -268,6 +268,7 @@ function PlayerPage() {
         brandName={settings?.brand_name ?? undefined}
         logoUrl={settings?.logo_url ?? undefined}
         onLogout={() => setToken(null)}
+        token={token!}
       />
 
       <main className="flex-1 overflow-y-auto">
