@@ -72,7 +72,14 @@ export const Route = createFileRoute("/api/public/health")({
           });
         }
         return Response.json(
-          { status: "ok", service: "stream-monitor-core", time: new Date().toISOString() },
+          {
+            status: "ok",
+            service: "stream-monitor-core",
+            isCore: process.env.IS_CORE === "true",
+            hasSecret: Boolean(process.env.CRON_SECRET),
+            time: new Date().toISOString(),
+          },
+
           { headers: { "cache-control": "no-store" } },
         );
       },
