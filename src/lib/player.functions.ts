@@ -279,8 +279,28 @@ export const diagnosePlayerCatalog = createServerFn({ method: "POST" })
     const creds = await getPlayerCredentials(session as any);
     if (!creds.username || !creds.password) throw new Error("Credenciais da sessão indisponíveis");
 
-    const { coreApiUrl, useCore } = await import("./core-api.server");
+    const { coreApiUrl, useCore, callCore } = await import("./core-api.server");
     const report = await probeXtreamEndpoints(session.server_id, creds, data.seriesId);
+
+    // ETAPA 4 — mesmo teste, porém passando pelo Core AWS (IP da VPS)
+    const viaCore: any[] = [];
+    if (useCore()) {
+      for (const action of ["get_series_categories", "get_series", "get_vod_streams", "get_live_streams"]) {
+        const started = Date.now();
+        try {
+          const r: any = await callCore("iptv-player-proxy" as any, {
+            serverId: session.server_id,
+            username: creds.username,
+            password: creds.password,
+            options: { action, limit: 5 },
+          });
+          const quantidade = Array.isArray(r) ? r.length : r && typeof r === "object" ? Object.keys(r).length : 0;
+          viaCore.push({ action, ms: Date.now() - started, quantidade, erro: null });
+        } catch (e: any) {
+          viaCore.push({ action, ms: Date.now() - started, quantidade: 0, erro: String(e?.message ?? e).slice(0, 300) });
+        }
+      }
+    }
 
     return {
       core: {
@@ -289,8 +309,13 @@ export const diagnosePlayerCatalog = createServerFn({ method: "POST" })
         fluxo: useCore() ? "Frontend -> Core AWS -> Servidor IPTV" : "Frontend -> Painel -> Servidor IPTV",
       },
       servidor: session.server_id,
-      ...report,
+      teste_direto_do_painel: report.resultados,
+      teste_via_core_aws: viaCore,
+      host: report.host,
+      usuario: report.usuario,
+      urls_de_stream: report.urls_de_stream,
     };
+
   });
 
 
