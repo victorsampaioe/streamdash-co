@@ -588,29 +588,6 @@ function PlayerPage() {
               </div>
 
               <div className="pt-6 border-t border-white/5 space-y-3">
-                <h2 className="text-lg font-semibold">Diagnóstico técnico</h2>
-                <div className="p-4 bg-yellow-500/10 border border-yellow-500/20 rounded-lg">
-                  <h4 className="text-yellow-400 font-bold mb-2 flex items-center gap-2">
-                    <ShieldCheck className="h-4 w-4" /> Diagnóstico do Core AWS
-                  </h4>
-                  <p className="text-xs text-yellow-200/80 leading-relaxed whitespace-pre-wrap">
-                    Verifique qual projeto Supabase o Core está usando atualmente.
-                    Não altere nada ainda. Apenas faça um diagnóstico mostrando:
-
-                    Qual valor de SUPABASE_URL está sendo carregado pelo container em produção.
-                    Qual SUPABASE_PROJECT_ID está configurado.
-                    Se a SUPABASE_SERVICE_ROLE_KEY pertence ao mesmo projeto da URL.
-                    Informe se o Core está conectado ao projeto:
-
-                    yiwyfiaqehhmngqngxvx.supabase.co
-
-                    ou
-
-                    rbmrnqtkddvjpaznyvtk.supabase.co
-
-                    O objetivo é somente identificar a origem do erro "rpc_get_admin_stats: Invalid API key" antes de alterar configurações.
-                  </p>
-                </div>
                 <Button
                   variant="outline"
                   className="w-full h-11 rounded-xl border-white/10 bg-white/5 text-white hover:bg-white/10"
