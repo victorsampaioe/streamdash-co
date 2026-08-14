@@ -48,11 +48,13 @@ import { ptBR } from "date-fns/locale";
 export const Route = createFileRoute("/_authenticated/app/admin/core-logs")({
   beforeLoad: async ({ context }) => {
     // Apenas admin tem acesso
-    const { data: roles } = await supabase.rpc("has_role", { 
-      _user_id: (context as any).auth?.user?.id, 
-      _role: "admin" 
+    const userId = (context as any)?.user?.id;
+    if (!userId) throw redirect({ to: "/auth" });
+    const { data: isAdmin } = await supabase.rpc("has_role", {
+      _user_id: userId,
+      _role: "admin",
     });
-    if (!roles) {
+    if (!isAdmin) {
       throw redirect({ to: "/app" });
     }
   },
