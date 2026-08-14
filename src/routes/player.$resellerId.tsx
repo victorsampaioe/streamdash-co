@@ -7,8 +7,10 @@ import {
   getPlayerCatalog, 
   validatePlayerSession,
   getPlayerStreamUrl,
-  getPlayerServers
+  getPlayerServers,
+  logoutPlayer
 } from "@/lib/player.functions";
+
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -30,8 +32,12 @@ import {
   Clock,
   ChevronLeft,
   X,
-  PlayCircle
+  PlayCircle,
+  Settings as SettingsIcon,
+  Plus
 } from "lucide-react";
+
+
 import { supabase } from "@/integrations/supabase/client";
 import Hls from "hls.js";
 
@@ -43,6 +49,9 @@ import { ContentCard } from "@/components/player/ContentCard";
 import { SearchOverlay } from "@/components/player/SearchOverlay";
 import { SeriesDetails } from "@/components/player/SeriesDetails";
 import { cn } from "@/lib/utils";
+import { ContentDetailsOverlay } from "@/components/player/ContentDetailsOverlay";
+
+
 
 export const Route = createFileRoute("/player/$resellerId")({
   component: PlayerPage,
@@ -82,6 +91,10 @@ function PlayerPage() {
     newReleases: [],
     liveHighlights: []
   });
+
+  const [selectedItem, setSelectedItem] = useState<any>(null);
+  const [isDetailsOpen, setIsDetailsOpen] = useState(false);
+
 
   // Identidade Visual
   const { data: settings, isLoading: settingsLoading } = useQuery({
@@ -257,6 +270,22 @@ function PlayerPage() {
     />;
   }
 
+  const handleLogout = async () => {
+    if (token) {
+      try {
+        const { logoutPlayer } = await import("@/lib/player.functions");
+        await logoutPlayer({ data: { token } });
+      } catch (err) {
+        console.error("Erro ao encerrar sessão no servidor:", err);
+      }
+    }
+    setToken(null);
+    setSession(null);
+    localStorage.removeItem(`stream_player_token_${resellerId}`);
+    // Limpar outros dados locais se houver
+    toast.success("Sessão encerrada");
+  };
+
   return (
     <div className="min-h-screen bg-neutral-950 text-white flex font-sans">
       <Sidebar 
@@ -267,9 +296,10 @@ function PlayerPage() {
         }}
         brandName={settings?.brand_name ?? undefined}
         logoUrl={settings?.logo_url ?? undefined}
-        onLogout={() => setToken(null)}
+        onLogout={handleLogout}
         token={token!}
       />
+
 
       <main className="flex-1 overflow-y-auto">
         {activeView === "home" && (
@@ -277,7 +307,15 @@ function PlayerPage() {
             <HeroBanner 
               item={homeData.featured} 
               primaryColor={primaryColor}
-              onPlay={(item) => handlePlay(item.stream_id || item.series_id, item.stream_type === "series" ? "series" : (item.stream_type === "live" ? "live" : "movie"))}
+              onPlay={(item: any) => {
+                const type = item.stream_type === "series" ? "series" : (item.stream_type === "live" ? "live" : "movie");
+                if (type === "live") {
+                  handlePlay(item.stream_id || item.series_id, "live");
+                } else {
+                  setSelectedItem(item);
+                  setIsDetailsOpen(true);
+                }
+              }}
             />
 
             <ContentRow 
@@ -285,24 +323,72 @@ function PlayerPage() {
               items={homeData.newReleases} 
               type="movie" 
               primaryColor={primaryColor}
-              onPlay={(item) => handlePlay(item.stream_id, "movie")}
+              onPlay={(item: any) => {
+                setSelectedItem(item);
+                setIsDetailsOpen(true);
+              }}
             />
             <ContentRow 
               title="Destaques Ao Vivo" 
               items={homeData.liveHighlights} 
               type="live" 
               primaryColor={primaryColor}
-              onPlay={(item) => handlePlay(item.stream_id, "live")}
+              onPlay={(item: any) => handlePlay(item.stream_id, "live")}
             />
+
           </div>
         )}
 
 
+        {activeView === "settings" && (
+          <div className="p-6 md:p-12 max-w-2xl mx-auto space-y-8">
+            <h1 className="text-3xl font-bold">Configurações</h1>
+            <Card className="p-6 bg-white/5 border-white/10 space-y-6">
+              <div className="space-y-4">
+                <h2 className="text-xl font-semibold">Sua Conta</h2>
+                <div className="grid gap-4">
+                  <div className="flex items-center justify-between p-4 bg-white/5 rounded-xl">
+                    <div className="flex items-center gap-3">
+                      <User className="h-5 w-5 text-primary" style={{ color: primaryColor }} />
+                      <div>
+                        <p className="text-sm font-medium text-white/90">{session?.xtream_user}</p>
+                        <p className="text-xs text-white/40">Usuário do Servidor</p>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="flex items-center justify-between p-4 bg-white/5 rounded-xl">
+                    <div className="flex items-center gap-3">
+                      <Clock className="h-5 w-5 text-primary" style={{ color: primaryColor }} />
+                      <div>
+                        <p className="text-sm font-medium text-white/90">
+                          {session?.expires_at ? new Date(session.expires_at).toLocaleDateString() : '--'}
+                        </p>
+                        <p className="text-xs text-white/40">Sessão expira em</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="pt-6 border-t border-white/5">
+                <Button 
+                  variant="destructive" 
+                  className="w-full h-12 rounded-xl font-bold"
+                  onClick={handleLogout}
+                >
+                  <LogOut className="mr-2 h-5 w-5" /> Sair da Conta
+                </Button>
+              </div>
+            </Card>
+          </div>
+        )}
+
         {(activeView === "live" || activeView === "movie" || activeView === "series") && (
           <div className="p-6 md:p-12 space-y-8">
+
             <h1 className="text-3xl font-bold capitalize">{activeView === "live" ? "TV Ao Vivo" : activeView === "movie" ? "Filmes" : "Séries"}</h1>
             
-            <div className="flex gap-2 overflow-x-auto pb-4">
+            <div className="flex gap-2 overflow-x-auto pb-4 scrollbar-hide">
               {categories.map((cat) => (
                 <button
                   key={cat.category_id}
@@ -311,7 +397,7 @@ function PlayerPage() {
                     "px-4 py-2 rounded-lg text-sm font-bold whitespace-nowrap transition-all",
                     selectedCategory === cat.category_id 
                       ? "bg-white text-black" 
-                      : "bg-white/5 text-white/60 hover:bg-white/10"
+                      : "bg-white/5 text-white/60 hover:text-white hover:bg-white/10"
                   )}
                 >
                   {cat.category_name}
@@ -319,33 +405,77 @@ function PlayerPage() {
               ))}
             </div>
 
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-6">
-              {content.map((item) => (
-                <ContentCard 
-                  key={item.stream_id || item.series_id} 
-                  item={item} 
-                  type={activeView as "live" | "movie" | "series"} 
-                  primaryColor={primaryColor} 
-                  onClick={(i) => {
-                    if (activeView === "live") handlePlay(i.stream_id, "live");
-                    else if (activeView === "movie") handlePlay(i.stream_id, "movie");
-                    else handleOpenSeries(i);
-                  }}
-                />
-              ))}
-            </div>
+            {loadingContent ? (
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-6">
+                {[...Array(12)].map((_, i) => (
+                  <div key={i} className="aspect-[2/3] bg-white/5 rounded-xl animate-pulse" />
+                ))}
+              </div>
+            ) : (
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-6">
+                {content.map((item) => (
+                  <ContentCard 
+                    key={item.stream_id || item.series_id} 
+                    item={item} 
+                    type={activeView as "live" | "movie" | "series"} 
+                    primaryColor={primaryColor} 
+                    onClick={(i) => {
+                      if (activeView === "live") {
+                        handlePlay(i.stream_id, "live");
+                      } else {
+                        setSelectedItem(i);
+                        setIsDetailsOpen(true);
+                      }
+                    }}
+
+                  />
+                ))}
+              </div>
+            )}
+
           </div>
         )}
 
       </main>
 
+      {selectedItem && (
+        <ContentDetailsOverlay 
+          item={selectedItem}
+          type={activeView === "series" ? "series" : "movie"}
+          isOpen={isDetailsOpen}
+          onClose={() => {
+            setIsDetailsOpen(false);
+            setSelectedItem(null);
+          }}
+          onPlay={(i: any) => {
+            if (activeView === "series") {
+              handleOpenSeries(i);
+            } else {
+              handlePlay(i.stream_id, "movie");
+            }
+            setIsDetailsOpen(false);
+          }}
+          primaryColor={primaryColor}
+        />
+      )}
+
       {/* Overlays */}
+
       <SearchOverlay 
         isOpen={isSearchOpen} 
         onClose={() => setIsSearchOpen(false)}
         token={token!}
         primaryColor={primaryColor}
-        onPlay={(item, type) => handlePlay(item.stream_id || item.series_id || item.id, type)}
+        onPlay={(item: any, type: "live" | "movie" | "series") => {
+          if (type === "live") {
+            handlePlay(item.stream_id || item.id, "live");
+          } else {
+            setSelectedItem(item);
+            setIsDetailsOpen(true);
+            setIsSearchOpen(false);
+          }
+        }}
+
       />
 
       

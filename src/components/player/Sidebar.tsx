@@ -29,12 +29,22 @@ interface SidebarProps {
 }
 
 export function Sidebar({ activeView, onChangeView, brandName, logoUrl, onLogout, token }: SidebarProps) {
-  const { data: serverStatus } = useQuery({
+  const { data: serverStatus, isError } = useQuery({
     queryKey: ["player-server-status", token],
-    queryFn: () => getServerStatus({ data: { token: token! } }),
+    queryFn: async () => {
+      try {
+        return await getServerStatus({ data: { token: token! } });
+      } catch (err) {
+        console.error("Telemetria do servidor indisponível:", err);
+        throw err;
+      }
+    },
     enabled: !!token,
-    refetchInterval: 60000, // Atualiza a cada 1 minuto
+    refetchInterval: 60000,
+    retry: 2,
+    staleTime: 30000,
   });
+
 
   const items = [
     { id: "home", label: "Início", icon: Home },
@@ -88,7 +98,11 @@ export function Sidebar({ activeView, onChangeView, brandName, logoUrl, onLogout
         </nav>
 
         <div className="px-4 py-2 mt-auto">
-          {serverStatus && (
+          {isError ? (
+            <div className="bg-white/5 rounded-xl p-4 border border-white/5 text-center">
+              <span className="text-[10px] text-white/30 font-bold uppercase tracking-wider">Status indisponível</span>
+            </div>
+          ) : serverStatus ? (
             <div className="bg-white/5 rounded-xl p-4 border border-white/5 space-y-3">
               <div className="flex items-center justify-between">
                 <span className="text-[10px] uppercase tracking-widest text-white/40 font-bold">Status do Servidor</span>
@@ -130,7 +144,13 @@ export function Sidebar({ activeView, onChangeView, brandName, logoUrl, onLogout
                 </div>
               </div>
             </div>
+          ) : (
+            <div className="bg-white/5 rounded-xl p-4 border border-white/5 animate-pulse space-y-2">
+              <div className="h-3 w-2/3 bg-white/10 rounded" />
+              <div className="h-8 bg-white/10 rounded" />
+            </div>
           )}
+
         </div>
 
         <nav className="px-4 py-4 space-y-2">
