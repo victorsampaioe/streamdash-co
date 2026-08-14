@@ -1,11 +1,11 @@
-import { createFileRoute, useNavigate, redirect } from "@tanstack/react-router";
-import { ShoppingBag } from "lucide-react";
+import { createFileRoute, useNavigate, redirect, Link } from "@tanstack/react-router";
+import { ShoppingBag, CardHeader, CardTitle, CardContent } from "lucide-react";
 
 import { useMemo, useState, useEffect } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { supabase } from "@/integrations/supabase/client";
-import { Card } from "@/components/ui/card";
+import { Card, CardContent as CardContentComponent, CardHeader as CardHeaderComponent, CardTitle as CardTitleComponent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";

@@ -216,7 +216,7 @@ function CoreLogsPage() {
                   filteredLogs?.map((log) => (
                     <TableRow key={log.id} className="border-white/5 hover:bg-white/5 transition-colors group">
                       <TableCell className="font-mono text-xs text-muted-foreground">
-                        {format(new Date(log.created_at), "dd/MM/yyyy HH:mm:ss", { locale: ptBR })}
+                        {log.created_at ? format(new Date(log.created_at as string), "dd/MM/yyyy HH:mm:ss", { locale: ptBR }) : "-"}
                       </TableCell>
                       <TableCell>
                         <Badge variant="outline" className="font-mono bg-blue-500/10 text-blue-400 border-blue-500/20">
