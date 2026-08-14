@@ -111,7 +111,8 @@ function PlayerPage() {
   const toggleFavoriteMutation = useMutation({
     mutationFn: toggleFavorite,
     onSuccess: (_, variables) => {
-      const { contentId, contentType, isFavorite } = variables.data;
+      const data = variables.data as any;
+      const { contentId, contentType, isFavorite } = data;
       if (isFavorite) {
         setFavorites(prev => [...prev, { content_id: contentId, content_type: contentType }]);
         toast.success("Adicionado à Minha Lista");
@@ -484,21 +485,24 @@ function PlayerPage() {
       {selectedItem && (
         <ContentDetailsOverlay 
           item={selectedItem}
-          type={activeView === "series" ? "series" : "movie"}
+          type={activeView === "series" || selectedItem.series_id ? "series" : "movie"}
           isOpen={isDetailsOpen}
           onClose={() => {
             setIsDetailsOpen(false);
             setSelectedItem(null);
           }}
           onPlay={(i: any) => {
-            if (activeView === "series") {
+            const isSeries = activeView === "series" || i.series_id || selectedItem.series_id;
+            if (isSeries) {
               handleOpenSeries(i);
             } else {
-              handlePlay(i.stream_id, "movie");
+              handlePlay(i.stream_id || i.id, "movie");
             }
             setIsDetailsOpen(false);
           }}
           primaryColor={primaryColor}
+          isFavorite={favorites.some(f => f.content_id === (selectedItem.stream_id || selectedItem.series_id || selectedItem.id).toString())}
+          onToggleFavorite={() => handleToggleFavorite(selectedItem)}
         />
       )}
 
