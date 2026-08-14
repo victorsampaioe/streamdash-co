@@ -331,12 +331,12 @@ function AdminPage() {
 
         <TabsContent value="core-audit" className="space-y-6">
           <Card className="bg-neutral-900/50 border-white/5">
-            <CardHeaderComponent className="flex flex-row items-center justify-between pb-2">
+            <CardHeader className="flex flex-row items-center justify-between pb-2">
               <div className="space-y-1">
-                <CardTitleComponent className="text-xl font-bold flex items-center gap-2">
+                <CardTitle className="text-xl font-bold flex items-center gap-2">
                   <ShieldCheck className="h-5 w-5 text-primary" />
                   Auditoria Core AWS
-                </CardTitleComponent>
+                </CardTitle>
                 <DialogDescription>Monitoramento das tarefas delegadas para a infraestrutura VPS.</DialogDescription>
               </div>
               <Button asChild variant="outline" size="sm" className="gap-2">
@@ -344,8 +344,8 @@ function AdminPage() {
                   <ExternalLink className="h-4 w-4" /> Ver Todos os Logs
                 </Link>
               </Button>
-            </CardHeaderComponent>
-            <CardContentComponent>
+            </CardHeader>
+            <CardContent>
                <div className="flex items-center gap-8 py-4">
                   <div className="text-center">
                     <p className="text-sm text-muted-foreground uppercase font-bold tracking-wider">Sucesso</p>
@@ -363,7 +363,7 @@ function AdminPage() {
                <p className="text-xs text-muted-foreground border-t border-white/5 pt-4">
                  Os logs completos mostram payload enviado, resposta JSON e tempo exato de cada verificação DNS, HTTP e IPTV.
                </p>
-            </CardContentComponent>
+            </CardContent>
           </Card>
         </TabsContent>
 
