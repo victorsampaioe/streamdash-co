@@ -598,7 +598,32 @@ function PlayerPage() {
                 ))}
               </div>
             )}
-
+            {!loadingContent && content.length >= 40 && (
+              <div className="flex justify-center pt-8">
+                <Button 
+                  variant="outline" 
+                  className="bg-white/5 border-white/10 text-white hover:bg-white/10"
+                  onClick={async () => {
+                    const actionMap = { live: "get_live_streams", movie: "get_vod_streams", series: "get_series" } as const;
+                    const action = actionMap[activeView as keyof typeof actionMap];
+                    const moreData = await getPlayerCatalog({ 
+                      data: { 
+                        token: token!, 
+                        action, 
+                        categoryId: selectedCategory || undefined,
+                        offset: content.length,
+                        limit: 40
+                      } 
+                    });
+                    if (Array.isArray(moreData)) {
+                      setContent(prev => [...prev, ...moreData]);
+                    }
+                  }}
+                >
+                  Carregar Mais
+                </Button>
+              </div>
+            )}
           </div>
         )}
 
