@@ -196,9 +196,13 @@ export const Route = createFileRoute("/api/public/core/task")({
           return new Response("Bad Request", { status: 400 });
         }
         try {
-          return Response.json(await execute(input));
+          const result = await execute(input);
+          return Response.json({ success: true, result });
         } catch (e: any) {
-          return new Response(`Error: ${e?.message ?? "unknown"}`, { status: 500 });
+          return Response.json(
+            { success: false, error: e?.message ?? "unknown" },
+            { status: 500 },
+          );
         }
       },
     },

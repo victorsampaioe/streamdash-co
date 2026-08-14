@@ -164,7 +164,12 @@ export async function callCore<T>(task: CoreTask, payload: Record<string, unknow
       });
     }
 
-    return json as T;
+    // O Core responde { success, result }. Versões antigas devolvem o resultado cru.
+    const unwrapped =
+      json && typeof json === "object" && "success" in json && "result" in json
+        ? (json as any).result
+        : json;
+    return unwrapped as T;
   } catch (e: any) {
     const elapsed = Date.now() - start;
     const isTimeout = e.name === "AbortError";

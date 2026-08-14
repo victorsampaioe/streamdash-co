@@ -175,26 +175,41 @@ async function recordCheck(serverId: string, p: ProbeResult, sslDays: number | n
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
+/**
+ * Executa a sonda no Core AWS (worker externo, IP da EC2) e persiste aqui.
+ * Se o Core estiver indisponível, roda localmente.
+ */
+async function probeViaCore(host: string): Promise<ProbeResult & { sslDays: number | null }> {
+  const { runOnCore } = await import("./core-api.server");
+  return await runOnCore("probe-http", { host }, async () => {
+    const p = await probe(host);
+    let sslDays: number | null = null;
+    try {
+      sslDays = await getSslDaysRemaining(host);
+    } catch {
+      /* opcional */
+    }
+    return { ...p, sslDays };
+  });
+}
+
 /** Modo "Confirmação": novas verificações a cada ~20s, gravando cada uma no histórico. */
 async function confirmationBurst(server: ServerRow, probes: number, sslDays: number | null) {
   const results: ProbeResult[] = [];
   for (let i = 0; i < probes; i++) {
     await sleep(CONFIRM_PROBE_INTERVAL_MS);
-    const p = await probe(server.host);
-    await recordCheck(server.id, p, sslDays);
+    const p = await probeViaCore(server.host);
+    await recordCheck(server.id, p, p.sslDays ?? sslDays);
     results.push(p);
   }
   return results;
 }
 
 async function performCheck(server: ServerRow) {
-  const first = await probe(server.host);
+  const first = await probeViaCore(server.host);
 
-  // SSL (oportunista, não fatal)
-  let sslDays: number | null = null;
-  try {
-    sslDays = await getSslDaysRemaining(server.host);
-  } catch { /* ignore */ }
+  // SSL vem junto da sonda do Core (ou do fallback local).
+  const sslDays: number | null = first.sslDays ?? null;
 
   await recordCheck(server.id, first, sslDays);
 
