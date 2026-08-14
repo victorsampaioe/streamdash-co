@@ -282,6 +282,19 @@ export const diagnosePlayerCatalog = createServerFn({ method: "POST" })
     const { coreApiUrl, useCore, callCore } = await import("./core-api.server");
     const report = await probeXtreamEndpoints(session.server_id, creds, data.seriesId);
 
+    // ETAPA 4 — saúde do Core AWS (confirma se o domínio realmente aponta para a VPS)
+    let coreSaude: any = { alcancavel: false };
+    const coreBase = coreApiUrl();
+    if (coreBase) {
+      try {
+        const res = await fetch(`${coreBase}/api/public/core/task`, { signal: AbortSignal.timeout(10_000) });
+        coreSaude = { alcancavel: true, status: res.status, ...(await res.json().catch(() => ({}))) };
+      } catch (e: any) {
+        coreSaude = { alcancavel: false, erro: String(e?.message ?? e) };
+      }
+    }
+
+
     // ETAPA 4 — mesmo teste, porém passando pelo Core AWS (IP da VPS)
     const viaCore: any[] = [];
     if (useCore()) {
