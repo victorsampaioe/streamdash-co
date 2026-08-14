@@ -36,7 +36,11 @@ import {
   X,
   PlayCircle,
   Settings as SettingsIcon,
-  Plus
+  Plus,
+  ArrowRight,
+  TrendingUp,
+  History,
+  CheckCircle2
 } from "lucide-react";
 
 
@@ -115,7 +119,7 @@ function PlayerPage() {
       const data = variables.data as any;
       const { contentId, contentType, isFavorite } = data;
       if (isFavorite) {
-        setFavorites(prev => [...prev, { content_id: contentId, content_type: contentType }]);
+        setFavorites(prev => [...prev, { content_id: contentId, content_type: contentType, name: selectedItem?.name || selectedItem?.title }]);
         toast.success("Adicionado à Minha Lista");
       } else {
         setFavorites(prev => prev.filter(f => f.content_id !== contentId));
@@ -169,31 +173,51 @@ function PlayerPage() {
   useEffect(() => {
     if (session && token && activeView === "home") {
       setLoadingContent(true);
-      // Fetch initial data for rows
+      const controller = new AbortController();
       const fetchHome = async () => {
         try {
-          // Em um cenário real, teríamos endpoints otimizados para a Home.
-          // Aqui simulamos buscando as primeiras categorias de cada tipo.
+          const fetchItems = async (action: string, catId?: string) => {
+            if (controller.signal.aborted) return [];
+            return await getPlayerCatalog({ 
+              data: { 
+                token, 
+                action: action as any, 
+                categoryId: catId,
+                offset: 0,
+                limit: 15
+              } 
+            });
+          };
+
+          // Buscar Novos Lançamentos (VOD)
           const vodCats = await getPlayerCatalog({ data: { token, action: "get_vod_categories" } });
           if (Array.isArray(vodCats) && vodCats.length > 0) {
             const firstCat = vodCats[0];
-            const vods = await getPlayerCatalog({ data: { token, action: "get_vod_streams", categoryId: firstCat.category_id } });
-            const list = Array.isArray(vods) ? vods : [];
+            const list = await fetchItems("get_vod_streams", firstCat.category_id);
             setHomeData(prev => ({ 
               ...prev, 
-              featured: list[0] || null,
-              newReleases: list.slice(1, 15)
+              featured: Array.isArray(list) ? list[0] || null : null,
+              newReleases: Array.isArray(list) ? list.slice(1, 15) : []
             }));
           }
 
+          // Buscar Canais Ao Vivo
           const liveCats = await getPlayerCatalog({ data: { token, action: "get_live_categories" } });
           if (Array.isArray(liveCats) && liveCats.length > 0) {
             const firstCat = liveCats[0];
-            const lives = await getPlayerCatalog({ data: { token, action: "get_live_streams", categoryId: firstCat.category_id } });
+            const list = await fetchItems("get_live_streams", firstCat.category_id);
             setHomeData(prev => ({ 
               ...prev, 
-              liveHighlights: Array.isArray(lives) ? lives.slice(0, 10) : []
+              liveHighlights: Array.isArray(list) ? list.slice(0, 10) : []
             }));
+          }
+
+          // Buscar Favoritos com metadados (amostra)
+          const favs = await getFavorites({ data: { token } });
+          if (favs && favs.length > 0) {
+            // Em um sistema real, buscaríamos detalhes dos primeiros 10 itens
+            // Por enquanto, apenas atualizamos a UI se houver favoritos
+            setFavorites(favs);
           }
         } catch (err) {
           console.error("Error loading home data", err);
@@ -202,6 +226,7 @@ function PlayerPage() {
         }
       };
       fetchHome();
+      return () => controller.abort();
     }
   }, [session, token, activeView]);
 
@@ -242,8 +267,13 @@ function PlayerPage() {
         try {
           if (activeView === ("mylist" as any)) {
             const favs = await getFavorites({ data: { token } });
-            // TODO: Implementar busca de metadados para favoritos
-            setContent([]); 
+            // Buscar metadados básicos para os favoritos se necessário
+            setContent(Array.isArray(favs) ? favs.map((f: any) => ({ 
+              ...f, 
+              name: f.name || `Item ${f.content_id}`, 
+              stream_id: f.content_id,
+              series_id: f.content_type === "series" ? f.content_id : undefined
+            })) : []); 
             setLoadingContent(false);
             return;
           }
@@ -256,7 +286,14 @@ function PlayerPage() {
             } as const;
             
             const action = actionMap[activeView as keyof typeof actionMap];
-            const data = await getPlayerCatalog({ data: { token, action, categoryId: selectedCategory || undefined } });
+            const data = await getPlayerCatalog({ 
+              data: { 
+                token, 
+                action, 
+                categoryId: selectedCategory || undefined,
+                limit: 40 // Paginação inicial
+              } 
+            });
             
             if (!controller.signal.aborted) {
               setContent(Array.isArray(data) ? data : []);
@@ -346,7 +383,11 @@ function PlayerPage() {
         activeView={activeView} 
         onChangeView={(v) => {
           if (v === "search") setIsSearchOpen(true);
-          else setActiveView(v);
+          else {
+            setActiveView(v);
+            setSelectedCategory(null); // Resetar categoria ao trocar aba
+            setContent([]); // Limpar conteúdo para mostrar skeleton
+          }
         }}
         brandName={settings?.brand_name ?? undefined}
         logoUrl={settings?.logo_url ?? undefined}
@@ -360,6 +401,7 @@ function PlayerPage() {
           <div className="p-6 md:p-12 space-y-12">
             <HeroBanner 
               item={homeData.featured} 
+              items={[homeData.featured, ...homeData.newReleases.slice(0, 4)].filter(Boolean)}
               primaryColor={primaryColor}
               onPlay={(item: any) => {
                 const type = item.stream_type === "series" ? "series" : (item.stream_type === "live" ? "live" : "movie");
@@ -371,24 +413,14 @@ function PlayerPage() {
                 }
               }}
               onMyList={(item: any) => handleToggleFavorite(item)}
-              isFavorite={favorites.some(f => f.content_id === (homeData.featured?.stream_id || homeData.featured?.series_id || homeData.featured?.id)?.toString())}
+              isFavorite={(item: any) => favorites.some(f => f.content_id === (item?.stream_id || item?.series_id || item?.id)?.toString())}
             />
 
-            <ContentRow 
-              title="Continuar Assistindo" 
-              items={[]} 
-              type="movie" 
-              primaryColor={primaryColor}
-              onPlay={(item: any) => {
-                setSelectedItem(item);
-                setIsDetailsOpen(true);
-              }}
-            />
-
-            {favorites.length > 0 && (
-               <ContentRow 
-                title="Minha Lista" 
-                items={[]} // TODO: Carregar metadados dos favoritos
+            {/* Continuar Assistindo Section */}
+            {history.length > 0 && (
+              <ContentRow 
+                title="Continuar Assistindo" 
+                items={history} 
                 type="movie" 
                 primaryColor={primaryColor}
                 onPlay={(item: any) => {
@@ -398,6 +430,19 @@ function PlayerPage() {
               />
             )}
 
+            {/* Minha Lista Section */}
+            {favorites.length > 0 && (
+               <ContentRow 
+                title="Minha Lista" 
+                items={favorites.map(f => ({ ...f, name: f.name || `Item ${f.content_id}` }))} 
+                type="movie" 
+                primaryColor={primaryColor}
+                onPlay={(item: any) => {
+                  setSelectedItem(item);
+                  setIsDetailsOpen(true);
+                }}
+              />
+            )}
 
             <ContentRow 
               title="Novidades" 
@@ -409,6 +454,18 @@ function PlayerPage() {
                 setIsDetailsOpen(true);
               }}
             />
+
+            <ContentRow 
+              title="Recomendados para Você" 
+              items={homeData.newReleases.slice().reverse().slice(0, 10)} 
+              type="movie" 
+              primaryColor={primaryColor}
+              onPlay={(item: any) => {
+                setSelectedItem(item);
+                setIsDetailsOpen(true);
+              }}
+            />
+
             <ContentRow 
               title="Destaques Ao Vivo" 
               items={homeData.liveHighlights} 
@@ -423,15 +480,32 @@ function PlayerPage() {
         {activeView === ("mylist" as any) && (
           <div className="p-6 md:p-12 space-y-8">
             <h1 className="text-3xl font-bold">Minha Lista</h1>
-            <div className="flex flex-col items-center justify-center py-20 text-center space-y-4">
-              <div className="h-20 w-20 rounded-full bg-white/5 flex items-center justify-center">
-                <Plus className="h-10 w-10 text-white/20" />
+            {content.length > 0 ? (
+              <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-6">
+                {content.map((item) => (
+                  <ContentCard 
+                    key={item.content_id || item.id} 
+                    item={item} 
+                    type={item.content_type || "movie"} 
+                    primaryColor={primaryColor} 
+                    onClick={(i) => {
+                      setSelectedItem(i);
+                      setIsDetailsOpen(true);
+                    }} 
+                  />
+                ))}
               </div>
-              <div>
-                <h2 className="text-xl font-bold">Em breve</h2>
-                <p className="text-white/40">Estamos finalizando a sincronização da sua lista.</p>
+            ) : (
+              <div className="flex flex-col items-center justify-center py-20 text-center space-y-4">
+                <div className="h-20 w-20 rounded-full bg-white/5 flex items-center justify-center">
+                  <Star className="h-10 w-10 text-white/20" />
+                </div>
+                <div>
+                  <h2 className="text-xl font-bold">Sua lista está vazia</h2>
+                  <p className="text-white/40">Adicione filmes e séries para assistir mais tarde.</p>
+                </div>
               </div>
-            </div>
+            )}
           </div>
         )}
 
@@ -529,7 +603,32 @@ function PlayerPage() {
                 ))}
               </div>
             )}
-
+            {!loadingContent && content.length >= 40 && (
+              <div className="flex justify-center pt-8">
+                <Button 
+                  variant="outline" 
+                  className="bg-white/5 border-white/10 text-white hover:bg-white/10"
+                  onClick={async () => {
+                    const actionMap = { live: "get_live_streams", movie: "get_vod_streams", series: "get_series" } as const;
+                    const action = actionMap[activeView as keyof typeof actionMap];
+                    const moreData = await getPlayerCatalog({ 
+                      data: { 
+                        token: token!, 
+                        action, 
+                        categoryId: selectedCategory || undefined,
+                        offset: content.length,
+                        limit: 40
+                      } 
+                    });
+                    if (Array.isArray(moreData)) {
+                      setContent(prev => [...prev, ...moreData]);
+                    }
+                  }}
+                >
+                  Carregar Mais
+                </Button>
+              </div>
+            )}
           </div>
         )}
 
@@ -654,12 +753,13 @@ function PlayerPage() {
   function handleOpenSeries(item: any) {
     setSelectedSeriesInfo({ info: item, episodes: {} });
     setLoadingSeries(true);
+    setIsDetailsOpen(false);
     
     getPlayerCatalog({ 
       data: { 
         token: token!, 
         action: "get_series_info", 
-        contentId: item.series_id 
+        contentId: (item.series_id || item.id).toString()
       } 
     })
     .then((data: any) => {

@@ -23,16 +23,16 @@ export function ContentCard({ item, type, primaryColor, onClick, onInfoClick }: 
 
   return (
     <div 
-      className="group relative flex flex-col gap-2 transition-transform duration-300 hover:z-10"
+      className="group relative flex flex-col gap-2 transition-all duration-300 hover:z-20"
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
     >
       <div 
         className={cn(
-          "relative overflow-hidden rounded-xl bg-neutral-900 shadow-lg cursor-pointer transition-all duration-300",
-          isHovered ? "ring-2 scale-105" : "scale-100"
+          "relative overflow-hidden rounded-xl bg-neutral-900 shadow-lg cursor-pointer transition-all duration-500",
+          isHovered ? "ring-2 scale-110 -translate-y-2 shadow-2xl shadow-black/50" : "scale-100"
         )}
-        style={isHovered ? { borderColor: primaryColor, boxShadow: `0 0 0 2px ${primaryColor}` } : {}}
+        style={isHovered ? { borderColor: primaryColor, boxShadow: `0 20px 25px -5px rgb(0 0 0 / 0.5), 0 0 0 2px ${primaryColor}` } : {}}
         onClick={() => onClick(item)}
 
       >

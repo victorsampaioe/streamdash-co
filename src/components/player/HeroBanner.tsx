@@ -1,15 +1,30 @@
-import { Play, Plus, Info, Star, Check } from "lucide-react";
+import { Play, Plus, Info, Star, Check, ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useState, useEffect } from "react";
+import { cn } from "@/lib/utils";
 
 interface HeroBannerProps {
-  item: any;
+  items?: any[]; // Array para rotação
+  item: any; // Fallback para item único
   onPlay: (item: any) => void;
   onMyList?: (item: any) => void;
   primaryColor?: string;
-  isFavorite?: boolean;
+  isFavorite?: (item: any) => boolean;
 }
 
-export function HeroBanner({ item, onPlay, onMyList, primaryColor, isFavorite }: HeroBannerProps) {
+export function HeroBanner({ items = [], item: fallbackItem, onPlay, onMyList, primaryColor, isFavorite }: HeroBannerProps) {
+  const [currentIndex, setCurrentIndex] = useState(0);
+  const rotationItems = items.length > 0 ? items : (fallbackItem ? [fallbackItem] : []);
+  const item = rotationItems[currentIndex];
+
+  useEffect(() => {
+    if (rotationItems.length <= 1) return;
+    const interval = setInterval(() => {
+      setCurrentIndex((prev) => (prev + 1) % rotationItems.length);
+    }, 8000);
+    return () => clearInterval(interval);
+  }, [rotationItems.length]);
+
   if (!item) return null;
 
   const title = item.name || item.title;
@@ -19,17 +34,50 @@ export function HeroBanner({ item, onPlay, onMyList, primaryColor, isFavorite }:
   const year = item.year || (item.releaseDate ? new Date(item.releaseDate).getFullYear() : null);
 
   return (
-    <div className="relative w-full h-[70vh] min-h-[500px] overflow-hidden rounded-3xl mb-8 group">
+    <div className="relative w-full h-[70vh] min-h-[500px] overflow-hidden rounded-3xl mb-8 group animate-in fade-in duration-700">
       {/* Background Image with Gradient */}
-      <div className="absolute inset-0">
+      <div className="absolute inset-0 transition-opacity duration-1000">
         <img 
+          key={item.stream_id || item.series_id || item.id}
           src={background} 
           alt={title}
-          className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
+          className="w-full h-full object-cover transition-transform duration-10000 group-hover:scale-110 animate-pulse-slow"
         />
         <div className="absolute inset-0 bg-gradient-to-t from-neutral-950 via-neutral-950/60 to-transparent" />
         <div className="absolute inset-0 bg-gradient-to-r from-neutral-950/80 via-transparent to-transparent" />
       </div>
+
+      {/* Navigation Arrows */}
+      {rotationItems.length > 1 && (
+        <>
+          <button 
+            onClick={() => setCurrentIndex(prev => (prev - 1 + rotationItems.length) % rotationItems.length)}
+            className="absolute left-4 top-1/2 -translate-y-1/2 z-20 h-12 w-12 rounded-full bg-black/20 backdrop-blur-md border border-white/10 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:bg-black/40 text-white"
+          >
+            <ChevronLeft className="h-6 w-6" />
+          </button>
+          <button 
+            onClick={() => setCurrentIndex(prev => (prev + 1) % rotationItems.length)}
+            className="absolute right-4 top-1/2 -translate-y-1/2 z-20 h-12 w-12 rounded-full bg-black/20 backdrop-blur-md border border-white/10 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:bg-black/40 text-white"
+          >
+            <ChevronRight className="h-6 w-6" />
+          </button>
+          
+          {/* Indicators */}
+          <div className="absolute bottom-8 right-8 z-20 flex gap-2">
+            {rotationItems.map((_, i) => (
+              <div 
+                key={i}
+                className={cn(
+                  "h-1.5 transition-all duration-300 rounded-full",
+                  i === currentIndex ? "w-8 bg-primary" : "w-2 bg-white/20"
+                )}
+                style={i === currentIndex ? { backgroundColor: primaryColor } : {}}
+              />
+            ))}
+          </div>
+        </>
+      )}
 
       {/* Content */}
       <div className="absolute bottom-0 left-0 p-8 md:p-16 w-full md:w-2/3 space-y-6">
@@ -72,8 +120,8 @@ export function HeroBanner({ item, onPlay, onMyList, primaryColor, isFavorite }:
             className="h-14 px-8 text-lg font-bold rounded-xl bg-white/5 border-white/10 hover:bg-white/10 transition-all text-white"
             onClick={() => onMyList?.(item)}
           >
-            {isFavorite ? <Check className="h-6 w-6 text-green-500" /> : <Plus className="h-6 w-6" />}
-            {isFavorite ? "Na Minha Lista" : "Minha Lista"}
+            {isFavorite?.(item) ? <Check className="h-6 w-6 text-green-500" /> : <Plus className="h-6 w-6" />}
+            {isFavorite?.(item) ? "Na Minha Lista" : "Minha Lista"}
           </Button>
 
           <Button 
