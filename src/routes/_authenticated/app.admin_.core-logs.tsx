@@ -45,7 +45,7 @@ import {
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
-export const Route = createFileRoute("/_authenticated/app/admin/core-logs")({
+export const Route = createFileRoute("/_authenticated/app/admin_/core-logs")({
   beforeLoad: async ({ context }) => {
     // Apenas admin tem acesso
     const userId = (context as any)?.user?.id;
