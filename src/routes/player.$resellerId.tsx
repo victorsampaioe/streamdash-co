@@ -588,6 +588,43 @@ function PlayerPage() {
               </div>
 
               <div className="pt-6 border-t border-white/5 space-y-3">
+                <div className="p-4 bg-yellow-500/10 border border-yellow-500/20 rounded-lg">
+                  <h4 className="text-yellow-400 font-bold mb-2 flex items-center gap-2">
+                    <ShieldCheck className="h-4 w-4" /> Localizar projeto Supabase correto usado pelo Core AWS (diagnóstico completo)
+                  </h4>
+                  <p className="text-xs text-yellow-200/80 leading-relaxed whitespace-pre-wrap">
+                    Preciso localizar a origem do projeto Supabase que o Core AWS está usando atualmente.
+
+                    O diagnóstico da VPS mostrou:
+                    SUPABASE_URL=https://yiwyfiaqehhmngqngxvx.supabase.co
+                    SUPABASE_PROJECT_ID=yiwyfiaqehhmngqngxvx
+
+                    Porém não consigo localizar esse projeto no meu painel Supabase.
+
+                    Preciso que você faça uma auditoria e informe:
+
+                    1. Identificação do projeto
+                    Encontrar qual projeto Supabase corresponde a: yiwyfiaqehhmngqngxvx
+                    Informar: Nome do projeto; Organização onde está; Se pertence ao Lovable Cloud; Data aproximada de criação (se disponível).
+
+                    2. Confirmar se esse é o banco oficial do Stream Monitor
+                    Verificar se esse projeto contém as tabelas utilizadas pelo sistema: servers, incidents, core_execution_logs, alertas, usuários, revendedores, permissões, dados do monitoramento.
+                    Preciso saber se esse é: ✅ banco principal atual ou ❌ banco antigo/teste.
+
+                    3. Localizar as credenciais corretas
+                    Preciso saber onde pegar as chaves desse projeto.
+                    Informar exatamente: URL do Supabase; Project ID; Publishable/anon key; Service Role Key (Legacy) correta para o backend/Core AWS.
+
+                    4. Verificar por que existe conflito
+                    O Core AWS está apresentando: rpc_get_admin_stats: Invalid API key.
+                    Confirmar: Qual chave o projeto espera; Se houve troca de Supabase; Se o sistema migrou para outro projeto.
+
+                    5. Não criar novo Supabase
+                    Importante: Não criar novo projeto. Não alterar banco. Não migrar nada. Apenas localizar o projeto existente e informar as credenciais corretas.
+
+                    Objetivo: Deixar o Core AWS conectado ao banco correto.
+                  </p>
+                </div>
                 <Button
                   variant="outline"
                   className="w-full h-11 rounded-xl border-white/10 bg-white/5 text-white hover:bg-white/10"
