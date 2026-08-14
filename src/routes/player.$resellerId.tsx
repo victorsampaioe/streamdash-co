@@ -111,11 +111,12 @@ function PlayerPage() {
   const toggleFavoriteMutation = useMutation({
     mutationFn: toggleFavorite,
     onSuccess: (_, variables) => {
-      if (variables.data.isFavorite) {
-        setFavorites(prev => [...prev, { content_id: variables.data.contentId, content_type: variables.data.contentType }]);
+      const { contentId, contentType, isFavorite } = variables.data;
+      if (isFavorite) {
+        setFavorites(prev => [...prev, { content_id: contentId, content_type: contentType }]);
         toast.success("Adicionado à Minha Lista");
       } else {
-        setFavorites(prev => prev.filter(f => f.content_id !== variables.data.contentId));
+        setFavorites(prev => prev.filter(f => f.content_id !== contentId));
         toast.success("Removido da Minha Lista");
       }
     }

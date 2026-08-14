@@ -21,7 +21,9 @@ export function ContentDetailsOverlay({
   isOpen, 
   onClose, 
   onPlay,
-  primaryColor 
+  primaryColor,
+  isFavorite,
+  onToggleFavorite
 }: ContentDetailsOverlayProps) {
   const { data: metadata, isLoading } = useQuery({
     queryKey: ["tmdb-metadata", item?.name || item?.title, type],
