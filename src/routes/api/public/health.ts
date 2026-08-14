@@ -79,13 +79,14 @@ export const Route = createFileRoute("/api/public/health")({
             headers: { "cache-control": "no-store" },
           });
         }
+        const isCore = process.env.IS_CORE === "true";
         return Response.json(
           {
             status: "ok",
-            service: "stream-monitor-core",
-            isCore: process.env.IS_CORE === "true",
-            worker: process.env.IS_CORE === "true",
-            database: process.env.IS_CORE === "true" ? false : Boolean(process.env.SUPABASE_SERVICE_ROLE_KEY),
+            service: isCore ? "stream-monitor-core-worker" : "stream-monitor-panel",
+            isCore,
+            worker: isCore,
+            database: false,
             hasSecret: Boolean(process.env.CRON_SECRET),
             time: new Date().toISOString(),
           },
