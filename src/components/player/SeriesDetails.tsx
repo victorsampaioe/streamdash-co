@@ -23,7 +23,20 @@ interface SeriesDetailsProps {
 
 export function SeriesDetails({ series, info, loading, onClose, onPlay, primaryColor }: SeriesDetailsProps) {
   const [selectedSeason, setSelectedSeason] = useState<number>(1);
-  const seasons = info?.episodes ? Object.keys(info.episodes).map(Number).sort((a, b) => a - b) : [];
+  
+  // Normalização segura das temporadas
+  const seasons = useMemo(() => {
+    if (!info?.episodes) return [];
+    try {
+      return Object.keys(info.episodes)
+        .map(Number)
+        .filter(n => !isNaN(n))
+        .sort((a, b) => a - b);
+    } catch (e) {
+      console.error("[SeriesDetails] Erro ao processar temporadas:", e);
+      return [];
+    }
+  }, [info?.episodes]);
   
   useEffect(() => {
     if (seasons.length > 0 && !seasons.includes(selectedSeason)) {
@@ -31,7 +44,10 @@ export function SeriesDetails({ series, info, loading, onClose, onPlay, primaryC
     }
   }, [seasons, selectedSeason]);
 
-  const episodes = info?.episodes?.[selectedSeason] || [];
+  const episodes = useMemo(() => {
+    const list = info?.episodes?.[selectedSeason.toString()] || info?.episodes?.[selectedSeason] || [];
+    return Array.isArray(list) ? list : [];
+  }, [info?.episodes, selectedSeason]);
 
   return (
     <div className="fixed inset-0 z-[100] bg-neutral-950 overflow-y-auto animate-in fade-in zoom-in-95 duration-300">

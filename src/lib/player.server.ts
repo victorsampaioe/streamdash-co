@@ -39,8 +39,11 @@ export function buildXtreamCatalogUrl(
   });
   if (opts.categoryId) params.set("category_id", opts.categoryId);
   if (opts.contentId) {
-    if (opts.action === "get_series_info" || opts.action === "get_episodes_list") params.set("series_id", opts.contentId);
-    else params.set("vod_id", opts.contentId);
+    if (opts.action === "get_series_info" || opts.action === "get_episodes_list") {
+      params.set("series_id", opts.contentId);
+    } else {
+      params.set("vod_id", opts.contentId);
+    }
   }
   return `${base}/player_api.php?${params.toString()}`;
 }
@@ -58,25 +61,44 @@ export async function fetchXtreamCatalog(
     .maybeSingle();
   if (!server) throw new Error("Servidor não encontrado");
 
-  const url = buildXtreamCatalogUrl(server.host, creds, opts);
   const { UA_PLAYER } = await import("./iptv.server");
 
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), 20_000);
-  try {
-    const res = await fetch(url, { headers: { "user-agent": UA_PLAYER }, signal: controller.signal });
-    const text = await res.text();
-    if (!res.ok) {
-      console.error(`[player-catalog] ${opts.action} host=${server.host} status=${res.status} body=${text.slice(0, 200)}`);
-      throw new Error(`Servidor IPTV respondeu ${res.status}`);
-    }
-    let json: unknown;
+  const runRequest = async (action: string) => {
+    const url = buildXtreamCatalogUrl(server.host, creds, { ...opts, action });
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 20_000);
     try {
-      json = JSON.parse(text);
-    } catch {
-      console.error(`[player-catalog] resposta não-JSON host=${server.host} body=${text.slice(0, 200)}`);
-      throw new Error("Resposta inválida do servidor IPTV");
+      const res = await fetch(url, { headers: { "user-agent": UA_PLAYER }, signal: controller.signal });
+      const text = await res.text();
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      return JSON.parse(text);
+    } finally {
+      clearTimeout(timer);
     }
+  };
+
+  try {
+    let json: any = await runRequest(opts.action);
+
+    // Fallback para séries: se get_episodes_list falhar ou for vazio, tenta get_series_info
+    if (opts.action === "get_episodes_list" && (!json || (typeof json === "object" && Object.keys(json).length === 0))) {
+      console.log(`[player-catalog] fallback para get_series_info para id=${opts.contentId}`);
+      json = await runRequest("get_series_info");
+    }
+
+    // Normalização para o componente SeriesDetails
+    if (opts.action === "get_episodes_list" || opts.action === "get_series_info") {
+      // Garantir estrutura: { info: {}, episodes: { "1": [], "2": [] } }
+      if (json && !json.episodes && json.info) {
+        // Já está no formato correto mas talvez sem episódios?
+      } else if (json && json.episodes) {
+        // OK
+      } else if (json && typeof json === "object" && !json.info) {
+        // Pode ser a resposta direta de get_series_info que às vezes vem diferente
+        json = { info: json, episodes: json.episodes || {} };
+      }
+    }
+
     // Paginação local se for array
     if (Array.isArray(json) && opts.limit !== undefined) {
       const start = opts.offset || 0;
@@ -84,12 +106,10 @@ export async function fetchXtreamCatalog(
       json = json.slice(start, end);
     }
     
-    console.log(
-      `[player-catalog] host=${server.host} action=${opts.action} itens=${Array.isArray(json) ? json.length : "objeto"}`
-    );
     return json;
-  } finally {
-    clearTimeout(timer);
+  } catch (err) {
+    console.error(`[player-catalog] falha na action=${opts.action}:`, err);
+    throw err;
   }
 }
 
