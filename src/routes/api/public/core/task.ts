@@ -1,6 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { z } from "zod";
-import { supabaseAdmin } from "@/integrations/supabase/client.server";
 
 /**
  * Endpoint executado no Core AWS (core.streammonitor.site).
@@ -52,6 +51,23 @@ function authorized(request: Request): boolean {
   const secret = process.env.CRON_SECRET;
   const given = request.headers.get("x-cron-secret");
   return Boolean(secret && given && given === secret);
+}
+
+/**
+ * Modo worker (IS_CORE=true): a VPS não tem credenciais do banco.
+ * Só executa tarefas stateless — tudo que precisa de banco fica no Painel.
+ */
+const WORKER_TASKS = new Set<z.infer<typeof Body>["task"]>([
+  "probe-http",
+  "probe-dns",
+  "probe-iptv-login",
+  "iptv-detect",
+  "iptv-validate",
+  "iptv-ua-test",
+]);
+
+function isWorker(): boolean {
+  return process.env.IS_CORE === "true";
 }
 
 async function execute(input: z.infer<typeof Body>) {
@@ -130,6 +146,7 @@ async function execute(input: z.infer<typeof Body>) {
     }
     case "iptv-player-proxy": {
       // Proxy de dados Xtream para o Web Player (CORS bypass)
+      const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
       const { data: server } = await supabaseAdmin.from("servers").select("host").eq("id", input.serverId!).single();
       if (!server) throw new Error("Servidor não encontrado");
 
@@ -194,6 +211,16 @@ export const Route = createFileRoute("/api/public/core/task")({
           input = Body.parse(await request.json());
         } catch {
           return new Response("Bad Request", { status: 400 });
+        }
+        if (isWorker() && !WORKER_TASKS.has(input.task)) {
+          return Response.json(
+            {
+              success: false,
+              error: `Tarefa "${input.task}" exige acesso ao banco e não roda no worker. Execute no Painel.`,
+              workerOnly: [...WORKER_TASKS],
+            },
+            { status: 501 },
+          );
         }
         try {
           const result = await execute(input);

@@ -28,23 +28,12 @@ async function safe<T>(label: string, fn: () => Promise<T>, fallback: T, errors:
 async function run() {
   const errors: string[] = [];
 
-  // O scheduler roda no Core AWS: se este processo for apenas o painel,
-  // encaminha o ciclo para core.streammonitor.site. Se o Core falhar,
-  // segue localmente (nunca devolve 500 para o scheduler).
-  const { useCore, coreApiUrl } = await import("@/lib/core-api.server");
-  if (useCore()) {
-    try {
-      const res = await fetch(`${coreApiUrl()}/api/public/cron/check`, {
-        method: "POST",
-        headers: { "x-cron-secret": process.env.CRON_SECRET ?? "" },
-      });
-      if (res.ok) return { forwardedToCore: true, ...(await res.json()) };
-      errors.push(`core: HTTP ${res.status}`);
-    } catch (e: any) {
-      errors.push(`core: ${e?.message ?? "fetch failed"}`);
-    }
-    console.warn("[cron] Core indisponível, executando localmente:", errors.at(-1));
+  // Arquitetura worker externo: o ciclo roda sempre no Painel (dono do banco).
+  // O Core AWS é acionado tarefa a tarefa (sondas stateless) via /api/public/core/task.
+  if (process.env.IS_CORE === "true") {
+    return { ok: true, skipped: true, reason: "worker mode: ciclo roda no Painel" };
   }
+
 
   const missing = missingEnv();
   if (missing.length) {
