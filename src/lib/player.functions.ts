@@ -206,7 +206,7 @@ export const getPlayerCatalog = createServerFn({ method: "POST" })
 
     // 3. Delegar ao Core AWS (com fallback local)
     const { runOnCore, coreApiUrl, useCore } = await import("./core-api.server");
-    const via = useCore() ? `Core AWS (${coreApiUrl()})` : "Painel (direto no IPTV)";
+    const via = useCore("iptv-player-proxy" as any) ? `Core AWS (${coreApiUrl()})` : "Painel (direto no IPTV, dono do banco)";
     const started = Date.now();
 
     console.log(
@@ -297,7 +297,7 @@ export const diagnosePlayerCatalog = createServerFn({ method: "POST" })
 
     // ETAPA 4 — mesmo teste, porém passando pelo Core AWS (IP da VPS)
     const viaCore: any[] = [];
-    if (useCore()) {
+    if (useCore("iptv-player-proxy" as any)) {
       for (const action of ["get_series_categories", "get_series", "get_vod_streams", "get_live_streams"]) {
         const started = Date.now();
         try {
@@ -318,8 +318,8 @@ export const diagnosePlayerCatalog = createServerFn({ method: "POST" })
     return {
       core: {
         core_api_url: coreApiUrl(),
-        usando_core: useCore(),
-        fluxo: useCore() ? "Frontend -> Core AWS -> Servidor IPTV" : "Frontend -> Painel -> Servidor IPTV",
+        usando_core: useCore("iptv-player-proxy" as any),
+        fluxo: useCore("iptv-player-proxy" as any) ? "Frontend -> Core AWS -> Servidor IPTV" : "Frontend -> Painel -> Servidor IPTV",
         saude_do_core: coreSaude,
       },
 
