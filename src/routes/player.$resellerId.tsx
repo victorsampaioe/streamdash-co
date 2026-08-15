@@ -741,7 +741,7 @@ function PlayerPage() {
             if (isSeries) {
               handleOpenSeries(i);
             } else {
-              handlePlay(i.stream_id || i.id || i.content_id, "movie");
+              handlePlay(i.stream_id || i.id || i.content_id, "movie", i.container_extension);
             }
           }}
           primaryColor={primaryColor}
