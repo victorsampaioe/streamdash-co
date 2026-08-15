@@ -186,6 +186,7 @@ export async function callCore<T>(task: CoreTask, payload: Record<string, unknow
           error_message: `HTTP ${res.status}`
         });
       }
+      console.error(`[core-task] ✖ fim task=${task} status=HTTP_${res.status} duracao=${elapsed}ms`);
       throw new Error(`Core ${task} falhou (${res.status}): ${text}`);
     }
 
@@ -201,6 +202,8 @@ export async function callCore<T>(task: CoreTask, payload: Record<string, unknow
         execution_time_ms: elapsed
       });
     }
+
+    console.log(`[core-task] ✔ fim task=${task} status=ok duracao=${elapsed}ms fila=${waiting.length}`);
 
     // O Core responde { success, result }. Versões antigas devolvem o resultado cru.
     const unwrapped =
@@ -222,11 +225,16 @@ export async function callCore<T>(task: CoreTask, payload: Record<string, unknow
         error_message: e.message
       });
     }
+    console.error(
+      `[core-task] ✖ fim task=${task} status=${isTimeout ? "timeout" : "erro"} duracao=${elapsed}ms erro=${e?.message}`,
+    );
     throw e;
   } finally {
     clearTimeout(timeout);
+    release();
   }
 }
+
 
 /**
  * Roda a tarefa no Core AWS; se o Core estiver indisponível, executa local
