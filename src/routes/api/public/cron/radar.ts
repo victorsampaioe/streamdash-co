@@ -73,13 +73,19 @@ async function run() {
   return { ok: errors.length === 0, recovered, clusters, auto, step, tmdb, ...(errors.length ? { errors } : {}) };
 }
 
+/** Um ciclo por vez: evita que o pg_cron empilhe execuções do Radar. */
+async function guardedRun() {
+  const { withCycleLock } = await import("@/lib/job-lock.server");
+  return await withCycleLock("cron-radar", 300, run);
+}
+
 export const Route = createFileRoute("/api/public/cron/radar")({
   server: {
     handlers: {
       POST: async ({ request }) => {
         if (!isAuthorized(request)) return new Response("Forbidden", { status: 403 });
         try {
-          return Response.json(await run());
+          return Response.json(await guardedRun());
         } catch (e: any) {
           return Response.json({ ok: false, error: e?.message ?? "unknown" }, { status: 200 });
         }
@@ -87,7 +93,7 @@ export const Route = createFileRoute("/api/public/cron/radar")({
       GET: async ({ request }) => {
         if (!isAuthorized(request)) return new Response("Forbidden", { status: 403 });
         try {
-          return Response.json(await run());
+          return Response.json(await guardedRun());
         } catch (e: any) {
           return Response.json({ ok: false, error: e?.message ?? "unknown" }, { status: 200 });
         }
@@ -95,3 +101,4 @@ export const Route = createFileRoute("/api/public/cron/radar")({
     },
   },
 });
+

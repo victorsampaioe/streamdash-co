@@ -105,19 +105,43 @@ async function run() {
   };
 }
 
+/** Fecha logs presos em "running" (tarefas que nunca finalizaram). */
+async function reapStaleLogs() {
+  if (process.env.IS_CORE === "true") return { reaped: 0 };
+  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+  const { data } = await supabaseAdmin
+    .from("core_execution_logs")
+    .update({ status: "timeout", error_message: "Tarefa não finalizou (log órfão)" })
+    .eq("status", "running")
+    .lt("created_at", new Date(Date.now() - 5 * 60_000).toISOString())
+    .select("id");
+  return { reaped: data?.length ?? 0 };
+}
+
+/** Um ciclo por vez: o pg_cron dispara a cada minuto e o ciclo pode demorar mais. */
+async function guardedRun() {
+  const { withCycleLock } = await import("@/lib/job-lock.server");
+  return await withCycleLock("cron-check", 300, async () => {
+    const reaped = await reapStaleLogs().catch(() => ({ reaped: 0 }));
+    const out = await run();
+    return { ...out, ...reaped };
+  });
+}
+
 export const Route = createFileRoute("/api/public/cron/check")({
   server: {
     handlers: {
       POST: async ({ request }) => {
         if (!isAuthorized(request)) return new Response("Forbidden", { status: 403 });
-        try { return Response.json(await run()); }
+        try { return Response.json(await guardedRun()); }
         catch (e: any) { return Response.json({ ok: false, error: e?.message ?? "unknown" }, { status: 200 }); }
       },
       GET: async ({ request }) => {
         if (!isAuthorized(request)) return new Response("Forbidden", { status: 403 });
-        try { return Response.json(await run()); }
+        try { return Response.json(await guardedRun()); }
         catch (e: any) { return Response.json({ ok: false, error: e?.message ?? "unknown" }, { status: 200 }); }
       },
+
     },
   },
 });
