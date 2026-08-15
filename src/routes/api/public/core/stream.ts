@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { supabaseAdmin } from "@/integrations/supabase/client.server";
+import { createHmac, timingSafeEqual } from "crypto";
 
 const CORS = {
   "Access-Control-Allow-Origin": "*",
@@ -23,6 +23,27 @@ function contentTypeFor(ext: string, upstream: string | null) {
   return upstream ?? "application/octet-stream";
 }
 
+/* ------------------------------------------------------------------ */
+/* Assinatura das URLs repassadas ao Core AWS (worker stateless)        */
+/* O Core não tem banco: ele não consegue validar a sessão do player.   */
+/* O Painel valida a sessão, resolve a URL real e assina (HMAC) o       */
+/* repasse. O Core só aceita URLs assinadas e ainda válidas.            */
+/* ------------------------------------------------------------------ */
+function signUpstream(absUrl: string, exp: number): string {
+  const secret = process.env.CRON_SECRET ?? "";
+  return createHmac("sha256", secret).update(`${absUrl}|${exp}`).digest("hex");
+}
+
+function verifyUpstream(absUrl: string, exp: number, sig: string): boolean {
+  const secret = process.env.CRON_SECRET ?? "";
+  if (!secret || !sig) return false;
+  if (!Number.isFinite(exp) || exp * 1000 < Date.now()) return false;
+  const expected = signUpstream(absUrl, exp);
+  const a = Buffer.from(expected, "utf8");
+  const b = Buffer.from(sig, "utf8");
+  return a.length === b.length && timingSafeEqual(a, b);
+}
+
 /** Reescreve as URLs internas de um manifesto HLS para passarem pelo proxy. */
 function rewriteManifest(manifest: string, upstreamUrl: string, token: string) {
   const baseUrl = new URL(upstreamUrl);
@@ -43,6 +64,10 @@ function rewriteManifest(manifest: string, upstreamUrl: string, token: string) {
     .join("\n");
 }
 
+function maskMedia(url: string) {
+  return url.replace(/\/\/([^/]+)\/(live|movie|series)\/[^/]+\/[^/]+\//, "//$1/$2/***/***/");
+}
+
 export const Route = createFileRoute("/api/public/core/stream")({
   server: {
     handlers: {
@@ -53,10 +78,53 @@ export const Route = createFileRoute("/api/public/core/stream")({
         const passthrough = url.searchParams.get("u");
         const ext = (url.searchParams.get("ext") || "ts").toLowerCase();
         const type = url.searchParams.get("type") || "live";
+        const range = request.headers.get("range");
+
+        const { UA_PLAYER, UA_VLC } = await import("@/lib/iptv.server");
+
+        /* ---------------------------------------------------------- */
+        /* MODO CORE (worker stateless): só serve URLs assinadas.      */
+        /* Nunca toca o banco — é o que fazia esta rota devolver 500.  */
+        /* ---------------------------------------------------------- */
+        const sig = url.searchParams.get("sig");
+        const exp = Number(url.searchParams.get("exp") ?? 0);
+        if (sig && passthrough) {
+          const abs = b64urlDecode(passthrough);
+          if (!verifyUpstream(abs, exp, sig)) {
+            return new Response("Assinatura inválida", { status: 403, headers: CORS });
+          }
+          const h: Record<string, string> = {
+            "User-Agent": type === "live" ? UA_PLAYER : UA_VLC,
+            Accept: "*/*",
+          };
+          if (range) h["Range"] = range;
+          try {
+            const res = await fetch(abs, { headers: h, redirect: "follow" });
+            console.log(
+              `[stream-proxy][worker] url=${maskMedia(abs)} status=${res.status} ct=${res.headers.get("content-type")} range=${range ?? "-"}`
+            );
+            const out = new Headers(CORS);
+            for (const k of ["Content-Type", "Content-Range", "Content-Length", "Accept-Ranges"]) {
+              const v = res.headers.get(k);
+              if (v) out.set(k, v);
+            }
+            out.set("Cache-Control", "no-cache");
+            return new Response(res.body, { status: res.status, headers: out });
+          } catch (e) {
+            return new Response(`Worker fetch error: ${(e as Error).message}`, { status: 502, headers: CORS });
+          }
+        }
+
+        if (process.env.IS_CORE === "true") {
+          // Worker sem banco: sem assinatura não há como validar a sessão.
+          return new Response("Core worker exige URL assinada (u+exp+sig)", { status: 400, headers: CORS });
+        }
 
         if (!token || (!sid && !passthrough)) {
           return new Response("Missing parameters", { status: 400, headers: CORS });
         }
+
+        const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
         // 1. Validar sessão
         const { data: session, error: sessionErr } = await supabaseAdmin
@@ -78,7 +146,6 @@ export const Route = createFileRoute("/api/public/core/stream")({
         if (!server) return new Response("Server not found", { status: 404, headers: CORS });
 
         const { getPlayerCredentials, hostCandidates } = await import("@/lib/player.server");
-        const { UA_PLAYER, UA_VLC } = await import("@/lib/iptv.server");
 
         // 3. Montar a lista de URLs candidatas
         let candidates: string[];
@@ -98,15 +165,17 @@ export const Route = createFileRoute("/api/public/core/stream")({
           const folder = type === "live" ? "live" : type === "movie" ? "movie" : "series";
           const user = encodeURIComponent(creds.username);
           const pass = encodeURIComponent(creds.password);
+          // Extensões alternativas: painéis Xtream servem mkv/mp4/ts conforme o container.
+          const exts =
+            type === "live" ? [ext] : [ext, ...["mp4", "mkv", "ts"].filter((e) => e !== ext)];
           candidates = hostCandidates(server.host).flatMap((base) => {
-            const paths = [`${folder}/${user}/${pass}/${sid}.${ext}`];
+            const paths = exts.map((e) => `${folder}/${user}/${pass}/${sid}.${e}`);
             // Live sem pasta é aceito por vários painéis Xtream.
             if (type === "live") paths.push(`${user}/${pass}/${sid}`);
             return paths.map((p) => `${base}/${p}`);
           });
         }
 
-        const range = request.headers.get("range");
         const headers: Record<string, string> = {
           "User-Agent": passthrough || type === "live" ? UA_PLAYER : UA_VLC,
           Accept: "*/*",
@@ -122,7 +191,7 @@ export const Route = createFileRoute("/api/public/core/stream")({
             const res = await fetch(candidate, { headers, redirect: "follow" });
             lastStatus = res.status;
             console.log(
-              `[stream-proxy] tentativa url=${candidate.replace(/\/\/[^/]+\/[^/]+\/[^/]+\/[^/]+\//, "//***/")} status=${res.status} ct=${res.headers.get("content-type")} len=${res.headers.get("content-length") ?? "chunked"}`
+              `[stream-proxy] tentativa url=${maskMedia(candidate)} status=${res.status} ct=${res.headers.get("content-type")} len=${res.headers.get("content-length") ?? "chunked"}`
             );
             if (res.ok || res.status === 206) {
               upstream = res;
@@ -135,34 +204,40 @@ export const Route = createFileRoute("/api/public/core/stream")({
           }
         }
 
-        // 3b. Bloqueio de borda (Cloudflare/WAF costuma responder 403 a IPs de
-        // datacenter): repassa a requisição ao Core AWS, que usa o IP da EC2.
+        // 3b. Bloqueio de borda (Cloudflare/WAF responde 403 a IPs de datacenter):
+        // repassa ao Core AWS, que usa o IP da EC2. Como o Core é stateless (sem
+        // banco), enviamos a URL final já resolvida e assinada — nunca o token.
         if (!upstream && url.searchParams.get("via") !== "core") {
           const { coreApiUrl, isCoreInstance } = await import("@/lib/core-api.server");
           const base = coreApiUrl();
-          if (base && !isCoreInstance()) {
-            const relay = new URL(`${base}/api/public/core/stream`);
-            url.searchParams.forEach((v, k) => relay.searchParams.set(k, v));
-            relay.searchParams.set("via", "core");
-            try {
-              const res = await fetch(relay.toString(), {
-                headers: range ? { Range: range } : {},
-                redirect: "follow",
-              });
-              console.log(`[stream-proxy] relay core status=${res.status} ct=${res.headers.get("content-type")}`);
-              if (res.ok || res.status === 206) {
-                const out = new Headers(CORS);
-                for (const h of ["Content-Type", "Content-Range", "Content-Length", "Accept-Ranges"]) {
-                  const v = res.headers.get(h);
-                  if (v) out.set(h, v);
+          if (base && !isCoreInstance() && process.env.CRON_SECRET) {
+            const expires = Math.floor(Date.now() / 1000) + 300;
+            for (const candidate of candidates) {
+              const relay = new URL(`${base}/api/public/core/stream`);
+              relay.searchParams.set("u", b64urlEncode(candidate));
+              relay.searchParams.set("exp", String(expires));
+              relay.searchParams.set("sig", signUpstream(candidate, expires));
+              relay.searchParams.set("type", type);
+              relay.searchParams.set("ext", ext);
+              relay.searchParams.set("via", "core");
+              try {
+                const res = await fetch(relay.toString(), {
+                  headers: range ? { Range: range } : {},
+                  redirect: "follow",
+                });
+                console.log(
+                  `[stream-proxy] relay core url=${maskMedia(candidate)} status=${res.status} ct=${res.headers.get("content-type")}`
+                );
+                if (res.ok || res.status === 206) {
+                  upstream = res;
+                  usedUrl = candidate;
+                  break;
                 }
-                out.set("Cache-Control", "no-cache");
-                return new Response(res.body, { status: res.status, headers: out });
+                await res.body?.cancel();
+                lastStatus = res.status;
+              } catch (e) {
+                console.warn(`[stream-proxy] relay core falhou: ${(e as Error).message}`);
               }
-              await res.body?.cancel();
-              lastStatus = lastStatus || res.status;
-            } catch (e) {
-              console.warn(`[stream-proxy] relay core falhou: ${(e as Error).message}`);
             }
           }
         }
@@ -173,7 +248,6 @@ export const Route = createFileRoute("/api/public/core/stream")({
             headers: CORS,
           });
         }
-
 
         const upstreamType = upstream.headers.get("Content-Type");
         const isManifest =
@@ -195,9 +269,10 @@ export const Route = createFileRoute("/api/public/core/stream")({
         }
 
         // 4b. Mídia binária (ts / mp4 / mkv) → repassa com suporte a Range
+        const finalExt = (usedUrl.match(/\.([a-z0-9]{2,4})(?:\?|$)/i)?.[1] ?? ext).toLowerCase();
         const out = new Headers(CORS);
         out.set("Cache-Control", "no-cache");
-        out.set("Content-Type", contentTypeFor(ext, upstreamType));
+        out.set("Content-Type", contentTypeFor(finalExt, upstreamType));
         for (const h of ["Content-Range", "Content-Length", "Accept-Ranges"]) {
           const v = upstream.headers.get(h);
           if (v) out.set(h, v);
@@ -205,7 +280,7 @@ export const Route = createFileRoute("/api/public/core/stream")({
         if (!out.has("Accept-Ranges") && type !== "live") out.set("Accept-Ranges", "bytes");
 
         console.log(
-          `[stream-proxy] entregando type=${type} ext=${ext} status=${upstream.status} ct=${out.get("Content-Type")} range=${range ?? "-"} len=${out.get("Content-Length") ?? "stream"}`
+          `[stream-proxy] entregando type=${type} ext=${finalExt} status=${upstream.status} ct=${out.get("Content-Type")} range=${range ?? "-"} len=${out.get("Content-Length") ?? "stream"}`
         );
 
         return new Response(upstream.body, { status: upstream.status, headers: out });
