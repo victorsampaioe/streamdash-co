@@ -80,17 +80,27 @@ export const Route = createFileRoute("/api/public/health")({
           });
         }
         const isCore = process.env.IS_CORE === "true";
+        const missing = isCore
+          ? [
+              ...(!process.env.CRON_SECRET ? ["CRON_SECRET"] : []),
+              ...(!process.env.CORE_API_URL ? ["CORE_API_URL"] : []),
+            ]
+          : [
+              ...(!process.env.CRON_SECRET ? ["CRON_SECRET"] : []),
+              ...(!process.env.SUPABASE_URL ? ["SUPABASE_URL"] : []),
+              ...(!process.env.SUPABASE_SERVICE_ROLE_KEY ? ["SUPABASE_SERVICE_ROLE_KEY"] : []),
+            ];
         return Response.json(
           {
-            status: "ok",
+            status: missing.length === 0 ? "ok" : "degraded",
             service: isCore ? "stream-monitor-core-worker" : "stream-monitor-panel",
             isCore,
             worker: isCore,
             database: false,
             hasSecret: Boolean(process.env.CRON_SECRET),
+            missing,
             time: new Date().toISOString(),
           },
-
           { headers: { "cache-control": "no-store" } },
         );
       },
