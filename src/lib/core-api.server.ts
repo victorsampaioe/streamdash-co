@@ -271,7 +271,14 @@ export async function runOnCore<T>(
   payload: Record<string, unknown>,
   local: () => Promise<T>,
 ): Promise<T> {
-  if (!useCore()) return await local();
+  if (!useCore(task)) {
+    if (coreApiUrl() && !isCoreInstance() && !canRunOnCore(task)) {
+      console.log(
+        `[CORE SKIP] task: ${task} | motivo: tarefa depende do banco (Painel é dono do banco) | timestamp: ${new Date().toISOString()}`,
+      );
+    }
+    return await local();
+  }
   try {
     return await callCore<T>(task, payload);
   } catch (e) {
@@ -279,6 +286,7 @@ export async function runOnCore<T>(
     return await local();
   }
 }
+
 
 /**
  * POST em um endpoint do Core exigindo resposta JSON.
