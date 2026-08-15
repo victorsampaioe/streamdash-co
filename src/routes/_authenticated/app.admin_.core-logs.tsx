@@ -69,9 +69,11 @@ function CoreLogsPage() {
   const { data: logs, isLoading, refetch } = useQuery({
     queryKey: ["core-execution-logs", taskFilter, statusFilter],
     queryFn: async () => {
+      const threeHoursAgo = new Date(Date.now() - 3 * 60 * 60 * 1000).toISOString();
       let query = supabase
         .from("core_execution_logs")
         .select("*")
+        .gte("created_at", threeHoursAgo)
         .order("created_at", { ascending: false })
         .limit(100);
 

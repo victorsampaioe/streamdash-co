@@ -588,60 +588,13 @@ function PlayerPage() {
               </div>
 
               <div className="pt-6 border-t border-white/5 space-y-3">
-                <h2 className="text-lg font-semibold">Localizar e validar a SUPABASE_SERVICE_ROLE_KEY correta do projeto de produção</h2>
+                <h2 className="text-lg font-semibold"># Investigação: falhas persistentes na Auditoria Core AWS (apesar do Core estar saudável)</h2>
                 <div className="p-4 bg-yellow-500/10 border border-yellow-500/20 rounded-lg">
                   <h4 className="text-yellow-400 font-bold mb-2 flex items-center gap-2">
                     <ShieldCheck className="h-4 w-4" /> Diagnóstico do Core AWS
                   </h4>
                   <p className="text-xs text-yellow-200/80 leading-relaxed whitespace-pre-wrap">
-                    O diagnóstico já confirmou:
-
-                    Projeto correto:
-                    yiwyfiaqehhmngqngxvx
-
-                    URL:
-                    https://yiwyfiaqehhmngqngxvx.supabase.co
-
-                    Esse é o banco oficial de produção do Stream Monitor e contém as tabelas utilizadas pelo sistema.
-
-                    Porém a VPS Core AWS apresenta:
-                    rpc_get_admin_stats: Invalid API key
-
-                    A variável existe no ambiente:
-                    SUPABASE_SERVICE_ROLE_KEY
-
-                    mas a chave atual não pertence ao projeto correto ou está inválida.
-
-                    Preciso que você faça uma validação completa:
-
-                    1. Confirmar a origem da chave correta
-                    Localizar no ambiente Lovable Cloud/Supabase:
-                    Projeto: yiwyfiaqehhmngqngxvx
-                    Encontrar a chave correta usada pelo backend: SUPABASE_SERVICE_ROLE_KEY
-                    Confirmar: Essa chave pertence ao projeto yiwyfiaqehhmngqngxvx? Ela é a chave administrativa de backend? Ela permite chamadas RPC? Ela permite acesso às tabelas de produção?
-
-                    2. Validar se existe diferença entre chaves
-                    Verificar se o projeto possui: Publishable key; Anon key; Service Role Key; Secret Key. Informar qual delas o Core AWS deve usar. Não quero a chave pública. O Core precisa de uma chave com permissão de servidor: SUPABASE_SERVICE_ROLE_KEY.
-
-                    3. Confirmar compatibilidade com o Core AWS
-                    O Core utiliza chamadas administrativas como: rpc_get_admin_stats. Então validar se a chave consegue executar: /rest/v1/rpc/get_admin_stats com sucesso.
-
-                    4. Verificar se a chave foi alterada/revogada
-                    Checar se: a service role antiga foi rotacionada; o projeto mudou de chave; existe alguma chave antiga salva no Core; o Lovable Cloud usa uma chave diferente da exibida no painel.
-
-                    5. Me informar exatamente onde pegar
-                    Preciso do caminho: Exemplo: Lovable Cloud → Backend → Supabase → API Keys → Service Role ou: Supabase Dashboard → Projeto yiwyfiaqehhmngqngxvx → Settings → API → Legacy service_role.
-
-                    6. Não criar outro projeto
-                    Importante: Não criar novo projeto. Não alterar banco. Não migrar nada. Somente localizar a credencial correta do projeto existente.
-
-                    Objetivo:
-                    A VPS AWS precisa ficar assim:
-                    SUPABASE_URL=https://yiwyfiaqehhmngqngxvx.supabase.co
-                    SUPABASE_SERVICE_ROLE_KEY=CHAVE_CORRETA_DO_PROJETO
-
-                    Depois disso o Core AWS deve voltar a:
-                    acessar banco; executar RPCs; processar monitoramento; executar Radar; liberar Web Player.
+                    {"## Contexto\nA infraestrutura do Core AWS já foi corrigida e está respondendo corretamente em testes manuais. Porém, o painel de **Auditoria Core AWS** continua mostrando falhas (taxa de sucesso 0%, timeouts, execuções falhando). Preciso descobrir a causa real — o Core está saudável, então o problema deve estar em como o painel está se comunicando com ele (ou em como está exibindo dados antigos).\n\n**Não alterar a arquitetura do Core novamente.** A arquitetura atual está correta e não deve mudar:\n- Painel = dono do banco\n- Core AWS = worker stateless\n- Comunicação via `CRON_SECRET`\n\nO objetivo desta tarefa é **só investigar e corrigir a causa da falha no fluxo automático**, sem redesenhar nada.\n\n---\n\n## Evidências já confirmadas (não precisa re-testar isso)\n\n**1. Core está online e saudável:**\n```\nGET https://core.streammonitor.site/api/public/health?deep=1\n```\nRetorno:\n```json\n{\n  \"status\": \"ok\",\n  \"service\": \"stream-monitor-core-worker\",\n  \"role\": \"worker\",\n  \"env\": {\n    \"IS_CORE\": true,\n    \"WORKER\": true,\n    \"DATABASE\": false,\n    \"CRON_SECRET\": true\n  },\n  \"missing\": []\n}\n```\n\n**2. Teste manual do Core funciona perfeitamente:**\n```bash\ncurl -X POST https://core.streammonitor.site/api/public/core/task \\\n  -H \"x-cron-secret: seu_secret\" \\\n  -H \"content-type: application/json\" \\\n  -d '{\"task\":\"probe-http\",\"host\":\"google.com\"}'\n```\nRetorno:\n```json\n{\n  \"success\": true,\n  \"result\": {\n    \"status\": \"up\",\n    \"httpStatus\": 301,\n    \"latency\": 80,\n    \"dnsIp\": \"172.217.162.238\",\n    \"error\": null,\n    \"sslDays\": 58\n  }\n}\n```\n\nOu seja: Core recebe requisição ✅, `CRON_SECRET` funciona ✅, probe HTTP funciona ✅. **O problema não está no Core em si — está em algum lugar entre o painel e o Core, ou na exibição dos dados.**\n\n---\n\n## O que preciso que seja investigado, passo a passo\n\n### 1. Confirmar a variável de ambiente do painel\nVerificar se o painel (frontend/backend, não o Core) está configurado com:\n```\nCORE_API_URL=https://core.streammonitor.site\n```\nConfirmar que essa variável está definida corretamente no ambiente de produção do painel (não só no Core) — se estiver ausente, vazia, apontando para `localhost` ou para uma URL antiga, o painel pode estar tentando processar o monitoramento **localmente** em vez de delegar pro Core AWS, o que explicaria falhas que não aparecem nos testes manuais direto no Core.\n\n### 2. Identificar a última execução com falha REAL (não histórico antigo)\nBuscar apenas execuções criadas **depois** do ajuste do `CRON_SECRET` — ignorar qualquer registro anterior a essa correção. Para a execução com falha mais recente, informar:\n- Horário exato\n- Endpoint chamado\n- Payload enviado\n- Status HTTP recebido\n- Resposta completa retornada pelo Core (ou ausência de resposta)\n- Mensagem de erro completa (stack trace se houver)\n\n### 3. Mapear o fluxo automático (scheduler → Core)\nAnalisar os arquivos:\n- `src/lib/core-api.server.ts`\n- `src/lib/monitoring.server.ts`\n- `src/routes/api/public/core/task.ts`\n\nConfirmar:\n- Qual função chama o Core automaticamente (o scheduler/cron do painel).\n- Qual payload exatamente está sendo montado e enviado nessa chamada automática.\n- Se o header está sendo enviado corretamente como `x-cron-secret: process.env.CRON_SECRET` (checar se a variável não está `undefined` nesse contexto específico — não só no `.env`, mas no runtime real do processo que dispara o cron).\n- Se o `host` (ou outro campo obrigatório do payload) está chegando preenchido corretamente até a chamada final, ou se está sendo perdido/formatado errado em algum passo intermediário.\n\n### 4. Comparar o payload manual (que funciona) com o payload automático (que falha)\nO teste manual usa:\n```json\n{ \"task\": \"probe-http\", \"host\": \"google.com\" }\n```\nComparar isso com o que o scheduler automático de fato envia. Erros comuns a procurar:\n- Campo errado, ex. `\"url\"` em vez de `\"host\"`:\n  ```json\n  { \"task\": \"probe-http\", \"url\": \"https://dominio.com\" }\n  ```\n- Campo presente mas vazio/nulo:\n  ```json\n  { \"task\": \"probe-http\", \"host\": null }\n  ```\n- Formato esperado (correto):\n  ```json\n  { \"task\": \"probe-http\", \"host\": \"dominio.com\" }\n  ```\n\nSe o payload automático estiver diferente do formato que o teste manual usa com sucesso, essa é provavelmente a causa raiz.\n\n### 5. Verificar se a tela de Auditoria está mostrando dado desatualizado\nConfirmar se os \"0% de sucesso\" exibidos são:\n- Registros antigos, de antes da correção do `CRON_SECRET` (cache/histórico não atualizado); ou\n- Execuções novas, realmente falhando agora.\n\nSe for histórico antigo sendo exibido, adicionar um filtro por data/hora na tela de Auditoria para deixar claro o que é execução recente vs. antiga, e evitar essa confusão se acontecer de novo no futuro.\n\n### 6. Adicionar logs temporários para rastrear exatamente onde a falha ocorre\nNo envio da requisição do painel para o Core:\n```\n[CORE REQUEST] task: probe-http | host: xxx | secret: presente/ausente | timestamp: xxx\n```\nNa resposta recebida:\n```\n[CORE RESPONSE] status: 200 | result: up/down | error: xxx\n```\nEsses logs devem deixar claro se a requisição automática:\n- Nunca chega a sair do painel (erro antes de enviar).\n- Sai mas com payload/header errado.\n- Chega no Core mas o Core responde erro (nesse caso o log do lado do Core também precisa ser checado).\n- Chega e retorna sucesso, mas o painel interpreta/grava errado o resultado.\n\n---\n\n## Entregável esperado\n1. Identificação clara da causa raiz (não \"parece que é X\" — mostrar o log/print da execução real com falha).\n2. Correção aplicada no ponto exato da causa (payload, variável de ambiente, ou leitura/gravação do resultado no painel — o que for).\n3. Print ou log confirmando que uma execução automática (do scheduler real, não teste manual) rodou com sucesso depois da correção.\n4. Confirmação de que a taxa de sucesso na tela de Auditoria voltou a refletir a realidade (não precisa ser 100%, mas precisa bater com o que de fato está acontecendo)."}
                   </p>
                 </div>
                 <Button

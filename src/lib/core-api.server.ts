@@ -156,12 +156,16 @@ export async function callCore<T>(task: CoreTask, payload: Record<string, unknow
 
 
   const start = Date.now();
+  const secret = process.env.CRON_SECRET ?? "";
+  
+  console.log(`[CORE REQUEST] task: ${task} | host: ${payload.host || 'N/A'} | secret: ${secret ? 'presente' : 'ausente'} | timestamp: ${new Date().toISOString()}`);
+
   try {
     const res = await fetch(endpoint, {
       method: "POST",
       headers: {
         "content-type": "application/json",
-        "x-cron-secret": process.env.CRON_SECRET ?? "",
+        "x-cron-secret": secret,
       },
       body: JSON.stringify({ task, ...payload }),
       signal: controller.signal,
@@ -203,6 +207,7 @@ export async function callCore<T>(task: CoreTask, payload: Record<string, unknow
       });
     }
 
+    console.log(`[CORE RESPONSE] status: ${res.status} | result: up/down | task: ${task} | duracao: ${elapsed}ms`);
     console.log(`[core-task] ✔ fim task=${task} status=ok duracao=${elapsed}ms fila=${waiting.length}`);
 
     // O Core responde { success, result }. Versões antigas devolvem o resultado cru.
