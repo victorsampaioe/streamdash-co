@@ -73,6 +73,8 @@ export const Route = createFileRoute("/api/public/core/diag-playback")({
         const cat = Array.isArray(vodCats.json) ? vodCats.json[0] : null;
         const vods = cat ? await api("get_vod_streams", { categoryId: String(cat.category_id) }) : { json: [] as any };
         const movie = Array.isArray(vods.json) ? vods.json[0] : null;
+        report.filme.catStatus = { status: vodCats.status, tipo: Array.isArray(vodCats.json) ? `array(${vodCats.json.length})` : typeof vodCats.json, amostra: (vodCats as any).amostra ?? JSON.stringify(vodCats.json)?.slice(0,200) };
+        report.filme.vodStatus = { status: (vods as any).status, tipo: Array.isArray(vods.json) ? `array(${vods.json.length})` : typeof vods.json, amostra: (vods as any).amostra ?? JSON.stringify(vods.json)?.slice(0,200) };
         report.filme.item = movie
           ? { id: movie.stream_id, nome: movie.name, container: movie.container_extension }
           : null;
@@ -100,6 +102,7 @@ export const Route = createFileRoute("/api/public/core/diag-playback")({
         const scat = Array.isArray(serCats.json) ? serCats.json[0] : null;
         const series = scat ? await api("get_series", { categoryId: String(scat.category_id) }) : { json: [] as any };
         const serie = Array.isArray(series.json) ? series.json[0] : null;
+        report.serie.catStatus = { status: serCats.status, tipo: Array.isArray(serCats.json) ? `array(${serCats.json.length})` : typeof serCats.json, amostra: (serCats as any).amostra ?? JSON.stringify(serCats.json)?.slice(0,200) };
         report.serie.item = serie ? { id: serie.series_id, nome: serie.name } : null;
 
         if (serie) {
