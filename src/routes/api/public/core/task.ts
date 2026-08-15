@@ -129,6 +129,7 @@ async function execute(input: z.infer<typeof Body>) {
     }
     case "iptv-player-proxy": {
       // Proxy de dados Xtream para o Web Player (CORS bypass)
+      const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
       const { data: server } = await supabaseAdmin.from("servers").select("host").eq("id", input.serverId!).single();
       if (!server) throw new Error("Servidor não encontrado");
 
