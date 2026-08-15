@@ -175,11 +175,32 @@ async function recordCheck(serverId: string, p: ProbeResult, sslDays: number | n
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
+/** Normaliza o host: remove espaços, protocolo, caminho e barras finais. */
+export function normalizeHost(raw: unknown): string {
+  let h = String(raw ?? "").trim();
+  if (!h) return "";
+  h = h.replace(/^[a-z][a-z0-9+.-]*:\/\//i, "");
+  h = h.split("/")[0]!.split("?")[0]!.split("#")[0]!;
+  return h.trim().replace(/\.+$/, "");
+}
+
 /**
  * Executa a sonda no Core AWS (worker externo, IP da EC2) e persiste aqui.
  * Se o Core estiver indisponível, roda localmente.
  */
-async function probeViaCore(host: string): Promise<ProbeResult & { sslDays: number | null }> {
+async function probeViaCore(rawHost: string, serverId?: string): Promise<ProbeResult & { sslDays: number | null }> {
+  const host = normalizeHost(rawHost);
+  if (!host) {
+    console.warn(`[monitor] host inválido server_id=${serverId ?? "-"} valor=${JSON.stringify(rawHost)}`);
+    return {
+      status: "down",
+      httpStatus: null,
+      latency: 0,
+      dnsIp: null,
+      error: "Host não configurado",
+      sslDays: null,
+    };
+  }
   const { runOnCore } = await import("./core-api.server");
   return await runOnCore("probe-http", { host }, async () => {
     const p = await probe(host);
@@ -192,6 +213,7 @@ async function probeViaCore(host: string): Promise<ProbeResult & { sslDays: numb
     return { ...p, sslDays };
   });
 }
+
 
 /** Modo "Confirmação": novas verificações a cada ~20s, gravando cada uma no histórico. */
 async function confirmationBurst(server: ServerRow, probes: number, sslDays: number | null) {
