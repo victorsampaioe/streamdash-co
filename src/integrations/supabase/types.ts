@@ -807,6 +807,27 @@ export type Database = {
         }
         Relationships: []
       }
+      cron_locks: {
+        Row: {
+          expires_at: string
+          holder: string | null
+          locked_at: string
+          name: string
+        }
+        Insert: {
+          expires_at: string
+          holder?: string | null
+          locked_at?: string
+          name: string
+        }
+        Update: {
+          expires_at?: string
+          holder?: string | null
+          locked_at?: string
+          name?: string
+        }
+        Relationships: []
+      }
       diagnostic_circuit_breakers: {
         Row: {
           failure_count: number | null
@@ -4803,6 +4824,7 @@ export type Database = {
         Args: { _server_id: string; _window_minutes?: number }
         Returns: Json
       }
+      release_cron_lock: { Args: { _name: string }; Returns: undefined }
       release_diagnostic_lock: {
         Args: { p_lock_key: string }
         Returns: undefined
@@ -4826,6 +4848,10 @@ export type Database = {
       transfer_credits_v2: {
         Args: { _amount: number; _recipient_id: string; _sender_id: string }
         Returns: undefined
+      }
+      try_acquire_cron_lock: {
+        Args: { _holder?: string; _name: string; _ttl_seconds: number }
+        Returns: boolean
       }
       update_catalog_stats: {
         Args: { _added_count: number; _server_id: string; _total: number }
