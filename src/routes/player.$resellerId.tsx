@@ -588,13 +588,13 @@ function PlayerPage() {
               </div>
 
               <div className="pt-6 border-t border-white/5 space-y-3">
-                <h2 className="text-lg font-semibold">Agora falta a parte final:</h2>
+                <h2 className="text-lg font-semibold">não é pra fazer diagnóticos!! é pra executar o que foi pedido! Agora falta a parte final:</h2>
                 <div className="p-4 bg-yellow-500/10 border border-yellow-500/20 rounded-lg">
                   <h4 className="text-yellow-400 font-bold mb-2 flex items-center gap-2">
                     <ShieldCheck className="h-4 w-4" /> "o Core em produção ainda roda a versão antiga da rota"
                   </h4>
                   <p className="text-xs text-yellow-200/80 leading-relaxed whitespace-pre-wrap">
-                    {"Então agora não é mais código do Web Player. É só deploy do Core AWS.\n\n\n\n\"Entendi. O diagnóstico confirmou que a correção está no Core stream proxy.\n\nAgora fazer o deploy da nova versão no Core AWS.\n\nApós o deploy confirmar:\n\nHealth:\nhttps://core.streammonitor.site/api/public/health?deep=1\nTeste direto:\n/api/public/core/stream\n\nConfirmar:\n\nHTTP 206 Partial Content para mp4/mkv;\nContent-Type correto;\nAccept-Ranges: bytes;\nRange funcionando.\nTestar no Web Player:\n1 filme;\n1 episódio de série.\n\nEnviar evidência:\n\n[STREAM RESPONSE]\n\nstatus:\ncontent-type:\nrange:\ncontent-length:\n\nNão alterar mais arquitetura. Apenas atualizar o worker Core com a rota nova.\""}
+                    {"Então agora não é mais código do Web Player. É só deploy do Core AWS.\n\nEu mandaria para o Lovable:\n\n\"Entendi. O diagnóstico confirmou que a correção está no Core stream proxy.\n\nAgora fazer o deploy da nova versão no Core AWS.\n\nApós o deploy confirmar:\n\nHealth:\nhttps://core.streammonitor.site/api/public/health?deep=1\nTeste direto:\n/api/public/core/stream\n\nConfirmar:\n\nHTTP 206 Partial Content para mp4/mkv;\nContent-Type correto;\nAccept-Ranges: bytes;\nRange funcionando.\nTestar no Web Player:\n1 filme;\n1 episódio de série.\n\nEnviar evidência:\n\n[STREAM RESPONSE]\n\nstatus:\ncontent-type:\nrange:\ncontent-length:\n\nNão alterar mais arquitetura. Apenas atualizar o worker Core com a rota nova.\""}
                   </p>
                 </div>
                 <Button
