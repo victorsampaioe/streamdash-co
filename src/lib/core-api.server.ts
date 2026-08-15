@@ -99,23 +99,61 @@ async function logCoreExecution(data: {
   }
 }
 
+/**
+ * Fila de concorrência: evita disparar centenas de tarefas simultâneas
+ * contra o Core (causa raiz de timeouts em cascata).
+ */
+const MAX_CONCURRENT = Number(process.env.CORE_MAX_CONCURRENT ?? 8);
+let inFlight = 0;
+const waiting: Array<() => void> = [];
+
+export function coreQueueStats() {
+  return { inFlight, queued: waiting.length, maxConcurrent: MAX_CONCURRENT };
+}
+
+async function acquireSlot(): Promise<() => void> {
+  if (inFlight < MAX_CONCURRENT) {
+    inFlight++;
+  } else {
+    await new Promise<void>((resolve) => waiting.push(resolve));
+    inFlight++;
+  }
+  let released = false;
+  return () => {
+    if (released) return;
+    released = true;
+    inFlight--;
+    const next = waiting.shift();
+    if (next) next();
+  };
+}
+
 /** Executa uma tarefa de monitoramento no Core AWS com auditoria. */
 export async function callCore<T>(task: CoreTask, payload: Record<string, unknown> = {}): Promise<T> {
   const base = coreApiUrl();
   if (!base) throw new Error("CORE_API_URL não configurada");
-  
+
   const endpoint = `${base}/api/public/core/task`;
   const isBatch = task === "iptv-batch-sync";
   const controller = new AbortController();
   const timeoutMs = isBatch ? 120_000 : 30_000;
+
+  const queuedAt = Date.now();
+  const release = await acquireSlot();
+  const queueWaitMs = Date.now() - queuedAt;
   const timeout = setTimeout(() => controller.abort(), timeoutMs);
+
+  console.log(
+    `[core-task] ▶ início task=${task} fila=${queueWaitMs}ms emExecucao=${inFlight}/${MAX_CONCURRENT} aguardando=${waiting.length} timeout=${timeoutMs}ms`,
+  );
 
   const logId = await logCoreExecution({
     task_type: task,
     endpoint,
-    request_payload: payload,
+    request_payload: { ...payload, _queueWaitMs: queueWaitMs },
     status: "running"
   });
+
 
   const start = Date.now();
   try {
