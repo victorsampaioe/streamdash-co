@@ -212,6 +212,16 @@ export const Route = createFileRoute("/api/public/core/task")({
         } catch {
           return new Response("Bad Request", { status: 400 });
         }
+        if (isWorker() && !WORKER_TASKS.has(input.task)) {
+          return Response.json(
+            {
+              success: false,
+              error: `Tarefa "${input.task}" exige acesso ao banco e não roda no worker. Execute no Painel.`,
+              workerOnly: [...WORKER_TASKS],
+            },
+            { status: 501 },
+          );
+        }
         try {
           const result = await execute(input);
           return Response.json({ success: true, result });
