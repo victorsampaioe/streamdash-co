@@ -53,6 +53,23 @@ function authorized(request: Request): boolean {
   return Boolean(secret && given && given === secret);
 }
 
+/**
+ * Modo worker (IS_CORE=true): a VPS não tem credenciais do banco.
+ * Só executa tarefas stateless — tudo que precisa de banco fica no Painel.
+ */
+const WORKER_TASKS = new Set<z.infer<typeof Body>["task"]>([
+  "probe-http",
+  "probe-dns",
+  "probe-iptv-login",
+  "iptv-detect",
+  "iptv-validate",
+  "iptv-ua-test",
+]);
+
+function isWorker(): boolean {
+  return process.env.IS_CORE === "true";
+}
+
 async function execute(input: z.infer<typeof Body>) {
   switch (input.task) {
     // ---- Sondas stateless: não tocam o banco, devolvem JSON puro ----
