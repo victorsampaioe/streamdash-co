@@ -54,9 +54,30 @@ export function isCoreInstance(): boolean {
   return Boolean(base && core && base === core);
 }
 
-export function useCore(): boolean {
-  return Boolean(coreApiUrl()) && !isCoreInstance();
+/**
+ * Tarefas que o Core AWS (worker stateless, sem banco) consegue executar.
+ * Qualquer outra tarefa depende do banco e é do Painel — delegá-la ao worker
+ * resulta em HTTP 501 ("exige acesso ao banco e não roda no worker").
+ */
+export const WORKER_CAPABLE_TASKS: ReadonlySet<CoreTask> = new Set<CoreTask>([
+  "probe-http",
+  "probe-dns",
+  "probe-iptv-login",
+  "iptv-detect",
+  "iptv-validate",
+  "iptv-ua-test",
+]);
+
+export function canRunOnCore(task: CoreTask): boolean {
+  return WORKER_CAPABLE_TASKS.has(task);
 }
+
+export function useCore(task?: CoreTask): boolean {
+  if (!coreApiUrl() || isCoreInstance()) return false;
+  if (task && !canRunOnCore(task)) return false;
+  return true;
+}
+
 
 /** 
  * Cria um registro de auditoria na tabela core_execution_logs.
@@ -128,10 +149,25 @@ async function acquireSlot(): Promise<() => void> {
   };
 }
 
+/** Remove credenciais do payload antes de gravar na auditoria. */
+function sanitizePayload(payload: Record<string, unknown>) {
+  const clone: Record<string, unknown> = { ...payload };
+  if ("password" in clone) clone["password"] = clone["password"] ? "***presente***" : null;
+  return clone;
+}
+
 /** Executa uma tarefa de monitoramento no Core AWS com auditoria. */
 export async function callCore<T>(task: CoreTask, payload: Record<string, unknown> = {}): Promise<T> {
   const base = coreApiUrl();
   if (!base) throw new Error("CORE_API_URL não configurada");
+
+  // O Core é um worker stateless: tarefas que dependem do banco não podem ser
+  // delegadas (retornariam HTTP 501). Falha rápido, sem poluir a auditoria.
+  if (!canRunOnCore(task)) {
+    throw new Error(
+      `Tarefa "${task}" depende do banco e roda no Painel — não é delegável ao Core worker.`,
+    );
+  }
 
   const endpoint = `${base}/api/public/core/task`;
   const isBatch = task === "iptv-batch-sync";
@@ -147,18 +183,23 @@ export async function callCore<T>(task: CoreTask, payload: Record<string, unknow
     `[core-task] ▶ início task=${task} fila=${queueWaitMs}ms emExecucao=${inFlight}/${MAX_CONCURRENT} aguardando=${waiting.length} timeout=${timeoutMs}ms`,
   );
 
+  const safePayload = sanitizePayload(payload);
+
   const logId = await logCoreExecution({
     task_type: task,
     endpoint,
-    request_payload: { ...payload, _queueWaitMs: queueWaitMs },
+    request_payload: { ...safePayload, _queueWaitMs: queueWaitMs },
     status: "running"
   });
 
 
   const start = Date.now();
   const secret = process.env.CRON_SECRET ?? "";
-  
-  console.log(`[CORE REQUEST] task: ${task} | host: ${payload.host || 'N/A'} | secret: ${secret ? 'presente' : 'ausente'} | timestamp: ${new Date().toISOString()}`);
+
+  console.log(
+    `[CORE REQUEST] task: ${task} | host: ${payload.host || "N/A"} | username: ${payload.username ? "presente" : "ausente"} | password: ${payload.password ? "presente" : "ausente"} | secret: ${secret ? "presente" : "ausente"} | timestamp: ${new Date().toISOString()}`,
+  );
+
 
   try {
     const res = await fetch(endpoint, {
@@ -182,7 +223,7 @@ export async function callCore<T>(task: CoreTask, payload: Record<string, unknow
           id: logId,
           task_type: task,
           endpoint,
-          request_payload: payload,
+          request_payload: safePayload,
           status: "failed",
           response_status: res.status,
           response_data: json || { raw: text.slice(0, 1000) },
@@ -199,7 +240,7 @@ export async function callCore<T>(task: CoreTask, payload: Record<string, unknow
         id: logId,
         task_type: task,
         endpoint,
-        request_payload: payload,
+        request_payload: safePayload,
         status: "success",
         response_status: res.status,
         response_data: json,
@@ -224,7 +265,7 @@ export async function callCore<T>(task: CoreTask, payload: Record<string, unknow
         id: logId,
         task_type: task,
         endpoint,
-        request_payload: payload,
+        request_payload: safePayload,
         status: isTimeout ? "timeout" : "failed",
         execution_time_ms: elapsed,
         error_message: e.message
@@ -250,7 +291,14 @@ export async function runOnCore<T>(
   payload: Record<string, unknown>,
   local: () => Promise<T>,
 ): Promise<T> {
-  if (!useCore()) return await local();
+  if (!useCore(task)) {
+    if (coreApiUrl() && !isCoreInstance() && !canRunOnCore(task)) {
+      console.log(
+        `[CORE SKIP] task: ${task} | motivo: tarefa depende do banco (Painel é dono do banco) | timestamp: ${new Date().toISOString()}`,
+      );
+    }
+    return await local();
+  }
   try {
     return await callCore<T>(task, payload);
   } catch (e) {
@@ -258,6 +306,7 @@ export async function runOnCore<T>(
     return await local();
   }
 }
+
 
 /**
  * POST em um endpoint do Core exigindo resposta JSON.
