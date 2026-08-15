@@ -16,6 +16,11 @@ function isAuthorized(request: Request): boolean {
 async function run() {
   const errors: string[] = [];
 
+  // Worker externo (Core AWS) não tem banco: o ciclo do Radar roda sempre no Painel.
+  if (process.env.IS_CORE === "true") {
+    return { ok: true, skipped: true, reason: "worker mode: ciclo roda no Painel" };
+  }
+
   // Deduplicação de servidores lógicos: roda no painel (1x/dia), independente do Core.
   let clusters: unknown = null;
   try {
@@ -25,16 +30,6 @@ async function run() {
     errors.push(`clusters: ${e?.message}`);
   }
 
-  const { useCore, coreJsonPost } = await import("@/lib/core-api.server");
-  if (useCore()) {
-    try {
-      const out = await coreJsonPost<Record<string, unknown>>("/api/public/cron/radar", 25_000);
-      return { forwardedToCore: true, clusters, ...out };
-    } catch (e: any) {
-      // Core indisponível ou com build antigo → processa localmente (não pode parar o Radar).
-      errors.push(`core: ${e?.message ?? "fetch failed"}`);
-    }
-  }
 
   const { runRadarJobStep, enrichTmdbPending, ensureAutoRadarJob, reclaimStuckRadarWork } =
     await import("@/lib/radar-jobs.server");
