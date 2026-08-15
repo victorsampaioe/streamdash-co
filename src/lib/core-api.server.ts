@@ -149,10 +149,25 @@ async function acquireSlot(): Promise<() => void> {
   };
 }
 
+/** Remove credenciais do payload antes de gravar na auditoria. */
+function sanitizePayload(payload: Record<string, unknown>) {
+  const clone: Record<string, unknown> = { ...payload };
+  if ("password" in clone) clone["password"] = clone["password"] ? "***presente***" : null;
+  return clone;
+}
+
 /** Executa uma tarefa de monitoramento no Core AWS com auditoria. */
 export async function callCore<T>(task: CoreTask, payload: Record<string, unknown> = {}): Promise<T> {
   const base = coreApiUrl();
   if (!base) throw new Error("CORE_API_URL não configurada");
+
+  // O Core é um worker stateless: tarefas que dependem do banco não podem ser
+  // delegadas (retornariam HTTP 501). Falha rápido, sem poluir a auditoria.
+  if (!canRunOnCore(task)) {
+    throw new Error(
+      `Tarefa "${task}" depende do banco e roda no Painel — não é delegável ao Core worker.`,
+    );
+  }
 
   const endpoint = `${base}/api/public/core/task`;
   const isBatch = task === "iptv-batch-sync";
@@ -168,18 +183,23 @@ export async function callCore<T>(task: CoreTask, payload: Record<string, unknow
     `[core-task] ▶ início task=${task} fila=${queueWaitMs}ms emExecucao=${inFlight}/${MAX_CONCURRENT} aguardando=${waiting.length} timeout=${timeoutMs}ms`,
   );
 
+  const safePayload = sanitizePayload(payload);
+
   const logId = await logCoreExecution({
     task_type: task,
     endpoint,
-    request_payload: { ...payload, _queueWaitMs: queueWaitMs },
+    request_payload: { ...safePayload, _queueWaitMs: queueWaitMs },
     status: "running"
   });
 
 
   const start = Date.now();
   const secret = process.env.CRON_SECRET ?? "";
-  
-  console.log(`[CORE REQUEST] task: ${task} | host: ${payload.host || 'N/A'} | secret: ${secret ? 'presente' : 'ausente'} | timestamp: ${new Date().toISOString()}`);
+
+  console.log(
+    `[CORE REQUEST] task: ${task} | host: ${payload.host || "N/A"} | username: ${payload.username ? "presente" : "ausente"} | password: ${payload.password ? "presente" : "ausente"} | secret: ${secret ? "presente" : "ausente"} | timestamp: ${new Date().toISOString()}`,
+  );
+
 
   try {
     const res = await fetch(endpoint, {
