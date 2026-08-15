@@ -220,7 +220,7 @@ async function confirmationBurst(server: ServerRow, probes: number, sslDays: num
   const results: Array<ProbeResult & { sslDays: number | null }> = [];
   for (let i = 0; i < probes; i++) {
     await sleep(CONFIRM_PROBE_INTERVAL_MS);
-    const p = await probeViaCore(server.host);
+    const p = await probeViaCore(server.host, server.id);
     await recordCheck(server.id, p, p.sslDays ?? sslDays);
     results.push(p);
   }
@@ -228,12 +228,14 @@ async function confirmationBurst(server: ServerRow, probes: number, sslDays: num
 }
 
 async function performCheck(server: ServerRow) {
-  const first = await probeViaCore(server.host);
+  const hostOk = normalizeHost(server.host) !== "";
+  const first = await probeViaCore(server.host, server.id);
 
   // SSL vem junto da sonda do Core (ou do fallback local).
   const sslDays: number | null = first.sslDays ?? null;
 
   await recordCheck(server.id, first, sslDays);
+
 
   const wasDown = server.current_status === "down";
   let final = first;
