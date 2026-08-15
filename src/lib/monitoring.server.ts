@@ -115,7 +115,8 @@ function classifyHttp(code: number, latency: number | null): string | null {
 }
 
 /** Uma verificação isolada (DNS + HTTP porta 80). */
-export async function probe(host: string): Promise<ProbeResult> {
+export async function probe(rawHost: string): Promise<ProbeResult> {
+  const host = normalizeHost(rawHost);
   const startedAt = Date.now();
   let status: ProbeResult["status"] = "unknown";
   let httpStatus: number | null = null;
@@ -123,7 +124,12 @@ export async function probe(host: string): Promise<ProbeResult> {
   let dnsIp: string | null = null;
   let errorMsg: string | null = null;
 
+  if (!host) {
+    return { status: "down", httpStatus: null, latency: 0, dnsIp: null, error: "Host não configurado" };
+  }
+
   try {
+
     const addrs = await dns.lookup(host, { all: false });
     dnsIp = addrs.address;
   } catch (e: any) {
