@@ -54,9 +54,30 @@ export function isCoreInstance(): boolean {
   return Boolean(base && core && base === core);
 }
 
-export function useCore(): boolean {
-  return Boolean(coreApiUrl()) && !isCoreInstance();
+/**
+ * Tarefas que o Core AWS (worker stateless, sem banco) consegue executar.
+ * Qualquer outra tarefa depende do banco e é do Painel — delegá-la ao worker
+ * resulta em HTTP 501 ("exige acesso ao banco e não roda no worker").
+ */
+export const WORKER_CAPABLE_TASKS: ReadonlySet<CoreTask> = new Set<CoreTask>([
+  "probe-http",
+  "probe-dns",
+  "probe-iptv-login",
+  "iptv-detect",
+  "iptv-validate",
+  "iptv-ua-test",
+]);
+
+export function canRunOnCore(task: CoreTask): boolean {
+  return WORKER_CAPABLE_TASKS.has(task);
 }
+
+export function useCore(task?: CoreTask): boolean {
+  if (!coreApiUrl() || isCoreInstance()) return false;
+  if (task && !canRunOnCore(task)) return false;
+  return true;
+}
+
 
 /** 
  * Cria um registro de auditoria na tabela core_execution_logs.
