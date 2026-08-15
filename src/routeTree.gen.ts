@@ -65,6 +65,7 @@ import { Route as ApiPublicCronCheckRouteImport } from './routes/api/public/cron
 import { Route as ApiPublicCoreTaskRouteImport } from './routes/api/public/core/task'
 import { Route as ApiPublicCoreStreamRouteImport } from './routes/api/public/core/stream'
 import { Route as ApiPublicCoreReportRouteImport } from './routes/api/public/core/report'
+import { Route as ApiPublicCoreDiagPlaybackRouteImport } from './routes/api/public/core/diag-playback'
 import { Route as AuthenticatedAppServersNewRouteImport } from './routes/_authenticated/app.servers.new'
 import { Route as AuthenticatedAppServersIdRouteImport } from './routes/_authenticated/app.servers.$id'
 import { Route as AuthenticatedAppHubVerificationRouteImport } from './routes/_authenticated/app.hub.verification'
@@ -373,6 +374,12 @@ const ApiPublicCoreReportRoute = ApiPublicCoreReportRouteImport.update({
   path: '/api/public/core/report',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicCoreDiagPlaybackRoute =
+  ApiPublicCoreDiagPlaybackRouteImport.update({
+    id: '/api/public/core/diag-playback',
+    path: '/api/public/core/diag-playback',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const AuthenticatedAppServersNewRoute =
   AuthenticatedAppServersNewRouteImport.update({
     id: '/servers/new',
@@ -493,6 +500,7 @@ export interface FileRoutesByFullPath {
   '/app/hub/verification': typeof AuthenticatedAppHubVerificationRoute
   '/app/servers/$id': typeof AuthenticatedAppServersIdRoute
   '/app/servers/new': typeof AuthenticatedAppServersNewRoute
+  '/api/public/core/diag-playback': typeof ApiPublicCoreDiagPlaybackRoute
   '/api/public/core/report': typeof ApiPublicCoreReportRoute
   '/api/public/core/stream': typeof ApiPublicCoreStreamRoute
   '/api/public/core/task': typeof ApiPublicCoreTaskRoute
@@ -560,6 +568,7 @@ export interface FileRoutesByTo {
   '/app/hub/verification': typeof AuthenticatedAppHubVerificationRoute
   '/app/servers/$id': typeof AuthenticatedAppServersIdRoute
   '/app/servers/new': typeof AuthenticatedAppServersNewRoute
+  '/api/public/core/diag-playback': typeof ApiPublicCoreDiagPlaybackRoute
   '/api/public/core/report': typeof ApiPublicCoreReportRoute
   '/api/public/core/stream': typeof ApiPublicCoreStreamRoute
   '/api/public/core/task': typeof ApiPublicCoreTaskRoute
@@ -631,6 +640,7 @@ export interface FileRoutesById {
   '/_authenticated/app/hub/verification': typeof AuthenticatedAppHubVerificationRoute
   '/_authenticated/app/servers/$id': typeof AuthenticatedAppServersIdRoute
   '/_authenticated/app/servers/new': typeof AuthenticatedAppServersNewRoute
+  '/api/public/core/diag-playback': typeof ApiPublicCoreDiagPlaybackRoute
   '/api/public/core/report': typeof ApiPublicCoreReportRoute
   '/api/public/core/stream': typeof ApiPublicCoreStreamRoute
   '/api/public/core/task': typeof ApiPublicCoreTaskRoute
@@ -702,6 +712,7 @@ export interface FileRouteTypes {
     | '/app/hub/verification'
     | '/app/servers/$id'
     | '/app/servers/new'
+    | '/api/public/core/diag-playback'
     | '/api/public/core/report'
     | '/api/public/core/stream'
     | '/api/public/core/task'
@@ -769,6 +780,7 @@ export interface FileRouteTypes {
     | '/app/hub/verification'
     | '/app/servers/$id'
     | '/app/servers/new'
+    | '/api/public/core/diag-playback'
     | '/api/public/core/report'
     | '/api/public/core/stream'
     | '/api/public/core/task'
@@ -839,6 +851,7 @@ export interface FileRouteTypes {
     | '/_authenticated/app/hub/verification'
     | '/_authenticated/app/servers/$id'
     | '/_authenticated/app/servers/new'
+    | '/api/public/core/diag-playback'
     | '/api/public/core/report'
     | '/api/public/core/stream'
     | '/api/public/core/task'
@@ -884,6 +897,7 @@ export interface RootRouteChildren {
   Char91DotmcpChar93InvokeToolToolRoute: typeof Char91DotmcpChar93InvokeToolToolRoute
   ApiPublicHealthRoute: typeof ApiPublicHealthRoute
   ApiPublicRadarRoute: typeof ApiPublicRadarRoute
+  ApiPublicCoreDiagPlaybackRoute: typeof ApiPublicCoreDiagPlaybackRoute
   ApiPublicCoreReportRoute: typeof ApiPublicCoreReportRoute
   ApiPublicCoreStreamRoute: typeof ApiPublicCoreStreamRoute
   ApiPublicCoreTaskRoute: typeof ApiPublicCoreTaskRoute
@@ -1292,6 +1306,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicCoreReportRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/core/diag-playback': {
+      id: '/api/public/core/diag-playback'
+      path: '/api/public/core/diag-playback'
+      fullPath: '/api/public/core/diag-playback'
+      preLoaderRoute: typeof ApiPublicCoreDiagPlaybackRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/_authenticated/app/servers/new': {
       id: '/_authenticated/app/servers/new'
       path: '/servers/new'
@@ -1507,6 +1528,7 @@ const rootRouteChildren: RootRouteChildren = {
   Char91DotmcpChar93InvokeToolToolRoute: Char91DotmcpChar93InvokeToolToolRoute,
   ApiPublicHealthRoute: ApiPublicHealthRoute,
   ApiPublicRadarRoute: ApiPublicRadarRoute,
+  ApiPublicCoreDiagPlaybackRoute: ApiPublicCoreDiagPlaybackRoute,
   ApiPublicCoreReportRoute: ApiPublicCoreReportRoute,
   ApiPublicCoreStreamRoute: ApiPublicCoreStreamRoute,
   ApiPublicCoreTaskRoute: ApiPublicCoreTaskRoute,
