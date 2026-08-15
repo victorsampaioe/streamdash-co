@@ -246,7 +246,9 @@ async function performCheck(server: ServerRow) {
 
   if (first.status === "down") {
     // Só entra em confirmação se já não estiver confirmado como DOWN
-    if (!wasDown) {
+    // e se o host for válido (não adianta reconfirmar host vazio).
+    if (!wasDown && hostOk) {
+
       const burst = await confirmationBurst(server, DOWN_CONFIRM_PROBES, sslDays);
       const all = [first, ...burst];
       const fails = all.filter((p) => p.status === "down").length;
