@@ -64,6 +64,7 @@ import { cn } from "@/lib/utils";
 import { ContentDetailsOverlay } from "@/components/player/ContentDetailsOverlay";
 import { BottomNav } from "@/components/player/BottomNav";
 import { DiagnosticBadge } from "@/components/player/DiagnosticBadge";
+import { isBrowserPlayable, incompatibleReason } from "@/lib/playback-format";
 
 
 
@@ -89,6 +90,7 @@ function PlayerPage() {
   const [loadingSeries, setLoadingSeries] = useState(false);
   const [streamUrl, setStreamUrl] = useState<string | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
+  const [playbackReason, setPlaybackReason] = useState<string | null>(null);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
   const hlsRef = useRef<Hls | null>(null);
@@ -886,7 +888,14 @@ function PlayerPage() {
              </Button>
           </div>
           <div className="h-full w-full flex items-center justify-center">
-             {!streamUrl ? (
+             {playbackReason ? (
+                <div className="max-w-md mx-6 rounded-2xl border border-white/10 bg-white/5 p-6 text-center space-y-3">
+                  <p className="text-sm text-white/90 leading-relaxed">{playbackReason}</p>
+                  <Button variant="outline" className="border-white/10 bg-white/5 text-white" onClick={handleClosePlayer}>
+                    Fechar
+                  </Button>
+                </div>
+             ) : !streamUrl ? (
                 <Loader2 className="h-12 w-12 animate-spin text-primary" />
              ) : (
                 <video 
@@ -914,12 +923,24 @@ function PlayerPage() {
   }
 
   function handlePlay(id: string, type: "live" | "movie" | "series", item?: any) {
-    setIsPlaying(true);
-    setStreamUrl(null);
-
     // Live → HLS (.m3u8) é o formato reproduzível no navegador.
     // Filmes/Séries → extensão real do container (.mp4, .mkv, .ts) com Range.
     const extension = type === "live" ? "m3u8" : (item?.container_extension || "mp4");
+
+    // Fluxo inteligente: formato incompatível não gera tentativas demoradas.
+    if (type !== "live" && !isBrowserPlayable(extension)) {
+      const reason = incompatibleReason(extension);
+      console.warn("[PLAYER_DEBUG] formato incompatível", { tipo: type, content_id: id, extensao: extension, motivo: reason });
+      setStreamUrl(null);
+      setPlaybackReason(reason);
+      setIsPlaying(true);
+      toast.error(reason, { duration: 8000 });
+      return;
+    }
+
+    setIsPlaying(true);
+    setStreamUrl(null);
+    setPlaybackReason(null);
 
     const startCheck = Date.now();
     console.log("[PLAYER_DEBUG] play", {
@@ -928,7 +949,7 @@ function PlayerPage() {
       server_id: session?.server_id ?? null,
       extensao: extension,
       endpoint: "server fn getPlayerStreamUrl -> /api/public/core/stream",
-      core_aws: "definido no servidor (CORE_API_URL)",
+      camada_principal: "Cliente -> Stream Monitor Core -> IPTV",
     });
 
     // Diagnóstico antes da reprodução
@@ -1033,6 +1054,7 @@ function PlayerPage() {
   function handleClosePlayer() {
     setIsPlaying(false);
     setStreamUrl(null);
+    setPlaybackReason(null);
     if (hlsRef.current) {
       hlsRef.current.destroy();
       hlsRef.current = null;
@@ -1045,18 +1067,34 @@ function PlayerPage() {
     const video = videoRef.current;
     const isHls = streamUrl.includes("ext=m3u8") || streamUrl.includes(".m3u8");
 
-    // Diagnóstico da camada de playback
+    // Diagnóstico da camada de playback (motivo real, não mensagem genérica)
     const logMeta = async () => {
       try {
         const res = await fetch(streamUrl, { headers: isHls ? {} : { Range: "bytes=0-1023" } });
+        const via = res.headers.get("x-playback-via");
+        const reason = res.headers.get("x-playback-reason");
         console.log(
           "[player] proxy status:", res.status,
+          "| via:", via,
           "| Content-Type:", res.headers.get("content-type"),
           "| Content-Length:", res.headers.get("content-length"),
-          "| Content-Range:", res.headers.get("content-range")
+          "| Content-Range:", res.headers.get("content-range"),
+          "| motivo:", reason
         );
-        if (!res.ok && res.status !== 206) {
-          toast.error(`Stream indisponível (HTTP ${res.status})`);
+        if (res.status === 415) {
+          const msg = reason || incompatibleReason(res.headers.get("x-playback-incompatible"));
+          setPlaybackReason(msg);
+          setStreamUrl(null);
+          toast.error(msg, { duration: 8000 });
+        } else if (!res.ok && res.status !== 206) {
+          const msg =
+            reason ||
+            (res.status === 403
+              ? "Servidor bloqueou o acesso ao stream. Reprodução direcionada pelo Core não foi aceita."
+              : `Stream indisponível (HTTP ${res.status}).`);
+          setPlaybackReason(msg);
+          setStreamUrl(null);
+          toast.error(msg, { duration: 8000 });
         }
         await res.body?.cancel();
       } catch (e) {
@@ -1064,6 +1102,7 @@ function PlayerPage() {
       }
     };
     void logMeta();
+
 
     if (isHls && Hls.isSupported()) {
       const hls = new Hls({ enableWorker: true, lowLatencyMode: false });
@@ -1102,9 +1141,11 @@ function PlayerPage() {
           console.warn("[player] Falha de mídia no HLS, tentando recuperar...");
           hls.recoverMediaError();
         } else {
-          toast.error("Erro fatal na reprodução do canal.");
+          const msg = `Falha fatal na reprodução do canal (${data.details}). O Core entregou o manifesto, porém o navegador não conseguiu decodificar o fluxo.`;
+          setPlaybackReason(msg);
+          toast.error(msg, { duration: 8000 });
           hls.destroy();
-          setIsPlaying(false);
+          setStreamUrl(null);
         }
       });
 
@@ -1112,9 +1153,12 @@ function PlayerPage() {
       // Nativo: Safari/iOS (HLS) e Filmes/Séries (mp4/mkv com Range)
       video.src = streamUrl;
       const onError = () => {
-
         console.error("[player] erro no elemento <video>", video.error);
-        toast.error("Não foi possível reproduzir este conteúdo (formato não suportado pelo navegador).");
+        const msg =
+          "Servidor respondeu normalmente, porém o formato do vídeo não é compatível com o navegador.";
+        setPlaybackReason(msg);
+        setStreamUrl(null);
+        toast.error(msg, { duration: 8000 });
       };
       video.addEventListener("loadedmetadata", () => {
         console.log("[player] metadados carregados, iniciando vídeo");
