@@ -16,10 +16,13 @@ function b64urlDecode(value: string) {
 }
 
 function contentTypeFor(ext: string, upstream: string | null) {
-  if (ext === "m3u8") return "application/vnd.apple.mpegurl";
-  if (ext === "ts") return "video/mp2t";
-  if (ext === "mp4") return "video/mp4";
-  if (ext === "mkv") return "video/x-matroska";
+  const e = ext.toLowerCase();
+  if (e === "m3u8") return "application/vnd.apple.mpegurl";
+  if (e === "ts") return "video/mp2t";
+  if (e === "mp4") return "video/mp4";
+  if (e === "mkv") return "video/x-matroska";
+  if (e === "m4v") return "video/x-m4v";
+  if (e === "avi") return "video/x-msvideo";
   return upstream ?? "application/octet-stream";
 }
 
