@@ -348,6 +348,13 @@ export const Route = createFileRoute("/api/public/core/stream")({
                 signal: AbortSignal.timeout(15000),
               });
               const workerVer = res.headers.get("X-Core-Stream-Version");
+              coreDiag.workerVersion = workerVer;
+              coreDiag.status = res.status;
+              coreDiag.motivo =
+                res.headers.get("X-Core-Error") ??
+                (!workerVer
+                  ? `Worker AWS desatualizado (esperado ${CORE_STREAM_VERSION}) — respondeu HTTP ${res.status} sem X-Core-Stream-Version`
+                  : `Core respondeu HTTP ${res.status}`);
               console.log(
                 `[stream-proxy][core] url=${maskMedia(candidate)} status=${res.status} ct=${res.headers.get("content-type")} worker=${workerVer ?? "DESATUALIZADO(sem versão)"} erro=${res.headers.get("X-Core-Error") ?? "-"}`
               );
