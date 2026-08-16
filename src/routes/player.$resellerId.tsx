@@ -1165,15 +1165,18 @@ function LoginForm({ resellerId, settings, onLogin, primaryColor, secondaryColor
                      </div>
                    ) : healthInfo ? (
                      <div className={cn(
-                       "flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider",
-                       healthInfo.status === 'stable' ? "text-emerald-400" : (healthInfo.status === 'unstable' ? "text-amber-400" : "text-red-400")
-                     )}>
-                       <span className={cn("h-1.5 w-1.5 rounded-full", 
-                         healthInfo.status === 'stable' ? "bg-emerald-400" : (healthInfo.status === 'unstable' ? "bg-amber-400" : "bg-red-400")
-                       )} />
-                       {healthInfo.status === 'stable' ? "Conexão normal" : (healthInfo.status === 'unstable' ? "Instabilidade detectada" : "Servidor indisponível")}
-                       {healthInfo.healthScore !== null && <span className="opacity-50">| Saúde: {healthInfo.healthScore}%</span>}
-                     </div>
+                        "flex items-center gap-1.5 text-[10px] font-black uppercase tracking-wider",
+                        healthInfo.status === 'stable' ? "text-emerald-400" : (healthInfo.status === 'unstable' ? "text-amber-400" : "text-red-400")
+                      )}>
+                        <div className={cn("h-1.5 w-1.5 rounded-full relative", 
+                          healthInfo.status === 'stable' ? "bg-emerald-400" : (healthInfo.status === 'unstable' ? "bg-amber-400" : "bg-red-400")
+                        )}>
+                           {healthInfo.status === 'stable' && <div className="absolute inset-0 rounded-full bg-emerald-400 animate-ping opacity-25" />}
+                        </div>
+                        {healthInfo.status === 'stable' ? "Serviço Online" : (healthInfo.status === 'unstable' ? "Instabilidade Detectada" : "Serviço Indisponível")}
+                        {healthInfo.healthScore !== null && <span className="opacity-40 font-bold ml-1">| SAÚDE: {healthInfo.healthScore}%</span>}
+                      </div>
+
                    ) : null}
                  </div>
                )}
