@@ -931,7 +931,9 @@ function PlayerPage() {
     if (type !== "live" && !isBrowserPlayable(extension)) {
       const reason = incompatibleReason(extension);
       console.warn("[PLAYER_DEBUG] formato incompatível", { tipo: type, content_id: id, extensao: extension, motivo: reason });
+      setStreamUrl(null);
       setPlaybackReason(reason);
+      setIsPlaying(true);
       toast.error(reason, { duration: 8000 });
       return;
     }
