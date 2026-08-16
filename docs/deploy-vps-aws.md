@@ -172,3 +172,42 @@ curl -s -X POST http://127.0.0.1:3000/api/public/cron/check \
 
 Agora o endpoint nunca devolve 500: cada etapa é isolada e as falhas voltam
 no campo `errors`, então o scheduler Docker não entra em loop de erro.
+
+## 7. Atualizar o Worker para a versão atual do Core Stream
+
+O protocolo de streaming tem versão (`CORE_STREAM_VERSION` em `src/lib/core-version.ts`).
+O Worker responde essa versão em `/api/public/health` (`streamVersion`) e no header
+`X-Core-Stream-Version` de `/api/public/core/stream`.
+
+Se o header não vier, o Worker está **desatualizado** (é a causa do HTTP 400
+"Missing parameters" no relay assinado).
+
+```bash
+ssh ubuntu@56.125.119.221
+cd /opt/streammonitor
+sudo git pull
+sudo docker compose up -d --build
+curl -s http://127.0.0.1:3000/api/public/health | jq
+```
+
+Esperado: `{"worker":true,"database":false,"hasSecret":true,"streamVersion":"..."}`.
+
+### Validação real após o deploy
+
+```bash
+CRON_SECRET=<mesmo do painel> CORE_API_URL=https://core.streammonitor.site \
+node scripts/verify-core-stream.mjs \
+  "http://HOST/live/USER/PASS/<stream_id>.m3u8" \
+  "http://HOST/movie/USER/PASS/<stream_id>.mp4" \
+  "http://HOST/series/USER/PASS/<episode_id>.mp4"
+```
+
+Saída por item: `via / status / Content-Type / Range / tempo / worker / erro / resultado`.
+Aceite: live → `200 application/vnd.apple.mpegurl` com segmentos; filme e episódio →
+`206 video/mp4` com `Content-Range`.
+
+### Diagnóstico no Worker (sem 400 genérico)
+
+- `[CORE REQUEST] status= erro= payload_valido= assinatura=` — entrada, HMAC, exp.
+- `[UPSTREAM IPTV] url= status= content-type= range= tempo= erro=` — saída para o IPTV.
+- Headers de resposta: `X-Core-Error`, `X-Upstream-Status`, `X-Playback-Reason`.
