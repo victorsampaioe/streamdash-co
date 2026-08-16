@@ -525,14 +525,20 @@ function PlayerPage() {
     } else {
       // Nativo: Safari/iOS (HLS) e Filmes/Séries (mp4/mkv com Range)
       video.src = streamUrl;
-      const onError = () => {
+      const onError = async () => {
         console.error("[player] erro no elemento <video>", video.error);
         setPlaybackDebug((prev: any) => ({
           ...(prev ?? {}),
           erro_video: `code=${video.error?.code ?? "?"} ${video.error?.message ?? ""}`.trim(),
         }));
+        // Em vez de só reportar erro, analisamos o conteúdo no Core (codec real)
+        const urlAtual = streamUrl;
+        lastStreamUrlRef.current = urlAtual;
+        const r = await runCompatTest(urlAtual);
         const msg =
-          "Servidor respondeu normalmente, porém o formato do vídeo não é compatível com o navegador.";
+          r && !r.ok
+            ? `${NEEDS_CONVERSION_MESSAGE} — vídeo ${r.video ?? "?"} / áudio ${r.audio ?? "?"} (${r.action === "transcode" ? "transcodificação" : "remux"} no Core).`
+            : "Servidor respondeu normalmente, porém o formato do vídeo não é compatível com o navegador.";
         setPlaybackReason(msg);
         setStreamUrl(null);
         toast.error(msg, { duration: 8000 });
