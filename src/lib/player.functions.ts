@@ -601,6 +601,79 @@ export const getTMDBMetadata = createServerFn({ method: "GET" })
 
 
 /**
+ * Salva o progresso de reprodução ou favorito
+ */
+export const updatePlayerActivity = createServerFn({ method: "POST" })
+  .inputValidator((data) => z.object({
+    token: z.string().uuid(),
+    contentId: z.string(),
+    contentType: z.enum(["movie", "series", "live"]),
+    progress: z.number().min(0).max(100).optional(),
+    isFavorite: z.boolean().optional(),
+    metadata: z.any().optional()
+  }).parse(data))
+  .handler(async ({ data }) => {
+    const { data: session, error: sessionErr } = await supabaseAdmin
+      .from("player_sessions")
+      .select("id, server_id")
+      .eq("token", data.token)
+      .single();
+
+    if (sessionErr || !session) throw new Error("Sessão inválida");
+
+    const activityData: any = {
+      session_id: session.id,
+      content_id: data.contentId,
+      content_type: data.contentType,
+      last_accessed_at: new Date().toISOString()
+    };
+
+    if (data.progress !== undefined) activityData.progress = data.progress;
+    if (data.isFavorite !== undefined) activityData.is_favorite = data.isFavorite;
+    if (data.metadata) activityData.metadata = data.metadata;
+
+    const { error } = await supabaseAdmin
+      .from("player_activities")
+      .upsert(activityData, { onConflict: "session_id, content_id" });
+
+    if (error) throw new Error(error.message);
+    return { success: true };
+  });
+
+/**
+ * Busca o histórico e favoritos do usuário
+ */
+export const getPlayerActivity = createServerFn({ method: "GET" })
+  .inputValidator((data) => z.object({
+    token: z.string().uuid(),
+    type: z.enum(["history", "favorites", "progress"])
+  }).parse(data))
+  .handler(async ({ data }) => {
+    const { data: session, error: sessionErr } = await supabaseAdmin
+      .from("player_sessions")
+      .select("id")
+      .eq("token", data.token)
+      .single();
+
+    if (sessionErr || !session) throw new Error("Sessão inválida");
+
+    let query = supabaseAdmin
+      .from("player_activities")
+      .select("*")
+      .eq("session_id", session.id);
+
+    if (data.type === 'favorites') query = query.eq("is_favorite", true);
+    if (data.type === 'progress') query = query.gt("progress", 0).lt("progress", 95);
+    
+    const { data: activities, error } = await query
+      .order("last_accessed_at", { ascending: false })
+      .limit(20);
+
+    if (error) throw new Error(error.message);
+    return activities;
+  });
+
+/**
  * Realiza uma checagem rápida de saúde em um servidor específico.
  * Usado na tela de login para diagnóstico prévio.
  */
@@ -636,4 +709,5 @@ export const logoutPlayer = createServerFn({ method: "POST" })
     if (error) throw new Error(error.message);
     return { success: true };
   });
+
 
