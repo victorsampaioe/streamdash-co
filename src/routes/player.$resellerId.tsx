@@ -94,6 +94,37 @@ function PlayerPage() {
   const [playbackReason, setPlaybackReason] = useState<string | null>(null);
   // HUD temporário de diagnóstico de reprodução (remover após validação)
   const [playbackDebug, setPlaybackDebug] = useState<any>(null);
+  // Teste de compatibilidade Web (codec real analisado no Core)
+  const [compat, setCompat] = useState<WebCompatResult | null>(null);
+  const [compatLoading, setCompatLoading] = useState(false);
+  const lastStreamUrlRef = useRef<string | null>(null);
+
+  const runCompatTest = async (url?: string | null) => {
+    const alvo = url ?? streamUrl ?? lastStreamUrlRef.current;
+    if (!alvo) {
+      toast.error("Abra um conteúdo antes de testar a compatibilidade.");
+      return null;
+    }
+    setCompatLoading(true);
+    try {
+      const r = await testWebCompatibility(alvo);
+      setCompat(r);
+      setPlaybackDebug((prev: any) => ({
+        ...(prev ?? {}),
+        codec_video: r.video ?? prev?.codec_video,
+        codec_audio: r.audio ?? prev?.codec_audio,
+        acao: r.action,
+      }));
+      console.log("[COMPAT]", JSON.stringify(r));
+      return r;
+    } catch (e) {
+      console.error("[COMPAT] falha no teste", e);
+      toast.error("Não foi possível analisar o conteúdo agora.");
+      return null;
+    } finally {
+      setCompatLoading(false);
+    }
+  };
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
   const hlsRef = useRef<Hls | null>(null);
