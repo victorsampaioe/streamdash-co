@@ -148,8 +148,8 @@ function PlayerPage() {
 
   const handleToggleFavorite = (item: any) => {
     if (!token) return;
-    const contentId = (item.stream_id || item.series_id || item.id).toString();
-    const contentType = item.stream_type === "live" ? "live" : (item.series_id ? "series" : "movie");
+    const contentId = (item.stream_id || item.series_id || item.id || item.content_id).toString();
+    const contentType = item.stream_type === "live" ? "live" : (item.series_id || item.content_type === "series" ? "series" : "movie");
     const isFavorite = favorites.some(f => f.content_id === contentId);
     
     toggleFavoriteMutation.mutate({
