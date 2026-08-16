@@ -880,6 +880,7 @@ function PlayerPage() {
     // Filmes/Séries → extensão real do container (.mp4, .mkv, .ts) com Range.
     const extension = type === "live" ? "m3u8" : (item?.container_extension || "mp4");
 
+    const startCheck = Date.now();
     console.log("[PLAYER_DEBUG] play", {
       tipo: type,
       content_id: id,
@@ -888,6 +889,17 @@ function PlayerPage() {
       endpoint: "server fn getPlayerStreamUrl -> /api/public/core/stream",
       core_aws: "definido no servidor (CORE_API_URL)",
     });
+
+    // Diagnóstico antes da reprodução
+    const isStable = serverStatus?.current_status === 'up';
+    if (!isStable) {
+      toast.warning(
+        serverStatus?.current_status === 'degraded' 
+          ? "Detectamos instabilidade no serviço. A reprodução pode falhar."
+          : "Servidor offline no momento. Tente novamente mais tarde.",
+        { duration: 5000 }
+      );
+    }
 
     getPlayerStreamUrl({
       data: {
@@ -898,7 +910,7 @@ function PlayerPage() {
       }
     })
     .then(url => {
-      console.log("[PLAYER_DEBUG] URL de reprodução (proxy):", url, "| tipo:", type, "| ext:", extension, "| status: ok");
+      console.log("[PLAYER_DEBUG] URL de reprodução (proxy):", url, "| tipo:", type, "| ext:", extension, "| status: ok | ms:", Date.now() - startCheck);
       setStreamUrl(url);
     })
     .catch(err => {
@@ -907,12 +919,19 @@ function PlayerPage() {
         content_id: id,
         endpoint: "getPlayerStreamUrl",
         mensagem: err?.message,
-        stack: err?.stack,
       });
-      toast.error(`Erro real ao reproduzir: ${err?.message ?? "desconhecido"}`);
+      
+      // Inteligência de erro amigável
+      const msg = err?.message || "";
+      if (msg.includes("403")) toast.error("Acesso bloqueado pelo servidor IPTV (403).");
+      else if (msg.includes("404")) toast.error("Conteúdo não encontrado no servidor.");
+      else if (msg.includes("timeout")) toast.error("O servidor IPTV não respondeu a tempo.");
+      else toast.error(`Erro ao reproduzir: ${msg}`);
+      
       setIsPlaying(false);
     });
   }
+
 
 
   async function handleOpenSeries(item: any) {
@@ -1017,13 +1036,20 @@ function PlayerPage() {
       hls.on(Hls.Events.ERROR, (_event, data) => {
         console.error("[player] HLS error", data.type, data.details, data.fatal);
         if (!data.fatal) return;
-        if (data.type === Hls.ErrorTypes.NETWORK_ERROR) hls.startLoad();
-        else if (data.type === Hls.ErrorTypes.MEDIA_ERROR) hls.recoverMediaError();
-        else {
-          toast.error("Erro no stream de vídeo");
+        
+        if (data.type === Hls.ErrorTypes.NETWORK_ERROR) {
+          console.warn("[player] Falha de rede no HLS, tentando recuperar...");
+          hls.startLoad();
+        } else if (data.type === Hls.ErrorTypes.MEDIA_ERROR) {
+          console.warn("[player] Falha de mídia no HLS, tentando recuperar...");
+          hls.recoverMediaError();
+        } else {
+          toast.error("Erro fatal na reprodução do canal.");
           hls.destroy();
+          setIsPlaying(false);
         }
       });
+
     } else {
       // Nativo: Safari/iOS (HLS) e Filmes/Séries (mp4/mkv com Range)
       video.src = streamUrl;
