@@ -818,7 +818,7 @@ function PlayerPage() {
             }
           }}
           primaryColor={primaryColor}
-          isFavorite={favorites.some(f => f.content_id === (selectedItem.stream_id || selectedItem.series_id || selectedItem.id || selectedItem.content_id).toString())}
+          isFavorite={favorites.some(f => f.content_id === (selectedItem.stream_id || selectedItem.series_id || selectedItem.id || selectedItem.content_id)?.toString())}
           onToggleFavorite={() => handleToggleFavorite(selectedItem)}
         />
       )}
