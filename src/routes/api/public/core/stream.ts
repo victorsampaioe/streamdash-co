@@ -436,6 +436,7 @@ export const Route = createFileRoute("/api/public/core/stream")({
             status: 200,
             headers: {
               ...CORS,
+              ...coreHeaders,
               "Content-Type": "application/vnd.apple.mpegurl",
               "Cache-Control": "no-cache",
               "X-Playback-Via": deliveredVia,
@@ -464,7 +465,7 @@ export const Route = createFileRoute("/api/public/core/stream")({
           });
         }
 
-        const out = new Headers(CORS);
+        const out = new Headers({ ...CORS, ...coreHeaders });
         out.set("Cache-Control", "no-cache");
         out.set("Content-Type", contentTypeFor(finalExt, upstreamType));
         out.set("X-Playback-Via", deliveredVia);
