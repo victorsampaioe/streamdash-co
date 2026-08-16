@@ -1141,9 +1141,11 @@ function PlayerPage() {
           console.warn("[player] Falha de mídia no HLS, tentando recuperar...");
           hls.recoverMediaError();
         } else {
-          toast.error("Erro fatal na reprodução do canal.");
+          const msg = `Falha fatal na reprodução do canal (${data.details}). O Core entregou o manifesto, porém o navegador não conseguiu decodificar o fluxo.`;
+          setPlaybackReason(msg);
+          toast.error(msg, { duration: 8000 });
           hls.destroy();
-          setIsPlaying(false);
+          setStreamUrl(null);
         }
       });
 
@@ -1151,9 +1153,12 @@ function PlayerPage() {
       // Nativo: Safari/iOS (HLS) e Filmes/Séries (mp4/mkv com Range)
       video.src = streamUrl;
       const onError = () => {
-
         console.error("[player] erro no elemento <video>", video.error);
-        toast.error("Não foi possível reproduzir este conteúdo (formato não suportado pelo navegador).");
+        const msg =
+          "Servidor respondeu normalmente, porém o formato do vídeo não é compatível com o navegador.";
+        setPlaybackReason(msg);
+        setStreamUrl(null);
+        toast.error(msg, { duration: 8000 });
       };
       video.addEventListener("loadedmetadata", () => {
         console.log("[player] metadados carregados, iniciando vídeo");
