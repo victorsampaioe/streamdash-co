@@ -888,7 +888,14 @@ function PlayerPage() {
              </Button>
           </div>
           <div className="h-full w-full flex items-center justify-center">
-             {!streamUrl ? (
+             {playbackReason ? (
+                <div className="max-w-md mx-6 rounded-2xl border border-white/10 bg-white/5 p-6 text-center space-y-3">
+                  <p className="text-sm text-white/90 leading-relaxed">{playbackReason}</p>
+                  <Button variant="outline" className="border-white/10 bg-white/5 text-white" onClick={handleClosePlayer}>
+                    Fechar
+                  </Button>
+                </div>
+             ) : !streamUrl ? (
                 <Loader2 className="h-12 w-12 animate-spin text-primary" />
              ) : (
                 <video 
