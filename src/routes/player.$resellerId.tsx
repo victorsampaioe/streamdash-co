@@ -1084,7 +1084,24 @@ function PlayerPage() {
       video.addEventListener("loadedmetadata", () => {
         console.log("[player] metadados carregados, iniciando vídeo");
         video.play().catch((e) => console.error("Auto-play bloqueado", e));
+        
+        // Registrar atividade para vídeo nativo
+        if (selectedContent && !isHls) {
+          updatePlayerActivity({
+            data: {
+              token: token!,
+              contentId: (selectedContent.stream_id || selectedContent.id || selectedContent.content_id).toString(),
+              contentType: selectedContent.stream_type === "live" ? "live" : (selectedContent.series_id ? "series" : "movie"),
+              progress: 0,
+              metadata: {
+                name: selectedContent.name || selectedContent.title,
+                stream_icon: selectedContent.stream_icon || selectedContent.cover
+              }
+            }
+          }).catch(console.error);
+        }
       });
+
 
       video.addEventListener("error", onError);
       return () => {
