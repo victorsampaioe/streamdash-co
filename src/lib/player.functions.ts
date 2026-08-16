@@ -632,6 +632,7 @@ export const updatePlayerActivity = createServerFn({ method: "POST" })
     if (data.isFavorite !== undefined) activityData.is_favorite = data.isFavorite;
     if (data.metadata) activityData.metadata = data.metadata;
 
+    // @ts-ignore
     const { error } = await supabaseAdmin
       .from("player_activities")
       .upsert(activityData, { onConflict: "session_id, content_id" });
@@ -639,6 +640,7 @@ export const updatePlayerActivity = createServerFn({ method: "POST" })
     if (error) throw new Error(error.message);
     return { success: true };
   });
+
 
 /**
  * Busca o histórico e favoritos do usuário
