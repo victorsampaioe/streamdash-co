@@ -56,11 +56,25 @@ function verifyUpstream(absUrl: string, exp: number, sig: string): boolean {
 function rewriteManifest(manifest: string, upstreamUrl: string, token: string, mode: string) {
   const baseUrl = new URL(upstreamUrl);
   const segExp = Math.floor(Date.now() / 1000) + 3600;
+  let segmentos = 0;
   const toProxy = (raw: string) => {
     const abs = new URL(raw, baseUrl).toString();
-    return `/api/public/core/stream?token=${token}&mode=${mode}&pexp=${segExp}&psig=${signUpstream(abs, segExp)}&u=${b64urlEncode(abs)}`;
+    const segExt = (abs.match(/\.([a-z0-9]{2,4})(?:\?|$)/i)?.[1] ?? "ts").toLowerCase();
+    segmentos += 1;
+    const p = new URLSearchParams({
+      token,
+      mode,
+      type: "live",
+      ext: segExt,
+      // Segmentos seguem obrigatoriamente pelo Core (mesma camada do manifesto).
+      forceCore: "1",
+      pexp: String(segExp),
+      psig: signUpstream(abs, segExp),
+      u: b64urlEncode(abs),
+    });
+    return `/api/public/core/stream?${p.toString()}`;
   };
-  return manifest
+  const out = manifest
     .split("\n")
     .map((line) => {
       const trimmed = line.trim();
@@ -71,7 +85,9 @@ function rewriteManifest(manifest: string, upstreamUrl: string, token: string, m
       return toProxy(trimmed);
     })
     .join("\n");
+  return { manifest: out, segmentos };
 }
+
 
 function maskMedia(url: string) {
   return url.replace(/\/\/([^/]+)\/(live|movie|series)\/[^/]+\/[^/]+\//, "//$1/$2/***/***/");
