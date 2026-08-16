@@ -693,6 +693,30 @@ function PlayerPage() {
                   {diagLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
                   Rodar diagnóstico de catálogo
                 </Button>
+                <Button
+                  variant="outline"
+                  className="w-full h-11 rounded-xl border-emerald-500/20 bg-emerald-500/10 text-emerald-300 hover:bg-emerald-500/20"
+                  disabled={diagLoading}
+                  onClick={async () => {
+                    if (!token) return;
+                    setDiagLoading(true);
+                    setDiag(null);
+                    try {
+                      const { diagnosePlayerPlayback } = await import("@/lib/player.functions");
+                      const r = await diagnosePlayerPlayback({ data: { token } });
+                      console.log("[PLAYBACK_DEBUG] relatório de reprodução:", r);
+                      setDiag(r);
+                    } catch (e: any) {
+                      console.error("[PLAYBACK_DEBUG] falha", e);
+                      setDiag({ erro: e?.message, stack: e?.stack });
+                    } finally {
+                      setDiagLoading(false);
+                    }
+                  }}
+                >
+                  {diagLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                  Testar reprodução real (Live / Filme / Série)
+                </Button>
                 {diag && (
                   <pre
                     data-testid="player-diagnostic"
