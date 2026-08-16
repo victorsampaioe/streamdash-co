@@ -388,6 +388,11 @@ function PlayerPage() {
           core_erro: res.headers.get("x-core-error"),
           core_status: res.headers.get("x-core-status"),
           worker: res.headers.get("x-core-worker-version"),
+          upstream: res.headers.get("x-upstream-status"),
+          upstream_ct: res.headers.get("x-upstream-content-type"),
+          codec_video: res.headers.get("x-playback-codec-video"),
+          codec_audio: res.headers.get("x-playback-codec-audio"),
+          acao: res.headers.get("x-playback-action"),
           url: streamUrl.replace(/(username|password|token)=[^&]*/gi, (_m, k) => `${k}=***`),
         };
         setPlaybackDebug((prev: any) => ({ ...(prev ?? {}), ...info }));
@@ -401,6 +406,7 @@ function PlayerPage() {
           status: info.status,
           erro: info.reason ?? null,
         }, null, 2));
+        const acao = res.headers.get("x-playback-action");
         if (res.status === 415) {
           const msg = reason || incompatibleReason(res.headers.get("x-playback-incompatible"));
           setPlaybackReason(msg);
@@ -410,11 +416,20 @@ function PlayerPage() {
           const msg =
             reason ||
             (res.status === 403
-              ? "Servidor bloqueou o acesso ao stream. Reprodução direcionada pelo Core não foi aceita."
-              : `Stream indisponível (HTTP ${res.status}).`);
+              ? `Servidor bloqueou o acesso ao stream (403) via ${info.via}. Upstream: ${info.upstream ?? "-"}.`
+              : `Stream indisponível (HTTP ${res.status}) via ${info.via}.`);
           setPlaybackReason(msg);
           setStreamUrl(null);
           toast.error(msg, { duration: 8000 });
+        } else if (acao && acao !== "direct" && reason) {
+          // Arquivo entregue corretamente (200/206), porém o codec real não é
+          // decodificável pelo navegador (H265/AC3/DTS) — motivo real, não erro
+          // de servidor. Requer remux/transcodificação pelo Core.
+          setPlaybackReason(
+            `${reason} (vídeo: ${info.codec_video ?? "?"} · áudio: ${info.codec_audio ?? "?"} · ação necessária: ${acao === "transcode" ? "transcodificar" : "remuxar"})`
+          );
+          setStreamUrl(null);
+          toast.error("Codec não suportado pelo navegador — veja o diagnóstico.", { duration: 8000 });
         }
         await res.body?.cancel();
       } catch (e) {
@@ -1107,6 +1122,8 @@ function PlayerPage() {
               <div>tipo: {playbackDebug.tipo ?? "-"} · ext: {playbackDebug.extensao ?? "-"}</div>
               <div>via: {playbackDebug.via ?? "aguardando..."}</div>
               <div>status: {playbackDebug.status ?? "-"} · tempo: {playbackDebug.ms != null ? `${(playbackDebug.ms / 1000).toFixed(1)}s` : "-"}</div>
+              <div>upstream: {playbackDebug.upstream ?? "-"} {playbackDebug.upstream_ct ? `(${playbackDebug.upstream_ct})` : ""}</div>
+              <div>codec: {playbackDebug.codec_video ?? "-"} / {playbackDebug.codec_audio ?? "-"} {playbackDebug.acao && playbackDebug.acao !== "direct" ? `· ${playbackDebug.acao}` : ""}</div>
               <div>formato: {playbackDebug.contentType ?? "-"}</div>
               <div>range: {playbackDebug.contentRange ?? playbackDebug.acceptRanges ?? "-"}</div>
               {playbackDebug.amostra && <div className="text-white/50">bytes: {String(playbackDebug.amostra).slice(0, 60)}</div>}
