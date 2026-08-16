@@ -22,6 +22,17 @@ export type WebCompatResult = {
   status: number | string | null;
   label: string;
   detail: string;
+  /** Diagnóstico de transporte (Range/Content-Type/Length). */
+  transport?: {
+    contentType: string | null;
+    acceptRanges: string | null;
+    contentLength: string | null;
+    contentRange: string | null;
+    firstRange: string;
+    midRange: string;
+    ok: boolean;
+    notes: string[];
+  };
 };
 
 export const NEEDS_CONVERSION_MESSAGE =
@@ -58,13 +69,65 @@ export function verdictFromHeaders(
   };
 }
 
-/** Executa o teste consultando o proxy com um Range mínimo. */
+/**
+ * Executa o teste completo de reprodução:
+ * 1) Range inicial (0-1023) → codec, Content-Type, Accept-Ranges, Content-Length;
+ * 2) Range intermediário → confirma seek real (206 + Content-Range coerente).
+ */
 export async function testWebCompatibility(streamUrl: string): Promise<WebCompatResult> {
   const res = await fetch(streamUrl, {
     headers: { Range: "bytes=0-1023" },
     signal: AbortSignal.timeout(25_000),
   });
   const verdict = verdictFromHeaders(res.headers, res.status);
+  const contentType = res.headers.get("content-type");
+  const acceptRanges = res.headers.get("accept-ranges");
+  const contentRange = res.headers.get("content-range");
+  const contentLength = res.headers.get("content-length");
   await res.body?.cancel();
+
+  const notes: string[] = [];
+  if (res.status !== 206) notes.push(`Range inicial devolveu ${res.status} (esperado 206)`);
+  if (!/^video\//i.test(contentType ?? "")) notes.push(`Content-Type inesperado: ${contentType ?? "ausente"}`);
+  if (!acceptRanges) notes.push("Accept-Ranges ausente");
+  if (!contentLength) notes.push("Content-Length ausente");
+
+  // Tamanho total vindo de "bytes 0-1023/TOTAL".
+  const total = Number(contentRange?.split("/")?.[1] ?? 0);
+  const inicio = Number.isFinite(total) && total > 4_000_000 ? Math.floor(total / 2) : 1_048_576;
+  const midRange = `bytes=${inicio}-${inicio + 1023}`;
+  let midStatus: number | string = "-";
+  let midContentRange: string | null = null;
+  try {
+    const res2 = await fetch(streamUrl, {
+      headers: { Range: midRange },
+      signal: AbortSignal.timeout(25_000),
+    });
+    midStatus = res2.status;
+    midContentRange = res2.headers.get("content-range");
+    await res2.body?.cancel();
+    if (res2.status !== 206) notes.push(`Range intermediário devolveu ${res2.status} (seek indisponível)`);
+    else if (midContentRange && !midContentRange.includes(String(inicio)))
+      notes.push(`Content-Range divergente no seek: ${midContentRange}`);
+  } catch (e) {
+    notes.push(`Falha no Range intermediário: ${(e as Error).message}`);
+  }
+
+  verdict.transport = {
+    contentType,
+    acceptRanges,
+    contentLength,
+    contentRange: midContentRange ?? contentRange,
+    firstRange: `bytes=0-1023 → ${res.status}`,
+    midRange: `${midRange} → ${midStatus}`,
+    ok: notes.length === 0,
+    notes,
+  };
+
+  if (notes.length && verdict.ok) {
+    verdict.label = "⚠️ transporte com inconsistências";
+    verdict.detail = notes.join(" • ");
+  }
   return verdict;
 }
+
