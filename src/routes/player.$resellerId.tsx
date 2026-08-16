@@ -283,8 +283,7 @@ function PlayerPage() {
       const fetchData = async () => {
         try {
           if (activeView === ("mylist" as any)) {
-            const favs = await getFavorites({ data: { token } });
-            // Buscar metadados básicos para os favoritos se necessário
+            const favs = await getPlayerActivity({ data: { token, type: 'favorites' } });
             setContent(Array.isArray(favs) ? favs.map((f: any) => ({ 
               ...f, 
               name: f.name || `Item ${f.content_id}`, 
@@ -294,6 +293,7 @@ function PlayerPage() {
             setLoadingContent(false);
             return;
           }
+
 
           if (["live", "movie", "series"].includes(activeView)) {
             const actionMap = {
