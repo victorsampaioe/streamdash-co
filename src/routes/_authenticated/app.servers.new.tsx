@@ -93,7 +93,14 @@ function NewServer() {
       runAnalyze({ data: { serverId: id } }).catch(() => { /* silencioso */ });
       navigate({ to: "/app/servers/$id", params: { id } });
     },
-    onError: (e: Error) => toast.error(e.message),
+    onError: (e: Error) => {
+      console.error("[new-server] insert error:", e);
+      if (e.message.includes("row-level security policy")) {
+        toast.error("Erro de permissão: Sua assinatura pode ter expirado ou seu período de teste acabou.");
+      } else {
+        toast.error(e.message);
+      }
+    },
   });
 
   return (
