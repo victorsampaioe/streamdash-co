@@ -61,6 +61,8 @@ import { SeriesDetails } from "@/components/player/SeriesDetails";
 import { cn } from "@/lib/utils";
 import { ContentDetailsOverlay } from "@/components/player/ContentDetailsOverlay";
 import { BottomNav } from "@/components/player/BottomNav";
+import { DiagnosticBadge } from "@/components/player/DiagnosticBadge";
+
 
 
 
@@ -328,6 +330,14 @@ function PlayerPage() {
   const primaryColor = settings?.primary_color || "#3B82F6";
   const secondaryColor = settings?.secondary_color || "#0A0A0A";
 
+  const { data: serverStatus } = useQuery({
+    queryKey: ["player-server-status", token],
+    queryFn: async () => token ? await getServerStatus({ data: { token } }) : null,
+    enabled: !!token,
+    refetchInterval: 60000,
+  });
+
+
   if (settingsLoading) {
     return (
       <div className="min-h-screen bg-neutral-950 flex items-center justify-center">
@@ -419,8 +429,32 @@ function PlayerPage() {
 
 
 
-      <main className="flex-1 overflow-y-auto">
+      <main className="flex-1 overflow-y-auto pb-24 md:pb-0">
+        <header className="sticky top-0 z-40 bg-neutral-950/80 backdrop-blur-md px-6 py-4 flex items-center justify-between border-b border-white/5 md:hidden">
+          <div className="flex items-center gap-2">
+            {settings?.logo_url ? (
+              <img src={settings.logo_url} alt="Logo" className="h-6 w-auto" />
+            ) : (
+              <div className="h-6 w-6 rounded bg-primary flex items-center justify-center font-bold text-xs">S</div>
+            )}
+            <span className="font-bold text-sm tracking-tight truncate max-w-[120px]">
+              {settings?.brand_name || "Stream Player"}
+            </span>
+          </div>
+          
+          <DiagnosticBadge 
+            status={serverStatus?.current_status || 'unknown'}
+            healthScore={serverStatus?.health_score}
+            latency={serverStatus?.last_latency_ms}
+            onClick={() => {
+              setActiveView("settings");
+              toast.info("Acessando diagnóstico detalhado...");
+            }}
+          />
+        </header>
+
         {activeView === "home" && (
+
           <div className="p-6 md:p-12 space-y-12">
             <HeroBanner 
               item={homeData.featured} 
