@@ -1,8 +1,9 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { lazy, Suspense } from "react";
-import { Activity, Bell, Globe, Zap, ShieldCheck, LineChart, Send, BookOpen, UserCheck, TrendingUp, Search, Film, Tv, CheckCircle2, Cpu, PlayCircle } from "lucide-react";
+import { lazy, Suspense, useState, useRef } from "react";
+import { Activity, Bell, Globe, Zap, ShieldCheck, LineChart, Send, BookOpen, UserCheck, TrendingUp, Search, Film, Tv, CheckCircle2, Cpu, PlayCircle, Play, Pause, Volume2, VolumeX } from "lucide-react";
 import { Button } from "@/components/ui/button";
 const SupportFab = lazy(() => import("@/components/support-fab").then(m => ({ default: m.SupportFab })));
+import heroVideoAsset from "@/assets/hero-video.mp4.asset.json";
 import poster_duneAsset from "@/assets/radar/dune.jpg.asset.json";
 import poster_godzillaAsset from "@/assets/radar/godzilla.jpg.asset.json";
 import poster_madamewebAsset from "@/assets/radar/madameweb.jpg.asset.json";
