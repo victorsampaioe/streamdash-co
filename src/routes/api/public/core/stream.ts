@@ -7,7 +7,8 @@ const CORS = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Methods": "GET, OPTIONS",
   "Access-Control-Allow-Headers": "Range, Content-Type",
-  "Access-Control-Expose-Headers": "Content-Length, Content-Range, Accept-Ranges, Content-Type",
+  "Access-Control-Expose-Headers":
+    "Content-Length, Content-Range, Accept-Ranges, Content-Type, X-Playback-Via, X-Playback-Reason, X-Playback-Incompatible, X-Core-Error, X-Core-Status, X-Core-Stream-Version, X-Core-Worker-Version",
 };
 
 function b64urlEncode(value: string) {
