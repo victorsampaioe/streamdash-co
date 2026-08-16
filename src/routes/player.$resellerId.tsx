@@ -1038,7 +1038,24 @@ function PlayerPage() {
       hls.on(Hls.Events.MANIFEST_PARSED, () => {
         console.log("[player] manifesto HLS carregado, iniciando reprodução");
         video.play().catch((e) => console.error("Auto-play bloqueado", e));
+        
+        // Registrar atividade (Início)
+        if (selectedContent) {
+          updatePlayerActivity({
+            data: {
+              token: token!,
+              contentId: (selectedContent.stream_id || selectedContent.id || selectedContent.content_id).toString(),
+              contentType: selectedContent.stream_type === "live" ? "live" : (selectedContent.series_id ? "series" : "movie"),
+              progress: 0,
+              metadata: {
+                name: selectedContent.name || selectedContent.title,
+                stream_icon: selectedContent.stream_icon || selectedContent.cover
+              }
+            }
+          }).catch(console.error);
+        }
       });
+
       hls.on(Hls.Events.ERROR, (_event, data) => {
         console.error("[player] HLS error", data.type, data.details, data.fatal);
         if (!data.fatal) return;
