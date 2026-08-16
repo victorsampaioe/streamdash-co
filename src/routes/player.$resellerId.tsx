@@ -388,6 +388,7 @@ function PlayerPage() {
     if (!isPlaying || !streamUrl || !videoRef.current) return;
     const video = videoRef.current;
     const isHls = streamUrl.includes("ext=m3u8") || streamUrl.includes(".m3u8");
+    lastStreamUrlRef.current = streamUrl;
 
     // Diagnóstico da camada de playback (motivo real, não mensagem genérica)
     const logMeta = async () => {
