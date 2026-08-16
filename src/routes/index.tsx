@@ -215,7 +215,8 @@ function Feature({ icon, title, desc }: { icon: React.ReactNode; title: string; 
 function RadarShowcase() {
   const videoRef = useRef<HTMLVideoElement>(null);
   const [isPlaying, setIsPlaying] = useState(true);
-  const [isMuted, setIsMuted] = useState(true);
+  const [isMuted, setIsMuted] = useState(false); // Try to start unmuted if possible, but browsers will likely block it
+  const [showPlayOverlay, setShowPlayOverlay] = useState(false);
 
   const togglePlay = () => {
     if (videoRef.current) {
@@ -229,10 +230,45 @@ function RadarShowcase() {
     }
   };
 
+  const handleStartDemo = () => {
+    if (videoRef.current) {
+      videoRef.current.muted = false;
+      setIsMuted(false);
+      videoRef.current.play().then(() => {
+        setIsPlaying(true);
+        setShowPlayOverlay(false);
+      }).catch(err => {
+        console.error("Playback failed even after click:", err);
+      });
+    }
+  };
+
   const toggleMute = () => {
     if (videoRef.current) {
       videoRef.current.muted = !videoRef.current.muted;
       setIsMuted(videoRef.current.muted);
+    }
+  };
+
+  const handleVideoLoad = () => {
+    if (videoRef.current) {
+      // Attempt autoplay with sound
+      videoRef.current.muted = false;
+      videoRef.current.play().then(() => {
+        setIsPlaying(true);
+        setIsMuted(false);
+      }).catch(() => {
+        // Autoplay with sound blocked, start muted
+        videoRef.current!.muted = true;
+        setIsMuted(true);
+        videoRef.current!.play().then(() => {
+          setIsPlaying(true);
+          setShowPlayOverlay(true);
+        }).catch(err => {
+          console.error("Autoplay completely blocked:", err);
+          setShowPlayOverlay(true);
+        });
+      });
     }
   };
 
@@ -330,8 +366,24 @@ function RadarShowcase() {
                 muted
                 loop
                 playsInline
+                onLoadedData={handleVideoLoad}
                 className="w-full h-full object-cover rounded-[2.2rem]"
               />
+
+              {/* Play Overlay (if autoplay with sound is blocked) */}
+              {showPlayOverlay && (
+                <div className="absolute inset-0 z-40 flex items-center justify-center bg-black/40 backdrop-blur-[2px]">
+                  <Button
+                    onClick={handleStartDemo}
+                    className="group/btn relative px-6 py-8 rounded-2xl bg-primary hover:bg-primary/90 text-black font-bold text-lg flex flex-col items-center gap-3 shadow-[0_0_50px_rgba(var(--primary),0.3)] transition-all hover:scale-105"
+                  >
+                    <div className="h-12 w-12 rounded-full bg-black flex items-center justify-center group-hover/btn:scale-110 transition-transform">
+                      <Play className="h-6 w-6 text-primary ml-1" />
+                    </div>
+                    <span>▶ Ver demonstração</span>
+                  </Button>
+                </div>
+              )}
 
               {/* Float Elements Overlay */}
               <div className="absolute inset-0 pointer-events-none p-6 flex flex-col justify-between z-20">
@@ -361,7 +413,7 @@ function RadarShowcase() {
               </div>
 
               {/* Floating Controls */}
-              <div className="absolute bottom-6 left-1/2 -translate-x-1/2 flex gap-3 z-30 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+              <div className="absolute bottom-6 left-1/2 -translate-x-1/2 flex items-center gap-3 z-30 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
                 <Button
                   variant="secondary"
                   size="icon"
@@ -370,14 +422,37 @@ function RadarShowcase() {
                 >
                   {isPlaying ? <Pause className="h-5 w-5" /> : <Play className="h-5 w-5 ml-0.5" />}
                 </Button>
-                <Button
-                  variant="secondary"
-                  size="icon"
-                  className="h-10 w-10 rounded-full bg-black/60 backdrop-blur-md border-white/10 hover:bg-black/80 text-white shadow-xl"
-                  onClick={toggleMute}
-                >
-                  {isMuted ? <VolumeX className="h-5 w-5" /> : <Volume2 className="h-5 w-5" />}
-                </Button>
+                
+                <div className="flex items-center gap-2 bg-black/60 backdrop-blur-md border border-white/10 rounded-full px-3 py-1">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8 text-white hover:bg-white/10 rounded-full"
+                    onClick={toggleMute}
+                  >
+                    {isMuted ? <VolumeX className="h-4 w-4" /> : <Volume2 className="h-4 w-4" />}
+                  </Button>
+                  <input 
+                    type="range" 
+                    min="0" 
+                    max="1" 
+                    step="0.1" 
+                    defaultValue="1"
+                    onChange={(e) => {
+                      if (videoRef.current) {
+                        videoRef.current.volume = parseFloat(e.target.value);
+                        if (videoRef.current.volume > 0) {
+                          videoRef.current.muted = false;
+                          setIsMuted(false);
+                        } else {
+                          videoRef.current.muted = true;
+                          setIsMuted(true);
+                        }
+                      }
+                    }}
+                    className="w-16 h-1 bg-white/20 rounded-lg appearance-none cursor-pointer accent-primary"
+                  />
+                </div>
               </div>
             </div>
             
