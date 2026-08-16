@@ -657,6 +657,7 @@ export const getPlayerActivity = createServerFn({ method: "GET" })
 
     if (sessionErr || !session) throw new Error("Sessão inválida");
 
+    // @ts-ignore - mesa de atividades criada via migração
     let query = supabaseAdmin
       .from("player_activities")
       .select("*")
@@ -670,8 +671,9 @@ export const getPlayerActivity = createServerFn({ method: "GET" })
       .limit(20);
 
     if (error) throw new Error(error.message);
-    return activities;
+    return activities as any[];
   });
+
 
 /**
  * Realiza uma checagem rápida de saúde em um servidor específico.
