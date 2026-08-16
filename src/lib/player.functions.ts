@@ -715,3 +715,26 @@ export const logoutPlayer = createServerFn({ method: "POST" })
   });
 
 
+
+/**
+ * Diagnóstico de REPRODUÇÃO real (PLAY) — live, filme e episódio.
+ * Compara Painel → IPTV com Painel → Core AWS → IPTV.
+ */
+export const diagnosePlayerPlayback = createServerFn({ method: "POST" })
+  .inputValidator((data) => z.object({ token: z.string().uuid() }).parse(data))
+  .handler(async ({ data }) => {
+    const { data: session, error } = await supabaseAdmin
+      .from("player_sessions")
+      .select("id, server_id, xtream_user, xtream_pass")
+      .eq("token", data.token)
+      .gt("expires_at", new Date().toISOString())
+      .single();
+
+    if (error || !session) throw new Error("Sessão expirada ou inválida");
+
+    const { getPlayerCredentials, probePlayback } = await import("./player.server");
+    const creds = await getPlayerCredentials(session as any);
+    if (!creds.username || !creds.password) throw new Error("Credenciais da sessão indisponíveis");
+
+    return await probePlayback(session.server_id, creds);
+  });
