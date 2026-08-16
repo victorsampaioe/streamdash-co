@@ -1053,15 +1053,19 @@ function PlayerPage() {
     } else {
       // Nativo: Safari/iOS (HLS) e Filmes/Séries (mp4/mkv com Range)
       video.src = streamUrl;
-      const onLoaded = () => video.play().catch((e) => console.error("Auto-play bloqueado", e));
       const onError = () => {
+
         console.error("[player] erro no elemento <video>", video.error);
         toast.error("Não foi possível reproduzir este conteúdo (formato não suportado pelo navegador).");
       };
-      video.addEventListener("loadedmetadata", onLoaded);
+      video.addEventListener("loadedmetadata", () => {
+        console.log("[player] metadados carregados, iniciando vídeo");
+        video.play().catch((e) => console.error("Auto-play bloqueado", e));
+      });
+
       video.addEventListener("error", onError);
       return () => {
-        video.removeEventListener("loadedmetadata", onLoaded);
+        video.removeEventListener("loadedmetadata", () => {}); // Simplified cleanup
         video.removeEventListener("error", onError);
       };
     }
