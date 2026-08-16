@@ -1163,19 +1163,42 @@ function LoginForm({ resellerId, settings, onLogin, primaryColor, secondaryColor
                      <div className="flex items-center gap-2 text-[10px] text-white/40 animate-pulse">
                        <Loader2 className="h-3 w-3 animate-spin" /> Verificando conexão...
                      </div>
-                   ) : healthInfo ? (
-                     <div className={cn(
-                        "flex items-center gap-1.5 text-[10px] font-black uppercase tracking-wider",
-                        healthInfo.status === 'stable' ? "text-emerald-400" : (healthInfo.status === 'unstable' ? "text-amber-400" : "text-red-400")
-                      )}>
-                        <div className={cn("h-1.5 w-1.5 rounded-full relative", 
-                          healthInfo.status === 'stable' ? "bg-emerald-400" : (healthInfo.status === 'unstable' ? "bg-amber-400" : "bg-red-400")
-                        )}>
-                           {healthInfo.status === 'stable' && <div className="absolute inset-0 rounded-full bg-emerald-400 animate-ping opacity-25" />}
+                    ) : healthInfo ? (
+                      <div 
+                        className={cn(
+                          "flex items-center gap-2 p-2 rounded-lg border animate-in fade-in slide-in-from-top-1 duration-300",
+                          healthInfo.status === 'stable' ? "bg-emerald-500/5 border-emerald-500/10 text-emerald-400" : 
+                          healthInfo.status === 'unstable' ? "bg-amber-500/5 border-amber-500/10 text-amber-400" : 
+                          "bg-red-500/5 border-red-500/10 text-red-400"
+                        )}
+                      >
+                        <div className="relative flex items-center justify-center">
+                          <div className={cn("h-2 w-2 rounded-full", 
+                            healthInfo.status === 'stable' ? "bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]" : 
+                            healthInfo.status === 'unstable' ? "bg-amber-500 shadow-[0_0_8px_rgba(245,158,11,0.5)]" : 
+                            "bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.5)]"
+                          )} />
+                          {healthInfo.status === 'stable' && <div className="absolute inset-0 rounded-full bg-emerald-500 animate-ping opacity-20" />}
                         </div>
-                        {healthInfo.status === 'stable' ? "Serviço Online" : (healthInfo.status === 'unstable' ? "Instabilidade Detectada" : "Serviço Indisponível")}
-                        {healthInfo.healthScore !== null && <span className="opacity-40 font-bold ml-1">| SAÚDE: {healthInfo.healthScore}%</span>}
+                        
+                        <div className="flex-1">
+                          <p className="text-[10px] font-black uppercase tracking-widest leading-none">
+                            {healthInfo.status === 'stable' ? "Serviço Online" : (healthInfo.status === 'unstable' ? "Instabilidade Detectada" : "Serviço Indisponível")}
+                          </p>
+                          {healthInfo.healthScore !== null && (
+                            <p className="text-[9px] font-bold opacity-60 mt-0.5 uppercase tracking-tighter">
+                              Saúde do Servidor: {healthInfo.healthScore}%
+                            </p>
+                          )}
+                        </div>
+                        
+                        {healthInfo.status !== 'stable' && (
+                          <div className="h-5 w-5 rounded-full bg-white/5 flex items-center justify-center">
+                            <Info className="h-3 w-3 opacity-50" />
+                          </div>
+                        )}
                       </div>
+
 
                    ) : null}
                  </div>
