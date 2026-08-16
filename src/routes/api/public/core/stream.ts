@@ -317,7 +317,8 @@ export const Route = createFileRoute("/api/public/core/stream")({
             "Accept-Encoding": "identity",
           };
           if (range) headers["Range"] = range;
-          for (const candidate of candidates) {
+          // No máximo 3 URLs por modo: a escada tem 5 modos, evita espera longa.
+          for (const candidate of candidates.slice(0, 3)) {
             const t0 = Date.now();
             try {
               const res = await fetch(candidate, {
@@ -356,7 +357,8 @@ export const Route = createFileRoute("/api/public/core/stream")({
             return;
           }
           const expires = Math.floor(Date.now() / 1000) + 300;
-          for (const candidate of candidates) {
+          // No máximo 3 URLs por modo: a escada tem 5 modos, evita espera longa.
+          for (const candidate of candidates.slice(0, 3)) {
             const relay = new URL(`${coreBase}/api/public/core/stream`);
             relay.searchParams.set("u", b64urlEncode(candidate));
             relay.searchParams.set("exp", String(expires));
