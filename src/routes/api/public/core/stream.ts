@@ -335,9 +335,15 @@ export const Route = createFileRoute("/api/public/core/stream")({
                 redirect: "follow",
                 signal: AbortSignal.timeout(15000),
               });
+              const workerVer = res.headers.get("X-Core-Stream-Version");
               console.log(
-                `[stream-proxy][core] url=${maskMedia(candidate)} status=${res.status} ct=${res.headers.get("content-type")}`
+                `[stream-proxy][core] url=${maskMedia(candidate)} status=${res.status} ct=${res.headers.get("content-type")} worker=${workerVer ?? "DESATUALIZADO(sem versão)"} erro=${res.headers.get("X-Core-Error") ?? "-"}`
               );
+              if (!workerVer) {
+                console.warn(
+                  `[stream-proxy][core] Worker AWS roda versão antiga do stream (esperado ${CORE_STREAM_VERSION}). Faça git pull + docker compose up -d --build na EC2.`
+                );
+              }
               if (res.ok || res.status === 206) {
                 upstream = res;
                 usedUrl = candidate;
@@ -346,6 +352,7 @@ export const Route = createFileRoute("/api/public/core/stream")({
               }
               await res.body?.cancel();
               lastStatus = res.status;
+
             } catch (e) {
               console.warn(`[stream-proxy][core] relay falhou: ${(e as Error).message}`);
             }
