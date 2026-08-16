@@ -914,12 +914,22 @@ function PlayerPage() {
   }
 
   function handlePlay(id: string, type: "live" | "movie" | "series", item?: any) {
-    setIsPlaying(true);
-    setStreamUrl(null);
-
     // Live → HLS (.m3u8) é o formato reproduzível no navegador.
     // Filmes/Séries → extensão real do container (.mp4, .mkv, .ts) com Range.
     const extension = type === "live" ? "m3u8" : (item?.container_extension || "mp4");
+
+    // Fluxo inteligente: formato incompatível não gera tentativas demoradas.
+    if (type !== "live" && !isBrowserPlayable(extension)) {
+      const reason = incompatibleReason(extension);
+      console.warn("[PLAYER_DEBUG] formato incompatível", { tipo: type, content_id: id, extensao: extension, motivo: reason });
+      setPlaybackReason(reason);
+      toast.error(reason, { duration: 8000 });
+      return;
+    }
+
+    setIsPlaying(true);
+    setStreamUrl(null);
+    setPlaybackReason(null);
 
     const startCheck = Date.now();
     console.log("[PLAYER_DEBUG] play", {
@@ -928,7 +938,7 @@ function PlayerPage() {
       server_id: session?.server_id ?? null,
       extensao: extension,
       endpoint: "server fn getPlayerStreamUrl -> /api/public/core/stream",
-      core_aws: "definido no servidor (CORE_API_URL)",
+      camada_principal: "Cliente -> Stream Monitor Core -> IPTV",
     });
 
     // Diagnóstico antes da reprodução
