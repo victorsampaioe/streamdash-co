@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { createHmac, timingSafeEqual } from "crypto";
+import { isBrowserPlayable, incompatibleReason } from "@/lib/playback-format";
 
 const CORS = {
   "Access-Control-Allow-Origin": "*",
