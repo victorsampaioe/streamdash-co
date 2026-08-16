@@ -311,14 +311,16 @@ export async function validateXtreamLogin(
 /* pelo Core AWS (URL assinada), comparando status/Range/Content-Type. */
 /* ------------------------------------------------------------------ */
 
+export type ProbeResult = Record<string, string | number | boolean | null>;
+
 export type PlaybackProbe = {
   tipo: "live" | "movie" | "series";
   item: string | null;
   content_id: string | null;
   extensao: string;
   url: string | null;
-  via_painel: Record<string, unknown> | null;
-  via_core: Record<string, unknown> | null;
+  via_painel: ProbeResult | null;
+  via_core: ProbeResult | null;
   reproduzivel_no_navegador: boolean;
   observacao: string | null;
 };
@@ -332,7 +334,7 @@ function b64url(value: string) {
 async function probeMediaUrl(
   url: string,
   opts: { range?: string; ua: string },
-): Promise<Record<string, unknown>> {
+): Promise<ProbeResult> {
   const started = Date.now();
   const ctl = new AbortController();
   const timer = setTimeout(() => ctl.abort(), 20_000);
