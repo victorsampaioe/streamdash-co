@@ -53,6 +53,17 @@ export function maskUrl(url: string): string {
   return url.replace(/(username|password)=[^&]*/gi, (_m, k) => `${k}=***`);
 }
 
+/** Mantém a resposta de séries consistente, venha ela do Core ou do fallback local. */
+export function normalizeSeriesInfoResponse(value: unknown): unknown {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return value;
+  const response = value as Record<string, unknown>;
+  const rawEpisodes = response.episodes;
+  if (rawEpisodes && typeof rawEpisodes === "object" && !Array.isArray(rawEpisodes)) {
+    return response;
+  }
+  return { ...response, episodes: {} };
+}
+
 /** Execução local (fallback quando o Core AWS não está configurado). */
 export async function fetchXtreamCatalog(
   serverId: string,
@@ -121,13 +132,7 @@ export async function fetchXtreamCatalog(
 
     // Normalização para o componente SeriesDetails
     if (opts.action === "get_episodes_list" || opts.action === "get_series_info") {
-      if (json && !json.episodes && json.info) {
-        // Já está no formato correto mas talvez sem episódios?
-      } else if (json && json.episodes) {
-        // OK
-      } else if (json && typeof json === "object" && !json.info) {
-        json = { info: json, episodes: json.episodes || {} };
-      }
+      json = normalizeSeriesInfoResponse(json);
     }
 
     // Paginação local se for array

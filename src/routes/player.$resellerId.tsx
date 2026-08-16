@@ -351,6 +351,193 @@ function PlayerPage() {
    });
 
 
+  // Efeito para inicializar Hls.js ou Video Nativo
+  useEffect(() => {
+    if (!isPlaying || !streamUrl || !videoRef.current) return;
+    const video = videoRef.current;
+    const isHls = streamUrl.includes("ext=m3u8") || streamUrl.includes(".m3u8");
+
+    // Diagnóstico da camada de playback (motivo real, não mensagem genérica)
+    const logMeta = async () => {
+      const t0 = performance.now();
+      try {
+        const res = await fetch(streamUrl, {
+          headers: isHls ? {} : { Range: "bytes=0-1023" },
+          signal: AbortSignal.timeout(20_000),
+        });
+        const via = res.headers.get("x-playback-via");
+        const reason = res.headers.get("x-playback-reason");
+        const ms = Math.round(performance.now() - t0);
+        let amostra = "";
+        try {
+          const buf = await res.clone().arrayBuffer();
+          amostra = isHls
+            ? new TextDecoder().decode(buf.slice(0, 200))
+            : Array.from(new Uint8Array(buf.slice(0, 16))).map((b) => b.toString(16).padStart(2, "0")).join(" ");
+        } catch { /* ignore */ }
+        const info = {
+          via: via ?? "desconhecido",
+          status: res.status,
+          contentType: res.headers.get("content-type"),
+          contentLength: res.headers.get("content-length"),
+          acceptRanges: res.headers.get("accept-ranges"),
+          contentRange: res.headers.get("content-range"),
+          ms,
+          amostra,
+          reason,
+          url: streamUrl.replace(/(username|password|token)=[^&]*/gi, (_m, k) => `${k}=***`),
+        };
+        setPlaybackDebug((prev: any) => ({ ...(prev ?? {}), ...info }));
+        console.log("[PLAY]", JSON.stringify({
+          tipo: playbackDebug?.tipo ?? null,
+          conteudo: selectedItem?.name ?? selectedItem?.title ?? null,
+          stream_id: playbackDebug?.tipo === "series" ? null : playbackDebug?.contentId ?? null,
+          episode_id: playbackDebug?.tipo === "series" ? playbackDebug?.contentId ?? null : null,
+          url_gerada: info.url,
+          via: info.via,
+          status: info.status,
+          erro: info.reason ?? null,
+        }, null, 2));
+        if (res.status === 415) {
+          const msg = reason || incompatibleReason(res.headers.get("x-playback-incompatible"));
+          setPlaybackReason(msg);
+          setStreamUrl(null);
+          toast.error(msg, { duration: 8000 });
+        } else if (!res.ok && res.status !== 206) {
+          const msg =
+            reason ||
+            (res.status === 403
+              ? "Servidor bloqueou o acesso ao stream. Reprodução direcionada pelo Core não foi aceita."
+              : `Stream indisponível (HTTP ${res.status}).`);
+          setPlaybackReason(msg);
+          setStreamUrl(null);
+          toast.error(msg, { duration: 8000 });
+        }
+        await res.body?.cancel();
+      } catch (e) {
+        console.error("[player] falha ao consultar o proxy de stream:", e);
+        const message = e instanceof Error && e.name === "TimeoutError"
+          ? "O Core não respondeu ao stream em 20 segundos."
+          : "Falha de rede ao acessar o stream pelo Core.";
+        setPlaybackDebug((prev: any) => ({ ...(prev ?? {}), via: "erro", status: "falha", erro_video: message }));
+        setPlaybackReason(message);
+      }
+    };
+    void logMeta();
+
+
+    if (isHls && Hls.isSupported()) {
+      const hls = new Hls({ enableWorker: true, lowLatencyMode: false });
+      hls.loadSource(streamUrl);
+      hls.attachMedia(video);
+      hlsRef.current = hls;
+      hls.on(Hls.Events.MANIFEST_PARSED, () => {
+        console.log("[player] manifesto HLS carregado, iniciando reprodução");
+        video.play().catch((e) => console.error("Auto-play bloqueado", e));
+        
+        // Registrar atividade (Início)
+        if (selectedItem) {
+          updatePlayerActivity({
+            data: {
+              token: token!,
+              contentId: (selectedItem.stream_id || selectedItem.id || selectedItem.content_id).toString(),
+              contentType: selectedItem.stream_type === "live" ? "live" : (selectedItem.series_id ? "series" : "movie"),
+              progress: 0,
+              metadata: {
+                name: selectedItem.name || selectedItem.title,
+                stream_icon: selectedItem.stream_icon || selectedItem.cover
+              }
+            }
+          }).catch(console.error);
+        }
+      });
+
+      hls.on(Hls.Events.ERROR, (_event, data) => {
+        console.error("[player] HLS error", data.type, data.details, data.fatal);
+        setPlaybackDebug((prev: any) => ({ ...(prev ?? {}), erro_hls: `${data.type}/${data.details}${data.fatal ? " (fatal)" : ""}` }));
+        if (!data.fatal) return;
+        
+        if (data.type === Hls.ErrorTypes.NETWORK_ERROR) {
+          console.warn("[player] Falha de rede no HLS, tentando recuperar...");
+          hls.startLoad();
+        } else if (data.type === Hls.ErrorTypes.MEDIA_ERROR) {
+          console.warn("[player] Falha de mídia no HLS, tentando recuperar...");
+          hls.recoverMediaError();
+        } else {
+          const msg = `Falha fatal na reprodução do canal (${data.details}). O Core entregou o manifesto, porém o navegador não conseguiu decodificar o fluxo.`;
+          setPlaybackReason(msg);
+          toast.error(msg, { duration: 8000 });
+          hls.destroy();
+          setStreamUrl(null);
+        }
+      });
+
+    } else {
+      // Nativo: Safari/iOS (HLS) e Filmes/Séries (mp4/mkv com Range)
+      video.src = streamUrl;
+      const onError = () => {
+        console.error("[player] erro no elemento <video>", video.error);
+        setPlaybackDebug((prev: any) => ({
+          ...(prev ?? {}),
+          erro_video: `code=${video.error?.code ?? "?"} ${video.error?.message ?? ""}`.trim(),
+        }));
+        const msg =
+          "Servidor respondeu normalmente, porém o formato do vídeo não é compatível com o navegador.";
+        setPlaybackReason(msg);
+        setStreamUrl(null);
+        toast.error(msg, { duration: 8000 });
+      };
+      video.addEventListener("loadedmetadata", () => {
+        console.log("[player] metadados carregados, iniciando vídeo");
+        video.play().catch((e) => console.error("Auto-play bloqueado", e));
+        
+        // Registrar atividade para vídeo nativo
+        if (selectedItem && !isHls) {
+          updatePlayerActivity({
+            data: {
+              token: token!,
+              contentId: (selectedItem.stream_id || selectedItem.id || selectedItem.content_id).toString(),
+              contentType: selectedItem.stream_type === "live" ? "live" : (selectedItem.series_id ? "series" : "movie"),
+              progress: 0,
+              metadata: {
+                name: selectedItem.name || selectedItem.title,
+                stream_icon: selectedItem.stream_icon || selectedItem.cover
+              }
+            }
+          }).catch(console.error);
+        }
+      });
+
+
+      const onTimeUpdate = () => {
+        if (!selectedItem || selectedItem.stream_type === "live") return;
+        const progress = Math.floor((video.currentTime / video.duration) * 100);
+        // Atualiza a cada 5% ou ao final
+        if (progress % 5 === 0 || progress > 98) {
+           updatePlayerActivity({
+            data: {
+              token: token!,
+              contentId: (selectedItem.stream_id || selectedItem.id || selectedItem.content_id).toString(),
+              contentType: selectedItem.series_id ? "series" : "movie",
+              progress,
+              metadata: {
+                name: selectedItem.name || selectedItem.title,
+                stream_icon: selectedItem.stream_icon || selectedItem.cover
+              }
+            }
+          }).catch(console.error);
+        }
+      };
+
+      video.addEventListener("timeupdate", onTimeUpdate);
+      video.addEventListener("error", onError);
+      
+      return () => {
+        video.removeEventListener("timeupdate", onTimeUpdate);
+        video.removeEventListener("error", onError);
+      };
+    }
+  }, [isPlaying, streamUrl, selectedItem, token]);
 
 
   if (settingsLoading) {
@@ -876,7 +1063,7 @@ function PlayerPage() {
           info={selectedSeriesInfo}
           loading={loadingSeries}
           onClose={() => setSelectedSeriesInfo(null)}
-          onPlay={(ep) => handlePlay(ep.id || ep.stream_id, "series", ep)}
+          onPlay={(ep) => handlePlay(ep.id ?? ep.stream_id, "series", ep)}
           primaryColor={primaryColor}
         />
       )}
@@ -940,6 +1127,13 @@ function PlayerPage() {
   }
 
   function handlePlay(id: string, type: "live" | "movie" | "series", item?: any) {
+    if (id === undefined || id === null || String(id).trim() === "") {
+      const error = type === "series" ? "O episódio não possui episode_id válido." : "O conteúdo não possui stream_id válido.";
+      console.error("[PLAY]", { tipo: type, conteudo: item?.name ?? item?.title ?? null, stream_id: null, episode_id: null, url_gerada: null, via: null, status: "erro", erro: error });
+      toast.error(error);
+      return;
+    }
+
     // Live → HLS (.m3u8) é o formato reproduzível no navegador.
     // Filmes/Séries → extensão real do container (.mp4, .mkv, .ts) com Range.
     const extension = type === "live" ? "m3u8" : (item?.container_extension || "mp4");
@@ -956,19 +1150,22 @@ function PlayerPage() {
     }
 
     setIsPlaying(true);
+    setSelectedItem(item ?? selectedItem);
     setStreamUrl(null);
     setPlaybackReason(null);
     setPlaybackDebug({ tipo: type, extensao: extension, contentId: id, status: null, via: null });
 
 
     const startCheck = Date.now();
-    console.log("[PLAYER_DEBUG] play", {
+    console.log("[PLAY]", {
       tipo: type,
-      content_id: id,
-      server_id: session?.server_id ?? null,
-      extensao: extension,
-      endpoint: "server fn getPlayerStreamUrl -> /api/public/core/stream",
-      camada_principal: "Cliente -> Stream Monitor Core -> IPTV",
+      conteudo: item?.name ?? item?.title ?? selectedItem?.name ?? null,
+      stream_id: type === "series" ? null : String(id),
+      episode_id: type === "series" ? String(id) : null,
+      url_gerada: null,
+      via: "gerando",
+      status: "iniciando",
+      erro: null,
     });
 
     // Diagnóstico antes da reprodução
@@ -991,15 +1188,19 @@ function PlayerPage() {
       }
     })
     .then(url => {
-      console.log("[PLAYER_DEBUG] URL de reprodução (proxy):", url, "| tipo:", type, "| ext:", extension, "| status: ok | ms:", Date.now() - startCheck);
+      console.log("[PLAY]", { tipo: type, conteudo: item?.name ?? item?.title ?? null, stream_id: type === "series" ? null : String(id), episode_id: type === "series" ? String(id) : null, url_gerada: url.replace(/token=[^&]*/i, "token=***"), via: "proxy", status: "url_gerada", erro: null });
       setStreamUrl(url);
     })
     .catch(err => {
-      console.error("[PLAYER_DEBUG] falha ao gerar URL de stream", {
+      console.error("[PLAY]", {
         tipo: type,
-        content_id: id,
-        endpoint: "getPlayerStreamUrl",
-        mensagem: err?.message,
+        conteudo: item?.name ?? item?.title ?? null,
+        stream_id: type === "series" ? null : String(id),
+        episode_id: type === "series" ? String(id) : null,
+        url_gerada: null,
+        via: null,
+        status: "erro",
+        erro: err?.message,
       });
       
       // Inteligência de erro amigável
@@ -1029,7 +1230,7 @@ function PlayerPage() {
       content_id: seriesId,
       server_id: session?.server_id ?? null,
       nome: item.name || item.title,
-      endpoint: "getPlayerCatalog(action=get_episodes_list)",
+      endpoint: "getPlayerCatalog(action=get_series_info)",
     });
     
     setSelectedSeriesInfo({ info: item, episodes: {} });
@@ -1040,7 +1241,7 @@ function PlayerPage() {
       const data = await getPlayerCatalog({ 
         data: { 
           token: token!, 
-          action: "get_episodes_list", 
+          action: "get_series_info", 
           contentId: seriesId
         } 
       });
@@ -1080,176 +1281,6 @@ function PlayerPage() {
     }
   }
 
-  // Efeito para inicializar Hls.js ou Video Nativo
-  useEffect(() => {
-    if (!isPlaying || !streamUrl || !videoRef.current) return;
-    const video = videoRef.current;
-    const isHls = streamUrl.includes("ext=m3u8") || streamUrl.includes(".m3u8");
-
-    // Diagnóstico da camada de playback (motivo real, não mensagem genérica)
-    const logMeta = async () => {
-      const t0 = performance.now();
-      try {
-        const res = await fetch(streamUrl, { headers: isHls ? {} : { Range: "bytes=0-1023" } });
-        const via = res.headers.get("x-playback-via");
-        const reason = res.headers.get("x-playback-reason");
-        const ms = Math.round(performance.now() - t0);
-        let amostra = "";
-        try {
-          const buf = await res.clone().arrayBuffer();
-          amostra = isHls
-            ? new TextDecoder().decode(buf.slice(0, 200))
-            : Array.from(new Uint8Array(buf.slice(0, 16))).map((b) => b.toString(16).padStart(2, "0")).join(" ");
-        } catch { /* ignore */ }
-        const info = {
-          via: via ?? "desconhecido",
-          status: res.status,
-          contentType: res.headers.get("content-type"),
-          contentLength: res.headers.get("content-length"),
-          acceptRanges: res.headers.get("accept-ranges"),
-          contentRange: res.headers.get("content-range"),
-          ms,
-          amostra,
-          reason,
-          url: streamUrl.replace(/(username|password|token)=[^&]*/gi, (_m, k) => `${k}=***`),
-        };
-        setPlaybackDebug((prev: any) => ({ ...(prev ?? {}), ...info }));
-        console.log("[PLAYER]", JSON.stringify(info, null, 2));
-        if (res.status === 415) {
-          const msg = reason || incompatibleReason(res.headers.get("x-playback-incompatible"));
-          setPlaybackReason(msg);
-          setStreamUrl(null);
-          toast.error(msg, { duration: 8000 });
-        } else if (!res.ok && res.status !== 206) {
-          const msg =
-            reason ||
-            (res.status === 403
-              ? "Servidor bloqueou o acesso ao stream. Reprodução direcionada pelo Core não foi aceita."
-              : `Stream indisponível (HTTP ${res.status}).`);
-          setPlaybackReason(msg);
-          setStreamUrl(null);
-          toast.error(msg, { duration: 8000 });
-        }
-        await res.body?.cancel();
-      } catch (e) {
-        console.error("[player] falha ao consultar o proxy de stream:", e);
-      }
-    };
-    void logMeta();
-
-
-    if (isHls && Hls.isSupported()) {
-      const hls = new Hls({ enableWorker: true, lowLatencyMode: false });
-      hls.loadSource(streamUrl);
-      hls.attachMedia(video);
-      hlsRef.current = hls;
-      hls.on(Hls.Events.MANIFEST_PARSED, () => {
-        console.log("[player] manifesto HLS carregado, iniciando reprodução");
-        video.play().catch((e) => console.error("Auto-play bloqueado", e));
-        
-        // Registrar atividade (Início)
-        if (selectedItem) {
-          updatePlayerActivity({
-            data: {
-              token: token!,
-              contentId: (selectedItem.stream_id || selectedItem.id || selectedItem.content_id).toString(),
-              contentType: selectedItem.stream_type === "live" ? "live" : (selectedItem.series_id ? "series" : "movie"),
-              progress: 0,
-              metadata: {
-                name: selectedItem.name || selectedItem.title,
-                stream_icon: selectedItem.stream_icon || selectedItem.cover
-              }
-            }
-          }).catch(console.error);
-        }
-      });
-
-      hls.on(Hls.Events.ERROR, (_event, data) => {
-        console.error("[player] HLS error", data.type, data.details, data.fatal);
-        setPlaybackDebug((prev: any) => ({ ...(prev ?? {}), erro_hls: `${data.type}/${data.details}${data.fatal ? " (fatal)" : ""}` }));
-        if (!data.fatal) return;
-        
-        if (data.type === Hls.ErrorTypes.NETWORK_ERROR) {
-          console.warn("[player] Falha de rede no HLS, tentando recuperar...");
-          hls.startLoad();
-        } else if (data.type === Hls.ErrorTypes.MEDIA_ERROR) {
-          console.warn("[player] Falha de mídia no HLS, tentando recuperar...");
-          hls.recoverMediaError();
-        } else {
-          const msg = `Falha fatal na reprodução do canal (${data.details}). O Core entregou o manifesto, porém o navegador não conseguiu decodificar o fluxo.`;
-          setPlaybackReason(msg);
-          toast.error(msg, { duration: 8000 });
-          hls.destroy();
-          setStreamUrl(null);
-        }
-      });
-
-    } else {
-      // Nativo: Safari/iOS (HLS) e Filmes/Séries (mp4/mkv com Range)
-      video.src = streamUrl;
-      const onError = () => {
-        console.error("[player] erro no elemento <video>", video.error);
-        setPlaybackDebug((prev: any) => ({
-          ...(prev ?? {}),
-          erro_video: `code=${video.error?.code ?? "?"} ${video.error?.message ?? ""}`.trim(),
-        }));
-        const msg =
-          "Servidor respondeu normalmente, porém o formato do vídeo não é compatível com o navegador.";
-        setPlaybackReason(msg);
-        setStreamUrl(null);
-        toast.error(msg, { duration: 8000 });
-      };
-      video.addEventListener("loadedmetadata", () => {
-        console.log("[player] metadados carregados, iniciando vídeo");
-        video.play().catch((e) => console.error("Auto-play bloqueado", e));
-        
-        // Registrar atividade para vídeo nativo
-        if (selectedItem && !isHls) {
-          updatePlayerActivity({
-            data: {
-              token: token!,
-              contentId: (selectedItem.stream_id || selectedItem.id || selectedItem.content_id).toString(),
-              contentType: selectedItem.stream_type === "live" ? "live" : (selectedItem.series_id ? "series" : "movie"),
-              progress: 0,
-              metadata: {
-                name: selectedItem.name || selectedItem.title,
-                stream_icon: selectedItem.stream_icon || selectedItem.cover
-              }
-            }
-          }).catch(console.error);
-        }
-      });
-
-
-      const onTimeUpdate = () => {
-        if (!selectedItem || selectedItem.stream_type === "live") return;
-        const progress = Math.floor((video.currentTime / video.duration) * 100);
-        // Atualiza a cada 5% ou ao final
-        if (progress % 5 === 0 || progress > 98) {
-           updatePlayerActivity({
-            data: {
-              token: token!,
-              contentId: (selectedItem.stream_id || selectedItem.id || selectedItem.content_id).toString(),
-              contentType: selectedItem.series_id ? "series" : "movie",
-              progress,
-              metadata: {
-                name: selectedItem.name || selectedItem.title,
-                stream_icon: selectedItem.stream_icon || selectedItem.cover
-              }
-            }
-          }).catch(console.error);
-        }
-      };
-
-      video.addEventListener("timeupdate", onTimeUpdate);
-      video.addEventListener("error", onError);
-      
-      return () => {
-        video.removeEventListener("timeupdate", onTimeUpdate);
-        video.removeEventListener("error", onError);
-      };
-    }
-  }, [isPlaying, streamUrl, selectedItem, token]);
 
 
 }
