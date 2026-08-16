@@ -1,4 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { CORE_STREAM_VERSION } from "@/lib/core-version";
 
 /**
  * Healthcheck público (usado pelo Docker e pelo Caddy). Não expõe dados.
