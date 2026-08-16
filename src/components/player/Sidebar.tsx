@@ -177,37 +177,7 @@ export function Sidebar({ activeView, onChangeView, brandName, logoUrl, onLogout
         </nav>
       </aside>
 
-      {/* Mobile Navigation Bar */}
-      <nav className="md:hidden fixed bottom-0 inset-x-0 h-16 bg-black/80 backdrop-blur-xl border-t border-white/5 flex items-center justify-around px-2 z-50">
-        {items.filter(i => i.id !== "search" && i.id !== "settings").map((item) => {
-          const Icon = item.icon;
-          const isActive = activeView === item.id;
-          
-          return (
-            <button
-              key={item.id}
-              onClick={() => onChangeView(item.id)}
-              className={cn(
-                "flex flex-col items-center gap-1 flex-1 py-1 rounded-lg transition-colors",
-                isActive ? "text-primary" : "text-white/40"
-              )}
-            >
-              <Icon className="h-5 w-5" />
-              <span className="text-[10px] font-medium">{item.label}</span>
-            </button>
-          );
-        })}
-        <button
-          onClick={() => onChangeView("search")}
-          className={cn(
-            "flex flex-col items-center gap-1 flex-1 py-1 rounded-lg transition-colors",
-            activeView === "search" ? "text-primary" : "text-white/40"
-          )}
-        >
-          <Search className="h-5 w-5" />
-          <span className="text-[10px] font-medium">Buscar</span>
-        </button>
-      </nav>
+      {/* Mobile Navigation Bar is now handled by BottomNav component */}
     </>
   );
 }

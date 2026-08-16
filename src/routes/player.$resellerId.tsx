@@ -9,12 +9,14 @@ import {
   getPlayerStreamUrl,
   getPlayerServers,
   logoutPlayer,
-  getFavorites,
-  toggleFavorite,
   getTMDBMetadata,
-  diagnosePlayerCatalog
+  diagnosePlayerCatalog,
+  getServerStatus,
+  getPlayerActivity,
+  updatePlayerActivity
 
 } from "@/lib/player.functions";
+
 
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -60,6 +62,10 @@ import { SearchOverlay } from "@/components/player/SearchOverlay";
 import { SeriesDetails } from "@/components/player/SeriesDetails";
 import { cn } from "@/lib/utils";
 import { ContentDetailsOverlay } from "@/components/player/ContentDetailsOverlay";
+import { BottomNav } from "@/components/player/BottomNav";
+import { DiagnosticBadge } from "@/components/player/DiagnosticBadge";
+
+
 
 
 
@@ -110,18 +116,23 @@ function PlayerPage() {
   const [diagLoading, setDiagLoading] = useState(false);
 
 
-  // Carregar favoritos
+  // Carregar favoritos e progresso
   useEffect(() => {
     if (token) {
-      getFavorites({ data: { token } })
+      getPlayerActivity({ data: { token, type: 'favorites' } })
         .then(setFavorites)
+        .catch(console.error);
+        
+      getPlayerActivity({ data: { token, type: 'history' } })
+        .then(setHistory)
         .catch(console.error);
     }
   }, [token]);
 
   const toggleFavoriteMutation = useMutation({
-    mutationFn: toggleFavorite,
+    mutationFn: (variables: { data: any }) => updatePlayerActivity(variables),
     onSuccess: (_, variables) => {
+
       if (!variables) return;
       const data = variables.data as any;
       const { contentId, contentType, isFavorite } = data;
@@ -219,13 +230,12 @@ function PlayerPage() {
             }));
           }
 
-          // Buscar Favoritos com metadados (amostra)
-          const favs = await getFavorites({ data: { token } });
-          if (favs && favs.length > 0) {
-            // Em um sistema real, buscaríamos detalhes dos primeiros 10 itens
-            // Por enquanto, apenas atualizamos a UI se houver favoritos
+          // Buscar Favoritos
+          const favs = await getPlayerActivity({ data: { token, type: 'favorites' } });
+          if (Array.isArray(favs)) {
             setFavorites(favs);
           }
+
         } catch (err) {
           console.error("Error loading home data", err);
         } finally {
@@ -273,8 +283,7 @@ function PlayerPage() {
       const fetchData = async () => {
         try {
           if (activeView === ("mylist" as any)) {
-            const favs = await getFavorites({ data: { token } });
-            // Buscar metadados básicos para os favoritos se necessário
+            const favs = await getPlayerActivity({ data: { token, type: 'favorites' } });
             setContent(Array.isArray(favs) ? favs.map((f: any) => ({ 
               ...f, 
               name: f.name || `Item ${f.content_id}`, 
@@ -284,6 +293,7 @@ function PlayerPage() {
             setLoadingContent(false);
             return;
           }
+
 
           if (["live", "movie", "series"].includes(activeView)) {
             const actionMap = {
@@ -325,6 +335,19 @@ function PlayerPage() {
 
   const primaryColor = settings?.primary_color || "#3B82F6";
   const secondaryColor = settings?.secondary_color || "#0A0A0A";
+
+   const { data: serverStatus } = useQuery({
+     queryKey: ["player-server-status", token],
+     queryFn: async () => {
+       if (!token) return null;
+       return await getServerStatus({ data: { token } });
+     },
+     enabled: !!token,
+     refetchInterval: 60000,
+   });
+
+
+
 
   if (settingsLoading) {
     return (
@@ -392,8 +415,8 @@ function PlayerPage() {
           if (v === "search") setIsSearchOpen(true);
           else {
             setActiveView(v);
-            setSelectedCategory(null); // Resetar categoria ao trocar aba
-            setContent([]); // Limpar conteúdo para mostrar skeleton
+            setSelectedCategory(null);
+            setContent([]);
           }
         }}
         brandName={settings?.brand_name ?? undefined}
@@ -402,9 +425,47 @@ function PlayerPage() {
         token={token!}
       />
 
+      <BottomNav 
+        activeView={activeView} 
+        onChangeView={(v) => {
+          if (v === "search") setIsSearchOpen(true);
+          else {
+            setActiveView(v);
+            setSelectedCategory(null);
+            setContent([]);
+          }
+        }}
+        primaryColor={primaryColor}
+      />
 
-      <main className="flex-1 overflow-y-auto">
+
+
+      <main className="flex-1 overflow-y-auto pb-24 md:pb-0">
+        <header className="sticky top-0 z-40 bg-neutral-950/80 backdrop-blur-md px-6 py-4 flex items-center justify-between border-b border-white/5 md:hidden">
+          <div className="flex items-center gap-2">
+            {settings?.logo_url ? (
+              <img src={settings.logo_url} alt="Logo" className="h-6 w-auto" />
+            ) : (
+              <div className="h-6 w-6 rounded bg-primary flex items-center justify-center font-bold text-xs">S</div>
+            )}
+            <span className="font-bold text-sm tracking-tight truncate max-w-[120px]">
+              {settings?.brand_name || "Stream Player"}
+            </span>
+          </div>
+          
+          <DiagnosticBadge 
+            status={serverStatus?.current_status || 'unknown'}
+            healthScore={serverStatus?.health_score}
+            latency={serverStatus?.last_latency_ms}
+            onClick={() => {
+              setActiveView("settings");
+              toast.info("Acessando diagnóstico detalhado...");
+            }}
+          />
+        </header>
+
         {activeView === "home" && (
+
           <div className="p-6 md:p-12 space-y-12">
             <HeroBanner 
               item={homeData.featured} 
@@ -825,6 +886,7 @@ function PlayerPage() {
     // Filmes/Séries → extensão real do container (.mp4, .mkv, .ts) com Range.
     const extension = type === "live" ? "m3u8" : (item?.container_extension || "mp4");
 
+    const startCheck = Date.now();
     console.log("[PLAYER_DEBUG] play", {
       tipo: type,
       content_id: id,
@@ -833,6 +895,17 @@ function PlayerPage() {
       endpoint: "server fn getPlayerStreamUrl -> /api/public/core/stream",
       core_aws: "definido no servidor (CORE_API_URL)",
     });
+
+    // Diagnóstico antes da reprodução
+    const isStable = serverStatus?.current_status === 'up';
+    if (!isStable) {
+      toast.warning(
+        serverStatus?.current_status === 'degraded' 
+          ? "Detectamos instabilidade no serviço. A reprodução pode falhar."
+          : "Servidor offline no momento. Tente novamente mais tarde.",
+        { duration: 5000 }
+      );
+    }
 
     getPlayerStreamUrl({
       data: {
@@ -843,7 +916,7 @@ function PlayerPage() {
       }
     })
     .then(url => {
-      console.log("[PLAYER_DEBUG] URL de reprodução (proxy):", url, "| tipo:", type, "| ext:", extension, "| status: ok");
+      console.log("[PLAYER_DEBUG] URL de reprodução (proxy):", url, "| tipo:", type, "| ext:", extension, "| status: ok | ms:", Date.now() - startCheck);
       setStreamUrl(url);
     })
     .catch(err => {
@@ -852,12 +925,19 @@ function PlayerPage() {
         content_id: id,
         endpoint: "getPlayerStreamUrl",
         mensagem: err?.message,
-        stack: err?.stack,
       });
-      toast.error(`Erro real ao reproduzir: ${err?.message ?? "desconhecido"}`);
+      
+      // Inteligência de erro amigável
+      const msg = err?.message || "";
+      if (msg.includes("403")) toast.error("Acesso bloqueado pelo servidor IPTV (403).");
+      else if (msg.includes("404")) toast.error("Conteúdo não encontrado no servidor.");
+      else if (msg.includes("timeout")) toast.error("O servidor IPTV não respondeu a tempo.");
+      else toast.error(`Erro ao reproduzir: ${msg}`);
+      
       setIsPlaying(false);
     });
   }
+
 
 
   async function handleOpenSeries(item: any) {
@@ -958,31 +1038,99 @@ function PlayerPage() {
       hls.on(Hls.Events.MANIFEST_PARSED, () => {
         console.log("[player] manifesto HLS carregado, iniciando reprodução");
         video.play().catch((e) => console.error("Auto-play bloqueado", e));
+        
+        // Registrar atividade (Início)
+        if (selectedContent) {
+          updatePlayerActivity({
+            data: {
+              token: token!,
+              contentId: (selectedContent.stream_id || selectedContent.id || selectedContent.content_id).toString(),
+              contentType: selectedContent.stream_type === "live" ? "live" : (selectedContent.series_id ? "series" : "movie"),
+              progress: 0,
+              metadata: {
+                name: selectedContent.name || selectedContent.title,
+                stream_icon: selectedContent.stream_icon || selectedContent.cover
+              }
+            }
+          }).catch(console.error);
+        }
       });
+
       hls.on(Hls.Events.ERROR, (_event, data) => {
         console.error("[player] HLS error", data.type, data.details, data.fatal);
         if (!data.fatal) return;
-        if (data.type === Hls.ErrorTypes.NETWORK_ERROR) hls.startLoad();
-        else if (data.type === Hls.ErrorTypes.MEDIA_ERROR) hls.recoverMediaError();
-        else {
-          toast.error("Erro no stream de vídeo");
+        
+        if (data.type === Hls.ErrorTypes.NETWORK_ERROR) {
+          console.warn("[player] Falha de rede no HLS, tentando recuperar...");
+          hls.startLoad();
+        } else if (data.type === Hls.ErrorTypes.MEDIA_ERROR) {
+          console.warn("[player] Falha de mídia no HLS, tentando recuperar...");
+          hls.recoverMediaError();
+        } else {
+          toast.error("Erro fatal na reprodução do canal.");
           hls.destroy();
+          setIsPlaying(false);
         }
       });
+
     } else {
       // Nativo: Safari/iOS (HLS) e Filmes/Séries (mp4/mkv com Range)
       video.src = streamUrl;
-      const onLoaded = () => video.play().catch((e) => console.error("Auto-play bloqueado", e));
       const onError = () => {
+
         console.error("[player] erro no elemento <video>", video.error);
         toast.error("Não foi possível reproduzir este conteúdo (formato não suportado pelo navegador).");
       };
-      video.addEventListener("loadedmetadata", onLoaded);
+      video.addEventListener("loadedmetadata", () => {
+        console.log("[player] metadados carregados, iniciando vídeo");
+        video.play().catch((e) => console.error("Auto-play bloqueado", e));
+        
+        // Registrar atividade para vídeo nativo
+        if (selectedContent && !isHls) {
+          updatePlayerActivity({
+            data: {
+              token: token!,
+              contentId: (selectedContent.stream_id || selectedContent.id || selectedContent.content_id).toString(),
+              contentType: selectedContent.stream_type === "live" ? "live" : (selectedContent.series_id ? "series" : "movie"),
+              progress: 0,
+              metadata: {
+                name: selectedContent.name || selectedContent.title,
+                stream_icon: selectedContent.stream_icon || selectedContent.cover
+              }
+            }
+          }).catch(console.error);
+        }
+      });
+
+
+      const onTimeUpdate = () => {
+        if (!selectedContent || selectedContent.stream_type === "live") return;
+        const progress = Math.floor((video.currentTime / video.duration) * 100);
+        // Atualiza a cada 5% ou ao final
+        if (progress % 5 === 0 || progress > 98) {
+           updatePlayerActivity({
+            data: {
+              token: token!,
+              contentId: (selectedContent.stream_id || selectedContent.id || selectedContent.content_id).toString(),
+              contentType: selectedContent.series_id ? "series" : "movie",
+              progress,
+              metadata: {
+                name: selectedContent.name || selectedContent.title,
+                stream_icon: selectedContent.stream_icon || selectedContent.cover
+              }
+            }
+          }).catch(console.error);
+        }
+      };
+
+      video.addEventListener("timeupdate", onTimeUpdate);
       video.addEventListener("error", onError);
       return () => {
-        video.removeEventListener("loadedmetadata", onLoaded);
+        video.removeEventListener("loadedmetadata", () => {});
+        video.removeEventListener("timeupdate", onTimeUpdate);
         video.removeEventListener("error", onError);
       };
+
     }
   }, [isPlaying, streamUrl]);
 
@@ -1078,17 +1226,43 @@ function LoginForm({ resellerId, settings, onLogin, primaryColor, secondaryColor
                      <div className="flex items-center gap-2 text-[10px] text-white/40 animate-pulse">
                        <Loader2 className="h-3 w-3 animate-spin" /> Verificando conexão...
                      </div>
-                   ) : healthInfo ? (
-                     <div className={cn(
-                       "flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider",
-                       healthInfo.status === 'stable' ? "text-emerald-400" : (healthInfo.status === 'unstable' ? "text-amber-400" : "text-red-400")
-                     )}>
-                       <span className={cn("h-1.5 w-1.5 rounded-full", 
-                         healthInfo.status === 'stable' ? "bg-emerald-400" : (healthInfo.status === 'unstable' ? "bg-amber-400" : "bg-red-400")
-                       )} />
-                       {healthInfo.status === 'stable' ? "Conexão normal" : (healthInfo.status === 'unstable' ? "Instabilidade detectada" : "Servidor indisponível")}
-                       {healthInfo.healthScore !== null && <span className="opacity-50">| Saúde: {healthInfo.healthScore}%</span>}
-                     </div>
+                    ) : healthInfo ? (
+                      <div 
+                        className={cn(
+                          "flex items-center gap-2 p-2 rounded-lg border animate-in fade-in slide-in-from-top-1 duration-300",
+                          healthInfo.status === 'stable' ? "bg-emerald-500/5 border-emerald-500/10 text-emerald-400" : 
+                          healthInfo.status === 'unstable' ? "bg-amber-500/5 border-amber-500/10 text-amber-400" : 
+                          "bg-red-500/5 border-red-500/10 text-red-400"
+                        )}
+                      >
+                        <div className="relative flex items-center justify-center">
+                          <div className={cn("h-2 w-2 rounded-full", 
+                            healthInfo.status === 'stable' ? "bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]" : 
+                            healthInfo.status === 'unstable' ? "bg-amber-500 shadow-[0_0_8px_rgba(245,158,11,0.5)]" : 
+                            "bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.5)]"
+                          )} />
+                          {healthInfo.status === 'stable' && <div className="absolute inset-0 rounded-full bg-emerald-500 animate-ping opacity-20" />}
+                        </div>
+                        
+                        <div className="flex-1">
+                          <p className="text-[10px] font-black uppercase tracking-widest leading-none">
+                            {healthInfo.status === 'stable' ? "Serviço Online" : (healthInfo.status === 'unstable' ? "Instabilidade Detectada" : "Serviço Indisponível")}
+                          </p>
+                          {healthInfo.healthScore !== null && (
+                            <p className="text-[9px] font-bold opacity-60 mt-0.5 uppercase tracking-tighter">
+                              Saúde do Servidor: {healthInfo.healthScore}%
+                            </p>
+                          )}
+                        </div>
+                        
+                        {healthInfo.status !== 'stable' && (
+                          <div className="h-5 w-5 rounded-full bg-white/5 flex items-center justify-center">
+                            <Info className="h-3 w-3 opacity-50" />
+                          </div>
+                        )}
+                      </div>
+
+
                    ) : null}
                  </div>
                )}

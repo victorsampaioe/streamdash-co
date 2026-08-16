@@ -34,7 +34,8 @@ export function HeroBanner({ items = [], item: fallbackItem, onPlay, onMyList, p
   const year = item.year || (item.releaseDate ? new Date(item.releaseDate).getFullYear() : null);
 
   return (
-    <div className="relative w-full h-[70vh] min-h-[500px] overflow-hidden rounded-3xl mb-8 group animate-in fade-in duration-700">
+    <div className="relative w-full h-[70vh] md:h-[70vh] min-h-[500px] md:min-h-[500px] aspect-[9/16] md:aspect-auto overflow-hidden rounded-3xl mb-8 group animate-in fade-in duration-700">
+
       {/* Background Image with Gradient */}
       <div className="absolute inset-0 transition-opacity duration-1000">
         <img 
@@ -80,7 +81,8 @@ export function HeroBanner({ items = [], item: fallbackItem, onPlay, onMyList, p
       )}
 
       {/* Content */}
-      <div className="absolute bottom-0 left-0 p-8 md:p-16 w-full md:w-2/3 space-y-6">
+      <div className="absolute bottom-0 left-0 p-6 md:p-16 w-full md:w-2/3 space-y-4 md:space-y-6">
+
         <div className="space-y-4">
           <div className="flex items-center gap-4 text-sm font-medium">
             <span className="px-2 py-0.5 rounded bg-primary text-white" style={{ backgroundColor: primaryColor }}>
@@ -95,43 +97,46 @@ export function HeroBanner({ items = [], item: fallbackItem, onPlay, onMyList, p
             {year && <span className="text-white/60">{year}</span>}
           </div>
           
-          <h1 className="text-4xl md:text-6xl font-bold text-white tracking-tight drop-shadow-2xl">
+          <h1 className="text-3xl md:text-6xl font-bold text-white tracking-tight drop-shadow-2xl line-clamp-2 md:line-clamp-none">
             {title}
           </h1>
+
           
-          <p className="text-lg text-white/80 line-clamp-3 max-w-xl leading-relaxed">
+          <p className="text-sm md:text-lg text-white/80 line-clamp-2 md:line-clamp-3 max-w-xl leading-relaxed">
             {description}
           </p>
         </div>
 
-        <div className="flex flex-wrap items-center gap-4 pt-2">
+        <div className="flex items-center gap-3 md:gap-4 pt-2">
           <Button 
             size="lg" 
-            className="h-14 px-8 text-lg font-bold rounded-xl shadow-xl shadow-primary/20 hover:scale-105 transition-transform"
+            className="flex-1 md:flex-none h-12 md:h-14 px-6 md:px-8 text-base md:text-lg font-bold rounded-xl shadow-xl shadow-primary/20 hover:scale-105 transition-transform"
             style={{ backgroundColor: primaryColor }}
             onClick={() => onPlay(item)}
           >
-            <Play className="mr-2 h-6 w-6 fill-white" /> Assistir Agora
+            <Play className="mr-2 h-5 w-5 md:h-6 md:w-6 fill-white" /> Assistir
           </Button>
+
           
           <Button 
             size="lg" 
             variant="outline"
-            className="h-14 px-8 text-lg font-bold rounded-xl bg-white/5 border-white/10 hover:bg-white/10 transition-all text-white"
+            className="h-12 md:h-14 w-12 md:w-auto px-0 md:px-8 text-lg font-bold rounded-xl bg-white/5 border-white/10 hover:bg-white/10 transition-all text-white"
             onClick={() => onMyList?.(item)}
           >
-            {isFavorite?.(item) ? <Check className="h-6 w-6 text-green-500" /> : <Plus className="h-6 w-6" />}
-            {isFavorite?.(item) ? "Na Minha Lista" : "Minha Lista"}
+            {isFavorite?.(item) ? <Check className="h-5 w-5 md:h-6 md:w-6 text-green-500" /> : <Plus className="h-5 w-5 md:h-6 md:w-6" />}
+            <span className="hidden md:inline ml-2">{isFavorite?.(item) ? "Na Minha Lista" : "Minha Lista"}</span>
           </Button>
 
           <Button 
             size="icon"
             variant="ghost"
-            className="h-14 w-14 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 text-white"
+            className="h-12 w-12 md:h-14 md:w-14 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 text-white"
           >
-            <Info className="h-6 w-6" />
+            <Info className="h-5 w-5 md:h-6 md:w-6" />
           </Button>
         </div>
+
       </div>
     </div>
   );

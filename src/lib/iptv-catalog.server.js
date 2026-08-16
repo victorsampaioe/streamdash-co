@@ -1,0 +1,336 @@
+// Server-only: Inteligência de Conteúdo IPTV.
+// Compara o catálogo atual (metadados apenas) com o último estado conhecido,
+// registra adições/remoções, histórico diário e assinatura (hash) do catálogo.
+import { supabaseAdmin } from "@/integrations/supabase/client.server";
+const MAX_ITEMS_PER_KIND = 40000;
+const CHUNK = 500;
+/**
+ * Normaliza o título para comparar o mesmo conteúdo entre servidores diferentes.
+ * Implementa reconhecimento inteligente conforme requisitos.
+ */
+export function titleKey(name) {
+    if (!name)
+        return "";
+    // 1. Normalização base
+    let key = name
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "") // Remove acentos
+        .toLowerCase();
+    // 2. Remoção de tags e qualidades (Ignorar tags)
+    key = key.replace(/\b(4k|fhd|hd|sd|hevc|h265|x265|x264|h264|web-dl|hdr|bluray|hdtv|webrip|dublado|legendado|leg|dub|l|d|dual|audio|multi|pt|en|br|latam)\b/g, " ");
+    // 3. Remoção de temporada/episódio (para agrupar séries)
+    key = key.replace(/\b(s\d{1,2}e\d{1,2}|s\d{1,2}|temporada\s?\d{1,2}|t\d{1,2}|ep\d{1,2})\b/g, " ");
+    // 4. Remoção de anos (para lidar com Homem Aranha 2026 vs Homem Aranha)
+    key = key.replace(/\(\d{4}\)|\b\d{4}\b/g, " ");
+    // 5. Limpeza final de símbolos e pontuação
+    key = key.replace(/[^a-z0-9]/g, " ")
+        .replace(/\s+/g, " ")
+        .trim();
+    return key.slice(0, 160);
+}
+/** Hash rápido e estável (FNV-1a) da lista completa — evita reprocessar catálogo idêntico. */
+function hashCatalog(input) {
+    let h = 0x811c9dc5;
+    const feed = (s) => {
+        for (let i = 0; i < s.length; i++) {
+            h ^= s.charCodeAt(i);
+            h = Math.imul(h, 0x01000193);
+        }
+    };
+    for (const kind of ["live", "vod", "series"]) {
+        feed(kind);
+        for (const it of input[kind])
+            feed(`${it.id}:${it.name}|`);
+    }
+    return (h >>> 0).toString(16);
+}
+async function chunked(rows, fn) {
+    for (let i = 0; i < rows.length; i += CHUNK)
+        await fn(rows.slice(i, i + CHUNK));
+}
+/**
+ * Sincroniza o catálogo de um servidor.
+ * Só armazena metadados (id, nome, categoria) — nunca conteúdo de vídeo.
+ */
+export async function syncCatalog(serverId, input, opts = {}) {
+    const started = Date.now();
+    console.log(`[iptv-radar] [${serverId}] Iniciando processamento do catálogo...`);
+    const kinds = ["live", "vod", "series"];
+    console.log(`[iptv-radar] [${serverId}] Etapa: Normalização e limpeza de duplicados...`);
+    const clean = { live: [], vod: [], series: [] };
+    for (const kind of kinds) {
+        const seen = new Set();
+        for (const raw of input[kind] ?? []) {
+            const id = String(raw.id ?? "").trim();
+            const name = String(raw.name ?? "").trim();
+            if (!id || !name || seen.has(id))
+                continue;
+            seen.add(id);
+            clean[kind].push({ id, name, category: raw.category ?? null });
+            if (clean[kind].length >= MAX_ITEMS_PER_KIND)
+                break;
+        }
+    }
+    const totals = { live: clean.live.length, vod: clean.vod.length, series: clean.series.length };
+    const hash = hashCatalog(clean);
+    const { data: srv } = await supabaseAdmin
+        .from("servers")
+        .select("catalog_hash")
+        .eq("id", serverId)
+        .maybeSingle();
+    if (!opts.force && srv && srv.catalog_hash === hash) {
+        await supabaseAdmin
+            .from("servers")
+            .update({ catalog_synced_at: new Date().toISOString() })
+            .eq("id", serverId);
+        return {
+            skipped: true,
+            reason: "catálogo idêntico (hash)",
+            hash,
+            sync_ms: Date.now() - started,
+            added: { live: 0, vod: 0, series: 0 },
+            removed: 0,
+            totals,
+        };
+    }
+    // Estado atual no banco (apenas itens ativos)
+    console.log(`[iptv-radar] [${serverId}] Etapa: Carregando catálogo atual do banco de dados (${totals.live + totals.vod + totals.series} itens pendentes)...`);
+    const known = new Map();
+    {
+        let from = 0;
+        for (;;) {
+            const { data } = await supabaseAdmin
+                .from("iptv_catalog_items")
+                .select("kind, external_id, name, category")
+                .eq("server_id", serverId)
+                .is("removed_at", null)
+                .range(from, from + 999);
+            const rows = (data ?? []);
+            for (const r of rows)
+                known.set(`${r.kind}:${r.external_id}`, { name: r.name, category: r.category ?? null });
+            if (rows.length < 1000)
+                break;
+            from += 1000;
+            if (from > 200000)
+                break;
+        }
+    }
+    const nowIso = new Date().toISOString();
+    const firstRun = known.size === 0;
+    const upserts = [];
+    const changes = [];
+    const added = { live: 0, vod: 0, series: 0 };
+    const currentKeys = new Set();
+    console.log(`[iptv-radar] [${serverId}] Etapa: Comparando e gerando diff...`);
+    for (const kind of kinds) {
+        for (const it of clean[kind]) {
+            const key = `${kind}:${it.id}`;
+            currentKeys.add(key);
+            const prev = known.get(key);
+            const category = it.category ?? null;
+            // Só grava quando o item é novo ou mudou de fato: evita reescrever
+            // centenas de milhares de linhas idênticas a cada sincronização.
+            const changed = !prev || prev.name !== it.name || prev.category !== category;
+            if (changed) {
+                upserts.push({
+                    server_id: serverId,
+                    kind,
+                    external_id: it.id,
+                    name: it.name,
+                    title_key: titleKey(it.name),
+                    category,
+                    last_seen_at: nowIso,
+                    removed_at: null,
+                    ...(prev ? {} : { first_seen_at: nowIso }),
+                });
+            }
+            if (!prev) {
+                added[kind]++;
+                // No primeiro mapeamento tudo é "novo": não gera ruído de novidades.
+                if (!firstRun) {
+                    changes.push({
+                        server_id: serverId,
+                        kind,
+                        action: "added",
+                        external_id: it.id,
+                        name: it.name,
+                        category: it.category ?? null,
+                        detected_at: nowIso,
+                    });
+                }
+            }
+        }
+    }
+    const removedKeys = [];
+    for (const [key, val] of known) {
+        if (currentKeys.has(key))
+            continue;
+        const [kind, ...rest] = key.split(":");
+        removedKeys.push({ kind: kind, id: rest.join(":"), name: val.name });
+    }
+    await chunked(upserts, async (part) => {
+        await supabaseAdmin
+            .from("iptv_catalog_items")
+            .upsert(part, { onConflict: "server_id,kind,external_id" });
+    });
+    if (removedKeys.length) {
+        await chunked(removedKeys, async (part) => {
+            await supabaseAdmin
+                .from("iptv_catalog_items")
+                .update({ removed_at: nowIso })
+                .eq("server_id", serverId)
+                .in("external_id", part.map((r) => r.id));
+        });
+        for (const r of removedKeys) {
+            changes.push({
+                server_id: serverId,
+                kind: r.kind,
+                action: "removed",
+                external_id: r.id,
+                name: r.name,
+                detected_at: nowIso,
+            });
+        }
+    }
+    if (changes.length) {
+        await chunked(changes, async (part) => {
+            await supabaseAdmin.from("iptv_catalog_changes").insert(part);
+        });
+    }
+    const syncMs = Date.now() - started;
+    const day = nowIso.slice(0, 10);
+    const { data: today } = await supabaseAdmin
+        .from("iptv_catalog_daily")
+        .select("added_channels, added_movies, added_series, removed_count")
+        .eq("server_id", serverId)
+        .eq("day", day)
+        .maybeSingle();
+    const prevDay = (today ?? {
+        added_channels: 0,
+        added_movies: 0,
+        added_series: 0,
+        removed_count: 0,
+    });
+    await supabaseAdmin.from("iptv_catalog_daily").upsert({
+        server_id: serverId,
+        day,
+        channels: totals.live,
+        movies: totals.vod,
+        series: totals.series,
+        added_channels: (prevDay["added_channels"] ?? 0) + (firstRun ? 0 : added.live),
+        added_movies: (prevDay["added_movies"] ?? 0) + (firstRun ? 0 : added.vod),
+        added_series: (prevDay["added_series"] ?? 0) + (firstRun ? 0 : added.series),
+        removed_count: (prevDay["removed_count"] ?? 0) + removedKeys.length,
+        sync_ms: syncMs,
+    }, { onConflict: "server_id,day" });
+    await supabaseAdmin
+        .from("servers")
+        .update({ catalog_hash: hash, catalog_synced_at: nowIso, catalog_sync_ms: syncMs })
+        .eq("id", serverId);
+    // 7. Sincronização com o Radar Inteligente Global
+    if (changes.length > 0 || firstRun) {
+        const { notifyNewContent } = await import("./iptv-notify.server");
+        // Processamos todos os itens atuais (no firstRun) ou apenas as mudanças
+        const itemsToProcess = firstRun
+            ? Object.entries(clean).flatMap(([kind, items]) => items.map(it => ({ ...it, kind })))
+            : changes.filter((c) => c.action === "added");
+        for (const item of itemsToProcess) {
+            const tKey = titleKey(item.name);
+            const mediaType = item.kind === "live" ? "live" : (item.kind === "series" ? "tv" : "movie");
+            // Upsert no Radar Global
+            const { data: globalItem, error: globalErr } = await supabaseAdmin
+                .from("iptv_global_catalog")
+                .upsert({
+                title_key: tKey,
+                media_type: mediaType,
+                normalized_name: item.name,
+                last_detected_at: nowIso,
+                // Se for novo, estes campos serão definidos
+                first_server_id: serverId,
+                first_detected_at: nowIso
+            }, { onConflict: 'title_key,media_type' })
+                .select('id, first_detected_at')
+                .single();
+            if (globalItem) {
+                // Vincula este servidor ao conteúdo
+                await supabaseAdmin
+                    .from("iptv_catalog_matches")
+                    .upsert({
+                    catalog_id: globalItem.id,
+                    server_id: serverId,
+                    external_id: item.id,
+                    raw_name: item.name,
+                    detected_at: nowIso
+                }, { onConflict: 'catalog_id,server_id' });
+                // Notifica se for novidade real (não apenas no firstRun do app, mas first_detected_at recente)
+                const isNewGlobal = globalItem.first_detected_at === nowIso;
+                if (isNewGlobal && !firstRun) {
+                    await notifyNewContent(serverId, {
+                        kind: item.kind,
+                        name: item.name,
+                        category: item.category
+                    }, { isFirst: true });
+                }
+                else if (!firstRun && itemsToProcess.length < 20) {
+                    // Notifica como atualização se não houver muitos itens (evita flood)
+                    await notifyNewContent(serverId, {
+                        kind: item.kind,
+                        name: item.name,
+                        category: item.category
+                    });
+                }
+            }
+        }
+    }
+    return {
+        skipped: false,
+        hash,
+        sync_ms: syncMs,
+        added: firstRun ? { live: 0, vod: 0, series: 0 } : added,
+        removed: removedKeys.length,
+        totals,
+    };
+}
+/**
+ * Sincronização simplificada para o Radar Global.
+ * Utilizado pelo motor de Inteligência para registrar novas detecções.
+ */
+export async function syncCatalogWithGlobal(serverId, input) {
+    const nowIso = new Date().toISOString();
+    let new_titles = 0;
+    let total_changes = 0;
+    const kinds = ["vod", "series", "live"];
+    for (const kind of kinds) {
+        for (const it of input[kind] ?? []) {
+            const tKey = titleKey(it.name);
+            const mediaType = kind === "live" ? "live" : (kind === "series" ? "tv" : "movie");
+            const { data: globalItem } = await supabaseAdmin
+                .from("iptv_global_catalog")
+                .upsert({
+                title_key: tKey,
+                media_type: mediaType,
+                normalized_name: it.name,
+                last_detected_at: nowIso,
+                first_server_id: serverId,
+                first_detected_at: nowIso
+            }, { onConflict: 'title_key,media_type' })
+                .select('id, first_detected_at')
+                .single();
+            if (globalItem) {
+                total_changes++;
+                if (globalItem.first_detected_at === nowIso)
+                    new_titles++;
+                await supabaseAdmin
+                    .from("iptv_catalog_matches")
+                    .upsert({
+                    catalog_id: globalItem.id,
+                    server_id: serverId,
+                    external_id: it.id,
+                    raw_name: it.name,
+                    detected_at: nowIso
+                }, { onConflict: 'catalog_id,server_id' });
+            }
+        }
+    }
+    return { new_titles, total_changes };
+}

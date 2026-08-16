@@ -88,23 +88,44 @@ export const loginXtreamClient = createServerFn({ method: "POST" })
     // Reutiliza a inteligência IPTV já existente (probeXtream) com fallback local.
     const local = () => validateXtreamLogin(server.host, data.username, data.password);
 
-    let authResult: any = await runOnCore("iptv-validate" as any, {
-      host: server.host,
-      username: data.username,
-      password: data.password,
-      options: { catalogMode: "auth" }
-    }, local);
+    const startLogin = Date.now();
+    console.log(`[player-login] servidor=uniplay etapa=inicio host=${server.host} usuario=${data.username}`);
+
+    let authResult: any;
+    try {
+      authResult = await runOnCore("iptv-validate" as any, {
+        host: server.host,
+        username: data.username,
+        password: data.password,
+        options: { catalogMode: "auth" }
+      }, local);
+      
+      console.log(`[player-login] servidor=uniplay etapa=core status=${authResult?.login_ok ? "OK" : "FAIL"} tempo=${Date.now() - startLogin}ms`);
+    } catch (e: any) {
+      console.error(`[player-login] servidor=uniplay etapa=core erro=${e?.message} tempo=${Date.now() - startLogin}ms`);
+    }
 
     // Se o Core respondeu mas não confirmou o login, tenta o fallback local
-    // (bases http/https, player_api/panel_api, múltiplos User-Agents).
     if (!authResult?.login_ok) {
-      console.warn(`[player-login] core não validou host=${server.host}: ${authResult?.error ?? "sem detalhe"} — tentando fallback local`);
+      const localStart = Date.now();
       authResult = await local();
+      console.log(`[player-login] servidor=uniplay etapa=fallback_local status=${authResult?.login_ok ? "OK" : "FAIL"} tempo=${Date.now() - localStart}ms erro=${authResult?.error || "n/a"}`);
     }
 
     if (!authResult?.login_ok) {
-      throw new Error(authResult?.error || "Falha na autenticação Xtream");
+      const duration = Date.now() - startLogin;
+      console.log(`[player-login] servidor=uniplay RESULTADO=FALHA tempo_total=${duration}ms erro=${authResult?.error}`);
+      
+      // Mensagens amigáveis e específicas
+      const errorMsg = authResult?.error || "";
+      if (errorMsg.includes("403")) throw new Error("Acesso temporariamente bloqueado pelo servidor (403).");
+      if (errorMsg.includes("timeout") || errorMsg.includes("AbortError")) throw new Error("O servidor demorou muito para responder. Tente novamente.");
+      if (errorMsg.includes("inválidos")) throw new Error("Usuário ou senha inválidos.");
+      
+      throw new Error(authResult?.error || "Não foi possível comunicar com o servidor no momento.");
     }
+
+    console.log(`[player-login] servidor=uniplay RESULTADO=SUCESSO tempo_total=${Date.now() - startLogin}ms`);
 
 
     const token = crypto.randomUUID();
@@ -580,6 +601,83 @@ export const getTMDBMetadata = createServerFn({ method: "GET" })
 
 
 /**
+ * Salva o progresso de reprodução ou favorito
+ */
+export const updatePlayerActivity = createServerFn({ method: "POST" })
+  .inputValidator((data) => z.object({
+    token: z.string().uuid(),
+    contentId: z.string(),
+    contentType: z.enum(["movie", "series", "live"]),
+    progress: z.number().min(0).max(100).optional(),
+    isFavorite: z.boolean().optional(),
+    metadata: z.any().optional()
+  }).parse(data))
+  .handler(async ({ data }) => {
+    const { data: session, error: sessionErr } = await supabaseAdmin
+      .from("player_sessions")
+      .select("id, server_id")
+      .eq("token", data.token)
+      .single();
+
+    if (sessionErr || !session) throw new Error("Sessão inválida");
+
+    const activityData: any = {
+      session_id: session.id,
+      content_id: data.contentId,
+      content_type: data.contentType,
+      last_accessed_at: new Date().toISOString()
+    };
+
+    if (data.progress !== undefined) activityData.progress = data.progress;
+    if (data.isFavorite !== undefined) activityData.is_favorite = data.isFavorite;
+    if (data.metadata) activityData.metadata = data.metadata;
+
+    // @ts-ignore
+    const { error } = await supabaseAdmin
+      .from("player_activities")
+      .upsert(activityData, { onConflict: "session_id, content_id" });
+
+    if (error) throw new Error(error.message);
+    return { success: true };
+  });
+
+
+/**
+ * Busca o histórico e favoritos do usuário
+ */
+export const getPlayerActivity = createServerFn({ method: "GET" })
+  .inputValidator((data) => z.object({
+    token: z.string().uuid(),
+    type: z.enum(["history", "favorites", "progress"])
+  }).parse(data))
+  .handler(async ({ data }) => {
+    const { data: session, error: sessionErr } = await supabaseAdmin
+      .from("player_sessions")
+      .select("id")
+      .eq("token", data.token)
+      .single();
+
+    if (sessionErr || !session) throw new Error("Sessão inválida");
+
+    // @ts-ignore - mesa de atividades criada via migração
+    let query = supabaseAdmin
+      .from("player_activities")
+      .select("*")
+      .eq("session_id", session.id);
+
+    if (data.type === 'favorites') query = query.eq("is_favorite", true);
+    if (data.type === 'progress') query = query.gt("progress", 0).lt("progress", 95);
+    
+    const { data: activities, error } = await query
+      .order("last_accessed_at", { ascending: false })
+      .limit(20);
+
+    if (error) throw new Error(error.message);
+    return activities as any[];
+  });
+
+
+/**
  * Realiza uma checagem rápida de saúde em um servidor específico.
  * Usado na tela de login para diagnóstico prévio.
  */
@@ -615,4 +713,5 @@ export const logoutPlayer = createServerFn({ method: "POST" })
     if (error) throw new Error(error.message);
     return { success: true };
   });
+
 
