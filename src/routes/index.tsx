@@ -366,8 +366,24 @@ function RadarShowcase() {
                 muted
                 loop
                 playsInline
+                onLoadedData={handleVideoLoad}
                 className="w-full h-full object-cover rounded-[2.2rem]"
               />
+
+              {/* Play Overlay (if autoplay with sound is blocked) */}
+              {showPlayOverlay && (
+                <div className="absolute inset-0 z-40 flex items-center justify-center bg-black/40 backdrop-blur-[2px]">
+                  <Button
+                    onClick={handleStartDemo}
+                    className="group/btn relative px-6 py-8 rounded-2xl bg-primary hover:bg-primary/90 text-black font-bold text-lg flex flex-col items-center gap-3 shadow-[0_0_50px_rgba(var(--primary),0.3)] transition-all hover:scale-105"
+                  >
+                    <div className="h-12 w-12 rounded-full bg-black flex items-center justify-center group-hover/btn:scale-110 transition-transform">
+                      <Play className="h-6 w-6 text-primary ml-1" />
+                    </div>
+                    <span>▶ Ver demonstração</span>
+                  </Button>
+                </div>
+              )}
 
               {/* Float Elements Overlay */}
               <div className="absolute inset-0 pointer-events-none p-6 flex flex-col justify-between z-20">
