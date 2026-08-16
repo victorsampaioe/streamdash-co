@@ -7,7 +7,7 @@ const CORS = {
   "Access-Control-Allow-Methods": "GET, OPTIONS",
   "Access-Control-Allow-Headers": "Range, Content-Type",
   "Access-Control-Expose-Headers":
-    "Content-Length, Content-Range, Accept-Ranges, Content-Type, X-Playback-Via, X-Playback-Reason, X-Playback-Incompatible, X-Playback-Codec-Video, X-Playback-Codec-Audio, X-Playback-Action, X-Core-Error, X-Core-Status, X-Core-Stream-Version, X-Core-Worker-Version, X-Core-UA, X-Upstream-Status, X-Upstream-Content-Type, X-Upstream-Url",
+    "Content-Length, Content-Range, Accept-Ranges, Content-Type, X-Playback-Via, X-Playback-Segments, X-Playback-Reason, X-Playback-Incompatible, X-Playback-Codec-Video, X-Playback-Codec-Audio, X-Playback-Action, X-Core-Error, X-Core-Status, X-Core-Stream-Version, X-Core-Worker-Version, X-Core-UA, X-Upstream-Status, X-Upstream-Content-Type, X-Upstream-Url",
 };
 
 function b64urlEncode(value: string) {
@@ -56,11 +56,25 @@ function verifyUpstream(absUrl: string, exp: number, sig: string): boolean {
 function rewriteManifest(manifest: string, upstreamUrl: string, token: string, mode: string) {
   const baseUrl = new URL(upstreamUrl);
   const segExp = Math.floor(Date.now() / 1000) + 3600;
+  let segmentos = 0;
   const toProxy = (raw: string) => {
     const abs = new URL(raw, baseUrl).toString();
-    return `/api/public/core/stream?token=${token}&mode=${mode}&pexp=${segExp}&psig=${signUpstream(abs, segExp)}&u=${b64urlEncode(abs)}`;
+    const segExt = (abs.match(/\.([a-z0-9]{2,4})(?:\?|$)/i)?.[1] ?? "ts").toLowerCase();
+    segmentos += 1;
+    const p = new URLSearchParams({
+      token,
+      mode,
+      type: "live",
+      ext: segExt,
+      // Segmentos seguem pela mesma camada que entregou o manifesto.
+      forceCore: mode.startsWith("CORE") ? "1" : "0",
+      pexp: String(segExp),
+      psig: signUpstream(abs, segExp),
+      u: b64urlEncode(abs),
+    });
+    return `/api/public/core/stream?${p.toString()}`;
   };
-  return manifest
+  const out = manifest
     .split("\n")
     .map((line) => {
       const trimmed = line.trim();
@@ -71,7 +85,9 @@ function rewriteManifest(manifest: string, upstreamUrl: string, token: string, m
       return toProxy(trimmed);
     })
     .join("\n");
+  return { manifest: out, segmentos };
 }
+
 
 function maskMedia(url: string) {
   return url.replace(/\/\/([^/]+)\/(live|movie|series)\/[^/]+\/[^/]+\//, "//$1/$2/***/***/");
@@ -447,9 +463,9 @@ export const Route = createFileRoute("/api/public/core/stream")({
         // Manifesto HLS → segmentos passam pelo mesmo modo que funcionou.
         if (isManifest) {
           const text = await found.text();
-          const rewritten = rewriteManifest(text, usedUrl, token, usedModo);
+          const { manifest: rewritten, segmentos } = rewriteManifest(text, usedUrl, token, usedModo);
           console.log(
-            `[STREAM RESPONSE] via=${usedModo} manifesto HLS bytes=${text.length} linhas=${text.split("\n").length}`
+            `[STREAM RESPONSE] via=${usedModo} manifesto HLS bytes=${text.length} linhas=${text.split("\n").length} segmentos_reescritos=${segmentos}`
           );
           return new Response(rewritten, {
             status: 200,
@@ -459,10 +475,12 @@ export const Route = createFileRoute("/api/public/core/stream")({
               "Content-Type": "application/vnd.apple.mpegurl",
               "Cache-Control": "no-cache",
               "X-Playback-Via": usedModo,
+              "X-Playback-Segments": String(segmentos),
               "X-Upstream-Status": String(found.headers.get("X-Upstream-Status") ?? found.status),
               "X-Playback-Reason": resumo || "OK",
             },
           });
+
         }
 
         const finalExt = (usedUrl.match(/\.([a-z0-9]{2,4})(?:\?|$)/i)?.[1] ?? ext).toLowerCase();
