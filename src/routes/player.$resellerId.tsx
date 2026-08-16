@@ -90,6 +90,7 @@ function PlayerPage() {
   const [loadingSeries, setLoadingSeries] = useState(false);
   const [streamUrl, setStreamUrl] = useState<string | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
+  const [playbackReason, setPlaybackReason] = useState<string | null>(null);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
   const hlsRef = useRef<Hls | null>(null);
