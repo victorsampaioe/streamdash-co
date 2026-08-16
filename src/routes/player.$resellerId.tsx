@@ -759,7 +759,7 @@ function PlayerPage() {
         primaryColor={primaryColor}
         onPlay={(item: any, type: "live" | "movie" | "series") => {
           if (type === "live") {
-            handlePlay(item.stream_id || item.id, "live");
+            handlePlay(item.stream_id || item.id, "live", item);
           } else {
             setSelectedItem(item);
             setIsDetailsOpen(true);
