@@ -463,9 +463,9 @@ export const Route = createFileRoute("/api/public/core/stream")({
         // Manifesto HLS → segmentos passam pelo mesmo modo que funcionou.
         if (isManifest) {
           const text = await found.text();
-          const rewritten = rewriteManifest(text, usedUrl, token, usedModo);
+          const { manifest: rewritten, segmentos } = rewriteManifest(text, usedUrl, token, usedModo);
           console.log(
-            `[STREAM RESPONSE] via=${usedModo} manifesto HLS bytes=${text.length} linhas=${text.split("\n").length}`
+            `[STREAM RESPONSE] via=${usedModo} manifesto HLS bytes=${text.length} linhas=${text.split("\n").length} segmentos_reescritos=${segmentos}`
           );
           return new Response(rewritten, {
             status: 200,
@@ -475,10 +475,12 @@ export const Route = createFileRoute("/api/public/core/stream")({
               "Content-Type": "application/vnd.apple.mpegurl",
               "Cache-Control": "no-cache",
               "X-Playback-Via": usedModo,
+              "X-Playback-Segments": String(segmentos),
               "X-Upstream-Status": String(found.headers.get("X-Upstream-Status") ?? found.status),
               "X-Playback-Reason": resumo || "OK",
             },
           });
+
         }
 
         const finalExt = (usedUrl.match(/\.([a-z0-9]{2,4})(?:\?|$)/i)?.[1] ?? ext).toLowerCase();
