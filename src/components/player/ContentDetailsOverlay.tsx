@@ -29,7 +29,8 @@ export function ContentDetailsOverlay({
     queryKey: ["tmdb-metadata", item?.name || item?.title, type],
     queryFn: async () => {
       // Limpar título para melhor busca (remover resoluções e tags comuns)
-      const cleanTitle = (item?.name || item?.title || "")
+      const rawTitle = item?.name || item?.title || item?.metadata?.name || "";
+      const cleanTitle = rawTitle
         .replace(/\b(4K|FHD|HD|SD|720p|1080p|2160p)\b/gi, "")
         .replace(/\[.*?\]|\(.*?\)/g, "")
         .trim();
@@ -47,12 +48,12 @@ export function ContentDetailsOverlay({
 
   if (!isOpen) return null;
 
-  const displayTitle = metadata?.title || item?.name || item?.title;
-  const overview = metadata?.overview || item?.plot || "Sem descrição disponível.";
+  const displayTitle = metadata?.title || item?.name || item?.title || item?.metadata?.name;
+  const overview = metadata?.overview || item?.plot || item?.metadata?.plot || "Sem descrição disponível.";
   const rating = metadata?.vote_average || item?.rating;
   const backdrop = metadata?.backdrop_path 
     ? `https://image.tmdb.org/t/p/original${metadata.backdrop_path}` 
-    : (item?.stream_icon || item?.cover);
+    : (item?.stream_icon || item?.cover || item?.metadata?.stream_icon);
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 md:p-8 animate-in fade-in duration-300">

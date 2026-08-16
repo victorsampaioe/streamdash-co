@@ -84,7 +84,7 @@ function PlayerPage() {
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [content, setContent] = useState<any[]>([]);
   const [loadingContent, setLoadingContent] = useState(false);
-  const [selectedContent, setSelectedContent] = useState<any>(null);
+  
   const [selectedSeriesInfo, setSelectedSeriesInfo] = useState<any>(null);
   const [loadingSeries, setLoadingSeries] = useState(false);
   const [streamUrl, setStreamUrl] = useState<string | null>(null);
@@ -148,8 +148,8 @@ function PlayerPage() {
 
   const handleToggleFavorite = (item: any) => {
     if (!token) return;
-    const contentId = (item.stream_id || item.series_id || item.id).toString();
-    const contentType = item.stream_type === "live" ? "live" : (item.series_id ? "series" : "movie");
+    const contentId = (item.stream_id || item.series_id || item.id || item.content_id).toString();
+    const contentType = item.stream_type === "live" ? "live" : (item.series_id || item.content_type === "series" ? "series" : "movie");
     const isFavorite = favorites.some(f => f.content_id === contentId);
     
     toggleFavoriteMutation.mutate({
@@ -488,7 +488,13 @@ function PlayerPage() {
             {history.length > 0 && (
               <ContentRow 
                 title="Continuar Assistindo" 
-                items={history} 
+                items={history.map(h => ({
+                  ...h,
+                  stream_id: h.content_id,
+                  name: h.metadata?.name || h.name || `Item ${h.content_id}`,
+                  stream_icon: h.metadata?.stream_icon || h.stream_icon,
+                  stream_type: h.content_type
+                }))} 
                 type="movie" 
                 primaryColor={primaryColor}
                 onPlay={(item: any) => {
@@ -502,7 +508,13 @@ function PlayerPage() {
             {favorites.length > 0 && (
                <ContentRow 
                 title="Minha Lista" 
-                items={favorites.map(f => ({ ...f, name: f.name || `Item ${f.content_id}` }))} 
+                items={favorites.map(f => ({
+                  ...f,
+                  stream_id: f.content_id,
+                  name: f.metadata?.name || f.name || `Item ${f.content_id}`,
+                  stream_icon: f.metadata?.stream_icon || f.stream_icon,
+                  stream_type: f.content_type
+                }))} 
                 type="movie" 
                 primaryColor={primaryColor}
                 onPlay={(item: any) => {
@@ -794,7 +806,6 @@ function PlayerPage() {
           isOpen={isDetailsOpen}
           onClose={() => {
             setIsDetailsOpen(false);
-            setSelectedItem(null);
           }}
           onPlay={(i: any) => {
             const isSeries = i.series_id || i.content_type === "series" || activeView === "series" || selectedItem.series_id;
@@ -806,7 +817,7 @@ function PlayerPage() {
             }
           }}
           primaryColor={primaryColor}
-          isFavorite={favorites.some(f => f.content_id === (selectedItem.stream_id || selectedItem.series_id || selectedItem.id || selectedItem.content_id).toString())}
+          isFavorite={favorites.some(f => f.content_id === (selectedItem.stream_id || selectedItem.series_id || selectedItem.id || selectedItem.content_id)?.toString())}
           onToggleFavorite={() => handleToggleFavorite(selectedItem)}
         />
       )}
@@ -1040,16 +1051,16 @@ function PlayerPage() {
         video.play().catch((e) => console.error("Auto-play bloqueado", e));
         
         // Registrar atividade (Início)
-        if (selectedContent) {
+        if (selectedItem) {
           updatePlayerActivity({
             data: {
               token: token!,
-              contentId: (selectedContent.stream_id || selectedContent.id || selectedContent.content_id).toString(),
-              contentType: selectedContent.stream_type === "live" ? "live" : (selectedContent.series_id ? "series" : "movie"),
+              contentId: (selectedItem.stream_id || selectedItem.id || selectedItem.content_id).toString(),
+              contentType: selectedItem.stream_type === "live" ? "live" : (selectedItem.series_id ? "series" : "movie"),
               progress: 0,
               metadata: {
-                name: selectedContent.name || selectedContent.title,
-                stream_icon: selectedContent.stream_icon || selectedContent.cover
+                name: selectedItem.name || selectedItem.title,
+                stream_icon: selectedItem.stream_icon || selectedItem.cover
               }
             }
           }).catch(console.error);
@@ -1086,16 +1097,16 @@ function PlayerPage() {
         video.play().catch((e) => console.error("Auto-play bloqueado", e));
         
         // Registrar atividade para vídeo nativo
-        if (selectedContent && !isHls) {
+        if (selectedItem && !isHls) {
           updatePlayerActivity({
             data: {
               token: token!,
-              contentId: (selectedContent.stream_id || selectedContent.id || selectedContent.content_id).toString(),
-              contentType: selectedContent.stream_type === "live" ? "live" : (selectedContent.series_id ? "series" : "movie"),
+              contentId: (selectedItem.stream_id || selectedItem.id || selectedItem.content_id).toString(),
+              contentType: selectedItem.stream_type === "live" ? "live" : (selectedItem.series_id ? "series" : "movie"),
               progress: 0,
               metadata: {
-                name: selectedContent.name || selectedContent.title,
-                stream_icon: selectedContent.stream_icon || selectedContent.cover
+                name: selectedItem.name || selectedItem.title,
+                stream_icon: selectedItem.stream_icon || selectedItem.cover
               }
             }
           }).catch(console.error);
@@ -1104,19 +1115,19 @@ function PlayerPage() {
 
 
       const onTimeUpdate = () => {
-        if (!selectedContent || selectedContent.stream_type === "live") return;
+        if (!selectedItem || selectedItem.stream_type === "live") return;
         const progress = Math.floor((video.currentTime / video.duration) * 100);
         // Atualiza a cada 5% ou ao final
         if (progress % 5 === 0 || progress > 98) {
            updatePlayerActivity({
             data: {
               token: token!,
-              contentId: (selectedContent.stream_id || selectedContent.id || selectedContent.content_id).toString(),
-              contentType: selectedContent.series_id ? "series" : "movie",
+              contentId: (selectedItem.stream_id || selectedItem.id || selectedItem.content_id).toString(),
+              contentType: selectedItem.series_id ? "series" : "movie",
               progress,
               metadata: {
-                name: selectedContent.name || selectedContent.title,
-                stream_icon: selectedContent.stream_icon || selectedContent.cover
+                name: selectedItem.name || selectedItem.title,
+                stream_icon: selectedItem.stream_icon || selectedItem.cover
               }
             }
           }).catch(console.error);
@@ -1125,14 +1136,13 @@ function PlayerPage() {
 
       video.addEventListener("timeupdate", onTimeUpdate);
       video.addEventListener("error", onError);
+      
       return () => {
-        video.removeEventListener("loadedmetadata", () => {});
         video.removeEventListener("timeupdate", onTimeUpdate);
         video.removeEventListener("error", onError);
       };
-
     }
-  }, [isPlaying, streamUrl]);
+  }, [isPlaying, streamUrl, selectedItem, token]);
 
 
 }
