@@ -296,7 +296,7 @@ export const Route = createFileRoute("/api/public/core/stream")({
         if (!out.has("Accept-Ranges") && type !== "live") out.set("Accept-Ranges", "bytes");
 
         console.log(
-          `[stream-proxy] entregando type=${type} ext=${finalExt} status=${upstream.status} ct=${out.get("Content-Type")} range=${range ?? "-"} len=${out.get("Content-Length") ?? "stream"}`
+          `[STREAM RESPONSE][panel] type=${type} ext=${finalExt} status=${upstream.status} ct=${out.get("Content-Type")} range=${range ?? "none"} len=${out.get("Content-Length") ?? "stream"}`
         );
 
         return new Response(upstream.body, { status: upstream.status, headers: out });
