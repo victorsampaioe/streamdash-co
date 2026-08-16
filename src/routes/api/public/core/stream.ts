@@ -328,7 +328,10 @@ export const Route = createFileRoute("/api/public/core/stream")({
           if (url.searchParams.get("via") === "core") return;
           const { coreApiUrl, isCoreInstance } = await import("@/lib/core-api.server");
           const base = coreApiUrl();
-          if (!base || isCoreInstance() || !process.env.CRON_SECRET) return;
+          if (!base) { coreDiag.motivo = "CORE_API_URL não configurada no Painel"; return; }
+          if (isCoreInstance()) { coreDiag.motivo = "Esta instância é o próprio Core"; return; }
+          if (!process.env.CRON_SECRET) { coreDiag.motivo = "CRON_SECRET ausente no Painel (não é possível assinar)"; return; }
+          coreDiag.tentado = true;
           const expires = Math.floor(Date.now() / 1000) + 300;
           for (const candidate of candidates) {
             const relay = new URL(`${base}/api/public/core/stream`);
