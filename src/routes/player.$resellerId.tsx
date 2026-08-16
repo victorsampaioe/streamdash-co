@@ -1098,16 +1098,16 @@ function PlayerPage() {
         video.play().catch((e) => console.error("Auto-play bloqueado", e));
         
         // Registrar atividade para vídeo nativo
-        if (selectedContent && !isHls) {
+        if (selectedItem && !isHls) {
           updatePlayerActivity({
             data: {
               token: token!,
-              contentId: (selectedContent.stream_id || selectedContent.id || selectedContent.content_id).toString(),
-              contentType: selectedContent.stream_type === "live" ? "live" : (selectedContent.series_id ? "series" : "movie"),
+              contentId: (selectedItem.stream_id || selectedItem.id || selectedItem.content_id).toString(),
+              contentType: selectedItem.stream_type === "live" ? "live" : (selectedItem.series_id ? "series" : "movie"),
               progress: 0,
               metadata: {
-                name: selectedContent.name || selectedContent.title,
-                stream_icon: selectedContent.stream_icon || selectedContent.cover
+                name: selectedItem.name || selectedItem.title,
+                stream_icon: selectedItem.stream_icon || selectedItem.cover
               }
             }
           }).catch(console.error);
