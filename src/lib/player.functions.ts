@@ -356,9 +356,15 @@ export const getPlayerStreamUrl = createServerFn({ method: "POST" })
 
     // Proxy same-origin: evita CORS/mixed-content e resolve host + credenciais
     // a partir do token da sessão.
-    const url = `/api/public/core/stream?token=${data.token}&sid=${encodeURIComponent(data.streamId)}&ext=${encodeURIComponent(data.extension)}&type=${data.type}`;
-    console.log(`[getPlayerStreamUrl] server=${session.server_id} type=${data.type} sid=${data.streamId} ext=${data.extension} proxy=${url.split("token=")[0]}token=***`);
-    return url;
+    const url = new URL(`/api/public/core/stream`, "http://localhost:8080"); // O browser usará o host real
+    url.searchParams.set("token", data.token);
+    url.searchParams.set("sid", data.streamId);
+    url.searchParams.set("ext", data.extension);
+    url.searchParams.set("type", data.type);
+    
+    const finalUrl = url.pathname + url.search;
+    console.log(`[getPlayerStreamUrl] server=${session.server_id} type=${data.type} sid=${data.streamId} ext=${data.extension} proxy=${finalUrl.split("token=")[0]}token=***`);
+    return finalUrl;
 
   });
 
