@@ -373,27 +373,51 @@ export const Route = createFileRoute("/api/public/core/stream")({
               lastStatus = res.status;
 
             } catch (e) {
-              console.warn(`[stream-proxy][core] relay falhou: ${(e as Error).message}`);
+              const msg = (e as Error).name === "TimeoutError"
+                ? "Timeout de 15s ao chamar o Core AWS"
+                : `Falha de rede ao chamar o Core: ${(e as Error).message}`;
+              coreDiag.motivo = msg;
+              console.warn(`[stream-proxy][core] relay falhou: ${msg}`);
             }
           }
         };
 
-        // Fluxo inteligente: Core primeiro; se ele não conseguir entregar,
-        // uma única passagem direta pelo Painel — sem loops demorados.
+        // Fluxo: Core primeiro. Em modo validação (forceCore=1) NÃO há fallback
+        // silencioso para o Painel — o motivo real do Core é devolvido ao HUD.
         await attemptCore();
-        if (!upstream) await attemptDirect();
+        if (!upstream && !forceCore) await attemptDirect();
 
+        const coreHeaders: Record<string, string> = {
+          "X-Core-Status": String(coreDiag.status ?? "-"),
+          "X-Core-Worker-Version": coreDiag.workerVersion ?? "ausente",
+          ...(coreDiag.motivo ? { "X-Core-Error": coreDiag.motivo } : {}),
+        };
 
         const found = upstream as Response | null;
 
+        if (!found && forceCore) {
+          const reason = `Core não entregou o stream: ${coreDiag.motivo ?? "motivo desconhecido"}`;
+          console.error(`[STREAM RESPONSE][core-forced] status=${coreDiag.status ?? 502} reason="${reason}"`);
+          return new Response(reason, {
+            status: coreDiag.status && coreDiag.status >= 400 ? coreDiag.status : 502,
+            headers: {
+              ...CORS,
+              ...coreHeaders,
+              "Content-Type": "text/plain; charset=utf-8",
+              "X-Playback-Reason": reason,
+              "X-Playback-Via": "core",
+            },
+          });
+        }
+
         if (!found) {
           const reason = blockedDirect
-            ? "Servidor bloqueou o acesso direto e o Core também não conseguiu entregar o stream."
-            : `Servidor não entregou o stream (HTTP ${lastStatus || "sem resposta"}).`;
+            ? `Servidor bloqueou o acesso direto e o Core também não conseguiu entregar o stream. Core: ${coreDiag.motivo ?? "-"}`
+            : `Servidor não entregou o stream (HTTP ${lastStatus || "sem resposta"}). Core: ${coreDiag.motivo ?? "-"}`;
           console.error(`[STREAM RESPONSE][${deliveredVia}] status=${lastStatus || 502} reason="${reason}"`);
           return new Response(reason, {
             status: lastStatus || 502,
-            headers: { ...CORS, "X-Playback-Reason": reason, "X-Playback-Via": deliveredVia },
+            headers: { ...CORS, ...coreHeaders, "X-Playback-Reason": reason, "X-Playback-Via": deliveredVia },
           });
         }
 
