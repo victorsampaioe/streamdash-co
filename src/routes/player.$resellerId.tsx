@@ -488,7 +488,13 @@ function PlayerPage() {
             {history.length > 0 && (
               <ContentRow 
                 title="Continuar Assistindo" 
-                items={history} 
+                items={history.map(h => ({
+                  ...h,
+                  stream_id: h.content_id,
+                  name: h.metadata?.name || h.name || `Item ${h.content_id}`,
+                  stream_icon: h.metadata?.stream_icon || h.stream_icon,
+                  stream_type: h.content_type
+                }))} 
                 type="movie" 
                 primaryColor={primaryColor}
                 onPlay={(item: any) => {
@@ -502,7 +508,13 @@ function PlayerPage() {
             {favorites.length > 0 && (
                <ContentRow 
                 title="Minha Lista" 
-                items={favorites.map(f => ({ ...f, name: f.name || `Item ${f.content_id}` }))} 
+                items={favorites.map(f => ({
+                  ...f,
+                  stream_id: f.content_id,
+                  name: f.metadata?.name || f.name || `Item ${f.content_id}`,
+                  stream_icon: f.metadata?.stream_icon || f.stream_icon,
+                  stream_type: f.content_type
+                }))} 
                 type="movie" 
                 primaryColor={primaryColor}
                 onPlay={(item: any) => {
