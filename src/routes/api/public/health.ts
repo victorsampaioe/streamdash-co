@@ -1,4 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { CORE_STREAM_VERSION } from "@/lib/core-version";
 
 /**
  * Healthcheck público (usado pelo Docker e pelo Caddy). Não expõe dados.
@@ -98,8 +99,10 @@ export const Route = createFileRoute("/api/public/health")({
             worker: isCore,
             database: false,
             hasSecret: Boolean(process.env.CRON_SECRET),
+            streamVersion: CORE_STREAM_VERSION,
             missing,
             time: new Date().toISOString(),
+
           },
           { headers: { "cache-control": "no-store" } },
         );

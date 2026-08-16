@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { createHmac, timingSafeEqual } from "crypto";
 import { isBrowserPlayable, incompatibleReason } from "@/lib/playback-format";
+import { CORE_STREAM_VERSION } from "@/lib/core-version";
 
 const CORS = {
   "Access-Control-Allow-Origin": "*",
@@ -91,55 +92,126 @@ export const Route = createFileRoute("/api/public/core/stream")({
         /* Nunca toca o banco — é o que fazia esta rota devolver 500.  */
         /* ---------------------------------------------------------- */
         const sig = url.searchParams.get("sig");
-        const exp = Number(url.searchParams.get("exp") ?? 0);
-        
-        if (sig && passthrough) {
-          const abs = b64urlDecode(passthrough);
-          
+        const expRaw = url.searchParams.get("exp");
+        const exp = Number(expRaw ?? 0);
+        const isCore = process.env.IS_CORE === "true";
+        const viaCore = url.searchParams.get("via") === "core";
+        const VER = { "X-Core-Stream-Version": CORE_STREAM_VERSION };
+
+        /** 400 nunca genérico: sempre com o motivo real. */
+        const badRequest = (motivo: string, detalhe: Record<string, unknown>) => {
+          console.error(
+            `[CORE REQUEST] status=400 erro="${motivo}" payload_valido=false assinatura=${sig ? "presente" : "ausente"} ${JSON.stringify(detalhe)}`
+          );
+          return new Response(motivo, {
+            status: 400,
+            headers: { ...CORS, ...VER, "X-Core-Error": motivo },
+          });
+        };
+
+        if (isCore || viaCore || sig || expRaw) {
+          // Requisição destinada ao worker: exige u + exp + sig válidos.
+          if (!passthrough) return badRequest("Parâmetro 'u' (URL assinada em base64url) ausente", { type, ext });
+          if (!expRaw) return badRequest("Parâmetro 'exp' ausente", { type, ext });
+          if (!Number.isFinite(exp) || exp <= 0) return badRequest("Parâmetro 'exp' inválido", { exp: expRaw });
+          if (!sig) return badRequest("Parâmetro 'sig' (HMAC) ausente", { exp });
+          if (!process.env.CRON_SECRET)
+            return new Response("Worker sem CRON_SECRET configurado", {
+              status: 500,
+              headers: { ...CORS, ...VER, "X-Core-Error": "CRON_SECRET ausente" },
+            });
+
+          let abs: string;
+          try {
+            abs = b64urlDecode(passthrough);
+            new URL(abs);
+          } catch {
+            return badRequest("Parâmetro 'u' não é uma URL base64url válida", {});
+          }
+
           console.log(
-            `[STREAM REQUEST][worker] type=${type} ext=${ext} sig=${sig.slice(0, 8)}... exp=${new Date(exp * 1000).toISOString()} url=${maskMedia(abs)}`
+            `[CORE REQUEST] status=recebido payload_valido=true assinatura=${sig.slice(0, 8)}... type=${type} ext=${ext} exp=${new Date(exp * 1000).toISOString()} range=${range ?? "none"} url=${maskMedia(abs)}`
           );
 
-          if (!verifyUpstream(abs, exp, sig)) {
-            console.error(`[STREAM RESPONSE][worker] status=403 error="Assinatura inválida ou expirada"`);
-            return new Response("Assinatura inválida", { status: 403, headers: CORS });
+          if (exp * 1000 < Date.now()) {
+            console.error(`[CORE REQUEST] status=403 erro="URL assinada expirada"`);
+            return new Response("URL assinada expirada", {
+              status: 403,
+              headers: { ...CORS, ...VER, "X-Core-Error": "exp expirado" },
+            });
           }
-          
+          if (!verifyUpstream(abs, exp, sig)) {
+            console.error(`[CORE REQUEST] status=403 erro="Assinatura HMAC inválida"`);
+            return new Response("Assinatura inválida", {
+              status: 403,
+              headers: { ...CORS, ...VER, "X-Core-Error": "assinatura inválida" },
+            });
+          }
+
+          const origin = new URL(abs).origin;
           const h: Record<string, string> = {
             "User-Agent": type === "live" ? UA_PLAYER : UA_VLC,
-            Accept: "*/*",
+            Accept:
+              ext === "m3u8"
+                ? "application/vnd.apple.mpegurl,application/x-mpegURL,*/*"
+                : "*/*",
+            "Accept-Encoding": "identity",
+            Connection: "keep-alive",
+            Referer: `${origin}/`,
+            Origin: origin,
           };
           if (range) h["Range"] = range;
-          
+
+          const t0 = Date.now();
           try {
-            const res = await fetch(abs, { headers: h, redirect: "follow" });
-            
-            const out = new Headers(CORS);
+            const res = await fetch(abs, {
+              headers: h,
+              redirect: "follow",
+              signal: AbortSignal.timeout(20000),
+            });
+
+            const out = new Headers({ ...CORS, ...VER });
             for (const k of ["Content-Type", "Content-Range", "Content-Length", "Accept-Ranges"]) {
               const v = res.headers.get(k);
               if (v) out.set(k, v);
             }
+            if (!out.has("Content-Type")) out.set("Content-Type", contentTypeFor(ext, null));
+            if (!out.has("Accept-Ranges") && type !== "live") out.set("Accept-Ranges", "bytes");
             out.set("Cache-Control", "no-cache");
-            
+            out.set("X-Upstream-Status", String(res.status));
+
             console.log(
-              `[STREAM RESPONSE][worker] status=${res.status} ct=${out.get("Content-Type")} range=${range ?? "none"} len=${out.get("Content-Length") ?? "stream"}`
+              `[UPSTREAM IPTV] url=${maskMedia(abs)} status=${res.status} content-type=${res.headers.get("content-type") ?? "-"} range=${range ?? "none"} content-range=${res.headers.get("content-range") ?? "-"} tempo=${Date.now() - t0}ms erro=-`
             );
+
+            if (!res.ok && res.status !== 206) {
+              await res.body?.cancel();
+              const motivo = `Origem IPTV respondeu HTTP ${res.status}`;
+              out.set("X-Playback-Reason", motivo);
+              out.set("Content-Type", "text/plain; charset=utf-8");
+              return new Response(motivo, { status: res.status, headers: out });
+            }
 
             return new Response(res.body, { status: res.status, headers: out });
           } catch (e) {
-            console.error(`[STREAM RESPONSE][worker] status=502 error="${(e as Error).message}"`);
-            return new Response(`Worker fetch error: ${(e as Error).message}`, { status: 502, headers: CORS });
+            const msg = (e as Error).message;
+            console.error(
+              `[UPSTREAM IPTV] url=${maskMedia(abs)} status=502 content-type=- range=${range ?? "none"} tempo=${Date.now() - t0}ms erro="${msg}"`
+            );
+            return new Response(`Worker fetch error: ${msg}`, {
+              status: 502,
+              headers: { ...CORS, ...VER, "X-Core-Error": msg },
+            });
           }
         }
 
-        if (process.env.IS_CORE === "true") {
-          // Worker sem banco: sem assinatura não há como validar a sessão.
-          return new Response("Core worker exige URL assinada (u+exp+sig)", { status: 400, headers: CORS });
+        if (!token || (!sid && !passthrough)) {
+          return badRequest(
+            !token ? "Token de sessão ausente" : "Informe 'sid' (conteúdo) ou 'u' (URL interna do HLS)",
+            { token: Boolean(token), sid, passthrough: Boolean(passthrough) }
+          );
         }
 
-        if (!token || (!sid && !passthrough)) {
-          return new Response("Missing parameters", { status: 400, headers: CORS });
-        }
 
         const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
@@ -263,9 +335,15 @@ export const Route = createFileRoute("/api/public/core/stream")({
                 redirect: "follow",
                 signal: AbortSignal.timeout(15000),
               });
+              const workerVer = res.headers.get("X-Core-Stream-Version");
               console.log(
-                `[stream-proxy][core] url=${maskMedia(candidate)} status=${res.status} ct=${res.headers.get("content-type")}`
+                `[stream-proxy][core] url=${maskMedia(candidate)} status=${res.status} ct=${res.headers.get("content-type")} worker=${workerVer ?? "DESATUALIZADO(sem versão)"} erro=${res.headers.get("X-Core-Error") ?? "-"}`
               );
+              if (!workerVer) {
+                console.warn(
+                  `[stream-proxy][core] Worker AWS roda versão antiga do stream (esperado ${CORE_STREAM_VERSION}). Faça git pull + docker compose up -d --build na EC2.`
+                );
+              }
               if (res.ok || res.status === 206) {
                 upstream = res;
                 usedUrl = candidate;
@@ -274,6 +352,7 @@ export const Route = createFileRoute("/api/public/core/stream")({
               }
               await res.body?.cancel();
               lastStatus = res.status;
+
             } catch (e) {
               console.warn(`[stream-proxy][core] relay falhou: ${(e as Error).message}`);
             }
