@@ -50,7 +50,9 @@ export function ContentDetailsOverlay({
 
   const displayTitle = metadata?.title || item?.name || item?.title || item?.metadata?.name;
   const overview = metadata?.overview || item?.plot || item?.metadata?.plot || "Sem descrição disponível.";
-  const rating = metadata?.vote_average || item?.rating;
+  const rawRating = metadata?.vote_average ?? item?.rating ?? item?.rating_5point;
+  const ratingNum = Number(rawRating);
+  const rating = Number.isFinite(ratingNum) ? ratingNum : 0;
   const backdrop = metadata?.backdrop_path 
     ? `https://image.tmdb.org/t/p/original${metadata.backdrop_path}` 
     : (item?.stream_icon || item?.cover || item?.metadata?.stream_icon);
