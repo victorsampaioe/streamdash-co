@@ -310,7 +310,7 @@ export const Route = createFileRoute("/api/public/core/stream")({
                 ? "CRON_SECRET ausente no Painel (não é possível assinar)"
                 : null;
 
-        const tentarPainel = async (modo: Modo, uaKind: "browser" | "vlc") => {
+        const tentarPainel = async (modo: Modo, uaKind: "browser" | "vlc" | "player") => {
           const headers: Record<string, string> = {
             "User-Agent": uaFor(uaKind),
             Accept: ext === "m3u8" ? "application/vnd.apple.mpegurl,*/*" : "*/*",
@@ -401,9 +401,12 @@ export const Route = createFileRoute("/api/public/core/stream")({
           }
         };
 
-        // 1) navegador direto → 2) CORE-VLC (compatível com VLC/IPTV Smarters)
-        //    → 3) CORE (UA player) → 4) Painel com UA VLC.
+        // Escada de compatibilidade (sem fallback silencioso — tudo é reportado):
+        // 1) Painel como navegador → 2) Painel como IPTV Smarters (muitos WAFs
+        //    liberam só este UA) → 3) CORE-VLC → 4) CORE (UA Smarters)
+        //    → 5) Painel como VLC.
         if (!forceCore) await tentarPainel("PAINEL", "browser");
+        if (!upstream && !forceCore) await tentarPainel("PAINEL-SMARTERS", "player");
         if (!upstream) await tentarCore("CORE-VLC", "vlc");
         if (!upstream) await tentarCore("CORE", "player");
         if (!upstream && !forceCore) await tentarPainel("PAINEL-VLC", "vlc");
