@@ -54,7 +54,7 @@ export const getParentResellerPlans = createServerFn({ method: "GET" })
         .rpc("get_reseller_contact" as any, { _email: "victorsampaio133@gmail.com" })
         .maybeSingle();
 
-      return { plans: [], parent: admin };
+      return { plans: [], parent: (admin ?? null) as ResellerContact | null };
     }
 
     const [plansRes, parentRes, settingsRes, adminRes] = await Promise.all([
@@ -89,7 +89,7 @@ export const getParentResellerPlans = createServerFn({ method: "GET" })
 
     return { 
       plans, 
-      parent: parentRes.data,
+      parent: (parentRes.data ?? null) as ResellerContact | null,
       settings: settingsRes.data,
       // Accounts under the Admin (main owner account) use the platform plans + Admin PIX
       parentIsAdmin: !!adminRes.data,
