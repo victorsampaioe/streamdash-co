@@ -215,7 +215,8 @@ function Feature({ icon, title, desc }: { icon: React.ReactNode; title: string; 
 function RadarShowcase() {
   const videoRef = useRef<HTMLVideoElement>(null);
   const [isPlaying, setIsPlaying] = useState(true);
-  const [isMuted, setIsMuted] = useState(true);
+  const [isMuted, setIsMuted] = useState(false); // Try to start unmuted if possible, but browsers will likely block it
+  const [showPlayOverlay, setShowPlayOverlay] = useState(false);
 
   const togglePlay = () => {
     if (videoRef.current) {
@@ -229,10 +230,45 @@ function RadarShowcase() {
     }
   };
 
+  const handleStartDemo = () => {
+    if (videoRef.current) {
+      videoRef.current.muted = false;
+      setIsMuted(false);
+      videoRef.current.play().then(() => {
+        setIsPlaying(true);
+        setShowPlayOverlay(false);
+      }).catch(err => {
+        console.error("Playback failed even after click:", err);
+      });
+    }
+  };
+
   const toggleMute = () => {
     if (videoRef.current) {
       videoRef.current.muted = !videoRef.current.muted;
       setIsMuted(videoRef.current.muted);
+    }
+  };
+
+  const handleVideoLoad = () => {
+    if (videoRef.current) {
+      // Attempt autoplay with sound
+      videoRef.current.muted = false;
+      videoRef.current.play().then(() => {
+        setIsPlaying(true);
+        setIsMuted(false);
+      }).catch(() => {
+        // Autoplay with sound blocked, start muted
+        videoRef.current!.muted = true;
+        setIsMuted(true);
+        videoRef.current!.play().then(() => {
+          setIsPlaying(true);
+          setShowPlayOverlay(true);
+        }).catch(err => {
+          console.error("Autoplay completely blocked:", err);
+          setShowPlayOverlay(true);
+        });
+      });
     }
   };
 
