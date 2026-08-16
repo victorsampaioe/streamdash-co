@@ -388,6 +388,11 @@ function PlayerPage() {
           core_erro: res.headers.get("x-core-error"),
           core_status: res.headers.get("x-core-status"),
           worker: res.headers.get("x-core-worker-version"),
+          upstream: res.headers.get("x-upstream-status"),
+          upstream_ct: res.headers.get("x-upstream-content-type"),
+          codec_video: res.headers.get("x-playback-codec-video"),
+          codec_audio: res.headers.get("x-playback-codec-audio"),
+          acao: res.headers.get("x-playback-action"),
           url: streamUrl.replace(/(username|password|token)=[^&]*/gi, (_m, k) => `${k}=***`),
         };
         setPlaybackDebug((prev: any) => ({ ...(prev ?? {}), ...info }));
