@@ -65,6 +65,7 @@ import { ContentDetailsOverlay } from "@/components/player/ContentDetailsOverlay
 import { BottomNav } from "@/components/player/BottomNav";
 import { DiagnosticBadge } from "@/components/player/DiagnosticBadge";
 import { isBrowserPlayable, incompatibleReason } from "@/lib/playback-format";
+import { testWebCompatibility, NEEDS_CONVERSION_MESSAGE, type WebCompatResult } from "@/lib/web-compat";
 
 
 
@@ -93,6 +94,37 @@ function PlayerPage() {
   const [playbackReason, setPlaybackReason] = useState<string | null>(null);
   // HUD temporário de diagnóstico de reprodução (remover após validação)
   const [playbackDebug, setPlaybackDebug] = useState<any>(null);
+  // Teste de compatibilidade Web (codec real analisado no Core)
+  const [compat, setCompat] = useState<WebCompatResult | null>(null);
+  const [compatLoading, setCompatLoading] = useState(false);
+  const lastStreamUrlRef = useRef<string | null>(null);
+
+  const runCompatTest = async (url?: string | null) => {
+    const alvo = url ?? streamUrl ?? lastStreamUrlRef.current;
+    if (!alvo) {
+      toast.error("Abra um conteúdo antes de testar a compatibilidade.");
+      return null;
+    }
+    setCompatLoading(true);
+    try {
+      const r = await testWebCompatibility(alvo);
+      setCompat(r);
+      setPlaybackDebug((prev: any) => ({
+        ...(prev ?? {}),
+        codec_video: r.video ?? prev?.codec_video,
+        codec_audio: r.audio ?? prev?.codec_audio,
+        acao: r.action,
+      }));
+      console.log("[COMPAT]", JSON.stringify(r));
+      return r;
+    } catch (e) {
+      console.error("[COMPAT] falha no teste", e);
+      toast.error("Não foi possível analisar o conteúdo agora.");
+      return null;
+    } finally {
+      setCompatLoading(false);
+    }
+  };
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
   const hlsRef = useRef<Hls | null>(null);
@@ -356,6 +388,7 @@ function PlayerPage() {
     if (!isPlaying || !streamUrl || !videoRef.current) return;
     const video = videoRef.current;
     const isHls = streamUrl.includes("ext=m3u8") || streamUrl.includes(".m3u8");
+    lastStreamUrlRef.current = streamUrl;
 
     // Diagnóstico da camada de playback (motivo real, não mensagem genérica)
     const logMeta = async () => {
@@ -493,14 +526,20 @@ function PlayerPage() {
     } else {
       // Nativo: Safari/iOS (HLS) e Filmes/Séries (mp4/mkv com Range)
       video.src = streamUrl;
-      const onError = () => {
+      const onError = async () => {
         console.error("[player] erro no elemento <video>", video.error);
         setPlaybackDebug((prev: any) => ({
           ...(prev ?? {}),
           erro_video: `code=${video.error?.code ?? "?"} ${video.error?.message ?? ""}`.trim(),
         }));
+        // Em vez de só reportar erro, analisamos o conteúdo no Core (codec real)
+        const urlAtual = streamUrl;
+        lastStreamUrlRef.current = urlAtual;
+        const r = await runCompatTest(urlAtual);
         const msg =
-          "Servidor respondeu normalmente, porém o formato do vídeo não é compatível com o navegador.";
+          r && !r.ok
+            ? `${NEEDS_CONVERSION_MESSAGE} — vídeo ${r.video ?? "?"} / áudio ${r.audio ?? "?"} (${r.action === "transcode" ? "transcodificação" : "remux"} no Core).`
+            : "Servidor respondeu normalmente, porém o formato do vídeo não é compatível com o navegador.";
         setPlaybackReason(msg);
         setStreamUrl(null);
         toast.error(msg, { duration: 8000 });
@@ -1098,9 +1137,25 @@ function PlayerPage() {
              {playbackReason ? (
                 <div className="max-w-md mx-6 rounded-2xl border border-white/10 bg-white/5 p-6 text-center space-y-3">
                   <p className="text-sm text-white/90 leading-relaxed">{playbackReason}</p>
-                  <Button variant="outline" className="border-white/10 bg-white/5 text-white" onClick={handleClosePlayer}>
-                    Fechar
-                  </Button>
+                  {compat && (
+                    <p className={`font-mono text-xs ${compat.ok ? "text-emerald-400" : "text-amber-400"}`}>
+                      {compat.label}
+                    </p>
+                  )}
+                  <div className="flex flex-wrap items-center justify-center gap-2">
+                    <Button
+                      variant="outline"
+                      className="border-white/10 bg-white/5 text-white"
+                      disabled={compatLoading}
+                      onClick={() => void runCompatTest()}
+                    >
+                      {compatLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                      Testar compatibilidade Web
+                    </Button>
+                    <Button variant="outline" className="border-white/10 bg-white/5 text-white" onClick={handleClosePlayer}>
+                      Fechar
+                    </Button>
+                  </div>
                 </div>
              ) : !streamUrl ? (
                 <Loader2 className="h-12 w-12 animate-spin text-primary" />
@@ -1132,6 +1187,17 @@ function PlayerPage() {
               {playbackDebug.reason && <div className="text-red-400">motivo: {playbackDebug.reason}</div>}
               {playbackDebug.erro_hls && <div className="text-red-400">erro_hls: {playbackDebug.erro_hls}</div>}
               {playbackDebug.erro_video && <div className="text-red-400">erro_video: {playbackDebug.erro_video}</div>}
+              {compat && (
+                <div className={compat.ok ? "text-emerald-300" : "text-amber-400"}>compat: {compat.label}</div>
+              )}
+              <button
+                type="button"
+                disabled={compatLoading}
+                onClick={() => void runCompatTest()}
+                className="mt-1 rounded border border-white/20 px-2 py-1 text-[11px] text-white/80 hover:bg-white/10 disabled:opacity-50"
+              >
+                {compatLoading ? "analisando..." : "Testar compatibilidade Web"}
+              </button>
             </div>
           )}
         </div>
@@ -1163,9 +1229,20 @@ function PlayerPage() {
 
     // Fluxo inteligente: formato incompatível não gera tentativas demoradas.
     if (type !== "live" && !isBrowserPlayable(extension)) {
-      const reason = incompatibleReason(extension);
+      const reason = `${NEEDS_CONVERSION_MESSAGE} — ${incompatibleReason(extension)}`;
       console.warn("[PLAYER_DEBUG] formato incompatível", { tipo: type, content_id: id, extensao: extension, motivo: reason });
       setStreamUrl(null);
+      setCompat({
+        ok: false,
+        container: extension,
+        video: null,
+        audio: null,
+        action: "remux",
+        via: null,
+        status: null,
+        label: `⚠️ container .${extension} precisa conversão`,
+        detail: NEEDS_CONVERSION_MESSAGE,
+      });
       setPlaybackReason(reason);
       setIsPlaying(true);
       toast.error(reason, { duration: 8000 });
@@ -1175,6 +1252,7 @@ function PlayerPage() {
     setIsPlaying(true);
     setSelectedItem(item ?? selectedItem);
     setStreamUrl(null);
+    setCompat(null);
     setPlaybackReason(null);
     setPlaybackDebug({ tipo: type, extensao: extension, contentId: id, status: null, via: null });
 
