@@ -51,11 +51,9 @@ export const getParentResellerPlans = createServerFn({ method: "GET" })
     if (!targetResellerId) {
       // Fallback if no tree entry exists (direct customer of system)
       const { data: admin } = await context.supabase
-        .from("profiles")
-        .select("whatsapp, phone, full_name")
-        .eq("email", "victorsampaio133@gmail.com")
+        .rpc("get_reseller_contact" as any, { _email: "victorsampaio133@gmail.com" })
         .maybeSingle();
-      
+
       return { plans: [], parent: admin };
     }
 
@@ -66,15 +64,14 @@ export const getParentResellerPlans = createServerFn({ method: "GET" })
         .eq("reseller_id", targetResellerId)
         .order("price_cents", { ascending: true }),
       context.supabase
-        .from("profiles")
-        .select("whatsapp, phone, full_name, email")
-        .eq("id", targetResellerId)
+        .rpc("get_reseller_contact" as any, { _reseller_id: targetResellerId })
         .maybeSingle(),
       context.supabase
         .rpc("get_parent_reseller_pricing", { _reseller_id: targetResellerId })
         .maybeSingle(),
       context.supabase.rpc("has_role", { _user_id: targetResellerId, _role: "admin" }),
     ]);
+
 
     
     if (plansRes.error) throw new Error(plansRes.error.message);
