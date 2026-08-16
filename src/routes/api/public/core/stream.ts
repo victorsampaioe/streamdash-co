@@ -256,9 +256,18 @@ export const Route = createFileRoute("/api/public/core/stream")({
         let candidates: string[];
         if (passthrough) {
           const abs = b64urlDecode(passthrough);
+          const pexp = Number(url.searchParams.get("pexp") ?? 0);
+          const psig = url.searchParams.get("psig") ?? "";
+          const assinado = psig ? verifyUpstream(abs, pexp, psig) : false;
+          // Segmento assinado pelo próprio manifesto (pode ser CDN externa) ou,
+          // por compatibilidade, mesmo host do servidor da sessão.
           const allowed = hostCandidates(server.host).map((c) => new URL(c).hostname);
-          if (!allowed.includes(new URL(abs).hostname)) {
-            return new Response("Forbidden host", { status: 403, headers: CORS });
+          if (!assinado && !allowed.includes(new URL(abs).hostname)) {
+            console.error(`[STREAM SEGMENT] 403 host não autorizado e sem assinatura url=${maskMedia(abs)}`);
+            return new Response("Segmento não autorizado (host externo sem assinatura válida)", {
+              status: 403,
+              headers: { ...CORS, "X-Playback-Reason": "segmento sem assinatura válida" },
+            });
           }
           candidates = [abs];
         } else {
