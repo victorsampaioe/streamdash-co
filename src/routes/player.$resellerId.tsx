@@ -413,7 +413,7 @@ function PlayerPage() {
               onPlay={(item: any) => {
                 const type = item.stream_type === "series" ? "series" : (item.stream_type === "live" ? "live" : "movie");
                 if (type === "live") {
-                  handlePlay(item.stream_id || item.series_id, "live");
+                  handlePlay(item.stream_id || item.series_id, "live", item);
                 } else {
                   setSelectedItem(item);
                   setIsDetailsOpen(true);
@@ -478,7 +478,7 @@ function PlayerPage() {
               items={homeData.liveHighlights} 
               type="live" 
               primaryColor={primaryColor}
-              onPlay={(item: any) => handlePlay(item.stream_id, "live")}
+              onPlay={(item: any) => handlePlay(item.stream_id, "live", item)}
             />
 
           </div>
