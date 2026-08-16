@@ -304,3 +304,224 @@ export async function validateXtreamLogin(
 
   return { login_ok: false, account: null, error: lastError ?? "Falha na autenticação Xtream", base: null };
 }
+
+/* ------------------------------------------------------------------ */
+/* Diagnóstico de REPRODUÇÃO (play real): live / movie / series        */
+/* Testa a URL final do Xtream a partir do Painel e, em paralelo,      */
+/* pelo Core AWS (URL assinada), comparando status/Range/Content-Type. */
+/* ------------------------------------------------------------------ */
+
+export type ProbeResult = Record<string, string | number | boolean | null>;
+
+export type PlaybackProbe = {
+  tipo: "live" | "movie" | "series";
+  item: string | null;
+  content_id: string | null;
+  extensao: string;
+  url: string | null;
+  via_painel: ProbeResult | null;
+  via_core: ProbeResult | null;
+  reproduzivel_no_navegador: boolean;
+  observacao: string | null;
+};
+
+const BROWSER_PLAYABLE = new Set(["m3u8", "ts", "mp4", "m4v", "webm"]);
+
+function b64url(value: string) {
+  return Buffer.from(value, "utf8").toString("base64url");
+}
+
+async function probeMediaUrl(
+  url: string,
+  opts: { range?: string; ua: string },
+): Promise<ProbeResult> {
+  const started = Date.now();
+  const ctl = new AbortController();
+  const timer = setTimeout(() => ctl.abort(), 20_000);
+  try {
+    const headers: Record<string, string> = { "User-Agent": opts.ua, Accept: "*/*" };
+    if (opts.range) headers["Range"] = opts.range;
+    const res = await fetch(url, { headers, redirect: "follow", signal: ctl.signal });
+    const ct = res.headers.get("content-type");
+    const isManifest = /mpegurl|m3u/i.test(ct ?? "") || /\.m3u8(\?|$)/i.test(url);
+    let amostra: string | null = null;
+    if (isManifest) {
+      amostra = (await res.text()).slice(0, 300);
+    } else {
+      const buf = await res.arrayBuffer().catch(() => null);
+      amostra = buf ? `${buf.byteLength} bytes recebidos` : null;
+    }
+    return {
+      status: res.status,
+      ok: res.ok || res.status === 206,
+      ms: Date.now() - started,
+      content_type: ct,
+      content_length: res.headers.get("content-length"),
+      content_range: res.headers.get("content-range"),
+      accept_ranges: res.headers.get("accept-ranges"),
+      range_suportado: res.status === 206 || !!res.headers.get("content-range"),
+      manifesto: isManifest,
+      amostra,
+      erro: null,
+    };
+  } catch (e) {
+    return { status: 0, ok: false, ms: Date.now() - started, erro: String((e as Error)?.message ?? e).slice(0, 200) };
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+export async function probePlayback(serverId: string, creds: PlayerCreds): Promise<{
+  host: string;
+  fluxo_atual: string;
+  core_configurado: boolean;
+  resultados: PlaybackProbe[];
+  conclusao: string[];
+}> {
+  const { data: server } = await supabaseAdmin
+    .from("servers")
+    .select("host")
+    .eq("id", serverId)
+    .maybeSingle();
+  if (!server) throw new Error("Servidor não encontrado");
+
+  const { UA_PLAYER, UA_VLC } = await import("./iptv.server");
+  const { coreApiUrl, isCoreInstance } = await import("./core-api.server");
+  const { createHmac } = await import("crypto");
+
+  const base = hostCandidates(server.host)[0]!;
+  const user = encodeURIComponent(creds.username ?? "");
+  const pass = encodeURIComponent(creds.password ?? "");
+
+  const coreBase = coreApiUrl();
+  const secret = process.env["CRON_SECRET"] ?? "";
+  const coreDisponivel = !!coreBase && !isCoreInstance() && !!secret;
+
+  const viaCore = async (absUrl: string, tipo: string, ext: string, range?: string) => {
+    if (!coreDisponivel) return null;
+    const exp = Math.floor(Date.now() / 1000) + 300;
+    const sig = createHmac("sha256", secret).update(`${absUrl}|${exp}`).digest("hex");
+    const relay = new URL(`${coreBase}/api/public/core/stream`);
+    relay.searchParams.set("u", b64url(absUrl));
+    relay.searchParams.set("exp", String(exp));
+    relay.searchParams.set("sig", sig);
+    relay.searchParams.set("type", tipo);
+    relay.searchParams.set("ext", ext);
+    relay.searchParams.set("via", "core");
+    return await probeMediaUrl(relay.toString(), { range, ua: UA_PLAYER });
+  };
+
+  const resultados: PlaybackProbe[] = [];
+
+  // ---------- LIVE ----------
+  try {
+    const live: any = await fetchXtreamCatalog(serverId, creds, { action: "get_live_streams", limit: 1 });
+    const ch = Array.isArray(live) ? live[0] : null;
+    if (ch) {
+      const id = String(ch.stream_id);
+      const url = `${base}/live/${user}/${pass}/${id}.m3u8`;
+      const painel = await probeMediaUrl(url, { ua: UA_PLAYER });
+      resultados.push({
+        tipo: "live",
+        item: ch.name ?? null,
+        content_id: id,
+        extensao: "m3u8",
+        url: maskUrl(url).replace(`/${user}/${pass}/`, "/***/***/"),
+        via_painel: painel,
+        via_core: await viaCore(url, "live", "m3u8"),
+        reproduzivel_no_navegador: true,
+        observacao: painel["manifesto"] ? "Manifesto HLS válido" : "Resposta não é um manifesto HLS",
+      });
+    }
+  } catch (e) {
+    resultados.push({ tipo: "live", item: null, content_id: null, extensao: "m3u8", url: null, via_painel: { erro: String((e as Error).message) }, via_core: null, reproduzivel_no_navegador: false, observacao: "Falha ao listar canais" });
+  }
+
+  // ---------- MOVIE ----------
+  try {
+    const vod: any = await fetchXtreamCatalog(serverId, creds, { action: "get_vod_streams", limit: 1 });
+    const mv = Array.isArray(vod) ? vod[0] : null;
+    if (mv) {
+      const id = String(mv.stream_id);
+      const ext = String(mv.container_extension || "mp4").toLowerCase();
+      const url = `${base}/movie/${user}/${pass}/${id}.${ext}`;
+      const painel = await probeMediaUrl(url, { range: "bytes=0-1023", ua: UA_VLC });
+      resultados.push({
+        tipo: "movie",
+        item: mv.name ?? null,
+        content_id: id,
+        extensao: ext,
+        url: `${base}/movie/***/***/${id}.${ext}`,
+        via_painel: painel,
+        via_core: await viaCore(url, "movie", ext, "bytes=0-1023"),
+        reproduzivel_no_navegador: BROWSER_PLAYABLE.has(ext),
+        observacao: BROWSER_PLAYABLE.has(ext)
+          ? null
+          : `Container .${ext} não é suportado nativamente pelo navegador (tela preta mesmo com HTTP 200/206).`,
+      });
+    }
+  } catch (e) {
+    resultados.push({ tipo: "movie", item: null, content_id: null, extensao: "mp4", url: null, via_painel: { erro: String((e as Error).message) }, via_core: null, reproduzivel_no_navegador: false, observacao: "Falha ao listar filmes" });
+  }
+
+  // ---------- SERIES ----------
+  try {
+    const series: any = await fetchXtreamCatalog(serverId, creds, { action: "get_series", limit: 1 });
+    const sr = Array.isArray(series) ? series[0] : null;
+    if (sr) {
+      const info: any = await fetchXtreamCatalog(serverId, creds, {
+        action: "get_episodes_list",
+        contentId: String(sr.series_id),
+      });
+      const seasons = info?.episodes ?? {};
+      const firstSeason = Object.keys(seasons)[0];
+      const ep = firstSeason ? seasons[firstSeason]?.[0] : null;
+      if (ep) {
+        const id = String(ep.id ?? ep.stream_id);
+        const ext = String(ep.container_extension || "mp4").toLowerCase();
+        const url = `${base}/series/${user}/${pass}/${id}.${ext}`;
+        const painel = await probeMediaUrl(url, { range: "bytes=0-1023", ua: UA_VLC });
+        resultados.push({
+          tipo: "series",
+          item: `${sr.name} — ${ep.title ?? `EP ${id}`}`,
+          content_id: id,
+          extensao: ext,
+          url: `${base}/series/***/***/${id}.${ext}`,
+          via_painel: painel,
+          via_core: await viaCore(url, "series", ext, "bytes=0-1023"),
+          reproduzivel_no_navegador: BROWSER_PLAYABLE.has(ext),
+          observacao: BROWSER_PLAYABLE.has(ext)
+            ? null
+            : `Container .${ext} não é suportado nativamente pelo navegador.`,
+        });
+      }
+    }
+  } catch (e) {
+    resultados.push({ tipo: "series", item: null, content_id: null, extensao: "mp4", url: null, via_painel: { erro: String((e as Error).message) }, via_core: null, reproduzivel_no_navegador: false, observacao: "Falha ao listar séries/episódios" });
+  }
+
+  // ---------- CONCLUSÃO ----------
+  const conclusao: string[] = [];
+  for (const r of resultados) {
+    const p: any = r.via_painel ?? {};
+    const c: any = r.via_core ?? null;
+    if (p.ok && !r.reproduzivel_no_navegador) {
+      conclusao.push(`${r.tipo.toUpperCase()}: stream OK (HTTP ${p.status}) mas container .${r.extensao} não roda no navegador — precisa de remux/transcode.`);
+    } else if (p.ok) {
+      conclusao.push(`${r.tipo.toUpperCase()}: reprodução viável pelo Painel (HTTP ${p.status}${p.range_suportado ? ", Range OK" : ", sem Range"}).`);
+    } else if (c?.ok) {
+      conclusao.push(`${r.tipo.toUpperCase()}: bloqueado no Painel (${p.status || p.erro}) e OK pelo Core AWS — usar sempre o relay do Core.`);
+    } else {
+      conclusao.push(`${r.tipo.toUpperCase()}: falhou nos dois caminhos (Painel=${p.status || p.erro}, Core=${c ? c.status || c.erro : "não configurado"}).`);
+    }
+  }
+  if (!coreDisponivel) conclusao.push("Core AWS não disponível para relay (CORE_API_URL/CRON_SECRET ausentes ou esta instância é o Core).");
+
+  return {
+    host: server.host,
+    fluxo_atual: coreDisponivel ? "Painel (direto) com fallback → Core AWS → IPTV" : "Painel (direto) → IPTV",
+    core_configurado: coreDisponivel,
+    resultados,
+    conclusao,
+  };
+}
