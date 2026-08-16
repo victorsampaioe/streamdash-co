@@ -4604,6 +4604,14 @@ export type Database = {
         Args: { _server_id: string; _window_minutes?: number }
         Returns: Json
       }
+      get_reseller_contact: {
+        Args: { _email?: string; _reseller_id?: string }
+        Returns: {
+          full_name: string
+          phone: string
+          whatsapp: string
+        }[]
+      }
       get_reseller_page: { Args: { _slug: string }; Returns: Json }
       get_server_concurrency_limit: {
         Args: { p_base_limit: number; p_server_id: string }
