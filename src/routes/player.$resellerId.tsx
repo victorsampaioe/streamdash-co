@@ -230,13 +230,12 @@ function PlayerPage() {
             }));
           }
 
-          // Buscar Favoritos com metadados (amostra)
-          const favs = await getFavorites({ data: { token } });
-          if (favs && favs.length > 0) {
-            // Em um sistema real, buscaríamos detalhes dos primeiros 10 itens
-            // Por enquanto, apenas atualizamos a UI se houver favoritos
+          // Buscar Favoritos
+          const favs = await getPlayerActivity({ data: { token, type: 'favorites' } });
+          if (Array.isArray(favs)) {
             setFavorites(favs);
           }
+
         } catch (err) {
           console.error("Error loading home data", err);
         } finally {
