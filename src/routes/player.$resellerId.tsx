@@ -1103,11 +1103,34 @@ function PlayerPage() {
       });
 
 
+      const onTimeUpdate = () => {
+        if (!selectedContent || selectedContent.stream_type === "live") return;
+        const progress = Math.floor((video.currentTime / video.duration) * 100);
+        // Atualiza a cada 5% ou ao final
+        if (progress % 5 === 0 || progress > 98) {
+           updatePlayerActivity({
+            data: {
+              token: token!,
+              contentId: (selectedContent.stream_id || selectedContent.id || selectedContent.content_id).toString(),
+              contentType: selectedContent.series_id ? "series" : "movie",
+              progress,
+              metadata: {
+                name: selectedContent.name || selectedContent.title,
+                stream_icon: selectedContent.stream_icon || selectedContent.cover
+              }
+            }
+          }).catch(console.error);
+        }
+      };
+
+      video.addEventListener("timeupdate", onTimeUpdate);
       video.addEventListener("error", onError);
       return () => {
-        video.removeEventListener("loadedmetadata", () => {}); // Simplified cleanup
+        video.removeEventListener("loadedmetadata", () => {});
+        video.removeEventListener("timeupdate", onTimeUpdate);
         video.removeEventListener("error", onError);
       };
+
     }
   }, [isPlaying, streamUrl]);
 
