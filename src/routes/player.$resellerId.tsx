@@ -1137,14 +1137,13 @@ function PlayerPage() {
 
       video.addEventListener("timeupdate", onTimeUpdate);
       video.addEventListener("error", onError);
+      
       return () => {
-        video.removeEventListener("loadedmetadata", () => {});
         video.removeEventListener("timeupdate", onTimeUpdate);
         video.removeEventListener("error", onError);
       };
-
     }
-  }, [isPlaying, streamUrl]);
+  }, [isPlaying, streamUrl, selectedItem, token]);
 
 
 }
