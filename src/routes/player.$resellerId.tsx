@@ -60,6 +60,8 @@ import { SearchOverlay } from "@/components/player/SearchOverlay";
 import { SeriesDetails } from "@/components/player/SeriesDetails";
 import { cn } from "@/lib/utils";
 import { ContentDetailsOverlay } from "@/components/player/ContentDetailsOverlay";
+import { BottomNav } from "@/components/player/BottomNav";
+
 
 
 
@@ -392,8 +394,8 @@ function PlayerPage() {
           if (v === "search") setIsSearchOpen(true);
           else {
             setActiveView(v);
-            setSelectedCategory(null); // Resetar categoria ao trocar aba
-            setContent([]); // Limpar conteúdo para mostrar skeleton
+            setSelectedCategory(null);
+            setContent([]);
           }
         }}
         brandName={settings?.brand_name ?? undefined}
@@ -401,6 +403,20 @@ function PlayerPage() {
         onLogout={handleLogout}
         token={token!}
       />
+
+      <BottomNav 
+        activeView={activeView} 
+        onChangeView={(v) => {
+          if (v === "search") setIsSearchOpen(true);
+          else {
+            setActiveView(v);
+            setSelectedCategory(null);
+            setContent([]);
+          }
+        }}
+        primaryColor={primaryColor}
+      />
+
 
 
       <main className="flex-1 overflow-y-auto">

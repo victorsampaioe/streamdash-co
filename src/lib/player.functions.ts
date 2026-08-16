@@ -88,23 +88,44 @@ export const loginXtreamClient = createServerFn({ method: "POST" })
     // Reutiliza a inteligência IPTV já existente (probeXtream) com fallback local.
     const local = () => validateXtreamLogin(server.host, data.username, data.password);
 
-    let authResult: any = await runOnCore("iptv-validate" as any, {
-      host: server.host,
-      username: data.username,
-      password: data.password,
-      options: { catalogMode: "auth" }
-    }, local);
+    const startLogin = Date.now();
+    console.log(`[player-login] servidor=uniplay etapa=inicio host=${server.host} usuario=${data.username}`);
+
+    let authResult: any;
+    try {
+      authResult = await runOnCore("iptv-validate" as any, {
+        host: server.host,
+        username: data.username,
+        password: data.password,
+        options: { catalogMode: "auth" }
+      }, local);
+      
+      console.log(`[player-login] servidor=uniplay etapa=core status=${authResult?.login_ok ? "OK" : "FAIL"} tempo=${Date.now() - startLogin}ms`);
+    } catch (e: any) {
+      console.error(`[player-login] servidor=uniplay etapa=core erro=${e?.message} tempo=${Date.now() - startLogin}ms`);
+    }
 
     // Se o Core respondeu mas não confirmou o login, tenta o fallback local
-    // (bases http/https, player_api/panel_api, múltiplos User-Agents).
     if (!authResult?.login_ok) {
-      console.warn(`[player-login] core não validou host=${server.host}: ${authResult?.error ?? "sem detalhe"} — tentando fallback local`);
+      const localStart = Date.now();
       authResult = await local();
+      console.log(`[player-login] servidor=uniplay etapa=fallback_local status=${authResult?.login_ok ? "OK" : "FAIL"} tempo=${Date.now() - localStart}ms erro=${authResult?.error || "n/a"}`);
     }
 
     if (!authResult?.login_ok) {
-      throw new Error(authResult?.error || "Falha na autenticação Xtream");
+      const duration = Date.now() - startLogin;
+      console.log(`[player-login] servidor=uniplay RESULTADO=FALHA tempo_total=${duration}ms erro=${authResult?.error}`);
+      
+      // Mensagens amigáveis e específicas
+      const errorMsg = authResult?.error || "";
+      if (errorMsg.includes("403")) throw new Error("Acesso temporariamente bloqueado pelo servidor (403).");
+      if (errorMsg.includes("timeout") || errorMsg.includes("AbortError")) throw new Error("O servidor demorou muito para responder. Tente novamente.");
+      if (errorMsg.includes("inválidos")) throw new Error("Usuário ou senha inválidos.");
+      
+      throw new Error(authResult?.error || "Não foi possível comunicar com o servidor no momento.");
     }
+
+    console.log(`[player-login] servidor=uniplay RESULTADO=SUCESSO tempo_total=${Date.now() - startLogin}ms`);
 
 
     const token = crypto.randomUUID();
