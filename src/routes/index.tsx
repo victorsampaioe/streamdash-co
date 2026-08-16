@@ -213,6 +213,29 @@ function Feature({ icon, title, desc }: { icon: React.ReactNode; title: string; 
 }
 
 function RadarShowcase() {
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const [isPlaying, setIsPlaying] = useState(true);
+  const [isMuted, setIsMuted] = useState(true);
+
+  const togglePlay = () => {
+    if (videoRef.current) {
+      if (videoRef.current.paused) {
+        videoRef.current.play();
+        setIsPlaying(true);
+      } else {
+        videoRef.current.pause();
+        setIsPlaying(false);
+      }
+    }
+  };
+
+  const toggleMute = () => {
+    if (videoRef.current) {
+      videoRef.current.muted = !videoRef.current.muted;
+      setIsMuted(videoRef.current.muted);
+    }
+  };
+
   const films = [
     {
       title: "Duna: Parte Dois",
@@ -289,6 +312,54 @@ function RadarShowcase() {
       </div>
 
       <div className="max-w-6xl mx-auto px-4 sm:px-6 relative text-center">
+        {/* Hero Video Section */}
+        <div className="mb-20 relative group">
+          <div className="absolute -inset-1 bg-gradient-to-r from-primary/20 via-purple-500/20 to-blue-500/20 rounded-3xl blur opacity-30 group-hover:opacity-60 transition duration-1000 group-hover:duration-200"></div>
+          <div className="relative aspect-video w-full max-w-5xl mx-auto rounded-2xl overflow-hidden border border-white/10 shadow-2xl bg-neutral-900">
+            <video
+              ref={videoRef}
+              src={heroVideoAsset.url}
+              autoPlay
+              muted
+              loop
+              playsInline
+              className="w-full h-full object-cover"
+            />
+            
+            {/* Overlay Controls */}
+            <div className="absolute bottom-4 right-4 flex gap-2">
+              <Button
+                variant="secondary"
+                size="icon"
+                className="h-9 w-9 rounded-full bg-black/40 backdrop-blur-sm border-white/10 hover:bg-black/60 text-white"
+                onClick={togglePlay}
+              >
+                {isPlaying ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4 ml-0.5" />}
+              </Button>
+              <Button
+                variant="secondary"
+                size="icon"
+                className="h-9 w-9 rounded-full bg-black/40 backdrop-blur-sm border-white/10 hover:bg-black/60 text-white"
+                onClick={toggleMute}
+              >
+                {isMuted ? <VolumeX className="h-4 w-4" /> : <Volume2 className="h-4 w-4" />}
+              </Button>
+            </div>
+
+            {/* Hint for interaction if needed */}
+            {!isPlaying && (
+              <div 
+                className="absolute inset-0 flex items-center justify-center bg-black/20 cursor-pointer"
+                onClick={togglePlay}
+              >
+                <div className="w-20 h-20 rounded-full bg-primary/80 flex items-center justify-center animate-pulse shadow-2xl">
+                  <Play className="h-8 w-8 text-black ml-1" />
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+
         <div className="mb-16">
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-accent text-primary text-xs font-semibold mb-4 border border-primary/20 animate-pulse">
             <Cpu className="h-3.5 w-3.5" />
