@@ -312,51 +312,77 @@ function RadarShowcase() {
       </div>
 
       <div className="max-w-6xl mx-auto px-4 sm:px-6 relative text-center">
-        {/* Hero Video Section */}
-        <div className="mb-20 relative group">
-          <div className="absolute -inset-1 bg-gradient-to-r from-primary/20 via-purple-500/20 to-blue-500/20 rounded-3xl blur opacity-30 group-hover:opacity-60 transition duration-1000 group-hover:duration-200"></div>
-          <div className="relative aspect-video w-full max-w-5xl mx-auto rounded-2xl overflow-hidden border border-white/10 shadow-2xl bg-neutral-900">
-            <video
-              ref={videoRef}
-              src={heroVideoAsset.url}
-              autoPlay
-              muted
-              loop
-              playsInline
-              className="w-full h-full object-cover"
-            />
-            
-            {/* Overlay Controls */}
-            <div className="absolute bottom-4 right-4 flex gap-2">
-              <Button
-                variant="secondary"
-                size="icon"
-                className="h-9 w-9 rounded-full bg-black/40 backdrop-blur-sm border-white/10 hover:bg-black/60 text-white"
-                onClick={togglePlay}
-              >
-                {isPlaying ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4 ml-0.5" />}
-              </Button>
-              <Button
-                variant="secondary"
-                size="icon"
-                className="h-9 w-9 rounded-full bg-black/40 backdrop-blur-sm border-white/10 hover:bg-black/60 text-white"
-                onClick={toggleMute}
-              >
-                {isMuted ? <VolumeX className="h-4 w-4" /> : <Volume2 className="h-4 w-4" />}
-              </Button>
-            </div>
+        {/* Hero Video Story Section */}
+        <div className="mb-20 relative flex justify-center">
+          {/* Main Glow Effect */}
+          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[300px] h-[500px] bg-primary/20 blur-[100px] rounded-full opacity-50 pointer-events-none" />
+          
+          <div className="relative group z-10">
+            {/* Phone-like Container */}
+            <div className="relative w-[280px] sm:w-[320px] aspect-[9/16] rounded-[3rem] p-3 bg-neutral-900 border-[8px] border-neutral-800 shadow-2xl overflow-hidden">
+              {/* Inner screen border */}
+              <div className="absolute inset-0 rounded-[2.5rem] border border-white/5 pointer-events-none z-20" />
+              
+              <video
+                ref={videoRef}
+                src={heroVideoAsset.url}
+                autoPlay
+                muted
+                loop
+                playsInline
+                className="w-full h-full object-cover rounded-[2.2rem]"
+              />
 
-            {/* Hint for interaction if needed */}
-            {!isPlaying && (
-              <div 
-                className="absolute inset-0 flex items-center justify-center bg-black/20 cursor-pointer"
-                onClick={togglePlay}
-              >
-                <div className="w-20 h-20 rounded-full bg-primary/80 flex items-center justify-center animate-pulse shadow-2xl">
-                  <Play className="h-8 w-8 text-black ml-1" />
+              {/* Float Elements Overlay */}
+              <div className="absolute inset-0 pointer-events-none p-6 flex flex-col justify-between z-20">
+                <div className="space-y-3">
+                  <div className="bg-primary/20 backdrop-blur-md border border-primary/30 rounded-full px-3 py-1.5 self-start flex items-center gap-2 animate-bounce shadow-lg">
+                    <div className="h-1.5 w-1.5 rounded-full bg-primary animate-pulse" />
+                    <span className="text-[10px] font-bold text-white uppercase tracking-wider">Conteúdo encontrado</span>
+                  </div>
+                  
+                  <div className="bg-black/40 backdrop-blur-md border border-white/10 rounded-xl p-2.5 self-start flex items-center gap-2 transform translate-x-4">
+                    <CheckCircle2 className="h-3.5 w-3.5 text-success" />
+                    <span className="text-[10px] text-white font-medium">Análise inteligente</span>
+                  </div>
+                </div>
+
+                <div className="space-y-3">
+                  <div className="bg-blue-500/20 backdrop-blur-md border border-blue-500/30 rounded-xl p-2.5 self-end flex items-center gap-2 transform -translate-x-4">
+                    <Globe className="h-3.5 w-3.5 text-blue-400" />
+                    <span className="text-[10px] text-white font-medium">Disponível em 8 servidores</span>
+                  </div>
+                  
+                  <div className="bg-purple-500/20 backdrop-blur-md border border-purple-500/30 rounded-full px-3 py-1.5 self-start flex items-center gap-2 shadow-lg">
+                    <Zap className="h-1.5 w-1.5 rounded-full bg-purple-400 animate-pulse" />
+                    <span className="text-[10px] font-bold text-white uppercase tracking-wider">Tempo real</span>
+                  </div>
                 </div>
               </div>
-            )}
+
+              {/* Floating Controls */}
+              <div className="absolute bottom-6 left-1/2 -translate-x-1/2 flex gap-3 z-30 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                <Button
+                  variant="secondary"
+                  size="icon"
+                  className="h-10 w-10 rounded-full bg-black/60 backdrop-blur-md border-white/10 hover:bg-black/80 text-white shadow-xl"
+                  onClick={togglePlay}
+                >
+                  {isPlaying ? <Pause className="h-5 w-5" /> : <Play className="h-5 w-5 ml-0.5" />}
+                </Button>
+                <Button
+                  variant="secondary"
+                  size="icon"
+                  className="h-10 w-10 rounded-full bg-black/60 backdrop-blur-md border-white/10 hover:bg-black/80 text-white shadow-xl"
+                  onClick={toggleMute}
+                >
+                  {isMuted ? <VolumeX className="h-5 w-5" /> : <Volume2 className="h-5 w-5" />}
+                </Button>
+              </div>
+            </div>
+            
+            {/* Glow outer border */}
+            <div className="absolute -inset-1 bg-gradient-to-t from-primary/40 via-cyan-500/20 to-transparent rounded-[3.5rem] blur-xl -z-10 opacity-50 group-hover:opacity-100 transition duration-1000" />
           </div>
         </div>
 
@@ -368,13 +394,11 @@ function RadarShowcase() {
           <h2 className="text-3xl sm:text-4xl font-bold mb-4 tracking-tight">
             Radar de Conteúdo IPTV
           </h2>
-          <p className="text-muted-foreground text-lg max-w-2xl mx-auto mb-4">
-            "Nossa inteligência analisa milhares de conteúdos e identifica onde novos filmes e séries aparecem primeiro."
-          </p>
-          <p className="text-muted-foreground/80 italic text-sm">
-            "Descubra novos filmes e séries encontrados na sua rede antes dos seus clientes."
+          <p className="text-muted-foreground text-lg max-w-2xl mx-auto mb-4 leading-relaxed">
+            Nossa inteligência encontra filmes e séries disponíveis nos seus servidores.
           </p>
         </div>
+
 
         {/* Filmes Section */}
         <div className="mb-16 text-left">
