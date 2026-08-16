@@ -48,12 +48,17 @@ function verifyUpstream(absUrl: string, exp: number, sig: string): boolean {
   return a.length === b.length && timingSafeEqual(a, b);
 }
 
-/** Reescreve as URLs internas de um manifesto HLS para passarem pelo proxy. */
+/**
+ * Reescreve as URLs internas de um manifesto HLS para passarem pelo proxy.
+ * Os segmentos são assinados (HMAC + exp): painéis Xtream redirecionam o live
+ * para CDNs de outros hosts, então validamos a assinatura em vez do hostname.
+ */
 function rewriteManifest(manifest: string, upstreamUrl: string, token: string, mode: string) {
   const baseUrl = new URL(upstreamUrl);
+  const segExp = Math.floor(Date.now() / 1000) + 3600;
   const toProxy = (raw: string) => {
     const abs = new URL(raw, baseUrl).toString();
-    return `/api/public/core/stream?token=${token}&mode=${mode}&u=${b64urlEncode(abs)}`;
+    return `/api/public/core/stream?token=${token}&mode=${mode}&pexp=${segExp}&psig=${signUpstream(abs, segExp)}&u=${b64urlEncode(abs)}`;
   };
   return manifest
     .split("\n")
