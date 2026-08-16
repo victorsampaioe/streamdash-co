@@ -98,8 +98,10 @@ export const Route = createFileRoute("/api/public/health")({
             worker: isCore,
             database: false,
             hasSecret: Boolean(process.env.CRON_SECRET),
+            streamVersion: CORE_STREAM_VERSION,
             missing,
             time: new Date().toISOString(),
+
           },
           { headers: { "cache-control": "no-store" } },
         );
