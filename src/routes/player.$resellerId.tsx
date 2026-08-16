@@ -336,16 +336,16 @@ function PlayerPage() {
   const primaryColor = settings?.primary_color || "#3B82F6";
   const secondaryColor = settings?.secondary_color || "#0A0A0A";
 
-  const { data: serverStatus } = useQuery({
-    queryKey: ["player-server-status", token],
-    queryFn: async () => {
-      if (!token) return null;
-      const { getServerStatus } = await import("@/lib/player.functions");
-      return await getServerStatus({ data: { token } });
-    },
-    enabled: !!token,
-    refetchInterval: 60000,
-  });
+   const { data: serverStatus } = useQuery({
+     queryKey: ["player-server-status", token],
+     queryFn: async () => {
+       if (!token) return null;
+       return await getServerStatus({ data: { token } });
+     },
+     enabled: !!token,
+     refetchInterval: 60000,
+   });
+
 
 
 
