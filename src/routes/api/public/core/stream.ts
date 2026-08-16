@@ -286,6 +286,14 @@ export const Route = createFileRoute("/api/public/core/stream")({
         let lastStatus = 0;
         let deliveredVia: "core" | "panel" = "panel";
         let blockedDirect = false;
+        // Modo validação: força a entrega pelo Core, sem fallback silencioso.
+        const forceCore = url.searchParams.get("forceCore") === "1";
+        const coreDiag: {
+          tentado: boolean;
+          motivo: string | null;
+          status: number | null;
+          workerVersion: string | null;
+        } = { tentado: false, motivo: null, status: null, workerVersion: null };
 
         const attemptDirect = async () => {
           for (const candidate of candidates) {
