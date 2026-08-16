@@ -91,6 +91,8 @@ function PlayerPage() {
   const [streamUrl, setStreamUrl] = useState<string | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [playbackReason, setPlaybackReason] = useState<string | null>(null);
+  // HUD temporário de diagnóstico de reprodução (remover após validação)
+  const [playbackDebug, setPlaybackDebug] = useState<any>(null);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
   const hlsRef = useRef<Hls | null>(null);
@@ -907,6 +909,21 @@ function PlayerPage() {
                 />
              )}
           </div>
+
+          {/* HUD TEMPORÁRIO DE DIAGNÓSTICO — remover após validação */}
+          {playbackDebug && (
+            <div className="absolute bottom-24 left-6 z-20 max-w-[90vw] rounded-xl border border-white/10 bg-black/70 px-4 py-3 font-mono text-[11px] leading-relaxed text-emerald-300 backdrop-blur">
+              <div className="mb-1 text-white/70">Reprodução (diagnóstico temporário)</div>
+              <div>tipo: {playbackDebug.tipo ?? "-"} · ext: {playbackDebug.extensao ?? "-"}</div>
+              <div>via: {playbackDebug.via ?? "aguardando..."}</div>
+              <div>status: {playbackDebug.status ?? "-"} · tempo: {playbackDebug.ms != null ? `${(playbackDebug.ms / 1000).toFixed(1)}s` : "-"}</div>
+              <div>formato: {playbackDebug.contentType ?? "-"}</div>
+              <div>range: {playbackDebug.contentRange ?? playbackDebug.acceptRanges ?? "-"}</div>
+              {playbackDebug.amostra && <div className="text-white/50">bytes: {String(playbackDebug.amostra).slice(0, 60)}</div>}
+              {playbackDebug.erro_hls && <div className="text-red-400">erro_hls: {playbackDebug.erro_hls}</div>}
+              {playbackDebug.erro_video && <div className="text-red-400">erro_video: {playbackDebug.erro_video}</div>}
+            </div>
+          )}
         </div>
       )}
     </div>
@@ -941,6 +958,8 @@ function PlayerPage() {
     setIsPlaying(true);
     setStreamUrl(null);
     setPlaybackReason(null);
+    setPlaybackDebug({ tipo: type, extensao: extension, contentId: id, status: null, via: null });
+
 
     const startCheck = Date.now();
     console.log("[PLAYER_DEBUG] play", {
@@ -1069,18 +1088,33 @@ function PlayerPage() {
 
     // Diagnóstico da camada de playback (motivo real, não mensagem genérica)
     const logMeta = async () => {
+      const t0 = performance.now();
       try {
         const res = await fetch(streamUrl, { headers: isHls ? {} : { Range: "bytes=0-1023" } });
         const via = res.headers.get("x-playback-via");
         const reason = res.headers.get("x-playback-reason");
-        console.log(
-          "[player] proxy status:", res.status,
-          "| via:", via,
-          "| Content-Type:", res.headers.get("content-type"),
-          "| Content-Length:", res.headers.get("content-length"),
-          "| Content-Range:", res.headers.get("content-range"),
-          "| motivo:", reason
-        );
+        const ms = Math.round(performance.now() - t0);
+        let amostra = "";
+        try {
+          const buf = await res.clone().arrayBuffer();
+          amostra = isHls
+            ? new TextDecoder().decode(buf.slice(0, 200))
+            : Array.from(new Uint8Array(buf.slice(0, 16))).map((b) => b.toString(16).padStart(2, "0")).join(" ");
+        } catch { /* ignore */ }
+        const info = {
+          via: via ?? "desconhecido",
+          status: res.status,
+          contentType: res.headers.get("content-type"),
+          contentLength: res.headers.get("content-length"),
+          acceptRanges: res.headers.get("accept-ranges"),
+          contentRange: res.headers.get("content-range"),
+          ms,
+          amostra,
+          reason,
+          url: streamUrl.replace(/(username|password|token)=[^&]*/gi, (_m, k) => `${k}=***`),
+        };
+        setPlaybackDebug((prev: any) => ({ ...(prev ?? {}), ...info }));
+        console.log("[PLAYER]", JSON.stringify(info, null, 2));
         if (res.status === 415) {
           const msg = reason || incompatibleReason(res.headers.get("x-playback-incompatible"));
           setPlaybackReason(msg);
@@ -1132,6 +1166,7 @@ function PlayerPage() {
 
       hls.on(Hls.Events.ERROR, (_event, data) => {
         console.error("[player] HLS error", data.type, data.details, data.fatal);
+        setPlaybackDebug((prev: any) => ({ ...(prev ?? {}), erro_hls: `${data.type}/${data.details}${data.fatal ? " (fatal)" : ""}` }));
         if (!data.fatal) return;
         
         if (data.type === Hls.ErrorTypes.NETWORK_ERROR) {
@@ -1154,6 +1189,10 @@ function PlayerPage() {
       video.src = streamUrl;
       const onError = () => {
         console.error("[player] erro no elemento <video>", video.error);
+        setPlaybackDebug((prev: any) => ({
+          ...(prev ?? {}),
+          erro_video: `code=${video.error?.code ?? "?"} ${video.error?.message ?? ""}`.trim(),
+        }));
         const msg =
           "Servidor respondeu normalmente, porém o formato do vídeo não é compatível com o navegador.";
         setPlaybackReason(msg);
