@@ -386,6 +386,9 @@ export const getPlayerStreamUrl = createServerFn({ method: "POST" })
     url.searchParams.set("sid", data.streamId);
     url.searchParams.set("ext", data.extension);
     url.searchParams.set("type", data.type);
+    // MODO VALIDAÇÃO DA ARQUITETURA: força a entrega pelo Core AWS.
+    // Sem fallback silencioso para o Painel enquanto validamos o fluxo.
+    url.searchParams.set("forceCore", "1");
     
     const finalUrl = url.pathname + url.search;
     console.log(`[getPlayerStreamUrl] server=${session.server_id} type=${data.type} sid=${data.streamId} ext=${data.extension} proxy=${finalUrl.split("token=")[0]}token=***`);

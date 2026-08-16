@@ -385,6 +385,9 @@ function PlayerPage() {
           ms,
           amostra,
           reason,
+          core_erro: res.headers.get("x-core-error"),
+          core_status: res.headers.get("x-core-status"),
+          worker: res.headers.get("x-core-worker-version"),
           url: streamUrl.replace(/(username|password|token)=[^&]*/gi, (_m, k) => `${k}=***`),
         };
         setPlaybackDebug((prev: any) => ({ ...(prev ?? {}), ...info }));
@@ -1107,6 +1110,9 @@ function PlayerPage() {
               <div>formato: {playbackDebug.contentType ?? "-"}</div>
               <div>range: {playbackDebug.contentRange ?? playbackDebug.acceptRanges ?? "-"}</div>
               {playbackDebug.amostra && <div className="text-white/50">bytes: {String(playbackDebug.amostra).slice(0, 60)}</div>}
+              <div>worker: {playbackDebug.worker ?? "-"} · core_status: {playbackDebug.core_status ?? "-"}</div>
+              {playbackDebug.core_erro && <div className="text-amber-400">core_erro: {playbackDebug.core_erro}</div>}
+              {playbackDebug.reason && <div className="text-red-400">motivo: {playbackDebug.reason}</div>}
               {playbackDebug.erro_hls && <div className="text-red-400">erro_hls: {playbackDebug.erro_hls}</div>}
               {playbackDebug.erro_video && <div className="text-red-400">erro_video: {playbackDebug.erro_video}</div>}
             </div>
