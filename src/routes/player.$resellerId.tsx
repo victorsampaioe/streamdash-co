@@ -1122,6 +1122,8 @@ function PlayerPage() {
               <div>tipo: {playbackDebug.tipo ?? "-"} · ext: {playbackDebug.extensao ?? "-"}</div>
               <div>via: {playbackDebug.via ?? "aguardando..."}</div>
               <div>status: {playbackDebug.status ?? "-"} · tempo: {playbackDebug.ms != null ? `${(playbackDebug.ms / 1000).toFixed(1)}s` : "-"}</div>
+              <div>upstream: {playbackDebug.upstream ?? "-"} {playbackDebug.upstream_ct ? `(${playbackDebug.upstream_ct})` : ""}</div>
+              <div>codec: {playbackDebug.codec_video ?? "-"} / {playbackDebug.codec_audio ?? "-"} {playbackDebug.acao && playbackDebug.acao !== "direct" ? `· ${playbackDebug.acao}` : ""}</div>
               <div>formato: {playbackDebug.contentType ?? "-"}</div>
               <div>range: {playbackDebug.contentRange ?? playbackDebug.acceptRanges ?? "-"}</div>
               {playbackDebug.amostra && <div className="text-white/50">bytes: {String(playbackDebug.amostra).slice(0, 60)}</div>}
