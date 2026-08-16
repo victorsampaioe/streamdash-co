@@ -109,6 +109,7 @@ export function useSubscription() {
       if (subError) console.error("Sub error:", subError);
       if (profileError) console.error("Profile error:", profileError);
       if (rolesError) console.error("Roles error:", rolesError);
+      const now = Date.now();
 
       const credits = wallet?.credits || 0;
       const roles = roleRows?.map((row) => String(row.role)) ?? [];
@@ -153,7 +154,6 @@ export function useSubscription() {
       }
 
       const sub = subData as Subscription;
-      const now = Date.now();
       const exp = new Date(sub.expires_at).getTime();
       const msPerDay = 24 * 60 * 60 * 1000;
       const daysRemaining = Math.max(0, Math.ceil((exp - now) / msPerDay));
