@@ -78,7 +78,7 @@ function maskMedia(url: string) {
 }
 
 /** Modo de reprodução tentado, sempre informado ao HUD (sem fallback silencioso). */
-type Modo = "PAINEL" | "PAINEL-VLC" | "CORE" | "CORE-VLC";
+type Modo = "PAINEL" | "PAINEL-SMARTERS" | "PAINEL-VLC" | "CORE" | "CORE-VLC";
 
 export const Route = createFileRoute("/api/public/core/stream")({
   server: {
