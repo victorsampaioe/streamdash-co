@@ -11,6 +11,9 @@ const planSchema = z.object({
   features: z.array(z.string()).optional(),
 });
 
+type ResellerContact = { full_name: string | null; whatsapp: string | null; phone: string | null };
+
+
 export const getResellerPlans = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
