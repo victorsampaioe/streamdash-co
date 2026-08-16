@@ -361,7 +361,10 @@ function PlayerPage() {
     const logMeta = async () => {
       const t0 = performance.now();
       try {
-        const res = await fetch(streamUrl, { headers: isHls ? {} : { Range: "bytes=0-1023" } });
+        const res = await fetch(streamUrl, {
+          headers: isHls ? {} : { Range: "bytes=0-1023" },
+          signal: AbortSignal.timeout(20_000),
+        });
         const via = res.headers.get("x-playback-via");
         const reason = res.headers.get("x-playback-reason");
         const ms = Math.round(performance.now() - t0);
@@ -385,7 +388,16 @@ function PlayerPage() {
           url: streamUrl.replace(/(username|password|token)=[^&]*/gi, (_m, k) => `${k}=***`),
         };
         setPlaybackDebug((prev: any) => ({ ...(prev ?? {}), ...info }));
-        console.log("[PLAYER]", JSON.stringify(info, null, 2));
+        console.log("[PLAY]", JSON.stringify({
+          tipo: playbackDebug?.tipo ?? null,
+          conteudo: selectedItem?.name ?? selectedItem?.title ?? null,
+          stream_id: playbackDebug?.tipo === "series" ? null : playbackDebug?.contentId ?? null,
+          episode_id: playbackDebug?.tipo === "series" ? playbackDebug?.contentId ?? null : null,
+          url_gerada: info.url,
+          via: info.via,
+          status: info.status,
+          erro: info.reason ?? null,
+        }, null, 2));
         if (res.status === 415) {
           const msg = reason || incompatibleReason(res.headers.get("x-playback-incompatible"));
           setPlaybackReason(msg);
@@ -404,6 +416,11 @@ function PlayerPage() {
         await res.body?.cancel();
       } catch (e) {
         console.error("[player] falha ao consultar o proxy de stream:", e);
+        const message = e instanceof Error && e.name === "TimeoutError"
+          ? "O Core não respondeu ao stream em 20 segundos."
+          : "Falha de rede ao acessar o stream pelo Core.";
+        setPlaybackDebug((prev: any) => ({ ...(prev ?? {}), via: "erro", status: "falha", erro_video: message }));
+        setPlaybackReason(message);
       }
     };
     void logMeta();

@@ -268,6 +268,10 @@ export const getPlayerCatalog = createServerFn({ method: "POST" })
         `[CATALOG_DEBUG] resposta | action=${data.action} via=${via} ms=${Date.now() - started} tipo_resposta=${Array.isArray(result) ? "array" : typeof result} quantidade=${quantidade} erro=null`
       );
 
+      if (data.action === "get_series_info" || data.action === "get_episodes_list") {
+        const { normalizeSeriesInfoResponse } = await import("./player.server");
+        return normalizeSeriesInfoResponse(result) as any;
+      }
       return result as any;
     } catch (e: any) {
       console.error(
