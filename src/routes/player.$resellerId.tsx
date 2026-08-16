@@ -406,6 +406,7 @@ function PlayerPage() {
           status: info.status,
           erro: info.reason ?? null,
         }, null, 2));
+        const acao = res.headers.get("x-playback-action");
         if (res.status === 415) {
           const msg = reason || incompatibleReason(res.headers.get("x-playback-incompatible"));
           setPlaybackReason(msg);
@@ -415,11 +416,20 @@ function PlayerPage() {
           const msg =
             reason ||
             (res.status === 403
-              ? "Servidor bloqueou o acesso ao stream. Reprodução direcionada pelo Core não foi aceita."
-              : `Stream indisponível (HTTP ${res.status}).`);
+              ? `Servidor bloqueou o acesso ao stream (403) via ${info.via}. Upstream: ${info.upstream ?? "-"}.`
+              : `Stream indisponível (HTTP ${res.status}) via ${info.via}.`);
           setPlaybackReason(msg);
           setStreamUrl(null);
           toast.error(msg, { duration: 8000 });
+        } else if (acao && acao !== "direct" && reason) {
+          // Arquivo entregue corretamente (200/206), porém o codec real não é
+          // decodificável pelo navegador (H265/AC3/DTS) — motivo real, não erro
+          // de servidor. Requer remux/transcodificação pelo Core.
+          setPlaybackReason(
+            `${reason} (vídeo: ${info.codec_video ?? "?"} · áudio: ${info.codec_audio ?? "?"} · ação necessária: ${acao === "transcode" ? "transcodificar" : "remuxar"})`
+          );
+          setStreamUrl(null);
+          toast.error("Codec não suportado pelo navegador — veja o diagnóstico.", { duration: 8000 });
         }
         await res.body?.cancel();
       } catch (e) {
