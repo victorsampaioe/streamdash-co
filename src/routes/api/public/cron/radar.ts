@@ -8,8 +8,6 @@ import { createFileRoute } from "@tanstack/react-router";
 function isAuthorized(request: Request): boolean {
   const cron = request.headers.get("x-cron-secret");
   if (cron && process.env.CRON_SECRET && cron === process.env.CRON_SECRET) return true;
-  const apikey = request.headers.get("apikey") ?? request.headers.get("authorization")?.replace(/^Bearer\s+/i, "");
-  if (apikey && process.env.SUPABASE_PUBLISHABLE_KEY && apikey === process.env.SUPABASE_PUBLISHABLE_KEY) return true;
   return false;
 }
 
