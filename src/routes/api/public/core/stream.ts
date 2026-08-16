@@ -428,7 +428,9 @@ export const Route = createFileRoute("/api/public/core/stream")({
         // 4a. Manifesto HLS → reescreve segmentos para o proxy
         if (isManifest) {
           const text = await found.text();
-          const rewritten = rewriteManifest(text, usedUrl, token);
+          const rewritten = forceCore
+            ? rewriteManifest(text, usedUrl, token).replace(/\/api\/public\/core\/stream\?token=/g, "/api/public/core/stream?forceCore=1&token=")
+            : rewriteManifest(text, usedUrl, token);
           console.log(`[stream-proxy] manifesto HLS reescrito bytes=${text.length} linhas=${text.split("\n").length} via=${deliveredVia}`);
           return new Response(rewritten, {
             status: 200,
