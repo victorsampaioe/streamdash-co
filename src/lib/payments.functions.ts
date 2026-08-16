@@ -1,11 +1,18 @@
 
 import { createServerFn } from "@tanstack/react-start";
-import { z } from "zod";
+import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { reconcilePendingPayments } from "./mercadopago.server";
 
 export const reconcileAllPayments = createServerFn({ method: "POST" })
-  .handler(async () => {
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const { data: isAdmin, error: roleError } = await context.supabase.rpc("has_role", {
+      _user_id: context.userId,
+      _role: "admin",
+    });
+    if (roleError || !isAdmin) throw new Error("Forbidden");
+
     // 1. Usa a rotina existente que verifica no Mercado Pago pagamentos pendentes
     const res = await reconcilePendingPayments(50);
 
@@ -19,7 +26,7 @@ export const reconcileAllPayments = createServerFn({ method: "POST" })
     let autoFixed = 0;
     for (const pay of approvedWithoutSub ?? []) {
       // Tenta finalizar para garantir que a assinatura existe e está correta
-      const { data: finalized, error: finalizeError } = await supabaseAdmin.rpc("finalize_approved_payment", {
+      const { error: finalizeError } = await supabaseAdmin.rpc("finalize_approved_payment", {
         _payment_id: pay.id,
         _provider_payment_id: pay.provider_payment_id || "",
         _raw_payload: pay.raw_payload || {},
@@ -29,7 +36,7 @@ export const reconcileAllPayments = createServerFn({ method: "POST" })
 
       if (!finalizeError) {
         autoFixed++;
-        
+
         // Log de ativação
         await supabaseAdmin.from("activation_logs").insert({
           user_id: pay.user_id,
@@ -63,9 +70,9 @@ export const reconcileAllPayments = createServerFn({ method: "POST" })
       }
     }
 
-    return { 
-      mp_checked: res.checked, 
+    return {
+      mp_checked: res.checked,
       mp_approved: res.approved,
-      db_fixed: autoFixed 
+      db_fixed: autoFixed
     };
   });
