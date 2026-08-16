@@ -64,6 +64,7 @@ import { cn } from "@/lib/utils";
 import { ContentDetailsOverlay } from "@/components/player/ContentDetailsOverlay";
 import { BottomNav } from "@/components/player/BottomNav";
 import { DiagnosticBadge } from "@/components/player/DiagnosticBadge";
+import { isBrowserPlayable, incompatibleReason } from "@/lib/playback-format";
 
 
 
