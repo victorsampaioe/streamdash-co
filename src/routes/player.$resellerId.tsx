@@ -1137,9 +1137,25 @@ function PlayerPage() {
              {playbackReason ? (
                 <div className="max-w-md mx-6 rounded-2xl border border-white/10 bg-white/5 p-6 text-center space-y-3">
                   <p className="text-sm text-white/90 leading-relaxed">{playbackReason}</p>
-                  <Button variant="outline" className="border-white/10 bg-white/5 text-white" onClick={handleClosePlayer}>
-                    Fechar
-                  </Button>
+                  {compat && (
+                    <p className={`font-mono text-xs ${compat.ok ? "text-emerald-400" : "text-amber-400"}`}>
+                      {compat.label}
+                    </p>
+                  )}
+                  <div className="flex flex-wrap items-center justify-center gap-2">
+                    <Button
+                      variant="outline"
+                      className="border-white/10 bg-white/5 text-white"
+                      disabled={compatLoading}
+                      onClick={() => void runCompatTest()}
+                    >
+                      {compatLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                      Testar compatibilidade Web
+                    </Button>
+                    <Button variant="outline" className="border-white/10 bg-white/5 text-white" onClick={handleClosePlayer}>
+                      Fechar
+                    </Button>
+                  </div>
                 </div>
              ) : !streamUrl ? (
                 <Loader2 className="h-12 w-12 animate-spin text-primary" />
