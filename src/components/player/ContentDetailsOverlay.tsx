@@ -132,6 +132,7 @@ export function ContentDetailsOverlay({
             <div className="flex flex-col sm:flex-row gap-4 pt-4">
               <Button 
                 onClick={() => onPlay(item)}
+
                 className="h-14 px-8 rounded-xl font-black text-lg gap-2 shadow-xl transition-all hover:scale-105 active:scale-95"
                 style={{ backgroundColor: primaryColor }}
               >

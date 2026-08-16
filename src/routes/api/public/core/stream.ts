@@ -16,10 +16,13 @@ function b64urlDecode(value: string) {
 }
 
 function contentTypeFor(ext: string, upstream: string | null) {
-  if (ext === "m3u8") return "application/vnd.apple.mpegurl";
-  if (ext === "ts") return "video/mp2t";
-  if (ext === "mp4") return "video/mp4";
-  if (ext === "mkv") return "video/x-matroska";
+  const e = ext.toLowerCase();
+  if (e === "m3u8") return "application/vnd.apple.mpegurl";
+  if (e === "ts") return "video/mp2t";
+  if (e === "mp4") return "video/mp4";
+  if (e === "mkv") return "video/x-matroska";
+  if (e === "m4v") return "video/x-m4v";
+  if (e === "avi") return "video/x-msvideo";
   return upstream ?? "application/octet-stream";
 }
 
@@ -88,29 +91,42 @@ export const Route = createFileRoute("/api/public/core/stream")({
         /* ---------------------------------------------------------- */
         const sig = url.searchParams.get("sig");
         const exp = Number(url.searchParams.get("exp") ?? 0);
+        
         if (sig && passthrough) {
           const abs = b64urlDecode(passthrough);
+          
+          console.log(
+            `[STREAM REQUEST][worker] type=${type} ext=${ext} sig=${sig.slice(0, 8)}... exp=${new Date(exp * 1000).toISOString()} url=${maskMedia(abs)}`
+          );
+
           if (!verifyUpstream(abs, exp, sig)) {
+            console.error(`[STREAM RESPONSE][worker] status=403 error="Assinatura inválida ou expirada"`);
             return new Response("Assinatura inválida", { status: 403, headers: CORS });
           }
+          
           const h: Record<string, string> = {
             "User-Agent": type === "live" ? UA_PLAYER : UA_VLC,
             Accept: "*/*",
           };
           if (range) h["Range"] = range;
+          
           try {
             const res = await fetch(abs, { headers: h, redirect: "follow" });
-            console.log(
-              `[stream-proxy][worker] url=${maskMedia(abs)} status=${res.status} ct=${res.headers.get("content-type")} range=${range ?? "-"}`
-            );
+            
             const out = new Headers(CORS);
             for (const k of ["Content-Type", "Content-Range", "Content-Length", "Accept-Ranges"]) {
               const v = res.headers.get(k);
               if (v) out.set(k, v);
             }
             out.set("Cache-Control", "no-cache");
+            
+            console.log(
+              `[STREAM RESPONSE][worker] status=${res.status} ct=${out.get("Content-Type")} range=${range ?? "none"} len=${out.get("Content-Length") ?? "stream"}`
+            );
+
             return new Response(res.body, { status: res.status, headers: out });
           } catch (e) {
+            console.error(`[STREAM RESPONSE][worker] status=502 error="${(e as Error).message}"`);
             return new Response(`Worker fetch error: ${(e as Error).message}`, { status: 502, headers: CORS });
           }
         }
@@ -280,7 +296,7 @@ export const Route = createFileRoute("/api/public/core/stream")({
         if (!out.has("Accept-Ranges") && type !== "live") out.set("Accept-Ranges", "bytes");
 
         console.log(
-          `[stream-proxy] entregando type=${type} ext=${finalExt} status=${upstream.status} ct=${out.get("Content-Type")} range=${range ?? "-"} len=${out.get("Content-Length") ?? "stream"}`
+          `[STREAM RESPONSE][panel] type=${type} ext=${finalExt} status=${upstream.status} ct=${out.get("Content-Type")} range=${range ?? "none"} len=${out.get("Content-Length") ?? "stream"}`
         );
 
         return new Response(upstream.body, { status: upstream.status, headers: out });

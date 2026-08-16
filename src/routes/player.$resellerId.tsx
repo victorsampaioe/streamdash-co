@@ -413,7 +413,7 @@ function PlayerPage() {
               onPlay={(item: any) => {
                 const type = item.stream_type === "series" ? "series" : (item.stream_type === "live" ? "live" : "movie");
                 if (type === "live") {
-                  handlePlay(item.stream_id || item.series_id, "live");
+                  handlePlay(item.stream_id || item.series_id, "live", item);
                 } else {
                   setSelectedItem(item);
                   setIsDetailsOpen(true);
@@ -478,7 +478,7 @@ function PlayerPage() {
               items={homeData.liveHighlights} 
               type="live" 
               primaryColor={primaryColor}
-              onPlay={(item: any) => handlePlay(item.stream_id, "live")}
+              onPlay={(item: any) => handlePlay(item.stream_id, "live", item)}
             />
 
           </div>
@@ -741,7 +741,7 @@ function PlayerPage() {
             if (isSeries) {
               handleOpenSeries(i);
             } else {
-              handlePlay(i.stream_id || i.id || i.content_id, "movie", i.container_extension);
+              handlePlay(i.stream_id || i.id || i.content_id, "movie", i);
             }
           }}
           primaryColor={primaryColor}
@@ -759,7 +759,7 @@ function PlayerPage() {
         primaryColor={primaryColor}
         onPlay={(item: any, type: "live" | "movie" | "series") => {
           if (type === "live") {
-            handlePlay(item.stream_id || item.id, "live");
+            handlePlay(item.stream_id || item.id, "live", item);
           } else {
             setSelectedItem(item);
             setIsDetailsOpen(true);
@@ -776,7 +776,7 @@ function PlayerPage() {
           info={selectedSeriesInfo}
           loading={loadingSeries}
           onClose={() => setSelectedSeriesInfo(null)}
-          onPlay={(ep) => handlePlay(ep.id, "series", ep.container_extension)}
+          onPlay={(ep) => handlePlay(ep.id || ep.stream_id, "series", ep)}
           primaryColor={primaryColor}
         />
       )}
@@ -817,13 +817,13 @@ function PlayerPage() {
     });
   }
 
-  function handlePlay(id: string, type: "live" | "movie" | "series", extOverride?: string) {
+  function handlePlay(id: string, type: "live" | "movie" | "series", item?: any) {
     setIsPlaying(true);
     setStreamUrl(null);
 
     // Live → HLS (.m3u8) é o formato reproduzível no navegador.
-    // Filmes/Séries → extensão real do container (mp4 por padrão) com Range.
-    const extension = type === "live" ? "m3u8" : (extOverride || "mp4");
+    // Filmes/Séries → extensão real do container (.mp4, .mkv, .ts) com Range.
+    const extension = type === "live" ? "m3u8" : (item?.container_extension || "mp4");
 
     console.log("[PLAYER_DEBUG] play", {
       tipo: type,
