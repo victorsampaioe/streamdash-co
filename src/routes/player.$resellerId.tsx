@@ -116,18 +116,23 @@ function PlayerPage() {
   const [diagLoading, setDiagLoading] = useState(false);
 
 
-  // Carregar favoritos
+  // Carregar favoritos e progresso
   useEffect(() => {
     if (token) {
-      getFavorites({ data: { token } })
+      getPlayerActivity({ data: { token, type: 'favorites' } })
         .then(setFavorites)
+        .catch(console.error);
+        
+      getPlayerActivity({ data: { token, type: 'history' } })
+        .then(setHistory)
         .catch(console.error);
     }
   }, [token]);
 
   const toggleFavoriteMutation = useMutation({
-    mutationFn: toggleFavorite,
+    mutationFn: (variables: { data: any }) => updatePlayerActivity(variables),
     onSuccess: (_, variables) => {
+
       if (!variables) return;
       const data = variables.data as any;
       const { contentId, contentType, isFavorite } = data;
