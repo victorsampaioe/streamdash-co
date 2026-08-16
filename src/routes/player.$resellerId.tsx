@@ -332,10 +332,15 @@ function PlayerPage() {
 
   const { data: serverStatus } = useQuery({
     queryKey: ["player-server-status", token],
-    queryFn: async () => token ? await getServerStatus({ data: { token } }) : null,
+    queryFn: async () => {
+      if (!token) return null;
+      const { getServerStatus } = await import("@/lib/player.functions");
+      return await getServerStatus({ data: { token } });
+    },
     enabled: !!token,
     refetchInterval: 60000,
   });
+
 
 
   if (settingsLoading) {
