@@ -1229,9 +1229,20 @@ function PlayerPage() {
 
     // Fluxo inteligente: formato incompatível não gera tentativas demoradas.
     if (type !== "live" && !isBrowserPlayable(extension)) {
-      const reason = incompatibleReason(extension);
+      const reason = `${NEEDS_CONVERSION_MESSAGE} — ${incompatibleReason(extension)}`;
       console.warn("[PLAYER_DEBUG] formato incompatível", { tipo: type, content_id: id, extensao: extension, motivo: reason });
       setStreamUrl(null);
+      setCompat({
+        ok: false,
+        container: extension,
+        video: null,
+        audio: null,
+        action: "remux",
+        via: null,
+        status: null,
+        label: `⚠️ container .${extension} precisa conversão`,
+        detail: NEEDS_CONVERSION_MESSAGE,
+      });
       setPlaybackReason(reason);
       setIsPlaying(true);
       toast.error(reason, { duration: 8000 });
@@ -1241,6 +1252,7 @@ function PlayerPage() {
     setIsPlaying(true);
     setSelectedItem(item ?? selectedItem);
     setStreamUrl(null);
+    setCompat(null);
     setPlaybackReason(null);
     setPlaybackDebug({ tipo: type, extensao: extension, contentId: id, status: null, via: null });
 
