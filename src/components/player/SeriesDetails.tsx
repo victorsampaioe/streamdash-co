@@ -1,11 +1,8 @@
 import { 
   X, 
   Star, 
-  Calendar, 
   Play, 
   Plus, 
-  ChevronRight,
-  ChevronLeft,
   Loader2
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -22,7 +19,7 @@ interface SeriesDetailsProps {
 }
 
 export function SeriesDetails({ series, info, loading, onClose, onPlay, primaryColor }: SeriesDetailsProps) {
-  const [selectedSeason, setSelectedSeason] = useState<number>(1);
+  const [selectedSeason, setSelectedSeason] = useState<number | null>(null);
   
   // Normalização segura das temporadas
   const seasons = useMemo(() => {
@@ -39,12 +36,13 @@ export function SeriesDetails({ series, info, loading, onClose, onPlay, primaryC
   }, [info?.episodes]);
   
   useEffect(() => {
-    if (seasons.length > 0 && !seasons.includes(selectedSeason)) {
+    if (seasons.length > 0 && (selectedSeason === null || !seasons.includes(selectedSeason))) {
       setSelectedSeason(seasons[0]);
     }
   }, [seasons, selectedSeason]);
 
   const episodes = useMemo(() => {
+    if (selectedSeason === null) return [];
     const list = info?.episodes?.[selectedSeason.toString()] || info?.episodes?.[selectedSeason] || [];
     return Array.isArray(list) ? list : [];
   }, [info?.episodes, selectedSeason]);
@@ -86,14 +84,17 @@ export function SeriesDetails({ series, info, loading, onClose, onPlay, primaryC
           </div>
 
           <div className="flex gap-4">
-            <Button 
-              size="lg" 
-              className="h-14 px-8 text-lg font-bold rounded-xl"
-              style={{ backgroundColor: primaryColor }}
-              onClick={() => episodes[0] && onPlay(episodes[0])}
-            >
-              <Play className="mr-2 h-6 w-6 fill-white" /> Assistir S1:E1
-            </Button>
+            {episodes[0] && (
+              <Button 
+                size="lg" 
+                className="h-14 px-8 text-lg font-bold rounded-xl"
+                style={{ backgroundColor: primaryColor }}
+                onClick={() => onPlay(episodes[0])}
+              >
+                <Play className="mr-2 h-6 w-6 fill-white" />
+                Assistir T{selectedSeason}:E{episodes[0].episode_num ?? 1}
+              </Button>
+            )}
             <Button 
               size="lg" 
               variant="outline"
@@ -134,11 +135,11 @@ export function SeriesDetails({ series, info, loading, onClose, onPlay, primaryC
           <div className="py-20 flex items-center justify-center">
             <Loader2 className="h-8 w-8 animate-spin text-primary" />
           </div>
-        ) : (
+        ) : episodes.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
             {episodes.map((episode: any) => (
               <div 
-                key={episode.id}
+                key={episode.id ?? episode.stream_id}
                 className="group relative rounded-xl overflow-hidden bg-white/5 border border-white/5 hover:border-white/20 transition-all cursor-pointer"
                 onClick={() => onPlay(episode)}
               >
@@ -169,6 +170,10 @@ export function SeriesDetails({ series, info, loading, onClose, onPlay, primaryC
                 </div>
               </div>
             ))}
+          </div>
+        ) : (
+          <div className="py-20 text-center text-white/50">
+            O servidor não retornou episódios para esta série.
           </div>
         )}
       </div>

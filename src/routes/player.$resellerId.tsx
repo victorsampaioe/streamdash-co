@@ -876,7 +876,7 @@ function PlayerPage() {
           info={selectedSeriesInfo}
           loading={loadingSeries}
           onClose={() => setSelectedSeriesInfo(null)}
-          onPlay={(ep) => handlePlay(ep.id || ep.stream_id, "series", ep)}
+          onPlay={(ep) => handlePlay(ep.id ?? ep.stream_id, "series", ep)}
           primaryColor={primaryColor}
         />
       )}
@@ -940,6 +940,13 @@ function PlayerPage() {
   }
 
   function handlePlay(id: string, type: "live" | "movie" | "series", item?: any) {
+    if (id === undefined || id === null || String(id).trim() === "") {
+      const error = type === "series" ? "O episódio não possui episode_id válido." : "O conteúdo não possui stream_id válido.";
+      console.error("[PLAY]", { tipo: type, conteudo: item?.name ?? item?.title ?? null, stream_id: null, episode_id: null, url_gerada: null, via: null, status: "erro", erro: error });
+      toast.error(error);
+      return;
+    }
+
     // Live → HLS (.m3u8) é o formato reproduzível no navegador.
     // Filmes/Séries → extensão real do container (.mp4, .mkv, .ts) com Range.
     const extension = type === "live" ? "m3u8" : (item?.container_extension || "mp4");
@@ -956,19 +963,22 @@ function PlayerPage() {
     }
 
     setIsPlaying(true);
+    setSelectedItem(item ?? selectedItem);
     setStreamUrl(null);
     setPlaybackReason(null);
     setPlaybackDebug({ tipo: type, extensao: extension, contentId: id, status: null, via: null });
 
 
     const startCheck = Date.now();
-    console.log("[PLAYER_DEBUG] play", {
+    console.log("[PLAY]", {
       tipo: type,
-      content_id: id,
-      server_id: session?.server_id ?? null,
-      extensao: extension,
-      endpoint: "server fn getPlayerStreamUrl -> /api/public/core/stream",
-      camada_principal: "Cliente -> Stream Monitor Core -> IPTV",
+      conteudo: item?.name ?? item?.title ?? selectedItem?.name ?? null,
+      stream_id: type === "series" ? null : String(id),
+      episode_id: type === "series" ? String(id) : null,
+      url_gerada: null,
+      via: "gerando",
+      status: "iniciando",
+      erro: null,
     });
 
     // Diagnóstico antes da reprodução
@@ -991,15 +1001,19 @@ function PlayerPage() {
       }
     })
     .then(url => {
-      console.log("[PLAYER_DEBUG] URL de reprodução (proxy):", url, "| tipo:", type, "| ext:", extension, "| status: ok | ms:", Date.now() - startCheck);
+      console.log("[PLAY]", { tipo: type, conteudo: item?.name ?? item?.title ?? null, stream_id: type === "series" ? null : String(id), episode_id: type === "series" ? String(id) : null, url_gerada: url.replace(/token=[^&]*/i, "token=***"), via: "proxy", status: "url_gerada", erro: null });
       setStreamUrl(url);
     })
     .catch(err => {
-      console.error("[PLAYER_DEBUG] falha ao gerar URL de stream", {
+      console.error("[PLAY]", {
         tipo: type,
-        content_id: id,
-        endpoint: "getPlayerStreamUrl",
-        mensagem: err?.message,
+        conteudo: item?.name ?? item?.title ?? null,
+        stream_id: type === "series" ? null : String(id),
+        episode_id: type === "series" ? String(id) : null,
+        url_gerada: null,
+        via: null,
+        status: "erro",
+        erro: err?.message,
       });
       
       // Inteligência de erro amigável
@@ -1029,7 +1043,7 @@ function PlayerPage() {
       content_id: seriesId,
       server_id: session?.server_id ?? null,
       nome: item.name || item.title,
-      endpoint: "getPlayerCatalog(action=get_episodes_list)",
+      endpoint: "getPlayerCatalog(action=get_series_info)",
     });
     
     setSelectedSeriesInfo({ info: item, episodes: {} });
@@ -1040,7 +1054,7 @@ function PlayerPage() {
       const data = await getPlayerCatalog({ 
         data: { 
           token: token!, 
-          action: "get_episodes_list", 
+          action: "get_series_info", 
           contentId: seriesId
         } 
       });
