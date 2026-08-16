@@ -2902,6 +2902,47 @@ export type Database = {
         }
         Relationships: []
       }
+      player_activities: {
+        Row: {
+          content_id: string
+          content_type: string
+          id: string
+          is_favorite: boolean | null
+          last_accessed_at: string | null
+          metadata: Json | null
+          progress: number | null
+          session_id: string
+        }
+        Insert: {
+          content_id: string
+          content_type: string
+          id?: string
+          is_favorite?: boolean | null
+          last_accessed_at?: string | null
+          metadata?: Json | null
+          progress?: number | null
+          session_id: string
+        }
+        Update: {
+          content_id?: string
+          content_type?: string
+          id?: string
+          is_favorite?: boolean | null
+          last_accessed_at?: string | null
+          metadata?: Json | null
+          progress?: number | null
+          session_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "player_activities_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "player_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       player_favorites: {
         Row: {
           content_id: string
