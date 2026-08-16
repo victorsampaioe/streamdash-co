@@ -806,7 +806,6 @@ function PlayerPage() {
           isOpen={isDetailsOpen}
           onClose={() => {
             setIsDetailsOpen(false);
-            setSelectedItem(null);
           }}
           onPlay={(i: any) => {
             const isSeries = i.series_id || i.content_type === "series" || activeView === "series" || selectedItem.series_id;
