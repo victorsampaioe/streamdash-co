@@ -1187,6 +1187,17 @@ function PlayerPage() {
               {playbackDebug.reason && <div className="text-red-400">motivo: {playbackDebug.reason}</div>}
               {playbackDebug.erro_hls && <div className="text-red-400">erro_hls: {playbackDebug.erro_hls}</div>}
               {playbackDebug.erro_video && <div className="text-red-400">erro_video: {playbackDebug.erro_video}</div>}
+              {compat && (
+                <div className={compat.ok ? "text-emerald-300" : "text-amber-400"}>compat: {compat.label}</div>
+              )}
+              <button
+                type="button"
+                disabled={compatLoading}
+                onClick={() => void runCompatTest()}
+                className="mt-1 rounded border border-white/20 px-2 py-1 text-[11px] text-white/80 hover:bg-white/10 disabled:opacity-50"
+              >
+                {compatLoading ? "analisando..." : "Testar compatibilidade Web"}
+              </button>
             </div>
           )}
         </div>
