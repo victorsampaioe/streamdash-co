@@ -1054,6 +1054,7 @@ function PlayerPage() {
   function handleClosePlayer() {
     setIsPlaying(false);
     setStreamUrl(null);
+    setPlaybackReason(null);
     if (hlsRef.current) {
       hlsRef.current.destroy();
       hlsRef.current = null;
@@ -1066,18 +1067,34 @@ function PlayerPage() {
     const video = videoRef.current;
     const isHls = streamUrl.includes("ext=m3u8") || streamUrl.includes(".m3u8");
 
-    // Diagnóstico da camada de playback
+    // Diagnóstico da camada de playback (motivo real, não mensagem genérica)
     const logMeta = async () => {
       try {
         const res = await fetch(streamUrl, { headers: isHls ? {} : { Range: "bytes=0-1023" } });
+        const via = res.headers.get("x-playback-via");
+        const reason = res.headers.get("x-playback-reason");
         console.log(
           "[player] proxy status:", res.status,
+          "| via:", via,
           "| Content-Type:", res.headers.get("content-type"),
           "| Content-Length:", res.headers.get("content-length"),
-          "| Content-Range:", res.headers.get("content-range")
+          "| Content-Range:", res.headers.get("content-range"),
+          "| motivo:", reason
         );
-        if (!res.ok && res.status !== 206) {
-          toast.error(`Stream indisponível (HTTP ${res.status})`);
+        if (res.status === 415) {
+          const msg = reason || incompatibleReason(res.headers.get("x-playback-incompatible"));
+          setPlaybackReason(msg);
+          setStreamUrl(null);
+          toast.error(msg, { duration: 8000 });
+        } else if (!res.ok && res.status !== 206) {
+          const msg =
+            reason ||
+            (res.status === 403
+              ? "Servidor bloqueou o acesso ao stream. Reprodução direcionada pelo Core não foi aceita."
+              : `Stream indisponível (HTTP ${res.status}).`);
+          setPlaybackReason(msg);
+          setStreamUrl(null);
+          toast.error(msg, { duration: 8000 });
         }
         await res.body?.cancel();
       } catch (e) {
@@ -1085,6 +1102,7 @@ function PlayerPage() {
       }
     };
     void logMeta();
+
 
     if (isHls && Hls.isSupported()) {
       const hls = new Hls({ enableWorker: true, lowLatencyMode: false });
