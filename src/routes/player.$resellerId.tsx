@@ -817,13 +817,13 @@ function PlayerPage() {
     });
   }
 
-  function handlePlay(id: string, type: "live" | "movie" | "series", extOverride?: string) {
+  function handlePlay(id: string, type: "live" | "movie" | "series", item?: any) {
     setIsPlaying(true);
     setStreamUrl(null);
 
     // Live → HLS (.m3u8) é o formato reproduzível no navegador.
-    // Filmes/Séries → extensão real do container (mp4 por padrão) com Range.
-    const extension = type === "live" ? "m3u8" : (extOverride || "mp4");
+    // Filmes/Séries → extensão real do container (.mp4, .mkv, .ts) com Range.
+    const extension = type === "live" ? "m3u8" : (item?.container_extension || "mp4");
 
     console.log("[PLAYER_DEBUG] play", {
       tipo: type,
