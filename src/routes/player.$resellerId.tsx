@@ -1116,19 +1116,19 @@ function PlayerPage() {
 
 
       const onTimeUpdate = () => {
-        if (!selectedContent || selectedContent.stream_type === "live") return;
+        if (!selectedItem || selectedItem.stream_type === "live") return;
         const progress = Math.floor((video.currentTime / video.duration) * 100);
         // Atualiza a cada 5% ou ao final
         if (progress % 5 === 0 || progress > 98) {
            updatePlayerActivity({
             data: {
               token: token!,
-              contentId: (selectedContent.stream_id || selectedContent.id || selectedContent.content_id).toString(),
-              contentType: selectedContent.series_id ? "series" : "movie",
+              contentId: (selectedItem.stream_id || selectedItem.id || selectedItem.content_id).toString(),
+              contentType: selectedItem.series_id ? "series" : "movie",
               progress,
               metadata: {
-                name: selectedContent.name || selectedContent.title,
-                stream_icon: selectedContent.stream_icon || selectedContent.cover
+                name: selectedItem.name || selectedItem.title,
+                stream_icon: selectedItem.stream_icon || selectedItem.cover
               }
             }
           }).catch(console.error);
