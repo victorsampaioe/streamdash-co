@@ -285,48 +285,75 @@ export const Route = createFileRoute("/api/public/core/stream")({
         if (!upstream) await attemptDirect();
 
 
-        if (!upstream) {
-          return new Response(`Upstream error: ${lastStatus || "sem resposta"}`, {
+        const found = upstream as Response | null;
+
+        if (!found) {
+          const reason = blockedDirect
+            ? "Servidor bloqueou o acesso direto e o Core também não conseguiu entregar o stream."
+            : `Servidor não entregou o stream (HTTP ${lastStatus || "sem resposta"}).`;
+          console.error(`[STREAM RESPONSE][${deliveredVia}] status=${lastStatus || 502} reason="${reason}"`);
+          return new Response(reason, {
             status: lastStatus || 502,
-            headers: CORS,
+            headers: { ...CORS, "X-Playback-Reason": reason, "X-Playback-Via": deliveredVia },
           });
         }
 
-        const upstreamType = upstream.headers.get("Content-Type");
+        const upstreamType = found.headers.get("Content-Type");
         const isManifest =
           /mpegurl|m3u/i.test(upstreamType ?? "") || /\.m3u8(\?|$)/i.test(usedUrl);
 
         // 4a. Manifesto HLS → reescreve segmentos para o proxy
         if (isManifest) {
-          const text = await upstream.text();
+          const text = await found.text();
           const rewritten = rewriteManifest(text, usedUrl, token);
-          console.log(`[stream-proxy] manifesto HLS reescrito bytes=${text.length} linhas=${text.split("\n").length}`);
+          console.log(`[stream-proxy] manifesto HLS reescrito bytes=${text.length} linhas=${text.split("\n").length} via=${deliveredVia}`);
           return new Response(rewritten, {
             status: 200,
             headers: {
               ...CORS,
               "Content-Type": "application/vnd.apple.mpegurl",
               "Cache-Control": "no-cache",
+              "X-Playback-Via": deliveredVia,
             },
           });
         }
 
         // 4b. Mídia binária (ts / mp4 / mkv) → repassa com suporte a Range
         const finalExt = (usedUrl.match(/\.([a-z0-9]{2,4})(?:\?|$)/i)?.[1] ?? ext).toLowerCase();
+
+        // Container que o navegador não decodifica: não entregar bytes que
+        // resultariam em tela preta — devolver o motivo real.
+        if (type !== "live" && !isBrowserPlayable(finalExt)) {
+          const reason = incompatibleReason(finalExt);
+          await found.body?.cancel();
+          console.warn(`[STREAM RESPONSE][${deliveredVia}] status=415 ext=${finalExt} reason="${reason}"`);
+          return new Response(reason, {
+            status: 415,
+            headers: {
+              ...CORS,
+              "Content-Type": "text/plain; charset=utf-8",
+              "X-Playback-Reason": reason,
+              "X-Playback-Incompatible": finalExt,
+              "X-Playback-Via": deliveredVia,
+            },
+          });
+        }
+
         const out = new Headers(CORS);
         out.set("Cache-Control", "no-cache");
         out.set("Content-Type", contentTypeFor(finalExt, upstreamType));
+        out.set("X-Playback-Via", deliveredVia);
         for (const h of ["Content-Range", "Content-Length", "Accept-Ranges"]) {
-          const v = upstream.headers.get(h);
+          const v = found.headers.get(h);
           if (v) out.set(h, v);
         }
         if (!out.has("Accept-Ranges") && type !== "live") out.set("Accept-Ranges", "bytes");
 
         console.log(
-          `[STREAM RESPONSE][panel] type=${type} ext=${finalExt} status=${upstream.status} ct=${out.get("Content-Type")} range=${range ?? "none"} len=${out.get("Content-Length") ?? "stream"}`
+          `[STREAM RESPONSE][${deliveredVia}] type=${type} ext=${finalExt} status=${found.status} ct=${out.get("Content-Type")} range=${range ?? "none"} len=${out.get("Content-Length") ?? "stream"}`
         );
 
-        return new Response(upstream.body, { status: upstream.status, headers: out });
+        return new Response(found.body, { status: found.status, headers: out });
       },
       OPTIONS: async () => new Response(null, { status: 204, headers: CORS }),
     },
