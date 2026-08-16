@@ -3,7 +3,7 @@ import { Activity, LayoutDashboard, ServerIcon, Bell, Users, LogOut, Sun, Moon, 
 import { SubscriptionBanner } from "@/components/subscription/subscription-banner";
 import { TelegramBanner } from "@/components/telegram-banner";
 import { WelcomeOnboarding } from "@/components/subscription/welcome-onboarding";
-import { SupportFab } from "@/components/support-fab";
+
 
 
 import { useEffect, useState, type ReactNode } from "react";
@@ -33,7 +33,7 @@ export function AppShell({ children }: { children: ReactNode }) {
         <TelegramBanner />
         <main id="main-content" className="flex-1 p-4 sm:p-6 md:p-8 max-w-[1600px] w-full mx-auto">{children}</main>
       </div>
-      <SupportFab />
+      
     </div>
   );
 }
