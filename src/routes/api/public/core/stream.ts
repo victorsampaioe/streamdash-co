@@ -7,7 +7,7 @@ const CORS = {
   "Access-Control-Allow-Methods": "GET, OPTIONS",
   "Access-Control-Allow-Headers": "Range, Content-Type",
   "Access-Control-Expose-Headers":
-    "Content-Length, Content-Range, Accept-Ranges, Content-Type, X-Playback-Via, X-Playback-Reason, X-Playback-Incompatible, X-Playback-Codec-Video, X-Playback-Codec-Audio, X-Playback-Action, X-Core-Error, X-Core-Status, X-Core-Stream-Version, X-Core-Worker-Version, X-Core-UA, X-Upstream-Status, X-Upstream-Content-Type, X-Upstream-Url",
+    "Content-Length, Content-Range, Accept-Ranges, Content-Type, X-Playback-Via, X-Playback-Segments, X-Playback-Reason, X-Playback-Incompatible, X-Playback-Codec-Video, X-Playback-Codec-Audio, X-Playback-Action, X-Core-Error, X-Core-Status, X-Core-Stream-Version, X-Core-Worker-Version, X-Core-UA, X-Upstream-Status, X-Upstream-Content-Type, X-Upstream-Url",
 };
 
 function b64urlEncode(value: string) {
@@ -66,8 +66,8 @@ function rewriteManifest(manifest: string, upstreamUrl: string, token: string, m
       mode,
       type: "live",
       ext: segExt,
-      // Segmentos seguem obrigatoriamente pelo Core (mesma camada do manifesto).
-      forceCore: "1",
+      // Segmentos seguem pela mesma camada que entregou o manifesto.
+      forceCore: mode.startsWith("CORE") ? "1" : "0",
       pexp: String(segExp),
       psig: signUpstream(abs, segExp),
       u: b64urlEncode(abs),
