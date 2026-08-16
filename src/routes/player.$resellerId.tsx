@@ -9,12 +9,14 @@ import {
   getPlayerStreamUrl,
   getPlayerServers,
   logoutPlayer,
-  getFavorites,
-  toggleFavorite,
   getTMDBMetadata,
-  diagnosePlayerCatalog
+  diagnosePlayerCatalog,
+  getServerStatus,
+  getPlayerActivity,
+  updatePlayerActivity
 
 } from "@/lib/player.functions";
+
 
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
