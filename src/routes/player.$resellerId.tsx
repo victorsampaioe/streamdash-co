@@ -776,7 +776,7 @@ function PlayerPage() {
           info={selectedSeriesInfo}
           loading={loadingSeries}
           onClose={() => setSelectedSeriesInfo(null)}
-          onPlay={(ep) => handlePlay(ep.id, "series", ep.container_extension)}
+          onPlay={(ep) => handlePlay(ep.id || ep.stream_id, "series", ep)}
           primaryColor={primaryColor}
         />
       )}
