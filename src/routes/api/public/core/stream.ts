@@ -743,6 +743,7 @@ export const Route = createFileRoute("/api/public/core/stream")({
           `[STREAM DEBUG][STREAM RESPONSE] via=${usedModo} type=${type} ext=${finalExt} status=${found.status} ct=${out.get("Content-Type")} range=${range ?? "none"} tentativas="${resumo}"`
         );
 
+        console.log(`[STREAM BODY START] modo=${usedModo} url=${maskMedia(usedUrl)} status=${found.status} content-type=${out.get("Content-Type")} content-length=${found.headers.get("content-length") ?? "-"} body_null=${found.body === null}`);
         return new Response(found.body, { status: found.status, headers: out });
       },
       OPTIONS: async () => new Response(null, { status: 204, headers: CORS }),
