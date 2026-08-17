@@ -244,6 +244,14 @@ export const Route = createFileRoute("/api/public/core/stream")({
               keepalive: true,
             });
 
+            // Painéis Xtream redirecionam (302) para CDNs externas. As URIs do
+            // manifesto são relativas à URL FINAL, não à URL do painel.
+            const finalUrl = res.url || abs;
+            if (isHlsManifest && finalUrl !== abs) {
+              console.log(`[HLS] redirecionado para CDN final: ${maskMedia(finalUrl)}`);
+            }
+
+
             // LOG DE DIAGNÓSTICO PROFUNDO [STREAM DEBUG]
             console.log(`[STREAM DEBUG]
 - URL original: ${maskMedia(abs)}
