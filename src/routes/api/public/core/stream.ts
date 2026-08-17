@@ -614,7 +614,7 @@ export const Route = createFileRoute("/api/public/core/stream")({
         // conter H265/AC3/DTS que o navegador não decodifica
         // (DEMUXER_ERROR_NO_SUPPORTED_STREAMS). Só na primeira faixa do arquivo.
         const primeiraFaixa = !range || /^bytes=0-/.test(range);
-        if (type !== "live" && primeiraFaixa) {
+        if (type !== "live" && primeiraFaixa && !isManifest) {
           const { probeCodecs } = await import("@/lib/codec-probe.server");
           const info = await probeCodecs(usedUrl, finalExt, usedModo.includes("VLC") ? UA_VLC : UA_PLAYER);
           if (info) {
