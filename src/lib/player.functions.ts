@@ -386,9 +386,12 @@ export const getPlayerStreamUrl = createServerFn({ method: "POST" })
     url.searchParams.set("sid", data.streamId);
     url.searchParams.set("ext", data.extension);
     url.searchParams.set("type", data.type);
-    // Escalonamento automático no proxy: navegador → CORE-VLC → CORE →
-    // PAINEL-VLC. O modo realmente usado é sempre informado no HUD
-    // (headers X-Playback-Via / X-Playback-Reason), sem fallback silencioso.
+    // Live: entrega obrigatória pelo Core (manifesto + segmentos na mesma camada).
+    // VOD: escalonamento automático navegador → CORE-VLC → CORE → PAINEL-VLC.
+    // O modo realmente usado é sempre informado no HUD (X-Playback-Via /
+    // X-Playback-Reason), sem fallback silencioso.
+    if (data.type === "live") url.searchParams.set("forceCore", "1");
+
     
     const finalUrl = url.pathname + url.search;
     console.log(`[getPlayerStreamUrl] server=${session.server_id} type=${data.type} sid=${data.streamId} ext=${data.extension} proxy=${finalUrl.split("token=")[0]}token=***`);

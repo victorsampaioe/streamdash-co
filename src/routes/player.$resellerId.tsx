@@ -1190,6 +1190,17 @@ function PlayerPage() {
               {compat && (
                 <div className={compat.ok ? "text-emerald-300" : "text-amber-400"}>compat: {compat.label}</div>
               )}
+              {compat?.transport && (
+                <div className="text-white/60">
+                  <div>ct: {compat.transport.contentType ?? "-"} · accept-ranges: {compat.transport.acceptRanges ?? "-"}</div>
+                  <div>length: {compat.transport.contentLength ?? "-"} · {compat.transport.contentRange ?? "-"}</div>
+                  <div>{compat.transport.firstRange} · {compat.transport.midRange}</div>
+                  {compat.transport.notes.map((n) => (
+                    <div key={n} className="text-amber-400">! {n}</div>
+                  ))}
+                </div>
+              )}
+
               <button
                 type="button"
                 disabled={compatLoading}
