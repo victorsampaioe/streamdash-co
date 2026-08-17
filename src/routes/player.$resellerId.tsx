@@ -90,6 +90,7 @@ function PlayerPage() {
   const [loadingContent, setLoadingContent] = useState(false);
   
   const [selectedSeriesInfo, setSelectedSeriesInfo] = useState<any>(null);
+  const [isSeriesOpen, setIsSeriesOpen] = useState(false);
   const [loadingSeries, setLoadingSeries] = useState(false);
   const [streamUrl, setStreamUrl] = useState<string | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
