@@ -372,8 +372,25 @@ export const Route = createFileRoute("/api/public/core/stream")({
 
             if (isHlsManifest) {
               const body = await res.text();
+              let diagInfo: ReturnType<typeof logLiveManifest> | null = null;
+              if (type === "live") {
+                diagInfo = logLiveManifest({
+                  url: abs,
+                  finalUrl,
+                  status: res.status,
+                  contentType: upstreamContentType,
+                  ua: uaKind,
+                  modo: "CORE",
+                  body,
+                });
+              }
               const { manifest: rewritten, segmentos } = rewriteManifest(body, finalUrl, token!, modeKind as any);
               console.log(`[HLS] manifest entregue | segments=${segmentos} | status=${res.status}`);
+              if (diagInfo) {
+                out.set("X-Live-Diag-Segments", String(diagInfo.total));
+                out.set("X-Live-Diag-Master", String(diagInfo.isMaster));
+                out.set("X-Live-Diag-UA", uaKind);
+              }
               return new Response(rewritten, {
                 status: res.status,
                 headers: { ...Object.fromEntries(out), "Content-Type": "application/vnd.apple.mpegurl" },
