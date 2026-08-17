@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
 import { TrailerModal } from "@/components/player/TrailerModal";
+import { detectQuality } from "@/lib/player-curation";
 
 interface HeroBannerProps {
   items?: any[]; // Array para rotação
