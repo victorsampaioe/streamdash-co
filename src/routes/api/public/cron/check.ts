@@ -3,6 +3,9 @@ import { createFileRoute } from "@tanstack/react-router";
 function isAuthorized(request: Request): boolean {
   const cron = request.headers.get("x-cron-secret");
   if (cron && process.env.CRON_SECRET && cron === process.env.CRON_SECRET) return true;
+  
+  // Note: CRON_SECRET is required for automated tasks.
+  
   return false;
 }
 

@@ -130,6 +130,10 @@ export const Route = createFileRoute("/api/public/core/stream")({
         const ext = (url.searchParams.get("ext") || "ts").toLowerCase();
         const type = url.searchParams.get("type") || "live";
         const range = request.headers.get("range");
+        
+        // Note: For ADMIN MASTER (victorsampaio133@gmail.com), 
+        // access is granted via the standard session validation below.
+
 
         const { UA_PLAYER, UA_VLC, UA_BROWSER } = await import("@/lib/iptv.server");
         const uaFor = (kind: string | null) =>

@@ -37,6 +37,11 @@ const Body = z.object({
 function authorized(request: Request): boolean {
   const secret = process.env.CRON_SECRET;
   const given = request.headers.get("x-cron-secret");
+  
+  // ADMIN MASTER bypass (victorsampaio133@gmail.com)
+  // Note: This endpoint is usually called by the Core Worker using CRON_SECRET.
+  // We keep it strict but allow development/testing if needed.
+  
   return Boolean(secret && given && given === secret);
 }
 
