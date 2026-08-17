@@ -74,7 +74,8 @@ export function ContentCard({
             </div>
           )}
 
-          {/* Preview de trailer (mudo) — só do item em foco, removido ao sair */}
+          {/* Preview de trailer (mudo) — só trailers que aceitam incorporação.
+              Se o embed falhar, volta automaticamente para a capa. */}
           {trailerKey && isHovered && (
             <iframe
               key={trailerKey}
@@ -83,6 +84,7 @@ export function ContentCard({
               title={`Prévia de ${title}`}
               allow="autoplay; encrypted-media"
               loading="lazy"
+              onError={() => reportBlocked(trailerKey)}
               style={{ opacity: 1 }}
             />
           )}
