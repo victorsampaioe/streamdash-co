@@ -136,7 +136,7 @@ function useNavItems() {
   items.push({ to: "/app/ai-integration", label: "Integração IA", icon: Bot });
   items.push({ to: "/app/ajuda", label: "Central de Ajuda", icon: BookOpen });
 
-  if (isAdmin) {
+  if (navIsAdmin) {
     items.push({ to: "/app/admin", label: "Admin", icon: Users });
   }
   return items;
