@@ -1291,9 +1291,8 @@ function PlayerPage() {
     setSelectedItem(item ?? selectedItem);
     setStreamUrl(null);
     setCompat(null);
-    setPlaybackReason(null);
+    setPlaybackReason("▶ Carregando conteúdo...");
     setPlaybackDebug({ tipo: type, extensao: extension, contentId: id, status: null, via: null });
-
 
     const startCheck = Date.now();
     console.log("[PLAY]", {
@@ -1307,17 +1306,7 @@ function PlayerPage() {
       erro: null,
     });
 
-    // Diagnóstico antes da reprodução
-    const isStable = serverStatus?.current_status === 'up';
-    if (!isStable) {
-      toast.warning(
-        serverStatus?.current_status === 'degraded' 
-          ? "Detectamos instabilidade no serviço. A reprodução pode falhar."
-          : "Servidor offline no momento. Tente novamente mais tarde.",
-        { duration: 5000 }
-      );
-    }
-
+    // Inicia busca da URL sem bloquear a abertura do player
     getPlayerStreamUrl({
       data: {
         token: token!,
@@ -1325,24 +1314,47 @@ function PlayerPage() {
         type,
         extension,
       }
-    })
-    .then(url => {
-      console.log("[PLAY]", { tipo: type, conteudo: item?.name ?? item?.title ?? null, stream_id: type === "series" ? null : String(id), episode_id: type === "series" ? String(id) : null, url_gerada: url.replace(/token=[^&]*/i, "token=***"), via: "proxy", status: "url_gerada", erro: null });
-      setStreamUrl(url);
-    })
-    .catch(err => {
-      console.error("[PLAY]", {
-        tipo: type,
-        conteudo: item?.name ?? item?.title ?? null,
-        stream_id: type === "series" ? null : String(id),
-        episode_id: type === "series" ? String(id) : null,
-        url_gerada: null,
-        via: null,
-        status: "erro",
-        erro: err?.message,
-      });
+    }).then(async (url) => {
+      if (!url) {
+        setPlaybackReason("Este conteúdo está temporariamente indisponível.");
+        return;
+      }
+
+      const checkUrl = `${url}${url.includes("?") ? "&" : "?"}probe=1`;
+      const t0 = Date.now();
       
-      // Inteligência de erro amigável
+      try {
+        const res = await fetch(checkUrl);
+        const reason = res.headers.get("x-playback-reason");
+        const info = {
+          url,
+          via: res.headers.get("x-playback-via") || "PAINEL",
+          status: res.status,
+          time: Date.now() - t0,
+          reason,
+          upstream: res.headers.get("x-upstream-status"),
+        };
+        
+        setPlaybackDebug((prev: any) => ({ ...(prev ?? {}), ...info }));
+        
+        if (res.status === 415) {
+          setPlaybackReason(reason || incompatibleReason(res.headers.get("x-playback-incompatible")));
+          setStreamUrl(null);
+        } else if (!res.ok && res.status !== 206) {
+          setPlaybackReason("Não foi possível iniciar este conteúdo. Tente novamente em alguns segundos.");
+          setStreamUrl(null);
+        } else {
+          setPlaybackReason(null);
+          setStreamUrl(url);
+        }
+      } catch (e) {
+        setPlaybackReason("Falha na conexão com o servidor de streaming.");
+        setStreamUrl(null);
+      }
+    }).catch(err => {
+      console.error("[PLAY_ERROR]", err);
+      setPlaybackReason("Erro ao obter link de reprodução.");
+    });
       const msg = err?.message || "";
       if (msg.includes("403")) toast.error("Acesso bloqueado pelo servidor IPTV (403).");
       else if (msg.includes("404")) toast.error("Conteúdo não encontrado no servidor.");
