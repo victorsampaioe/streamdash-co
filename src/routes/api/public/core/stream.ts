@@ -306,7 +306,7 @@ export const Route = createFileRoute("/api/public/core/stream")({
 
             if (isHlsManifest) {
               const body = await res.text();
-              const { manifest: rewritten, segmentos } = rewriteManifest(body, abs, token!, modeKind);
+              const { manifest: rewritten, segmentos } = rewriteManifest(body, abs, token!, modeKind as any);
               console.log(`[HLS] manifest entregue | segments=${segmentos} | status=${res.status}`);
               return new Response(rewritten, {
                 status: res.status,
