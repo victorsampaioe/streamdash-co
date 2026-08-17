@@ -204,12 +204,15 @@ export const Route = createFileRoute("/api/public/core/stream")({
 
           const t0 = Date.now();
           try {
-            // Aumentar timeout para VOD (arquivos grandes)
-            const timeout = type === "live" ? 20000 : 60000;
+            // Otimização VOD: timeout maior e blocos eficientes
+            const isVod = type === "movie" || type === "series";
+            const timeout = isVod ? 60000 : 30000;
+            
             const res = await fetch(abs, {
               headers: h,
               redirect: "follow",
               signal: AbortSignal.timeout(timeout),
+              keepalive: true, // Conexão persistente entre Core e Upstream
             });
 
             const out = new Headers({ ...CORS, ...VER });
