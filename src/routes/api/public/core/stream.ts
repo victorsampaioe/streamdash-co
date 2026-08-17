@@ -1,6 +1,8 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { createHmac, timingSafeEqual } from "crypto";
 import { CORE_STREAM_VERSION } from "@/lib/core-version";
+// DIAGNÓSTICO TEMPORÁRIO — somente TV ao vivo (remover junto com src/lib/live-diagnostics.ts)
+import { logLiveManifest, logLiveSegment } from "@/lib/live-diagnostics";
 import { readSegmentCacheEnv, segmentCacheDecision } from "@/lib/stream-cache";
 
 const CORS = {
