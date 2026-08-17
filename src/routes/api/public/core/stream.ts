@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { createHmac, timingSafeEqual } from "crypto";
 import { CORE_STREAM_VERSION } from "@/lib/core-version";
+import { readSegmentCacheEnv, segmentCacheDecision } from "@/lib/stream-cache";
 
 const CORS = {
   "Access-Control-Allow-Origin": "*",
@@ -299,6 +300,24 @@ export const Route = createFileRoute("/api/public/core/stream")({
             } else {
               out.set("Cache-Control", "no-cache");
             }
+
+            // Etapa 3 — cache compartilhado (CDN) apenas para segmentos de TV ao vivo.
+            // Desligado por padrão: HLS_SEGMENT_CACHE=on ativa. Rollback = voltar para off.
+            // Nunca aplica a manifesto (.m3u8), a VOD com Range, nem a respostas de erro.
+            const cacheEnv = readSegmentCacheEnv();
+            const cacheDecision = segmentCacheDecision({
+              type,
+              ext,
+              isHlsManifest,
+              status: res.status,
+              hasRange: Boolean(range),
+              enabled: cacheEnv.enabled,
+              ttlSeconds: cacheEnv.ttlSeconds,
+            });
+            if (cacheDecision) {
+              out.set("Cache-Control", cacheDecision.cacheControl);
+              if (cacheDecision.hitHeader) out.set("X-Core-Cache", cacheDecision.hitHeader);
+            }
             
             out.set("X-Upstream-Status", String(res.status));
             out.set("X-Upstream-Content-Type", upstreamContentType ?? "-");
@@ -334,6 +353,9 @@ export const Route = createFileRoute("/api/public/core/stream")({
               out.set("X-Playback-Reason", asciiHeader(motivo));
               out.set("X-Core-Error", asciiHeader(motivo));
               out.set("Content-Type", "text/plain; charset=utf-8");
+              // Erro nunca entra em cache compartilhado.
+              out.set("Cache-Control", "no-store");
+              out.delete("X-Core-Cache");
               return new Response(motivo, { status: res.status, headers: out });
             }
 
@@ -354,6 +376,8 @@ export const Route = createFileRoute("/api/public/core/stream")({
                if (html.includes("403") || html.includes("Forbidden")) {
                   const msg = `Upstream retornou página 403 (Forbidden) disfarçada de 200 com UA=${uaKind}`;
                   out.set("X-Core-Error", asciiHeader(msg));
+                  out.set("Cache-Control", "no-store");
+                  out.delete("X-Core-Cache");
                   return new Response(msg, { status: 403, headers: out });
                }
             }
@@ -372,7 +396,13 @@ export const Route = createFileRoute("/api/public/core/stream")({
             }
             return new Response(`Worker fetch error: ${msg}`, {
               status: 502,
-              headers: { ...CORS, ...VER, "X-Core-Error": asciiHeader(msg), "X-Core-UA": uaKind },
+              headers: {
+                ...CORS,
+                ...VER,
+                "X-Core-Error": asciiHeader(msg),
+                "X-Core-UA": uaKind,
+                "Cache-Control": "no-store",
+              },
             });
           }
         }

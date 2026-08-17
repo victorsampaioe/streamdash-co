@@ -35,10 +35,12 @@ RUN apt-get update \
  && apt-get install -y --no-install-recommends ca-certificates curl tini \
  && rm -rf /var/lib/apt/lists/*
 COPY --from=build /app/.output ./.output
+# Etapa 1 — lançador multiprocesso (desligado por padrão: CORE_CLUSTER_WORKERS<=1)
+COPY --from=build /app/scripts/cluster.mjs ./scripts/cluster.mjs
 # Usuário sem privilégios (o node:slim já traz o usuário "node")
 USER node
 EXPOSE 3000
 HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
   CMD curl -fsS http://127.0.0.1:3000/api/public/health || exit 1
 ENTRYPOINT ["/usr/bin/tini", "--"]
-CMD ["node", ".output/server/index.mjs"]
+CMD ["node", "scripts/cluster.mjs"]
