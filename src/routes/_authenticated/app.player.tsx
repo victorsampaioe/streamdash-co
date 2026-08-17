@@ -286,22 +286,23 @@ function PlayerAdminPage() {
             </CardContent>
             <CardFooter className="flex flex-col gap-4">
               <div className="w-full space-y-2">
-                <p className="text-xs text-muted-foreground">Link via UUID:</p>
+                <p className="text-xs text-muted-foreground">ID do Revendedor:</p>
                 <div className="bg-muted p-2 rounded text-xs font-mono w-full break-all flex items-center justify-between gap-2">
-                  <span className="truncate">{window.location.origin}/player/{user?.id}</span>
+                  <span className="truncate">{user?.id}</span>
                   <Button 
                     variant="ghost" 
                     size="icon" 
                     className="h-6 w-6 flex-shrink-0" 
                     onClick={() => {
-                      navigator.clipboard.writeText(`${window.location.origin}/player/${user?.id}`);
-                      toast.success("Link copiado!");
+                      navigator.clipboard.writeText(user?.id || "");
+                      toast.success("ID copiado!");
                     }}
                   >
-                    <Globe className="h-3 w-3" />
+                    <Copy className="h-3 w-3" />
                   </Button>
                 </div>
               </div>
+
               
               {slug ? (
                 <div className="w-full space-y-2">
