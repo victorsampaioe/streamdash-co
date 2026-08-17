@@ -715,7 +715,9 @@ function PlayerPage() {
     }
     setToken(null);
     setSession(null);
-    localStorage.removeItem(`stream_player_token_${resellerId}`);
+    if (typeof window !== "undefined") {
+      localStorage.removeItem(`stream_player_token_${resellerId}`);
+    }
     // Limpar outros dados locais se houver
     toast.success("Sessão encerrada");
   };
