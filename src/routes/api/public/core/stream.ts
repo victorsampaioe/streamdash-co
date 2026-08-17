@@ -292,15 +292,15 @@ export const Route = createFileRoute("/api/public/core/stream")({
 
             return new Response(res.body, { status: res.status, headers: out });
           } catch (e) {
-            if (ext === "m3u8") {
-              console.error(`[HLS] erro fatal de rede no manifesto: ${(e as Error).message} url=${maskMedia(abs)}`);
-            }
             const msg = (e as Error).message;
+            if (ext === "m3u8") {
+              console.error(`[STREAM DEBUG][HLS] erro fatal de rede no manifesto: ${msg} url=${maskMedia(abs)}`);
+            }
             console.error(
-              `[UPSTREAM IPTV] url=${maskMedia(abs)} ua=${uaKind} status=502 tempo=${Date.now() - t0}ms erro="${msg}"`
+              `[STREAM DEBUG][UPSTREAM IPTV] url=${maskMedia(abs)} ua=${uaKind} status=502 tempo=${Date.now() - t0}ms erro="${msg}"`
             );
             if (ext === "ts" || ext === "m4s" || type === "live") {
-              console.error(`[HLS SEGMENT] URL=${maskMedia(abs)} STATUS=502 ERRO="${msg}"`);
+              console.error(`[STREAM DEBUG][HLS SEGMENT] URL=${maskMedia(abs)} STATUS=502 ERRO="${msg}"`);
             }
             return new Response(`Worker fetch error: ${msg}`, {
               status: 502,
