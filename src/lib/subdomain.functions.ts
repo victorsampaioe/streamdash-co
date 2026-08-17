@@ -7,7 +7,8 @@ import { getPlayerSettings } from "./player.functions";
  */
 export const resolveResellerByHost = createServerFn({ method: "GET" })
   .handler(async ({ request }) => {
-    const host = request.headers.get("host") || "";
+    // @ts-ignore - access raw request for host header
+    const host = request?.headers?.get("host") || "";
     const parts = host.split(".");
     
     // Se não tiver subdomínio ou for streammonitor.site / www / app, ignora
