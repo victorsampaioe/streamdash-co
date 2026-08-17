@@ -200,7 +200,8 @@ export const getPlayerCatalog = createServerFn({ method: "POST" })
       "get_series_info", 
       "get_episodes_list",
       "get_vod_info",
-      "get_series_episodes" // Novo: para carregar apenas episódios de uma temporada/série
+      "get_series_episodes",
+      "get_series_info"
     ]),
     categoryId: z.string().optional(),
     contentId: z.string().optional(),
@@ -236,6 +237,7 @@ export const getPlayerCatalog = createServerFn({ method: "POST" })
     );
 
     try {
+      const isSeriesDetail = data.action === "get_series_info" || data.action === "get_episodes_list";
       const result = await runOnCore(
         "iptv-player-proxy" as any,
         {
@@ -256,7 +258,8 @@ export const getPlayerCatalog = createServerFn({ method: "POST" })
           contentId: data.contentId,
           offset: data.offset,
           limit: data.limit,
-        })
+        }),
+        isSeriesDetail // Novo: força Core para detalhes de séries
       );
 
       const quantidade = Array.isArray(result)
