@@ -68,6 +68,15 @@ import { BottomNav } from "@/components/player/BottomNav";
 import { DiagnosticBadge } from "@/components/player/DiagnosticBadge";
 import { isBrowserPlayable, incompatibleReason } from "@/lib/playback-format";
 import { testWebCompatibility, NEEDS_CONVERSION_MESSAGE, type WebCompatResult } from "@/lib/web-compat";
+import { AppDownloadCard } from "@/components/player/AppDownloadCard";
+
+const SMART_LOADING_MESSAGES = [
+  "Conectando...",
+  "Verificando servidor...",
+  "Analisando estabilidade...",
+  "Otimizando a reprodução...",
+];
+
 
 
 
