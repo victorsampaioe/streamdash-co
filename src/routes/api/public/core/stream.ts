@@ -459,7 +459,8 @@ export const Route = createFileRoute("/api/public/core/stream")({
             relay.searchParams.set("type", type);
             relay.searchParams.set("ext", ext);
             relay.searchParams.set("ua", uaKind);
-            relay.searchParams.set("via", "core");
+             relay.searchParams.set("via", "core");
+             relay.searchParams.set("forceCore", "1");
             const t0 = Date.now();
             try {
               const timeout = type === "live" ? 20000 : 60000;
