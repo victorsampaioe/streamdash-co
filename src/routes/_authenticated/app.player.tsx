@@ -53,6 +53,7 @@ function PlayerAdminPage() {
       const settings = await getPlayerSettings({ data: { profileId: user!.id } });
       if (settings) {
         setBrandName(settings.brand_name || "");
+        setSlug(settings.slug || "");
         setLogoUrl(settings.logo_url || "");
         setPrimaryColor(settings.primary_color || "#3B82F6");
         setSecondaryColor(settings.secondary_color || "#1E293B");
