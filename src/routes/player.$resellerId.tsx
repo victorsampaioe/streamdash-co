@@ -387,8 +387,7 @@ function PlayerPage() {
     }
   }, [session, token, activeView, selectedCategory]);
 
-  const primaryColor = settings?.primary_color || "#3B82F6";
-  const secondaryColor = settings?.secondary_color || "#0A0A0A";
+  // Duplicados removidos: primaryColor e secondaryColor já definidos via settings do loader
 
   const isAdmin = session?.user?.email?.includes("admin") || false;
 
