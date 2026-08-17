@@ -560,16 +560,18 @@ export const Route = createFileRoute("/api/public/core/stream")({
         };
 
         // Escada de compatibilidade (sem fallback silencioso — tudo é reportado):
-        // Priorizamos Core para VOD para garantir suporte a Range (HTTP 206).
+        // O UA de player real é o único aceito pela maioria dos painéis Xtream
+        // (navegador e VLC recebem "Access denied"/403), então vem primeiro.
         if (!forceCore) {
-          await tentarPainel("PAINEL", "browser");
-          if (!upstream) await tentarPainel("PAINEL-SMARTERS", "player");
+          await tentarPainel("PAINEL-SMARTERS", "player");
           if (!upstream) await tentarPainel("PAINEL-VLC", "vlc");
+          if (!upstream) await tentarPainel("PAINEL", "browser");
         }
-        
+
         // Se forçado (ex: VOD) ou falhou no painel
-        if (!upstream) await tentarCore("CORE-VLC", "vlc");
         if (!upstream) await tentarCore("CORE", "player");
+        if (!upstream) await tentarCore("CORE-VLC", "vlc");
+
 
         const resumo = tentativas
           .map((t) => `${t.modo}=${t.status ?? "erro"}${t.motivo ? ` (${t.motivo})` : ""}`)
