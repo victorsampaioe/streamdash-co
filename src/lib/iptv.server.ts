@@ -320,7 +320,10 @@ async function getJson(
   const outIp = await egressIp();
   let res: Response;
   try {
-    res = await timedFetch(url, ms, { headers: reqHeaders });
+    res = await timedFetch(url, ms, { 
+      headers: reqHeaders,
+      redirect: "follow", // Seguir redirecionamentos para hosts que mudam porta/domínio
+    });
   } catch (e: unknown) {
     const aborted = (e as Error)?.name === "AbortError";
     const diag: PlayerApiDiagnostics = {
