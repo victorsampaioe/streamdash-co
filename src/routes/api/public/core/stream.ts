@@ -465,7 +465,7 @@ export const Route = createFileRoute("/api/public/core/stream")({
               coreWorkerVersion = res.headers.get("X-Core-Stream-Version") ?? coreWorkerVersion;
               const upstreamStatus = res.headers.get("X-Upstream-Status") ?? "-";
               console.log(
-                `[STREAM ATTEMPT][${modo}] url=${maskMedia(candidate)} ua=${uaKind} core_status=${res.status} upstream=${upstreamStatus} ct=${res.headers.get("content-type") ?? "-"} worker=${coreWorkerVersion ?? "sem versão"} erro=${res.headers.get("X-Core-Error") ?? "-"} tempo=${Date.now() - t0}ms`
+                `[STREAM DEBUG][STREAM ATTEMPT][${modo}] url=${maskMedia(candidate)} ua=${uaKind} core_status=${res.status} upstream=${upstreamStatus} ct=${res.headers.get("content-type") ?? "-"} worker=${coreWorkerVersion ?? "sem versão"} erro=${res.headers.get("X-Core-Error") ?? "-"} tempo=${Date.now() - t0}ms`
               );
               if (res.ok || res.status === 206) {
                 upstream = res;
