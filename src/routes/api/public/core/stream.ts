@@ -441,13 +441,17 @@ export const Route = createFileRoute("/api/public/core/stream")({
         };
 
         // Escada de compatibilidade (sem fallback silencioso — tudo é reportado):
-        // 1) Painel como navegador → 2) Painel como IPTV Smarters (muitos WAFs
-        //    liberam só este UA) → 3) CORE-VLC → 4) CORE (UA Smarters)
-        //    → 5) Painel como VLC.
-        if (!forceCore) await tentarPainel("PAINEL", "browser");
-        if (!upstream && !forceCore) await tentarPainel("PAINEL-SMARTERS", "player");
+        // Priorizamos Core para VOD para garantir suporte a Range (HTTP 206).
+        if (!forceCore) {
+          await tentarPainel("PAINEL", "browser");
+          if (!upstream) await tentarPainel("PAINEL-SMARTERS", "player");
+        }
+        
+        // Se forçado (ex: VOD) ou falhou no painel
         if (!upstream) await tentarCore("CORE-VLC", "vlc");
         if (!upstream) await tentarCore("CORE", "player");
+        
+        // Fallback final no painel se tudo falhar e não forçado
         if (!upstream && !forceCore) await tentarPainel("PAINEL-VLC", "vlc");
 
         const resumo = tentativas
