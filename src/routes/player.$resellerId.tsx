@@ -1135,7 +1135,11 @@ function PlayerPage() {
           series={selectedSeriesInfo.info}
           info={selectedSeriesInfo}
           loading={loadingSeries}
-          onClose={() => setSelectedSeriesInfo(null)}
+          isOpen={isSeriesOpen}
+          onClose={() => {
+            setSelectedSeriesInfo(null);
+            setIsSeriesOpen(false);
+          }}
           onPlay={(ep) => handlePlay(ep.id ?? ep.stream_id, "series", ep)}
           primaryColor={primaryColor}
         />
