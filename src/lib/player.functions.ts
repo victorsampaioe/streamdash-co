@@ -4,17 +4,25 @@ import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
 /**
- * Busca as configurações de marca de um revendedor pelo ID do perfil.
+ * Busca as configurações de marca de um revendedor pelo ID ou pelo Slug do subdomínio.
  */
 export const getPlayerSettings = createServerFn({ method: "GET" })
-  // Acesso público necessário para a tela de login do cliente final
-  .inputValidator((data) => z.object({ profileId: z.string().uuid() }).parse(data))
+  .inputValidator((data) => z.object({ 
+    profileId: z.string().uuid().optional(),
+    slug: z.string().optional()
+  }).parse(data))
   .handler(async ({ data }) => {
-    const { data: settings, error } = await supabaseAdmin
-      .from("player_settings")
-      .select("*")
-      .eq("profile_id", data.profileId)
-      .maybeSingle();
+    let query = supabaseAdmin.from("player_settings").select("*");
+    
+    if (data.profileId) {
+      query = query.eq("profile_id", data.profileId);
+    } else if (data.slug) {
+      query = query.eq("slug", data.slug);
+    } else {
+      throw new Error("profileId or slug is required");
+    }
+
+    const { data: settings, error } = await query.maybeSingle();
 
     if (error) throw new Error(error.message);
     return settings;
@@ -27,6 +35,7 @@ export const savePlayerSettings = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((data) => z.object({
     brand_name: z.string().min(2).max(50),
+    slug: z.string().regex(/^[a-z0-9-]+$/).min(3).max(30).optional().nullable(),
     logo_url: z.string().url().optional().nullable(),
     primary_color: z.string().regex(/^#[0-9A-F]{6}$/i).default("#3B82F6"),
     secondary_color: z.string().regex(/^#[0-9A-F]{6}$/i).default("#1E293B"),

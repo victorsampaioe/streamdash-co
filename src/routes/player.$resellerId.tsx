@@ -74,13 +74,27 @@ import { testWebCompatibility, NEEDS_CONVERSION_MESSAGE, type WebCompatResult } 
 
 
 export const Route = createFileRoute("/player/$resellerId")({
+  loader: async ({ params, context }) => {
+    const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(params.resellerId);
+    
+    // Se for UUID, busca por profileId. Se não for, busca por slug.
+    const settings = await getPlayerSettings({ 
+      data: isUuid ? { profileId: params.resellerId } : { slug: params.resellerId } 
+    });
+    
+    if (!settings) throw new Error("Revendedor não encontrado");
+    return { settings };
+  },
   component: PlayerPage,
 });
 
 function PlayerPage() {
   const navigate = useNavigate();
   const { resellerId } = Route.useParams();
-  const [token, setToken] = useState<string | null>(localStorage.getItem(`stream_player_token_${resellerId}`));
+  const { settings } = Route.useLoaderData();
+  const profileId = settings.profile_id;
+  
+  const [token, setToken] = useState<string | null>(localStorage.getItem(`stream_player_token_${profileId}`));
   const [session, setSession] = useState<any>(null);
   const [activeView, setActiveView] = useState<"home" | "live" | "movie" | "series" | "mylist" | "search" | "settings" | "categories">("home");
 
@@ -205,11 +219,9 @@ function PlayerPage() {
   };
 
 
-  // Identidade Visual
-  const { data: settings, isLoading: settingsLoading } = useQuery({
-    queryKey: ["public-player-settings", resellerId],
-    queryFn: () => getPlayerSettings({ data: { profileId: resellerId } }),
-  });
+  // Carregamento da Identidade Visual agora vem do loader
+  const primaryColor = settings?.primary_color || "#3B82F6";
+  const secondaryColor = settings?.secondary_color || "#0A0A0A";
 
   // Validar sessão ao carregar
   useEffect(() => {
@@ -223,11 +235,11 @@ function PlayerPage() {
     }
   }, [token]);
 
-  // Salvar token
+  // Salvar token usando profile_id fixo
   useEffect(() => {
-    if (token) localStorage.setItem(`stream_player_token_${resellerId}`, token);
-    else localStorage.removeItem(`stream_player_token_${resellerId}`);
-  }, [token, resellerId]);
+    if (token) localStorage.setItem(`stream_player_token_${profileId}`, token);
+    else localStorage.removeItem(`stream_player_token_${profileId}`);
+  }, [token, profileId]);
 
   // Carregar dados da Home
   useEffect(() => {
