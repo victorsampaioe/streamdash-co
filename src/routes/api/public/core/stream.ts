@@ -261,6 +261,8 @@ export const Route = createFileRoute("/api/public/core/stream")({
               keepalive: true,
             });
 
+            console.log(`[UPSTREAM RESPONSE] modo=CORE status=${res.status} content-type=${res.headers.get("content-type") ?? "-"} content-length=${res.headers.get("content-length") ?? "-"} url=${maskMedia(abs)}`);
+
             // Painéis Xtream redirecionam (302) para CDNs externas. As URIs do
             // manifesto são relativas à URL FINAL, não à URL do painel.
             const finalUrl = res.url || abs;
