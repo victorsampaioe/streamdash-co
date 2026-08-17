@@ -200,12 +200,19 @@ function PlayerPage() {
     continueWatching: any[];
     newReleases: any[];
     liveHighlights: any[];
+    seriesHighlights: any[];
   }>({
     featured: null,
     continueWatching: [],
     newReleases: [],
-    liveHighlights: []
+    liveHighlights: [],
+    seriesHighlights: []
   });
+
+  // Filtro rápido local (catálogo já carregado)
+  const [quickFilter, setQuickFilter] = useState("");
+  // Trailer sob demanda (camada visual)
+  const [trailerItem, setTrailerItem] = useState<any>(null);
 
   const [selectedItem, setSelectedItem] = useState<any>(null);
   const [isDetailsOpen, setIsDetailsOpen] = useState(false);
