@@ -109,16 +109,7 @@ function ResellerDashboard() {
   const { data: subData } = useSubscription();
   const navigate = useNavigate();
   
-  const adminCheckQ = useQuery({
-    queryKey: ["is-admin-simple"],
-    queryFn: async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return false;
-      const { data } = await supabase.rpc("has_role", { _user_id: user.id, _role: "admin" });
-      return !!data;
-    },
-  });
-  const isAdmin = adminCheckQ.data === true;
+  const isAdmin = subData?.profile?.email === 'victorsampaio133@gmail.com' || subData?.profile?.role === 'admin';
 
   // Comprar créditos não depende do saldo atual nem da assinatura:
   // créditos são a moeda da revenda e devem poder ser recarregados com saldo zerado.

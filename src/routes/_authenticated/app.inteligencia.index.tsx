@@ -14,6 +14,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Brain, Search, Star, Server, Film, Tv, Sparkles, TrendingUp } from "lucide-react";
 import { toast } from "sonner";
+import { useSubscription } from "@/hooks/use-subscription";
 
 
 export const Route = createFileRoute("/_authenticated/app/inteligencia/")({
@@ -58,7 +59,8 @@ function ContentIntelligence() {
     refetchInterval: 10_000,
   });
 
-  const isAdmin = !!statusQuery.data;
+  const { data: subInfo } = useSubscription();
+  const isAdmin = subInfo?.profile?.email === 'victorsampaio133@gmail.com' || subInfo?.profile?.role === 'admin';
 
 
 
