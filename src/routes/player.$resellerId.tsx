@@ -1429,7 +1429,7 @@ function PlayerPage() {
       });
 
       if (!data || (!data.episodes && !data.info)) {
-        throw new Error("Resposta da API vazia ou inválida (get_episodes_list/get_series_info)");
+        throw new Error("O servidor IPTV demorou muito ou retornou dados inválidos.");
       }
 
       setSelectedSeriesInfo(data);
