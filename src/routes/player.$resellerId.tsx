@@ -1234,6 +1234,10 @@ function PlayerPage() {
           {isAdmin && playbackDebug && (
             <div className="absolute bottom-24 left-6 z-20 max-w-[90vw] rounded-xl border border-white/10 bg-black/70 px-4 py-3 font-mono text-[11px] leading-relaxed text-emerald-300 backdrop-blur">
               <div className="mb-1 text-white/70">Diagnóstico de Reprodução (Admin)</div>
+              <div className="mb-2 flex items-center gap-2">
+                <span className="px-1.5 py-0.5 rounded bg-emerald-500/20 border border-emerald-500/40 text-[9px] text-emerald-400">FE: {feVersion}</span>
+                <span className="px-1.5 py-0.5 rounded bg-blue-500/20 border border-blue-500/40 text-[9px] text-blue-400">CORE: {CORE_STREAM_VERSION}</span>
+              </div>
               <div>tipo: {playbackDebug.tipo ?? "-"} · ext: {playbackDebug.extensao ?? "-"}</div>
               <div>via: {playbackDebug.via ?? "aguardando..."}</div>
               <div>status: {playbackDebug.status ?? "-"} · tempo: {playbackDebug.ms != null ? `${(playbackDebug.ms / 1000).toFixed(1)}s` : "-"}</div>
