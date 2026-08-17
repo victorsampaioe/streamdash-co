@@ -1130,9 +1130,9 @@ function PlayerPage() {
       />
 
       
-      {selectedSeriesInfo && (
+      {isSeriesOpen && selectedSeriesInfo && (
         <SeriesDetails 
-          series={selectedSeriesInfo.info}
+          isOpen={true}
           info={selectedSeriesInfo}
           loading={loadingSeries}
           
