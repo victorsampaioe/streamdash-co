@@ -539,6 +539,9 @@ export const Route = createFileRoute("/api/public/core/stream")({
               console.log(
                 `[STREAM ATTEMPT][${modo}] url=${maskMedia(candidate)} ua=${uaKind} status=${res.status} ct=${ct} tempo=${Date.now() - t0}ms`
               );
+              console.log(
+                `[UPSTREAM RESPONSE] modo=${modo} status=${res.status} content-type=${ct} url=${maskMedia(candidate)}`
+              );
               if (res.ok || res.status === 206) {
                 upstream = res;
                 usedUrl = res.url || candidate;
