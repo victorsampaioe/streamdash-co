@@ -32,6 +32,7 @@ export const Route = createFileRoute("/_authenticated/app/player")({
 
 function PlayerAdminPage() {
   const [brandName, setBrandName] = useState("");
+  const [slug, setSlug] = useState("");
   const [logoUrl, setLogoUrl] = useState("");
   const [primaryColor, setPrimaryColor] = useState("#3B82F6");
   const [secondaryColor, setSecondaryColor] = useState("#1E293B");
