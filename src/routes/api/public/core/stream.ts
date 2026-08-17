@@ -49,6 +49,15 @@ function verifyUpstream(absUrl: string, exp: number, sig: string): boolean {
 }
 
 /**
+ * Headers HTTP só aceitam ByteString (latin-1). Motivos de diagnóstico contêm
+ * travessões/acentos vindos do upstream e quebravam a resposta com
+ * "Cannot convert argument to a ByteString" (virava 502 falso na TV ao vivo).
+ */
+function asciiHeader(v: string): string {
+  return v.replace(/[—–]/g, "-").replace(/[^\x20-\x7E]/g, "?").slice(0, 900);
+}
+
+/**
  * Reescreve as URLs internas de um manifesto HLS para passarem pelo proxy.
  * Os segmentos são assinados (HMAC + exp): painéis Xtream redirecionam o live
  * para CDNs de outros hosts, então validamos a assinatura em vez do hostname.
