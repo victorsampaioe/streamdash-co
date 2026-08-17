@@ -39,7 +39,7 @@ export function ContentCard({
   const quality = detectQuality(item);
   const isLive = type === "live";
 
-  const trailerKey = useHoverTrailer(
+  const { trailerKey, reportBlocked } = useHoverTrailer(
     title,
     type === "series" ? "series" : "movie",
     enablePreview && !isLive && isHovered,
