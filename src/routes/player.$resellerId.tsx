@@ -1147,13 +1147,10 @@ function PlayerPage() {
               <div className="relative w-full md:w-64">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-white/40" />
                 <Input 
-                  placeholder="Busca rápida..." 
+                  placeholder={activeView === "live" ? "Buscar canal..." : "Busca rápida..."} 
+                  value={quickFilter}
                   className="bg-white/5 border-white/10 pl-9 h-10 rounded-xl text-sm"
-                  onChange={(e) => {
-                    const q = e.target.value.toLowerCase();
-                    // Implementação de busca rápida local (apenas no que já está carregado)
-                    // Para busca global, usa-se a aba Buscar
-                  }}
+                  onChange={(e) => setQuickFilter(e.target.value)}
                 />
               </div>
             </div>
