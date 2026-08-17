@@ -322,10 +322,11 @@ function PlayerPage() {
           if (Array.isArray(vodCats) && vodCats.length > 0) {
             const firstCat = vodCats[0];
             const list = await fetchItems("get_vod_streams", firstCat.category_id);
+            const movies = Array.isArray(list) ? list : [];
             setHomeData(prev => ({ 
               ...prev, 
-              featured: Array.isArray(list) ? list[0] || null : null,
-              newReleases: Array.isArray(list) ? list.slice(1, 15) : []
+              featured: curateHero(movies, 1)[0] ?? movies[0] ?? null,
+              newReleases: movies
             }));
           }
 
@@ -336,7 +337,18 @@ function PlayerPage() {
             const list = await fetchItems("get_live_streams", firstCat.category_id);
             setHomeData(prev => ({ 
               ...prev, 
-              liveHighlights: Array.isArray(list) ? list.slice(0, 10) : []
+              liveHighlights: Array.isArray(list) ? list.slice(0, 12) : []
+            }));
+          }
+
+          // Buscar Séries recentes
+          const seriesCats = await getPlayerCatalog({ data: { token, action: "get_series_categories" } });
+          if (Array.isArray(seriesCats) && seriesCats.length > 0) {
+            const firstCat = seriesCats[0];
+            const list = await fetchItems("get_series", firstCat.category_id);
+            setHomeData(prev => ({ 
+              ...prev, 
+              seriesHighlights: Array.isArray(list) ? list : []
             }));
           }
 
