@@ -32,6 +32,7 @@ export const Route = createFileRoute("/_authenticated/app/player")({
 
 function PlayerAdminPage() {
   const [brandName, setBrandName] = useState("");
+  const [slug, setSlug] = useState("");
   const [logoUrl, setLogoUrl] = useState("");
   const [primaryColor, setPrimaryColor] = useState("#3B82F6");
   const [secondaryColor, setSecondaryColor] = useState("#1E293B");
@@ -52,6 +53,7 @@ function PlayerAdminPage() {
       const settings = await getPlayerSettings({ data: { profileId: user!.id } });
       if (settings) {
         setBrandName(settings.brand_name || "");
+        setSlug(settings.slug || "");
         setLogoUrl(settings.logo_url || "");
         setPrimaryColor(settings.primary_color || "#3B82F6");
         setSecondaryColor(settings.secondary_color || "#1E293B");
@@ -76,6 +78,7 @@ function PlayerAdminPage() {
     saveMutation.mutate({
       data: {
         brand_name: brandName,
+        slug: slug || null,
         logo_url: logoUrl || null,
         primary_color: primaryColor,
         secondary_color: secondaryColor,
@@ -129,6 +132,19 @@ function PlayerAdminPage() {
                   value={brandName}
                   onChange={(e) => setBrandName(e.target.value)}
                 />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="slug">Subdomínio (Ex: minhalogo.streammonitor.site)</Label>
+                <div className="flex gap-2 items-center">
+                  <Input
+                    id="slug"
+                    placeholder="minha-marca"
+                    value={slug}
+                    onChange={(e) => setSlug(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ""))}
+                  />
+                  <span className="text-sm text-muted-foreground whitespace-nowrap">.streammonitor.site</span>
+                </div>
+                <p className="text-[10px] text-muted-foreground">Apenas letras minúsculas, números e hifens.</p>
               </div>
               <div className="space-y-2">
                 <Label htmlFor="logo-url">URL da Logo (PNG transparente recomendado)</Label>
@@ -261,24 +277,46 @@ function PlayerAdminPage() {
                 </div>
               </div>
             </CardContent>
-            <CardFooter className="flex flex-col gap-2">
-              <p className="text-xs text-center text-muted-foreground w-full">
-                Link de acesso público:
-              </p>
-              <div className="bg-muted p-2 rounded text-xs font-mono w-full break-all flex items-center justify-between gap-2">
-                <span className="truncate">{window.location.origin}/player/{user?.id}</span>
-                <Button 
-                  variant="ghost" 
-                  size="icon" 
-                  className="h-6 w-6" 
-                  onClick={() => {
-                    navigator.clipboard.writeText(`${window.location.origin}/player/${user?.id}`);
-                    toast.success("Link copiado!");
-                  }}
-                >
-                  <Globe className="h-3 w-3" />
-                </Button>
+            <CardFooter className="flex flex-col gap-4">
+              <div className="w-full space-y-2">
+                <p className="text-xs text-muted-foreground">Link via UUID:</p>
+                <div className="bg-muted p-2 rounded text-xs font-mono w-full break-all flex items-center justify-between gap-2">
+                  <span className="truncate">{window.location.origin}/player/{user?.id}</span>
+                  <Button 
+                    variant="ghost" 
+                    size="icon" 
+                    className="h-6 w-6 flex-shrink-0" 
+                    onClick={() => {
+                      navigator.clipboard.writeText(`${window.location.origin}/player/${user?.id}`);
+                      toast.success("Link copiado!");
+                    }}
+                  >
+                    <Globe className="h-3 w-3" />
+                  </Button>
+                </div>
               </div>
+              
+              {slug && (
+                <div className="w-full space-y-2">
+                  <p className="text-xs text-muted-foreground">Link via Subdomínio:</p>
+                  <div className="bg-muted p-2 rounded text-xs font-mono w-full break-all flex items-center justify-between gap-2 border border-primary/20">
+                    <span className="truncate">https://{slug}.{window.location.host.split('.').slice(-2).join('.')}</span>
+                    <Button 
+                      variant="ghost" 
+                      size="icon" 
+                      className="h-6 w-6 flex-shrink-0" 
+                      onClick={() => {
+                        const domain = window.location.host.split('.').slice(-2).join('.');
+                        navigator.clipboard.writeText(`https://${slug}.${domain}`);
+                        toast.success("Link do subdomínio copiado!");
+                      }}
+                    >
+                      <Globe className="h-3 w-3 text-primary" />
+                    </Button>
+                  </div>
+                  <p className="text-[10px] text-muted-foreground">Nota: O subdomínio requer configuração de DNS Wildcard ativa.</p>
+                </div>
+              )}
             </CardFooter>
           </Card>
         </div>

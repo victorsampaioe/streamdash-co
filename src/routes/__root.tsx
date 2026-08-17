@@ -154,6 +154,21 @@ function RootComponent() {
   const { queryClient } = Route.useRouteContext();
   const router = useRouter();
   
+  // Redirecionamento de subdomínio para a rota do player
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const host = window.location.host;
+    const parts = host.split(".");
+    if (parts.length >= 3) {
+      const subdomain = parts[0].toLowerCase();
+      const reserved = ["www", "app", "api", "admin", "core", "dev", "status"];
+      if (!reserved.includes(subdomain) && window.location.pathname === "/") {
+        router.navigate({ to: "/player/$resellerId", params: { resellerId: subdomain } });
+      }
+    }
+  }, [router]);
+
+  
   useEffect(() => {
     if ("serviceWorker" in navigator) {
       window.addEventListener("load", () => {
