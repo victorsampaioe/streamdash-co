@@ -60,8 +60,14 @@ function rewriteManifest(manifest: string, upstreamUrl: string, token: string, m
   
   const toProxy = (raw: string) => {
     try {
+      // Já reescrito por outra camada (ex.: Core devolveu manifesto pronto).
+      if (raw.startsWith("/api/public/core/stream") || raw.includes("/api/public/core/stream?")) {
+        segmentos += 1;
+        return raw;
+      }
       // Resolve URL relativa (de segmentos, chaves, etc) para absoluta
       const abs = new URL(raw, baseUrl).toString();
+
       const segExt = (abs.match(/\.([a-z0-9]{2,4})(?:\?|$)/i)?.[1] ?? "ts").toLowerCase();
       segmentos += 1;
       
@@ -194,8 +200,10 @@ export const Route = createFileRoute("/api/public/core/stream")({
             });
           }
 
-          // Modo VLC: emula exatamente o cliente que funciona no VLC/IPTV Smarters.
-          const uaKind = url.searchParams.get("ua") ?? (type === "live" ? "player" : "vlc");
+          // Painéis Xtream costumam aceitar apenas o UA de player real
+          // (VLC e navegador recebem "Access denied"/403). Player é o padrão.
+          const uaKind = url.searchParams.get("ua") ?? "player";
+
           const ua = uaFor(uaKind);
           const origin = new URL(abs).origin;
           const h: Record<string, string> = {
@@ -236,6 +244,14 @@ export const Route = createFileRoute("/api/public/core/stream")({
               keepalive: true,
             });
 
+            // Painéis Xtream redirecionam (302) para CDNs externas. As URIs do
+            // manifesto são relativas à URL FINAL, não à URL do painel.
+            const finalUrl = res.url || abs;
+            if (isHlsManifest && finalUrl !== abs) {
+              console.log(`[HLS] redirecionado para CDN final: ${maskMedia(finalUrl)}`);
+            }
+
+
             // LOG DE DIAGNÓSTICO PROFUNDO [STREAM DEBUG]
             console.log(`[STREAM DEBUG]
 - URL original: ${maskMedia(abs)}
@@ -254,9 +270,13 @@ export const Route = createFileRoute("/api/public/core/stream")({
               if (v) out.set(k, v);
             }
             
-            // Forçar Accept-Ranges para VOD se a origem omitir mas devolver 206
+            // Alguns painéis devolvem "Accept-Ranges: 0-123456" (inválido).
+            // O navegador só entende "bytes"; normalizamos sempre.
+            const arUp = out.get("Accept-Ranges");
+            if (arUp && !/^(bytes|none)$/i.test(arUp.trim())) out.set("Accept-Ranges", "bytes");
             if (!out.has("Accept-Ranges") && (type !== "live" || res.status === 206)) {
               out.set("Accept-Ranges", "bytes");
+
             }
             
             // Garantir Content-Type correto
@@ -310,7 +330,7 @@ export const Route = createFileRoute("/api/public/core/stream")({
 
             if (isHlsManifest) {
               const body = await res.text();
-              const { manifest: rewritten, segmentos } = rewriteManifest(body, abs, token!, modeKind as any);
+              const { manifest: rewritten, segmentos } = rewriteManifest(body, finalUrl, token!, modeKind as any);
               console.log(`[HLS] manifest entregue | segments=${segmentos} | status=${res.status}`);
               return new Response(rewritten, {
                 status: res.status,
@@ -408,15 +428,17 @@ export const Route = createFileRoute("/api/public/core/stream")({
           // Ordem de candidatos otimizada para compatibilidade
           candidates = hostCandidates(server.host).flatMap((base) => {
             if (type === "live") {
-              // Alguns painéis exigem output=ts explicitamente ou caminhos sem pasta /live/
+              // Navegador só reproduz HLS: .m3u8 primeiro; .ts (mpegts contínuo)
+              // fica como último recurso.
               return [
-                `${base}/live/${user}/${pass}/${sid}.ts`,
                 `${base}/live/${user}/${pass}/${sid}.m3u8`,
+                `${base}/${user}/${pass}/${sid}.m3u8`,
+                `${base}/live/${user}/${pass}/${sid}.ts`,
                 `${base}/${user}/${pass}/${sid}.ts`,
-                `${base}/live/${user}/${pass}/${sid}`,
-                `${base}/${user}/${pass}/${sid}`
+                `${base}/live/${user}/${pass}/${sid}`
               ];
             }
+
             return [`${base}/${folder}/${user}/${pass}/${sid}.${ext}`, `${base}/${folder}/${user}/${pass}/${sid}.mp4`];
           });
         }
@@ -544,16 +566,18 @@ export const Route = createFileRoute("/api/public/core/stream")({
         };
 
         // Escada de compatibilidade (sem fallback silencioso — tudo é reportado):
-        // Priorizamos Core para VOD para garantir suporte a Range (HTTP 206).
+        // O UA de player real é o único aceito pela maioria dos painéis Xtream
+        // (navegador e VLC recebem "Access denied"/403), então vem primeiro.
         if (!forceCore) {
-          await tentarPainel("PAINEL", "browser");
-          if (!upstream) await tentarPainel("PAINEL-SMARTERS", "player");
+          await tentarPainel("PAINEL-SMARTERS", "player");
           if (!upstream) await tentarPainel("PAINEL-VLC", "vlc");
+          if (!upstream) await tentarPainel("PAINEL", "browser");
         }
-        
+
         // Se forçado (ex: VOD) ou falhou no painel
-        if (!upstream) await tentarCore("CORE-VLC", "vlc");
         if (!upstream) await tentarCore("CORE", "player");
+        if (!upstream) await tentarCore("CORE-VLC", "vlc");
+
 
         const resumo = tentativas
           .map((t) => `${t.modo}=${t.status ?? "erro"}${t.motivo ? ` (${t.motivo})` : ""}`)
@@ -623,7 +647,10 @@ export const Route = createFileRoute("/api/public/core/stream")({
           const v = found.headers.get(h);
           if (v) out.set(h, v);
         }
+        const arFinal = out.get("Accept-Ranges");
+        if (arFinal && !/^(bytes|none)$/i.test(arFinal.trim())) out.set("Accept-Ranges", "bytes");
         if (!out.has("Accept-Ranges") && type !== "live") out.set("Accept-Ranges", "bytes");
+
 
         // Diagnóstico de CODEC real: o arquivo é entregue (200/206), mas pode
         // conter H265/AC3/DTS que o navegador não decodifica
