@@ -200,8 +200,10 @@ export const Route = createFileRoute("/api/public/core/stream")({
             });
           }
 
-          // Modo VLC: emula exatamente o cliente que funciona no VLC/IPTV Smarters.
-          const uaKind = url.searchParams.get("ua") ?? (type === "live" ? "player" : "vlc");
+          // Painéis Xtream costumam aceitar apenas o UA de player real
+          // (VLC e navegador recebem "Access denied"/403). Player é o padrão.
+          const uaKind = url.searchParams.get("ua") ?? "player";
+
           const ua = uaFor(uaKind);
           const origin = new URL(abs).origin;
           const h: Record<string, string> = {
