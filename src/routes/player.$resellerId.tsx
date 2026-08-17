@@ -1153,11 +1153,21 @@ function PlayerPage() {
                   <div className="mx-auto w-12 h-12 rounded-full bg-white/5 flex items-center justify-center border border-white/10">
                      {playbackReason.includes("Carregando") ? (
                        <Loader2 className="h-6 w-6 text-white animate-spin" />
+                     ) : playbackReason.includes("indisponível") ? (
+                       <AlertCircle className="h-6 w-6 text-red-500" />
                      ) : (
                        <PlayCircle className="h-6 w-6 text-white/40" />
                      )}
                   </div>
-                  <p className="text-base font-medium text-white">{playbackReason}</p>
+                  <p className="text-base font-medium text-white">
+                    {playbackReason.includes("HTTP 403") || playbackReason.includes("403") 
+                      ? "🟡 Bloqueado pela origem (servidor bloqueando)"
+                      : playbackReason.includes("HTTP 404") || playbackReason.includes("404") || playbackReason.includes("inexistente")
+                      ? "🔴 Offline (conteúdo inexistente)"
+                      : playbackReason.includes("conversão") || playbackReason.includes("codec")
+                      ? "🟠 Formato não compatível (problema de compatibilidade)"
+                      : playbackReason}
+                  </p>
                   
                   {isAdmin && (
                     <div className="pt-4 border-t border-white/5 space-y-2">
@@ -1348,8 +1358,12 @@ function PlayerPage() {
           via: res.headers.get("x-playback-via") || "PAINEL",
           status: res.status,
           time: Date.now() - t0,
+          ms: Date.now() - t0,
           reason,
           upstream: res.headers.get("x-upstream-status"),
+          contentLength: res.headers.get("content-length"),
+          contentRange: res.headers.get("content-range"),
+          acceptRanges: res.headers.get("accept-ranges"),
         };
         
         setPlaybackDebug((prev: any) => ({ ...(prev ?? {}), ...info }));
