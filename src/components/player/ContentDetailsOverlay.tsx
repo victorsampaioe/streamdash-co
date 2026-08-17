@@ -58,13 +58,13 @@ export function ContentDetailsOverlay({
     : (item?.stream_icon || item?.cover || item?.metadata?.stream_icon);
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 md:p-8 animate-in fade-in duration-300">
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 md:p-8 transition-all duration-300">
       <div 
         className="absolute inset-0 bg-black/90 backdrop-blur-sm" 
         onClick={onClose}
       />
       
-      <div className="relative w-full max-w-5xl bg-[#0a0a0a] rounded-2xl overflow-hidden border border-white/10 shadow-2xl animate-in zoom-in-95 duration-300">
+      <div className="relative w-full max-w-5xl bg-[#0a0a0a] rounded-2xl overflow-hidden border border-white/10 shadow-2xl transition-all duration-300">
         <button 
           onClick={onClose}
           className="absolute top-4 right-4 z-10 p-2 bg-black/50 hover:bg-black/80 rounded-full text-white/70 hover:text-white transition-all"

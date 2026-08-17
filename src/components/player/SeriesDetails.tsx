@@ -48,7 +48,7 @@ export function SeriesDetails({ series, info, loading, onClose, onPlay, primaryC
   }, [info?.episodes, selectedSeason]);
 
   return (
-    <div className="fixed inset-0 z-[100] bg-neutral-950 overflow-y-auto animate-in fade-in zoom-in-95 duration-300">
+    <div className="fixed inset-0 z-[100] bg-neutral-950 overflow-y-auto transition-all duration-300">
       {/* Hero Section */}
       <div className="relative w-full h-[60vh] min-h-[400px]">
         <img 
