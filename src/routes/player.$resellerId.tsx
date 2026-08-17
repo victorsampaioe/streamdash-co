@@ -1352,7 +1352,7 @@ function PlayerPage() {
       const t0 = Date.now();
       
       try {
-        const res = await fetch(checkUrl);
+        const res = await fetch(checkUrl, { signal: AbortSignal.timeout(20000) });
         const reason = res.headers.get("x-playback-reason");
         const info = {
           url,
