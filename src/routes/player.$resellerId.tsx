@@ -1402,10 +1402,10 @@ function PlayerPage() {
 
     const timeoutId = setTimeout(() => {
       if (!streamUrl && isPlaying) {
-        setPlaybackReason("Não foi possível iniciar este conteúdo. Tente novamente.");
-        toast.error("Tempo esgotado ao tentar carregar o conteúdo.");
+        setPlaybackReason("Não foi possível iniciar este conteúdo. Verifique sua conexão ou tente outro player.");
+        toast.error("Tempo esgotado ao carregar o stream.");
       }
-    }, 15000);
+    }, 20000);
 
     // Inicia busca da URL sem bloquear a abertura do player
     getPlayerStreamUrl({
