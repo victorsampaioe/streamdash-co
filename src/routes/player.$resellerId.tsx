@@ -1598,128 +1598,115 @@ function LoginForm({ resellerId, settings, onLogin, primaryColor, secondaryColor
         <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] rounded-full blur-[120px]" style={{ backgroundColor: primaryColor }} />
       </div>
 
-      <Card className="w-full max-w-[400px] bg-black/40 backdrop-blur-xl border-white/10 shadow-2xl relative overflow-hidden">
-        <div className="absolute top-0 left-0 w-full h-1" style={{ backgroundColor: primaryColor }} />
-        
-        <form onSubmit={handleSubmit} className="p-8 space-y-6">
-          <div className="text-center space-y-4">
-            <div className="mx-auto h-20 w-20 bg-white/5 rounded-2xl flex items-center justify-center border border-white/10">
+      <div className="w-full max-w-md relative z-10">
+        <div className="bg-neutral-900/40 backdrop-blur-3xl border border-white/5 p-8 rounded-3xl shadow-2xl relative overflow-hidden group">
+          <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-primary/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+          
+          <div className="flex flex-col items-center mb-8">
+            <div className="h-20 w-20 bg-white/5 backdrop-blur-md rounded-2xl flex items-center justify-center border border-white/10 mb-4 shadow-xl ring-1 ring-white/5 transition-transform hover:scale-105 duration-500">
               {settings?.logo_url ? (
-                <img src={settings.logo_url} alt="Logo" className="max-h-full max-w-full object-contain" />
+                <img src={settings.logo_url} alt="Logo" className="max-h-14 max-w-14 object-contain filter drop-shadow-2xl" />
               ) : (
-                <PlayCircle className="h-10 w-10" style={{ color: primaryColor }} />
+                <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-primary/20 to-transparent">
+                  <PlayCircle className="h-10 w-10" style={{ color: primaryColor }} />
+                </div>
               )}
             </div>
-            <div>
-              <h1 className="text-2xl font-bold text-white">{settings?.brand_name || "Web Player"}</h1>
-              <p className="text-sm text-white/60 mt-1">{settings?.welcome_message || "Entre com suas credenciais."}</p>
+            <h1 className="text-3xl font-black text-white tracking-tighter uppercase drop-shadow-sm">{settings?.brand_name || "Stream Player"}</h1>
+            <p className="text-white/40 text-sm mt-2 font-medium tracking-wide">
+              {settings?.welcome_message || "Acesse seu portal de entretenimento"}
+            </p>
+          </div>
+
+          <form onSubmit={handleSubmit} className="space-y-5">
+            <div className="space-y-2">
+              <Label className="text-[10px] font-black uppercase tracking-widest text-white/30 ml-1">Servidor</Label>
+              <div className="relative group/field">
+                <select 
+                  className="w-full bg-black/40 border border-white/5 focus:border-primary/50 rounded-xl px-4 py-3.5 text-white outline-none appearance-none transition-all hover:bg-black/60 pr-10"
+                  value={serverId}
+                  onChange={(e) => setServerId(e.target.value)}
+                  disabled={loginMutation.isPending}
+                >
+                  <option value="">Selecione o servidor...</option>
+                  {servers.map((s: any) => (
+                    <option key={s.id} value={s.id}>{s.name || s.host}</option>
+                  ))}
+                </select>
+                <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-white/20">
+                  <ChevronRight className="h-4 w-4 rotate-90" />
+                </div>
+                {healthInfo && (
+                  <div className="absolute -right-2 -top-2 scale-90">
+                    <DiagnosticBadge 
+                      status={healthInfo.status} 
+                      healthScore={healthInfo.healthScore}
+                      latency={healthInfo.latency}
+                    />
+                  </div>
+                )}
+              </div>
             </div>
+
+            <div className="space-y-2">
+              <Label className="text-[10px] font-black uppercase tracking-widest text-white/30 ml-1">Usuário</Label>
+              <Input
+                placeholder="Insira seu usuário"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                className="bg-black/40 border-white/5 focus:border-primary/50 h-12 rounded-xl text-white placeholder:text-white/10"
+                disabled={loginMutation.isPending}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label className="text-[10px] font-black uppercase tracking-widest text-white/30 ml-1">Senha</Label>
+              <Input
+                type="password"
+                placeholder="Insira sua senha"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="bg-black/40 border-white/5 focus:border-primary/50 h-12 rounded-xl text-white placeholder:text-white/10"
+                disabled={loginMutation.isPending}
+              />
+            </div>
+
+            <Button 
+              type="submit"
+              className="w-full h-14 rounded-xl font-black uppercase tracking-widest text-xs transition-all active:scale-[0.98] shadow-2xl overflow-hidden group/btn relative"
+              style={{ backgroundColor: primaryColor, color: '#fff' }}
+              disabled={loginMutation.isPending}
+            >
+              <div className="absolute inset-0 bg-white/10 translate-y-full group-hover/btn:translate-y-0 transition-transform duration-300" />
+              <div className="relative flex items-center justify-center gap-2">
+                {loginMutation.isPending ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Autenticando...
+                  </>
+                ) : (
+                  <>
+                    Entrar no Player
+                    <ArrowRight className="h-4 w-4 group-hover/btn:translate-x-1 transition-transform" />
+                  </>
+                )}
+              </div>
+            </Button>
+          </form>
+
+          <div className="mt-8 pt-6 border-t border-white/5 flex items-center justify-between text-[10px] font-medium tracking-widest text-white/20 uppercase">
+            <div className="flex items-center gap-2">
+              <ShieldCheck className="h-3 w-3 text-emerald-500/50" />
+              Proteção HMAC v2
+            </div>
+            <div>Core v{CORE_STREAM_VERSION.split('-')[0]}</div>
           </div>
-
-          <div className="space-y-4">
-             <div className="space-y-2">
-               <Label className="text-white/70 text-xs">Servidor</Label>
-               <select 
-                 className="w-full h-11 bg-white/5 border border-white/10 rounded-lg px-3 text-white focus:ring-2 focus:ring-primary/50 outline-none"
-                 value={serverId}
-                 onChange={(e) => setServerId(e.target.value)}
-                 required
-               >
-                 <option value="" className="bg-neutral-900">Escolha o servidor...</option>
-                 {servers.map(s => <option key={s.id} value={s.id} className="bg-neutral-900">{s.name || s.host}</option>)}
-               </select>
-
-               {serverId && (
-                 <div className="flex items-center gap-2 px-1">
-                   {diagnosing ? (
-                     <div className="flex items-center gap-2 text-[10px] text-white/40 animate-pulse">
-                       <Loader2 className="h-3 w-3 animate-spin" /> Verificando conexão...
-                     </div>
-                    ) : healthInfo ? (
-                      <div 
-                        className={cn(
-                          "flex items-center gap-2 p-2 rounded-lg border animate-in fade-in slide-in-from-top-1 duration-300",
-                          healthInfo.status === 'stable' ? "bg-emerald-500/5 border-emerald-500/10 text-emerald-400" : 
-                          healthInfo.status === 'unstable' ? "bg-amber-500/5 border-amber-500/10 text-amber-400" : 
-                          "bg-red-500/5 border-red-500/10 text-red-400"
-                        )}
-                      >
-                        <div className="relative flex items-center justify-center">
-                          <div className={cn("h-2 w-2 rounded-full", 
-                            healthInfo.status === 'stable' ? "bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]" : 
-                            healthInfo.status === 'unstable' ? "bg-amber-500 shadow-[0_0_8px_rgba(245,158,11,0.5)]" : 
-                            "bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.5)]"
-                          )} />
-                          {healthInfo.status === 'stable' && <div className="absolute inset-0 rounded-full bg-emerald-500 animate-ping opacity-20" />}
-                        </div>
-                        
-                        <div className="flex-1">
-                          <p className="text-[10px] font-black uppercase tracking-widest leading-none">
-                            {healthInfo.status === 'stable' ? "Serviço Online" : (healthInfo.status === 'unstable' ? "Instabilidade Detectada" : "Serviço Indisponível")}
-                          </p>
-                          {healthInfo.healthScore !== null && (
-                            <p className="text-[9px] font-bold opacity-60 mt-0.5 uppercase tracking-tighter">
-                              Saúde do Servidor: {healthInfo.healthScore}%
-                            </p>
-                          )}
-                        </div>
-                        
-                        {healthInfo.status !== 'stable' && (
-                          <div className="h-5 w-5 rounded-full bg-white/5 flex items-center justify-center">
-                            <Info className="h-3 w-3 opacity-50" />
-                          </div>
-                        )}
-                      </div>
-
-
-                   ) : null}
-                 </div>
-               )}
-             </div>
-             
-             <div className="space-y-2">
-               <Label className="text-white/70 text-xs">Usuário</Label>
-               <Input 
-                 placeholder="Usuário IPTV" 
-                 value={username} 
-                 onChange={e => setUsername(e.target.value)}
-                 className="bg-white/5 border-white/10 h-11 text-white" 
-                 required
-               />
-             </div>
-
-             <div className="space-y-2">
-               <Label className="text-white/70 text-xs">Senha</Label>
-               <Input 
-                 type="password"
-                 placeholder="Senha IPTV" 
-                 value={password} 
-                 onChange={e => setPassword(e.target.value)}
-                 className="bg-white/5 border-white/10 h-11 text-white" 
-                 required
-               />
-             </div>
-          </div>
-
-          <Button 
-            type="submit" 
-            className="w-full h-12 font-bold text-lg" 
-            style={{ backgroundColor: primaryColor }}
-            disabled={loginMutation.isPending}
-          >
-            {loginMutation.isPending ? (
-              <Loader2 className="h-5 w-5 animate-spin mr-2" />
-            ) : (
-              <Play className="h-5 w-5 mr-2 fill-white" />
-            )}
-            Acessar Agora
-          </Button>
-
-          <p className="text-center text-[10px] text-white/20 uppercase tracking-widest">
-            Powered by StreamMonitor.site
-          </p>
-        </form>
-      </Card>
+        </div>
+        
+        <p className="text-center mt-6 text-[10px] text-white/20 uppercase tracking-[0.2em] font-black">
+          Powered by Stream Monitor Cloud
+        </p>
+      </div>
     </div>
   );
 }
