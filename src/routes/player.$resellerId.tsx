@@ -1355,14 +1355,6 @@ function PlayerPage() {
       console.error("[PLAY_ERROR]", err);
       setPlaybackReason("Erro ao obter link de reprodução.");
     });
-      const msg = err?.message || "";
-      if (msg.includes("403")) toast.error("Acesso bloqueado pelo servidor IPTV (403).");
-      else if (msg.includes("404")) toast.error("Conteúdo não encontrado no servidor.");
-      else if (msg.includes("timeout")) toast.error("O servidor IPTV não respondeu a tempo.");
-      else toast.error(`Erro ao reproduzir: ${msg}`);
-      
-      setIsPlaying(false);
-    });
   }
 
 
