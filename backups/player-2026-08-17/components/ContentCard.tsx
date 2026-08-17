@@ -1,4 +1,4 @@
-import { Play, Star, Plus, Info, Check } from "lucide-react";
+import { Play, Star, Plus, Info } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useState } from "react";
 
@@ -8,13 +8,9 @@ interface ContentCardProps {
   primaryColor?: string;
   onClick: (item: any) => void;
   onInfoClick?: (item: any) => void;
-  onPlayClick?: (item: any) => void;
-  onToggleFavorite?: (item: any) => void;
-  isFavorite?: boolean;
 }
 
-export function ContentCard({ item, type, primaryColor, onClick, onInfoClick, onPlayClick, onToggleFavorite, isFavorite }: ContentCardProps) {
-
+export function ContentCard({ item, type, primaryColor, onClick, onInfoClick }: ContentCardProps) {
   const [isHovered, setIsHovered] = useState(false);
   
   const title = item.name || item.title;
@@ -50,7 +46,6 @@ export function ContentCard({ item, type, primaryColor, onClick, onInfoClick, on
               alt={title} 
               className="w-full h-full object-cover"
               loading="lazy"
-              decoding="async"
             />
           ) : (
             <div className="w-full h-full flex items-center justify-center text-white/20">
@@ -59,40 +54,18 @@ export function ContentCard({ item, type, primaryColor, onClick, onInfoClick, on
           )}
         </div>
 
-        {/* Ações rápidas no hover */}
+        {/* Overlay on hover */}
         <div className={cn(
-          "absolute inset-0 bg-black/60 flex items-center justify-center gap-3 transition-opacity duration-200",
-          isHovered ? "opacity-100" : "opacity-0 pointer-events-none"
+          "absolute inset-0 bg-black/60 flex items-center justify-center gap-2 transition-opacity duration-300",
+          isHovered ? "opacity-100" : "opacity-0"
         )}>
-          <button
-            aria-label="Assistir"
-            onClick={(e) => { e.stopPropagation(); (onPlayClick ?? onClick)(item); }}
-            className="h-11 w-11 rounded-full flex items-center justify-center text-white shadow-xl transition-transform active:scale-90"
+          <div 
+            className="h-12 w-12 rounded-full bg-primary flex items-center justify-center text-white shadow-xl transform transition-all active:scale-90"
             style={{ backgroundColor: primaryColor }}
           >
-            <Play className="h-5 w-5 fill-white ml-0.5" />
-          </button>
-          {onToggleFavorite && (
-            <button
-              aria-label="Adicionar à minha lista"
-              onClick={(e) => { e.stopPropagation(); onToggleFavorite(item); }}
-              className="h-11 w-11 rounded-full flex items-center justify-center bg-white/10 border border-white/20 text-white transition-transform active:scale-90"
-            >
-              {isFavorite ? <Check className="h-5 w-5 text-emerald-400" /> : <Plus className="h-5 w-5" />}
-            </button>
-          )}
-          {onInfoClick && (
-            <button
-              aria-label="Ver detalhes"
-              onClick={(e) => { e.stopPropagation(); onInfoClick(item); }}
-              className="h-11 w-11 rounded-full flex items-center justify-center bg-white/10 border border-white/20 text-white transition-transform active:scale-90"
-            >
-              <Info className="h-5 w-5" />
-            </button>
-          )}
+            <Play className="h-6 w-6 fill-white ml-1" />
+          </div>
         </div>
-
-
 
         {/* Badges */}
         <div className="absolute top-2 left-2 flex flex-col gap-1">

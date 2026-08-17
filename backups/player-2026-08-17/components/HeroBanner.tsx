@@ -1,22 +1,19 @@
-import { Play, Plus, Info, Star, Check, ChevronLeft, ChevronRight, Film, Clock, Layers } from "lucide-react";
+import { Play, Plus, Info, Star, Check, ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
-import { TrailerModal } from "@/components/player/TrailerModal";
 
 interface HeroBannerProps {
   items?: any[]; // Array para rotação
   item: any; // Fallback para item único
   onPlay: (item: any) => void;
   onMyList?: (item: any) => void;
-  onDetails?: (item: any) => void;
   primaryColor?: string;
   isFavorite?: (item: any) => boolean;
 }
 
-export function HeroBanner({ items = [], item: fallbackItem, onPlay, onMyList, onDetails, primaryColor, isFavorite }: HeroBannerProps) {
+export function HeroBanner({ items = [], item: fallbackItem, onPlay, onMyList, primaryColor, isFavorite }: HeroBannerProps) {
   const [currentIndex, setCurrentIndex] = useState(0);
-  const [trailerOpen, setTrailerOpen] = useState(false);
   const rotationItems = items.length > 0 ? items : (fallbackItem ? [fallbackItem] : []);
   const item = rotationItems[currentIndex];
 
@@ -33,14 +30,8 @@ export function HeroBanner({ items = [], item: fallbackItem, onPlay, onMyList, o
   const title = item.name || item.title;
   const description = item.plot || item.description || "Assista agora a este conteúdo incrível disponível na plataforma.";
   const background = item.backdrop || item.cover || item.stream_icon || item.series_icon;
-  const rating = Number(item.rating || item.rating_5point || 0);
+  const rating = item.rating || item.rating_5point;
   const year = item.year || (item.releaseDate ? new Date(item.releaseDate).getFullYear() : null);
-  const genre = item.genre || item.category_name;
-  const duration = item.duration || item.episode_run_time;
-  const seasons = item.seasons?.length || item.season_count;
-  const episodes = item.episode_count;
-  const isSeriesItem = !!(item.series_id || item.content_type === "series" || seasons);
-
 
   return (
     <div className="relative w-full h-[70vh] md:h-[75vh] min-h-[500px] md:min-h-[600px] aspect-[9/16] md:aspect-auto overflow-hidden rounded-3xl mb-8 group transition-all duration-500">
@@ -93,29 +84,17 @@ export function HeroBanner({ items = [], item: fallbackItem, onPlay, onMyList, o
       <div className="absolute bottom-0 left-0 p-6 md:p-16 w-full md:w-2/3 space-y-4 md:space-y-6">
 
         <div className="space-y-4">
-          <div className="flex flex-wrap items-center gap-3 md:gap-4 text-sm font-medium">
-            <span className="px-2 py-0.5 rounded text-white text-[10px] font-black uppercase tracking-widest" style={{ backgroundColor: primaryColor }}>
+          <div className="flex items-center gap-4 text-sm font-medium">
+            <span className="px-2 py-0.5 rounded bg-primary text-white text-[10px] font-black uppercase tracking-widest" style={{ backgroundColor: primaryColor }}>
               Em Destaque
             </span>
-            {rating > 0 && (
+            {rating && (
               <span className="flex items-center gap-1 text-yellow-500">
                 <Star className="h-4 w-4 fill-yellow-500" />
-                {rating.toFixed(1)}
+                {rating}
               </span>
             )}
             {year && <span className="text-white/60">{year}</span>}
-            {genre && <span className="text-white/40 truncate max-w-[10rem]">{genre}</span>}
-            {duration && (
-              <span className="flex items-center gap-1 text-white/40">
-                <Clock className="h-3.5 w-3.5" /> {duration}
-              </span>
-            )}
-            {seasons && (
-              <span className="flex items-center gap-1 text-white/40">
-                <Layers className="h-3.5 w-3.5" /> {seasons} temporada{Number(seasons) > 1 ? "s" : ""}
-                {episodes ? ` · ${episodes} ep.` : ""}
-              </span>
-            )}
           </div>
           
           <h1 className="text-3xl md:text-6xl font-bold text-white tracking-tight drop-shadow-2xl line-clamp-2 md:line-clamp-none">
@@ -128,7 +107,7 @@ export function HeroBanner({ items = [], item: fallbackItem, onPlay, onMyList, o
           </p>
         </div>
 
-        <div className="flex flex-wrap items-center gap-3 md:gap-4 pt-2">
+        <div className="flex items-center gap-3 md:gap-4 pt-2">
           <Button 
             size="lg" 
             className="flex-1 md:flex-none h-12 md:h-14 px-6 md:px-10 text-base md:text-lg font-bold rounded-xl shadow-xl transition-all active:scale-95"
@@ -136,28 +115,6 @@ export function HeroBanner({ items = [], item: fallbackItem, onPlay, onMyList, o
             onClick={() => onPlay(item)}
           >
             <Play className="mr-2 h-5 w-5 md:h-6 md:w-6 fill-white" /> Assistir agora
-          </Button>
-
-          {onDetails && (
-            <Button
-              size="lg"
-              variant="outline"
-              className="h-12 md:h-14 px-5 md:px-8 text-base font-bold rounded-xl bg-white/5 border-white/10 hover:bg-white/10 text-white active:scale-95"
-              onClick={() => onDetails(item)}
-            >
-              <Info className="h-5 w-5 md:mr-2" />
-              <span className="hidden md:inline">Ver detalhes</span>
-            </Button>
-          )}
-
-          <Button
-            size="lg"
-            variant="outline"
-            className="h-12 md:h-14 px-5 md:px-8 text-base font-bold rounded-xl bg-white/5 border-white/10 hover:bg-white/10 text-white active:scale-95"
-            onClick={() => setTrailerOpen(true)}
-          >
-            <Film className="h-5 w-5 md:mr-2" />
-            <span className="hidden md:inline">Trailer</span>
           </Button>
           
           <Button 
@@ -172,14 +129,6 @@ export function HeroBanner({ items = [], item: fallbackItem, onPlay, onMyList, o
         </div>
 
       </div>
-
-      <TrailerModal
-        isOpen={trailerOpen}
-        onClose={() => setTrailerOpen(false)}
-        title={title}
-        type={isSeriesItem ? "series" : "movie"}
-      />
     </div>
   );
 }
-

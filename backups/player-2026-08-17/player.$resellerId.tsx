@@ -68,15 +68,6 @@ import { BottomNav } from "@/components/player/BottomNav";
 import { DiagnosticBadge } from "@/components/player/DiagnosticBadge";
 import { isBrowserPlayable, incompatibleReason } from "@/lib/playback-format";
 import { testWebCompatibility, NEEDS_CONVERSION_MESSAGE, type WebCompatResult } from "@/lib/web-compat";
-import { AppDownloadCard } from "@/components/player/AppDownloadCard";
-
-const SMART_LOADING_MESSAGES = [
-  "Conectando...",
-  "Verificando servidor...",
-  "Analisando estabilidade...",
-  "Otimizando a reprodução...",
-];
-
 
 
 
@@ -127,29 +118,7 @@ function PlayerPage() {
   const [loadingSeries, setLoadingSeries] = useState(false);
   const [streamUrl, setStreamUrl] = useState<string | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
-  const [smartMsgIndex, setSmartMsgIndex] = useState(0);
   const [playbackReason, setPlaybackReason] = useState<string | null>(null);
-
-  // Mensagens inteligentes durante a conexão + trava de scroll no modo player
-  useEffect(() => {
-    if (!isPlaying || streamUrl) {
-      setSmartMsgIndex(0);
-      return;
-    }
-    const id = setInterval(() => {
-      setSmartMsgIndex((i) => Math.min(i + 1, SMART_LOADING_MESSAGES.length - 1));
-    }, 2200);
-    return () => clearInterval(id);
-  }, [isPlaying, streamUrl]);
-
-  useEffect(() => {
-    if (typeof document === "undefined") return;
-    document.body.style.overflow = isPlaying ? "hidden" : "";
-    return () => {
-      document.body.style.overflow = "";
-    };
-  }, [isPlaying]);
-
   // HUD temporário de diagnóstico de reprodução (remover após validação)
   const [playbackDebug, setPlaybackDebug] = useState<any>(null);
   // Versão do Frontend (para conferência em produção)
@@ -829,13 +798,8 @@ function PlayerPage() {
                 }
               }}
               onMyList={(item: any) => handleToggleFavorite(item)}
-              onDetails={(item: any) => {
-                setSelectedItem(item);
-                setIsDetailsOpen(true);
-              }}
               isFavorite={(item: any) => favorites.some(f => f.content_id === (item?.stream_id || item?.series_id || item?.id)?.toString())}
             />
-
 
             {/* Continuar Assistindo Section */}
             {history.length > 0 && (
@@ -907,10 +871,7 @@ function PlayerPage() {
               onPlay={(item: any) => handlePlay(item.stream_id, "live", item)}
             />
 
-            <AppDownloadCard primaryColor={primaryColor} apkUrl={(settings as any)?.apk_url ?? null} />
-
           </div>
-
         )}
 
 
@@ -1317,13 +1278,10 @@ function PlayerPage() {
                   )}
                 </div>
              ) : !streamUrl ? (
-                <div className="flex flex-col items-center gap-6">
+                <div className="flex flex-col items-center gap-6 animate-pulse">
                   <div className="w-12 h-12 border-4 border-primary/20 border-t-primary rounded-full animate-spin" />
-                  <p className="text-white/50 text-xs font-black uppercase tracking-[0.3em] transition-opacity">
-                    {SMART_LOADING_MESSAGES[smartMsgIndex]}
-                  </p>
+                  <p className="text-white/40 text-xs font-black uppercase tracking-[0.3em]">Conectando ao Stream</p>
                 </div>
-
              ) : (
                   <video 
                     ref={videoRef}
