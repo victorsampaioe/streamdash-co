@@ -252,6 +252,9 @@ export const Route = createFileRoute("/api/public/core/stream")({
             console.error(
               `[UPSTREAM IPTV] url=${maskMedia(abs)} ua=${uaKind} status=502 tempo=${Date.now() - t0}ms erro="${msg}"`
             );
+            if (ext === "ts" || ext === "m4s" || type === "live") {
+              console.error(`[HLS SEGMENT] URL=${maskMedia(abs)} STATUS=502 ERRO="${msg}"`);
+            }
             return new Response(`Worker fetch error: ${msg}`, {
               status: 502,
               headers: { ...CORS, ...VER, "X-Core-Error": msg, "X-Core-UA": uaKind },
