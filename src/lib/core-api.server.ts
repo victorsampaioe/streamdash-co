@@ -161,9 +161,11 @@ export async function callCore<T>(task: CoreTask, payload: Record<string, unknow
   const base = coreApiUrl();
   if (!base) throw new Error("CORE_API_URL não configurada");
 
-  // O Core é um worker stateless: tarefas que dependem do banco não podem ser
-  // delegadas (retornariam HTTP 501). Falha rápido, sem poluir a auditoria.
-  if (!canRunOnCore(task)) {
+  // O Core é um worker stateless: a maioria das tarefas depende do banco e roda no Painel.
+  // Somente tarefas permitidas (canRunOnCore) são delegadas ao worker, exceto se forçado
+  // para tasks específicas que o worker suporta via proxy (iptv-player-proxy).
+  const isProxy = task === "iptv-player-proxy";
+  if (!isProxy && !canRunOnCore(task)) {
     throw new Error(
       `Tarefa "${task}" depende do banco e roda no Painel — não é delegável ao Core worker.`,
     );
