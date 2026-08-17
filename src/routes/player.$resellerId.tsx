@@ -102,6 +102,7 @@ function PlayerPage() {
   // Teste de compatibilidade Web (codec real analisado no Core)
   const [compat, setCompat] = useState<WebCompatResult | null>(null);
   const [compatLoading, setCompatLoading] = useState(false);
+  const [showDebugHud, setShowDebugHud] = useState(false);
   const lastStreamUrlRef = useRef<string | null>(null);
 
   const runCompatTest = async (url?: string | null) => {
@@ -940,6 +941,26 @@ function PlayerPage() {
                       </div>
                     </div>
                   </div>
+                  <div className="flex items-center justify-between p-4 bg-white/5 rounded-xl">
+                    <div className="flex items-center gap-3">
+                      <SettingsIcon className="h-5 w-5 text-primary" style={{ color: primaryColor }} />
+                      <div>
+                        <p className="text-sm font-medium text-white/90">Modo Diagnóstico</p>
+                        <p className="text-xs text-white/40">{showDebugHud ? 'Ativado' : 'Desativado'}</p>
+                      </div>
+                    </div>
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      onClick={() => setShowDebugHud(!showDebugHud)}
+                      className={cn(
+                        "h-8 border-white/10",
+                        showDebugHud ? "bg-primary/20 text-primary border-primary/20" : "bg-white/5 text-white/60"
+                      )}
+                    >
+                      {showDebugHud ? 'Desativar' : 'Ativar'}
+                    </Button>
+                  </div>
                 </div>
               </div>
 
@@ -1194,7 +1215,7 @@ function PlayerPage() {
                       : "Não foi possível reproduzir este conteúdo."}
                   </p>
                   
-                  {isAdmin && (
+                  {isAdmin && showDebugHud && (
                     <div className="pt-4 border-t border-white/5 space-y-2">
                        <p className="text-[10px] text-white/40 uppercase tracking-widest font-bold">Diagnóstico Admin (Modo Debug)</p>
                        {playbackDebug && (
@@ -1251,7 +1272,7 @@ function PlayerPage() {
              )}
           </div>
 
-          {isAdmin && playbackDebug && (
+          {isAdmin && showDebugHud && playbackDebug && (
             <div className="absolute bottom-24 left-6 z-20 max-w-[90vw] rounded-xl border border-white/10 bg-black/70 px-4 py-3 font-mono text-[11px] leading-relaxed text-emerald-300 backdrop-blur">
               <div className="mb-1 text-white/70">Diagnóstico de Reprodução (Admin)</div>
               <div className="mb-2 flex items-center gap-2">
@@ -1349,20 +1370,26 @@ function PlayerPage() {
     setStreamUrl(null);
     setCompat(null);
     setPlaybackReason("▶ Carregando conteúdo...");
+    
     const started = Date.now();
-    setPlaybackDebug({ tipo: type, extensao: extension, contentId: id, status: null, via: null, started_at: started });
-
-    const startCheck = Date.now();
-    console.log("[PLAY]", {
-      tipo: type,
-      conteudo: item?.name ?? item?.title ?? selectedItem?.name ?? null,
-      stream_id: type === "series" ? null : String(id),
-      episode_id: type === "series" ? String(id) : null,
-      url_gerada: null,
-      via: "gerando",
-      status: "iniciando",
-      erro: null,
+    setPlaybackDebug({ 
+      tipo: type, 
+      extensao: extension, 
+      contentId: id, 
+      status: null, 
+      via: "aguardando...", 
+      started_at: started 
     });
+
+    const controller = new AbortController();
+    abortControllerRef.current = controller;
+
+    const timeoutId = setTimeout(() => {
+      if (!streamUrl && isPlaying) {
+        setPlaybackReason("Não foi possível iniciar este conteúdo. Tente novamente.");
+        toast.error("Tempo esgotado ao tentar carregar o conteúdo.");
+      }
+    }, 15000);
 
     // Inicia busca da URL sem bloquear a abertura do player
     getPlayerStreamUrl({
@@ -1373,15 +1400,18 @@ function PlayerPage() {
         extension,
       }
     }).then(async (url) => {
+      clearTimeout(timeoutId);
+      if (controller.signal.aborted) return;
+
       if (!url) {
-        setPlaybackReason("Este conteúdo está temporariamente indisponível.");
+        setPlaybackReason("Não foi possível iniciar este conteúdo. Tente novamente.");
         return;
       }
 
-      const checkUrl = `${url}${url.includes("?") ? "&" : "?"}probe=1`;
+      // Probe de diagnóstico opcional (para HUD se for Admin)
       const t0 = Date.now();
-      
       try {
+        const checkUrl = `${url}${url.includes("?") ? "&" : "?"}probe=1`;
         const res = await fetch(checkUrl, { signal: AbortSignal.timeout(45000) });
         const reason = res.headers.get("x-playback-reason");
         const info = {
@@ -1400,22 +1430,26 @@ function PlayerPage() {
         setPlaybackDebug((prev: any) => ({ ...(prev ?? {}), ...info }));
         
         if (res.status === 415) {
-          setPlaybackReason(reason || incompatibleReason(res.headers.get("x-playback-incompatible")));
+          setPlaybackReason("Formato de vídeo incompatível com o navegador.");
           setStreamUrl(null);
         } else if (!res.ok && res.status !== 206) {
-          setPlaybackReason("Não foi possível iniciar este conteúdo. Tente novamente em alguns segundos.");
+          setPlaybackReason("Não foi possível iniciar este conteúdo. Tente novamente.");
           setStreamUrl(null);
         } else {
           setPlaybackReason(null);
           setStreamUrl(url);
         }
       } catch (e) {
-        setPlaybackReason("Falha na conexão com o servidor de streaming.");
-        setStreamUrl(null);
+        // Se o probe falhar mas o player puder tentar direto, tentamos
+        console.warn("[PLAY] probe falhou, tentando tocar assim mesmo");
+        setPlaybackReason(null);
+        setStreamUrl(url);
       }
     }).catch(err => {
+      clearTimeout(timeoutId);
+      if (controller.signal.aborted) return;
       console.error("[PLAY_ERROR]", err);
-      setPlaybackReason("Erro ao obter link de reprodução.");
+      setPlaybackReason("Não foi possível iniciar este conteúdo. Tente novamente.");
     });
   }
 
@@ -1481,6 +1515,11 @@ function PlayerPage() {
     setIsPlaying(false);
     setStreamUrl(null);
     setPlaybackReason(null);
+    setPlaybackDebug(null);
+    setCompat(null);
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
     if (hlsRef.current) {
       hlsRef.current.destroy();
       hlsRef.current = null;

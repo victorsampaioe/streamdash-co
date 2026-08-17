@@ -186,9 +186,10 @@ export const Route = createFileRoute("/api/public/core/stream")({
           const h: Record<string, string> = {
             "User-Agent": ua,
             Accept:
-              ext === "m3u8" ? "application/vnd.apple.mpegurl,application/x-mpegURL,*/*" : "*/*",
+              ext === "m3u8" ? "application/vnd.apple.mpegurl,application/x-mpegURL,application/octet-stream,*/*" : "*/*",
             "Accept-Encoding": "identity",
             Connection: "keep-alive",
+            "Icy-MetaData": "1", // Alguns servidores SHOUTcast/IPTV precisam disso para não cortar a conexão
           };
           // VLC/IPTV Smarters NÃO enviam Referer/Origin — muitos painéis
           // devolvem 403 justamente por causa desses headers de navegador.
@@ -206,8 +207,13 @@ export const Route = createFileRoute("/api/public/core/stream")({
           try {
             // Otimização VOD: timeout maior e blocos eficientes
             const isVod = type === "movie" || type === "series";
+            const isHlsManifest = ext === "m3u8";
             const timeout = isVod ? 60000 : 30000;
             
+            if (isHlsManifest) {
+              console.log(`[HLS] solicitando manifesto: ${maskMedia(abs)}`);
+            }
+
             const res = await fetch(abs, {
               headers: h,
               redirect: "follow",
@@ -220,32 +226,42 @@ export const Route = createFileRoute("/api/public/core/stream")({
               const v = res.headers.get(k);
               if (v) out.set(k, v);
             }
-            if (!out.has("Content-Type")) out.set("Content-Type", contentTypeFor(ext, res.headers.get("content-type")));
+            
+            // Garantir Content-Type correto
+            const upstreamContentType = res.headers.get("content-type");
+            if (!out.has("Content-Type")) out.set("Content-Type", contentTypeFor(ext, upstreamContentType));
             if (!out.has("Accept-Ranges") && type !== "live") out.set("Accept-Ranges", "bytes");
             
             // Otimização VOD: Cache agressivo no browser e blocos eficientes
-            if (isVod) {
+            if (isVod && !isHlsManifest) {
               out.set("Cache-Control", "public, max-age=3600");
             } else {
               out.set("Cache-Control", "no-cache");
             }
             
             out.set("X-Upstream-Status", String(res.status));
-            out.set("X-Upstream-Content-Type", res.headers.get("content-type") ?? "-");
+            out.set("X-Upstream-Content-Type", upstreamContentType ?? "-");
             out.set("X-Core-UA", uaKind);
             out.set("Connection", "keep-alive");
 
             if (ext === "ts" || ext === "m4s" || type === "live") {
               console.log(
-                `[HLS SEGMENT] URL=${maskMedia(abs)} STATUS=${res.status} TEMPO=${Date.now() - t0}ms CONTENT-TYPE=${res.headers.get("content-type") ?? "-"} RANGE=${range ?? "none"}`
+                `[HLS SEGMENT] URL=${maskMedia(abs)} STATUS=${res.status} TEMPO=${Date.now() - t0}ms CONTENT-TYPE=${upstreamContentType ?? "-"} RANGE=${range ?? "none"}`
               );
             }
 
+            if (isHlsManifest) {
+              console.log(`[HLS] manifesto recebido: status=${res.status} ct=${upstreamContentType} tempo=${Date.now() - t0}ms`);
+            }
+
             console.log(
-              `[UPSTREAM IPTV] url=${maskMedia(abs)} ua=${uaKind} status=${res.status} content-type=${res.headers.get("content-type") ?? "-"} range=${range ?? "none"} content-range=${res.headers.get("content-range") ?? "-"} tempo=${Date.now() - t0}ms`
+              `[UPSTREAM IPTV] url=${maskMedia(abs)} ua=${uaKind} status=${res.status} content-type=${upstreamContentType ?? "-"} range=${range ?? "none"} content-range=${res.headers.get("content-range") ?? "-"} tempo=${Date.now() - t0}ms`
             );
 
             if (!res.ok && res.status !== 206) {
+              if (isHlsManifest) {
+                console.error(`[HLS] falha ao obter manifesto: status=${res.status} url=${maskMedia(abs)}`);
+              }
               // Corpo do bloqueio ajuda a identificar o motivo real do 403.
               let corpo = "";
               try { corpo = (await res.text()).slice(0, 200).replace(/\s+/g, " "); } catch { /* ignore */ }
@@ -262,6 +278,9 @@ export const Route = createFileRoute("/api/public/core/stream")({
 
             return new Response(res.body, { status: res.status, headers: out });
           } catch (e) {
+            if (ext === "m3u8") {
+              console.error(`[HLS] erro fatal de rede no manifesto: ${(e as Error).message} url=${maskMedia(abs)}`);
+            }
             const msg = (e as Error).message;
             console.error(
               `[UPSTREAM IPTV] url=${maskMedia(abs)} ua=${uaKind} status=502 tempo=${Date.now() - t0}ms erro="${msg}"`
