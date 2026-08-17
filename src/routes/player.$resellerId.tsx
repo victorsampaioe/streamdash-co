@@ -395,6 +395,10 @@ function PlayerPage() {
 
     // Diagnóstico da camada de playback (motivo real, não mensagem genérica)
     const logMeta = async () => {
+      // Se não for admin, não precisamos do fetch de diagnóstico pesado aqui
+      // pois o handlePlay já fez um probe leve.
+      if (!isAdmin) return;
+
       const t0 = performance.now();
       try {
         const res = await fetch(streamUrl, {
