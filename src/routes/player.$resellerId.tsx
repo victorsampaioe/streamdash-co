@@ -1402,10 +1402,10 @@ function PlayerPage() {
 
     const timeoutId = setTimeout(() => {
       if (!streamUrl && isPlaying) {
-        setPlaybackReason("Não foi possível iniciar este conteúdo. Tente novamente.");
-        toast.error("Tempo esgotado ao tentar carregar o conteúdo.");
+        setPlaybackReason("Não foi possível iniciar este conteúdo. Verifique sua conexão ou tente outro player.");
+        toast.error("Tempo esgotado ao carregar o stream.");
       }
-    }, 15000);
+    }, 20000);
 
     // Inicia busca da URL sem bloquear a abertura do player
     getPlayerStreamUrl({
@@ -1427,8 +1427,8 @@ function PlayerPage() {
       // Probe de diagnóstico opcional (para HUD se for Admin)
       const t0 = Date.now();
       try {
-        const checkUrl = `${url}${url.includes("?") ? "&" : "?"}probe=1`;
-        const res = await fetch(checkUrl, { signal: AbortSignal.timeout(45000) });
+        const checkUrl = `${url}${url.includes("?") ? "&" : "?"}probe=1&forceCore=1`;
+        const res = await fetch(checkUrl, { signal: AbortSignal.timeout(60000) });
         const reason = res.headers.get("x-playback-reason");
         const info = {
           url,
@@ -1453,13 +1453,13 @@ function PlayerPage() {
           setStreamUrl(null);
         } else {
           setPlaybackReason(null);
-          setStreamUrl(url);
+          setStreamUrl(`${url}${url.includes("?") ? "&" : "?"}forceCore=1`);
         }
       } catch (e) {
         // Se o probe falhar mas o player puder tentar direto, tentamos
         console.warn("[PLAY] probe falhou, tentando tocar assim mesmo");
         setPlaybackReason(null);
-        setStreamUrl(url);
+        setStreamUrl(`${url}${url.includes("?") ? "&" : "?"}forceCore=1`);
       }
     }).catch(err => {
       clearTimeout(timeoutId);

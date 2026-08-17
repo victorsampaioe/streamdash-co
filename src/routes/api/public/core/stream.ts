@@ -59,23 +59,29 @@ function rewriteManifest(manifest: string, upstreamUrl: string, token: string, m
   let segmentos = 0;
   
   const toProxy = (raw: string) => {
-    // Resolve URL relativa (de segmentos, chaves, etc) para absoluta
-    const abs = new URL(raw, baseUrl).toString();
-    const segExt = (abs.match(/\.([a-z0-9]{2,4})(?:\?|$)/i)?.[1] ?? "ts").toLowerCase();
-    segmentos += 1;
-    
-    // Assinatura de cada segmento para permitir acesso à CDN final
-    const p = new URLSearchParams({
-      token,
-      mode,
-      type: "live",
-      ext: segExt,
-      via: "core", // Força o segmento a ser validado pelo bloco de assinatura
-      exp: String(segExp), // Usamos 'exp' em vez de 'pexp' para casar com a validação do handler
-      sig: signUpstream(abs, segExp), // Usamos 'sig' em vez de 'psig' para casar com a validação do handler
-      u: b64urlEncode(abs),
-    });
-    return `/api/public/core/stream?${p.toString()}`;
+    try {
+      // Resolve URL relativa (de segmentos, chaves, etc) para absoluta
+      const abs = new URL(raw, baseUrl).toString();
+      const segExt = (abs.match(/\.([a-z0-9]{2,4})(?:\?|$)/i)?.[1] ?? "ts").toLowerCase();
+      segmentos += 1;
+      
+      // Assinatura de cada segmento para permitir acesso à CDN final
+      const p = new URLSearchParams({
+        token,
+        mode,
+        type: "live",
+        ext: segExt,
+        via: "core", 
+        exp: String(segExp),
+        sig: signUpstream(abs, segExp),
+        u: b64urlEncode(abs),
+        forceCore: "1",
+      });
+      return `/api/public/core/stream?${p.toString()}`;
+    } catch (e) {
+      console.warn(`[HLS][rewriteManifest] Falha ao resolver URL: ${raw}`, e);
+      return raw;
+    }
   };
 
   // Processa linhas do HLS: URLs, #EXT-X-STREAM-INF, #EXT-X-KEY, #EXT-X-MEDIA...
@@ -89,6 +95,10 @@ function rewriteManifest(manifest: string, upstreamUrl: string, token: string, m
       if (trimmed.startsWith("#EXT-X-KEY:")) {
         return line.replace(/URI="([^"]+)"/g, (_m, uri) => `URI="${toProxy(uri)}"`);
       }
+      // #EXT-X-MEDIA: URI="..."
+      if (trimmed.startsWith("#EXT-X-MEDIA:")) {
+        return line.replace(/URI="([^"]+)"/g, (_m, uri) => `URI="${toProxy(uri)}"`);
+      }
       // URLs de playlist/segmento (não iniciam com #)
       if (!trimmed.startsWith("#")) {
         return toProxy(trimmed);
@@ -97,7 +107,7 @@ function rewriteManifest(manifest: string, upstreamUrl: string, token: string, m
     })
     .join("\n");
     
-  console.log(`[HLS][rewriteManifest] URL original: ${upstreamUrl} | Segmentos reescritos: ${segmentos}`);
+  console.log(`[HLS][rewriteManifest] URL original: ${maskMedia(upstreamUrl)} | Segmentos reescritos: ${segmentos}`);
   return { manifest: out, segmentos };
 }
 
@@ -200,7 +210,7 @@ export const Route = createFileRoute("/api/public/core/stream")({
           if (range) h["Range"] = range;
 
           console.log(
-            `[CORE REQUEST] recebido type=${type} ext=${ext} ua=${uaKind} range=${range ?? "none"} url=${maskMedia(abs)} headers_enviados=${JSON.stringify({ ...h, "User-Agent": ua.slice(0, 40) })}`
+            `[STREAM DEBUG][CORE REQUEST] recebido type=${type} ext=${ext} ua=${uaKind} range=${range ?? "none"} url=${maskMedia(abs)} sig=${sig ? "presente" : "ausente"} exp=${expRaw} headers=${JSON.stringify({ ...h, "User-Agent": ua.slice(0, 40) })}`
           );
 
           const t0 = Date.now();
@@ -225,6 +235,11 @@ export const Route = createFileRoute("/api/public/core/stream")({
             for (const k of ["Content-Type", "Content-Range", "Content-Length", "Accept-Ranges"]) {
               const v = res.headers.get(k);
               if (v) out.set(k, v);
+            }
+            
+            // Forçar Accept-Ranges para VOD se a origem omitir mas devolver 206
+            if (!out.has("Accept-Ranges") && (type !== "live" || res.status === 206)) {
+              out.set("Accept-Ranges", "bytes");
             }
             
             // Garantir Content-Type correto
@@ -255,7 +270,7 @@ export const Route = createFileRoute("/api/public/core/stream")({
             }
 
             console.log(
-              `[UPSTREAM IPTV] url=${maskMedia(abs)} ua=${uaKind} status=${res.status} content-type=${upstreamContentType ?? "-"} range=${range ?? "none"} content-range=${res.headers.get("content-range") ?? "-"} tempo=${Date.now() - t0}ms`
+              `[STREAM DEBUG][UPSTREAM IPTV] url=${maskMedia(abs)} ua=${uaKind} status=${res.status} content-type=${upstreamContentType ?? "-"} range=${range ?? "none"} content-range=${res.headers.get("content-range") ?? "-"} tempo=${Date.now() - t0}ms`
             );
 
             if (!res.ok && res.status !== 206) {
@@ -278,15 +293,15 @@ export const Route = createFileRoute("/api/public/core/stream")({
 
             return new Response(res.body, { status: res.status, headers: out });
           } catch (e) {
-            if (ext === "m3u8") {
-              console.error(`[HLS] erro fatal de rede no manifesto: ${(e as Error).message} url=${maskMedia(abs)}`);
-            }
             const msg = (e as Error).message;
+            if (ext === "m3u8") {
+              console.error(`[STREAM DEBUG][HLS] erro fatal de rede no manifesto: ${msg} url=${maskMedia(abs)}`);
+            }
             console.error(
-              `[UPSTREAM IPTV] url=${maskMedia(abs)} ua=${uaKind} status=502 tempo=${Date.now() - t0}ms erro="${msg}"`
+              `[STREAM DEBUG][UPSTREAM IPTV] url=${maskMedia(abs)} ua=${uaKind} status=502 tempo=${Date.now() - t0}ms erro="${msg}"`
             );
             if (ext === "ts" || ext === "m4s" || type === "live") {
-              console.error(`[HLS SEGMENT] URL=${maskMedia(abs)} STATUS=502 ERRO="${msg}"`);
+              console.error(`[STREAM DEBUG][HLS SEGMENT] URL=${maskMedia(abs)} STATUS=502 ERRO="${msg}"`);
             }
             return new Response(`Worker fetch error: ${msg}`, {
               status: 502,
@@ -444,7 +459,8 @@ export const Route = createFileRoute("/api/public/core/stream")({
             relay.searchParams.set("type", type);
             relay.searchParams.set("ext", ext);
             relay.searchParams.set("ua", uaKind);
-            relay.searchParams.set("via", "core");
+             relay.searchParams.set("via", "core");
+             relay.searchParams.set("forceCore", "1");
             const t0 = Date.now();
             try {
               const timeout = type === "live" ? 20000 : 60000;
@@ -456,7 +472,7 @@ export const Route = createFileRoute("/api/public/core/stream")({
               coreWorkerVersion = res.headers.get("X-Core-Stream-Version") ?? coreWorkerVersion;
               const upstreamStatus = res.headers.get("X-Upstream-Status") ?? "-";
               console.log(
-                `[STREAM ATTEMPT][${modo}] url=${maskMedia(candidate)} ua=${uaKind} core_status=${res.status} upstream=${upstreamStatus} ct=${res.headers.get("content-type") ?? "-"} worker=${coreWorkerVersion ?? "sem versão"} erro=${res.headers.get("X-Core-Error") ?? "-"} tempo=${Date.now() - t0}ms`
+                `[STREAM DEBUG][STREAM ATTEMPT][${modo}] url=${maskMedia(candidate)} ua=${uaKind} core_status=${res.status} upstream=${upstreamStatus} ct=${res.headers.get("content-type") ?? "-"} worker=${coreWorkerVersion ?? "sem versão"} erro=${res.headers.get("X-Core-Error") ?? "-"} tempo=${Date.now() - t0}ms`
               );
               if (res.ok || res.status === 206) {
                 upstream = res;
@@ -487,14 +503,12 @@ export const Route = createFileRoute("/api/public/core/stream")({
         if (!forceCore) {
           await tentarPainel("PAINEL", "browser");
           if (!upstream) await tentarPainel("PAINEL-SMARTERS", "player");
+          if (!upstream) await tentarPainel("PAINEL-VLC", "vlc");
         }
         
         // Se forçado (ex: VOD) ou falhou no painel
         if (!upstream) await tentarCore("CORE-VLC", "vlc");
         if (!upstream) await tentarCore("CORE", "player");
-        
-        // Fallback final no painel se tudo falhar e não forçado
-        if (!upstream && !forceCore) await tentarPainel("PAINEL-VLC", "vlc");
 
         const resumo = tentativas
           .map((t) => `${t.modo}=${t.status ?? "erro"}${t.motivo ? ` (${t.motivo})` : ""}`)
@@ -588,7 +602,7 @@ export const Route = createFileRoute("/api/public/core/stream")({
         }
 
         console.log(
-          `[STREAM RESPONSE] via=${usedModo} type=${type} ext=${finalExt} status=${found.status} ct=${out.get("Content-Type")} range=${range ?? "none"} tentativas="${resumo}"`
+          `[STREAM DEBUG][STREAM RESPONSE] via=${usedModo} type=${type} ext=${finalExt} status=${found.status} ct=${out.get("Content-Type")} range=${range ?? "none"} tentativas="${resumo}"`
         );
 
         return new Response(found.body, { status: found.status, headers: out });
