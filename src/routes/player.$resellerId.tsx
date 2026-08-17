@@ -1599,8 +1599,10 @@ function LoginForm({ resellerId, settings, onLogin, primaryColor, secondaryColor
     e.preventDefault();
     if (!serverId) return toast.error("Selecione o servidor");
     loginMutation.mutate({ data: { serverId, username, password, resellerId } });
-    localStorage.setItem(`stream_player_last_server_${resellerId}`, serverId);
-    localStorage.setItem(`stream_player_last_user_${resellerId}`, username);
+    if (typeof window !== "undefined") {
+      localStorage.setItem(`stream_player_last_server_${resellerId}`, serverId);
+      localStorage.setItem(`stream_player_last_user_${resellerId}`, username);
+    }
   };
 
   return (
