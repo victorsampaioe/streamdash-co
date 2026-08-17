@@ -38,7 +38,7 @@ export function WelcomeOnboarding() {
               "DNS, SSL e IPTV Intelligence",
               "Alertas automáticos via Telegram",
               "Relatórios de instabilidade e Uptime",
-              "Hub de revendedores e rede multinível"
+              "Painel Administrativo para Revendedores"
             ].map((p) => (
               <li key={p} className="flex items-center gap-3">
                 <CheckCircle2 className="h-4 w-4 text-success shrink-0" />
