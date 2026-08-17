@@ -303,6 +303,16 @@ export const Route = createFileRoute("/api/public/core/stream")({
               return new Response(motivo, { status: res.status, headers: out });
             }
 
+            if (isHlsManifest) {
+              const body = await res.text();
+              const { manifest: rewritten, segmentos } = rewriteManifest(body, abs, token!, mode!);
+              console.log(`[HLS] manifest entregue | segments=${segmentos} | status=${res.status}`);
+              return new Response(rewritten, {
+                status: res.status,
+                headers: { ...Object.fromEntries(out), "Content-Type": "application/vnd.apple.mpegurl" },
+              });
+            }
+
             return new Response(res.body, { status: res.status, headers: out });
           } catch (e) {
             const msg = (e as Error).message;
