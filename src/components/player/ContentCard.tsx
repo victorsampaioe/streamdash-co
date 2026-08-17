@@ -1,4 +1,4 @@
-import { Play, Star, Plus, Info } from "lucide-react";
+import { Play, Star, Plus, Info, Check } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useState } from "react";
 
@@ -8,9 +8,13 @@ interface ContentCardProps {
   primaryColor?: string;
   onClick: (item: any) => void;
   onInfoClick?: (item: any) => void;
+  onPlayClick?: (item: any) => void;
+  onToggleFavorite?: (item: any) => void;
+  isFavorite?: boolean;
 }
 
-export function ContentCard({ item, type, primaryColor, onClick, onInfoClick }: ContentCardProps) {
+export function ContentCard({ item, type, primaryColor, onClick, onInfoClick, onPlayClick, onToggleFavorite, isFavorite }: ContentCardProps) {
+
   const [isHovered, setIsHovered] = useState(false);
   
   const title = item.name || item.title;
