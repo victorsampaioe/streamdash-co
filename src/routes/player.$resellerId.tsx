@@ -16,7 +16,7 @@ import {
   updatePlayerActivity
 
 } from "@/lib/player.functions";
-
+import { CORE_STREAM_VERSION } from "@/lib/core-version";
 
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
