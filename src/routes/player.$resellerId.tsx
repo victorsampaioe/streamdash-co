@@ -251,7 +251,7 @@ function PlayerPage() {
 
   // Salvar token usando profile_id fixo
   useEffect(() => {
-    if (typeof window !== "undefined") {
+    if (typeof window !== "undefined" && profileId) {
       if (token) localStorage.setItem(`stream_player_token_${profileId}`, token);
       else localStorage.removeItem(`stream_player_token_${profileId}`);
     }
