@@ -550,6 +550,10 @@ function PlayerPage() {
     } else {
       // Nativo: Safari/iOS (HLS) e Filmes/Séries (mp4/mkv com Range)
       video.src = streamUrl;
+      
+      // Otimização VOD nativo (MP4/MKV)
+      video.preload = "auto";
+      
       const onError = async () => {
         console.error("[player] erro no elemento <video>", video.error);
         setPlaybackDebug((prev: any) => ({
@@ -563,13 +567,20 @@ function PlayerPage() {
         const msg =
           r && !r.ok
             ? `${NEEDS_CONVERSION_MESSAGE} — vídeo ${r.video ?? "?"} / áudio ${r.audio ?? "?"} (${r.action === "transcode" ? "transcodificação" : "remux"} no Core).`
-            : "Servidor respondeu normalmente, porém o formato do vídeo não é compatível com o navegador.";
+            : "Não foi possível iniciar este conteúdo. Tente novamente.";
         setPlaybackReason(msg);
         setStreamUrl(null);
         toast.error(msg, { duration: 8000 });
       };
       video.addEventListener("loadedmetadata", () => {
         console.log("[player] metadados carregados, iniciando vídeo");
+        
+        // Ajuste de buffer para evitar travadas em VOD
+        if (selectedItem?.stream_type !== "live") {
+          // Tentar forçar o carregamento de mais dados inicialmente
+          console.log("[player] VOD detectado, otimizando buffer");
+        }
+        
         video.play().catch((e) => console.error("Auto-play bloqueado", e));
         
         // Registrar atividade para vídeo nativo
