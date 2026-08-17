@@ -351,6 +351,9 @@ export const Route = createFileRoute("/api/public/core/stream")({
               out.set("X-Playback-Reason", asciiHeader(motivo));
               out.set("X-Core-Error", asciiHeader(motivo));
               out.set("Content-Type", "text/plain; charset=utf-8");
+              // Erro nunca entra em cache compartilhado.
+              out.set("Cache-Control", "no-store");
+              out.delete("X-Core-Cache");
               return new Response(motivo, { status: res.status, headers: out });
             }
 
