@@ -205,7 +205,7 @@ export const Route = createFileRoute("/api/public/core/stream")({
           const t0 = Date.now();
           try {
             // Aumentar timeout para VOD (arquivos grandes)
-            const timeout = type === "live" ? 20000 : 45000;
+            const timeout = type === "live" ? 20000 : 60000;
             const res = await fetch(abs, {
               headers: h,
               redirect: "follow",
