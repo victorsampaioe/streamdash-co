@@ -330,7 +330,8 @@ export type PlaybackProbe = {
   observacao: string | null;
 };
 
-const BROWSER_PLAYABLE = new Set(["m3u8", "ts", "mp4", "m4v", "webm"]);
+const BROWSER_PLAYABLE = new Set(["m3u8", "ts", "mp4", "m4v", "webm", "m4a"]);
+const VOD_EXTENSIONS = new Set(["mp4", "mkv", "avi", "mov", "wmv", "flv", "mpg", "mpeg"]);
 
 function b64url(value: string) {
   return Buffer.from(value, "utf8").toString("base64url");

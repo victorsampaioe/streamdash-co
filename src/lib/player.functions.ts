@@ -199,7 +199,8 @@ export const getPlayerCatalog = createServerFn({ method: "POST" })
       "get_series", 
       "get_series_info", 
       "get_episodes_list",
-      "get_vod_info"
+      "get_vod_info",
+      "get_series_episodes" // Novo: para carregar apenas episódios de uma temporada/série
     ]),
     categoryId: z.string().optional(),
     contentId: z.string().optional(),

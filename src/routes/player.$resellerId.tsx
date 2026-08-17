@@ -1161,11 +1161,16 @@ function PlayerPage() {
                   
                   {isAdmin && (
                     <div className="pt-4 border-t border-white/5 space-y-2">
-                       <p className="text-[10px] text-white/40 uppercase tracking-widest font-bold">Diagnóstico Admin</p>
-                       {compat && (
-                         <p className={`font-mono text-xs ${compat.ok ? "text-emerald-400" : "text-amber-400"}`}>
-                           {compat.label}
-                         </p>
+                       <p className="text-[10px] text-white/40 uppercase tracking-widest font-bold">Diagnóstico Admin (VOD)</p>
+                       {playbackDebug && (
+                         <div className="text-[10px] text-white/60 space-y-1 text-left bg-black/40 p-3 rounded-lg border border-white/5 font-mono">
+                           <div className="flex justify-between"><span>Status HTTP:</span> <span className={playbackDebug.status === 206 ? "text-emerald-400" : "text-amber-400"}>{playbackDebug.status || "-"}</span></div>
+                           <div className="flex justify-between"><span>Range:</span> <span>{playbackDebug.contentRange || playbackDebug.acceptRanges || "Nenhum"}</span></div>
+                           <div className="flex justify-between"><span>Tamanho:</span> <span>{playbackDebug.contentLength ? `${(parseInt(playbackDebug.contentLength)/1024/1024).toFixed(1)}MB` : "-"}</span></div>
+                           <div className="flex justify-between"><span>TTFB:</span> <span>{playbackDebug.ms}ms</span></div>
+                           <div className="flex justify-between"><span>Via:</span> <span className="text-primary">{playbackDebug.via}</span></div>
+                           {playbackDebug.reason && <div className="text-red-400 mt-1 whitespace-pre-wrap">Erro: {playbackDebug.reason}</div>}
+                         </div>
                        )}
                        <div className="flex flex-wrap items-center justify-center gap-2">
                          <Button
@@ -1176,7 +1181,7 @@ function PlayerPage() {
                            onClick={() => void runCompatTest()}
                          >
                            {compatLoading ? <Loader2 className="mr-2 h-3 w-3 animate-spin" /> : <ShieldAlert className="mr-2 h-3 w-3" />}
-                           Testar compatibilidade Web
+                           Testar Compatibilidade
                          </Button>
                        </div>
                     </div>
@@ -1303,7 +1308,8 @@ function PlayerPage() {
     setStreamUrl(null);
     setCompat(null);
     setPlaybackReason("▶ Carregando conteúdo...");
-    setPlaybackDebug({ tipo: type, extensao: extension, contentId: id, status: null, via: null });
+    const started = Date.now();
+    setPlaybackDebug({ tipo: type, extensao: extension, contentId: id, status: null, via: null, started_at: started });
 
     const startCheck = Date.now();
     console.log("[PLAY]", {
