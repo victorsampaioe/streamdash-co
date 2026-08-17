@@ -1187,6 +1187,34 @@ function PlayerPage() {
       {/* Video Player */}
       {isPlaying && (
         <div className="fixed inset-0 z-[100] bg-black">
+          {/* Diagnostic HUD (Admin Only) */}
+          {isAdmin && (
+            <div className="absolute top-20 left-6 z-[120] max-w-sm pointer-events-none">
+              <div className="bg-black/80 backdrop-blur-md p-4 rounded-2xl border border-blue-500/20 text-[10px] font-mono text-blue-400 space-y-2 shadow-2xl">
+                <div className="flex items-center justify-between border-b border-white/10 pb-2 mb-2">
+                  <span className="font-black uppercase tracking-widest text-white/90">Diagnostic Mode</span>
+                  <span className="bg-blue-500/20 px-2 py-0.5 rounded text-[8px] text-blue-300">ADMIN</span>
+                </div>
+                <div className="space-y-1">
+                  <div className="flex justify-between"><span>Status HTTP:</span> <span className={playbackDebug?.status === 206 || playbackDebug?.status === 200 ? "text-emerald-400" : "text-amber-400"}>{playbackDebug?.status || "WAIT"}</span></div>
+                  <div className="flex justify-between"><span>Range:</span> <span>{playbackDebug?.contentRange || playbackDebug?.acceptRanges || "NONE"}</span></div>
+                  <div className="flex justify-between"><span>TTFB:</span> <span>{playbackDebug?.ms}ms</span></div>
+                  <div className="flex justify-between"><span>Via:</span> <span className="text-primary">{playbackDebug?.via || "RELAY"}</span></div>
+                  <div className="flex justify-between"><span>Core:</span> <span className="text-white/40">{CORE_STREAM_VERSION}</span></div>
+                  {playbackDebug?.reason && <div className="text-red-400 mt-2 bg-red-500/10 p-2 rounded border border-red-500/20 whitespace-pre-wrap">{playbackDebug.reason}</div>}
+                </div>
+                <div className="pt-2 mt-2 border-t border-white/10 flex gap-2">
+                  <button 
+                    onClick={(e) => { e.stopPropagation(); runCompatTest(); }}
+                    className="flex-1 bg-white/5 hover:bg-white/10 border border-white/10 py-1.5 rounded-lg transition-colors pointer-events-auto text-[9px] uppercase tracking-tighter"
+                  >
+                    Compatibility Test
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
           <div className="absolute top-6 left-6 z-10">
              <Button 
                variant="ghost" 
@@ -1196,83 +1224,61 @@ function PlayerPage() {
                <X className="h-6 w-6" />
              </Button>
           </div>
+          
           <div className="h-full w-full flex items-center justify-center">
              {playbackReason ? (
-                <div className="max-w-md mx-6 rounded-3xl border border-white/5 bg-white/5 backdrop-blur-xl p-10 text-center space-y-6 shadow-2xl">
+                <div className="max-w-md mx-6 rounded-3xl border border-white/5 bg-white/5 backdrop-blur-xl p-10 text-center space-y-6 shadow-2xl animate-in fade-in zoom-in duration-300">
                   <div className="mx-auto w-16 h-16 rounded-2xl bg-white/5 flex items-center justify-center border border-white/10">
                      {playbackReason.includes("Conectando") ? (
-                       <Loader2 className="h-8 w-8 text-white animate-spin" />
+                       <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
                      ) : playbackReason.includes("indisponível") ? (
                        <AlertCircle className="h-8 w-8 text-red-500" />
                      ) : (
                        <PlayCircle className="h-8 w-8 text-white/40" />
                      )}
                   </div>
-                  <p className="text-base font-medium text-white">
-                    {playbackReason.includes("indisponível") || playbackReason.includes("indisponível")
-                      ? "Conteúdo indisponível"
-                      : playbackReason.includes("lento") || playbackReason.includes("instável")
-                      ? "Servidor instável, tentando novamente..."
-                      : playbackReason.includes("Carregando")
-                      ? "Conectando ao servidor..."
-                      : "Não foi possível reproduzir este conteúdo."}
-                  </p>
+                  <div className="space-y-2">
+                    <p className="text-lg font-bold text-white tracking-tight">
+                      {playbackReason.includes("indisponível") || playbackReason.includes("indisponível")
+                        ? "Conteúdo indisponível"
+                        : playbackReason.includes("lento") || playbackReason.includes("instável")
+                        ? "O servidor está instável"
+                        : playbackReason.includes("Conectando")
+                        ? "Carregando conteúdo..."
+                        : "Falha na reprodução"}
+                    </p>
+                    <p className="text-sm text-white/40 font-medium">
+                      {playbackReason.includes("Conectando") 
+                        ? "Isso pode levar alguns segundos dependendo da sua conexão."
+                        : "Tente novamente em instantes ou selecione outro conteúdo."}
+                    </p>
+                  </div>
                   
-                  {isAdmin && showDebugHud && (
-                    <div className="pt-4 border-t border-white/5 space-y-2">
-                       <p className="text-[10px] text-white/40 uppercase tracking-widest font-bold">Diagnóstico Admin (Modo Debug)</p>
-                       {playbackDebug && (
-                         <div className="text-[10px] text-white/60 space-y-1 text-left bg-black/40 p-3 rounded-lg border border-white/5 font-mono">
-                           <div className="flex justify-between"><span>Status HTTP:</span> <span className={playbackDebug.status === 206 ? "text-emerald-400" : "text-amber-400"}>{playbackDebug.status || "-"}</span></div>
-                           <div className="flex justify-between"><span>Range:</span> <span>{playbackDebug.contentRange || playbackDebug.acceptRanges || "Nenhum"}</span></div>
-                           <div className="flex justify-between"><span>Tamanho:</span> <span>{playbackDebug.contentLength ? `${(parseInt(playbackDebug.contentLength)/1024/1024).toFixed(1)}MB` : "-"}</span></div>
-                           <div className="flex justify-between"><span>TTFB:</span> <span>{playbackDebug.ms}ms</span></div>
-                           <div className="flex justify-between"><span>Via:</span> <span className="text-primary">{playbackDebug.via}</span></div>
-                           <div className="flex justify-between"><span>FE:</span> <span className="text-white/40">{feVersion}</span></div>
-                           <div className="flex justify-between"><span>Core:</span> <span className="text-white/40">{CORE_STREAM_VERSION}</span></div>
-                           {playbackDebug.reason && <div className="text-red-400 mt-1 whitespace-pre-wrap">Erro: {playbackDebug.reason}</div>}
-                         </div>
-                       )}
-                       <div className="flex flex-wrap items-center justify-center gap-2">
-                         <Button
-                           variant="outline"
-                           size="sm"
-                           className="h-8 border-white/10 bg-white/5 text-white text-[10px]"
-                           disabled={compatLoading}
-                           onClick={() => void runCompatTest()}
-                         >
-                           {compatLoading ? <Loader2 className="mr-2 h-3 w-3 animate-spin" /> : <ShieldAlert className="mr-2 h-3 w-3" />}
-                           Testar Compatibilidade Web
-                         </Button>
-                       </div>
-                    </div>
-                  )}
-                  
-                  {!playbackReason.includes("Carregando") && (
+                  {!playbackReason.includes("Conectando") && (
                     <Button 
-                      variant="ghost" 
+                      variant="outline" 
                       onClick={() => setIsPlaying(false)}
-                      className="text-white/60 hover:text-white"
+                      className="border-white/10 text-white/60 hover:text-white hover:bg-white/5 w-full rounded-xl py-6"
                     >
-                      Voltar para o catálogo
+                      Voltar ao catálogo
                     </Button>
                   )}
                 </div>
              ) : !streamUrl ? (
-                <div className="flex flex-col items-center gap-4">
-                  <Loader2 className="h-10 w-10 text-white animate-spin opacity-20" />
-                  <p className="text-white/40 text-sm font-black uppercase tracking-widest">Conectando...</p>
+                <div className="flex flex-col items-center gap-6 animate-pulse">
+                  <div className="w-12 h-12 border-4 border-primary/20 border-t-primary rounded-full animate-spin" />
+                  <p className="text-white/40 text-xs font-black uppercase tracking-[0.3em]">Conectando ao Stream</p>
                 </div>
              ) : (
-                 <video 
-                   ref={videoRef}
-                   className="w-full h-full max-h-screen"
-                   controls
-                   autoPlay
-                   playsInline
-                   preload="auto"
-                   crossOrigin="anonymous"
-                 />
+                  <video 
+                    ref={videoRef}
+                    className="w-full h-full max-h-screen object-contain"
+                    controls
+                    autoPlay
+                    playsInline
+                    preload="auto"
+                    crossOrigin="anonymous"
+                  />
              )}
           </div>
 

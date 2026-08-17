@@ -68,7 +68,7 @@ function rewriteManifest(manifest: string, upstreamUrl: string, token: string, m
       // Assinatura de cada segmento para permitir acesso à CDN final
       const p = new URLSearchParams({
         token,
-        mode,
+        mode: mode || "proxy",
         type: "live",
         ext: segExt,
         via: "core", 
@@ -167,6 +167,7 @@ export const Route = createFileRoute("/api/public/core/stream")({
             });
 
           let abs: string;
+          const modeKind = url.searchParams.get("mode") ?? "proxy";
           try {
             abs = b64urlDecode(passthrough);
             new URL(abs);
@@ -217,7 +218,7 @@ export const Route = createFileRoute("/api/public/core/stream")({
           try {
             // Otimização VOD: timeout maior e blocos eficientes
             const isVod = type === "movie" || type === "series";
-            const isHlsManifest = ext === "m3u8";
+            const isHlsManifest = ext === "m3u8" || (type === "live" && !ext.includes("ts"));
             const timeout = isVod ? 60000 : 30000;
             
             if (isHlsManifest) {
@@ -228,8 +229,20 @@ export const Route = createFileRoute("/api/public/core/stream")({
               headers: h,
               redirect: "follow",
               signal: AbortSignal.timeout(timeout),
-              keepalive: true, // Conexão persistente entre Core e Upstream
+              keepalive: true,
             });
+
+            // LOG DE DIAGNÓSTICO PROFUNDO [STREAM DEBUG]
+            console.log(`[STREAM DEBUG]
+- URL original: ${maskMedia(abs)}
+- URL enviada para Core: ${request.url}
+- HTTP upstream: ${res.status}
+- Content-Type: ${res.headers.get("content-type") ?? "unknown"}
+- Content-Length: ${res.headers.get("content-length") ?? "unknown"}
+- Range solicitado: ${range ?? "none"}
+- Range devolvido: ${res.headers.get("content-range") ?? "none"}
+- UA utilizado: ${uaKind}
+`);
 
             const out = new Headers({ ...CORS, ...VER });
             for (const k of ["Content-Type", "Content-Range", "Content-Length", "Accept-Ranges"]) {
@@ -291,6 +304,27 @@ export const Route = createFileRoute("/api/public/core/stream")({
               return new Response(motivo, { status: res.status, headers: out });
             }
 
+            if (isHlsManifest) {
+              const body = await res.text();
+              const { manifest: rewritten, segmentos } = rewriteManifest(body, abs, token!, modeKind as any);
+              console.log(`[HLS] manifest entregue | segments=${segmentos} | status=${res.status}`);
+              return new Response(rewritten, {
+                status: res.status,
+                headers: { ...Object.fromEntries(out), "Content-Type": "application/vnd.apple.mpegurl" },
+              });
+            }
+
+            // Se o Content-Type upstream for text/html ou similar e for live,
+            // pode ser um redirecionamento ou página de erro 403 mas com status 200.
+            if (res.status === 200 && /text\/html/.test(res.headers.get("content-type") || "")) {
+               const html = await res.text();
+               if (html.includes("403") || html.includes("Forbidden")) {
+                  const msg = `Upstream retornou página 403 (Forbidden) disfarçada de 200 com UA=${uaKind}`;
+                  out.set("X-Core-Error", msg);
+                  return new Response(msg, { status: 403, headers: out });
+               }
+            }
+            
             return new Response(res.body, { status: res.status, headers: out });
           } catch (e) {
             const msg = (e as Error).message;
@@ -366,25 +400,32 @@ export const Route = createFileRoute("/api/public/core/stream")({
           const folder = type === "live" ? "live" : type === "movie" ? "movie" : "series";
           const user = encodeURIComponent(creds.username);
           const pass = encodeURIComponent(creds.password);
+          
+          // Ordem de candidatos otimizada para compatibilidade
           candidates = hostCandidates(server.host).flatMap((base) => {
-            const paths =
-              type === "live"
-                ? [`live/${user}/${pass}/${sid}.m3u8`, `${user}/${pass}/${sid}.m3u8`, `live/${user}/${pass}/${sid}.ts`]
-                : [`${folder}/${user}/${pass}/${sid}.${ext}`, `${folder}/${user}/${pass}/${sid}.mp4`];
-            return paths.map((p) => `${base}/${p}`);
+            if (type === "live") {
+              // Alguns painéis exigem output=ts explicitamente ou caminhos sem pasta /live/
+              return [
+                `${base}/live/${user}/${pass}/${sid}.ts`,
+                `${base}/live/${user}/${pass}/${sid}.m3u8`,
+                `${base}/${user}/${pass}/${sid}.ts`,
+                `${base}/live/${user}/${pass}/${sid}`,
+                `${base}/${user}/${pass}/${sid}`
+              ];
+            }
+            return [`${base}/${folder}/${user}/${pass}/${sid}.${ext}`, `${base}/${folder}/${user}/${pass}/${sid}.mp4`];
           });
         }
-        candidates = candidates.slice(0, 6);
+        candidates = [...new Set(candidates)].slice(0, 8);
 
         /* --------- Escalonamento de modos (browser → CORE-VLC) ------ */
         type Tentativa = { modo: Modo; status: number | null; motivo: string | null; ms: number };
         const tentativas: Tentativa[] = [];
         let upstream: Response | null = null;
         let usedUrl = "";
-        let usedModo: Modo = "PAINEL";
         let coreWorkerVersion: string | null = null;
-        // Modo solicitado explicitamente (ex.: segmentos HLS mantêm o modo do manifesto).
         const modeParam = (url.searchParams.get("mode") || "").toUpperCase();
+        let usedModo: Modo = modeParam.includes("CORE") ? (modeParam as Modo) : "PAINEL";
         
         // MP4/MOV: forçamos Core por padrão para garantir Range 206, exceto se mode for PAINEL
         const isVodMp4 = type === "movie" || type === "series";
@@ -539,7 +580,7 @@ export const Route = createFileRoute("/api/public/core/stream")({
         }
 
         const upstreamType = found.headers.get("Content-Type");
-        const isManifest = /mpegurl|m3u/i.test(upstreamType ?? "") || /\.m3u8(\?|$)/i.test(usedUrl);
+        const isManifest = /mpegurl|m3u/i.test(upstreamType ?? "") || /\.m3u8(\?|$)/i.test(usedUrl) || type === "live";
 
         // Manifesto HLS → segmentos passam pelo mesmo modo que funcionou.
         if (isManifest) {
@@ -584,7 +625,7 @@ export const Route = createFileRoute("/api/public/core/stream")({
         // conter H265/AC3/DTS que o navegador não decodifica
         // (DEMUXER_ERROR_NO_SUPPORTED_STREAMS). Só na primeira faixa do arquivo.
         const primeiraFaixa = !range || /^bytes=0-/.test(range);
-        if (type !== "live" && primeiraFaixa) {
+        if (type !== "live" && primeiraFaixa && !isManifest) {
           const { probeCodecs } = await import("@/lib/codec-probe.server");
           const info = await probeCodecs(usedUrl, finalExt, usedModo.includes("VLC") ? UA_VLC : UA_PLAYER);
           if (info) {
