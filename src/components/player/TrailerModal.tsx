@@ -1,6 +1,8 @@
 import { X, Loader2, Film } from "lucide-react";
+import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { getTMDBMetadata } from "@/lib/player.functions";
+import { markEmbedBlocked, pickEmbeddableKey } from "@/lib/youtube-embed";
 
 interface TrailerModalProps {
   isOpen: boolean;
@@ -12,6 +14,8 @@ interface TrailerModalProps {
 /**
  * Trailer sob demanda: só busca no TMDB e só carrega o iframe
  * depois que o usuário abre o modal (zero consumo de banda na Home).
+ * Só exibe trailers que permitem incorporação — os bloqueados nunca
+ * chegam a virar iframe quebrado.
  */
 export function TrailerModal({ isOpen, onClose, title, type }: TrailerModalProps) {
   const cleanTitle = (title || "")
@@ -27,9 +31,37 @@ export function TrailerModal({ isOpen, onClose, title, type }: TrailerModalProps
     staleTime: 1000 * 60 * 60 * 24,
   });
 
+  const [key, setKey] = useState<string | null>(null);
+  const [checking, setChecking] = useState(false);
+
+  useEffect(() => {
+    let alive = true;
+    if (!isOpen || !data) {
+      setKey(null);
+      return;
+    }
+    const meta = data as any;
+    const candidates: string[] = meta?.trailer_candidates?.length
+      ? meta.trailer_candidates
+      : meta?.trailer_key
+        ? [meta.trailer_key]
+        : [];
+    if (!candidates.length) {
+      setKey(null);
+      return;
+    }
+    setChecking(true);
+    pickEmbeddableKey(candidates)
+      .then((found) => alive && setKey(found))
+      .finally(() => alive && setChecking(false));
+    return () => {
+      alive = false;
+    };
+  }, [isOpen, data]);
+
   if (!isOpen) return null;
 
-  const key = (data as any)?.trailer_key;
+  const carregando = isLoading || checking;
 
   return (
     <div className="fixed inset-0 z-[110] flex items-center justify-center p-4">
@@ -44,7 +76,7 @@ export function TrailerModal({ isOpen, onClose, title, type }: TrailerModalProps
         </button>
 
         <div className="aspect-video w-full flex items-center justify-center bg-black">
-          {isLoading ? (
+          {carregando ? (
             <div className="flex flex-col items-center gap-3 text-white/50">
               <Loader2 className="h-6 w-6 animate-spin" />
               <span className="text-xs font-bold uppercase tracking-[0.25em]">Buscando trailer</span>
@@ -57,6 +89,10 @@ export function TrailerModal({ isOpen, onClose, title, type }: TrailerModalProps
               allow="accelerometer; autoplay; encrypted-media; picture-in-picture; fullscreen"
               allowFullScreen
               loading="lazy"
+              onError={() => {
+                markEmbedBlocked(key);
+                setKey(null);
+              }}
             />
           ) : (
             <div className="flex flex-col items-center gap-3 text-white/40">
