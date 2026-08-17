@@ -593,6 +593,9 @@ export const Route = createFileRoute("/api/public/core/stream")({
               console.log(
                 `[STREAM DEBUG][STREAM ATTEMPT][${modo}] url=${maskMedia(candidate)} ua=${uaKind} core_status=${res.status} upstream=${upstreamStatus} ct=${res.headers.get("content-type") ?? "-"} worker=${coreWorkerVersion ?? "sem versão"} erro=${res.headers.get("X-Core-Error") ?? "-"} tempo=${Date.now() - t0}ms`
               );
+              console.log(
+                `[UPSTREAM RESPONSE] modo=${modo} status=${res.status} content-type=${res.headers.get("content-type") ?? "-"} upstream-status=${upstreamStatus} url=${maskMedia(candidate)}`
+              );
               if (res.ok || res.status === 206) {
                 upstream = res;
                 usedUrl = candidate;
