@@ -1558,8 +1558,10 @@ function LoginForm({ resellerId, settings, onLogin, primaryColor, secondaryColor
   const [serverId, setServerId] = useState("");
   
   useEffect(() => {
-    setUsername(localStorage.getItem(`stream_player_last_user_${resellerId}`) || "");
-    setServerId(localStorage.getItem(`stream_player_last_server_${resellerId}`) || "");
+    if (typeof window !== "undefined") {
+      setUsername(localStorage.getItem(`stream_player_last_user_${resellerId}`) || "");
+      setServerId(localStorage.getItem(`stream_player_last_server_${resellerId}`) || "");
+    }
   }, [resellerId]);
   const [servers, setServers] = useState<any[]>([]);
   const [diagnosing, setDiagnosing] = useState(false);
