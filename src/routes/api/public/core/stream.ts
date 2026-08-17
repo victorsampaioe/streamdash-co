@@ -167,6 +167,7 @@ export const Route = createFileRoute("/api/public/core/stream")({
             });
 
           let abs: string;
+          const modeKind = url.searchParams.get("mode") ?? "proxy";
           try {
             abs = b64urlDecode(passthrough);
             new URL(abs);
