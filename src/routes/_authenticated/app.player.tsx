@@ -78,6 +78,7 @@ function PlayerAdminPage() {
     saveMutation.mutate({
       data: {
         brand_name: brandName,
+        slug: slug || null,
         logo_url: logoUrl || null,
         primary_color: primaryColor,
         secondary_color: secondaryColor,
