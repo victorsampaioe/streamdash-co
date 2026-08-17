@@ -1459,7 +1459,7 @@ function PlayerPage() {
         // Se o probe falhar mas o player puder tentar direto, tentamos
         console.warn("[PLAY] probe falhou, tentando tocar assim mesmo");
         setPlaybackReason(null);
-        setStreamUrl(url);
+        setStreamUrl(`${url}${url.includes("?") ? "&" : "?"}forceCore=1`);
       }
     }).catch(err => {
       clearTimeout(timeoutId);
