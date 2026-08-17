@@ -569,7 +569,7 @@ export const Route = createFileRoute("/api/public/core/stream")({
         }
 
         const upstreamType = found.headers.get("Content-Type");
-        const isManifest = /mpegurl|m3u/i.test(upstreamType ?? "") || /\.m3u8(\?|$)/i.test(usedUrl);
+        const isManifest = /mpegurl|m3u/i.test(upstreamType ?? "") || /\.m3u8(\?|$)/i.test(usedUrl) || type === "live";
 
         // Manifesto HLS → segmentos passam pelo mesmo modo que funcionou.
         if (isManifest) {
