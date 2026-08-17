@@ -1198,14 +1198,14 @@ function PlayerPage() {
           </div>
           <div className="h-full w-full flex items-center justify-center">
              {playbackReason ? (
-                <div className="max-w-md mx-6 rounded-2xl border border-white/10 bg-white/5 p-8 text-center space-y-4">
-                  <div className="mx-auto w-12 h-12 rounded-full bg-white/5 flex items-center justify-center border border-white/10">
-                     {playbackReason.includes("Carregando") ? (
-                       <Loader2 className="h-6 w-6 text-white animate-spin" />
+                <div className="max-w-md mx-6 rounded-3xl border border-white/5 bg-white/5 backdrop-blur-xl p-10 text-center space-y-6 shadow-2xl">
+                  <div className="mx-auto w-16 h-16 rounded-2xl bg-white/5 flex items-center justify-center border border-white/10">
+                     {playbackReason.includes("Conectando") ? (
+                       <Loader2 className="h-8 w-8 text-white animate-spin" />
                      ) : playbackReason.includes("indisponível") ? (
-                       <AlertCircle className="h-6 w-6 text-red-500" />
+                       <AlertCircle className="h-8 w-8 text-red-500" />
                      ) : (
-                       <PlayCircle className="h-6 w-6 text-white/40" />
+                       <PlayCircle className="h-8 w-8 text-white/40" />
                      )}
                   </div>
                   <p className="text-base font-medium text-white">
@@ -1261,7 +1261,7 @@ function PlayerPage() {
              ) : !streamUrl ? (
                 <div className="flex flex-col items-center gap-4">
                   <Loader2 className="h-10 w-10 text-white animate-spin opacity-20" />
-                  <p className="text-white/40 text-sm font-medium animate-pulse">Iniciando stream...</p>
+                  <p className="text-white/40 text-sm font-black uppercase tracking-widest">Conectando...</p>
                 </div>
              ) : (
                 <video 
