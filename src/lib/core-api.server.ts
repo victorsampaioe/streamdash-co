@@ -301,6 +301,8 @@ export async function runOnCore<T>(
     return await local();
   }
   try {
+    // Se force=true, tentamos o callCore mesmo que useCore(task) retorne false
+    // (ex: forçar detalhes de séries pelo Core AWS para bypassar WAF do painel)
     return await callCore<T>(task, payload);
   } catch (e) {
     console.warn(`[core-api] fallback local para "${task}":`, (e as Error)?.message);
