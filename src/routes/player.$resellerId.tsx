@@ -82,7 +82,9 @@ export const Route = createFileRoute("/player/$resellerId")({
       data: isUuid ? { profileId: params.resellerId } : { slug: params.resellerId } 
     });
     
-    if (!settings) throw new Error("Revendedor não encontrado");
+    if (!settings) {
+      return { settings: null };
+    }
     return { settings };
   },
   component: PlayerPage,
