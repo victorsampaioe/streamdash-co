@@ -1510,9 +1510,7 @@ export async function getSeriesDataOnCore(serverId: string, seriesId: string, se
   if (!creds.username || !creds.password) throw new Error("Credenciais IPTV não configuradas");
 
   const auth = `username=${encodeURIComponent(creds.username)}&password=${encodeURIComponent(creds.password)}`;
-  // Se seasonNum for informado, retornamos apenas aquela temporada.
-  // Caso contrário, retornamos os dados básicos da série.
-  const action = seasonNum ? "get_series_info" : "get_series_info"; 
+  const action = "get_series_info"; 
   const url = `http://${server.host}/player_api.php?${auth}&action=${action}&series_id=${seriesId}`;
   
   const res = await fetch(url, { headers: { "user-agent": UA_PLAYER } });
