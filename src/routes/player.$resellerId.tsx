@@ -1453,7 +1453,7 @@ function PlayerPage() {
           setStreamUrl(null);
         } else {
           setPlaybackReason(null);
-          setStreamUrl(url);
+          setStreamUrl(`${url}${url.includes("?") ? "&" : "?"}forceCore=1`);
         }
       } catch (e) {
         // Se o probe falhar mas o player puder tentar direto, tentamos
