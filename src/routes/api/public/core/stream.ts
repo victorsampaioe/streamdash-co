@@ -341,6 +341,17 @@ export const Route = createFileRoute("/api/public/core/stream")({
               );
             }
 
+            if (type === "live" && !isHlsManifest) {
+              logLiveSegment({
+                url: abs,
+                status: res.status,
+                contentType: upstreamContentType,
+                contentLength: res.headers.get("content-length"),
+                ua: uaKind,
+                ms: Date.now() - t0,
+              });
+            }
+
             if (isHlsManifest) {
               console.log(`[HLS] manifesto recebido: status=${res.status} ct=${upstreamContentType} tempo=${Date.now() - t0}ms`);
             }
