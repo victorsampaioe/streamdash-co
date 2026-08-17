@@ -249,8 +249,10 @@ function PlayerPage() {
 
   // Salvar token usando profile_id fixo
   useEffect(() => {
-    if (token) localStorage.setItem(`stream_player_token_${profileId}`, token);
-    else localStorage.removeItem(`stream_player_token_${profileId}`);
+    if (typeof window !== "undefined") {
+      if (token) localStorage.setItem(`stream_player_token_${profileId}`, token);
+      else localStorage.removeItem(`stream_player_token_${profileId}`);
+    }
   }, [token, profileId]);
 
   // Carregar dados da Home
