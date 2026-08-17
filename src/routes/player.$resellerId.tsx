@@ -1132,7 +1132,7 @@ function PlayerPage() {
       
       {isSeriesOpen && selectedSeriesInfo && (
         <SeriesDetails 
-          isOpen={true}
+          series={selectedSeriesInfo.info}
           info={selectedSeriesInfo}
           loading={loadingSeries}
           
