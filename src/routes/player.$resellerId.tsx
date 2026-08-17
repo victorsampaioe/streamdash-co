@@ -965,6 +965,8 @@ function PlayerPage() {
               onPlay={(item: any) => handlePlay(item.stream_id, "live", item)}
             />
 
+            <PlatformHighlights primaryColor={primaryColor} />
+
             <AppDownloadCard primaryColor={primaryColor} apkUrl={(settings as any)?.apk_url ?? null} />
 
           </div>
