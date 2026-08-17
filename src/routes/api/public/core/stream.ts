@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { createHmac, timingSafeEqual } from "crypto";
 import { CORE_STREAM_VERSION } from "@/lib/core-version";
+import { readSegmentCacheEnv, segmentCacheDecision } from "@/lib/stream-cache";
 
 const CORS = {
   "Access-Control-Allow-Origin": "*",
