@@ -49,9 +49,9 @@ function DnsPage() {
           </div>
           <div className="space-y-4">
             <h2 className="text-2xl font-bold flex items-center gap-2">
-              <CheckCircle2 className="text-primary" /> Hub de Ferramentas
+              <CheckCircle2 className="text-primary" /> Ferramentas Integradas
             </h2>
-            <p className="text-muted-foreground">Acesse ferramentas integradas de WHOIS, DNS Lookup, Ping Global e geradores de segurança diretamente no seu painel.</p>
+            <p className="text-muted-foreground">Acesse ferramentas de WHOIS, DNS Lookup, Ping Global e geradores de segurança diretamente no seu painel.</p>
           </div>
         </div>
 
