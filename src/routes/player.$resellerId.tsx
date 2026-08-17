@@ -1433,6 +1433,7 @@ function PlayerPage() {
       }
 
       setSelectedSeriesInfo(data);
+      setIsSeriesOpen(true);
     } catch (err: any) {
       console.error("[PLAYER_DEBUG] erro ao carregar série", {
         content_id: seriesId,
