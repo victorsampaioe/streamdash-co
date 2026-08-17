@@ -97,6 +97,8 @@ function PlayerPage() {
   const [playbackReason, setPlaybackReason] = useState<string | null>(null);
   // HUD temporário de diagnóstico de reprodução (remover após validação)
   const [playbackDebug, setPlaybackDebug] = useState<any>(null);
+  // Versão do Frontend (para conferência em produção)
+  const [feVersion] = useState("2026.08.17-fe-v1");
   // Teste de compatibilidade Web (codec real analisado no Core)
   const [compat, setCompat] = useState<WebCompatResult | null>(null);
   const [compatLoading, setCompatLoading] = useState(false);
