@@ -264,7 +264,7 @@ export const Route = createFileRoute("/api/public/core/stream")({
             }
 
             console.log(
-              `[UPSTREAM IPTV] url=${maskMedia(abs)} ua=${uaKind} status=${res.status} content-type=${upstreamContentType ?? "-"} range=${range ?? "none"} content-range=${res.headers.get("content-range") ?? "-"} tempo=${Date.now() - t0}ms`
+              `[STREAM DEBUG][UPSTREAM IPTV] url=${maskMedia(abs)} ua=${uaKind} status=${res.status} content-type=${upstreamContentType ?? "-"} range=${range ?? "none"} content-range=${res.headers.get("content-range") ?? "-"} tempo=${Date.now() - t0}ms`
             );
 
             if (!res.ok && res.status !== 206) {
