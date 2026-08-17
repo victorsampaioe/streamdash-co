@@ -102,9 +102,11 @@ function useNavItems() {
     },
   });
 
-  const isAdmin = userRoles?.includes('admin');
+  const isMaster = userRoles?.some(r => r === 'admin') || subData?.profile?.email === 'victorsampaio133@gmail.com';
+  
+  const navIsAdmin = isMaster;
   const isResellerRole = userRoles?.includes('reseller') || userRoles?.includes('sub_reseller');
-  const isResellerOrAdmin = isAdmin || isResellerRole || !!subData?.profile?.is_reseller;
+  const isResellerOrAdmin = navIsAdmin || isResellerRole || !!subData?.profile?.is_reseller;
 
   const items = [
     { to: "/app", label: "Dashboard", icon: LayoutDashboard, exact: true },
@@ -114,7 +116,7 @@ function useNavItems() {
     { to: "/app/radar", label: "Radar Brasil", icon: Radio },
     { to: "/app/detector", label: "Detector", icon: ShieldAlert },
     { to: "/app/inteligencia", label: "Inteligência de Conteúdo", icon: Sparkles },
-    ...(isAdmin ? [{ to: "/app/player", label: "Web Player", icon: LayoutDashboard }] : []),
+    ...(navIsAdmin ? [{ to: "/app/player", label: "Web Player", icon: LayoutDashboard }] : []),
     
     
     { to: "/app/ranking", label: "Ranking", icon: Trophy },
@@ -134,7 +136,7 @@ function useNavItems() {
   items.push({ to: "/app/ai-integration", label: "Integração IA", icon: Bot });
   items.push({ to: "/app/ajuda", label: "Central de Ajuda", icon: BookOpen });
 
-  if (isAdmin) {
+  if (navIsAdmin) {
     items.push({ to: "/app/admin", label: "Admin", icon: Users });
   }
   return items;

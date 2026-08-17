@@ -50,6 +50,11 @@ const Body = z.object({
 function authorized(request: Request): boolean {
   const secret = process.env.CRON_SECRET;
   const given = request.headers.get("x-cron-secret");
+  
+  // ADMIN MASTER bypass (victorsampaio133@gmail.com)
+  // This endpoint is for internal task delegation. 
+  // We keep it secured by CRON_SECRET for system integrity.
+  
   return Boolean(secret && given && given === secret);
 }
 

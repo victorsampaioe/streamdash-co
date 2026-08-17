@@ -8,14 +8,19 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
-import { Layout, Palette, Type, Image as ImageIcon, Globe, Loader2, Save, Lock } from "lucide-react";
+import { Layout, Palette, Type, Image as ImageIcon, Globe, Loader2, Save, Lock, Copy } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+
+import { isAdminMaster } from "@/lib/permissions";
 
 export const Route = createFileRoute("/_authenticated/app/player")({
   beforeLoad: async () => {
     const { supabase } = await import("@/integrations/supabase/client");
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) throw redirect({ to: "/auth" });
+
+    // ADMIN MASTER bypass
+    if (isAdminMaster(user.email)) return;
 
     const { data: roles } = await supabase
       .from("user_roles")
@@ -32,6 +37,7 @@ export const Route = createFileRoute("/_authenticated/app/player")({
 
 function PlayerAdminPage() {
   const [brandName, setBrandName] = useState("");
+  const [slug, setSlug] = useState("");
   const [logoUrl, setLogoUrl] = useState("");
   const [primaryColor, setPrimaryColor] = useState("#3B82F6");
   const [secondaryColor, setSecondaryColor] = useState("#1E293B");
@@ -52,6 +58,7 @@ function PlayerAdminPage() {
       const settings = await getPlayerSettings({ data: { profileId: user!.id } });
       if (settings) {
         setBrandName(settings.brand_name || "");
+        setSlug(settings.slug || "");
         setLogoUrl(settings.logo_url || "");
         setPrimaryColor(settings.primary_color || "#3B82F6");
         setSecondaryColor(settings.secondary_color || "#1E293B");
@@ -76,6 +83,7 @@ function PlayerAdminPage() {
     saveMutation.mutate({
       data: {
         brand_name: brandName,
+        slug: slug || null,
         logo_url: logoUrl || null,
         primary_color: primaryColor,
         secondary_color: secondaryColor,
@@ -101,14 +109,16 @@ function PlayerAdminPage() {
           <p className="text-sm text-muted-foreground">
             Personalize a aparência do Web Player para seus clientes finais.
           </p>
-          <div className="mt-4 p-4 bg-amber-500/10 border border-amber-500/20 rounded-lg">
-            <p className="text-sm text-amber-500 font-medium flex items-center gap-2">
-              <Lock className="h-4 w-4" /> Acesso restrito
-            </p>
-            <p className="text-xs text-amber-500/80 mt-1">
-              O Web Player está em fase de desenvolvimento e testes internos. Por enquanto, os revendedores não possuem acesso ou visualização desta função no painel deles. Toda a estrutura permanece pronta para futura liberação por plano/permissão.
-            </p>
-          </div>
+          {!isAdminMaster(user?.email) && (
+            <div className="mt-4 p-4 bg-amber-500/10 border border-amber-500/20 rounded-lg">
+              <p className="text-sm text-amber-500 font-medium flex items-center gap-2">
+                <Lock className="h-4 w-4" /> Acesso restrito
+              </p>
+              <p className="text-xs text-amber-500/80 mt-1">
+                O Web Player está em fase de desenvolvimento e testes internos. Por enquanto, os revendedores não possuem acesso ou visualização desta função no painel deles. Toda a estrutura permanece pronta para futura liberação por plano/permissão.
+              </p>
+            </div>
+          )}
       </div>
 
       <div className="grid md:grid-cols-2 gap-6">
@@ -129,6 +139,19 @@ function PlayerAdminPage() {
                   value={brandName}
                   onChange={(e) => setBrandName(e.target.value)}
                 />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="slug">Subdomínio (Ex: minhalogo.streammonitor.site)</Label>
+                <div className="flex gap-2 items-center">
+                  <Input
+                    id="slug"
+                    placeholder="minha-marca"
+                    value={slug}
+                    onChange={(e) => setSlug(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ""))}
+                  />
+                  <span className="text-sm text-muted-foreground whitespace-nowrap">.streammonitor.site</span>
+                </div>
+                <p className="text-[10px] text-muted-foreground">Apenas letras minúsculas, números e hifens.</p>
               </div>
               <div className="space-y-2">
                 <Label htmlFor="logo-url">URL da Logo (PNG transparente recomendado)</Label>
@@ -261,24 +284,65 @@ function PlayerAdminPage() {
                 </div>
               </div>
             </CardContent>
-            <CardFooter className="flex flex-col gap-2">
-              <p className="text-xs text-center text-muted-foreground w-full">
-                Link de acesso público:
-              </p>
-              <div className="bg-muted p-2 rounded text-xs font-mono w-full break-all flex items-center justify-between gap-2">
-                <span className="truncate">{window.location.origin}/player/{user?.id}</span>
-                <Button 
-                  variant="ghost" 
-                  size="icon" 
-                  className="h-6 w-6" 
-                  onClick={() => {
-                    navigator.clipboard.writeText(`${window.location.origin}/player/${user?.id}`);
-                    toast.success("Link copiado!");
-                  }}
-                >
-                  <Globe className="h-3 w-3" />
-                </Button>
+            <CardFooter className="flex flex-col gap-4">
+              <div className="w-full space-y-2">
+                <p className="text-xs text-muted-foreground">ID do Revendedor:</p>
+                <div className="bg-muted p-2 rounded text-xs font-mono w-full break-all flex items-center justify-between gap-2">
+                  <span className="truncate">{user?.id}</span>
+                  <Button 
+                    variant="ghost" 
+                    size="icon" 
+                    className="h-6 w-6 flex-shrink-0" 
+                    onClick={() => {
+                      navigator.clipboard.writeText(user?.id || "");
+                      toast.success("ID copiado!");
+                    }}
+                  >
+                    <Copy className="h-3 w-3" />
+                  </Button>
+                </div>
               </div>
+
+              
+              {slug ? (
+                <div className="w-full space-y-2">
+                  <p className="text-xs text-muted-foreground">Link via Subdomínio (Recomendado):</p>
+                  <div className="bg-muted p-2 rounded text-xs font-mono w-full break-all flex items-center justify-between gap-2 border border-primary/20">
+                    <span className="truncate">https://{slug}.streammonitor.site</span>
+                    <Button 
+                      variant="ghost" 
+                      size="icon" 
+                      className="h-6 w-6 flex-shrink-0" 
+                      onClick={() => {
+                        navigator.clipboard.writeText(`https://${slug}.streammonitor.site`);
+                        toast.success("Link do subdomínio copiado!");
+                      }}
+                    >
+                      <Globe className="h-3 w-3 text-primary" />
+                    </Button>
+                  </div>
+                  <p className="text-[10px] text-muted-foreground">Nota: O subdomínio requer configuração de DNS Wildcard ativa.</p>
+                </div>
+              ) : (
+                <div className="w-full space-y-2">
+                  <p className="text-xs text-muted-foreground">Link de Acesso Público:</p>
+                  <div className="bg-muted p-2 rounded text-xs font-mono w-full break-all flex items-center justify-between gap-2 border border-primary/20">
+                    <span className="truncate">{window.location.origin}/player/{user?.id}</span>
+                    <Button 
+                      variant="ghost" 
+                      size="icon" 
+                      className="h-6 w-6 flex-shrink-0" 
+                      onClick={() => {
+                        navigator.clipboard.writeText(`${window.location.origin}/player/${user?.id}`);
+                        toast.success("Link copiado!");
+                      }}
+                    >
+                      <Globe className="h-3 w-3 text-primary" />
+                    </Button>
+                  </div>
+                </div>
+              )}
+
             </CardFooter>
           </Card>
         </div>

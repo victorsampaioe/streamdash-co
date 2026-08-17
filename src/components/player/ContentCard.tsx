@@ -29,10 +29,10 @@ export function ContentCard({ item, type, primaryColor, onClick, onInfoClick }: 
     >
       <div 
         className={cn(
-          "relative overflow-hidden rounded-xl bg-neutral-900 shadow-lg cursor-pointer transition-all duration-500",
-          isHovered ? "ring-2 scale-110 -translate-y-2 shadow-2xl shadow-black/50" : "scale-100"
+          "relative overflow-hidden rounded-xl bg-neutral-900 shadow-lg cursor-pointer transition-all duration-300",
+          isHovered ? "ring-2 ring-primary shadow-2xl" : "scale-100"
         )}
-        style={isHovered ? { borderColor: primaryColor, boxShadow: `0 20px 25px -5px rgb(0 0 0 / 0.5), 0 0 0 2px ${primaryColor}` } : {}}
+        style={isHovered ? { borderColor: primaryColor } : {}}
         onClick={() => onClick(item)}
 
       >
@@ -44,7 +44,7 @@ export function ContentCard({ item, type, primaryColor, onClick, onInfoClick }: 
             <img 
               src={image} 
               alt={title} 
-              className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+              className="w-full h-full object-cover"
               loading="lazy"
             />
           ) : (
@@ -60,7 +60,7 @@ export function ContentCard({ item, type, primaryColor, onClick, onInfoClick }: 
           isHovered ? "opacity-100" : "opacity-0"
         )}>
           <div 
-            className="h-12 w-12 rounded-full bg-primary flex items-center justify-center text-white shadow-xl transform transition-transform duration-300 scale-90 hover:scale-110"
+            className="h-12 w-12 rounded-full bg-primary flex items-center justify-center text-white shadow-xl transform transition-all active:scale-90"
             style={{ backgroundColor: primaryColor }}
           >
             <Play className="h-6 w-6 fill-white ml-1" />
@@ -89,16 +89,14 @@ export function ContentCard({ item, type, primaryColor, onClick, onInfoClick }: 
         )} style={isHovered ? { color: primaryColor } : {}}>
           {title}
         </h3>
-        <div className="flex items-center gap-2 text-[10px] text-white/40 mt-0.5 font-medium">
+        <div className="flex items-center gap-1.5 text-[10px] text-white/40 mt-0.5 font-medium">
           {rating && rating > 0 && (
             <span className="flex items-center gap-0.5 text-yellow-500">
               <Star className="h-3 w-3 fill-yellow-500" />
-              {rating}
+              {Number(rating || 0).toFixed(1)}
             </span>
           )}
-          {year && <span>{year}</span>}
-          {type === "movie" && <span>Filme</span>}
-          {type === "series" && <span>Série</span>}
+          {year && <span>· {year}</span>}
         </div>
       </div>
     </div>

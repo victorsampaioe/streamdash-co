@@ -34,7 +34,7 @@ export function HeroBanner({ items = [], item: fallbackItem, onPlay, onMyList, p
   const year = item.year || (item.releaseDate ? new Date(item.releaseDate).getFullYear() : null);
 
   return (
-    <div className="relative w-full h-[70vh] md:h-[70vh] min-h-[500px] md:min-h-[500px] aspect-[9/16] md:aspect-auto overflow-hidden rounded-3xl mb-8 group animate-in fade-in duration-700">
+    <div className="relative w-full h-[70vh] md:h-[75vh] min-h-[500px] md:min-h-[600px] aspect-[9/16] md:aspect-auto overflow-hidden rounded-3xl mb-8 group transition-all duration-500">
 
       {/* Background Image with Gradient */}
       <div className="absolute inset-0 transition-opacity duration-1000">
@@ -42,7 +42,7 @@ export function HeroBanner({ items = [], item: fallbackItem, onPlay, onMyList, p
           key={item.stream_id || item.series_id || item.id}
           src={background} 
           alt={title}
-          className="w-full h-full object-cover transition-transform duration-10000 group-hover:scale-110 animate-pulse-slow"
+          className="w-full h-full object-cover transition-transform duration-10000"
         />
         <div className="absolute inset-0 bg-gradient-to-t from-neutral-950 via-neutral-950/60 to-transparent" />
         <div className="absolute inset-0 bg-gradient-to-r from-neutral-950/80 via-transparent to-transparent" />
@@ -85,8 +85,8 @@ export function HeroBanner({ items = [], item: fallbackItem, onPlay, onMyList, p
 
         <div className="space-y-4">
           <div className="flex items-center gap-4 text-sm font-medium">
-            <span className="px-2 py-0.5 rounded bg-primary text-white" style={{ backgroundColor: primaryColor }}>
-              DESTAQUE
+            <span className="px-2 py-0.5 rounded bg-primary text-white text-[10px] font-black uppercase tracking-widest" style={{ backgroundColor: primaryColor }}>
+              Em Destaque
             </span>
             {rating && (
               <span className="flex items-center gap-1 text-yellow-500">
@@ -110,30 +110,21 @@ export function HeroBanner({ items = [], item: fallbackItem, onPlay, onMyList, p
         <div className="flex items-center gap-3 md:gap-4 pt-2">
           <Button 
             size="lg" 
-            className="flex-1 md:flex-none h-12 md:h-14 px-6 md:px-8 text-base md:text-lg font-bold rounded-xl shadow-xl shadow-primary/20 hover:scale-105 transition-transform"
+            className="flex-1 md:flex-none h-12 md:h-14 px-6 md:px-10 text-base md:text-lg font-bold rounded-xl shadow-xl transition-all active:scale-95"
             style={{ backgroundColor: primaryColor }}
             onClick={() => onPlay(item)}
           >
-            <Play className="mr-2 h-5 w-5 md:h-6 md:w-6 fill-white" /> Assistir
+            <Play className="mr-2 h-5 w-5 md:h-6 md:w-6 fill-white" /> Assistir agora
           </Button>
-
           
           <Button 
             size="lg" 
             variant="outline"
-            className="h-12 md:h-14 w-12 md:w-auto px-0 md:px-8 text-lg font-bold rounded-xl bg-white/5 border-white/10 hover:bg-white/10 transition-all text-white"
+            className="h-12 md:h-14 w-12 md:w-auto px-0 md:px-8 text-lg font-bold rounded-xl bg-white/5 border-white/10 hover:bg-white/10 transition-all text-white active:scale-95"
             onClick={() => onMyList?.(item)}
           >
             {isFavorite?.(item) ? <Check className="h-5 w-5 md:h-6 md:w-6 text-green-500" /> : <Plus className="h-5 w-5 md:h-6 md:w-6" />}
             <span className="hidden md:inline ml-2">{isFavorite?.(item) ? "Na Minha Lista" : "Minha Lista"}</span>
-          </Button>
-
-          <Button 
-            size="icon"
-            variant="ghost"
-            className="h-12 w-12 md:h-14 md:w-14 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 text-white"
-          >
-            <Info className="h-5 w-5 md:h-6 md:w-6" />
           </Button>
         </div>
 

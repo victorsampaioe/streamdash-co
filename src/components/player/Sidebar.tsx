@@ -48,19 +48,19 @@ export function Sidebar({ activeView, onChangeView, brandName, logoUrl, onLogout
 
 
   const items = [
-    { id: "home", label: "Início", icon: Home },
-    { id: "live", label: "TV Ao Vivo", icon: Tv },
-    { id: "movie", label: "Filmes", icon: Film },
-    { id: "series", label: "Séries", icon: Play },
-    { id: "categories", label: "Categorias", icon: LayoutGrid },
-    { id: "mylist", label: "Minha Lista", icon: Star },
-    { id: "search", label: "Buscar", icon: Search },
+    { id: "home", label: "🏠 Início", icon: Home },
+    { id: "live", label: "📺 TV Ao Vivo", icon: Tv },
+    { id: "movie", label: "🎬 Filmes", icon: Film },
+    { id: "series", label: "📺 Séries", icon: Play },
+    { id: "mylist", label: "⭐ Minha Lista", icon: Star },
+    { id: "search", label: "🔍 Buscar", icon: Search },
+    { id: "settings", label: "⚙ Configurações", icon: Settings },
   ];
 
   return (
     <>
       {/* Desktop Sidebar */}
-      <aside className="hidden md:flex flex-col w-64 bg-black/60 backdrop-blur-xl border-r border-white/5 h-screen sticky top-0 z-50">
+      <aside className="hidden md:flex flex-col w-64 bg-black border-r border-white/5 h-screen sticky top-0 z-50">
         <div className="p-6 mb-4">
           <div className="flex items-center gap-3">
             {logoUrl ? (
@@ -85,15 +85,16 @@ export function Sidebar({ activeView, onChangeView, brandName, logoUrl, onLogout
               <button
                 key={item.id}
                 onClick={() => onChangeView(item.id)}
+                title={item.label.replace(/[^\w\sÀ-ú]/g, '').trim()}
                 className={cn(
-                  "w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 group",
+                  "w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 group active:scale-95",
                   isActive 
                     ? "bg-primary text-white shadow-lg shadow-primary/20" 
                     : "text-white/60 hover:text-white hover:bg-white/5"
                 )}
               >
-                <Icon className={cn("h-5 w-5", isActive ? "scale-110" : "group-hover:scale-110 transition-transform")} />
-                <span className="font-medium">{item.label}</span>
+                <Icon className={cn("h-4 w-4", isActive ? "scale-110" : "group-hover:scale-110 transition-transform")} />
+                <span className="font-bold text-[11px] uppercase tracking-widest">{item.label}</span>
               </button>
             );
           })}
@@ -157,22 +158,11 @@ export function Sidebar({ activeView, onChangeView, brandName, logoUrl, onLogout
 
         <nav className="px-4 py-4 space-y-2">
           <button
-            onClick={() => onChangeView("settings")}
-            className={cn(
-              "w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all text-white/60 hover:text-white hover:bg-white/5",
-              activeView === "settings" && "bg-white/5 text-white"
-            )}
-          >
-            <Settings className="h-5 w-5" />
-            <span className="font-medium">Configurações</span>
-          </button>
-          
-          <button
             onClick={onLogout}
-            className="w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all text-white/40 hover:text-red-500 hover:bg-red-500/5 cursor-pointer"
+            className="w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all text-white/40 hover:text-red-500 hover:bg-red-500/5 cursor-pointer active:scale-95"
           >
             <LogOut className="h-5 w-5" />
-            <span className="font-medium">Sair</span>
+            <span className="font-bold text-[11px] uppercase tracking-widest">Sair</span>
           </button>
         </nav>
       </aside>
