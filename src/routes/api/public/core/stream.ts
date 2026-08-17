@@ -603,6 +603,9 @@ export const Route = createFileRoute("/api/public/core/stream")({
         if (!found) {
           const ultimo = tentativas[tentativas.length - 1];
           const reason = `Nenhum modo entregou o stream. Tentativas: ${resumo || "nenhuma"}`;
+          // Headers HTTP só aceitam ByteString (latin-1): sanitiza acentos/travessões
+          const asciiHeader = (v: string) =>
+            v.replace(/[—–]/g, "-").replace(/[^\x20-\x7E]/g, "?").slice(0, 900);
           console.error(`[STREAM RESPONSE] status=${ultimo?.status ?? 502} ${reason}`);
           return new Response(reason, {
             status: ultimo?.status && ultimo.status >= 400 ? ultimo.status : 502,
@@ -611,11 +614,12 @@ export const Route = createFileRoute("/api/public/core/stream")({
               ...diagHeaders,
               "Content-Type": "text/plain; charset=utf-8",
               "X-Playback-Via": tentativas[0]?.modo ?? "PAINEL",
-              "X-Playback-Reason": reason,
-              "X-Core-Error": ultimo?.motivo ?? reason,
+              "X-Playback-Reason": asciiHeader(reason),
+              "X-Core-Error": asciiHeader(ultimo?.motivo ?? reason),
             },
           });
         }
+
 
         const upstreamType = found.headers.get("Content-Type");
         const isManifest = /mpegurl|m3u/i.test(upstreamType ?? "") || /\.m3u8(\?|$)/i.test(usedUrl) || type === "live";
