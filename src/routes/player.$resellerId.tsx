@@ -485,7 +485,14 @@ function PlayerPage() {
 
 
     if (isHls && Hls.isSupported()) {
-      const hls = new Hls({ enableWorker: true, lowLatencyMode: false });
+      const hls = new Hls({ 
+        enableWorker: true, 
+        lowLatencyMode: true,
+        backBufferLength: 60,
+        maxBufferLength: 30,
+        maxMaxBufferLength: 60,
+        initialLiveManifestSize: 1
+      });
       hls.loadSource(streamUrl);
       hls.attachMedia(video);
       hlsRef.current = hls;
