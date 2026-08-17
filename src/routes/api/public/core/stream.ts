@@ -642,7 +642,7 @@ export const Route = createFileRoute("/api/public/core/stream")({
           if (!upstream) await tentarPainel("PAINEL", "browser");
         }
 
-
+        console.log(`[MODO ESCOLHIDO] ${usedModo} forceCore=${forceCore} url=${maskMedia(usedUrl || "-")}`);
 
         const resumo = tentativas
           .map((t) => `${t.modo}=${t.status ?? "erro"}${t.motivo ? ` (${t.motivo})` : ""}`)
