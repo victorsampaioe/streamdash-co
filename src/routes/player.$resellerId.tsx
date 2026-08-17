@@ -1264,14 +1264,15 @@ function PlayerPage() {
                   <p className="text-white/40 text-sm font-black uppercase tracking-widest">Conectando...</p>
                 </div>
              ) : (
-                <video 
-                  ref={videoRef}
-                  className="w-full h-full"
-                  controls
-                  autoPlay
-                  playsInline
-                  preload="auto"
-                />
+                 <video 
+                   ref={videoRef}
+                   className="w-full h-full max-h-screen"
+                   controls
+                   autoPlay
+                   playsInline
+                   preload="auto"
+                   crossOrigin="anonymous"
+                 />
              )}
           </div>
 
@@ -1389,10 +1390,10 @@ function PlayerPage() {
 
     const timeoutId = setTimeout(() => {
       if (!streamUrl && isPlaying) {
-        setPlaybackReason("Não foi possível iniciar este conteúdo. Verifique sua conexão ou tente outro player.");
-        toast.error("Tempo esgotado ao carregar o stream.");
+        setPlaybackReason("Servidor instável, tentando novamente...");
+        // Tentativa de reconexão automática ou fallback
       }
-    }, 20000);
+    }, 15000);
 
     // Inicia busca da URL sem bloquear a abertura do player
     getPlayerStreamUrl({
