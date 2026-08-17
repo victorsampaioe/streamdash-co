@@ -391,6 +391,7 @@ export const Route = createFileRoute("/api/public/core/stream")({
                }
             }
             
+            console.log(`[STREAM BODY START] modo=CORE url=${maskMedia(abs)} status=${res.status} content-type=${out.get("Content-Type")} content-length=${res.headers.get("content-length") ?? "-"} body_null=${res.body === null}`);
             return new Response(res.body, { status: res.status, headers: out });
           } catch (e) {
             const msg = (e as Error).message;
