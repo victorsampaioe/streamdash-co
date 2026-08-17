@@ -19,6 +19,10 @@ services:
       NODE_ENV: production
       HOST: 0.0.0.0
       PORT: 3000
+      # Etapa 1 / Etapa 3 — flags de rollback imediato (defaults = comportamento atual)
+      CORE_CLUSTER_WORKERS: ${CORE_CLUSTER_WORKERS:-1}
+      HLS_SEGMENT_CACHE: ${HLS_SEGMENT_CACHE:-off}
+      HLS_CACHE_TTL_SECONDS: ${HLS_CACHE_TTL_SECONDS:-15}
     # Somente o Caddy (host) acessa: exposto apenas em 127.0.0.1
     ports:
       - "127.0.0.1:3000:3000"
