@@ -492,7 +492,7 @@ export const Route = createFileRoute("/api/public/core/stream")({
           const { manifest: rewritten, segmentos } = rewriteManifest(text, usedUrl, token, usedModo);
           
           console.log(
-            `[HLS]\nURL original: ${maskMedia(usedUrl)}\nManifesto: ${text.length} bytes\nStatus manifesto: ${found.status}\nSegmentos encontrados: ${segmentos}\nTempo resposta: ${Date.now() - tManifesto}ms\nErro: none`
+            `[HLS][FINAL]\nURL original: ${maskMedia(usedUrl)}\nManifesto: ${text.length} bytes\nStatus manifesto: ${found.status}\nSegmentos encontrados: ${segmentos}\nTempo resposta: ${Date.now() - tManifesto}ms\nFE_VER: 2026.08.17-fe-v1\nCORE_VER: ${CORE_STREAM_VERSION}`
           );
           return new Response(rewritten, {
             status: 200,

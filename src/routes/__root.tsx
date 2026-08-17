@@ -157,7 +157,22 @@ function RootComponent() {
   useEffect(() => {
     if ("serviceWorker" in navigator) {
       window.addEventListener("load", () => {
-        navigator.serviceWorker.register("/sw.js").catch(err => {
+        navigator.serviceWorker.register("/sw.js").then(registration => {
+          console.log("SW registered:", registration.scope);
+          
+          // Forçar atualização se houver um novo worker esperando
+          registration.onupdatefound = () => {
+            const newWorker = registration.installing;
+            if (newWorker) {
+              newWorker.onstatechange = () => {
+                if (newWorker.state === "installed" && navigator.serviceWorker.controller) {
+                  console.log("Novo Service Worker disponível. Invalidação de cache recomendada.");
+                  // Opcional: toast ou reload automático
+                }
+              };
+            }
+          };
+        }).catch(err => {
           console.log("SW registration failed: ", err);
         });
       });
