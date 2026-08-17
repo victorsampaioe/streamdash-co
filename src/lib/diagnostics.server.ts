@@ -252,9 +252,11 @@ async function executeDiagnostic(
       : [`http://${bareHost}`, `https://${bareHost}`];
 
     // Máscara de credenciais para logs
+    const cUser = String(creds.username ?? "");
+    const cPass = String(creds.password ?? "");
     const mask = (u: string) =>
-      u.replace(encodeURIComponent(creds.username), "***").replace(creds.username, "***")
-       .replace(encodeURIComponent(creds.password ?? ""), "***").replace(creds.password ?? "", "***");
+      u.split(encodeURIComponent(cUser)).join("***").split(cUser).join("***")
+       .split(encodeURIComponent(cPass)).join("***").split(cPass).join("***");
 
     // Construir candidatos de URL de stream baseado no tipo
     const candidates: string[] = [];
