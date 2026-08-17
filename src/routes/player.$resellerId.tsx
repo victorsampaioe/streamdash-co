@@ -39,6 +39,7 @@ import {
   Clock,
   ChevronLeft,
   X,
+  AlertCircle,
   PlayCircle,
   Settings as SettingsIcon,
   Plus,
