@@ -597,7 +597,7 @@ export const Route = createFileRoute("/api/public/core/stream")({
         }
 
         console.log(
-          `[STREAM RESPONSE] via=${usedModo} type=${type} ext=${finalExt} status=${found.status} ct=${out.get("Content-Type")} range=${range ?? "none"} tentativas="${resumo}"`
+          `[STREAM DEBUG][STREAM RESPONSE] via=${usedModo} type=${type} ext=${finalExt} status=${found.status} ct=${out.get("Content-Type")} range=${range ?? "none"} tentativas="${resumo}"`
         );
 
         return new Response(found.body, { status: found.status, headers: out });
