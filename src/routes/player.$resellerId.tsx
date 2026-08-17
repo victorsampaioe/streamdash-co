@@ -645,6 +645,10 @@ function PlayerPage() {
   }, [isPlaying, streamUrl, selectedItem, token]);
 
 
+  // Loader handled by TanStack Router loader, so this isn't strictly needed for settings,
+  // but keeping a placeholder if needed for other global state
+  const settingsLoading = false; 
+
   if (settingsLoading) {
     return (
       <div className="min-h-screen bg-neutral-950 flex items-center justify-center">
