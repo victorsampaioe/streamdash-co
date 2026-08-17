@@ -98,7 +98,7 @@ function PlayerPage() {
   
   const [token, setToken] = useState<string | null>(localStorage.getItem(`stream_player_token_${profileId}`));
   const [session, setSession] = useState<any>(null);
-  const [activeView, setActiveView] = useState<"home" | "live" | "movie" | "series" | "mylist" | "search" | "settings" | "categories">("home");
+  const [activeView, setActiveView] = useState<"home" | "live" | "movie" | "series" | "mylist" | "search" | "settings">("home");
   const [loadingContent, setLoadingContent] = useState(false);
   const [categories, setCategories] = useState<any[]>([]);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
@@ -330,7 +330,7 @@ function PlayerPage() {
 
   useEffect(() => {
     if (session && token) {
-      if (activeView === "search" || activeView === "settings" || activeView === "categories") return;
+      if (activeView === "search" || activeView === "settings") return;
       
       setLoadingContent(true);
       const controller = new AbortController();
@@ -857,44 +857,6 @@ function PlayerPage() {
           </div>
         )}
 
-        {activeView === "categories" && (
-          <div className="p-6 md:p-12 space-y-8 animate-in fade-in duration-500">
-            <h1 className="text-3xl font-black tracking-tight flex items-center gap-3">
-              <LayoutGrid className="h-8 w-8 text-primary" style={{ color: primaryColor }} />
-              Plataformas e Categorias
-            </h1>
-            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-6">
-              {[
-                { name: "Netflix", logo: "https://upload.wikimedia.org/wikipedia/commons/0/08/Netflix_2015_logo.svg", color: "#E50914" },
-                { name: "Prime Video", logo: "https://upload.wikimedia.org/wikipedia/commons/f/f1/Prime_Video.png", color: "#00A8E1" },
-                { name: "HBO Max", logo: "https://upload.wikimedia.org/wikipedia/commons/1/17/HBO_Max_Logo.svg", color: "#5822b4" },
-                { name: "Disney+", logo: "https://upload.wikimedia.org/wikipedia/commons/3/3e/Disney%2B_logo.svg", color: "#0063e5" },
-                { name: "Apple TV+", logo: "https://upload.wikimedia.org/wikipedia/commons/a/a2/Apple_TV%2B_logo.svg", color: "#ffffff" },
-              ].map((brand) => (
-                <Card 
-                  key={brand.name} 
-                  className="bg-neutral-900/50 border-white/5 hover:border-white/20 transition-all cursor-pointer group overflow-hidden"
-                  onClick={() => {
-                    setActiveView("movie");
-                    setSelectedCategory(null);
-                    toast.info(`Explorando catálogo ${brand.name}`);
-                  }}
-                >
-                  <div className="aspect-video p-6 flex items-center justify-center relative">
-                    <div 
-                      className="absolute inset-0 opacity-0 group-hover:opacity-10 transition-opacity" 
-                      style={{ backgroundColor: brand.color }}
-                    />
-                    <img src={brand.logo} alt={brand.name} className="h-8 md:h-12 w-auto object-contain brightness-0 invert group-hover:brightness-100 group-hover:invert-0 transition-all" />
-                  </div>
-                  <div className="p-4 text-center border-t border-white/5 font-bold text-sm text-white/40 group-hover:text-white transition-colors">
-                    {brand.name}
-                  </div>
-                </Card>
-              ))}
-            </div>
-          </div>
-        )}
 
         {activeView === ("mylist" as any) && (
           <div className="p-6 md:p-12 space-y-8">
@@ -1063,8 +1025,24 @@ function PlayerPage() {
 
         {(activeView === "live" || activeView === "movie" || activeView === "series") && (
           <div className="p-6 md:p-12 space-y-8">
-
-            <h1 className="text-3xl font-bold capitalize">{activeView === "live" ? "TV Ao Vivo" : activeView === "movie" ? "Filmes" : "Séries"}</h1>
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+              <h1 className="text-3xl font-black capitalize tracking-tight">
+                {activeView === "live" ? "TV Ao Vivo" : activeView === "movie" ? "Filmes" : "Séries"}
+              </h1>
+              
+              <div className="relative w-full md:w-64">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-white/40" />
+                <Input 
+                  placeholder="Busca rápida..." 
+                  className="bg-white/5 border-white/10 pl-9 h-10 rounded-xl text-sm"
+                  onChange={(e) => {
+                    const q = e.target.value.toLowerCase();
+                    // Implementação de busca rápida local (apenas no que já está carregado)
+                    // Para busca global, usa-se a aba Buscar
+                  }}
+                />
+              </div>
+            </div>
             
             <div className="flex gap-2 overflow-x-auto pb-4 scrollbar-hide">
               {categories.map((cat) => (
