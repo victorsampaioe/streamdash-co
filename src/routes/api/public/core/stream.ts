@@ -228,8 +228,20 @@ export const Route = createFileRoute("/api/public/core/stream")({
               headers: h,
               redirect: "follow",
               signal: AbortSignal.timeout(timeout),
-              keepalive: true, // Conexão persistente entre Core e Upstream
+              keepalive: true,
             });
+
+            // LOG DE DIAGNÓSTICO PROFUNDO [STREAM DEBUG]
+            console.log(`[STREAM DEBUG]
+- URL original: ${maskMedia(abs)}
+- URL enviada para Core: ${request.url}
+- HTTP upstream: ${res.status}
+- Content-Type: ${res.headers.get("content-type") ?? "unknown"}
+- Content-Length: ${res.headers.get("content-length") ?? "unknown"}
+- Range solicitado: ${range ?? "none"}
+- Range devolvido: ${res.headers.get("content-range") ?? "none"}
+- UA utilizado: ${uaKind}
+`);
 
             const out = new Headers({ ...CORS, ...VER });
             for (const k of ["Content-Type", "Content-Range", "Content-Length", "Accept-Ranges"]) {
@@ -366,15 +378,23 @@ export const Route = createFileRoute("/api/public/core/stream")({
           const folder = type === "live" ? "live" : type === "movie" ? "movie" : "series";
           const user = encodeURIComponent(creds.username);
           const pass = encodeURIComponent(creds.password);
+          
+          // Ordem de candidatos otimizada para compatibilidade
           candidates = hostCandidates(server.host).flatMap((base) => {
-            const paths =
-              type === "live"
-                ? [`live/${user}/${pass}/${sid}.m3u8`, `${user}/${pass}/${sid}.m3u8`, `live/${user}/${pass}/${sid}.ts`]
-                : [`${folder}/${user}/${pass}/${sid}.${ext}`, `${folder}/${user}/${pass}/${sid}.mp4`];
-            return paths.map((p) => `${base}/${p}`);
+            if (type === "live") {
+              // Alguns painéis exigem output=ts explicitamente ou caminhos sem pasta /live/
+              return [
+                `${base}/live/${user}/${pass}/${sid}.ts`,
+                `${base}/live/${user}/${pass}/${sid}.m3u8`,
+                `${base}/${user}/${pass}/${sid}.ts`,
+                `${base}/live/${user}/${pass}/${sid}`,
+                `${base}/${user}/${pass}/${sid}`
+              ];
+            }
+            return [`${base}/${folder}/${user}/${pass}/${sid}.${ext}`, `${base}/${folder}/${user}/${pass}/${sid}.mp4`];
           });
         }
-        candidates = candidates.slice(0, 6);
+        candidates = [...new Set(candidates)].slice(0, 8);
 
         /* --------- Escalonamento de modos (browser → CORE-VLC) ------ */
         type Tentativa = { modo: Modo; status: number | null; motivo: string | null; ms: number };
