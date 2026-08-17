@@ -1188,7 +1188,11 @@ function PlayerPage() {
       {isPlaying && (
         <div className="fixed inset-0 z-[100] bg-black">
           <div className="absolute top-6 left-6 z-10">
-             <Button variant="ghost" onClick={handleClosePlayer} className="bg-black/40 hover:bg-black/60 text-white rounded-full h-12 w-12 p-0">
+             <Button 
+               variant="ghost" 
+               onClick={handleClosePlayer} 
+               className="bg-black/40 hover:bg-white/10 text-white rounded-full h-12 w-12 p-0 transition-all border border-white/5"
+             >
                <X className="h-6 w-6" />
              </Button>
           </div>
@@ -1368,7 +1372,7 @@ function PlayerPage() {
     setSelectedItem(item ?? selectedItem);
     setStreamUrl(null);
     setCompat(null);
-    setPlaybackReason("▶ Carregando conteúdo...");
+    setPlaybackReason("Conectando ao servidor...");
     
     const started = Date.now();
     setPlaybackDebug({ 
