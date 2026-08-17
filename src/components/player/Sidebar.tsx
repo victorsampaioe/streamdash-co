@@ -52,15 +52,15 @@ export function Sidebar({ activeView, onChangeView, brandName, logoUrl, onLogout
     { id: "live", label: "TV Ao Vivo", icon: Tv },
     { id: "movie", label: "Filmes", icon: Film },
     { id: "series", label: "Séries", icon: Play },
-    { id: "categories", label: "Categorias", icon: LayoutGrid },
     { id: "mylist", label: "Minha Lista", icon: Star },
     { id: "search", label: "Buscar", icon: Search },
+    { id: "settings", label: "Configurações", icon: Settings },
   ];
 
   return (
     <>
       {/* Desktop Sidebar */}
-      <aside className="hidden md:flex flex-col w-64 bg-black/60 backdrop-blur-xl border-r border-white/5 h-screen sticky top-0 z-50">
+      <aside className="hidden md:flex flex-col w-64 bg-black border-r border-white/5 h-screen sticky top-0 z-50">
         <div className="p-6 mb-4">
           <div className="flex items-center gap-3">
             {logoUrl ? (
@@ -156,17 +156,6 @@ export function Sidebar({ activeView, onChangeView, brandName, logoUrl, onLogout
         </div>
 
         <nav className="px-4 py-4 space-y-2">
-          <button
-            onClick={() => onChangeView("settings")}
-            className={cn(
-              "w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all text-white/60 hover:text-white hover:bg-white/5",
-              activeView === "settings" && "bg-white/5 text-white"
-            )}
-          >
-            <Settings className="h-5 w-5" />
-            <span className="font-medium">Configurações</span>
-          </button>
-          
           <button
             onClick={onLogout}
             className="w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all text-white/40 hover:text-red-500 hover:bg-red-500/5 cursor-pointer"

@@ -34,7 +34,7 @@ export function HeroBanner({ items = [], item: fallbackItem, onPlay, onMyList, p
   const year = item.year || (item.releaseDate ? new Date(item.releaseDate).getFullYear() : null);
 
   return (
-    <div className="relative w-full h-[70vh] md:h-[70vh] min-h-[500px] md:min-h-[500px] aspect-[9/16] md:aspect-auto overflow-hidden rounded-3xl mb-8 group animate-in fade-in duration-700">
+    <div className="relative w-full h-[70vh] md:h-[75vh] min-h-[500px] md:min-h-[600px] aspect-[9/16] md:aspect-auto overflow-hidden rounded-3xl mb-8 group transition-all duration-500">
 
       {/* Background Image with Gradient */}
       <div className="absolute inset-0 transition-opacity duration-1000">
@@ -42,7 +42,7 @@ export function HeroBanner({ items = [], item: fallbackItem, onPlay, onMyList, p
           key={item.stream_id || item.series_id || item.id}
           src={background} 
           alt={title}
-          className="w-full h-full object-cover transition-transform duration-10000 group-hover:scale-110 animate-pulse-slow"
+          className="w-full h-full object-cover transition-transform duration-10000"
         />
         <div className="absolute inset-0 bg-gradient-to-t from-neutral-950 via-neutral-950/60 to-transparent" />
         <div className="absolute inset-0 bg-gradient-to-r from-neutral-950/80 via-transparent to-transparent" />
