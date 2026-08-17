@@ -394,7 +394,13 @@ export const Route = createFileRoute("/api/public/core/stream")({
             }
             return new Response(`Worker fetch error: ${msg}`, {
               status: 502,
-              headers: { ...CORS, ...VER, "X-Core-Error": asciiHeader(msg), "X-Core-UA": uaKind },
+              headers: {
+                ...CORS,
+                ...VER,
+                "X-Core-Error": asciiHeader(msg),
+                "X-Core-UA": uaKind,
+                "Cache-Control": "no-store",
+              },
             });
           }
         }
