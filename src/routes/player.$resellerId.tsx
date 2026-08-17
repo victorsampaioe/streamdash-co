@@ -1246,6 +1246,7 @@ function PlayerPage() {
                   controls
                   autoPlay
                   playsInline
+                  preload="auto"
                 />
              )}
           </div>

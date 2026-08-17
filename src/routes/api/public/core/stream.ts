@@ -222,10 +222,18 @@ export const Route = createFileRoute("/api/public/core/stream")({
             }
             if (!out.has("Content-Type")) out.set("Content-Type", contentTypeFor(ext, res.headers.get("content-type")));
             if (!out.has("Accept-Ranges") && type !== "live") out.set("Accept-Ranges", "bytes");
-            out.set("Cache-Control", "no-cache");
+            
+            // Otimização VOD: Cache agressivo no browser e blocos eficientes
+            if (isVod) {
+              out.set("Cache-Control", "public, max-age=3600");
+            } else {
+              out.set("Cache-Control", "no-cache");
+            }
+            
             out.set("X-Upstream-Status", String(res.status));
             out.set("X-Upstream-Content-Type", res.headers.get("content-type") ?? "-");
             out.set("X-Core-UA", uaKind);
+            out.set("Connection", "keep-alive");
 
             if (ext === "ts" || ext === "m4s" || type === "live") {
               console.log(
