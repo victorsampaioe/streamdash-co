@@ -186,9 +186,10 @@ export const Route = createFileRoute("/api/public/core/stream")({
           const h: Record<string, string> = {
             "User-Agent": ua,
             Accept:
-              ext === "m3u8" ? "application/vnd.apple.mpegurl,application/x-mpegURL,*/*" : "*/*",
+              ext === "m3u8" ? "application/vnd.apple.mpegurl,application/x-mpegURL,application/octet-stream,*/*" : "*/*",
             "Accept-Encoding": "identity",
             Connection: "keep-alive",
+            "Icy-MetaData": "1", // Alguns servidores SHOUTcast/IPTV precisam disso para não cortar a conexão
           };
           // VLC/IPTV Smarters NÃO enviam Referer/Origin — muitos painéis
           // devolvem 403 justamente por causa desses headers de navegador.
@@ -258,6 +259,9 @@ export const Route = createFileRoute("/api/public/core/stream")({
             );
 
             if (!res.ok && res.status !== 206) {
+              if (isHlsManifest) {
+                console.error(`[HLS] falha ao obter manifesto: status=${res.status} url=${maskMedia(abs)}`);
+              }
               // Corpo do bloqueio ajuda a identificar o motivo real do 403.
               let corpo = "";
               try { corpo = (await res.text()).slice(0, 200).replace(/\s+/g, " "); } catch { /* ignore */ }
@@ -274,6 +278,9 @@ export const Route = createFileRoute("/api/public/core/stream")({
 
             return new Response(res.body, { status: res.status, headers: out });
           } catch (e) {
+            if (ext === "m3u8") {
+              console.error(`[HLS] erro fatal de rede no manifesto: ${(e as Error).message} url=${maskMedia(abs)}`);
+            }
             const msg = (e as Error).message;
             console.error(
               `[UPSTREAM IPTV] url=${maskMedia(abs)} ua=${uaKind} status=502 tempo=${Date.now() - t0}ms erro="${msg}"`
