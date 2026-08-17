@@ -492,10 +492,16 @@ function PlayerPage() {
       const hls = new Hls({ 
         enableWorker: true, 
         lowLatencyMode: true,
-        backBufferLength: 60,
-        maxBufferLength: 30,
-        maxMaxBufferLength: 60,
-        initialLiveManifestSize: 1
+        backBufferLength: 90,
+        maxBufferLength: 60,
+        maxMaxBufferLength: 120,
+        initialLiveManifestSize: 1,
+        // Otimização VOD HLS
+        maxBufferHole: 0.5,
+        nudgeOffset: 0.1,
+        nudgeMaxRetry: 10,
+        maxFragLookUpTolerance: 0.25,
+        liveSyncDurationCount: 3,
       });
       hls.loadSource(streamUrl);
       hls.attachMedia(video);
