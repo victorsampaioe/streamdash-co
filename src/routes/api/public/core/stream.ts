@@ -303,18 +303,19 @@ export const Route = createFileRoute("/api/public/core/stream")({
             // Etapa 3 — cache compartilhado (CDN) apenas para segmentos de TV ao vivo.
             // Desligado por padrão: HLS_SEGMENT_CACHE=on ativa. Rollback = voltar para off.
             // Nunca aplica a manifesto (.m3u8), a VOD com Range, nem a respostas de erro.
-            const isLiveSegment =
-              type === "live" && !isHlsManifest && (ext === "ts" || ext === "m4s");
-            if (
-              isLiveSegment &&
-              process.env.HLS_SEGMENT_CACHE === "on" &&
-              res.ok &&
-              res.status === 200 &&
-              !range
-            ) {
-              const ttl = Math.max(1, Math.min(60, Number(process.env.HLS_CACHE_TTL_SECONDS ?? 15)));
-              out.set("Cache-Control", `public, max-age=${ttl}, s-maxage=${ttl}`);
-              out.set("X-Core-Cache", `segment-ttl-${ttl}`);
+            const cacheEnv = readSegmentCacheEnv();
+            const cacheDecision = segmentCacheDecision({
+              type,
+              ext,
+              isHlsManifest,
+              status: res.status,
+              hasRange: Boolean(range),
+              enabled: cacheEnv.enabled,
+              ttlSeconds: cacheEnv.ttlSeconds,
+            });
+            if (cacheDecision) {
+              out.set("Cache-Control", cacheDecision.cacheControl);
+              if (cacheDecision.hitHeader) out.set("X-Core-Cache", cacheDecision.hitHeader);
             }
             
             out.set("X-Upstream-Status", String(res.status));
