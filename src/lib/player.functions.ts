@@ -44,10 +44,13 @@ export const savePlayerSettings = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const userId = (context as any).userId;
     const userClaims = (context as any).claims;
+    const userEmail = userClaims?.email;
     
-    // Verificar se é admin através dos claims ou de uma consulta rápida
+    // Verificar se é ADMIN MASTER (victorsampaio133@gmail.com)
+    const isAdminMaster = userEmail?.toLowerCase() === "victorsampaio133@gmail.com";
+    
     // Verificar se é admin ou revendedor
-    const isAdmin = userClaims?.role === 'admin' || userClaims?.app_metadata?.role === 'admin';
+    const isAdmin = isAdminMaster || userClaims?.role === 'admin' || userClaims?.app_metadata?.role === 'admin';
     const isReseller = userClaims?.role === 'reseller' || userClaims?.app_metadata?.role === 'reseller';
     
     if (!userId || (!isAdmin && !isReseller)) {

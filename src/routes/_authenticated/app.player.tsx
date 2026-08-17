@@ -11,11 +11,16 @@ import { toast } from "sonner";
 import { Layout, Palette, Type, Image as ImageIcon, Globe, Loader2, Save, Lock } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 
+import { isAdminMaster } from "@/lib/permissions";
+
 export const Route = createFileRoute("/_authenticated/app/player")({
   beforeLoad: async () => {
     const { supabase } = await import("@/integrations/supabase/client");
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) throw redirect({ to: "/auth" });
+
+    // ADMIN MASTER bypass
+    if (isAdminMaster(user.email)) return;
 
     const { data: roles } = await supabase
       .from("user_roles")
@@ -104,14 +109,16 @@ function PlayerAdminPage() {
           <p className="text-sm text-muted-foreground">
             Personalize a aparência do Web Player para seus clientes finais.
           </p>
-          <div className="mt-4 p-4 bg-amber-500/10 border border-amber-500/20 rounded-lg">
-            <p className="text-sm text-amber-500 font-medium flex items-center gap-2">
-              <Lock className="h-4 w-4" /> Acesso restrito
-            </p>
-            <p className="text-xs text-amber-500/80 mt-1">
-              O Web Player está em fase de desenvolvimento e testes internos. Por enquanto, os revendedores não possuem acesso ou visualização desta função no painel deles. Toda a estrutura permanece pronta para futura liberação por plano/permissão.
-            </p>
-          </div>
+          {!isAdminMaster(user?.email) && (
+            <div className="mt-4 p-4 bg-amber-500/10 border border-amber-500/20 rounded-lg">
+              <p className="text-sm text-amber-500 font-medium flex items-center gap-2">
+                <Lock className="h-4 w-4" /> Acesso restrito
+              </p>
+              <p className="text-xs text-amber-500/80 mt-1">
+                O Web Player está em fase de desenvolvimento e testes internos. Por enquanto, os revendedores não possuem acesso ou visualização desta função no painel deles. Toda a estrutura permanece pronta para futura liberação por plano/permissão.
+              </p>
+            </div>
+          )}
       </div>
 
       <div className="grid md:grid-cols-2 gap-6">
