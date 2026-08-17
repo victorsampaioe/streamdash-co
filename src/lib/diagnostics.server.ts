@@ -243,19 +243,42 @@ async function executeDiagnostic(
     updateStep(2, 'success');
 
     updateStep(3, 'running');
-    // Construir URL de stream baseado no tipo
-    let streamUrl = "";
+    // Normaliza host (pode vir com ou sem esquema / barra final)
+    const rawHost = String(server.host || "").replace(/\/+$/, "");
+    const hasScheme = /^https?:\/\//i.test(rawHost);
+    const bareHost = rawHost.replace(/^https?:\/\//i, "");
+    const bases = hasScheme
+      ? [rawHost, `${/^https:/i.test(rawHost) ? "http" : "https"}://${bareHost}`]
+      : [`http://${bareHost}`, `https://${bareHost}`];
+
+    // Máscara de credenciais para logs
+    const cUser = String(creds.username ?? "");
+    const cPass = String(creds.password ?? "");
+    const mask = (u: string) =>
+      u.split(encodeURIComponent(cUser)).join("***").split(cUser).join("***")
+       .split(encodeURIComponent(cPass)).join("***").split(cPass).join("***");
+
+    // Construir candidatos de URL de stream baseado no tipo
+    const candidates: string[] = [];
     if (contentType === 'live') {
-      streamUrl = `http://${server.host}/live/${creds.username}/${creds.password}/${contentId}.ts`;
+      // Xtream Live aceita .ts, .m3u8 e o caminho curto /user/pass/id
+      for (const base of bases) {
+        candidates.push(`${base}/live/${creds.username}/${creds.password}/${contentId}.ts`);
+        candidates.push(`${base}/live/${creds.username}/${creds.password}/${contentId}.m3u8`);
+        candidates.push(`${base}/${creds.username}/${creds.password}/${contentId}`);
+      }
     } else if (contentType === 'movie') {
-      // Xtream VOD: contentId costuma ser o ID numérico.
-      // Tenta .mp4 como fallback padrão se não houver extensão.
       const ext = contentId.includes('.') ? '' : '.mp4';
-      streamUrl = `http://${server.host}/movie/${creds.username}/${creds.password}/${contentId}${ext}`;
+      for (const base of bases) {
+        candidates.push(`${base}/movie/${creds.username}/${creds.password}/${contentId}${ext}`);
+        if (!contentId.includes('.')) candidates.push(`${base}/movie/${creds.username}/${creds.password}/${contentId}.mkv`);
+      }
     } else if (contentType === 'episode' || contentType === 'series') {
-      // Xtream Series: /series/user/pass/id.ext
       const ext = contentId.includes('.') ? '' : '.mp4';
-      streamUrl = `http://${server.host}/series/${creds.username}/${creds.password}/${contentId}${ext}`;
+      for (const base of bases) {
+        candidates.push(`${base}/series/${creds.username}/${creds.password}/${contentId}${ext}`);
+        if (!contentId.includes('.')) candidates.push(`${base}/series/${creds.username}/${creds.password}/${contentId}.mkv`);
+      }
     } else {
       throw new Error(`Tipo de conteúdo inválido: ${contentType}`);
     }
@@ -271,33 +294,40 @@ async function executeDiagnostic(
     cancelSignal?.addEventListener('abort', onCancel);
     
     // Timeout de conexão (8s) vs Timeout total (15s)
-    // DIAG_TIMEOUT_TOTAL = 15s (global para o diagnóstico todo)
-    // DIAG_TIMEOUT_CONNECT = 8s (específico para o fetch inicial)
-    
     const connectTimeout = setTimeout(() => controller.abort(), DIAG_TIMEOUT_CONNECT);
-    
-    const tReq = Date.now();
-    let response: Response;
-    try {
-      // Tenta primeiro com User-Agent de Player (padrão)
-      response = await fetch(streamUrl, {
-        headers: {
-          'User-Agent': UA_PLAYER,
-          'Range': `bytes=0-${MAX_BYTES}`
-        },
-        signal: controller.signal
-      });
 
-      // Se der 403, tenta com VLC como fallback
-      if (response.status === 403) {
-        const { UA_VLC } = await import("./iptv.server");
-        response = await fetch(streamUrl, {
-          headers: {
-            'User-Agent': UA_VLC,
-            'Range': `bytes=0-${MAX_BYTES}`
-          },
-          signal: controller.signal
-        });
+    const { UA_VLC } = await import("./iptv.server");
+    const agents = [UA_PLAYER, UA_VLC];
+
+    const tReq = Date.now();
+    let response: Response | null = null;
+    let streamUrl = candidates[0];
+    let lastStatus = 0;
+    try {
+      outer: for (const url of candidates) {
+        for (const ua of agents) {
+          if (cancelSignal?.aborted) throw new DiagnosticCancelled();
+          try {
+            const r = await fetch(url, {
+              headers: { 'User-Agent': ua, 'Range': `bytes=0-${MAX_BYTES}` },
+              redirect: 'follow',
+              signal: controller.signal,
+            });
+            lastStatus = r.status;
+            console.log(`[DIAG ${contentType.toUpperCase()}] ${mask(url)} → HTTP ${r.status} (${r.headers.get('content-type') ?? '-'})`);
+            if (r.ok) {
+              response = r;
+              streamUrl = url;
+              break outer;
+            }
+            await r.body?.cancel().catch(() => {});
+            // 401/403 = bloqueio real: não adianta tentar outras extensões com o mesmo UA
+            if (r.status === 401) break outer;
+          } catch (e: any) {
+            if (e?.name === 'AbortError') throw e;
+            console.log(`[DIAG ${contentType.toUpperCase()}] ${mask(url)} → ERRO ${e?.message}`);
+          }
+        }
       }
     } catch (fetchErr: any) {
       if (cancelSignal?.aborted) throw new DiagnosticCancelled();
@@ -309,22 +339,22 @@ async function executeDiagnostic(
       clearTimeout(connectTimeout);
     }
 
+    console.log(`[DIAG ${contentType.toUpperCase()}] URL final: ${mask(streamUrl)} status=${response?.status ?? lastStatus}`);
 
-    if (!response.ok) {
-      // Diferenciar erros HTTP para facilitar diagnóstico
-      if (response.status === 401 || response.status === 403) {
+    if (!response) {
+      if (lastStatus === 401 || lastStatus === 403) {
         const egress = await egressIp();
-        const msg = response.status === 403 
+        throw new Error(lastStatus === 403
           ? `HTTP 403: Acesso negado pelo servidor (Bloqueio de IP ou Firewall). IP de saída: ${egress || 'desconhecido'}`
-          : `HTTP 401: Acesso negado (Credenciais inválidas para este conteúdo)`;
-        throw new Error(msg);
+          : `HTTP 401: Acesso negado (Credenciais inválidas para este conteúdo)`);
       }
-      if (response.status === 404) {
-        throw new Error(`HTTP 404: Conteúdo não encontrado no host`);
+      if (lastStatus === 404) {
+        throw new Error(`HTTP 404: Conteúdo não encontrado no host (testado .ts, .m3u8 e caminho curto, em http e https)`);
       }
-      throw new Error(`HTTP ${response.status}: Falha na requisição`);
+      throw new Error(lastStatus ? `HTTP ${lastStatus}: Falha na requisição` : `Não foi possível conectar ao stream`);
     }
     updateStep(4, 'success');
+
 
     updateStep(5, 'running');
     const ttfb = Date.now() - tReq;
