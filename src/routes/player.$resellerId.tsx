@@ -1370,20 +1370,26 @@ function PlayerPage() {
     setStreamUrl(null);
     setCompat(null);
     setPlaybackReason("▶ Carregando conteúdo...");
+    
     const started = Date.now();
-    setPlaybackDebug({ tipo: type, extensao: extension, contentId: id, status: null, via: null, started_at: started });
-
-    const startCheck = Date.now();
-    console.log("[PLAY]", {
-      tipo: type,
-      conteudo: item?.name ?? item?.title ?? selectedItem?.name ?? null,
-      stream_id: type === "series" ? null : String(id),
-      episode_id: type === "series" ? String(id) : null,
-      url_gerada: null,
-      via: "gerando",
-      status: "iniciando",
-      erro: null,
+    setPlaybackDebug({ 
+      tipo: type, 
+      extensao: extension, 
+      contentId: id, 
+      status: null, 
+      via: "aguardando...", 
+      started_at: started 
     });
+
+    const controller = new AbortController();
+    abortControllerRef.current = controller;
+
+    const timeoutId = setTimeout(() => {
+      if (!streamUrl && isPlaying) {
+        setPlaybackReason("Não foi possível iniciar este conteúdo. Tente novamente.");
+        toast.error("Tempo esgotado ao tentar carregar o conteúdo.");
+      }
+    }, 15000);
 
     // Inicia busca da URL sem bloquear a abertura do player
     getPlayerStreamUrl({
@@ -1394,15 +1400,18 @@ function PlayerPage() {
         extension,
       }
     }).then(async (url) => {
+      clearTimeout(timeoutId);
+      if (controller.signal.aborted) return;
+
       if (!url) {
-        setPlaybackReason("Este conteúdo está temporariamente indisponível.");
+        setPlaybackReason("Não foi possível iniciar este conteúdo. Tente novamente.");
         return;
       }
 
-      const checkUrl = `${url}${url.includes("?") ? "&" : "?"}probe=1`;
+      // Probe de diagnóstico opcional (para HUD se for Admin)
       const t0 = Date.now();
-      
       try {
+        const checkUrl = `${url}${url.includes("?") ? "&" : "?"}probe=1`;
         const res = await fetch(checkUrl, { signal: AbortSignal.timeout(45000) });
         const reason = res.headers.get("x-playback-reason");
         const info = {
@@ -1421,22 +1430,26 @@ function PlayerPage() {
         setPlaybackDebug((prev: any) => ({ ...(prev ?? {}), ...info }));
         
         if (res.status === 415) {
-          setPlaybackReason(reason || incompatibleReason(res.headers.get("x-playback-incompatible")));
+          setPlaybackReason("Formato de vídeo incompatível com o navegador.");
           setStreamUrl(null);
         } else if (!res.ok && res.status !== 206) {
-          setPlaybackReason("Não foi possível iniciar este conteúdo. Tente novamente em alguns segundos.");
+          setPlaybackReason("Não foi possível iniciar este conteúdo. Tente novamente.");
           setStreamUrl(null);
         } else {
           setPlaybackReason(null);
           setStreamUrl(url);
         }
       } catch (e) {
-        setPlaybackReason("Falha na conexão com o servidor de streaming.");
-        setStreamUrl(null);
+        // Se o probe falhar mas o player puder tentar direto, tentamos
+        console.warn("[PLAY] probe falhou, tentando tocar assim mesmo");
+        setPlaybackReason(null);
+        setStreamUrl(url);
       }
     }).catch(err => {
+      clearTimeout(timeoutId);
+      if (controller.signal.aborted) return;
       console.error("[PLAY_ERROR]", err);
-      setPlaybackReason("Erro ao obter link de reprodução.");
+      setPlaybackReason("Não foi possível iniciar este conteúdo. Tente novamente.");
     });
   }
 
@@ -1502,6 +1515,11 @@ function PlayerPage() {
     setIsPlaying(false);
     setStreamUrl(null);
     setPlaybackReason(null);
+    setPlaybackDebug(null);
+    setCompat(null);
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
     if (hlsRef.current) {
       hlsRef.current.destroy();
       hlsRef.current = null;
