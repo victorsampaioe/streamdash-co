@@ -68,7 +68,7 @@ function rewriteManifest(manifest: string, upstreamUrl: string, token: string, m
       // Assinatura de cada segmento para permitir acesso à CDN final
       const p = new URLSearchParams({
         token,
-        mode,
+        mode: mode || "proxy",
         type: "live",
         ext: segExt,
         via: "core", 
