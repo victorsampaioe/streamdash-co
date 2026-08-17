@@ -647,7 +647,10 @@ export const Route = createFileRoute("/api/public/core/stream")({
           const v = found.headers.get(h);
           if (v) out.set(h, v);
         }
+        const arFinal = out.get("Accept-Ranges");
+        if (arFinal && !/^(bytes|none)$/i.test(arFinal.trim())) out.set("Accept-Ranges", "bytes");
         if (!out.has("Accept-Ranges") && type !== "live") out.set("Accept-Ranges", "bytes");
+
 
         // Diagnóstico de CODEC real: o arquivo é entregue (200/206), mas pode
         // conter H265/AC3/DTS que o navegador não decodifica
