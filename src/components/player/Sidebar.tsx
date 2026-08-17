@@ -85,6 +85,7 @@ export function Sidebar({ activeView, onChangeView, brandName, logoUrl, onLogout
               <button
                 key={item.id}
                 onClick={() => onChangeView(item.id)}
+                title={item.label.replace(/[^\w\sÀ-ú]/g, '').trim()}
                 className={cn(
                   "w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 group active:scale-95",
                   isActive 
@@ -93,7 +94,7 @@ export function Sidebar({ activeView, onChangeView, brandName, logoUrl, onLogout
                 )}
               >
                 <Icon className={cn("h-4 w-4", isActive ? "scale-110" : "group-hover:scale-110 transition-transform")} />
-                <span className="font-bold text-[11px] uppercase tracking-widest">{item.label.replace(/[^\w\sÀ-ú]/g, '').trim()}</span>
+                <span className="font-bold text-[11px] uppercase tracking-widest">{item.label}</span>
               </button>
             );
           })}
