@@ -835,10 +835,10 @@ function PlayerPage() {
 
         {activeView === "home" && (
 
-          <div className="p-6 md:p-12 space-y-12">
+          <div className="p-4 md:p-12 space-y-8 md:space-y-10">
             <HeroBanner 
               item={homeData.featured} 
-              items={[homeData.featured, ...homeData.newReleases.slice(0, 4)].filter(Boolean)}
+              items={curateHero([...(homeData.newReleases || []), ...(homeData.seriesHighlights || [])], 5)}
               primaryColor={primaryColor}
               onPlay={(item: any) => {
                 const type = item.stream_type === "series" ? "series" : (item.stream_type === "live" ? "live" : "movie");
@@ -857,11 +857,10 @@ function PlayerPage() {
               isFavorite={(item: any) => favorites.some(f => f.content_id === (item?.stream_id || item?.series_id || item?.id)?.toString())}
             />
 
-
-            {/* Continuar Assistindo Section */}
+            {/* Continuar Assistindo */}
             {history.length > 0 && (
               <ContentRow 
-                title="Continuar Assistindo" 
+                title="▶ Continuar assistindo" 
                 items={history.map(h => ({
                   ...h,
                   stream_id: h.content_id,
@@ -878,10 +877,10 @@ function PlayerPage() {
               />
             )}
 
-            {/* Minha Lista Section */}
+            {/* Minha Lista */}
             {favorites.length > 0 && (
                <ContentRow 
-                title="Minha Lista" 
+                title="❤️ Minha lista" 
                 items={favorites.map(f => ({
                   ...f,
                   stream_id: f.content_id,
@@ -899,29 +898,67 @@ function PlayerPage() {
             )}
 
             <ContentRow 
-              title="Lançamentos" 
-              items={homeData.newReleases} 
+              title="🔥 Lançamentos HD" 
+              items={curateHdReleases(homeData.newReleases, 20)} 
               type="movie" 
               primaryColor={primaryColor}
+              enablePreview
               onPlay={(item: any) => {
                 setSelectedItem(item);
                 setIsDetailsOpen(true);
               }}
+              onInfo={(item: any) => { setSelectedItem(item); setIsDetailsOpen(true); }}
+              onTrailer={(item: any) => setTrailerItem({ ...item, __type: "movie" })}
+              onToggleFavorite={(item: any) => handleToggleFavorite(item)}
+              isFavorite={(item: any) => favorites.some(f => f.content_id === (item?.stream_id || item?.id)?.toString())}
             />
 
             <ContentRow 
-              title="Mais Assistidos" 
-              items={homeData.newReleases.slice().reverse().slice(0, 10)} 
+              title="⭐ Mais assistidos" 
+              items={curateTopRated(homeData.newReleases, 20)} 
               type="movie" 
               primaryColor={primaryColor}
+              enablePreview
               onPlay={(item: any) => {
                 setSelectedItem(item);
                 setIsDetailsOpen(true);
               }}
+              onInfo={(item: any) => { setSelectedItem(item); setIsDetailsOpen(true); }}
+              onTrailer={(item: any) => setTrailerItem({ ...item, __type: "movie" })}
+              onToggleFavorite={(item: any) => handleToggleFavorite(item)}
+              isFavorite={(item: any) => favorites.some(f => f.content_id === (item?.stream_id || item?.id)?.toString())}
             />
 
             <ContentRow 
-              title="Canais em Destaque" 
+              title="🎬 Filmes recentes" 
+              items={curateRecent(homeData.newReleases, 20)} 
+              type="movie" 
+              primaryColor={primaryColor}
+              enablePreview
+              onPlay={(item: any) => {
+                setSelectedItem(item);
+                setIsDetailsOpen(true);
+              }}
+              onInfo={(item: any) => { setSelectedItem(item); setIsDetailsOpen(true); }}
+              onTrailer={(item: any) => setTrailerItem({ ...item, __type: "movie" })}
+            />
+
+            <ContentRow 
+              title="📺 Séries recentes" 
+              items={curateRecent(homeData.seriesHighlights, 20)} 
+              type="series" 
+              primaryColor={primaryColor}
+              enablePreview
+              onPlay={(item: any) => {
+                setSelectedItem(item);
+                setIsDetailsOpen(true);
+              }}
+              onInfo={(item: any) => { setSelectedItem(item); setIsDetailsOpen(true); }}
+              onTrailer={(item: any) => setTrailerItem({ ...item, __type: "series" })}
+            />
+
+            <ContentRow 
+              title="📡 Canais em destaque" 
               items={homeData.liveHighlights} 
               type="live" 
               primaryColor={primaryColor}
