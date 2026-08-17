@@ -120,7 +120,7 @@ export async function closeOfflineIncident(serverId: string): Promise<RecoveryGa
 
   const secs = Math.max(0, Math.round((Date.now() - new Date(closed.started_at).getTime()) / 1000));
   const downtimeLabel =
-    secs < 60 ? `${secs}s` : secs < 3600 ? `${Math.round(secs / 60)}min` : `${(secs / 3600).toFixed(1)}h`;
+    secs < 60 ? `${secs}s` : secs < 3600 ? `${Math.round(secs / 60)}min` : `${(Number(secs || 0) / 3600).toFixed(1)}h`;
 
   return { notify: true, incidentId: closed.id, startedAt: closed.started_at, downtimeLabel };
 }

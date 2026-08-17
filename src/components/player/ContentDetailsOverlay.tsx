@@ -95,7 +95,7 @@ export function ContentDetailsOverlay({
                 {rating > 0 && (
                   <div className="flex items-center gap-1 text-yellow-500">
                     <Star className="h-4 w-4 fill-current" />
-                    <span className="text-white font-bold">{rating.toFixed(1)}</span>
+                    <span className="text-white font-bold">{Number(rating || 0).toFixed(1)}</span>
                   </div>
                 )}
                 {metadata?.release_date && (

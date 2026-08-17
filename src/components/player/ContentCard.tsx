@@ -93,7 +93,7 @@ export function ContentCard({ item, type, primaryColor, onClick, onInfoClick }: 
           {rating && rating > 0 && (
             <span className="flex items-center gap-0.5 text-yellow-500">
               <Star className="h-3 w-3 fill-yellow-500" />
-              {rating.toFixed(1)}
+              {Number(rating || 0).toFixed(1)}
             </span>
           )}
           {year && <span>· {year}</span>}
