@@ -93,10 +93,13 @@ function PlayerPage() {
   const { resellerId } = Route.useParams();
   const { settings } = Route.useLoaderData();
   const profileId = settings.profile_id;
+  const primaryColor = settings?.primary_color || "#3B82F6";
+  const secondaryColor = settings?.secondary_color || "#0A0A0A";
   
   const [token, setToken] = useState<string | null>(localStorage.getItem(`stream_player_token_${profileId}`));
   const [session, setSession] = useState<any>(null);
   const [activeView, setActiveView] = useState<"home" | "live" | "movie" | "series" | "mylist" | "search" | "settings" | "categories">("home");
+  const [loadingContent, setLoadingContent] = useState(false);
 
   const [categories, setCategories] = useState<any[]>([]);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
