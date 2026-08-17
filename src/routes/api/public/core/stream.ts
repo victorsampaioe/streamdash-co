@@ -60,8 +60,14 @@ function rewriteManifest(manifest: string, upstreamUrl: string, token: string, m
   
   const toProxy = (raw: string) => {
     try {
+      // Já reescrito por outra camada (ex.: Core devolveu manifesto pronto).
+      if (raw.startsWith("/api/public/core/stream") || raw.includes("/api/public/core/stream?")) {
+        segmentos += 1;
+        return raw;
+      }
       // Resolve URL relativa (de segmentos, chaves, etc) para absoluta
       const abs = new URL(raw, baseUrl).toString();
+
       const segExt = (abs.match(/\.([a-z0-9]{2,4})(?:\?|$)/i)?.[1] ?? "ts").toLowerCase();
       segmentos += 1;
       
