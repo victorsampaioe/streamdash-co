@@ -328,7 +328,12 @@ export const Route = createFileRoute("/api/public/core/stream")({
         let coreWorkerVersion: string | null = null;
         // Modo solicitado explicitamente (ex.: segmentos HLS mantêm o modo do manifesto).
         const modeParam = (url.searchParams.get("mode") || "").toUpperCase();
-        const forceCore = url.searchParams.get("forceCore") === "1" || modeParam.startsWith("CORE");
+        
+        // MP4/MOV: forçamos Core por padrão para garantir Range 206, exceto se mode for PAINEL
+        const isVodMp4 = type === "movie" || type === "series";
+        const forceCore = url.searchParams.get("forceCore") === "1" || 
+                         (modeParam.startsWith("CORE")) ||
+                         (isVodMp4 && modeParam !== "PAINEL");
 
         const { coreApiUrl, isCoreInstance } = await import("@/lib/core-api.server");
         const coreBase = coreApiUrl();
