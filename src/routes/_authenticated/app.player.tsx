@@ -134,6 +134,19 @@ function PlayerAdminPage() {
                 />
               </div>
               <div className="space-y-2">
+                <Label htmlFor="slug">Subdomínio (Ex: minhalogo.streammonitor.site)</Label>
+                <div className="flex gap-2 items-center">
+                  <Input
+                    id="slug"
+                    placeholder="minha-marca"
+                    value={slug}
+                    onChange={(e) => setSlug(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ""))}
+                  />
+                  <span className="text-sm text-muted-foreground whitespace-nowrap">.streammonitor.site</span>
+                </div>
+                <p className="text-[10px] text-muted-foreground">Apenas letras minúsculas, números e hifens.</p>
+              </div>
+              <div className="space-y-2">
                 <Label htmlFor="logo-url">URL da Logo (PNG transparente recomendado)</Label>
                 <div className="flex gap-2">
                   <Input
