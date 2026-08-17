@@ -118,7 +118,29 @@ function PlayerPage() {
   const [loadingSeries, setLoadingSeries] = useState(false);
   const [streamUrl, setStreamUrl] = useState<string | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
+  const [smartMsgIndex, setSmartMsgIndex] = useState(0);
   const [playbackReason, setPlaybackReason] = useState<string | null>(null);
+
+  // Mensagens inteligentes durante a conexão + trava de scroll no modo player
+  useEffect(() => {
+    if (!isPlaying || streamUrl) {
+      setSmartMsgIndex(0);
+      return;
+    }
+    const id = setInterval(() => {
+      setSmartMsgIndex((i) => Math.min(i + 1, SMART_LOADING_MESSAGES.length - 1));
+    }, 2200);
+    return () => clearInterval(id);
+  }, [isPlaying, streamUrl]);
+
+  useEffect(() => {
+    if (typeof document === "undefined") return;
+    document.body.style.overflow = isPlaying ? "hidden" : "";
+    return () => {
+      document.body.style.overflow = "";
+    };
+  }, [isPlaying]);
+
   // HUD temporário de diagnóstico de reprodução (remover após validação)
   const [playbackDebug, setPlaybackDebug] = useState<any>(null);
   // Versão do Frontend (para conferência em produção)
