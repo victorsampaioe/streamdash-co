@@ -1135,7 +1135,7 @@ function PlayerPage() {
           series={selectedSeriesInfo.info}
           info={selectedSeriesInfo}
           loading={loadingSeries}
-          isOpen={isSeriesOpen}
+          
           onClose={() => {
             setSelectedSeriesInfo(null);
             setIsSeriesOpen(false);
