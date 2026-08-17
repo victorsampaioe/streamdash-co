@@ -94,7 +94,7 @@ function PlayerPage() {
   const navigate = useNavigate();
   const { resellerId } = Route.useParams();
   const { settings } = Route.useLoaderData();
-  const profileId = settings.profile_id;
+  const profileId = settings?.profile_id || resellerId;
   const primaryColor = settings?.primary_color || "#3B82F6";
   const secondaryColor = settings?.secondary_color || "#0A0A0A";
   
@@ -102,7 +102,7 @@ function PlayerPage() {
   const [session, setSession] = useState<any>(null);
   
   useEffect(() => {
-    if (typeof window !== "undefined") {
+    if (typeof window !== "undefined" && profileId) {
       const savedToken = localStorage.getItem(`stream_player_token_${profileId}`);
       if (savedToken) setToken(savedToken);
     }
