@@ -218,7 +218,7 @@ export const Route = createFileRoute("/api/public/core/stream")({
           try {
             // Otimização VOD: timeout maior e blocos eficientes
             const isVod = type === "movie" || type === "series";
-            const isHlsManifest = ext === "m3u8";
+            const isHlsManifest = ext === "m3u8" || (type === "live" && !ext.includes("ts"));
             const timeout = isVod ? 60000 : 30000;
             
             if (isHlsManifest) {
