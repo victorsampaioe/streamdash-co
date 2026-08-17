@@ -960,13 +960,13 @@ function PlayerPage() {
               </div>
 
               <div className="pt-6 border-t border-white/5 space-y-3">
-                <h2 className="text-lg font-semibold text-white/90">Objetivo de Redesign Premium</h2>
-                <div className="p-5 bg-white/5 border border-white/10 rounded-2xl">
-                  <h4 className="text-primary font-bold mb-3 flex items-center gap-2">
-                    <ShieldCheck className="h-4 w-4" /> Especificação do Web Player
+                <h2 className="text-lg font-semibold">Plano de Teste e Otimização</h2>
+                <div className="p-4 bg-emerald-500/10 border border-emerald-500/20 rounded-lg">
+                  <h4 className="text-emerald-400 font-bold mb-2 flex items-center gap-2">
+                    <ShieldCheck className="h-4 w-4" /> Diagnóstico Xtream & Web Player
                   </h4>
-                  <p className="text-[11px] text-white/60 leading-relaxed whitespace-pre-wrap font-mono">
-                    {"O site principal streammonitor.site está carregando apenas HTML sem o CSS. Verifique o build/deploy dos assets, arquivos CSS/JS, cache/CDN e se o index.html está apontando para os arquivos corretos. Fazer um novo deploy completo e invalidar cache."}
+                  <p className="text-[10px] text-emerald-200/70 leading-relaxed whitespace-pre-wrap">
+                    {"# Ajuste do Web Player — usar Core como camada principal de reprodução\n\nPelo diagnóstico, catálogo e login estão funcionando.\n\nAgora quero ajustar a arquitetura de reprodução.\n\nHoje está:\n\nCliente → Painel → IPTV\n\nQuero evoluir para:\n\nCliente → Stream Monitor Core → IPTV\n\nO Core deve ser a camada responsável pela entrega dos streams quando necessário.\n\n## Objetivos:\n\n### 1. Live TV\n\nGarantir reprodução de:\n\n* m3u8;\n* HLS;\n* TS.\n\nO Core deve tratar:\n\n* headers;\n* CORS;\n* conexão;\n* timeout;\n* resposta do stream.\n\n---\n\n### 2. Filmes e Séries\n\nPara:\n\n* MP4;\n* formatos compatíveis com navegador.\n\nUsar o relay/proxy do Core.\n\nPara:\n\n* MKV;\n* AVI;\n* formatos não suportados pelo navegador.\n\nNão tentar apenas entregar direto ao navegador.\n\nCriar uma identificação clara:\n\n\"Formato não compatível com reprodução direta no navegador.\"\n\nRegistrar isso no diagnóstico.\n\n---\n\n### 3. Fluxo inteligente\n\nManter uma lógica:\n\nPrimeiro:\n\nCore Stream Monitor → IPTV\n\nSe o Core identificar que não consegue entregar:\n\nRegistrar o motivo.\n\nNão fazer várias tentativas demoradas.\n\n---\n\n### 4. Diagnóstico no Player\n\nQuando falhar, retornar motivo real:\n\nExemplo:\n\n\"Servidor respondeu normalmente, porém o formato do vídeo não é compatível com navegador.\"\n\nou\n\n\"Servidor bloqueou acesso direto. Reprodução direcionada pelo Core.\"\n\n---\n\n### 5. Não mexer no login\n\nO login Xtream já está funcionando.\n\nFocar somente na camada:\n\nCATÁLOGO → STREAM → PLAYER\n\n---\n\nDepois executar teste real:\n\n✅ Live funcionando\n✅ Filme MP4 funcionando\n✅ Série funcionando\n✅ Erros de MKV/AVI identificados corretamente"}
                   </p>
                 </div>
                 <Button
