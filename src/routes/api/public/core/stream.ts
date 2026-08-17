@@ -475,10 +475,12 @@ export const Route = createFileRoute("/api/public/core/stream")({
 
         // Manifesto HLS → segmentos passam pelo mesmo modo que funcionou.
         if (isManifest) {
+          const tManifesto = Date.now();
           const text = await found.text();
           const { manifest: rewritten, segmentos } = rewriteManifest(text, usedUrl, token, usedModo);
+          
           console.log(
-            `[STREAM RESPONSE] via=${usedModo} manifesto HLS bytes=${text.length} linhas=${text.split("\n").length} segmentos_reescritos=${segmentos}`
+            `[HLS]\nURL original: ${maskMedia(usedUrl)}\nManifesto: ${text.length} bytes\nStatus manifesto: ${found.status}\nSegmentos encontrados: ${segmentos}\nTempo resposta: ${Date.now() - tManifesto}ms\nErro: none`
           );
           return new Response(rewritten, {
             status: 200,
