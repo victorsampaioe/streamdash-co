@@ -58,13 +58,13 @@ export function ContentDetailsOverlay({
     : (item?.stream_icon || item?.cover || item?.metadata?.stream_icon);
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 md:p-8 animate-in fade-in duration-300">
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 md:p-8 transition-all duration-300">
       <div 
         className="absolute inset-0 bg-black/90 backdrop-blur-sm" 
         onClick={onClose}
       />
       
-      <div className="relative w-full max-w-5xl bg-[#0a0a0a] rounded-2xl overflow-hidden border border-white/10 shadow-2xl animate-in zoom-in-95 duration-300">
+      <div className="relative w-full max-w-5xl bg-[#0a0a0a] rounded-2xl overflow-hidden border border-white/10 shadow-2xl transition-all duration-300">
         <button 
           onClick={onClose}
           className="absolute top-4 right-4 z-10 p-2 bg-black/50 hover:bg-black/80 rounded-full text-white/70 hover:text-white transition-all"
@@ -111,7 +111,7 @@ export function ContentDetailsOverlay({
                   </div>
                 )}
                 {type === "series" && (
-                  <span className="px-2 py-0.5 bg-white/10 rounded text-xs font-black uppercase tracking-wider">Série</span>
+                  <span className="px-2 py-0.5 bg-white/10 rounded text-[10px] font-black uppercase tracking-widest">Série</span>
                 )}
               </div>
             </div>
@@ -155,7 +155,7 @@ export function ContentDetailsOverlay({
 
             {metadata?.cast && metadata.cast.length > 0 && (
               <div className="pt-6 border-t border-white/5">
-                <p className="text-xs font-bold text-white/40 uppercase tracking-widest mb-2">Elenco Principal</p>
+                <p className="text-[10px] font-black text-white/40 uppercase tracking-widest mb-2">Elenco Principal</p>
                 <p className="text-sm text-white/60">
                   {metadata.cast.join(", ")}
                 </p>

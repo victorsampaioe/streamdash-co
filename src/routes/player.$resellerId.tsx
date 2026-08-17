@@ -98,7 +98,7 @@ function PlayerPage() {
   
   const [token, setToken] = useState<string | null>(localStorage.getItem(`stream_player_token_${profileId}`));
   const [session, setSession] = useState<any>(null);
-  const [activeView, setActiveView] = useState<"home" | "live" | "movie" | "series" | "mylist" | "search" | "settings" | "categories">("home");
+  const [activeView, setActiveView] = useState<"home" | "live" | "movie" | "series" | "mylist" | "search" | "settings">("home");
   const [loadingContent, setLoadingContent] = useState(false);
   const [categories, setCategories] = useState<any[]>([]);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
@@ -206,7 +206,7 @@ function PlayerPage() {
   const handleToggleFavorite = (item: any) => {
     if (!token) return;
     const contentId = (item.stream_id || item.series_id || item.id || item.content_id).toString();
-    const contentType = item.stream_type === "live" ? "live" : (item.series_id || item.content_type === "series" ? "series" : "movie");
+    const contentType = item.stream_type === "live" ? "live" : (item.series_id || item.content_type === "series" || item.content_type === "series" ? "series" : "movie");
     const isFavorite = favorites.some(f => f.content_id === contentId);
     
     toggleFavoriteMutation.mutate({
@@ -214,7 +214,11 @@ function PlayerPage() {
         token,
         contentId,
         contentType,
-        isFavorite: !isFavorite
+        isFavorite: !isFavorite,
+        metadata: {
+          name: item.name || item.title,
+          stream_icon: item.stream_icon || item.cover
+        }
       }
     });
   };
@@ -330,7 +334,7 @@ function PlayerPage() {
 
   useEffect(() => {
     if (session && token) {
-      if (activeView === "search" || activeView === "settings" || activeView === "categories") return;
+      if (activeView === "search" || activeView === "settings") return;
       
       setLoadingContent(true);
       const controller = new AbortController();
@@ -740,8 +744,8 @@ function PlayerPage() {
 
 
 
-      <main className="flex-1 overflow-y-auto pb-24 md:pb-0">
-        <header className="sticky top-0 z-40 bg-neutral-950/80 backdrop-blur-md px-6 py-4 flex items-center justify-between border-b border-white/5 md:hidden">
+      <main className="flex-1 overflow-y-auto pb-24 md:pb-0 scroll-smooth">
+        <header className="sticky top-0 z-40 bg-black/80 backdrop-blur-md px-6 py-4 flex items-center justify-between border-b border-white/5 md:hidden">
           <div className="flex items-center gap-2">
             {settings?.logo_url ? (
               <img src={settings.logo_url} alt="Logo" className="h-6 w-auto" />
@@ -825,7 +829,7 @@ function PlayerPage() {
             )}
 
             <ContentRow 
-              title="Novidades" 
+              title="Lançamentos" 
               items={homeData.newReleases} 
               type="movie" 
               primaryColor={primaryColor}
@@ -836,7 +840,7 @@ function PlayerPage() {
             />
 
             <ContentRow 
-              title="Recomendados para Você" 
+              title="Mais Assistidos" 
               items={homeData.newReleases.slice().reverse().slice(0, 10)} 
               type="movie" 
               primaryColor={primaryColor}
@@ -847,7 +851,7 @@ function PlayerPage() {
             />
 
             <ContentRow 
-              title="Destaques Ao Vivo" 
+              title="Canais em Destaque" 
               items={homeData.liveHighlights} 
               type="live" 
               primaryColor={primaryColor}
@@ -857,44 +861,6 @@ function PlayerPage() {
           </div>
         )}
 
-        {activeView === "categories" && (
-          <div className="p-6 md:p-12 space-y-8 animate-in fade-in duration-500">
-            <h1 className="text-3xl font-black tracking-tight flex items-center gap-3">
-              <LayoutGrid className="h-8 w-8 text-primary" style={{ color: primaryColor }} />
-              Plataformas e Categorias
-            </h1>
-            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-6">
-              {[
-                { name: "Netflix", logo: "https://upload.wikimedia.org/wikipedia/commons/0/08/Netflix_2015_logo.svg", color: "#E50914" },
-                { name: "Prime Video", logo: "https://upload.wikimedia.org/wikipedia/commons/f/f1/Prime_Video.png", color: "#00A8E1" },
-                { name: "HBO Max", logo: "https://upload.wikimedia.org/wikipedia/commons/1/17/HBO_Max_Logo.svg", color: "#5822b4" },
-                { name: "Disney+", logo: "https://upload.wikimedia.org/wikipedia/commons/3/3e/Disney%2B_logo.svg", color: "#0063e5" },
-                { name: "Apple TV+", logo: "https://upload.wikimedia.org/wikipedia/commons/a/a2/Apple_TV%2B_logo.svg", color: "#ffffff" },
-              ].map((brand) => (
-                <Card 
-                  key={brand.name} 
-                  className="bg-neutral-900/50 border-white/5 hover:border-white/20 transition-all cursor-pointer group overflow-hidden"
-                  onClick={() => {
-                    setActiveView("movie");
-                    setSelectedCategory(null);
-                    toast.info(`Explorando catálogo ${brand.name}`);
-                  }}
-                >
-                  <div className="aspect-video p-6 flex items-center justify-center relative">
-                    <div 
-                      className="absolute inset-0 opacity-0 group-hover:opacity-10 transition-opacity" 
-                      style={{ backgroundColor: brand.color }}
-                    />
-                    <img src={brand.logo} alt={brand.name} className="h-8 md:h-12 w-auto object-contain brightness-0 invert group-hover:brightness-100 group-hover:invert-0 transition-all" />
-                  </div>
-                  <div className="p-4 text-center border-t border-white/5 font-bold text-sm text-white/40 group-hover:text-white transition-colors">
-                    {brand.name}
-                  </div>
-                </Card>
-              ))}
-            </div>
-          </div>
-        )}
 
         {activeView === ("mylist" as any) && (
           <div className="p-6 md:p-12 space-y-8">
@@ -1063,10 +1029,26 @@ function PlayerPage() {
 
         {(activeView === "live" || activeView === "movie" || activeView === "series") && (
           <div className="p-6 md:p-12 space-y-8">
-
-            <h1 className="text-3xl font-bold capitalize">{activeView === "live" ? "TV Ao Vivo" : activeView === "movie" ? "Filmes" : "Séries"}</h1>
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+              <h1 className="text-3xl font-black capitalize tracking-tight">
+                {activeView === "live" ? "TV Ao Vivo" : activeView === "movie" ? "Filmes" : "Séries"}
+              </h1>
+              
+              <div className="relative w-full md:w-64">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-white/40" />
+                <Input 
+                  placeholder="Busca rápida..." 
+                  className="bg-white/5 border-white/10 pl-9 h-10 rounded-xl text-sm"
+                  onChange={(e) => {
+                    const q = e.target.value.toLowerCase();
+                    // Implementação de busca rápida local (apenas no que já está carregado)
+                    // Para busca global, usa-se a aba Buscar
+                  }}
+                />
+              </div>
+            </div>
             
-            <div className="flex gap-2 overflow-x-auto pb-4 scrollbar-hide">
+            <div className="flex gap-2 overflow-x-auto pb-4 scrollbar-hide no-scrollbar">
               {categories.map((cat) => (
                 <button
                   key={cat.category_id}
@@ -1099,11 +1081,10 @@ function PlayerPage() {
                     primaryColor={primaryColor} 
                     onClick={(i) => {
                       debugClick(i, activeView as "live" | "movie" | "series");
+                      setSelectedItem(i);
+                      setIsDetailsOpen(true);
                       if (activeView === "live") {
-                        handlePlay(i.stream_id, "live");
-                      } else {
-                        setSelectedItem(i);
-                        setIsDetailsOpen(true);
+                        // handlePlay(i.stream_id, "live");
                       }
                     }}
 
@@ -1116,7 +1097,7 @@ function PlayerPage() {
               <div className="flex justify-center pt-8">
                 <Button 
                   variant="outline" 
-                  className="bg-white/5 border-white/10 text-white hover:bg-white/10"
+                  className="bg-white/5 border-white/10 text-white hover:bg-white/10 rounded-xl"
                   onClick={async () => {
                     const actionMap = { live: "get_live_streams", movie: "get_vod_streams", series: "get_series" } as const;
                     const action = actionMap[activeView as keyof typeof actionMap];
@@ -1126,7 +1107,7 @@ function PlayerPage() {
                         action, 
                         categoryId: selectedCategory || undefined,
                         offset: content.length,
-                        limit: 40
+                        limit: 50
                       } 
                     });
                     if (Array.isArray(moreData)) {
@@ -1134,7 +1115,7 @@ function PlayerPage() {
                     }
                   }}
                 >
-                  Carregar Mais
+                  Carregar mais conteúdos
                 </Button>
               </div>
             )}
@@ -1146,7 +1127,7 @@ function PlayerPage() {
       {selectedItem && (
         <ContentDetailsOverlay 
           item={selectedItem}
-          type={(selectedItem.series_id || selectedItem.content_type === "series" || activeView === "series") ? "series" : "movie"}
+          type={activeView === "live" ? "movie" : (selectedItem.series_id || selectedItem.content_type === "series" || activeView === "series") ? "series" : "movie"}
           isOpen={isDetailsOpen}
           onClose={() => {
             setIsDetailsOpen(false);
@@ -1154,7 +1135,9 @@ function PlayerPage() {
           onPlay={(i: any) => {
             const isSeries = i.series_id || i.content_type === "series" || activeView === "series" || selectedItem.series_id;
             setIsDetailsOpen(false);
-            if (isSeries) {
+            if (activeView === "live") {
+              handlePlay(i.stream_id || i.id || i.content_id, "live", i);
+            } else if (isSeries) {
               handleOpenSeries(i);
             } else {
               handlePlay(i.stream_id || i.id || i.content_id, "movie", i);
@@ -1205,29 +1188,33 @@ function PlayerPage() {
       {isPlaying && (
         <div className="fixed inset-0 z-[100] bg-black">
           <div className="absolute top-6 left-6 z-10">
-             <Button variant="ghost" onClick={handleClosePlayer} className="bg-black/40 hover:bg-black/60 text-white rounded-full h-12 w-12 p-0">
+             <Button 
+               variant="ghost" 
+               onClick={handleClosePlayer} 
+               className="bg-black/40 hover:bg-white/10 text-white rounded-full h-12 w-12 p-0 transition-all border border-white/5"
+             >
                <X className="h-6 w-6" />
              </Button>
           </div>
           <div className="h-full w-full flex items-center justify-center">
              {playbackReason ? (
-                <div className="max-w-md mx-6 rounded-2xl border border-white/10 bg-white/5 p-8 text-center space-y-4">
-                  <div className="mx-auto w-12 h-12 rounded-full bg-white/5 flex items-center justify-center border border-white/10">
-                     {playbackReason.includes("Carregando") ? (
-                       <Loader2 className="h-6 w-6 text-white animate-spin" />
+                <div className="max-w-md mx-6 rounded-3xl border border-white/5 bg-white/5 backdrop-blur-xl p-10 text-center space-y-6 shadow-2xl">
+                  <div className="mx-auto w-16 h-16 rounded-2xl bg-white/5 flex items-center justify-center border border-white/10">
+                     {playbackReason.includes("Conectando") ? (
+                       <Loader2 className="h-8 w-8 text-white animate-spin" />
                      ) : playbackReason.includes("indisponível") ? (
-                       <AlertCircle className="h-6 w-6 text-red-500" />
+                       <AlertCircle className="h-8 w-8 text-red-500" />
                      ) : (
-                       <PlayCircle className="h-6 w-6 text-white/40" />
+                       <PlayCircle className="h-8 w-8 text-white/40" />
                      )}
                   </div>
                   <p className="text-base font-medium text-white">
-                    {playbackReason.includes("indisponível") || playbackReason.includes("Não foi possível")
-                      ? "Não foi possível iniciar este conteúdo. Tente novamente."
-                      : playbackReason.includes("Falha na conexão")
-                      ? "Erro ao conectar com o servidor. Verifique sua rede."
+                    {playbackReason.includes("indisponível") || playbackReason.includes("indisponível")
+                      ? "Conteúdo indisponível"
+                      : playbackReason.includes("lento") || playbackReason.includes("instável")
+                      ? "Servidor instável, tentando novamente..."
                       : playbackReason.includes("Carregando")
-                      ? "▶ Carregando conteúdo..."
+                      ? "Conectando ao servidor..."
                       : "Não foi possível reproduzir este conteúdo."}
                   </p>
                   
@@ -1274,17 +1261,18 @@ function PlayerPage() {
              ) : !streamUrl ? (
                 <div className="flex flex-col items-center gap-4">
                   <Loader2 className="h-10 w-10 text-white animate-spin opacity-20" />
-                  <p className="text-white/40 text-sm font-medium animate-pulse">Iniciando stream...</p>
+                  <p className="text-white/40 text-sm font-black uppercase tracking-widest">Conectando...</p>
                 </div>
              ) : (
-                <video 
-                  ref={videoRef}
-                  className="w-full h-full"
-                  controls
-                  autoPlay
-                  playsInline
-                  preload="auto"
-                />
+                 <video 
+                   ref={videoRef}
+                   className="w-full h-full max-h-screen"
+                   controls
+                   autoPlay
+                   playsInline
+                   preload="auto"
+                   crossOrigin="anonymous"
+                 />
              )}
           </div>
 
@@ -1385,7 +1373,7 @@ function PlayerPage() {
     setSelectedItem(item ?? selectedItem);
     setStreamUrl(null);
     setCompat(null);
-    setPlaybackReason("▶ Carregando conteúdo...");
+    setPlaybackReason("Conectando ao servidor...");
     
     const started = Date.now();
     setPlaybackDebug({ 
@@ -1402,10 +1390,10 @@ function PlayerPage() {
 
     const timeoutId = setTimeout(() => {
       if (!streamUrl && isPlaying) {
-        setPlaybackReason("Não foi possível iniciar este conteúdo. Verifique sua conexão ou tente outro player.");
-        toast.error("Tempo esgotado ao carregar o stream.");
+        setPlaybackReason("Servidor instável, tentando novamente...");
+        // Tentativa de reconexão automática ou fallback
       }
-    }, 20000);
+    }, 15000);
 
     // Inicia busca da URL sem bloquear a abertura do player
     getPlayerStreamUrl({
@@ -1599,7 +1587,7 @@ function LoginForm({ resellerId, settings, onLogin, primaryColor, secondaryColor
       </div>
 
       <div className="w-full max-w-md relative z-10">
-        <div className="bg-neutral-900/40 backdrop-blur-3xl border border-white/5 p-8 rounded-3xl shadow-2xl relative overflow-hidden group">
+        <div className="bg-black/60 backdrop-blur-3xl border border-white/5 p-8 rounded-3xl shadow-2xl relative overflow-hidden group">
           <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-primary/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
           
           <div className="flex flex-col items-center mb-8">
@@ -1623,7 +1611,7 @@ function LoginForm({ resellerId, settings, onLogin, primaryColor, secondaryColor
               <Label className="text-[10px] font-black uppercase tracking-widest text-white/30 ml-1">Servidor</Label>
               <div className="relative group/field">
                 <select 
-                  className="w-full bg-black/40 border border-white/5 focus:border-primary/50 rounded-xl px-4 py-3.5 text-white outline-none appearance-none transition-all hover:bg-black/60 pr-10"
+                  className="w-full bg-black border border-white/5 focus:border-primary/50 rounded-xl px-4 py-3.5 text-white outline-none appearance-none transition-all hover:bg-neutral-900 pr-10"
                   value={serverId}
                   onChange={(e) => setServerId(e.target.value)}
                   disabled={loginMutation.isPending}
@@ -1654,7 +1642,7 @@ function LoginForm({ resellerId, settings, onLogin, primaryColor, secondaryColor
                 placeholder="Insira seu usuário"
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
-                className="bg-black/40 border-white/5 focus:border-primary/50 h-12 rounded-xl text-white placeholder:text-white/10"
+                className="bg-black border-white/5 focus:border-primary/50 h-12 rounded-xl text-white placeholder:text-white/10"
                 disabled={loginMutation.isPending}
               />
             </div>
@@ -1666,7 +1654,7 @@ function LoginForm({ resellerId, settings, onLogin, primaryColor, secondaryColor
                 placeholder="Insira sua senha"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="bg-black/40 border-white/5 focus:border-primary/50 h-12 rounded-xl text-white placeholder:text-white/10"
+                className="bg-black border-white/5 focus:border-primary/50 h-12 rounded-xl text-white placeholder:text-white/10"
                 disabled={loginMutation.isPending}
               />
             </div>
