@@ -1547,9 +1547,14 @@ function PlayerPage() {
 
 
 function LoginForm({ resellerId, settings, onLogin, primaryColor, secondaryColor }: any) {
-  const [username, setUsername] = useState(localStorage.getItem(`stream_player_last_user_${resellerId}`) || "");
+  const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
-  const [serverId, setServerId] = useState(localStorage.getItem(`stream_player_last_server_${resellerId}`) || "");
+  const [serverId, setServerId] = useState("");
+  
+  useEffect(() => {
+    setUsername(localStorage.getItem(`stream_player_last_user_${resellerId}`) || "");
+    setServerId(localStorage.getItem(`stream_player_last_server_${resellerId}`) || "");
+  }, [resellerId]);
   const [servers, setServers] = useState<any[]>([]);
   const [diagnosing, setDiagnosing] = useState(false);
   const [healthInfo, setHealthInfo] = useState<any>(null);
