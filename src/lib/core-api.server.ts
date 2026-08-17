@@ -290,8 +290,9 @@ export async function runOnCore<T>(
   task: CoreTask,
   payload: Record<string, unknown>,
   local: () => Promise<T>,
+  force = false,
 ): Promise<T> {
-  if (!useCore(task)) {
+  if (!force && !useCore(task)) {
     if (coreApiUrl() && !isCoreInstance() && !canRunOnCore(task)) {
       console.log(
         `[CORE SKIP] task: ${task} | motivo: tarefa depende do banco (Painel é dono do banco) | timestamp: ${new Date().toISOString()}`,
