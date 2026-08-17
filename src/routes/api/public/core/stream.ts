@@ -167,7 +167,7 @@ export const Route = createFileRoute("/api/public/core/stream")({
           );
           return new Response(motivo, {
             status: 400,
-            headers: { ...CORS, ...VER, "X-Core-Error": motivo },
+            headers: { ...CORS, ...VER, "X-Core-Error": asciiHeader(motivo) },
           });
         };
 
@@ -331,8 +331,8 @@ export const Route = createFileRoute("/api/public/core/stream")({
               if (ext === "ts" || ext === "m4s" || type === "live") {
                 console.error(`[HLS SEGMENT] URL=${maskMedia(abs)} STATUS=${res.status} ERRO="${motivo}"`);
               }
-              out.set("X-Playback-Reason", motivo);
-              out.set("X-Core-Error", motivo);
+              out.set("X-Playback-Reason", asciiHeader(motivo));
+              out.set("X-Core-Error", asciiHeader(motivo));
               out.set("Content-Type", "text/plain; charset=utf-8");
               return new Response(motivo, { status: res.status, headers: out });
             }
@@ -353,7 +353,7 @@ export const Route = createFileRoute("/api/public/core/stream")({
                const html = await res.text();
                if (html.includes("403") || html.includes("Forbidden")) {
                   const msg = `Upstream retornou página 403 (Forbidden) disfarçada de 200 com UA=${uaKind}`;
-                  out.set("X-Core-Error", msg);
+                  out.set("X-Core-Error", asciiHeader(msg));
                   return new Response(msg, { status: 403, headers: out });
                }
             }
@@ -372,7 +372,7 @@ export const Route = createFileRoute("/api/public/core/stream")({
             }
             return new Response(`Worker fetch error: ${msg}`, {
               status: 502,
-              headers: { ...CORS, ...VER, "X-Core-Error": msg, "X-Core-UA": uaKind },
+              headers: { ...CORS, ...VER, "X-Core-Error": asciiHeader(msg), "X-Core-UA": uaKind },
             });
           }
         }
@@ -612,9 +612,6 @@ export const Route = createFileRoute("/api/public/core/stream")({
         if (!found) {
           const ultimo = tentativas[tentativas.length - 1];
           const reason = `Nenhum modo entregou o stream. Tentativas: ${resumo || "nenhuma"}`;
-          // Headers HTTP só aceitam ByteString (latin-1): sanitiza acentos/travessões
-          const asciiHeader = (v: string) =>
-            v.replace(/[—–]/g, "-").replace(/[^\x20-\x7E]/g, "?").slice(0, 900);
           console.error(`[STREAM RESPONSE] status=${ultimo?.status ?? 502} ${reason}`);
           return new Response(reason, {
             status: ultimo?.status && ultimo.status >= 400 ? ultimo.status : 502,
@@ -652,7 +649,7 @@ export const Route = createFileRoute("/api/public/core/stream")({
               "X-Playback-Via": usedModo,
               "X-Playback-Segments": String(segmentos),
               "X-Upstream-Status": String(found.headers.get("X-Upstream-Status") ?? found.status),
-              "X-Playback-Reason": resumo || "OK",
+              "X-Playback-Reason": asciiHeader(resumo || "OK"),
             },
           });
 
@@ -688,7 +685,7 @@ export const Route = createFileRoute("/api/public/core/stream")({
             out.set("X-Playback-Action", info.action);
             if (!info.browserSupported && info.reason) {
               out.set("X-Playback-Incompatible", finalExt);
-              out.set("X-Playback-Reason", info.reason);
+              out.set("X-Playback-Reason", asciiHeader(info.reason));
             }
             console.log(
               `[CODEC] via=${usedModo} ext=${finalExt} video=${info.video ?? "?"} audio=${info.audio ?? "?"} suportado=${info.browserSupported} acao=${info.action}`
