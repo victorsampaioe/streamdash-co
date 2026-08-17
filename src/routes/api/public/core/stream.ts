@@ -424,15 +424,17 @@ export const Route = createFileRoute("/api/public/core/stream")({
           // Ordem de candidatos otimizada para compatibilidade
           candidates = hostCandidates(server.host).flatMap((base) => {
             if (type === "live") {
-              // Alguns painéis exigem output=ts explicitamente ou caminhos sem pasta /live/
+              // Navegador só reproduz HLS: .m3u8 primeiro; .ts (mpegts contínuo)
+              // fica como último recurso.
               return [
-                `${base}/live/${user}/${pass}/${sid}.ts`,
                 `${base}/live/${user}/${pass}/${sid}.m3u8`,
+                `${base}/${user}/${pass}/${sid}.m3u8`,
+                `${base}/live/${user}/${pass}/${sid}.ts`,
                 `${base}/${user}/${pass}/${sid}.ts`,
-                `${base}/live/${user}/${pass}/${sid}`,
-                `${base}/${user}/${pass}/${sid}`
+                `${base}/live/${user}/${pass}/${sid}`
               ];
             }
+
             return [`${base}/${folder}/${user}/${pass}/${sid}.${ext}`, `${base}/${folder}/${user}/${pass}/${sid}.mp4`];
           });
         }
