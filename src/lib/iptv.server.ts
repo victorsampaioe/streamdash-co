@@ -311,7 +311,7 @@ class PlayerApiError extends Error {
  */
 async function getJson(
   url: string,
-  ms = API_TIMEOUT_MS,
+  ms = 20_000, // Aumentado para 20s para VOD/Séries pesadas
   ua: string = UA_PLAYER,
 ): Promise<{ data: unknown; diag: PlayerApiDiagnostics }> {
   const t0 = Date.now();
