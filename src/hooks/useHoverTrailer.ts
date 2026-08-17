@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { getTMDBMetadata } from "@/lib/player.functions";
+import { markEmbedBlocked, pickEmbeddableKey } from "@/lib/youtube-embed";
 
 /** Cache global de trailers já resolvidos (evita repetir chamadas TMDB). */
 const trailerCache = new Map<string, string | null>();
@@ -20,6 +21,8 @@ export function isTouchDevice() {
  * Preview de trailer no hover — apenas camada visual.
  * - só dispara depois de ~1,5s de hover
  * - só carrega o item em foco (nunca em lote)
+ * - só usa trailers que ACEITAM incorporação (evita o aviso
+ *   "Este conteúdo está bloqueado"); sem trailer válido, fica a capa
  * - libera o vídeo assim que o mouse sai
  * - desativado em telas de toque
  */
@@ -58,7 +61,13 @@ export function useHoverTrailer(title: string, type: "movie" | "series", enabled
         const meta: any = await getTMDBMetadata({
           data: { title: cleanTitle(title), type: type === "series" ? "tv" : "movie" },
         });
-        const found = meta?.trailer_key ?? null;
+        const candidates: string[] = meta?.trailer_candidates?.length
+          ? meta.trailer_candidates
+          : meta?.trailer_key
+            ? [meta.trailer_key]
+            : [];
+        // Prioriza o primeiro trailer que permite embed; nenhum → capa.
+        const found = await pickEmbeddableKey(candidates);
         trailerCache.set(key, found);
         if (aliveRef.current) setTrailerKey(found);
       } catch {
@@ -76,5 +85,13 @@ export function useHoverTrailer(title: string, type: "movie" | "series", enabled
     if (!enabled) setTrailerKey(null);
   }, [enabled]);
 
-  return trailerKey;
+  /** Chamado quando o iframe falha em tela: descarta o preview e volta à capa. */
+  const reportBlocked = (blockedKey: string) => {
+    markEmbedBlocked(blockedKey);
+    const cacheKey = `${type}:${cleanTitle(title).toLowerCase()}`;
+    trailerCache.set(cacheKey, null);
+    if (aliveRef.current) setTrailerKey(null);
+  };
+
+  return { trailerKey, reportBlocked };
 }
