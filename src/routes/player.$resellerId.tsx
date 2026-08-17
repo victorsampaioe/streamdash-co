@@ -46,7 +46,8 @@ import {
   TrendingUp,
   History,
   CheckCircle2,
-  ShieldCheck
+  ShieldCheck,
+  ShieldAlert
 } from "lucide-react";
 
 
@@ -372,15 +373,17 @@ function PlayerPage() {
   const primaryColor = settings?.primary_color || "#3B82F6";
   const secondaryColor = settings?.secondary_color || "#0A0A0A";
 
-   const { data: serverStatus } = useQuery({
-     queryKey: ["player-server-status", token],
-     queryFn: async () => {
-       if (!token) return null;
-       return await getServerStatus({ data: { token } });
-     },
-     enabled: !!token,
-     refetchInterval: 60000,
-   });
+  const isAdmin = session?.user?.email?.includes("admin") || false;
+
+  const { data: serverStatus } = useQuery({
+    queryKey: ["player-server-status", token],
+    queryFn: async () => {
+      if (!token) return null;
+      return await getServerStatus({ data: { token } });
+    },
+    enabled: !!token,
+    refetchInterval: 60000,
+  });
 
 
   // Efeito para inicializar Hls.js ou Video Nativo
@@ -392,6 +395,10 @@ function PlayerPage() {
 
     // Diagnóstico da camada de playback (motivo real, não mensagem genérica)
     const logMeta = async () => {
+      // Se não for admin, não precisamos do fetch de diagnóstico pesado aqui
+      // pois o handlePlay já fez um probe leve.
+      if (!isAdmin) return;
+
       const t0 = performance.now();
       try {
         const res = await fetch(streamUrl, {
@@ -478,7 +485,14 @@ function PlayerPage() {
 
 
     if (isHls && Hls.isSupported()) {
-      const hls = new Hls({ enableWorker: true, lowLatencyMode: false });
+      const hls = new Hls({ 
+        enableWorker: true, 
+        lowLatencyMode: true,
+        backBufferLength: 60,
+        maxBufferLength: 30,
+        maxMaxBufferLength: 60,
+        initialLiveManifestSize: 1
+      });
       hls.loadSource(streamUrl);
       hls.attachMedia(video);
       hlsRef.current = hls;
@@ -1135,30 +1149,54 @@ function PlayerPage() {
           </div>
           <div className="h-full w-full flex items-center justify-center">
              {playbackReason ? (
-                <div className="max-w-md mx-6 rounded-2xl border border-white/10 bg-white/5 p-6 text-center space-y-3">
-                  <p className="text-sm text-white/90 leading-relaxed">{playbackReason}</p>
-                  {compat && (
-                    <p className={`font-mono text-xs ${compat.ok ? "text-emerald-400" : "text-amber-400"}`}>
-                      {compat.label}
-                    </p>
-                  )}
-                  <div className="flex flex-wrap items-center justify-center gap-2">
-                    <Button
-                      variant="outline"
-                      className="border-white/10 bg-white/5 text-white"
-                      disabled={compatLoading}
-                      onClick={() => void runCompatTest()}
-                    >
-                      {compatLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-                      Testar compatibilidade Web
-                    </Button>
-                    <Button variant="outline" className="border-white/10 bg-white/5 text-white" onClick={handleClosePlayer}>
-                      Fechar
-                    </Button>
+                <div className="max-w-md mx-6 rounded-2xl border border-white/10 bg-white/5 p-8 text-center space-y-4">
+                  <div className="mx-auto w-12 h-12 rounded-full bg-white/5 flex items-center justify-center border border-white/10">
+                     {playbackReason.includes("Carregando") ? (
+                       <Loader2 className="h-6 w-6 text-white animate-spin" />
+                     ) : (
+                       <PlayCircle className="h-6 w-6 text-white/40" />
+                     )}
                   </div>
+                  <p className="text-base font-medium text-white">{playbackReason}</p>
+                  
+                  {isAdmin && (
+                    <div className="pt-4 border-t border-white/5 space-y-2">
+                       <p className="text-[10px] text-white/40 uppercase tracking-widest font-bold">Diagnóstico Admin</p>
+                       {compat && (
+                         <p className={`font-mono text-xs ${compat.ok ? "text-emerald-400" : "text-amber-400"}`}>
+                           {compat.label}
+                         </p>
+                       )}
+                       <div className="flex flex-wrap items-center justify-center gap-2">
+                         <Button
+                           variant="outline"
+                           size="sm"
+                           className="h-8 border-white/10 bg-white/5 text-white text-[10px]"
+                           disabled={compatLoading}
+                           onClick={() => void runCompatTest()}
+                         >
+                           {compatLoading ? <Loader2 className="mr-2 h-3 w-3 animate-spin" /> : <ShieldAlert className="mr-2 h-3 w-3" />}
+                           Testar compatibilidade Web
+                         </Button>
+                       </div>
+                    </div>
+                  )}
+                  
+                  {!playbackReason.includes("Carregando") && (
+                    <Button 
+                      variant="ghost" 
+                      onClick={() => setIsPlaying(false)}
+                      className="text-white/60 hover:text-white"
+                    >
+                      Voltar para o catálogo
+                    </Button>
+                  )}
                 </div>
              ) : !streamUrl ? (
-                <Loader2 className="h-12 w-12 animate-spin text-primary" />
+                <div className="flex flex-col items-center gap-4">
+                  <Loader2 className="h-10 w-10 text-white animate-spin opacity-20" />
+                  <p className="text-white/40 text-sm font-medium animate-pulse">Iniciando stream...</p>
+                </div>
              ) : (
                 <video 
                   ref={videoRef}
@@ -1264,9 +1302,8 @@ function PlayerPage() {
     setSelectedItem(item ?? selectedItem);
     setStreamUrl(null);
     setCompat(null);
-    setPlaybackReason(null);
+    setPlaybackReason("▶ Carregando conteúdo...");
     setPlaybackDebug({ tipo: type, extensao: extension, contentId: id, status: null, via: null });
-
 
     const startCheck = Date.now();
     console.log("[PLAY]", {
@@ -1280,17 +1317,7 @@ function PlayerPage() {
       erro: null,
     });
 
-    // Diagnóstico antes da reprodução
-    const isStable = serverStatus?.current_status === 'up';
-    if (!isStable) {
-      toast.warning(
-        serverStatus?.current_status === 'degraded' 
-          ? "Detectamos instabilidade no serviço. A reprodução pode falhar."
-          : "Servidor offline no momento. Tente novamente mais tarde.",
-        { duration: 5000 }
-      );
-    }
-
+    // Inicia busca da URL sem bloquear a abertura do player
     getPlayerStreamUrl({
       data: {
         token: token!,
@@ -1298,31 +1325,46 @@ function PlayerPage() {
         type,
         extension,
       }
-    })
-    .then(url => {
-      console.log("[PLAY]", { tipo: type, conteudo: item?.name ?? item?.title ?? null, stream_id: type === "series" ? null : String(id), episode_id: type === "series" ? String(id) : null, url_gerada: url.replace(/token=[^&]*/i, "token=***"), via: "proxy", status: "url_gerada", erro: null });
-      setStreamUrl(url);
-    })
-    .catch(err => {
-      console.error("[PLAY]", {
-        tipo: type,
-        conteudo: item?.name ?? item?.title ?? null,
-        stream_id: type === "series" ? null : String(id),
-        episode_id: type === "series" ? String(id) : null,
-        url_gerada: null,
-        via: null,
-        status: "erro",
-        erro: err?.message,
-      });
+    }).then(async (url) => {
+      if (!url) {
+        setPlaybackReason("Este conteúdo está temporariamente indisponível.");
+        return;
+      }
+
+      const checkUrl = `${url}${url.includes("?") ? "&" : "?"}probe=1`;
+      const t0 = Date.now();
       
-      // Inteligência de erro amigável
-      const msg = err?.message || "";
-      if (msg.includes("403")) toast.error("Acesso bloqueado pelo servidor IPTV (403).");
-      else if (msg.includes("404")) toast.error("Conteúdo não encontrado no servidor.");
-      else if (msg.includes("timeout")) toast.error("O servidor IPTV não respondeu a tempo.");
-      else toast.error(`Erro ao reproduzir: ${msg}`);
-      
-      setIsPlaying(false);
+      try {
+        const res = await fetch(checkUrl);
+        const reason = res.headers.get("x-playback-reason");
+        const info = {
+          url,
+          via: res.headers.get("x-playback-via") || "PAINEL",
+          status: res.status,
+          time: Date.now() - t0,
+          reason,
+          upstream: res.headers.get("x-upstream-status"),
+        };
+        
+        setPlaybackDebug((prev: any) => ({ ...(prev ?? {}), ...info }));
+        
+        if (res.status === 415) {
+          setPlaybackReason(reason || incompatibleReason(res.headers.get("x-playback-incompatible")));
+          setStreamUrl(null);
+        } else if (!res.ok && res.status !== 206) {
+          setPlaybackReason("Não foi possível iniciar este conteúdo. Tente novamente em alguns segundos.");
+          setStreamUrl(null);
+        } else {
+          setPlaybackReason(null);
+          setStreamUrl(url);
+        }
+      } catch (e) {
+        setPlaybackReason("Falha na conexão com o servidor de streaming.");
+        setStreamUrl(null);
+      }
+    }).catch(err => {
+      console.error("[PLAY_ERROR]", err);
+      setPlaybackReason("Erro ao obter link de reprodução.");
     });
   }
 

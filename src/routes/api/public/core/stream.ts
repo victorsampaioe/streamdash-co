@@ -57,16 +57,19 @@ function rewriteManifest(manifest: string, upstreamUrl: string, token: string, m
   const baseUrl = new URL(upstreamUrl);
   const segExp = Math.floor(Date.now() / 1000) + 3600;
   let segmentos = 0;
+  
   const toProxy = (raw: string) => {
+    // Resolve URL relativa (de segmentos, chaves, etc) para absoluta
     const abs = new URL(raw, baseUrl).toString();
     const segExt = (abs.match(/\.([a-z0-9]{2,4})(?:\?|$)/i)?.[1] ?? "ts").toLowerCase();
     segmentos += 1;
+    
+    // Assinatura de cada segmento para permitir acesso à CDN final
     const p = new URLSearchParams({
       token,
       mode,
       type: "live",
       ext: segExt,
-      // Segmentos seguem pela mesma camada que entregou o manifesto.
       forceCore: mode.startsWith("CORE") ? "1" : "0",
       pexp: String(segExp),
       psig: signUpstream(abs, segExp),
@@ -74,17 +77,27 @@ function rewriteManifest(manifest: string, upstreamUrl: string, token: string, m
     });
     return `/api/public/core/stream?${p.toString()}`;
   };
+
+  // Processa linhas do HLS: URLs, #EXT-X-STREAM-INF, #EXT-X-KEY, #EXT-X-MEDIA...
   const out = manifest
     .split("\n")
     .map((line) => {
       const trimmed = line.trim();
-      if (!trimmed) return line;
-      if (trimmed.startsWith("#")) {
+      if (!trimmed || trimmed.startsWith("#EXT-X-ENDLIST")) return line;
+      
+      // #EXT-X-KEY: URI="..."
+      if (trimmed.startsWith("#EXT-X-KEY:")) {
         return line.replace(/URI="([^"]+)"/g, (_m, uri) => `URI="${toProxy(uri)}"`);
       }
-      return toProxy(trimmed);
+      // URLs de playlist/segmento (não iniciam com #)
+      if (!trimmed.startsWith("#")) {
+        return toProxy(trimmed);
+      }
+      return line;
     })
     .join("\n");
+    
+  console.log(`[HLS][rewriteManifest] URL original: ${upstreamUrl} | Segmentos reescritos: ${segmentos}`);
   return { manifest: out, segmentos };
 }
 
@@ -462,10 +475,12 @@ export const Route = createFileRoute("/api/public/core/stream")({
 
         // Manifesto HLS → segmentos passam pelo mesmo modo que funcionou.
         if (isManifest) {
+          const tManifesto = Date.now();
           const text = await found.text();
           const { manifest: rewritten, segmentos } = rewriteManifest(text, usedUrl, token, usedModo);
+          
           console.log(
-            `[STREAM RESPONSE] via=${usedModo} manifesto HLS bytes=${text.length} linhas=${text.split("\n").length} segmentos_reescritos=${segmentos}`
+            `[HLS]\nURL original: ${maskMedia(usedUrl)}\nManifesto: ${text.length} bytes\nStatus manifesto: ${found.status}\nSegmentos encontrados: ${segmentos}\nTempo resposta: ${Date.now() - tManifesto}ms\nErro: none`
           );
           return new Response(rewritten, {
             status: 200,
