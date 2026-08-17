@@ -1225,10 +1225,9 @@ function PlayerPage() {
              )}
           </div>
 
-          {/* HUD TEMPORÁRIO DE DIAGNÓSTICO — remover após validação */}
-          {playbackDebug && (
+          {isAdmin && playbackDebug && (
             <div className="absolute bottom-24 left-6 z-20 max-w-[90vw] rounded-xl border border-white/10 bg-black/70 px-4 py-3 font-mono text-[11px] leading-relaxed text-emerald-300 backdrop-blur">
-              <div className="mb-1 text-white/70">Reprodução (diagnóstico temporário)</div>
+              <div className="mb-1 text-white/70">Diagnóstico de Reprodução (Admin)</div>
               <div>tipo: {playbackDebug.tipo ?? "-"} · ext: {playbackDebug.extensao ?? "-"}</div>
               <div>via: {playbackDebug.via ?? "aguardando..."}</div>
               <div>status: {playbackDebug.status ?? "-"} · tempo: {playbackDebug.ms != null ? `${(playbackDebug.ms / 1000).toFixed(1)}s` : "-"}</div>
