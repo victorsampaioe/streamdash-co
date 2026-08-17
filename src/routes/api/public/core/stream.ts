@@ -236,6 +236,11 @@ export const Route = createFileRoute("/api/public/core/stream")({
               if (v) out.set(k, v);
             }
             
+            // Forçar Accept-Ranges para VOD se a origem omitir mas devolver 206
+            if (!out.has("Accept-Ranges") && (type !== "live" || res.status === 206)) {
+              out.set("Accept-Ranges", "bytes");
+            }
+            
             // Garantir Content-Type correto
             const upstreamContentType = res.headers.get("content-type");
             if (!out.has("Content-Type")) out.set("Content-Type", contentTypeFor(ext, upstreamContentType));
