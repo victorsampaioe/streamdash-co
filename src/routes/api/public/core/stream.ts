@@ -374,6 +374,8 @@ export const Route = createFileRoute("/api/public/core/stream")({
                if (html.includes("403") || html.includes("Forbidden")) {
                   const msg = `Upstream retornou página 403 (Forbidden) disfarçada de 200 com UA=${uaKind}`;
                   out.set("X-Core-Error", asciiHeader(msg));
+                  out.set("Cache-Control", "no-store");
+                  out.delete("X-Core-Cache");
                   return new Response(msg, { status: 403, headers: out });
                }
             }
