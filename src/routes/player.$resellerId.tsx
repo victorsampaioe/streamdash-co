@@ -102,6 +102,7 @@ function PlayerPage() {
   // Teste de compatibilidade Web (codec real analisado no Core)
   const [compat, setCompat] = useState<WebCompatResult | null>(null);
   const [compatLoading, setCompatLoading] = useState(false);
+  const [showDebugHud, setShowDebugHud] = useState(false);
   const lastStreamUrlRef = useRef<string | null>(null);
 
   const runCompatTest = async (url?: string | null) => {
@@ -940,6 +941,26 @@ function PlayerPage() {
                       </div>
                     </div>
                   </div>
+                  <div className="flex items-center justify-between p-4 bg-white/5 rounded-xl">
+                    <div className="flex items-center gap-3">
+                      <SettingsIcon className="h-5 w-5 text-primary" style={{ color: primaryColor }} />
+                      <div>
+                        <p className="text-sm font-medium text-white/90">Modo Diagnóstico</p>
+                        <p className="text-xs text-white/40">{showDebugHud ? 'Ativado' : 'Desativado'}</p>
+                      </div>
+                    </div>
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      onClick={() => setShowDebugHud(!showDebugHud)}
+                      className={cn(
+                        "h-8 border-white/10",
+                        showDebugHud ? "bg-primary/20 text-primary border-primary/20" : "bg-white/5 text-white/60"
+                      )}
+                    >
+                      {showDebugHud ? 'Desativar' : 'Ativar'}
+                    </Button>
+                  </div>
                 </div>
               </div>
 
@@ -1194,7 +1215,7 @@ function PlayerPage() {
                       : "Não foi possível reproduzir este conteúdo."}
                   </p>
                   
-                  {isAdmin && (
+                  {isAdmin && showDebugHud && (
                     <div className="pt-4 border-t border-white/5 space-y-2">
                        <p className="text-[10px] text-white/40 uppercase tracking-widest font-bold">Diagnóstico Admin (Modo Debug)</p>
                        {playbackDebug && (
@@ -1251,7 +1272,7 @@ function PlayerPage() {
              )}
           </div>
 
-          {isAdmin && playbackDebug && (
+          {isAdmin && showDebugHud && playbackDebug && (
             <div className="absolute bottom-24 left-6 z-20 max-w-[90vw] rounded-xl border border-white/10 bg-black/70 px-4 py-3 font-mono text-[11px] leading-relaxed text-emerald-300 backdrop-blur">
               <div className="mb-1 text-white/70">Diagnóstico de Reprodução (Admin)</div>
               <div className="mb-2 flex items-center gap-2">
