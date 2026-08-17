@@ -1278,10 +1278,13 @@ function PlayerPage() {
                   )}
                 </div>
              ) : !streamUrl ? (
-                <div className="flex flex-col items-center gap-6 animate-pulse">
+                <div className="flex flex-col items-center gap-6">
                   <div className="w-12 h-12 border-4 border-primary/20 border-t-primary rounded-full animate-spin" />
-                  <p className="text-white/40 text-xs font-black uppercase tracking-[0.3em]">Conectando ao Stream</p>
+                  <p className="text-white/50 text-xs font-black uppercase tracking-[0.3em] transition-opacity">
+                    {SMART_LOADING_MESSAGES[smartMsgIndex]}
+                  </p>
                 </div>
+
              ) : (
                   <video 
                     ref={videoRef}
