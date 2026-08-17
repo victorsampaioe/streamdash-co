@@ -70,9 +70,9 @@ function rewriteManifest(manifest: string, upstreamUrl: string, token: string, m
       mode,
       type: "live",
       ext: segExt,
-      forceCore: mode.startsWith("CORE") ? "1" : "0",
-      pexp: String(segExp),
-      psig: signUpstream(abs, segExp),
+      via: "core", // Força o segmento a ser validado pelo bloco de assinatura
+      exp: String(segExp), // Usamos 'exp' em vez de 'pexp' para casar com a validação do handler
+      sig: signUpstream(abs, segExp), // Usamos 'sig' em vez de 'psig' para casar com a validação do handler
       u: b64urlEncode(abs),
     });
     return `/api/public/core/stream?${p.toString()}`;
@@ -217,12 +217,18 @@ export const Route = createFileRoute("/api/public/core/stream")({
               const v = res.headers.get(k);
               if (v) out.set(k, v);
             }
-            if (!out.has("Content-Type")) out.set("Content-Type", contentTypeFor(ext, null));
+            if (!out.has("Content-Type")) out.set("Content-Type", contentTypeFor(ext, res.headers.get("content-type")));
             if (!out.has("Accept-Ranges") && type !== "live") out.set("Accept-Ranges", "bytes");
             out.set("Cache-Control", "no-cache");
             out.set("X-Upstream-Status", String(res.status));
             out.set("X-Upstream-Content-Type", res.headers.get("content-type") ?? "-");
             out.set("X-Core-UA", uaKind);
+
+            if (ext === "ts" || ext === "m4s" || type === "live") {
+              console.log(
+                `[HLS SEGMENT] URL=${maskMedia(abs)} STATUS=${res.status} TEMPO=${Date.now() - t0}ms CONTENT-TYPE=${res.headers.get("content-type") ?? "-"} RANGE=${range ?? "none"}`
+              );
+            }
 
             console.log(
               `[UPSTREAM IPTV] url=${maskMedia(abs)} ua=${uaKind} status=${res.status} content-type=${res.headers.get("content-type") ?? "-"} range=${range ?? "none"} content-range=${res.headers.get("content-range") ?? "-"} tempo=${Date.now() - t0}ms`
@@ -234,6 +240,9 @@ export const Route = createFileRoute("/api/public/core/stream")({
               try { corpo = (await res.text()).slice(0, 200).replace(/\s+/g, " "); } catch { /* ignore */ }
               const motivo = `Origem IPTV respondeu HTTP ${res.status} com UA=${uaKind}${corpo ? ` — resposta: "${corpo}"` : ""}`;
               console.error(`[UPSTREAM IPTV][bloqueio] ${motivo} url=${maskMedia(abs)}`);
+              if (ext === "ts" || ext === "m4s" || type === "live") {
+                console.error(`[HLS SEGMENT] URL=${maskMedia(abs)} STATUS=${res.status} ERRO="${motivo}"`);
+              }
               out.set("X-Playback-Reason", motivo);
               out.set("X-Core-Error", motivo);
               out.set("Content-Type", "text/plain; charset=utf-8");
@@ -246,6 +255,9 @@ export const Route = createFileRoute("/api/public/core/stream")({
             console.error(
               `[UPSTREAM IPTV] url=${maskMedia(abs)} ua=${uaKind} status=502 tempo=${Date.now() - t0}ms erro="${msg}"`
             );
+            if (ext === "ts" || ext === "m4s" || type === "live") {
+              console.error(`[HLS SEGMENT] URL=${maskMedia(abs)} STATUS=502 ERRO="${msg}"`);
+            }
             return new Response(`Worker fetch error: ${msg}`, {
               status: 502,
               headers: { ...CORS, ...VER, "X-Core-Error": msg, "X-Core-UA": uaKind },
@@ -287,8 +299,8 @@ export const Route = createFileRoute("/api/public/core/stream")({
         let candidates: string[];
         if (passthrough) {
           const abs = b64urlDecode(passthrough);
-          const pexp = Number(url.searchParams.get("pexp") ?? 0);
-          const psig = url.searchParams.get("psig") ?? "";
+          const pexp = Number(url.searchParams.get("exp") ?? 0);
+          const psig = url.searchParams.get("sig") ?? "";
           const assinado = psig ? verifyUpstream(abs, pexp, psig) : false;
           // Segmento assinado pelo próprio manifesto (pode ser CDN externa) ou,
           // por compatibilidade, mesmo host do servidor da sessão.
