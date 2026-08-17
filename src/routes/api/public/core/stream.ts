@@ -314,6 +314,17 @@ export const Route = createFileRoute("/api/public/core/stream")({
               });
             }
 
+            // Se o Content-Type upstream for text/html ou similar e for live,
+            // pode ser um redirecionamento ou página de erro 403 mas com status 200.
+            if (res.status === 200 && /text\/html/.test(res.headers.get("content-type") || "")) {
+               const html = await res.text();
+               if (html.includes("403") || html.includes("Forbidden")) {
+                  const msg = `Upstream retornou página 403 (Forbidden) disfarçada de 200 com UA=${uaKind}`;
+                  out.set("X-Core-Error", msg);
+                  return new Response(msg, { status: 403, headers: out });
+               }
+            }
+            
             return new Response(res.body, { status: res.status, headers: out });
           } catch (e) {
             const msg = (e as Error).message;
