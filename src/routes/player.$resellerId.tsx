@@ -829,8 +829,13 @@ function PlayerPage() {
                 }
               }}
               onMyList={(item: any) => handleToggleFavorite(item)}
+              onDetails={(item: any) => {
+                setSelectedItem(item);
+                setIsDetailsOpen(true);
+              }}
               isFavorite={(item: any) => favorites.some(f => f.content_id === (item?.stream_id || item?.series_id || item?.id)?.toString())}
             />
+
 
             {/* Continuar Assistindo Section */}
             {history.length > 0 && (
