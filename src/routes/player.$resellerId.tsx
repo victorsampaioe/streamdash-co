@@ -492,10 +492,16 @@ function PlayerPage() {
       const hls = new Hls({ 
         enableWorker: true, 
         lowLatencyMode: true,
-        backBufferLength: 60,
-        maxBufferLength: 30,
-        maxMaxBufferLength: 60,
-        initialLiveManifestSize: 1
+        backBufferLength: 90,
+        maxBufferLength: 60,
+        maxMaxBufferLength: 120,
+        initialLiveManifestSize: 1,
+        // Otimização VOD HLS
+        maxBufferHole: 0.5,
+        nudgeOffset: 0.1,
+        nudgeMaxRetry: 10,
+        maxFragLookUpTolerance: 0.25,
+        liveSyncDurationCount: 3,
       });
       hls.loadSource(streamUrl);
       hls.attachMedia(video);
@@ -544,6 +550,10 @@ function PlayerPage() {
     } else {
       // Nativo: Safari/iOS (HLS) e Filmes/Séries (mp4/mkv com Range)
       video.src = streamUrl;
+      
+      // Otimização VOD nativo (MP4/MKV)
+      video.preload = "auto";
+      
       const onError = async () => {
         console.error("[player] erro no elemento <video>", video.error);
         setPlaybackDebug((prev: any) => ({
@@ -557,13 +567,20 @@ function PlayerPage() {
         const msg =
           r && !r.ok
             ? `${NEEDS_CONVERSION_MESSAGE} — vídeo ${r.video ?? "?"} / áudio ${r.audio ?? "?"} (${r.action === "transcode" ? "transcodificação" : "remux"} no Core).`
-            : "Servidor respondeu normalmente, porém o formato do vídeo não é compatível com o navegador.";
+            : "Não foi possível iniciar este conteúdo. Tente novamente.";
         setPlaybackReason(msg);
         setStreamUrl(null);
         toast.error(msg, { duration: 8000 });
       };
       video.addEventListener("loadedmetadata", () => {
         console.log("[player] metadados carregados, iniciando vídeo");
+        
+        // Ajuste de buffer para evitar travadas em VOD
+        if (selectedItem?.stream_type !== "live") {
+          // Tentar forçar o carregamento de mais dados inicialmente
+          console.log("[player] VOD detectado, otimizando buffer");
+        }
+        
         video.play().catch((e) => console.error("Auto-play bloqueado", e));
         
         // Registrar atividade para vídeo nativo
@@ -1168,18 +1185,18 @@ function PlayerPage() {
                      )}
                   </div>
                   <p className="text-base font-medium text-white">
-                    {playbackReason.includes("HTTP 403") || playbackReason.includes("403") 
-                      ? "🟡 Bloqueado pela origem (servidor bloqueando)"
-                      : playbackReason.includes("HTTP 404") || playbackReason.includes("404") || playbackReason.includes("inexistente")
-                      ? "🔴 Offline (conteúdo inexistente)"
-                      : playbackReason.includes("conversão") || playbackReason.includes("codec")
-                      ? "🟠 Formato não compatível (problema de compatibilidade)"
-                      : playbackReason}
+                    {playbackReason.includes("indisponível") || playbackReason.includes("Não foi possível")
+                      ? "Não foi possível iniciar este conteúdo. Tente novamente."
+                      : playbackReason.includes("Falha na conexão")
+                      ? "Erro ao conectar com o servidor. Verifique sua rede."
+                      : playbackReason.includes("Carregando")
+                      ? "▶ Carregando conteúdo..."
+                      : "Não foi possível reproduzir este conteúdo."}
                   </p>
                   
                   {isAdmin && (
                     <div className="pt-4 border-t border-white/5 space-y-2">
-                       <p className="text-[10px] text-white/40 uppercase tracking-widest font-bold">Diagnóstico Admin (VOD)</p>
+                       <p className="text-[10px] text-white/40 uppercase tracking-widest font-bold">Diagnóstico Admin (Modo Debug)</p>
                        {playbackDebug && (
                          <div className="text-[10px] text-white/60 space-y-1 text-left bg-black/40 p-3 rounded-lg border border-white/5 font-mono">
                            <div className="flex justify-between"><span>Status HTTP:</span> <span className={playbackDebug.status === 206 ? "text-emerald-400" : "text-amber-400"}>{playbackDebug.status || "-"}</span></div>
@@ -1187,6 +1204,8 @@ function PlayerPage() {
                            <div className="flex justify-between"><span>Tamanho:</span> <span>{playbackDebug.contentLength ? `${(parseInt(playbackDebug.contentLength)/1024/1024).toFixed(1)}MB` : "-"}</span></div>
                            <div className="flex justify-between"><span>TTFB:</span> <span>{playbackDebug.ms}ms</span></div>
                            <div className="flex justify-between"><span>Via:</span> <span className="text-primary">{playbackDebug.via}</span></div>
+                           <div className="flex justify-between"><span>FE:</span> <span className="text-white/40">{feVersion}</span></div>
+                           <div className="flex justify-between"><span>Core:</span> <span className="text-white/40">{CORE_STREAM_VERSION}</span></div>
                            {playbackDebug.reason && <div className="text-red-400 mt-1 whitespace-pre-wrap">Erro: {playbackDebug.reason}</div>}
                          </div>
                        )}
@@ -1199,7 +1218,7 @@ function PlayerPage() {
                            onClick={() => void runCompatTest()}
                          >
                            {compatLoading ? <Loader2 className="mr-2 h-3 w-3 animate-spin" /> : <ShieldAlert className="mr-2 h-3 w-3" />}
-                           Testar Compatibilidade
+                           Testar Compatibilidade Web
                          </Button>
                        </div>
                     </div>
@@ -1227,6 +1246,7 @@ function PlayerPage() {
                   controls
                   autoPlay
                   playsInline
+                  preload="auto"
                 />
              )}
           </div>

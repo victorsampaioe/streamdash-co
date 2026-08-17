@@ -204,12 +204,15 @@ export const Route = createFileRoute("/api/public/core/stream")({
 
           const t0 = Date.now();
           try {
-            // Aumentar timeout para VOD (arquivos grandes)
-            const timeout = type === "live" ? 20000 : 60000;
+            // Otimização VOD: timeout maior e blocos eficientes
+            const isVod = type === "movie" || type === "series";
+            const timeout = isVod ? 60000 : 30000;
+            
             const res = await fetch(abs, {
               headers: h,
               redirect: "follow",
               signal: AbortSignal.timeout(timeout),
+              keepalive: true, // Conexão persistente entre Core e Upstream
             });
 
             const out = new Headers({ ...CORS, ...VER });
@@ -219,10 +222,18 @@ export const Route = createFileRoute("/api/public/core/stream")({
             }
             if (!out.has("Content-Type")) out.set("Content-Type", contentTypeFor(ext, res.headers.get("content-type")));
             if (!out.has("Accept-Ranges") && type !== "live") out.set("Accept-Ranges", "bytes");
-            out.set("Cache-Control", "no-cache");
+            
+            // Otimização VOD: Cache agressivo no browser e blocos eficientes
+            if (isVod) {
+              out.set("Cache-Control", "public, max-age=3600");
+            } else {
+              out.set("Cache-Control", "no-cache");
+            }
+            
             out.set("X-Upstream-Status", String(res.status));
             out.set("X-Upstream-Content-Type", res.headers.get("content-type") ?? "-");
             out.set("X-Core-UA", uaKind);
+            out.set("Connection", "keep-alive");
 
             if (ext === "ts" || ext === "m4s" || type === "live") {
               console.log(
