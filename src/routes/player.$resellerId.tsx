@@ -100,11 +100,9 @@ function PlayerPage() {
   const [session, setSession] = useState<any>(null);
   const [activeView, setActiveView] = useState<"home" | "live" | "movie" | "series" | "mylist" | "search" | "settings" | "categories">("home");
   const [loadingContent, setLoadingContent] = useState(false);
-
   const [categories, setCategories] = useState<any[]>([]);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [content, setContent] = useState<any[]>([]);
-  const [loadingContent, setLoadingContent] = useState(false);
   
   const [selectedSeriesInfo, setSelectedSeriesInfo] = useState<any>(null);
   const [isSeriesOpen, setIsSeriesOpen] = useState(false);
