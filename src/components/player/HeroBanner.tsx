@@ -1,19 +1,22 @@
-import { Play, Plus, Info, Star, Check, ChevronLeft, ChevronRight } from "lucide-react";
+import { Play, Plus, Info, Star, Check, ChevronLeft, ChevronRight, Film, Clock, Layers } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
+import { TrailerModal } from "@/components/player/TrailerModal";
 
 interface HeroBannerProps {
   items?: any[]; // Array para rotação
   item: any; // Fallback para item único
   onPlay: (item: any) => void;
   onMyList?: (item: any) => void;
+  onDetails?: (item: any) => void;
   primaryColor?: string;
   isFavorite?: (item: any) => boolean;
 }
 
-export function HeroBanner({ items = [], item: fallbackItem, onPlay, onMyList, primaryColor, isFavorite }: HeroBannerProps) {
+export function HeroBanner({ items = [], item: fallbackItem, onPlay, onMyList, onDetails, primaryColor, isFavorite }: HeroBannerProps) {
   const [currentIndex, setCurrentIndex] = useState(0);
+  const [trailerOpen, setTrailerOpen] = useState(false);
   const rotationItems = items.length > 0 ? items : (fallbackItem ? [fallbackItem] : []);
   const item = rotationItems[currentIndex];
 
@@ -30,8 +33,14 @@ export function HeroBanner({ items = [], item: fallbackItem, onPlay, onMyList, p
   const title = item.name || item.title;
   const description = item.plot || item.description || "Assista agora a este conteúdo incrível disponível na plataforma.";
   const background = item.backdrop || item.cover || item.stream_icon || item.series_icon;
-  const rating = item.rating || item.rating_5point;
+  const rating = Number(item.rating || item.rating_5point || 0);
   const year = item.year || (item.releaseDate ? new Date(item.releaseDate).getFullYear() : null);
+  const genre = item.genre || item.category_name;
+  const duration = item.duration || item.episode_run_time;
+  const seasons = item.seasons?.length || item.season_count;
+  const episodes = item.episode_count;
+  const isSeriesItem = !!(item.series_id || item.content_type === "series" || seasons);
+
 
   return (
     <div className="relative w-full h-[70vh] md:h-[75vh] min-h-[500px] md:min-h-[600px] aspect-[9/16] md:aspect-auto overflow-hidden rounded-3xl mb-8 group transition-all duration-500">
