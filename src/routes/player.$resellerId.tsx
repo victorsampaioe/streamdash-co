@@ -97,12 +97,14 @@ function PlayerPage() {
   const secondaryColor = settings?.secondary_color || "#0A0A0A";
   
   const [token, setToken] = useState<string | null>(null);
+  const [session, setSession] = useState<any>(null);
   
   useEffect(() => {
-    const saved = localStorage.getItem(`stream_player_token_${profileId}`);
-    if (saved) setToken(saved);
+    if (typeof window !== "undefined") {
+      const savedToken = localStorage.getItem(`stream_player_token_${profileId}`);
+      if (savedToken) setToken(savedToken);
+    }
   }, [profileId]);
-  const [session, setSession] = useState<any>(null);
   const [activeView, setActiveView] = useState<"home" | "live" | "movie" | "series" | "mylist" | "search" | "settings">("home");
   const [loadingContent, setLoadingContent] = useState(false);
   const [categories, setCategories] = useState<any[]>([]);
