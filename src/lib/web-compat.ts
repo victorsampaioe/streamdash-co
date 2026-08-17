@@ -77,7 +77,7 @@ export function verdictFromHeaders(
 export async function testWebCompatibility(streamUrl: string): Promise<WebCompatResult> {
   const res = await fetch(streamUrl, {
     headers: { Range: "bytes=0-1023" },
-    signal: AbortSignal.timeout(25_000),
+    signal: AbortSignal.timeout(45_000),
   });
   const verdict = verdictFromHeaders(res.headers, res.status);
   const contentType = res.headers.get("content-type");
