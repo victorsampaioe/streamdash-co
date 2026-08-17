@@ -46,10 +46,12 @@ export const savePlayerSettings = createServerFn({ method: "POST" })
     const userClaims = (context as any).claims;
     
     // Verificar se é admin através dos claims ou de uma consulta rápida
+    // Verificar se é admin ou revendedor
     const isAdmin = userClaims?.role === 'admin' || userClaims?.app_metadata?.role === 'admin';
+    const isReseller = userClaims?.role === 'reseller' || userClaims?.app_metadata?.role === 'reseller';
     
-    if (!userId || !isAdmin) {
-      throw new Error("Acesso restrito apenas para administradores durante a fase de testes.");
+    if (!userId || (!isAdmin && !isReseller)) {
+      throw new Error("Acesso restrito apenas para administradores e revendedores.");
     }
 
     // Garantir que o revendedor só edita suas próprias configurações
