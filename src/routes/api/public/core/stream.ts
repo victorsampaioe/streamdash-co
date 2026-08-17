@@ -146,6 +146,13 @@ export const Route = createFileRoute("/api/public/core/stream")({
         const ext = (url.searchParams.get("ext") || "ts").toLowerCase();
         const type = url.searchParams.get("type") || "live";
         const range = request.headers.get("range");
+
+        const modeStart = url.searchParams.get("mode") || "proxy";
+        const viaCoreStart = url.searchParams.get("via") === "core";
+        const isCoreStart = process.env.IS_CORE === "true";
+        const forceCoreStart = url.searchParams.get("forceCore") === "1";
+        const startPath = forceCoreStart || viaCoreStart || isCoreStart ? "CORE" : "PAINEL";
+        console.log(`[STREAM START] path=${url.pathname} modo=${startPath} submodo=${modeStart} type=${type} ext=${ext} range=${range ?? "none"} isCore=${isCoreStart} viaCore=${viaCoreStart} token=${token ? "presente" : "ausente"} u=${passthrough ? "presente" : "ausente"}`);
         
         // Note: For ADMIN MASTER (victorsampaio133@gmail.com), 
         // access is granted via the standard session validation below.
