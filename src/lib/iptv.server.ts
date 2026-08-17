@@ -1513,8 +1513,12 @@ export async function getSeriesDataOnCore(serverId: string, seriesId: string, se
   const action = "get_series_info"; 
   const url = `http://${server.host}/player_api.php?${auth}&action=${action}&series_id=${seriesId}`;
   
-  const res = await fetch(url, { headers: { "user-agent": UA_PLAYER } });
-  if (!res.ok) throw new Error(`IPTV API Error: ${res.status}`);
+  const res = await fetch(url, { 
+    headers: { "user-agent": UA_PLAYER },
+    redirect: "follow",
+    signal: AbortSignal.timeout(30000) // Mais tempo para séries grandes
+  });
+  if (!res.ok) throw new Error(`IPTV API Error: ${res.status} em ${safeUrl(url)}`);
   
   const data = await res.json();
   
