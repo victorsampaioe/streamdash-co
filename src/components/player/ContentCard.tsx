@@ -92,13 +92,7 @@ export function ContentCard({ item, type, primaryColor, onClick, onInfoClick, on
           )}
         </div>
 
-          <div 
-            className="h-12 w-12 rounded-full bg-primary flex items-center justify-center text-white shadow-xl transform transition-all active:scale-90"
-            style={{ backgroundColor: primaryColor }}
-          >
-            <Play className="h-6 w-6 fill-white ml-1" />
-          </div>
-        </div>
+
 
         {/* Badges */}
         <div className="absolute top-2 left-2 flex flex-col gap-1">
