@@ -311,7 +311,7 @@ class PlayerApiError extends Error {
  */
 async function getJson(
   url: string,
-  ms = API_TIMEOUT_MS,
+  ms = 20_000, // Aumentado para 20s para VOD/Séries pesadas
   ua: string = UA_PLAYER,
 ): Promise<{ data: unknown; diag: PlayerApiDiagnostics }> {
   const t0 = Date.now();
@@ -320,7 +320,10 @@ async function getJson(
   const outIp = await egressIp();
   let res: Response;
   try {
-    res = await timedFetch(url, ms, { headers: reqHeaders });
+    res = await timedFetch(url, ms, { 
+      headers: reqHeaders,
+      redirect: "follow",
+    });
   } catch (e: unknown) {
     const aborted = (e as Error)?.name === "AbortError";
     const diag: PlayerApiDiagnostics = {
@@ -1507,13 +1510,15 @@ export async function getSeriesDataOnCore(serverId: string, seriesId: string, se
   if (!creds.username || !creds.password) throw new Error("Credenciais IPTV não configuradas");
 
   const auth = `username=${encodeURIComponent(creds.username)}&password=${encodeURIComponent(creds.password)}`;
-  // Se seasonNum for informado, retornamos apenas aquela temporada.
-  // Caso contrário, retornamos os dados básicos da série.
-  const action = seasonNum ? "get_series_info" : "get_series_info"; 
+  const action = "get_series_info"; 
   const url = `http://${server.host}/player_api.php?${auth}&action=${action}&series_id=${seriesId}`;
   
-  const res = await fetch(url, { headers: { "user-agent": UA_PLAYER } });
-  if (!res.ok) throw new Error(`IPTV API Error: ${res.status}`);
+  const res = await fetch(url, { 
+    headers: { "user-agent": UA_PLAYER },
+    redirect: "follow",
+    signal: AbortSignal.timeout(30000) // Mais tempo para séries grandes
+  });
+  if (!res.ok) throw new Error(`IPTV API Error: ${res.status} em ${safeUrl(url)}`);
   
   const data = await res.json();
   

@@ -39,6 +39,7 @@ import {
   Clock,
   ChevronLeft,
   X,
+  AlertCircle,
   PlayCircle,
   Settings as SettingsIcon,
   Plus,
@@ -89,6 +90,7 @@ function PlayerPage() {
   const [loadingContent, setLoadingContent] = useState(false);
   
   const [selectedSeriesInfo, setSelectedSeriesInfo] = useState<any>(null);
+  const [isSeriesOpen, setIsSeriesOpen] = useState(false);
   const [loadingSeries, setLoadingSeries] = useState(false);
   const [streamUrl, setStreamUrl] = useState<string | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
@@ -1128,12 +1130,16 @@ function PlayerPage() {
       />
 
       
-      {selectedSeriesInfo && (
+      {isSeriesOpen && selectedSeriesInfo && (
         <SeriesDetails 
           series={selectedSeriesInfo.info}
           info={selectedSeriesInfo}
           loading={loadingSeries}
-          onClose={() => setSelectedSeriesInfo(null)}
+          
+          onClose={() => {
+            setSelectedSeriesInfo(null);
+            setIsSeriesOpen(false);
+          }}
           onPlay={(ep) => handlePlay(ep.id ?? ep.stream_id, "series", ep)}
           primaryColor={primaryColor}
         />
@@ -1153,19 +1159,34 @@ function PlayerPage() {
                   <div className="mx-auto w-12 h-12 rounded-full bg-white/5 flex items-center justify-center border border-white/10">
                      {playbackReason.includes("Carregando") ? (
                        <Loader2 className="h-6 w-6 text-white animate-spin" />
+                     ) : playbackReason.includes("indisponível") ? (
+                       <AlertCircle className="h-6 w-6 text-red-500" />
                      ) : (
                        <PlayCircle className="h-6 w-6 text-white/40" />
                      )}
                   </div>
-                  <p className="text-base font-medium text-white">{playbackReason}</p>
+                  <p className="text-base font-medium text-white">
+                    {playbackReason.includes("HTTP 403") || playbackReason.includes("403") 
+                      ? "🟡 Bloqueado pela origem (servidor bloqueando)"
+                      : playbackReason.includes("HTTP 404") || playbackReason.includes("404") || playbackReason.includes("inexistente")
+                      ? "🔴 Offline (conteúdo inexistente)"
+                      : playbackReason.includes("conversão") || playbackReason.includes("codec")
+                      ? "🟠 Formato não compatível (problema de compatibilidade)"
+                      : playbackReason}
+                  </p>
                   
                   {isAdmin && (
                     <div className="pt-4 border-t border-white/5 space-y-2">
-                       <p className="text-[10px] text-white/40 uppercase tracking-widest font-bold">Diagnóstico Admin</p>
-                       {compat && (
-                         <p className={`font-mono text-xs ${compat.ok ? "text-emerald-400" : "text-amber-400"}`}>
-                           {compat.label}
-                         </p>
+                       <p className="text-[10px] text-white/40 uppercase tracking-widest font-bold">Diagnóstico Admin (VOD)</p>
+                       {playbackDebug && (
+                         <div className="text-[10px] text-white/60 space-y-1 text-left bg-black/40 p-3 rounded-lg border border-white/5 font-mono">
+                           <div className="flex justify-between"><span>Status HTTP:</span> <span className={playbackDebug.status === 206 ? "text-emerald-400" : "text-amber-400"}>{playbackDebug.status || "-"}</span></div>
+                           <div className="flex justify-between"><span>Range:</span> <span>{playbackDebug.contentRange || playbackDebug.acceptRanges || "Nenhum"}</span></div>
+                           <div className="flex justify-between"><span>Tamanho:</span> <span>{playbackDebug.contentLength ? `${(parseInt(playbackDebug.contentLength)/1024/1024).toFixed(1)}MB` : "-"}</span></div>
+                           <div className="flex justify-between"><span>TTFB:</span> <span>{playbackDebug.ms}ms</span></div>
+                           <div className="flex justify-between"><span>Via:</span> <span className="text-primary">{playbackDebug.via}</span></div>
+                           {playbackDebug.reason && <div className="text-red-400 mt-1 whitespace-pre-wrap">Erro: {playbackDebug.reason}</div>}
+                         </div>
                        )}
                        <div className="flex flex-wrap items-center justify-center gap-2">
                          <Button
@@ -1176,7 +1197,7 @@ function PlayerPage() {
                            onClick={() => void runCompatTest()}
                          >
                            {compatLoading ? <Loader2 className="mr-2 h-3 w-3 animate-spin" /> : <ShieldAlert className="mr-2 h-3 w-3" />}
-                           Testar compatibilidade Web
+                           Testar Compatibilidade
                          </Button>
                        </div>
                     </div>
@@ -1208,10 +1229,9 @@ function PlayerPage() {
              )}
           </div>
 
-          {/* HUD TEMPORÁRIO DE DIAGNÓSTICO — remover após validação */}
-          {playbackDebug && (
+          {isAdmin && playbackDebug && (
             <div className="absolute bottom-24 left-6 z-20 max-w-[90vw] rounded-xl border border-white/10 bg-black/70 px-4 py-3 font-mono text-[11px] leading-relaxed text-emerald-300 backdrop-blur">
-              <div className="mb-1 text-white/70">Reprodução (diagnóstico temporário)</div>
+              <div className="mb-1 text-white/70">Diagnóstico de Reprodução (Admin)</div>
               <div>tipo: {playbackDebug.tipo ?? "-"} · ext: {playbackDebug.extensao ?? "-"}</div>
               <div>via: {playbackDebug.via ?? "aguardando..."}</div>
               <div>status: {playbackDebug.status ?? "-"} · tempo: {playbackDebug.ms != null ? `${(playbackDebug.ms / 1000).toFixed(1)}s` : "-"}</div>
@@ -1303,7 +1323,8 @@ function PlayerPage() {
     setStreamUrl(null);
     setCompat(null);
     setPlaybackReason("▶ Carregando conteúdo...");
-    setPlaybackDebug({ tipo: type, extensao: extension, contentId: id, status: null, via: null });
+    const started = Date.now();
+    setPlaybackDebug({ tipo: type, extensao: extension, contentId: id, status: null, via: null, started_at: started });
 
     const startCheck = Date.now();
     console.log("[PLAY]", {
@@ -1335,15 +1356,19 @@ function PlayerPage() {
       const t0 = Date.now();
       
       try {
-        const res = await fetch(checkUrl);
+        const res = await fetch(checkUrl, { signal: AbortSignal.timeout(45000) });
         const reason = res.headers.get("x-playback-reason");
         const info = {
           url,
           via: res.headers.get("x-playback-via") || "PAINEL",
           status: res.status,
           time: Date.now() - t0,
+          ms: Date.now() - t0,
           reason,
           upstream: res.headers.get("x-upstream-status"),
+          contentLength: res.headers.get("content-length"),
+          contentRange: res.headers.get("content-range"),
+          acceptRanges: res.headers.get("accept-ranges"),
         };
         
         setPlaybackDebug((prev: any) => ({ ...(prev ?? {}), ...info }));
@@ -1408,10 +1433,11 @@ function PlayerPage() {
       });
 
       if (!data || (!data.episodes && !data.info)) {
-        throw new Error("Resposta da API vazia ou inválida (get_episodes_list/get_series_info)");
+        throw new Error("O servidor IPTV demorou muito ou retornou dados inválidos.");
       }
 
       setSelectedSeriesInfo(data);
+      setIsSeriesOpen(true);
     } catch (err: any) {
       console.error("[PLAYER_DEBUG] erro ao carregar série", {
         content_id: seriesId,

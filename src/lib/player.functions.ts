@@ -199,7 +199,9 @@ export const getPlayerCatalog = createServerFn({ method: "POST" })
       "get_series", 
       "get_series_info", 
       "get_episodes_list",
-      "get_vod_info"
+      "get_vod_info",
+      "get_series_episodes",
+      "get_series_info"
     ]),
     categoryId: z.string().optional(),
     contentId: z.string().optional(),
@@ -235,6 +237,7 @@ export const getPlayerCatalog = createServerFn({ method: "POST" })
     );
 
     try {
+      const isSeriesDetail = data.action === "get_series_info" || data.action === "get_episodes_list";
       const result = await runOnCore(
         "iptv-player-proxy" as any,
         {
@@ -255,7 +258,8 @@ export const getPlayerCatalog = createServerFn({ method: "POST" })
           contentId: data.contentId,
           offset: data.offset,
           limit: data.limit,
-        })
+        }),
+        isSeriesDetail // Novo: força Core para detalhes de séries
       );
 
       const quantidade = Array.isArray(result)
@@ -390,7 +394,10 @@ export const getPlayerStreamUrl = createServerFn({ method: "POST" })
     // VOD: escalonamento automático navegador → CORE-VLC → CORE → PAINEL-VLC.
     // O modo realmente usado é sempre informado no HUD (X-Playback-Via /
     // X-Playback-Reason), sem fallback silencioso.
-    if (data.type === "live") url.searchParams.set("forceCore", "1");
+    // MP4/MOV: forçamos Core para garantir Range 206 estável.
+    if (data.type === "live" || ["mp4", "mov", "m4v"].includes(data.extension.toLowerCase())) {
+      url.searchParams.set("forceCore", "1");
+    }
 
     
     const finalUrl = url.pathname + url.search;

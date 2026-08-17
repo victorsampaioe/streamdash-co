@@ -204,10 +204,12 @@ export const Route = createFileRoute("/api/public/core/stream")({
 
           const t0 = Date.now();
           try {
+            // Aumentar timeout para VOD (arquivos grandes)
+            const timeout = type === "live" ? 20000 : 60000;
             const res = await fetch(abs, {
               headers: h,
               redirect: "follow",
-              signal: AbortSignal.timeout(20000),
+              signal: AbortSignal.timeout(timeout),
             });
 
             const out = new Headers({ ...CORS, ...VER });
@@ -326,7 +328,12 @@ export const Route = createFileRoute("/api/public/core/stream")({
         let coreWorkerVersion: string | null = null;
         // Modo solicitado explicitamente (ex.: segmentos HLS mantêm o modo do manifesto).
         const modeParam = (url.searchParams.get("mode") || "").toUpperCase();
-        const forceCore = url.searchParams.get("forceCore") === "1" || modeParam.startsWith("CORE");
+        
+        // MP4/MOV: forçamos Core por padrão para garantir Range 206, exceto se mode for PAINEL
+        const isVodMp4 = type === "movie" || type === "series";
+        const forceCore = url.searchParams.get("forceCore") === "1" || 
+                         (modeParam.startsWith("CORE")) ||
+                         (isVodMp4 && modeParam !== "PAINEL");
 
         const { coreApiUrl, isCoreInstance } = await import("@/lib/core-api.server");
         const coreBase = coreApiUrl();
@@ -398,10 +405,11 @@ export const Route = createFileRoute("/api/public/core/stream")({
             relay.searchParams.set("via", "core");
             const t0 = Date.now();
             try {
+              const timeout = type === "live" ? 20000 : 60000;
               const res = await fetch(relay.toString(), {
                 headers: range ? { Range: range } : {},
                 redirect: "follow",
-                signal: AbortSignal.timeout(15000),
+                signal: AbortSignal.timeout(timeout),
               });
               coreWorkerVersion = res.headers.get("X-Core-Stream-Version") ?? coreWorkerVersion;
               const upstreamStatus = res.headers.get("X-Upstream-Status") ?? "-";
@@ -425,7 +433,7 @@ export const Route = createFileRoute("/api/public/core/stream")({
             } catch (e) {
               const msg =
                 (e as Error).name === "TimeoutError"
-                  ? "Timeout de 15s ao chamar o Core AWS"
+                  ? `Timeout de ${type === "live" ? 20 : 60}s ao chamar o Core AWS`
                   : `Falha de rede ao chamar o Core: ${(e as Error).message}`;
               tentativas.push({ modo, status: null, motivo: msg, ms: Date.now() - t0 });
             }
@@ -433,13 +441,17 @@ export const Route = createFileRoute("/api/public/core/stream")({
         };
 
         // Escada de compatibilidade (sem fallback silencioso — tudo é reportado):
-        // 1) Painel como navegador → 2) Painel como IPTV Smarters (muitos WAFs
-        //    liberam só este UA) → 3) CORE-VLC → 4) CORE (UA Smarters)
-        //    → 5) Painel como VLC.
-        if (!forceCore) await tentarPainel("PAINEL", "browser");
-        if (!upstream && !forceCore) await tentarPainel("PAINEL-SMARTERS", "player");
+        // Priorizamos Core para VOD para garantir suporte a Range (HTTP 206).
+        if (!forceCore) {
+          await tentarPainel("PAINEL", "browser");
+          if (!upstream) await tentarPainel("PAINEL-SMARTERS", "player");
+        }
+        
+        // Se forçado (ex: VOD) ou falhou no painel
         if (!upstream) await tentarCore("CORE-VLC", "vlc");
         if (!upstream) await tentarCore("CORE", "player");
+        
+        // Fallback final no painel se tudo falhar e não forçado
         if (!upstream && !forceCore) await tentarPainel("PAINEL-VLC", "vlc");
 
         const resumo = tentativas

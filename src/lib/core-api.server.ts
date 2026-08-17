@@ -69,7 +69,7 @@ export const WORKER_CAPABLE_TASKS: ReadonlySet<CoreTask> = new Set<CoreTask>([
 ]);
 
 export function canRunOnCore(task: CoreTask): boolean {
-  return WORKER_CAPABLE_TASKS.has(task);
+  return WORKER_CAPABLE_TASKS.has(task) || task === "iptv-player-proxy";
 }
 
 export function useCore(task?: CoreTask): boolean {
@@ -161,9 +161,11 @@ export async function callCore<T>(task: CoreTask, payload: Record<string, unknow
   const base = coreApiUrl();
   if (!base) throw new Error("CORE_API_URL não configurada");
 
-  // O Core é um worker stateless: tarefas que dependem do banco não podem ser
-  // delegadas (retornariam HTTP 501). Falha rápido, sem poluir a auditoria.
-  if (!canRunOnCore(task)) {
+  // O Core é um worker stateless: a maioria das tarefas depende do banco e roda no Painel.
+  // Somente tarefas permitidas (canRunOnCore) são delegadas ao worker, exceto se forçado
+  // para tasks específicas que o worker suporta via proxy (iptv-player-proxy).
+  const isProxy = task === "iptv-player-proxy";
+  if (!isProxy && !canRunOnCore(task)) {
     throw new Error(
       `Tarefa "${task}" depende do banco e roda no Painel — não é delegável ao Core worker.`,
     );
@@ -290,8 +292,9 @@ export async function runOnCore<T>(
   task: CoreTask,
   payload: Record<string, unknown>,
   local: () => Promise<T>,
+  force = false,
 ): Promise<T> {
-  if (!useCore(task)) {
+  if (!force && !useCore(task)) {
     if (coreApiUrl() && !isCoreInstance() && !canRunOnCore(task)) {
       console.log(
         `[CORE SKIP] task: ${task} | motivo: tarefa depende do banco (Painel é dono do banco) | timestamp: ${new Date().toISOString()}`,
@@ -300,6 +303,8 @@ export async function runOnCore<T>(
     return await local();
   }
   try {
+    // Se force=true, tentamos o callCore mesmo que useCore(task) retorne false
+    // (ex: forçar detalhes de séries pelo Core AWS para bypassar WAF do painel)
     return await callCore<T>(task, payload);
   } catch (e) {
     console.warn(`[core-api] fallback local para "${task}":`, (e as Error)?.message);

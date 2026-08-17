@@ -103,7 +103,7 @@ export async function probeCodecs(
     const res = await fetch(url, {
       headers: { "User-Agent": ua, Accept: "*/*", Range: "bytes=0-262143" },
       redirect: "follow",
-      signal: AbortSignal.timeout(12_000),
+      signal: AbortSignal.timeout(30_000), // Aumentado para 30s para VOD lento
     });
     if (!res.ok && res.status !== 206) {
       await res.body?.cancel();
