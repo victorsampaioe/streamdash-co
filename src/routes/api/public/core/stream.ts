@@ -720,6 +720,17 @@ export const Route = createFileRoute("/api/public/core/stream")({
         if (isManifest) {
           const tManifesto = Date.now();
           const text = await found.text();
+          if (type === "live") {
+            logLiveManifest({
+              url: usedUrl,
+              finalUrl: usedUrl,
+              status: found.status,
+              contentType: upstreamType,
+              ua: usedModo.includes("VLC") ? "vlc" : usedModo.includes("SMARTERS") || usedModo.startsWith("CORE") ? "player" : "browser",
+              modo: usedModo,
+              body: text,
+            });
+          }
           const { manifest: rewritten, segmentos } = rewriteManifest(text, usedUrl, token, usedModo);
           
           console.log(
