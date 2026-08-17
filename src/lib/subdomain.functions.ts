@@ -6,8 +6,9 @@ import { getPlayerSettings } from "./player.functions";
  * Extrai o subdomínio da requisição e resolve para as configurações da revenda.
  */
 export const resolveResellerByHost = createServerFn({ method: "GET" })
-  .handler(async ({ request }) => {
+  .handler(async (ctx) => {
     // @ts-ignore - access raw request for host header
+    const request = (ctx as any).request as Request;
     const host = request?.headers?.get("host") || "";
     const parts = host.split(".");
     
