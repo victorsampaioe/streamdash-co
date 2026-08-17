@@ -50,6 +50,7 @@ export function ContentCard({ item, type, primaryColor, onClick, onInfoClick, on
               alt={title} 
               className="w-full h-full object-cover"
               loading="lazy"
+              decoding="async"
             />
           ) : (
             <div className="w-full h-full flex items-center justify-center text-white/20">
@@ -58,11 +59,39 @@ export function ContentCard({ item, type, primaryColor, onClick, onInfoClick, on
           )}
         </div>
 
-        {/* Overlay on hover */}
+        {/* Ações rápidas no hover */}
         <div className={cn(
-          "absolute inset-0 bg-black/60 flex items-center justify-center gap-2 transition-opacity duration-300",
-          isHovered ? "opacity-100" : "opacity-0"
+          "absolute inset-0 bg-black/60 flex items-center justify-center gap-3 transition-opacity duration-200",
+          isHovered ? "opacity-100" : "opacity-0 pointer-events-none"
         )}>
+          <button
+            aria-label="Assistir"
+            onClick={(e) => { e.stopPropagation(); (onPlayClick ?? onClick)(item); }}
+            className="h-11 w-11 rounded-full flex items-center justify-center text-white shadow-xl transition-transform active:scale-90"
+            style={{ backgroundColor: primaryColor }}
+          >
+            <Play className="h-5 w-5 fill-white ml-0.5" />
+          </button>
+          {onToggleFavorite && (
+            <button
+              aria-label="Adicionar à minha lista"
+              onClick={(e) => { e.stopPropagation(); onToggleFavorite(item); }}
+              className="h-11 w-11 rounded-full flex items-center justify-center bg-white/10 border border-white/20 text-white transition-transform active:scale-90"
+            >
+              {isFavorite ? <Check className="h-5 w-5 text-emerald-400" /> : <Plus className="h-5 w-5" />}
+            </button>
+          )}
+          {onInfoClick && (
+            <button
+              aria-label="Ver detalhes"
+              onClick={(e) => { e.stopPropagation(); onInfoClick(item); }}
+              className="h-11 w-11 rounded-full flex items-center justify-center bg-white/10 border border-white/20 text-white transition-transform active:scale-90"
+            >
+              <Info className="h-5 w-5" />
+            </button>
+          )}
+        </div>
+
           <div 
             className="h-12 w-12 rounded-full bg-primary flex items-center justify-center text-white shadow-xl transform transition-all active:scale-90"
             style={{ backgroundColor: primaryColor }}
