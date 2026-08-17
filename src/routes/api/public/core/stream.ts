@@ -578,6 +578,16 @@ export const Route = createFileRoute("/api/public/core/stream")({
         if (!upstream) await tentarCore("CORE", "player");
         if (!upstream) await tentarCore("CORE-VLC", "vlc");
 
+        // Fallback explícito: se o Core falhou (ex.: worker AWS desatualizado),
+        // o Painel ainda tenta entregar direto. Todas as tentativas continuam
+        // registradas em `tentativas` (nada é silenciado).
+        if (!upstream && forceCore && !isCoreInstance()) {
+          await tentarPainel("PAINEL-SMARTERS", "player");
+          if (!upstream) await tentarPainel("PAINEL-VLC", "vlc");
+          if (!upstream) await tentarPainel("PAINEL", "browser");
+        }
+
+
 
         const resumo = tentativas
           .map((t) => `${t.modo}=${t.status ?? "erro"}${t.motivo ? ` (${t.motivo})` : ""}`)
@@ -593,6 +603,9 @@ export const Route = createFileRoute("/api/public/core/stream")({
         if (!found) {
           const ultimo = tentativas[tentativas.length - 1];
           const reason = `Nenhum modo entregou o stream. Tentativas: ${resumo || "nenhuma"}`;
+          // Headers HTTP só aceitam ByteString (latin-1): sanitiza acentos/travessões
+          const asciiHeader = (v: string) =>
+            v.replace(/[—–]/g, "-").replace(/[^\x20-\x7E]/g, "?").slice(0, 900);
           console.error(`[STREAM RESPONSE] status=${ultimo?.status ?? 502} ${reason}`);
           return new Response(reason, {
             status: ultimo?.status && ultimo.status >= 400 ? ultimo.status : 502,
@@ -601,11 +614,12 @@ export const Route = createFileRoute("/api/public/core/stream")({
               ...diagHeaders,
               "Content-Type": "text/plain; charset=utf-8",
               "X-Playback-Via": tentativas[0]?.modo ?? "PAINEL",
-              "X-Playback-Reason": reason,
-              "X-Core-Error": ultimo?.motivo ?? reason,
+              "X-Playback-Reason": asciiHeader(reason),
+              "X-Core-Error": asciiHeader(ultimo?.motivo ?? reason),
             },
           });
         }
+
 
         const upstreamType = found.headers.get("Content-Type");
         const isManifest = /mpegurl|m3u/i.test(upstreamType ?? "") || /\.m3u8(\?|$)/i.test(usedUrl) || type === "live";
