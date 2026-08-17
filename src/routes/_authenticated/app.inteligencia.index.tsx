@@ -58,7 +58,8 @@ function ContentIntelligence() {
     refetchInterval: 10_000,
   });
 
-  const isAdmin = !!statusQuery.data;
+  const { data: subInfo } = useSubscription();
+  const isAdmin = subInfo?.profile?.email === 'victorsampaio133@gmail.com' || subInfo?.profile?.role === 'admin';
 
 
 

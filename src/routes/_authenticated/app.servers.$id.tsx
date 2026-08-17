@@ -44,15 +44,7 @@ function ServerDetail() {
   const runAnalyze = useServerFn(analyzeServer);
   const { data: subInfo } = useSubscription();
 
-  const { data: isAdmin } = useQuery({
-    queryKey: ["is-admin"],
-    queryFn: async () => {
-      const { data: u } = await supabase.auth.getUser();
-      if (!u.user) return false;
-      const { data } = await supabase.from("user_roles").select("role").eq("user_id", u.user.id).eq("role", "admin").maybeSingle();
-      return !!data;
-    },
-  });
+  const isAdmin = subInfo?.profile?.email === 'victorsampaio133@gmail.com' || subInfo?.profile?.role === 'admin';
 
   const { data: server, refetch } = useQuery({
     queryKey: ["server", id],
