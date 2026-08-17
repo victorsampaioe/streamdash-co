@@ -75,6 +75,7 @@ function rewriteManifest(manifest: string, upstreamUrl: string, token: string, m
         exp: String(segExp),
         sig: signUpstream(abs, segExp),
         u: b64urlEncode(abs),
+        forceCore: "1",
       });
       return `/api/public/core/stream?${p.toString()}`;
     } catch (e) {
