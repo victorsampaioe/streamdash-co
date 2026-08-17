@@ -1427,8 +1427,8 @@ function PlayerPage() {
       // Probe de diagnóstico opcional (para HUD se for Admin)
       const t0 = Date.now();
       try {
-        const checkUrl = `${url}${url.includes("?") ? "&" : "?"}probe=1`;
-        const res = await fetch(checkUrl, { signal: AbortSignal.timeout(45000) });
+        const checkUrl = `${url}${url.includes("?") ? "&" : "?"}probe=1&forceCore=1`;
+        const res = await fetch(checkUrl, { signal: AbortSignal.timeout(60000) });
         const reason = res.headers.get("x-playback-reason");
         const info = {
           url,
