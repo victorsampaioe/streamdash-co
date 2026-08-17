@@ -240,6 +240,9 @@ export const Route = createFileRoute("/api/public/core/stream")({
               try { corpo = (await res.text()).slice(0, 200).replace(/\s+/g, " "); } catch { /* ignore */ }
               const motivo = `Origem IPTV respondeu HTTP ${res.status} com UA=${uaKind}${corpo ? ` — resposta: "${corpo}"` : ""}`;
               console.error(`[UPSTREAM IPTV][bloqueio] ${motivo} url=${maskMedia(abs)}`);
+              if (ext === "ts" || ext === "m4s" || type === "live") {
+                console.error(`[HLS SEGMENT] URL=${maskMedia(abs)} STATUS=${res.status} ERRO="${motivo}"`);
+              }
               out.set("X-Playback-Reason", motivo);
               out.set("X-Core-Error", motivo);
               out.set("Content-Type", "text/plain; charset=utf-8");
