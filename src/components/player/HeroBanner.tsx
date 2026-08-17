@@ -93,17 +93,29 @@ export function HeroBanner({ items = [], item: fallbackItem, onPlay, onMyList, o
       <div className="absolute bottom-0 left-0 p-6 md:p-16 w-full md:w-2/3 space-y-4 md:space-y-6">
 
         <div className="space-y-4">
-          <div className="flex items-center gap-4 text-sm font-medium">
-            <span className="px-2 py-0.5 rounded bg-primary text-white text-[10px] font-black uppercase tracking-widest" style={{ backgroundColor: primaryColor }}>
+          <div className="flex flex-wrap items-center gap-3 md:gap-4 text-sm font-medium">
+            <span className="px-2 py-0.5 rounded text-white text-[10px] font-black uppercase tracking-widest" style={{ backgroundColor: primaryColor }}>
               Em Destaque
             </span>
-            {rating && (
+            {rating > 0 && (
               <span className="flex items-center gap-1 text-yellow-500">
                 <Star className="h-4 w-4 fill-yellow-500" />
-                {rating}
+                {rating.toFixed(1)}
               </span>
             )}
             {year && <span className="text-white/60">{year}</span>}
+            {genre && <span className="text-white/40 truncate max-w-[10rem]">{genre}</span>}
+            {duration && (
+              <span className="flex items-center gap-1 text-white/40">
+                <Clock className="h-3.5 w-3.5" /> {duration}
+              </span>
+            )}
+            {seasons && (
+              <span className="flex items-center gap-1 text-white/40">
+                <Layers className="h-3.5 w-3.5" /> {seasons} temporada{Number(seasons) > 1 ? "s" : ""}
+                {episodes ? ` · ${episodes} ep.` : ""}
+              </span>
+            )}
           </div>
           
           <h1 className="text-3xl md:text-6xl font-bold text-white tracking-tight drop-shadow-2xl line-clamp-2 md:line-clamp-none">
@@ -116,7 +128,7 @@ export function HeroBanner({ items = [], item: fallbackItem, onPlay, onMyList, o
           </p>
         </div>
 
-        <div className="flex items-center gap-3 md:gap-4 pt-2">
+        <div className="flex flex-wrap items-center gap-3 md:gap-4 pt-2">
           <Button 
             size="lg" 
             className="flex-1 md:flex-none h-12 md:h-14 px-6 md:px-10 text-base md:text-lg font-bold rounded-xl shadow-xl transition-all active:scale-95"
@@ -124,6 +136,28 @@ export function HeroBanner({ items = [], item: fallbackItem, onPlay, onMyList, o
             onClick={() => onPlay(item)}
           >
             <Play className="mr-2 h-5 w-5 md:h-6 md:w-6 fill-white" /> Assistir agora
+          </Button>
+
+          {onDetails && (
+            <Button
+              size="lg"
+              variant="outline"
+              className="h-12 md:h-14 px-5 md:px-8 text-base font-bold rounded-xl bg-white/5 border-white/10 hover:bg-white/10 text-white active:scale-95"
+              onClick={() => onDetails(item)}
+            >
+              <Info className="h-5 w-5 md:mr-2" />
+              <span className="hidden md:inline">Ver detalhes</span>
+            </Button>
+          )}
+
+          <Button
+            size="lg"
+            variant="outline"
+            className="h-12 md:h-14 px-5 md:px-8 text-base font-bold rounded-xl bg-white/5 border-white/10 hover:bg-white/10 text-white active:scale-95"
+            onClick={() => setTrailerOpen(true)}
+          >
+            <Film className="h-5 w-5 md:mr-2" />
+            <span className="hidden md:inline">Trailer</span>
           </Button>
           
           <Button 
@@ -138,6 +172,14 @@ export function HeroBanner({ items = [], item: fallbackItem, onPlay, onMyList, o
         </div>
 
       </div>
+
+      <TrailerModal
+        isOpen={trailerOpen}
+        onClose={() => setTrailerOpen(false)}
+        title={title}
+        type={isSeriesItem ? "series" : "movie"}
+      />
     </div>
   );
 }
+
