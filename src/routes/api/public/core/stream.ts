@@ -578,6 +578,16 @@ export const Route = createFileRoute("/api/public/core/stream")({
         if (!upstream) await tentarCore("CORE", "player");
         if (!upstream) await tentarCore("CORE-VLC", "vlc");
 
+        // Fallback explícito: se o Core falhou (ex.: worker AWS desatualizado),
+        // o Painel ainda tenta entregar direto. Todas as tentativas continuam
+        // registradas em `tentativas` (nada é silenciado).
+        if (!upstream && forceCore && !isCoreInstance()) {
+          await tentarPainel("PAINEL-SMARTERS", "player");
+          if (!upstream) await tentarPainel("PAINEL-VLC", "vlc");
+          if (!upstream) await tentarPainel("PAINEL", "browser");
+        }
+
+
 
         const resumo = tentativas
           .map((t) => `${t.modo}=${t.status ?? "erro"}${t.motivo ? ` (${t.motivo})` : ""}`)
