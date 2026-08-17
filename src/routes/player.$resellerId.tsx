@@ -206,7 +206,7 @@ function PlayerPage() {
   const handleToggleFavorite = (item: any) => {
     if (!token) return;
     const contentId = (item.stream_id || item.series_id || item.id || item.content_id).toString();
-    const contentType = item.stream_type === "live" ? "live" : (item.series_id || item.content_type === "series" ? "series" : "movie");
+    const contentType = item.stream_type === "live" ? "live" : (item.series_id || item.content_type === "series" || item.content_type === "series" ? "series" : "movie");
     const isFavorite = favorites.some(f => f.content_id === contentId);
     
     toggleFavoriteMutation.mutate({
@@ -214,7 +214,11 @@ function PlayerPage() {
         token,
         contentId,
         contentType,
-        isFavorite: !isFavorite
+        isFavorite: !isFavorite,
+        metadata: {
+          name: item.name || item.title,
+          stream_icon: item.stream_icon || item.cover
+        }
       }
     });
   };
@@ -1200,12 +1204,12 @@ function PlayerPage() {
                      )}
                   </div>
                   <p className="text-base font-medium text-white">
-                    {playbackReason.includes("indisponível") || playbackReason.includes("Não foi possível")
-                      ? "Não foi possível iniciar este conteúdo. Tente novamente."
-                      : playbackReason.includes("Falha na conexão")
-                      ? "Erro ao conectar com o servidor. Verifique sua rede."
+                    {playbackReason.includes("indisponível") || playbackReason.includes("indisponível")
+                      ? "Conteúdo indisponível"
+                      : playbackReason.includes("lento") || playbackReason.includes("instável")
+                      ? "Servidor instável, tentando novamente..."
                       : playbackReason.includes("Carregando")
-                      ? "▶ Carregando conteúdo..."
+                      ? "Conectando ao servidor..."
                       : "Não foi possível reproduzir este conteúdo."}
                   </p>
                   
