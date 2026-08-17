@@ -434,6 +434,16 @@ export const Route = createFileRoute("/api/public/core/stream")({
             if (ext === "ts" || ext === "m4s" || type === "live") {
               console.error(`[STREAM DEBUG][HLS SEGMENT] URL=${maskMedia(abs)} STATUS=502 ERRO="${msg}"`);
             }
+            if (type === "live") {
+              logLiveSegment({
+                url: abs,
+                status: 502,
+                contentType: null,
+                ua: uaKind,
+                ms: Date.now() - t0,
+                erro: msg,
+              });
+            }
             return new Response(`Worker fetch error: ${msg}`, {
               status: 502,
               headers: {
