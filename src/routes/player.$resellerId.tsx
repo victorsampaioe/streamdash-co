@@ -1127,7 +1127,7 @@ function PlayerPage() {
       {selectedItem && (
         <ContentDetailsOverlay 
           item={selectedItem}
-          type={(selectedItem.series_id || selectedItem.content_type === "series" || activeView === "series") ? "series" : "movie"}
+          type={activeView === "live" ? "movie" : (selectedItem.series_id || selectedItem.content_type === "series" || activeView === "series") ? "series" : "movie"}
           isOpen={isDetailsOpen}
           onClose={() => {
             setIsDetailsOpen(false);
