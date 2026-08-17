@@ -102,13 +102,9 @@ function useNavItems() {
     },
   });
 
-  const isAdmin = userRoles?.includes('admin') || userRoles?.includes('victorsampaio133@gmail.com'); // This is a bit hacky, but consistent with the instructions. Better check email directly:
   const isMaster = userRoles?.some(r => r === 'admin') || subData?.profile?.email === 'victorsampaio133@gmail.com';
   
-  // Real fix for NavItems:
-  // Let's get the email from the user object if available, or just rely on the isAdmin flag we are about to refine.
-  
-  const navIsAdmin = isAdmin || subData?.profile?.email === 'victorsampaio133@gmail.com';
+  const navIsAdmin = isMaster;
   const isResellerRole = userRoles?.includes('reseller') || userRoles?.includes('sub_reseller');
   const isResellerOrAdmin = navIsAdmin || isResellerRole || !!subData?.profile?.is_reseller;
 
