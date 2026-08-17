@@ -428,7 +428,7 @@ export const Route = createFileRoute("/api/public/core/stream")({
             } catch (e) {
               const msg =
                 (e as Error).name === "TimeoutError"
-                  ? "Timeout de 15s ao chamar o Core AWS"
+                  ? `Timeout de ${type === "live" ? 20 : 45}s ao chamar o Core AWS`
                   : `Falha de rede ao chamar o Core: ${(e as Error).message}`;
               tentativas.push({ modo, status: null, motivo: msg, ms: Date.now() - t0 });
             }
