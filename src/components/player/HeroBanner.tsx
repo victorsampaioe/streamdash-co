@@ -110,30 +110,21 @@ export function HeroBanner({ items = [], item: fallbackItem, onPlay, onMyList, p
         <div className="flex items-center gap-3 md:gap-4 pt-2">
           <Button 
             size="lg" 
-            className="flex-1 md:flex-none h-12 md:h-14 px-6 md:px-8 text-base md:text-lg font-bold rounded-xl shadow-xl shadow-primary/20 hover:scale-105 transition-transform"
+            className="flex-1 md:flex-none h-12 md:h-14 px-6 md:px-10 text-base md:text-lg font-bold rounded-xl shadow-xl transition-all active:scale-95"
             style={{ backgroundColor: primaryColor }}
             onClick={() => onPlay(item)}
           >
-            <Play className="mr-2 h-5 w-5 md:h-6 md:w-6 fill-white" /> Assistir
+            <Play className="mr-2 h-5 w-5 md:h-6 md:w-6 fill-white" /> Assistir agora
           </Button>
-
           
           <Button 
             size="lg" 
             variant="outline"
-            className="h-12 md:h-14 w-12 md:w-auto px-0 md:px-8 text-lg font-bold rounded-xl bg-white/5 border-white/10 hover:bg-white/10 transition-all text-white"
+            className="h-12 md:h-14 w-12 md:w-auto px-0 md:px-8 text-lg font-bold rounded-xl bg-white/5 border-white/10 hover:bg-white/10 transition-all text-white active:scale-95"
             onClick={() => onMyList?.(item)}
           >
             {isFavorite?.(item) ? <Check className="h-5 w-5 md:h-6 md:w-6 text-green-500" /> : <Plus className="h-5 w-5 md:h-6 md:w-6" />}
             <span className="hidden md:inline ml-2">{isFavorite?.(item) ? "Na Minha Lista" : "Minha Lista"}</span>
-          </Button>
-
-          <Button 
-            size="icon"
-            variant="ghost"
-            className="h-12 w-12 md:h-14 md:w-14 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 text-white"
-          >
-            <Info className="h-5 w-5 md:h-6 md:w-6" />
           </Button>
         </div>
 
