@@ -277,24 +277,46 @@ function PlayerAdminPage() {
                 </div>
               </div>
             </CardContent>
-            <CardFooter className="flex flex-col gap-2">
-              <p className="text-xs text-center text-muted-foreground w-full">
-                Link de acesso público:
-              </p>
-              <div className="bg-muted p-2 rounded text-xs font-mono w-full break-all flex items-center justify-between gap-2">
-                <span className="truncate">{window.location.origin}/player/{user?.id}</span>
-                <Button 
-                  variant="ghost" 
-                  size="icon" 
-                  className="h-6 w-6" 
-                  onClick={() => {
-                    navigator.clipboard.writeText(`${window.location.origin}/player/${user?.id}`);
-                    toast.success("Link copiado!");
-                  }}
-                >
-                  <Globe className="h-3 w-3" />
-                </Button>
+            <CardFooter className="flex flex-col gap-4">
+              <div className="w-full space-y-2">
+                <p className="text-xs text-muted-foreground">Link via UUID:</p>
+                <div className="bg-muted p-2 rounded text-xs font-mono w-full break-all flex items-center justify-between gap-2">
+                  <span className="truncate">{window.location.origin}/player/{user?.id}</span>
+                  <Button 
+                    variant="ghost" 
+                    size="icon" 
+                    className="h-6 w-6 flex-shrink-0" 
+                    onClick={() => {
+                      navigator.clipboard.writeText(`${window.location.origin}/player/${user?.id}`);
+                      toast.success("Link copiado!");
+                    }}
+                  >
+                    <Globe className="h-3 w-3" />
+                  </Button>
+                </div>
               </div>
+              
+              {slug && (
+                <div className="w-full space-y-2">
+                  <p className="text-xs text-muted-foreground">Link via Subdomínio:</p>
+                  <div className="bg-muted p-2 rounded text-xs font-mono w-full break-all flex items-center justify-between gap-2 border border-primary/20">
+                    <span className="truncate">https://{slug}.{window.location.host.split('.').slice(-2).join('.')}</span>
+                    <Button 
+                      variant="ghost" 
+                      size="icon" 
+                      className="h-6 w-6 flex-shrink-0" 
+                      onClick={() => {
+                        const domain = window.location.host.split('.').slice(-2).join('.');
+                        navigator.clipboard.writeText(`https://${slug}.${domain}`);
+                        toast.success("Link do subdomínio copiado!");
+                      }}
+                    >
+                      <Globe className="h-3 w-3 text-primary" />
+                    </Button>
+                  </div>
+                  <p className="text-[10px] text-muted-foreground">Nota: O subdomínio requer configuração de DNS Wildcard ativa.</p>
+                </div>
+              )}
             </CardFooter>
           </Card>
         </div>
