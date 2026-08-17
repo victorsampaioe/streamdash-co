@@ -740,8 +740,8 @@ function PlayerPage() {
 
 
 
-      <main className="flex-1 overflow-y-auto pb-24 md:pb-0">
-        <header className="sticky top-0 z-40 bg-neutral-950/80 backdrop-blur-md px-6 py-4 flex items-center justify-between border-b border-white/5 md:hidden">
+      <main className="flex-1 overflow-y-auto pb-24 md:pb-0 scroll-smooth">
+        <header className="sticky top-0 z-40 bg-black/80 backdrop-blur-md px-6 py-4 flex items-center justify-between border-b border-white/5 md:hidden">
           <div className="flex items-center gap-2">
             {settings?.logo_url ? (
               <img src={settings.logo_url} alt="Logo" className="h-6 w-auto" />
@@ -1044,7 +1044,7 @@ function PlayerPage() {
               </div>
             </div>
             
-            <div className="flex gap-2 overflow-x-auto pb-4 scrollbar-hide">
+            <div className="flex gap-2 overflow-x-auto pb-4 scrollbar-hide no-scrollbar">
               {categories.map((cat) => (
                 <button
                   key={cat.category_id}
@@ -1094,7 +1094,7 @@ function PlayerPage() {
               <div className="flex justify-center pt-8">
                 <Button 
                   variant="outline" 
-                  className="bg-white/5 border-white/10 text-white hover:bg-white/10"
+                  className="bg-white/5 border-white/10 text-white hover:bg-white/10 rounded-xl"
                   onClick={async () => {
                     const actionMap = { live: "get_live_streams", movie: "get_vod_streams", series: "get_series" } as const;
                     const action = actionMap[activeView as keyof typeof actionMap];
@@ -1104,7 +1104,7 @@ function PlayerPage() {
                         action, 
                         categoryId: selectedCategory || undefined,
                         offset: content.length,
-                        limit: 40
+                        limit: 50
                       } 
                     });
                     if (Array.isArray(moreData)) {
@@ -1112,7 +1112,7 @@ function PlayerPage() {
                     }
                   }}
                 >
-                  Carregar Mais
+                  Carregar mais conteúdos
                 </Button>
               </div>
             )}
@@ -1577,7 +1577,7 @@ function LoginForm({ resellerId, settings, onLogin, primaryColor, secondaryColor
       </div>
 
       <div className="w-full max-w-md relative z-10">
-        <div className="bg-neutral-900/40 backdrop-blur-3xl border border-white/5 p-8 rounded-3xl shadow-2xl relative overflow-hidden group">
+        <div className="bg-black/60 backdrop-blur-3xl border border-white/5 p-8 rounded-3xl shadow-2xl relative overflow-hidden group">
           <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-primary/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
           
           <div className="flex flex-col items-center mb-8">
@@ -1601,7 +1601,7 @@ function LoginForm({ resellerId, settings, onLogin, primaryColor, secondaryColor
               <Label className="text-[10px] font-black uppercase tracking-widest text-white/30 ml-1">Servidor</Label>
               <div className="relative group/field">
                 <select 
-                  className="w-full bg-black/40 border border-white/5 focus:border-primary/50 rounded-xl px-4 py-3.5 text-white outline-none appearance-none transition-all hover:bg-black/60 pr-10"
+                  className="w-full bg-black border border-white/5 focus:border-primary/50 rounded-xl px-4 py-3.5 text-white outline-none appearance-none transition-all hover:bg-neutral-900 pr-10"
                   value={serverId}
                   onChange={(e) => setServerId(e.target.value)}
                   disabled={loginMutation.isPending}
@@ -1632,7 +1632,7 @@ function LoginForm({ resellerId, settings, onLogin, primaryColor, secondaryColor
                 placeholder="Insira seu usuário"
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
-                className="bg-black/40 border-white/5 focus:border-primary/50 h-12 rounded-xl text-white placeholder:text-white/10"
+                className="bg-black border-white/5 focus:border-primary/50 h-12 rounded-xl text-white placeholder:text-white/10"
                 disabled={loginMutation.isPending}
               />
             </div>
@@ -1644,7 +1644,7 @@ function LoginForm({ resellerId, settings, onLogin, primaryColor, secondaryColor
                 placeholder="Insira sua senha"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="bg-black/40 border-white/5 focus:border-primary/50 h-12 rounded-xl text-white placeholder:text-white/10"
+                className="bg-black border-white/5 focus:border-primary/50 h-12 rounded-xl text-white placeholder:text-white/10"
                 disabled={loginMutation.isPending}
               />
             </div>
