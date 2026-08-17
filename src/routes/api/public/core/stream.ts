@@ -405,7 +405,7 @@ export const Route = createFileRoute("/api/public/core/stream")({
             relay.searchParams.set("via", "core");
             const t0 = Date.now();
             try {
-              const timeout = type === "live" ? 20000 : 45000;
+              const timeout = type === "live" ? 20000 : 60000;
               const res = await fetch(relay.toString(), {
                 headers: range ? { Range: range } : {},
                 redirect: "follow",
