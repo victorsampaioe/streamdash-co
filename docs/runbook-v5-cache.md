@@ -149,9 +149,9 @@ node scripts/loadtest-stream.mjs "<URL_ASSINADA_DO_MANIFESTO>" 50 60
 Repita, um de cada vez, trocando o número e o arquivo de métricas:
 
 ```bash
-./scripts/monitor-core.sh 60 /tmp/metrics-100.log   &&  node scripts/loadtest-stream.mjs "<URL>" 100 60
-./scripts/monitor-core.sh 60 /tmp/metrics-200.log   &&  node scripts/loadtest-stream.mjs "<URL>" 200 60
-./scripts/monitor-core.sh 60 /tmp/metrics-500.log   &&  node scripts/loadtest-stream.mjs "<URL>" 500 60
+./scripts/monitor-core.sh 60 /tmp/metrics-100.log & node scripts/loadtest-stream.mjs "<URL>" 100 60; wait
+./scripts/monitor-core.sh 60 /tmp/metrics-200.log & node scripts/loadtest-stream.mjs "<URL>" 200 60; wait
+./scripts/monitor-core.sh 60 /tmp/metrics-500.log & node scripts/loadtest-stream.mjs "<URL>" 500 60; wait
 ```
 
 > A URL assinada expira (~300 s). Gere uma nova antes de cada patamar abrindo o canal no player e
