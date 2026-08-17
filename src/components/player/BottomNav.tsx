@@ -16,8 +16,8 @@ interface BottomNavProps {
 export function BottomNav({ activeView, onChangeView, primaryColor }: BottomNavProps) {
   const items = [
     { id: "home", label: "Início", icon: Home },
-    { id: "live", label: "TV ao vivo", icon: Tv },
-    { id: "mylist", label: "Favoritos", icon: Star },
+    { id: "live", label: "TV Ao Vivo", icon: Tv },
+    { id: "mylist", label: "Minha Lista", icon: Star },
     { id: "search", label: "Buscar", icon: Search },
     { id: "settings", label: "Ajustes", icon: Settings },
   ];

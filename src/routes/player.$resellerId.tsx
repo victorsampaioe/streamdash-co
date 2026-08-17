@@ -829,7 +829,7 @@ function PlayerPage() {
             )}
 
             <ContentRow 
-              title="Novidades" 
+              title="Lançamentos" 
               items={homeData.newReleases} 
               type="movie" 
               primaryColor={primaryColor}
@@ -840,7 +840,7 @@ function PlayerPage() {
             />
 
             <ContentRow 
-              title="Recomendados para Você" 
+              title="Mais Assistidos" 
               items={homeData.newReleases.slice().reverse().slice(0, 10)} 
               type="movie" 
               primaryColor={primaryColor}
@@ -851,7 +851,7 @@ function PlayerPage() {
             />
 
             <ContentRow 
-              title="Destaques Ao Vivo" 
+              title="Canais em Destaque" 
               items={homeData.liveHighlights} 
               type="live" 
               primaryColor={primaryColor}
