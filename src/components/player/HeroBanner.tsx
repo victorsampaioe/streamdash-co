@@ -85,8 +85,8 @@ export function HeroBanner({ items = [], item: fallbackItem, onPlay, onMyList, p
 
         <div className="space-y-4">
           <div className="flex items-center gap-4 text-sm font-medium">
-            <span className="px-2 py-0.5 rounded bg-primary text-white" style={{ backgroundColor: primaryColor }}>
-              DESTAQUE
+            <span className="px-2 py-0.5 rounded bg-primary text-white text-[10px] font-black uppercase tracking-widest" style={{ backgroundColor: primaryColor }}>
+              Em Destaque
             </span>
             {rating && (
               <span className="flex items-center gap-1 text-yellow-500">

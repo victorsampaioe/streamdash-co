@@ -111,7 +111,7 @@ export function ContentDetailsOverlay({
                   </div>
                 )}
                 {type === "series" && (
-                  <span className="px-2 py-0.5 bg-white/10 rounded text-xs font-black uppercase tracking-wider">Série</span>
+                  <span className="px-2 py-0.5 bg-white/10 rounded text-[10px] font-black uppercase tracking-widest">Série</span>
                 )}
               </div>
             </div>
@@ -155,7 +155,7 @@ export function ContentDetailsOverlay({
 
             {metadata?.cast && metadata.cast.length > 0 && (
               <div className="pt-6 border-t border-white/5">
-                <p className="text-xs font-bold text-white/40 uppercase tracking-widest mb-2">Elenco Principal</p>
+                <p className="text-[10px] font-black text-white/40 uppercase tracking-widest mb-2">Elenco Principal</p>
                 <p className="text-sm text-white/60">
                   {metadata.cast.join(", ")}
                 </p>
