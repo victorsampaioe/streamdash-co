@@ -611,6 +611,27 @@ export const getTMDBMetadata = createServerFn({ method: "GET" })
       const detailsResponse = await fetch(detailsUrl.toString());
       const detailsData = await detailsResponse.json();
 
+      // Candidatos de trailer ordenados: Trailer oficial > Teaser > Clip.
+      // O cliente valida embed (alguns vídeos bloqueiam incorporação) e usa o
+      // primeiro que aceitar; se nenhum aceitar, volta para a capa.
+      const videos: any[] = detailsData.videos?.results ?? [];
+      const rank = (v: any) => {
+        let score = 0;
+        if (v.type === "Trailer") score += 100;
+        else if (v.type === "Teaser") score += 60;
+        else if (v.type === "Clip") score += 20;
+        if (v.official) score += 25;
+        if (v.iso_639_1 === "pt") score += 15;
+        if (v.size >= 1080) score += 5;
+        return score;
+      };
+      const trailerCandidates = videos
+        .filter((v) => v.site === "YouTube" && v.key && ["Trailer", "Teaser", "Clip"].includes(v.type))
+        .sort((a, b) => rank(b) - rank(a))
+        .map((v) => v.key as string)
+        .filter((k, i, arr) => arr.indexOf(k) === i)
+        .slice(0, 5);
+
       return {
         id: detailsData.id,
         title: detailsData.title || detailsData.name,
@@ -622,7 +643,8 @@ export const getTMDBMetadata = createServerFn({ method: "GET" })
         genres: detailsData.genres?.map((g: any) => g.name) || [],
         runtime: detailsData.runtime || (detailsData.episode_run_time ? detailsData.episode_run_time[0] : null),
         cast: detailsData.credits?.cast?.slice(0, 5).map((c: any) => c.name) || [],
-        trailer_key: detailsData.videos?.results?.find((v: any) => v.type === 'Trailer' && v.site === 'YouTube')?.key
+        trailer_key: trailerCandidates[0],
+        trailer_candidates: trailerCandidates,
       };
     } catch (error) {
       console.error("Erro ao buscar metadados TMDB:", error);
