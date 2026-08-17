@@ -1137,30 +1137,54 @@ function PlayerPage() {
           </div>
           <div className="h-full w-full flex items-center justify-center">
              {playbackReason ? (
-                <div className="max-w-md mx-6 rounded-2xl border border-white/10 bg-white/5 p-6 text-center space-y-3">
-                  <p className="text-sm text-white/90 leading-relaxed">{playbackReason}</p>
-                  {compat && (
-                    <p className={`font-mono text-xs ${compat.ok ? "text-emerald-400" : "text-amber-400"}`}>
-                      {compat.label}
-                    </p>
-                  )}
-                  <div className="flex flex-wrap items-center justify-center gap-2">
-                    <Button
-                      variant="outline"
-                      className="border-white/10 bg-white/5 text-white"
-                      disabled={compatLoading}
-                      onClick={() => void runCompatTest()}
-                    >
-                      {compatLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-                      Testar compatibilidade Web
-                    </Button>
-                    <Button variant="outline" className="border-white/10 bg-white/5 text-white" onClick={handleClosePlayer}>
-                      Fechar
-                    </Button>
+                <div className="max-w-md mx-6 rounded-2xl border border-white/10 bg-white/5 p-8 text-center space-y-4">
+                  <div className="mx-auto w-12 h-12 rounded-full bg-white/5 flex items-center justify-center border border-white/10">
+                     {playbackReason.includes("Carregando") ? (
+                       <Loader2 className="h-6 w-6 text-white animate-spin" />
+                     ) : (
+                       <PlayCircle className="h-6 w-6 text-white/40" />
+                     )}
                   </div>
+                  <p className="text-base font-medium text-white">{playbackReason}</p>
+                  
+                  {isAdmin && (
+                    <div className="pt-4 border-t border-white/5 space-y-2">
+                       <p className="text-[10px] text-white/40 uppercase tracking-widest font-bold">Diagnóstico Admin</p>
+                       {compat && (
+                         <p className={`font-mono text-xs ${compat.ok ? "text-emerald-400" : "text-amber-400"}`}>
+                           {compat.label}
+                         </p>
+                       )}
+                       <div className="flex flex-wrap items-center justify-center gap-2">
+                         <Button
+                           variant="outline"
+                           size="sm"
+                           className="h-8 border-white/10 bg-white/5 text-white text-[10px]"
+                           disabled={compatLoading}
+                           onClick={() => void runCompatTest()}
+                         >
+                           {compatLoading ? <Loader2 className="mr-2 h-3 w-3 animate-spin" /> : <ShieldAlert className="mr-2 h-3 w-3" />}
+                           Testar compatibilidade Web
+                         </Button>
+                       </div>
+                    </div>
+                  )}
+                  
+                  {!playbackReason.includes("Carregando") && (
+                    <Button 
+                      variant="ghost" 
+                      onClick={() => setIsPlaying(false)}
+                      className="text-white/60 hover:text-white"
+                    >
+                      Voltar para o catálogo
+                    </Button>
+                  )}
                 </div>
              ) : !streamUrl ? (
-                <Loader2 className="h-12 w-12 animate-spin text-primary" />
+                <div className="flex flex-col items-center gap-4">
+                  <Loader2 className="h-10 w-10 text-white animate-spin opacity-20" />
+                  <p className="text-white/40 text-sm font-medium animate-pulse">Iniciando stream...</p>
+                </div>
              ) : (
                 <video 
                   ref={videoRef}
