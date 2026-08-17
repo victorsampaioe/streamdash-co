@@ -82,7 +82,9 @@ export const Route = createFileRoute("/player/$resellerId")({
       data: isUuid ? { profileId: params.resellerId } : { slug: params.resellerId } 
     });
     
-    if (!settings) throw new Error("Revendedor não encontrado");
+    if (!settings) {
+      return { settings: null };
+    }
     return { settings };
   },
   component: PlayerPage,
@@ -92,17 +94,19 @@ function PlayerPage() {
   const navigate = useNavigate();
   const { resellerId } = Route.useParams();
   const { settings } = Route.useLoaderData();
-  const profileId = settings.profile_id;
+  const profileId = settings?.profile_id || resellerId;
   const primaryColor = settings?.primary_color || "#3B82F6";
   const secondaryColor = settings?.secondary_color || "#0A0A0A";
   
   const [token, setToken] = useState<string | null>(null);
+  const [session, setSession] = useState<any>(null);
   
   useEffect(() => {
-    const saved = localStorage.getItem(`stream_player_token_${profileId}`);
-    if (saved) setToken(saved);
+    if (typeof window !== "undefined" && profileId) {
+      const savedToken = localStorage.getItem(`stream_player_token_${profileId}`);
+      if (savedToken) setToken(savedToken);
+    }
   }, [profileId]);
-  const [session, setSession] = useState<any>(null);
   const [activeView, setActiveView] = useState<"home" | "live" | "movie" | "series" | "mylist" | "search" | "settings">("home");
   const [loadingContent, setLoadingContent] = useState(false);
   const [categories, setCategories] = useState<any[]>([]);
@@ -247,8 +251,10 @@ function PlayerPage() {
 
   // Salvar token usando profile_id fixo
   useEffect(() => {
-    if (token) localStorage.setItem(`stream_player_token_${profileId}`, token);
-    else localStorage.removeItem(`stream_player_token_${profileId}`);
+    if (typeof window !== "undefined" && profileId) {
+      if (token) localStorage.setItem(`stream_player_token_${profileId}`, token);
+      else localStorage.removeItem(`stream_player_token_${profileId}`);
+    }
   }, [token, profileId]);
 
   // Carregar dados da Home
@@ -711,7 +717,9 @@ function PlayerPage() {
     }
     setToken(null);
     setSession(null);
-    localStorage.removeItem(`stream_player_token_${resellerId}`);
+    if (typeof window !== "undefined") {
+      localStorage.removeItem(`stream_player_token_${resellerId}`);
+    }
     // Limpar outros dados locais se houver
     toast.success("Sessão encerrada");
   };
@@ -1547,9 +1555,16 @@ function PlayerPage() {
 
 
 function LoginForm({ resellerId, settings, onLogin, primaryColor, secondaryColor }: any) {
-  const [username, setUsername] = useState(localStorage.getItem(`stream_player_last_user_${resellerId}`) || "");
+  const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
-  const [serverId, setServerId] = useState(localStorage.getItem(`stream_player_last_server_${resellerId}`) || "");
+  const [serverId, setServerId] = useState("");
+  
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      setUsername(localStorage.getItem(`stream_player_last_user_${resellerId}`) || "");
+      setServerId(localStorage.getItem(`stream_player_last_server_${resellerId}`) || "");
+    }
+  }, [resellerId]);
   const [servers, setServers] = useState<any[]>([]);
   const [diagnosing, setDiagnosing] = useState(false);
   const [healthInfo, setHealthInfo] = useState<any>(null);
@@ -1586,8 +1601,10 @@ function LoginForm({ resellerId, settings, onLogin, primaryColor, secondaryColor
     e.preventDefault();
     if (!serverId) return toast.error("Selecione o servidor");
     loginMutation.mutate({ data: { serverId, username, password, resellerId } });
-    localStorage.setItem(`stream_player_last_server_${resellerId}`, serverId);
-    localStorage.setItem(`stream_player_last_user_${resellerId}`, username);
+    if (typeof window !== "undefined") {
+      localStorage.setItem(`stream_player_last_server_${resellerId}`, serverId);
+      localStorage.setItem(`stream_player_last_user_${resellerId}`, username);
+    }
   };
 
   return (
