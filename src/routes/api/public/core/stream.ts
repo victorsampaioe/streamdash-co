@@ -146,6 +146,13 @@ export const Route = createFileRoute("/api/public/core/stream")({
         const ext = (url.searchParams.get("ext") || "ts").toLowerCase();
         const type = url.searchParams.get("type") || "live";
         const range = request.headers.get("range");
+
+        const modeStart = url.searchParams.get("mode") || "proxy";
+        const viaCoreStart = url.searchParams.get("via") === "core";
+        const isCoreStart = process.env.IS_CORE === "true";
+        const forceCoreStart = url.searchParams.get("forceCore") === "1";
+        const startPath = forceCoreStart || viaCoreStart || isCoreStart ? "CORE" : "PAINEL";
+        console.log(`[STREAM START] path=${url.pathname} modo=${startPath} submodo=${modeStart} type=${type} ext=${ext} range=${range ?? "none"} isCore=${isCoreStart} viaCore=${viaCoreStart} token=${token ? "presente" : "ausente"} u=${passthrough ? "presente" : "ausente"}`);
         
         // Note: For ADMIN MASTER (victorsampaio133@gmail.com), 
         // access is granted via the standard session validation below.
@@ -253,6 +260,8 @@ export const Route = createFileRoute("/api/public/core/stream")({
               signal: AbortSignal.timeout(timeout),
               keepalive: true,
             });
+
+            console.log(`[UPSTREAM RESPONSE] modo=CORE status=${res.status} content-type=${res.headers.get("content-type") ?? "-"} content-length=${res.headers.get("content-length") ?? "-"} url=${maskMedia(abs)}`);
 
             // Painéis Xtream redirecionam (302) para CDNs externas. As URIs do
             // manifesto são relativas à URL FINAL, não à URL do painel.
@@ -382,6 +391,7 @@ export const Route = createFileRoute("/api/public/core/stream")({
                }
             }
             
+            console.log(`[STREAM BODY START] modo=CORE url=${maskMedia(abs)} status=${res.status} content-type=${out.get("Content-Type")} content-length=${res.headers.get("content-length") ?? "-"} body_null=${res.body === null}`);
             return new Response(res.body, { status: res.status, headers: out });
           } catch (e) {
             const msg = (e as Error).message;
@@ -529,6 +539,9 @@ export const Route = createFileRoute("/api/public/core/stream")({
               console.log(
                 `[STREAM ATTEMPT][${modo}] url=${maskMedia(candidate)} ua=${uaKind} status=${res.status} ct=${ct} tempo=${Date.now() - t0}ms`
               );
+              console.log(
+                `[UPSTREAM RESPONSE] modo=${modo} status=${res.status} content-type=${ct} url=${maskMedia(candidate)}`
+              );
               if (res.ok || res.status === 206) {
                 upstream = res;
                 usedUrl = res.url || candidate;
@@ -580,6 +593,9 @@ export const Route = createFileRoute("/api/public/core/stream")({
               console.log(
                 `[STREAM DEBUG][STREAM ATTEMPT][${modo}] url=${maskMedia(candidate)} ua=${uaKind} core_status=${res.status} upstream=${upstreamStatus} ct=${res.headers.get("content-type") ?? "-"} worker=${coreWorkerVersion ?? "sem versão"} erro=${res.headers.get("X-Core-Error") ?? "-"} tempo=${Date.now() - t0}ms`
               );
+              console.log(
+                `[UPSTREAM RESPONSE] modo=${modo} status=${res.status} content-type=${res.headers.get("content-type") ?? "-"} upstream-status=${upstreamStatus} url=${maskMedia(candidate)}`
+              );
               if (res.ok || res.status === 206) {
                 upstream = res;
                 usedUrl = candidate;
@@ -626,7 +642,7 @@ export const Route = createFileRoute("/api/public/core/stream")({
           if (!upstream) await tentarPainel("PAINEL", "browser");
         }
 
-
+        console.log(`[MODO ESCOLHIDO] ${usedModo} forceCore=${forceCore} url=${maskMedia(usedUrl || "-")}`);
 
         const resumo = tentativas
           .map((t) => `${t.modo}=${t.status ?? "erro"}${t.motivo ? ` (${t.motivo})` : ""}`)
@@ -727,6 +743,7 @@ export const Route = createFileRoute("/api/public/core/stream")({
           `[STREAM DEBUG][STREAM RESPONSE] via=${usedModo} type=${type} ext=${finalExt} status=${found.status} ct=${out.get("Content-Type")} range=${range ?? "none"} tentativas="${resumo}"`
         );
 
+        console.log(`[STREAM BODY START] modo=${usedModo} url=${maskMedia(usedUrl)} status=${found.status} content-type=${out.get("Content-Type")} content-length=${found.headers.get("content-length") ?? "-"} body_null=${found.body === null}`);
         return new Response(found.body, { status: found.status, headers: out });
       },
       OPTIONS: async () => new Response(null, { status: 204, headers: CORS }),
