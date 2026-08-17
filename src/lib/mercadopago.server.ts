@@ -35,7 +35,7 @@ export async function createMpPixCharge(params: {
   if (!token) throw new Error("MERCADOPAGO_ACCESS_TOKEN não configurado");
 
   const body = {
-    transaction_amount: Number((Number(params.amountCents || 0) / 100).toFixed(2)),
+    transaction_amount: Number((params.amountCents / 100).toFixed(2)),
     description: params.description,
     payment_method_id: "pix",
     external_reference: params.externalReference,

@@ -22,7 +22,6 @@ export type SubscriptionInfo = {
   ownerId: string | null;
   profile: {
     id: string;
-    email: string | null;
     phone: string | null;
     full_name: string | null;
     is_reseller: boolean;
@@ -86,7 +85,7 @@ export function useSubscription() {
           .maybeSingle(),
         supabase
           .from("profiles")
-          .select("id, email, phone, full_name, is_reseller, created_at, signup_bonus_days")
+          .select("id, phone, full_name, is_reseller, created_at, signup_bonus_days")
           .eq("id", userData.user.id)
           .maybeSingle(),
         supabase
@@ -121,7 +120,6 @@ export function useSubscription() {
 
       const prof = profile ? {
         id: profile.id,
-        email: profile.email,
         phone: profile.phone,
         full_name: profile.full_name,
         is_reseller: isReseller,

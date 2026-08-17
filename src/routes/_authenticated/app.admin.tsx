@@ -55,16 +55,11 @@ import { deleteUserAdmin } from "@/lib/admin-actions.functions";
 import { updateClientAdmin } from "@/lib/admin-client-update.functions";
 
 
-import { isAdminMaster } from "@/lib/permissions";
-
 export const Route = createFileRoute("/_authenticated/app/admin")({
   beforeLoad: async ({ context }) => {
     const { supabase } = await import("@/integrations/supabase/client");
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) throw redirect({ to: "/auth" });
-    
-    // ADMIN MASTER bypass
-    if (isAdminMaster(user.email)) return;
     
     const { data: isAdmin, error } = await supabase.rpc("has_role", { 
       _user_id: user.id, 
@@ -145,10 +140,6 @@ function AdminPage() {
         console.warn("Admin check: No user found");
         return false;
       }
-      
-      // ADMIN MASTER bypass
-      if (user.email === "victorsampaio133@gmail.com") return true;
-
       const { data, error } = await supabase.rpc("has_role", { _user_id: user.id, _role: "admin" });
       if (error) {
         console.error("Admin role check error:", error);

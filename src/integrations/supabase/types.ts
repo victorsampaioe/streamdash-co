@@ -3081,7 +3081,6 @@ export type Database = {
           primary_color: string | null
           profile_id: string
           secondary_color: string | null
-          slug: string | null
           updated_at: string | null
           welcome_message: string | null
         }
@@ -3095,7 +3094,6 @@ export type Database = {
           primary_color?: string | null
           profile_id: string
           secondary_color?: string | null
-          slug?: string | null
           updated_at?: string | null
           welcome_message?: string | null
         }
@@ -3109,7 +3107,6 @@ export type Database = {
           primary_color?: string | null
           profile_id?: string
           secondary_color?: string | null
-          slug?: string | null
           updated_at?: string | null
           welcome_message?: string | null
         }

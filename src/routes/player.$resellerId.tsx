@@ -74,44 +74,20 @@ import { testWebCompatibility, NEEDS_CONVERSION_MESSAGE, type WebCompatResult } 
 
 
 export const Route = createFileRoute("/player/$resellerId")({
-  loader: async ({ params, context }) => {
-    const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(params.resellerId);
-    
-    // Se for UUID, busca por profileId. Se não for, busca por slug.
-    const settings = await getPlayerSettings({ 
-      data: isUuid ? { profileId: params.resellerId } : { slug: params.resellerId } 
-    });
-    
-    if (!settings) {
-      return { settings: null };
-    }
-    return { settings };
-  },
   component: PlayerPage,
 });
 
 function PlayerPage() {
   const navigate = useNavigate();
   const { resellerId } = Route.useParams();
-  const { settings } = Route.useLoaderData();
-  const profileId = settings?.profile_id || resellerId;
-  const primaryColor = settings?.primary_color || "#3B82F6";
-  const secondaryColor = settings?.secondary_color || "#0A0A0A";
-  
-  const [token, setToken] = useState<string | null>(null);
+  const [token, setToken] = useState<string | null>(localStorage.getItem(`stream_player_token_${resellerId}`));
   const [session, setSession] = useState<any>(null);
-  
-  useEffect(() => {
-    if (typeof window !== "undefined" && profileId) {
-      const savedToken = localStorage.getItem(`stream_player_token_${profileId}`);
-      if (savedToken) setToken(savedToken);
-    }
-  }, [profileId]);
-  const [activeView, setActiveView] = useState<"home" | "live" | "movie" | "series" | "mylist" | "search" | "settings">("home");
-  const [loadingContent, setLoadingContent] = useState(false);
+  const [activeView, setActiveView] = useState<"home" | "live" | "movie" | "series" | "mylist" | "search" | "settings" | "categories">("home");
+
   const [categories, setCategories] = useState<any[]>([]);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [content, setContent] = useState<any[]>([]);
+  const [loadingContent, setLoadingContent] = useState(false);
   
   const [selectedSeriesInfo, setSelectedSeriesInfo] = useState<any>(null);
   const [isSeriesOpen, setIsSeriesOpen] = useState(false);
@@ -215,7 +191,7 @@ function PlayerPage() {
   const handleToggleFavorite = (item: any) => {
     if (!token) return;
     const contentId = (item.stream_id || item.series_id || item.id || item.content_id).toString();
-    const contentType = item.stream_type === "live" ? "live" : (item.series_id || item.content_type === "series" || item.content_type === "series" ? "series" : "movie");
+    const contentType = item.stream_type === "live" ? "live" : (item.series_id || item.content_type === "series" ? "series" : "movie");
     const isFavorite = favorites.some(f => f.content_id === contentId);
     
     toggleFavoriteMutation.mutate({
@@ -223,19 +199,17 @@ function PlayerPage() {
         token,
         contentId,
         contentType,
-        isFavorite: !isFavorite,
-        metadata: {
-          name: item.name || item.title,
-          stream_icon: item.stream_icon || item.cover
-        }
+        isFavorite: !isFavorite
       }
     });
   };
 
 
-  // Carregamento da Identidade Visual agora vem do loader
-  // const primaryColor = settings?.primary_color || "#3B82F6";
-  // const secondaryColor = settings?.secondary_color || "#0A0A0A";
+  // Identidade Visual
+  const { data: settings, isLoading: settingsLoading } = useQuery({
+    queryKey: ["public-player-settings", resellerId],
+    queryFn: () => getPlayerSettings({ data: { profileId: resellerId } }),
+  });
 
   // Validar sessão ao carregar
   useEffect(() => {
@@ -249,13 +223,11 @@ function PlayerPage() {
     }
   }, [token]);
 
-  // Salvar token usando profile_id fixo
+  // Salvar token
   useEffect(() => {
-    if (typeof window !== "undefined" && profileId) {
-      if (token) localStorage.setItem(`stream_player_token_${profileId}`, token);
-      else localStorage.removeItem(`stream_player_token_${profileId}`);
-    }
-  }, [token, profileId]);
+    if (token) localStorage.setItem(`stream_player_token_${resellerId}`, token);
+    else localStorage.removeItem(`stream_player_token_${resellerId}`);
+  }, [token, resellerId]);
 
   // Carregar dados da Home
   useEffect(() => {
@@ -345,7 +317,7 @@ function PlayerPage() {
 
   useEffect(() => {
     if (session && token) {
-      if (activeView === "search" || activeView === "settings") return;
+      if (activeView === "search" || activeView === "settings" || activeView === "categories") return;
       
       setLoadingContent(true);
       const controller = new AbortController();
@@ -403,7 +375,8 @@ function PlayerPage() {
     }
   }, [session, token, activeView, selectedCategory]);
 
-  // Duplicados removidos: primaryColor e secondaryColor já definidos via settings do loader
+  const primaryColor = settings?.primary_color || "#3B82F6";
+  const secondaryColor = settings?.secondary_color || "#0A0A0A";
 
   const isAdmin = session?.user?.email?.includes("admin") || false;
 
@@ -660,10 +633,6 @@ function PlayerPage() {
   }, [isPlaying, streamUrl, selectedItem, token]);
 
 
-  // Loader handled by TanStack Router loader, so this isn't strictly needed for settings,
-  // but keeping a placeholder if needed for other global state
-  const settingsLoading = false; 
-
   if (settingsLoading) {
     return (
       <div className="min-h-screen bg-neutral-950 flex items-center justify-center">
@@ -717,9 +686,7 @@ function PlayerPage() {
     }
     setToken(null);
     setSession(null);
-    if (typeof window !== "undefined") {
-      localStorage.removeItem(`stream_player_token_${resellerId}`);
-    }
+    localStorage.removeItem(`stream_player_token_${resellerId}`);
     // Limpar outros dados locais se houver
     toast.success("Sessão encerrada");
   };
@@ -757,8 +724,8 @@ function PlayerPage() {
 
 
 
-      <main className="flex-1 overflow-y-auto pb-24 md:pb-0 scroll-smooth">
-        <header className="sticky top-0 z-40 bg-black/80 backdrop-blur-md px-6 py-4 flex items-center justify-between border-b border-white/5 md:hidden">
+      <main className="flex-1 overflow-y-auto pb-24 md:pb-0">
+        <header className="sticky top-0 z-40 bg-neutral-950/80 backdrop-blur-md px-6 py-4 flex items-center justify-between border-b border-white/5 md:hidden">
           <div className="flex items-center gap-2">
             {settings?.logo_url ? (
               <img src={settings.logo_url} alt="Logo" className="h-6 w-auto" />
@@ -842,7 +809,7 @@ function PlayerPage() {
             )}
 
             <ContentRow 
-              title="Lançamentos" 
+              title="Novidades" 
               items={homeData.newReleases} 
               type="movie" 
               primaryColor={primaryColor}
@@ -853,7 +820,7 @@ function PlayerPage() {
             />
 
             <ContentRow 
-              title="Mais Assistidos" 
+              title="Recomendados para Você" 
               items={homeData.newReleases.slice().reverse().slice(0, 10)} 
               type="movie" 
               primaryColor={primaryColor}
@@ -864,7 +831,7 @@ function PlayerPage() {
             />
 
             <ContentRow 
-              title="Canais em Destaque" 
+              title="Destaques Ao Vivo" 
               items={homeData.liveHighlights} 
               type="live" 
               primaryColor={primaryColor}
@@ -874,6 +841,44 @@ function PlayerPage() {
           </div>
         )}
 
+        {activeView === "categories" && (
+          <div className="p-6 md:p-12 space-y-8 animate-in fade-in duration-500">
+            <h1 className="text-3xl font-black tracking-tight flex items-center gap-3">
+              <LayoutGrid className="h-8 w-8 text-primary" style={{ color: primaryColor }} />
+              Plataformas e Categorias
+            </h1>
+            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-6">
+              {[
+                { name: "Netflix", logo: "https://upload.wikimedia.org/wikipedia/commons/0/08/Netflix_2015_logo.svg", color: "#E50914" },
+                { name: "Prime Video", logo: "https://upload.wikimedia.org/wikipedia/commons/f/f1/Prime_Video.png", color: "#00A8E1" },
+                { name: "HBO Max", logo: "https://upload.wikimedia.org/wikipedia/commons/1/17/HBO_Max_Logo.svg", color: "#5822b4" },
+                { name: "Disney+", logo: "https://upload.wikimedia.org/wikipedia/commons/3/3e/Disney%2B_logo.svg", color: "#0063e5" },
+                { name: "Apple TV+", logo: "https://upload.wikimedia.org/wikipedia/commons/a/a2/Apple_TV%2B_logo.svg", color: "#ffffff" },
+              ].map((brand) => (
+                <Card 
+                  key={brand.name} 
+                  className="bg-neutral-900/50 border-white/5 hover:border-white/20 transition-all cursor-pointer group overflow-hidden"
+                  onClick={() => {
+                    setActiveView("movie");
+                    setSelectedCategory(null);
+                    toast.info(`Explorando catálogo ${brand.name}`);
+                  }}
+                >
+                  <div className="aspect-video p-6 flex items-center justify-center relative">
+                    <div 
+                      className="absolute inset-0 opacity-0 group-hover:opacity-10 transition-opacity" 
+                      style={{ backgroundColor: brand.color }}
+                    />
+                    <img src={brand.logo} alt={brand.name} className="h-8 md:h-12 w-auto object-contain brightness-0 invert group-hover:brightness-100 group-hover:invert-0 transition-all" />
+                  </div>
+                  <div className="p-4 text-center border-t border-white/5 font-bold text-sm text-white/40 group-hover:text-white transition-colors">
+                    {brand.name}
+                  </div>
+                </Card>
+              ))}
+            </div>
+          </div>
+        )}
 
         {activeView === ("mylist" as any) && (
           <div className="p-6 md:p-12 space-y-8">
@@ -960,13 +965,13 @@ function PlayerPage() {
               </div>
 
               <div className="pt-6 border-t border-white/5 space-y-3">
-                <h2 className="text-lg font-semibold text-white/90">Objetivo de Redesign Premium</h2>
-                <div className="p-5 bg-white/5 border border-white/10 rounded-2xl">
-                  <h4 className="text-primary font-bold mb-3 flex items-center gap-2">
-                    <ShieldCheck className="h-4 w-4" /> Especificação do Web Player
+                <h2 className="text-lg font-semibold">Plano de Teste e Otimização</h2>
+                <div className="p-4 bg-emerald-500/10 border border-emerald-500/20 rounded-lg">
+                  <h4 className="text-emerald-400 font-bold mb-2 flex items-center gap-2">
+                    <ShieldCheck className="h-4 w-4" /> Diagnóstico Xtream & Web Player
                   </h4>
-                  <p className="text-[11px] text-white/60 leading-relaxed whitespace-pre-wrap font-mono">
-                    {"O site principal streammonitor.site está carregando apenas HTML sem o CSS. Verifique o build/deploy dos assets, arquivos CSS/JS, cache/CDN e se o index.html está apontando para os arquivos corretos. Fazer um novo deploy completo e invalidar cache."}
+                  <p className="text-[10px] text-emerald-200/70 leading-relaxed whitespace-pre-wrap">
+                    {"# Ajuste do Web Player — usar Core como camada principal de reprodução\n\nPelo diagnóstico, catálogo e login estão funcionando.\n\nAgora quero ajustar a arquitetura de reprodução.\n\nHoje está:\n\nCliente → Painel → IPTV\n\nQuero evoluir para:\n\nCliente → Stream Monitor Core → IPTV\n\nO Core deve ser a camada responsável pela entrega dos streams quando necessário.\n\n## Objetivos:\n\n### 1. Live TV\n\nGarantir reprodução de:\n\n* m3u8;\n* HLS;\n* TS.\n\nO Core deve tratar:\n\n* headers;\n* CORS;\n* conexão;\n* timeout;\n* resposta do stream.\n\n---\n\n### 2. Filmes e Séries\n\nPara:\n\n* MP4;\n* formatos compatíveis com navegador.\n\nUsar o relay/proxy do Core.\n\nPara:\n\n* MKV;\n* AVI;\n* formatos não suportados pelo navegador.\n\nNão tentar apenas entregar direto ao navegador.\n\nCriar uma identificação clara:\n\n\"Formato não compatível com reprodução direta no navegador.\"\n\nRegistrar isso no diagnóstico.\n\n---\n\n### 3. Fluxo inteligente\n\nManter uma lógica:\n\nPrimeiro:\n\nCore Stream Monitor → IPTV\n\nSe o Core identificar que não consegue entregar:\n\nRegistrar o motivo.\n\nNão fazer várias tentativas demoradas.\n\n---\n\n### 4. Diagnóstico no Player\n\nQuando falhar, retornar motivo real:\n\nExemplo:\n\n\"Servidor respondeu normalmente, porém o formato do vídeo não é compatível com navegador.\"\n\nou\n\n\"Servidor bloqueou acesso direto. Reprodução direcionada pelo Core.\"\n\n---\n\n### 5. Não mexer no login\n\nO login Xtream já está funcionando.\n\nFocar somente na camada:\n\nCATÁLOGO → STREAM → PLAYER\n\n---\n\nDepois executar teste real:\n\n✅ Live funcionando\n✅ Filme MP4 funcionando\n✅ Série funcionando\n✅ Erros de MKV/AVI identificados corretamente"}
                   </p>
                 </div>
                 <Button
@@ -1042,26 +1047,10 @@ function PlayerPage() {
 
         {(activeView === "live" || activeView === "movie" || activeView === "series") && (
           <div className="p-6 md:p-12 space-y-8">
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-              <h1 className="text-3xl font-black capitalize tracking-tight">
-                {activeView === "live" ? "TV Ao Vivo" : activeView === "movie" ? "Filmes" : "Séries"}
-              </h1>
-              
-              <div className="relative w-full md:w-64">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-white/40" />
-                <Input 
-                  placeholder="Busca rápida..." 
-                  className="bg-white/5 border-white/10 pl-9 h-10 rounded-xl text-sm"
-                  onChange={(e) => {
-                    const q = e.target.value.toLowerCase();
-                    // Implementação de busca rápida local (apenas no que já está carregado)
-                    // Para busca global, usa-se a aba Buscar
-                  }}
-                />
-              </div>
-            </div>
+
+            <h1 className="text-3xl font-bold capitalize">{activeView === "live" ? "TV Ao Vivo" : activeView === "movie" ? "Filmes" : "Séries"}</h1>
             
-            <div className="flex gap-2 overflow-x-auto pb-4 scrollbar-hide no-scrollbar">
+            <div className="flex gap-2 overflow-x-auto pb-4 scrollbar-hide">
               {categories.map((cat) => (
                 <button
                   key={cat.category_id}
@@ -1094,10 +1083,11 @@ function PlayerPage() {
                     primaryColor={primaryColor} 
                     onClick={(i) => {
                       debugClick(i, activeView as "live" | "movie" | "series");
-                      setSelectedItem(i);
-                      setIsDetailsOpen(true);
                       if (activeView === "live") {
-                        // handlePlay(i.stream_id, "live");
+                        handlePlay(i.stream_id, "live");
+                      } else {
+                        setSelectedItem(i);
+                        setIsDetailsOpen(true);
                       }
                     }}
 
@@ -1110,7 +1100,7 @@ function PlayerPage() {
               <div className="flex justify-center pt-8">
                 <Button 
                   variant="outline" 
-                  className="bg-white/5 border-white/10 text-white hover:bg-white/10 rounded-xl"
+                  className="bg-white/5 border-white/10 text-white hover:bg-white/10"
                   onClick={async () => {
                     const actionMap = { live: "get_live_streams", movie: "get_vod_streams", series: "get_series" } as const;
                     const action = actionMap[activeView as keyof typeof actionMap];
@@ -1120,7 +1110,7 @@ function PlayerPage() {
                         action, 
                         categoryId: selectedCategory || undefined,
                         offset: content.length,
-                        limit: 50
+                        limit: 40
                       } 
                     });
                     if (Array.isArray(moreData)) {
@@ -1128,7 +1118,7 @@ function PlayerPage() {
                     }
                   }}
                 >
-                  Carregar mais conteúdos
+                  Carregar Mais
                 </Button>
               </div>
             )}
@@ -1140,7 +1130,7 @@ function PlayerPage() {
       {selectedItem && (
         <ContentDetailsOverlay 
           item={selectedItem}
-          type={activeView === "live" ? "movie" : (selectedItem.series_id || selectedItem.content_type === "series" || activeView === "series") ? "series" : "movie"}
+          type={(selectedItem.series_id || selectedItem.content_type === "series" || activeView === "series") ? "series" : "movie"}
           isOpen={isDetailsOpen}
           onClose={() => {
             setIsDetailsOpen(false);
@@ -1148,9 +1138,7 @@ function PlayerPage() {
           onPlay={(i: any) => {
             const isSeries = i.series_id || i.content_type === "series" || activeView === "series" || selectedItem.series_id;
             setIsDetailsOpen(false);
-            if (activeView === "live") {
-              handlePlay(i.stream_id || i.id || i.content_id, "live", i);
-            } else if (isSeries) {
+            if (isSeries) {
               handleOpenSeries(i);
             } else {
               handlePlay(i.stream_id || i.id || i.content_id, "movie", i);
@@ -1200,98 +1188,87 @@ function PlayerPage() {
       {/* Video Player */}
       {isPlaying && (
         <div className="fixed inset-0 z-[100] bg-black">
-          {/* Diagnostic HUD (Admin Only) */}
-          {isAdmin && (
-            <div className="absolute top-20 left-6 z-[120] max-w-sm pointer-events-none">
-              <div className="bg-black/80 backdrop-blur-md p-4 rounded-2xl border border-blue-500/20 text-[10px] font-mono text-blue-400 space-y-2 shadow-2xl">
-                <div className="flex items-center justify-between border-b border-white/10 pb-2 mb-2">
-                  <span className="font-black uppercase tracking-widest text-white/90">Diagnostic Mode</span>
-                  <span className="bg-blue-500/20 px-2 py-0.5 rounded text-[8px] text-blue-300">ADMIN</span>
-                </div>
-                <div className="space-y-1">
-                  <div className="flex justify-between"><span>Status HTTP:</span> <span className={playbackDebug?.status === 206 || playbackDebug?.status === 200 ? "text-emerald-400" : "text-amber-400"}>{playbackDebug?.status || "WAIT"}</span></div>
-                  <div className="flex justify-between"><span>Range:</span> <span>{playbackDebug?.contentRange || playbackDebug?.acceptRanges || "NONE"}</span></div>
-                  <div className="flex justify-between"><span>TTFB:</span> <span>{playbackDebug?.ms}ms</span></div>
-                  <div className="flex justify-between"><span>Via:</span> <span className="text-primary">{playbackDebug?.via || "RELAY"}</span></div>
-                  <div className="flex justify-between"><span>Core:</span> <span className="text-white/40">{CORE_STREAM_VERSION}</span></div>
-                  {playbackDebug?.reason && <div className="text-red-400 mt-2 bg-red-500/10 p-2 rounded border border-red-500/20 whitespace-pre-wrap">{playbackDebug.reason}</div>}
-                </div>
-                <div className="pt-2 mt-2 border-t border-white/10 flex gap-2">
-                  <button 
-                    onClick={(e) => { e.stopPropagation(); runCompatTest(); }}
-                    className="flex-1 bg-white/5 hover:bg-white/10 border border-white/10 py-1.5 rounded-lg transition-colors pointer-events-auto text-[9px] uppercase tracking-tighter"
-                  >
-                    Compatibility Test
-                  </button>
-                </div>
-              </div>
-            </div>
-          )}
-
           <div className="absolute top-6 left-6 z-10">
-             <Button 
-               variant="ghost" 
-               onClick={handleClosePlayer} 
-               className="bg-black/40 hover:bg-white/10 text-white rounded-full h-12 w-12 p-0 transition-all border border-white/5"
-             >
+             <Button variant="ghost" onClick={handleClosePlayer} className="bg-black/40 hover:bg-black/60 text-white rounded-full h-12 w-12 p-0">
                <X className="h-6 w-6" />
              </Button>
           </div>
-          
           <div className="h-full w-full flex items-center justify-center">
              {playbackReason ? (
-                <div className="max-w-md mx-6 rounded-3xl border border-white/5 bg-white/5 backdrop-blur-xl p-10 text-center space-y-6 shadow-2xl animate-in fade-in zoom-in duration-300">
-                  <div className="mx-auto w-16 h-16 rounded-2xl bg-white/5 flex items-center justify-center border border-white/10">
-                     {playbackReason.includes("Conectando") ? (
-                       <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+                <div className="max-w-md mx-6 rounded-2xl border border-white/10 bg-white/5 p-8 text-center space-y-4">
+                  <div className="mx-auto w-12 h-12 rounded-full bg-white/5 flex items-center justify-center border border-white/10">
+                     {playbackReason.includes("Carregando") ? (
+                       <Loader2 className="h-6 w-6 text-white animate-spin" />
                      ) : playbackReason.includes("indisponível") ? (
-                       <AlertCircle className="h-8 w-8 text-red-500" />
+                       <AlertCircle className="h-6 w-6 text-red-500" />
                      ) : (
-                       <PlayCircle className="h-8 w-8 text-white/40" />
+                       <PlayCircle className="h-6 w-6 text-white/40" />
                      )}
                   </div>
-                  <div className="space-y-2">
-                    <p className="text-lg font-bold text-white tracking-tight">
-                      {playbackReason.includes("indisponível") || playbackReason.includes("indisponível")
-                        ? "Conteúdo indisponível"
-                        : playbackReason.includes("lento") || playbackReason.includes("instável")
-                        ? "O servidor está instável"
-                        : playbackReason.includes("Conectando")
-                        ? "Carregando conteúdo..."
-                        : "Falha na reprodução"}
-                    </p>
-                    <p className="text-sm text-white/40 font-medium">
-                      {playbackReason.includes("Conectando") 
-                        ? "Isso pode levar alguns segundos dependendo da sua conexão."
-                        : "Tente novamente em instantes ou selecione outro conteúdo."}
-                    </p>
-                  </div>
+                  <p className="text-base font-medium text-white">
+                    {playbackReason.includes("indisponível") || playbackReason.includes("Não foi possível")
+                      ? "Não foi possível iniciar este conteúdo. Tente novamente."
+                      : playbackReason.includes("Falha na conexão")
+                      ? "Erro ao conectar com o servidor. Verifique sua rede."
+                      : playbackReason.includes("Carregando")
+                      ? "▶ Carregando conteúdo..."
+                      : "Não foi possível reproduzir este conteúdo."}
+                  </p>
                   
-                  {!playbackReason.includes("Conectando") && (
+                  {isAdmin && showDebugHud && (
+                    <div className="pt-4 border-t border-white/5 space-y-2">
+                       <p className="text-[10px] text-white/40 uppercase tracking-widest font-bold">Diagnóstico Admin (Modo Debug)</p>
+                       {playbackDebug && (
+                         <div className="text-[10px] text-white/60 space-y-1 text-left bg-black/40 p-3 rounded-lg border border-white/5 font-mono">
+                           <div className="flex justify-between"><span>Status HTTP:</span> <span className={playbackDebug.status === 206 ? "text-emerald-400" : "text-amber-400"}>{playbackDebug.status || "-"}</span></div>
+                           <div className="flex justify-between"><span>Range:</span> <span>{playbackDebug.contentRange || playbackDebug.acceptRanges || "Nenhum"}</span></div>
+                           <div className="flex justify-between"><span>Tamanho:</span> <span>{playbackDebug.contentLength ? `${(parseInt(playbackDebug.contentLength)/1024/1024).toFixed(1)}MB` : "-"}</span></div>
+                           <div className="flex justify-between"><span>TTFB:</span> <span>{playbackDebug.ms}ms</span></div>
+                           <div className="flex justify-between"><span>Via:</span> <span className="text-primary">{playbackDebug.via}</span></div>
+                           <div className="flex justify-between"><span>FE:</span> <span className="text-white/40">{feVersion}</span></div>
+                           <div className="flex justify-between"><span>Core:</span> <span className="text-white/40">{CORE_STREAM_VERSION}</span></div>
+                           {playbackDebug.reason && <div className="text-red-400 mt-1 whitespace-pre-wrap">Erro: {playbackDebug.reason}</div>}
+                         </div>
+                       )}
+                       <div className="flex flex-wrap items-center justify-center gap-2">
+                         <Button
+                           variant="outline"
+                           size="sm"
+                           className="h-8 border-white/10 bg-white/5 text-white text-[10px]"
+                           disabled={compatLoading}
+                           onClick={() => void runCompatTest()}
+                         >
+                           {compatLoading ? <Loader2 className="mr-2 h-3 w-3 animate-spin" /> : <ShieldAlert className="mr-2 h-3 w-3" />}
+                           Testar Compatibilidade Web
+                         </Button>
+                       </div>
+                    </div>
+                  )}
+                  
+                  {!playbackReason.includes("Carregando") && (
                     <Button 
-                      variant="outline" 
+                      variant="ghost" 
                       onClick={() => setIsPlaying(false)}
-                      className="border-white/10 text-white/60 hover:text-white hover:bg-white/5 w-full rounded-xl py-6"
+                      className="text-white/60 hover:text-white"
                     >
-                      Voltar ao catálogo
+                      Voltar para o catálogo
                     </Button>
                   )}
                 </div>
              ) : !streamUrl ? (
-                <div className="flex flex-col items-center gap-6 animate-pulse">
-                  <div className="w-12 h-12 border-4 border-primary/20 border-t-primary rounded-full animate-spin" />
-                  <p className="text-white/40 text-xs font-black uppercase tracking-[0.3em]">Conectando ao Stream</p>
+                <div className="flex flex-col items-center gap-4">
+                  <Loader2 className="h-10 w-10 text-white animate-spin opacity-20" />
+                  <p className="text-white/40 text-sm font-medium animate-pulse">Iniciando stream...</p>
                 </div>
              ) : (
-                  <video 
-                    ref={videoRef}
-                    className="w-full h-full max-h-screen object-contain"
-                    controls
-                    autoPlay
-                    playsInline
-                    preload="auto"
-                    crossOrigin="anonymous"
-                  />
+                <video 
+                  ref={videoRef}
+                  className="w-full h-full"
+                  controls
+                  autoPlay
+                  playsInline
+                  preload="auto"
+                />
              )}
           </div>
 
@@ -1304,7 +1281,7 @@ function PlayerPage() {
               </div>
               <div>tipo: {playbackDebug.tipo ?? "-"} · ext: {playbackDebug.extensao ?? "-"}</div>
               <div>via: {playbackDebug.via ?? "aguardando..."}</div>
-              <div>status: {playbackDebug.status ?? "-"} · tempo: {playbackDebug.ms != null ? `${(Number(playbackDebug.ms || 0) / 1000).toFixed(1)}s` : "-"}</div>
+              <div>status: {playbackDebug.status ?? "-"} · tempo: {playbackDebug.ms != null ? `${(playbackDebug.ms / 1000).toFixed(1)}s` : "-"}</div>
               <div>upstream: {playbackDebug.upstream ?? "-"} {playbackDebug.upstream_ct ? `(${playbackDebug.upstream_ct})` : ""}</div>
               <div>codec: {playbackDebug.codec_video ?? "-"} / {playbackDebug.codec_audio ?? "-"} {playbackDebug.acao && playbackDebug.acao !== "direct" ? `· ${playbackDebug.acao}` : ""}</div>
               <div>formato: {playbackDebug.contentType ?? "-"}</div>
@@ -1392,7 +1369,7 @@ function PlayerPage() {
     setSelectedItem(item ?? selectedItem);
     setStreamUrl(null);
     setCompat(null);
-    setPlaybackReason("Conectando ao servidor...");
+    setPlaybackReason("▶ Carregando conteúdo...");
     
     const started = Date.now();
     setPlaybackDebug({ 
@@ -1409,8 +1386,8 @@ function PlayerPage() {
 
     const timeoutId = setTimeout(() => {
       if (!streamUrl && isPlaying) {
-        setPlaybackReason("Servidor instável, tentando novamente...");
-        // Tentativa de reconexão automática ou fallback
+        setPlaybackReason("Não foi possível iniciar este conteúdo. Tente novamente.");
+        toast.error("Tempo esgotado ao tentar carregar o conteúdo.");
       }
     }, 15000);
 
@@ -1434,8 +1411,8 @@ function PlayerPage() {
       // Probe de diagnóstico opcional (para HUD se for Admin)
       const t0 = Date.now();
       try {
-        const checkUrl = `${url}${url.includes("?") ? "&" : "?"}probe=1&forceCore=1`;
-        const res = await fetch(checkUrl, { signal: AbortSignal.timeout(60000) });
+        const checkUrl = `${url}${url.includes("?") ? "&" : "?"}probe=1`;
+        const res = await fetch(checkUrl, { signal: AbortSignal.timeout(45000) });
         const reason = res.headers.get("x-playback-reason");
         const info = {
           url,
@@ -1460,13 +1437,13 @@ function PlayerPage() {
           setStreamUrl(null);
         } else {
           setPlaybackReason(null);
-          setStreamUrl(`${url}${url.includes("?") ? "&" : "?"}forceCore=1`);
+          setStreamUrl(url);
         }
       } catch (e) {
         // Se o probe falhar mas o player puder tentar direto, tentamos
         console.warn("[PLAY] probe falhou, tentando tocar assim mesmo");
         setPlaybackReason(null);
-        setStreamUrl(`${url}${url.includes("?") ? "&" : "?"}forceCore=1`);
+        setStreamUrl(url);
       }
     }).catch(err => {
       clearTimeout(timeoutId);
@@ -1555,16 +1532,9 @@ function PlayerPage() {
 
 
 function LoginForm({ resellerId, settings, onLogin, primaryColor, secondaryColor }: any) {
-  const [username, setUsername] = useState("");
+  const [username, setUsername] = useState(localStorage.getItem(`stream_player_last_user_${resellerId}`) || "");
   const [password, setPassword] = useState("");
-  const [serverId, setServerId] = useState("");
-  
-  useEffect(() => {
-    if (typeof window !== "undefined") {
-      setUsername(localStorage.getItem(`stream_player_last_user_${resellerId}`) || "");
-      setServerId(localStorage.getItem(`stream_player_last_server_${resellerId}`) || "");
-    }
-  }, [resellerId]);
+  const [serverId, setServerId] = useState(localStorage.getItem(`stream_player_last_server_${resellerId}`) || "");
   const [servers, setServers] = useState<any[]>([]);
   const [diagnosing, setDiagnosing] = useState(false);
   const [healthInfo, setHealthInfo] = useState<any>(null);
@@ -1601,10 +1571,8 @@ function LoginForm({ resellerId, settings, onLogin, primaryColor, secondaryColor
     e.preventDefault();
     if (!serverId) return toast.error("Selecione o servidor");
     loginMutation.mutate({ data: { serverId, username, password, resellerId } });
-    if (typeof window !== "undefined") {
-      localStorage.setItem(`stream_player_last_server_${resellerId}`, serverId);
-      localStorage.setItem(`stream_player_last_user_${resellerId}`, username);
-    }
+    localStorage.setItem(`stream_player_last_server_${resellerId}`, serverId);
+    localStorage.setItem(`stream_player_last_user_${resellerId}`, username);
   };
 
   return (
@@ -1614,115 +1582,128 @@ function LoginForm({ resellerId, settings, onLogin, primaryColor, secondaryColor
         <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] rounded-full blur-[120px]" style={{ backgroundColor: primaryColor }} />
       </div>
 
-      <div className="w-full max-w-md relative z-10">
-        <div className="bg-black/60 backdrop-blur-3xl border border-white/5 p-8 rounded-3xl shadow-2xl relative overflow-hidden group">
-          <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-primary/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
-          
-          <div className="flex flex-col items-center mb-8">
-            <div className="h-20 w-20 bg-white/5 backdrop-blur-md rounded-2xl flex items-center justify-center border border-white/10 mb-4 shadow-xl ring-1 ring-white/5 transition-transform hover:scale-105 duration-500">
+      <Card className="w-full max-w-[400px] bg-black/40 backdrop-blur-xl border-white/10 shadow-2xl relative overflow-hidden">
+        <div className="absolute top-0 left-0 w-full h-1" style={{ backgroundColor: primaryColor }} />
+        
+        <form onSubmit={handleSubmit} className="p-8 space-y-6">
+          <div className="text-center space-y-4">
+            <div className="mx-auto h-20 w-20 bg-white/5 rounded-2xl flex items-center justify-center border border-white/10">
               {settings?.logo_url ? (
-                <img src={settings.logo_url} alt="Logo" className="max-h-14 max-w-14 object-contain filter drop-shadow-2xl" />
+                <img src={settings.logo_url} alt="Logo" className="max-h-full max-w-full object-contain" />
               ) : (
-                <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-primary/20 to-transparent">
-                  <PlayCircle className="h-10 w-10" style={{ color: primaryColor }} />
-                </div>
+                <PlayCircle className="h-10 w-10" style={{ color: primaryColor }} />
               )}
             </div>
-            <h1 className="text-3xl font-black text-white tracking-tighter uppercase drop-shadow-sm">{settings?.brand_name || "Stream Player"}</h1>
-            <p className="text-white/40 text-sm mt-2 font-medium tracking-wide">
-              {settings?.welcome_message || "Acesse seu portal de entretenimento"}
-            </p>
+            <div>
+              <h1 className="text-2xl font-bold text-white">{settings?.brand_name || "Web Player"}</h1>
+              <p className="text-sm text-white/60 mt-1">{settings?.welcome_message || "Entre com suas credenciais."}</p>
+            </div>
           </div>
 
-          <form onSubmit={handleSubmit} className="space-y-5">
-            <div className="space-y-2">
-              <Label className="text-[10px] font-black uppercase tracking-widest text-white/30 ml-1">Servidor</Label>
-              <div className="relative group/field">
-                <select 
-                  className="w-full bg-black border border-white/5 focus:border-primary/50 rounded-xl px-4 py-3.5 text-white outline-none appearance-none transition-all hover:bg-neutral-900 pr-10"
-                  value={serverId}
-                  onChange={(e) => setServerId(e.target.value)}
-                  disabled={loginMutation.isPending}
-                >
-                  <option value="">Selecione o servidor...</option>
-                  {servers.map((s: any) => (
-                    <option key={s.id} value={s.id}>{s.name || s.host}</option>
-                  ))}
-                </select>
-                <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-white/20">
-                  <ChevronRight className="h-4 w-4 rotate-90" />
-                </div>
-                {healthInfo && (
-                  <div className="absolute -right-2 -top-2 scale-90">
-                    <DiagnosticBadge 
-                      status={healthInfo.status} 
-                      healthScore={healthInfo.healthScore}
-                      latency={healthInfo.latency}
-                    />
-                  </div>
-                )}
-              </div>
-            </div>
+          <div className="space-y-4">
+             <div className="space-y-2">
+               <Label className="text-white/70 text-xs">Servidor</Label>
+               <select 
+                 className="w-full h-11 bg-white/5 border border-white/10 rounded-lg px-3 text-white focus:ring-2 focus:ring-primary/50 outline-none"
+                 value={serverId}
+                 onChange={(e) => setServerId(e.target.value)}
+                 required
+               >
+                 <option value="" className="bg-neutral-900">Escolha o servidor...</option>
+                 {servers.map(s => <option key={s.id} value={s.id} className="bg-neutral-900">{s.name || s.host}</option>)}
+               </select>
 
-            <div className="space-y-2">
-              <Label className="text-[10px] font-black uppercase tracking-widest text-white/30 ml-1">Usuário</Label>
-              <Input
-                placeholder="Insira seu usuário"
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
-                className="bg-black border-white/5 focus:border-primary/50 h-12 rounded-xl text-white placeholder:text-white/10"
-                disabled={loginMutation.isPending}
-              />
-            </div>
+               {serverId && (
+                 <div className="flex items-center gap-2 px-1">
+                   {diagnosing ? (
+                     <div className="flex items-center gap-2 text-[10px] text-white/40 animate-pulse">
+                       <Loader2 className="h-3 w-3 animate-spin" /> Verificando conexão...
+                     </div>
+                    ) : healthInfo ? (
+                      <div 
+                        className={cn(
+                          "flex items-center gap-2 p-2 rounded-lg border animate-in fade-in slide-in-from-top-1 duration-300",
+                          healthInfo.status === 'stable' ? "bg-emerald-500/5 border-emerald-500/10 text-emerald-400" : 
+                          healthInfo.status === 'unstable' ? "bg-amber-500/5 border-amber-500/10 text-amber-400" : 
+                          "bg-red-500/5 border-red-500/10 text-red-400"
+                        )}
+                      >
+                        <div className="relative flex items-center justify-center">
+                          <div className={cn("h-2 w-2 rounded-full", 
+                            healthInfo.status === 'stable' ? "bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]" : 
+                            healthInfo.status === 'unstable' ? "bg-amber-500 shadow-[0_0_8px_rgba(245,158,11,0.5)]" : 
+                            "bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.5)]"
+                          )} />
+                          {healthInfo.status === 'stable' && <div className="absolute inset-0 rounded-full bg-emerald-500 animate-ping opacity-20" />}
+                        </div>
+                        
+                        <div className="flex-1">
+                          <p className="text-[10px] font-black uppercase tracking-widest leading-none">
+                            {healthInfo.status === 'stable' ? "Serviço Online" : (healthInfo.status === 'unstable' ? "Instabilidade Detectada" : "Serviço Indisponível")}
+                          </p>
+                          {healthInfo.healthScore !== null && (
+                            <p className="text-[9px] font-bold opacity-60 mt-0.5 uppercase tracking-tighter">
+                              Saúde do Servidor: {healthInfo.healthScore}%
+                            </p>
+                          )}
+                        </div>
+                        
+                        {healthInfo.status !== 'stable' && (
+                          <div className="h-5 w-5 rounded-full bg-white/5 flex items-center justify-center">
+                            <Info className="h-3 w-3 opacity-50" />
+                          </div>
+                        )}
+                      </div>
 
-            <div className="space-y-2">
-              <Label className="text-[10px] font-black uppercase tracking-widest text-white/30 ml-1">Senha</Label>
-              <Input
-                type="password"
-                placeholder="Insira sua senha"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="bg-black border-white/5 focus:border-primary/50 h-12 rounded-xl text-white placeholder:text-white/10"
-                disabled={loginMutation.isPending}
-              />
-            </div>
 
-            <Button 
-              type="submit"
-              className="w-full h-14 rounded-xl font-black uppercase tracking-widest text-xs transition-all active:scale-[0.98] shadow-2xl overflow-hidden group/btn relative"
-              style={{ backgroundColor: primaryColor, color: '#fff' }}
-              disabled={loginMutation.isPending}
-            >
-              <div className="absolute inset-0 bg-white/10 translate-y-full group-hover/btn:translate-y-0 transition-transform duration-300" />
-              <div className="relative flex items-center justify-center gap-2">
-                {loginMutation.isPending ? (
-                  <>
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                    Autenticando...
-                  </>
-                ) : (
-                  <>
-                    Entrar no Player
-                    <ArrowRight className="h-4 w-4 group-hover/btn:translate-x-1 transition-transform" />
-                  </>
-                )}
-              </div>
-            </Button>
-          </form>
+                   ) : null}
+                 </div>
+               )}
+             </div>
+             
+             <div className="space-y-2">
+               <Label className="text-white/70 text-xs">Usuário</Label>
+               <Input 
+                 placeholder="Usuário IPTV" 
+                 value={username} 
+                 onChange={e => setUsername(e.target.value)}
+                 className="bg-white/5 border-white/10 h-11 text-white" 
+                 required
+               />
+             </div>
 
-          <div className="mt-8 pt-6 border-t border-white/5 flex items-center justify-between text-[10px] font-medium tracking-widest text-white/20 uppercase">
-            <div className="flex items-center gap-2">
-              <ShieldCheck className="h-3 w-3 text-emerald-500/50" />
-              Proteção HMAC v2
-            </div>
-            <div>Core v{CORE_STREAM_VERSION.split('-')[0]}</div>
+             <div className="space-y-2">
+               <Label className="text-white/70 text-xs">Senha</Label>
+               <Input 
+                 type="password"
+                 placeholder="Senha IPTV" 
+                 value={password} 
+                 onChange={e => setPassword(e.target.value)}
+                 className="bg-white/5 border-white/10 h-11 text-white" 
+                 required
+               />
+             </div>
           </div>
-        </div>
-        
-        <p className="text-center mt-6 text-[10px] text-white/20 uppercase tracking-[0.2em] font-black">
-          Powered by Stream Monitor Cloud
-        </p>
-      </div>
+
+          <Button 
+            type="submit" 
+            className="w-full h-12 font-bold text-lg" 
+            style={{ backgroundColor: primaryColor }}
+            disabled={loginMutation.isPending}
+          >
+            {loginMutation.isPending ? (
+              <Loader2 className="h-5 w-5 animate-spin mr-2" />
+            ) : (
+              <Play className="h-5 w-5 mr-2 fill-white" />
+            )}
+            Acessar Agora
+          </Button>
+
+          <p className="text-center text-[10px] text-white/20 uppercase tracking-widest">
+            Powered by StreamMonitor.site
+          </p>
+        </form>
+      </Card>
     </div>
   );
 }

@@ -30,18 +30,18 @@ export function SearchOverlay({ isOpen, onClose, token, primaryColor, onPlay }: 
     const timer = setTimeout(async () => {
       setLoading(true);
       try {
+        // Como o catálogo xtream não tem busca global eficiente sem carregar tudo,
+        // simulamos buscando nas principais categorias ou o usuário pode implementar busca no server
+        // Por enquanto, vamos buscar uma pequena amostra de cada tipo
+        
         const [live, vod, series] = await Promise.all([
-          getPlayerCatalog({ data: { token, action: "get_live_streams", limit: 100 } }).catch(() => []),
-          getPlayerCatalog({ data: { token, action: "get_vod_streams", limit: 100 } }).catch(() => []),
-          getPlayerCatalog({ data: { token, action: "get_series", limit: 100 } }).catch(() => [])
+          getPlayerCatalog({ data: { token, action: "get_live_streams", limit: 50 } }).catch(() => []),
+          getPlayerCatalog({ data: { token, action: "get_vod_streams", limit: 50 } }).catch(() => []),
+          getPlayerCatalog({ data: { token, action: "get_series", limit: 50 } }).catch(() => [])
         ]);
 
         const filter = (list: any[]) => 
-          Array.isArray(list) ? list.filter(i => {
-            const name = (i.name || i.title || "").toLowerCase();
-            const search = query.toLowerCase();
-            return name.includes(search);
-          }) : [];
+          Array.isArray(list) ? list.filter(i => (i.name || i.title || "").toLowerCase().includes(query.toLowerCase())) : [];
 
         setResults({
           live: filter(live as any[]),
@@ -53,7 +53,7 @@ export function SearchOverlay({ isOpen, onClose, token, primaryColor, onPlay }: 
       } finally {
         setLoading(false);
       }
-    }, 400);
+    }, 600);
 
     return () => clearTimeout(timer);
   }, [query, token]);
@@ -124,7 +124,7 @@ export function SearchOverlay({ isOpen, onClose, token, primaryColor, onPlay }: 
               <div className="space-y-6">
                 <h3 className="text-xl font-bold text-white flex items-center gap-2">
                   <Tv className="h-5 w-5 text-primary" style={{ color: primaryColor }} />
-                  📡 Canais encontrados ({results.live.length})
+                  Canais ({results.live.length})
                 </h3>
                 <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-6">
                   {results.live.map(item => (
@@ -138,7 +138,7 @@ export function SearchOverlay({ isOpen, onClose, token, primaryColor, onPlay }: 
               <div className="space-y-6">
                 <h3 className="text-xl font-bold text-white flex items-center gap-2">
                   <Film className="h-5 w-5 text-primary" style={{ color: primaryColor }} />
-                  🎬 Filmes encontrados ({results.vod.length})
+                  Filmes ({results.vod.length})
                 </h3>
                 <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-6">
                   {results.vod.map(item => (
@@ -152,7 +152,7 @@ export function SearchOverlay({ isOpen, onClose, token, primaryColor, onPlay }: 
               <div className="space-y-6">
                 <h3 className="text-xl font-bold text-white flex items-center gap-2">
                   <Play className="h-5 w-5 text-primary" style={{ color: primaryColor }} />
-                  📺 Séries encontradas ({results.series.length})
+                  Séries ({results.series.length})
                 </h3>
                 <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-6">
                   {results.series.map(item => (

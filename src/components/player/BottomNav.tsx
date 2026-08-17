@@ -16,14 +16,14 @@ interface BottomNavProps {
 export function BottomNav({ activeView, onChangeView, primaryColor }: BottomNavProps) {
   const items = [
     { id: "home", label: "Início", icon: Home },
-    { id: "live", label: "TV Ao Vivo", icon: Tv },
-    { id: "mylist", label: "Minha Lista", icon: Star },
+    { id: "live", label: "TV ao vivo", icon: Tv },
+    { id: "mylist", label: "Favoritos", icon: Star },
     { id: "search", label: "Buscar", icon: Search },
     { id: "settings", label: "Ajustes", icon: Settings },
   ];
 
   return (
-    <nav className="md:hidden fixed bottom-0 inset-x-0 h-[72px] bg-black border-t border-white/5 flex items-center justify-around px-2 z-[60] pb-safe">
+    <nav className="md:hidden fixed bottom-0 inset-x-0 h-[72px] bg-black/80 backdrop-blur-xl border-t border-white/5 flex items-center justify-around px-2 z-[60] pb-safe">
       {items.map((item) => {
         const Icon = item.icon;
         const isActive = activeView === item.id;
