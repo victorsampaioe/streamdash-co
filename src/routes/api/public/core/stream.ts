@@ -503,14 +503,12 @@ export const Route = createFileRoute("/api/public/core/stream")({
         if (!forceCore) {
           await tentarPainel("PAINEL", "browser");
           if (!upstream) await tentarPainel("PAINEL-SMARTERS", "player");
+          if (!upstream) await tentarPainel("PAINEL-VLC", "vlc");
         }
         
         // Se forçado (ex: VOD) ou falhou no painel
         if (!upstream) await tentarCore("CORE-VLC", "vlc");
         if (!upstream) await tentarCore("CORE", "player");
-        
-        // Fallback final no painel se tudo falhar e não forçado
-        if (!upstream && !forceCore) await tentarPainel("PAINEL-VLC", "vlc");
 
         const resumo = tentativas
           .map((t) => `${t.modo}=${t.status ?? "erro"}${t.motivo ? ` (${t.motivo})` : ""}`)
