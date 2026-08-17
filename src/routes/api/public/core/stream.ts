@@ -209,7 +209,7 @@ export const Route = createFileRoute("/api/public/core/stream")({
           if (range) h["Range"] = range;
 
           console.log(
-            `[CORE REQUEST] recebido type=${type} ext=${ext} ua=${uaKind} range=${range ?? "none"} url=${maskMedia(abs)} headers_enviados=${JSON.stringify({ ...h, "User-Agent": ua.slice(0, 40) })}`
+            `[STREAM DEBUG][CORE REQUEST] recebido type=${type} ext=${ext} ua=${uaKind} range=${range ?? "none"} url=${maskMedia(abs)} sig=${sig ? "presente" : "ausente"} exp=${expRaw} headers=${JSON.stringify({ ...h, "User-Agent": ua.slice(0, 40) })}`
           );
 
           const t0 = Date.now();
