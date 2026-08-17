@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
-import { Layout, Palette, Type, Image as ImageIcon, Globe, Loader2, Save, Lock } from "lucide-react";
+import { Layout, Palette, Type, Image as ImageIcon, Globe, Loader2, Save, Lock, Copy } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 
 import { isAdminMaster } from "@/lib/permissions";
@@ -286,35 +286,35 @@ function PlayerAdminPage() {
             </CardContent>
             <CardFooter className="flex flex-col gap-4">
               <div className="w-full space-y-2">
-                <p className="text-xs text-muted-foreground">Link via UUID:</p>
+                <p className="text-xs text-muted-foreground">ID do Revendedor:</p>
                 <div className="bg-muted p-2 rounded text-xs font-mono w-full break-all flex items-center justify-between gap-2">
-                  <span className="truncate">{window.location.origin}/player/{user?.id}</span>
+                  <span className="truncate">{user?.id}</span>
                   <Button 
                     variant="ghost" 
                     size="icon" 
                     className="h-6 w-6 flex-shrink-0" 
                     onClick={() => {
-                      navigator.clipboard.writeText(`${window.location.origin}/player/${user?.id}`);
-                      toast.success("Link copiado!");
+                      navigator.clipboard.writeText(user?.id || "");
+                      toast.success("ID copiado!");
                     }}
                   >
-                    <Globe className="h-3 w-3" />
+                    <Copy className="h-3 w-3" />
                   </Button>
                 </div>
               </div>
+
               
-              {slug && (
+              {slug ? (
                 <div className="w-full space-y-2">
-                  <p className="text-xs text-muted-foreground">Link via Subdomínio:</p>
+                  <p className="text-xs text-muted-foreground">Link via Subdomínio (Recomendado):</p>
                   <div className="bg-muted p-2 rounded text-xs font-mono w-full break-all flex items-center justify-between gap-2 border border-primary/20">
-                    <span className="truncate">https://{slug}.{window.location.host.split('.').slice(-2).join('.')}</span>
+                    <span className="truncate">https://{slug}.streammonitor.site</span>
                     <Button 
                       variant="ghost" 
                       size="icon" 
                       className="h-6 w-6 flex-shrink-0" 
                       onClick={() => {
-                        const domain = window.location.host.split('.').slice(-2).join('.');
-                        navigator.clipboard.writeText(`https://${slug}.${domain}`);
+                        navigator.clipboard.writeText(`https://${slug}.streammonitor.site`);
                         toast.success("Link do subdomínio copiado!");
                       }}
                     >
@@ -323,7 +323,26 @@ function PlayerAdminPage() {
                   </div>
                   <p className="text-[10px] text-muted-foreground">Nota: O subdomínio requer configuração de DNS Wildcard ativa.</p>
                 </div>
+              ) : (
+                <div className="w-full space-y-2">
+                  <p className="text-xs text-muted-foreground">Link de Acesso Público:</p>
+                  <div className="bg-muted p-2 rounded text-xs font-mono w-full break-all flex items-center justify-between gap-2 border border-primary/20">
+                    <span className="truncate">{window.location.origin}/player/{user?.id}</span>
+                    <Button 
+                      variant="ghost" 
+                      size="icon" 
+                      className="h-6 w-6 flex-shrink-0" 
+                      onClick={() => {
+                        navigator.clipboard.writeText(`${window.location.origin}/player/${user?.id}`);
+                        toast.success("Link copiado!");
+                      }}
+                    >
+                      <Globe className="h-3 w-3 text-primary" />
+                    </Button>
+                  </div>
+                </div>
               )}
+
             </CardFooter>
           </Card>
         </div>
