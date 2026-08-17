@@ -270,9 +270,13 @@ export const Route = createFileRoute("/api/public/core/stream")({
               if (v) out.set(k, v);
             }
             
-            // Forçar Accept-Ranges para VOD se a origem omitir mas devolver 206
+            // Alguns painéis devolvem "Accept-Ranges: 0-123456" (inválido).
+            // O navegador só entende "bytes"; normalizamos sempre.
+            const arUp = out.get("Accept-Ranges");
+            if (arUp && !/^(bytes|none)$/i.test(arUp.trim())) out.set("Accept-Ranges", "bytes");
             if (!out.has("Accept-Ranges") && (type !== "live" || res.status === 206)) {
               out.set("Accept-Ranges", "bytes");
+
             }
             
             // Garantir Content-Type correto
