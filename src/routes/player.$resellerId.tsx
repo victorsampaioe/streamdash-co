@@ -1179,13 +1179,22 @@ function PlayerPage() {
                 ))}
               </div>
             ) : (
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-6">
-                {content.map((item) => (
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4 md:gap-6">
+                {content
+                  .filter((item) =>
+                    !quickFilter.trim() ||
+                    String(item.name || item.title || "").toLowerCase().includes(quickFilter.trim().toLowerCase())
+                  )
+                  .map((item) => (
                   <ContentCard 
                     key={item.stream_id || item.series_id} 
                     item={item} 
                     type={activeView as "live" | "movie" | "series"} 
                     primaryColor={primaryColor} 
+                    enablePreview={activeView !== "live"}
+                    onTrailerClick={activeView !== "live" ? (i: any) => setTrailerItem({ ...i, __type: activeView === "series" ? "series" : "movie" }) : undefined}
+                    onToggleFavorite={(i: any) => handleToggleFavorite(i)}
+                    isFavorite={favorites.some(f => f.content_id === (item.stream_id || item.series_id)?.toString())}
                     onClick={(i) => {
                       debugClick(i, activeView as "live" | "movie" | "series");
                       setSelectedItem(i);
