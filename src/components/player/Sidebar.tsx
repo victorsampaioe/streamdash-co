@@ -86,14 +86,14 @@ export function Sidebar({ activeView, onChangeView, brandName, logoUrl, onLogout
                 key={item.id}
                 onClick={() => onChangeView(item.id)}
                 className={cn(
-                  "w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 group",
+                  "w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 group active:scale-95",
                   isActive 
                     ? "bg-primary text-white shadow-lg shadow-primary/20" 
                     : "text-white/60 hover:text-white hover:bg-white/5"
                 )}
               >
-                <Icon className={cn("h-5 w-5", isActive ? "scale-110" : "group-hover:scale-110 transition-transform")} />
-                <span className="font-medium">{item.label}</span>
+                <Icon className={cn("h-4 w-4", isActive ? "scale-110" : "group-hover:scale-110 transition-transform")} />
+                <span className="font-bold text-[11px] uppercase tracking-widest">{item.label.replace(/[^\w\sÀ-ú]/g, '').trim()}</span>
               </button>
             );
           })}
@@ -158,10 +158,10 @@ export function Sidebar({ activeView, onChangeView, brandName, logoUrl, onLogout
         <nav className="px-4 py-4 space-y-2">
           <button
             onClick={onLogout}
-            className="w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all text-white/40 hover:text-red-500 hover:bg-red-500/5 cursor-pointer"
+            className="w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all text-white/40 hover:text-red-500 hover:bg-red-500/5 cursor-pointer active:scale-95"
           >
             <LogOut className="h-5 w-5" />
-            <span className="font-medium">Sair</span>
+            <span className="font-bold text-[11px] uppercase tracking-widest">Sair</span>
           </button>
         </nav>
       </aside>
