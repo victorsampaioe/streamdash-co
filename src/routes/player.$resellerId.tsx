@@ -1081,11 +1081,10 @@ function PlayerPage() {
                     primaryColor={primaryColor} 
                     onClick={(i) => {
                       debugClick(i, activeView as "live" | "movie" | "series");
+                      setSelectedItem(i);
+                      setIsDetailsOpen(true);
                       if (activeView === "live") {
-                        handlePlay(i.stream_id, "live");
-                      } else {
-                        setSelectedItem(i);
-                        setIsDetailsOpen(true);
+                        // handlePlay(i.stream_id, "live");
                       }
                     }}
 
@@ -1136,7 +1135,9 @@ function PlayerPage() {
           onPlay={(i: any) => {
             const isSeries = i.series_id || i.content_type === "series" || activeView === "series" || selectedItem.series_id;
             setIsDetailsOpen(false);
-            if (isSeries) {
+            if (activeView === "live") {
+              handlePlay(i.stream_id || i.id || i.content_id, "live", i);
+            } else if (isSeries) {
               handleOpenSeries(i);
             } else {
               handlePlay(i.stream_id || i.id || i.content_id, "movie", i);
