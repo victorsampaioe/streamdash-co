@@ -64,6 +64,7 @@ import { Route as ApiPublicCronCheckRouteImport } from './routes/api/public/cron
 import { Route as ApiPublicCoreTaskRouteImport } from './routes/api/public/core/task'
 import { Route as ApiPublicCoreStreamRouteImport } from './routes/api/public/core/stream'
 import { Route as ApiPublicCoreReportRouteImport } from './routes/api/public/core/report'
+import { Route as ApiPublicCoreLiveDiagRouteImport } from './routes/api/public/core/live-diag'
 import { Route as AuthenticatedAppServersNewRouteImport } from './routes/_authenticated/app.servers.new'
 import { Route as AuthenticatedAppServersIdRouteImport } from './routes/_authenticated/app.servers.$id'
 import { Route as AuthenticatedAppAdminCoreLogsRouteImport } from './routes/_authenticated/app.admin_.core-logs'
@@ -358,6 +359,11 @@ const ApiPublicCoreReportRoute = ApiPublicCoreReportRouteImport.update({
   path: '/api/public/core/report',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicCoreLiveDiagRoute = ApiPublicCoreLiveDiagRouteImport.update({
+  id: '/api/public/core/live-diag',
+  path: '/api/public/core/live-diag',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AuthenticatedAppServersNewRoute =
   AuthenticatedAppServersNewRouteImport.update({
     id: '/servers/new',
@@ -426,6 +432,7 @@ export interface FileRoutesByFullPath {
   '/app/admin/core-logs': typeof AuthenticatedAppAdminCoreLogsRoute
   '/app/servers/$id': typeof AuthenticatedAppServersIdRoute
   '/app/servers/new': typeof AuthenticatedAppServersNewRoute
+  '/api/public/core/live-diag': typeof ApiPublicCoreLiveDiagRoute
   '/api/public/core/report': typeof ApiPublicCoreReportRoute
   '/api/public/core/stream': typeof ApiPublicCoreStreamRoute
   '/api/public/core/task': typeof ApiPublicCoreTaskRoute
@@ -485,6 +492,7 @@ export interface FileRoutesByTo {
   '/app/admin/core-logs': typeof AuthenticatedAppAdminCoreLogsRoute
   '/app/servers/$id': typeof AuthenticatedAppServersIdRoute
   '/app/servers/new': typeof AuthenticatedAppServersNewRoute
+  '/api/public/core/live-diag': typeof ApiPublicCoreLiveDiagRoute
   '/api/public/core/report': typeof ApiPublicCoreReportRoute
   '/api/public/core/stream': typeof ApiPublicCoreStreamRoute
   '/api/public/core/task': typeof ApiPublicCoreTaskRoute
@@ -547,6 +555,7 @@ export interface FileRoutesById {
   '/_authenticated/app/admin_/core-logs': typeof AuthenticatedAppAdminCoreLogsRoute
   '/_authenticated/app/servers/$id': typeof AuthenticatedAppServersIdRoute
   '/_authenticated/app/servers/new': typeof AuthenticatedAppServersNewRoute
+  '/api/public/core/live-diag': typeof ApiPublicCoreLiveDiagRoute
   '/api/public/core/report': typeof ApiPublicCoreReportRoute
   '/api/public/core/stream': typeof ApiPublicCoreStreamRoute
   '/api/public/core/task': typeof ApiPublicCoreTaskRoute
@@ -609,6 +618,7 @@ export interface FileRouteTypes {
     | '/app/admin/core-logs'
     | '/app/servers/$id'
     | '/app/servers/new'
+    | '/api/public/core/live-diag'
     | '/api/public/core/report'
     | '/api/public/core/stream'
     | '/api/public/core/task'
@@ -668,6 +678,7 @@ export interface FileRouteTypes {
     | '/app/admin/core-logs'
     | '/app/servers/$id'
     | '/app/servers/new'
+    | '/api/public/core/live-diag'
     | '/api/public/core/report'
     | '/api/public/core/stream'
     | '/api/public/core/task'
@@ -729,6 +740,7 @@ export interface FileRouteTypes {
     | '/_authenticated/app/admin_/core-logs'
     | '/_authenticated/app/servers/$id'
     | '/_authenticated/app/servers/new'
+    | '/api/public/core/live-diag'
     | '/api/public/core/report'
     | '/api/public/core/stream'
     | '/api/public/core/task'
@@ -772,6 +784,7 @@ export interface RootRouteChildren {
   Char91DotmcpChar93InvokeToolToolRoute: typeof Char91DotmcpChar93InvokeToolToolRoute
   ApiPublicHealthRoute: typeof ApiPublicHealthRoute
   ApiPublicRadarRoute: typeof ApiPublicRadarRoute
+  ApiPublicCoreLiveDiagRoute: typeof ApiPublicCoreLiveDiagRoute
   ApiPublicCoreReportRoute: typeof ApiPublicCoreReportRoute
   ApiPublicCoreStreamRoute: typeof ApiPublicCoreStreamRoute
   ApiPublicCoreTaskRoute: typeof ApiPublicCoreTaskRoute
@@ -1173,6 +1186,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicCoreReportRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/core/live-diag': {
+      id: '/api/public/core/live-diag'
+      path: '/api/public/core/live-diag'
+      fullPath: '/api/public/core/live-diag'
+      preLoaderRoute: typeof ApiPublicCoreLiveDiagRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/_authenticated/app/servers/new': {
       id: '/_authenticated/app/servers/new'
       path: '/servers/new'
@@ -1304,6 +1324,7 @@ const rootRouteChildren: RootRouteChildren = {
   Char91DotmcpChar93InvokeToolToolRoute: Char91DotmcpChar93InvokeToolToolRoute,
   ApiPublicHealthRoute: ApiPublicHealthRoute,
   ApiPublicRadarRoute: ApiPublicRadarRoute,
+  ApiPublicCoreLiveDiagRoute: ApiPublicCoreLiveDiagRoute,
   ApiPublicCoreReportRoute: ApiPublicCoreReportRoute,
   ApiPublicCoreStreamRoute: ApiPublicCoreStreamRoute,
   ApiPublicCoreTaskRoute: ApiPublicCoreTaskRoute,

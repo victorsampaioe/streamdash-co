@@ -1,6 +1,8 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { createHmac, timingSafeEqual } from "crypto";
 import { CORE_STREAM_VERSION } from "@/lib/core-version";
+// DIAGNÓSTICO TEMPORÁRIO — somente TV ao vivo (remover junto com src/lib/live-diagnostics.ts)
+import { logLiveManifest, logLiveSegment } from "@/lib/live-diagnostics";
 import { readSegmentCacheEnv, segmentCacheDecision } from "@/lib/stream-cache";
 
 const CORS = {
@@ -339,6 +341,17 @@ export const Route = createFileRoute("/api/public/core/stream")({
               );
             }
 
+            if (type === "live" && !isHlsManifest) {
+              logLiveSegment({
+                url: abs,
+                status: res.status,
+                contentType: upstreamContentType,
+                contentLength: res.headers.get("content-length"),
+                ua: uaKind,
+                ms: Date.now() - t0,
+              });
+            }
+
             if (isHlsManifest) {
               console.log(`[HLS] manifesto recebido: status=${res.status} ct=${upstreamContentType} tempo=${Date.now() - t0}ms`);
             }
@@ -370,8 +383,25 @@ export const Route = createFileRoute("/api/public/core/stream")({
 
             if (isHlsManifest) {
               const body = await res.text();
+              let diagInfo: ReturnType<typeof logLiveManifest> | null = null;
+              if (type === "live") {
+                diagInfo = logLiveManifest({
+                  url: abs,
+                  finalUrl,
+                  status: res.status,
+                  contentType: upstreamContentType,
+                  ua: uaKind,
+                  modo: "CORE",
+                  body,
+                });
+              }
               const { manifest: rewritten, segmentos } = rewriteManifest(body, finalUrl, token!, modeKind as any);
               console.log(`[HLS] manifest entregue | segments=${segmentos} | status=${res.status}`);
+              if (diagInfo) {
+                out.set("X-Live-Diag-Segments", String(diagInfo.total));
+                out.set("X-Live-Diag-Master", String(diagInfo.isMaster));
+                out.set("X-Live-Diag-UA", uaKind);
+              }
               return new Response(rewritten, {
                 status: res.status,
                 headers: { ...Object.fromEntries(out), "Content-Type": "application/vnd.apple.mpegurl" },
@@ -403,6 +433,16 @@ export const Route = createFileRoute("/api/public/core/stream")({
             );
             if (ext === "ts" || ext === "m4s" || type === "live") {
               console.error(`[STREAM DEBUG][HLS SEGMENT] URL=${maskMedia(abs)} STATUS=502 ERRO="${msg}"`);
+            }
+            if (type === "live") {
+              logLiveSegment({
+                url: abs,
+                status: 502,
+                contentType: null,
+                ua: uaKind,
+                ms: Date.now() - t0,
+                erro: msg,
+              });
             }
             return new Response(`Worker fetch error: ${msg}`, {
               status: 502,
@@ -680,6 +720,17 @@ export const Route = createFileRoute("/api/public/core/stream")({
         if (isManifest) {
           const tManifesto = Date.now();
           const text = await found.text();
+          if (type === "live") {
+            logLiveManifest({
+              url: usedUrl,
+              finalUrl: usedUrl,
+              status: found.status,
+              contentType: upstreamType,
+              ua: usedModo.includes("VLC") ? "vlc" : usedModo.includes("SMARTERS") || usedModo.startsWith("CORE") ? "player" : "browser",
+              modo: usedModo,
+              body: text,
+            });
+          }
           const { manifest: rewritten, segmentos } = rewriteManifest(text, usedUrl, token, usedModo);
           
           console.log(
