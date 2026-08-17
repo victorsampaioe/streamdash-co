@@ -412,7 +412,7 @@ export const Route = createFileRoute("/api/public/core/stream")({
         const tentativas: Tentativa[] = [];
         let upstream: Response | null = null;
         let usedUrl = "";
-        let usedModo: Modo = "PAINEL";
+        let usedModo: Modo = modeParam.includes("CORE") ? (modeParam as Modo) : "PAINEL";
         let coreWorkerVersion: string | null = null;
         // Modo solicitado explicitamente (ex.: segmentos HLS mantêm o modo do manifesto).
         const modeParam = (url.searchParams.get("mode") || "").toUpperCase();
