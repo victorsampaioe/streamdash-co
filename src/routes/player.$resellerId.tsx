@@ -69,6 +69,7 @@ import { DiagnosticBadge } from "@/components/player/DiagnosticBadge";
 import { isBrowserPlayable, incompatibleReason } from "@/lib/playback-format";
 import { testWebCompatibility, NEEDS_CONVERSION_MESSAGE, type WebCompatResult } from "@/lib/web-compat";
 import { AppDownloadCard } from "@/components/player/AppDownloadCard";
+import { PlatformHighlights } from "@/components/player/PlatformHighlights";
 import { TrailerModal } from "@/components/player/TrailerModal";
 import { curateHero, curateHdReleases, curateRecent, curateTopRated } from "@/lib/player-curation";
 
