@@ -220,8 +220,8 @@ function PlayerPage() {
 
 
   // Carregamento da Identidade Visual agora vem do loader
-  const primaryColor = settings?.primary_color || "#3B82F6";
-  const secondaryColor = settings?.secondary_color || "#0A0A0A";
+  // const primaryColor = settings?.primary_color || "#3B82F6";
+  // const secondaryColor = settings?.secondary_color || "#0A0A0A";
 
   // Validar sessão ao carregar
   useEffect(() => {
