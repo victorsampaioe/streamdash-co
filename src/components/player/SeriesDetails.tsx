@@ -108,26 +108,23 @@ export function SeriesDetails({ series, info, loading, onClose, onPlay, primaryC
 
       {/* Episodes Section */}
       <div className="container max-w-7xl mx-auto px-6 py-12 pb-24">
-        <div className="flex items-center justify-between mb-8">
-          <div className="flex items-center gap-6">
-            <h2 className="text-2xl font-bold">Episódios</h2>
-            <div className="flex gap-2">
-              {seasons.map((season: number) => (
-                <button
-                  key={season}
-                  onClick={() => setSelectedSeason(season)}
-                  className={cn(
-                    "px-4 py-2 rounded-lg text-sm font-bold transition-all",
-                    selectedSeason === season 
-                      ? "bg-primary text-white" 
-                      : "bg-white/5 text-white/40 hover:text-white hover:bg-white/10"
-                  )}
-                  style={selectedSeason === season ? { backgroundColor: primaryColor } : {}}
-                >
-                  Temp. {season}
-                </button>
-              ))}
-            </div>
+        <div className="flex flex-col md:flex-row md:items-center justify-between mb-10 gap-6">
+          <div className="flex flex-wrap items-center gap-3">
+            {seasons.map((season: number) => (
+              <button
+                key={season}
+                onClick={() => setSelectedSeason(season)}
+                className={cn(
+                  "px-6 py-2.5 rounded-xl text-sm font-black tracking-widest uppercase transition-all",
+                  selectedSeason === season 
+                    ? "bg-primary text-white shadow-lg" 
+                    : "bg-white/5 text-white/40 hover:text-white hover:bg-white/10"
+                )}
+                style={selectedSeason === season ? { backgroundColor: primaryColor } : {}}
+              >
+                T{season}
+              </button>
+            ))}
           </div>
         </div>
 
@@ -140,13 +137,13 @@ export function SeriesDetails({ series, info, loading, onClose, onPlay, primaryC
             {episodes.map((episode: any) => (
               <div 
                 key={episode.id ?? episode.stream_id}
-                className="group relative rounded-xl overflow-hidden bg-white/5 border border-white/5 hover:border-white/20 transition-all cursor-pointer"
+                className="group relative rounded-2xl overflow-hidden bg-white/5 border border-white/5 hover:border-white/20 transition-all cursor-pointer"
                 onClick={() => onPlay(episode)}
               >
                 <div className="aspect-video relative overflow-hidden">
                   <img 
                     src={episode.info?.movie_image || info?.info?.cover} 
-                    className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+                    className="w-full h-full object-cover"
                     alt={episode.title}
                   />
                   <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
