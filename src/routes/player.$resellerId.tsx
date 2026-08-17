@@ -1284,6 +1284,17 @@ function PlayerPage() {
 
       />
 
+      {trailerItem && (
+        <TrailerModal
+          isOpen={!!trailerItem}
+          onClose={() => setTrailerItem(null)}
+          title={trailerItem.name || trailerItem.title || ""}
+          type={trailerItem.__type === "series" ? "series" : "movie"}
+        />
+      )}
+
+      
+
       
       {isSeriesOpen && selectedSeriesInfo && (
         <SeriesDetails 
