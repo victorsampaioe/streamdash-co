@@ -26,6 +26,7 @@ import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as StatusSlugRouteImport } from './routes/status.$slug'
 import { Route as PlayerResellerIdRouteImport } from './routes/player.$resellerId'
+import { Route as DownloadAndroidRouteImport } from './routes/download.android'
 import { Route as BlogComoEvitarQuedaIptvRouteImport } from './routes/blog.como-evitar-queda-iptv'
 import { Route as AuthenticatedAppRouteImport } from './routes/_authenticated/app'
 import { Route as Char91DotwellKnownChar93OauthProtectedResourceRouteImport } from './routes/[.well-known]/oauth-protected-resource'
@@ -150,6 +151,11 @@ const StatusSlugRoute = StatusSlugRouteImport.update({
 const PlayerResellerIdRoute = PlayerResellerIdRouteImport.update({
   id: '/player/$resellerId',
   path: '/player/$resellerId',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DownloadAndroidRoute = DownloadAndroidRouteImport.update({
+  id: '/download/android',
+  path: '/download/android',
   getParentRoute: () => rootRouteImport,
 } as any)
 const BlogComoEvitarQuedaIptvRoute = BlogComoEvitarQuedaIptvRouteImport.update({
@@ -396,6 +402,7 @@ export interface FileRoutesByFullPath {
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   '/app': typeof AuthenticatedAppRouteWithChildren
   '/blog/como-evitar-queda-iptv': typeof BlogComoEvitarQuedaIptvRoute
+  '/download/android': typeof DownloadAndroidRoute
   '/player/$resellerId': typeof PlayerResellerIdRoute
   '/status/$slug': typeof StatusSlugRoute
   '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
@@ -454,6 +461,7 @@ export interface FileRoutesByTo {
   '/.mcp/list-tools': typeof Char91DotmcpChar93ListToolsRoute
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   '/blog/como-evitar-queda-iptv': typeof BlogComoEvitarQuedaIptvRoute
+  '/download/android': typeof DownloadAndroidRoute
   '/player/$resellerId': typeof PlayerResellerIdRoute
   '/status/$slug': typeof StatusSlugRoute
   '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
@@ -515,6 +523,7 @@ export interface FileRoutesById {
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   '/_authenticated/app': typeof AuthenticatedAppRouteWithChildren
   '/blog/como-evitar-queda-iptv': typeof BlogComoEvitarQuedaIptvRoute
+  '/download/android': typeof DownloadAndroidRoute
   '/player/$resellerId': typeof PlayerResellerIdRoute
   '/status/$slug': typeof StatusSlugRoute
   '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
@@ -576,6 +585,7 @@ export interface FileRouteTypes {
     | '/.well-known/oauth-protected-resource'
     | '/app'
     | '/blog/como-evitar-queda-iptv'
+    | '/download/android'
     | '/player/$resellerId'
     | '/status/$slug'
     | '/.lovable/oauth/consent'
@@ -634,6 +644,7 @@ export interface FileRouteTypes {
     | '/.mcp/list-tools'
     | '/.well-known/oauth-protected-resource'
     | '/blog/como-evitar-queda-iptv'
+    | '/download/android'
     | '/player/$resellerId'
     | '/status/$slug'
     | '/.lovable/oauth/consent'
@@ -694,6 +705,7 @@ export interface FileRouteTypes {
     | '/.well-known/oauth-protected-resource'
     | '/_authenticated/app'
     | '/blog/como-evitar-queda-iptv'
+    | '/download/android'
     | '/player/$resellerId'
     | '/status/$slug'
     | '/.lovable/oauth/consent'
@@ -753,6 +765,7 @@ export interface RootRouteChildren {
   VerifyEmailRoute: typeof VerifyEmailRoute
   Char91DotmcpChar93ListToolsRoute: typeof Char91DotmcpChar93ListToolsRoute
   Char91DotwellKnownChar93OauthProtectedResourceRoute: typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
+  DownloadAndroidRoute: typeof DownloadAndroidRoute
   PlayerResellerIdRoute: typeof PlayerResellerIdRoute
   StatusSlugRoute: typeof StatusSlugRoute
   DotlovableOauthConsentRoute: typeof DotlovableOauthConsentRoute
@@ -892,6 +905,13 @@ declare module '@tanstack/react-router' {
       path: '/player/$resellerId'
       fullPath: '/player/$resellerId'
       preLoaderRoute: typeof PlayerResellerIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/download/android': {
+      id: '/download/android'
+      path: '/download/android'
+      fullPath: '/download/android'
+      preLoaderRoute: typeof DownloadAndroidRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/blog/como-evitar-queda-iptv': {
@@ -1277,6 +1297,7 @@ const rootRouteChildren: RootRouteChildren = {
   Char91DotmcpChar93ListToolsRoute: Char91DotmcpChar93ListToolsRoute,
   Char91DotwellKnownChar93OauthProtectedResourceRoute:
     Char91DotwellKnownChar93OauthProtectedResourceRoute,
+  DownloadAndroidRoute: DownloadAndroidRoute,
   PlayerResellerIdRoute: PlayerResellerIdRoute,
   StatusSlugRoute: StatusSlugRoute,
   DotlovableOauthConsentRoute: DotlovableOauthConsentRoute,

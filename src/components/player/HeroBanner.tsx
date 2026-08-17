@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
 import { TrailerModal } from "@/components/player/TrailerModal";
+import { detectQuality } from "@/lib/player-curation";
 
 interface HeroBannerProps {
   items?: any[]; // Array para rotação
@@ -104,6 +105,11 @@ export function HeroBanner({ items = [], item: fallbackItem, onPlay, onMyList, o
               </span>
             )}
             {year && <span className="text-white/60">{year}</span>}
+            {detectQuality(item) && (
+              <span className="px-2 py-0.5 rounded bg-white/10 border border-white/15 text-[10px] font-bold tracking-wider text-white">
+                {detectQuality(item)}
+              </span>
+            )}
             {genre && <span className="text-white/40 truncate max-w-[10rem]">{genre}</span>}
             {duration && (
               <span className="flex items-center gap-1 text-white/40">

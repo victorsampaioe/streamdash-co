@@ -69,6 +69,8 @@ import { DiagnosticBadge } from "@/components/player/DiagnosticBadge";
 import { isBrowserPlayable, incompatibleReason } from "@/lib/playback-format";
 import { testWebCompatibility, NEEDS_CONVERSION_MESSAGE, type WebCompatResult } from "@/lib/web-compat";
 import { AppDownloadCard } from "@/components/player/AppDownloadCard";
+import { TrailerModal } from "@/components/player/TrailerModal";
+import { curateHero, curateHdReleases, curateRecent, curateTopRated } from "@/lib/player-curation";
 
 const SMART_LOADING_MESSAGES = [
   "Conectando...",
@@ -198,12 +200,19 @@ function PlayerPage() {
     continueWatching: any[];
     newReleases: any[];
     liveHighlights: any[];
+    seriesHighlights: any[];
   }>({
     featured: null,
     continueWatching: [],
     newReleases: [],
-    liveHighlights: []
+    liveHighlights: [],
+    seriesHighlights: []
   });
+
+  // Filtro rápido local (catálogo já carregado)
+  const [quickFilter, setQuickFilter] = useState("");
+  // Trailer sob demanda (camada visual)
+  const [trailerItem, setTrailerItem] = useState<any>(null);
 
   const [selectedItem, setSelectedItem] = useState<any>(null);
   const [isDetailsOpen, setIsDetailsOpen] = useState(false);
@@ -313,10 +322,11 @@ function PlayerPage() {
           if (Array.isArray(vodCats) && vodCats.length > 0) {
             const firstCat = vodCats[0];
             const list = await fetchItems("get_vod_streams", firstCat.category_id);
+            const movies = Array.isArray(list) ? list : [];
             setHomeData(prev => ({ 
               ...prev, 
-              featured: Array.isArray(list) ? list[0] || null : null,
-              newReleases: Array.isArray(list) ? list.slice(1, 15) : []
+              featured: curateHero(movies, 1)[0] ?? movies[0] ?? null,
+              newReleases: movies
             }));
           }
 
@@ -327,7 +337,18 @@ function PlayerPage() {
             const list = await fetchItems("get_live_streams", firstCat.category_id);
             setHomeData(prev => ({ 
               ...prev, 
-              liveHighlights: Array.isArray(list) ? list.slice(0, 10) : []
+              liveHighlights: Array.isArray(list) ? list.slice(0, 12) : []
+            }));
+          }
+
+          // Buscar Séries recentes
+          const seriesCats = await getPlayerCatalog({ data: { token, action: "get_series_categories" } });
+          if (Array.isArray(seriesCats) && seriesCats.length > 0) {
+            const firstCat = seriesCats[0];
+            const list = await fetchItems("get_series", firstCat.category_id);
+            setHomeData(prev => ({ 
+              ...prev, 
+              seriesHighlights: Array.isArray(list) ? list : []
             }));
           }
 
@@ -814,10 +835,10 @@ function PlayerPage() {
 
         {activeView === "home" && (
 
-          <div className="p-6 md:p-12 space-y-12">
+          <div className="p-4 md:p-12 space-y-8 md:space-y-10">
             <HeroBanner 
               item={homeData.featured} 
-              items={[homeData.featured, ...homeData.newReleases.slice(0, 4)].filter(Boolean)}
+              items={curateHero([...(homeData.newReleases || []), ...(homeData.seriesHighlights || [])], 5)}
               primaryColor={primaryColor}
               onPlay={(item: any) => {
                 const type = item.stream_type === "series" ? "series" : (item.stream_type === "live" ? "live" : "movie");
@@ -836,11 +857,10 @@ function PlayerPage() {
               isFavorite={(item: any) => favorites.some(f => f.content_id === (item?.stream_id || item?.series_id || item?.id)?.toString())}
             />
 
-
-            {/* Continuar Assistindo Section */}
+            {/* Continuar Assistindo */}
             {history.length > 0 && (
               <ContentRow 
-                title="Continuar Assistindo" 
+                title="▶ Continuar assistindo" 
                 items={history.map(h => ({
                   ...h,
                   stream_id: h.content_id,
@@ -857,10 +877,10 @@ function PlayerPage() {
               />
             )}
 
-            {/* Minha Lista Section */}
+            {/* Minha Lista */}
             {favorites.length > 0 && (
                <ContentRow 
-                title="Minha Lista" 
+                title="❤️ Minha lista" 
                 items={favorites.map(f => ({
                   ...f,
                   stream_id: f.content_id,
@@ -878,29 +898,67 @@ function PlayerPage() {
             )}
 
             <ContentRow 
-              title="Lançamentos" 
-              items={homeData.newReleases} 
+              title="🔥 Lançamentos HD" 
+              items={curateHdReleases(homeData.newReleases, 20)} 
               type="movie" 
               primaryColor={primaryColor}
+              enablePreview
               onPlay={(item: any) => {
                 setSelectedItem(item);
                 setIsDetailsOpen(true);
               }}
+              onInfo={(item: any) => { setSelectedItem(item); setIsDetailsOpen(true); }}
+              onTrailer={(item: any) => setTrailerItem({ ...item, __type: "movie" })}
+              onToggleFavorite={(item: any) => handleToggleFavorite(item)}
+              isFavorite={(item: any) => favorites.some(f => f.content_id === (item?.stream_id || item?.id)?.toString())}
             />
 
             <ContentRow 
-              title="Mais Assistidos" 
-              items={homeData.newReleases.slice().reverse().slice(0, 10)} 
+              title="⭐ Mais assistidos" 
+              items={curateTopRated(homeData.newReleases, 20)} 
               type="movie" 
               primaryColor={primaryColor}
+              enablePreview
               onPlay={(item: any) => {
                 setSelectedItem(item);
                 setIsDetailsOpen(true);
               }}
+              onInfo={(item: any) => { setSelectedItem(item); setIsDetailsOpen(true); }}
+              onTrailer={(item: any) => setTrailerItem({ ...item, __type: "movie" })}
+              onToggleFavorite={(item: any) => handleToggleFavorite(item)}
+              isFavorite={(item: any) => favorites.some(f => f.content_id === (item?.stream_id || item?.id)?.toString())}
             />
 
             <ContentRow 
-              title="Canais em Destaque" 
+              title="🎬 Filmes recentes" 
+              items={curateRecent(homeData.newReleases, 20)} 
+              type="movie" 
+              primaryColor={primaryColor}
+              enablePreview
+              onPlay={(item: any) => {
+                setSelectedItem(item);
+                setIsDetailsOpen(true);
+              }}
+              onInfo={(item: any) => { setSelectedItem(item); setIsDetailsOpen(true); }}
+              onTrailer={(item: any) => setTrailerItem({ ...item, __type: "movie" })}
+            />
+
+            <ContentRow 
+              title="📺 Séries recentes" 
+              items={curateRecent(homeData.seriesHighlights, 20)} 
+              type="series" 
+              primaryColor={primaryColor}
+              enablePreview
+              onPlay={(item: any) => {
+                setSelectedItem(item);
+                setIsDetailsOpen(true);
+              }}
+              onInfo={(item: any) => { setSelectedItem(item); setIsDetailsOpen(true); }}
+              onTrailer={(item: any) => setTrailerItem({ ...item, __type: "series" })}
+            />
+
+            <ContentRow 
+              title="📡 Canais em destaque" 
               items={homeData.liveHighlights} 
               type="live" 
               primaryColor={primaryColor}
@@ -1089,13 +1147,10 @@ function PlayerPage() {
               <div className="relative w-full md:w-64">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-white/40" />
                 <Input 
-                  placeholder="Busca rápida..." 
+                  placeholder={activeView === "live" ? "Buscar canal..." : "Busca rápida..."} 
+                  value={quickFilter}
                   className="bg-white/5 border-white/10 pl-9 h-10 rounded-xl text-sm"
-                  onChange={(e) => {
-                    const q = e.target.value.toLowerCase();
-                    // Implementação de busca rápida local (apenas no que já está carregado)
-                    // Para busca global, usa-se a aba Buscar
-                  }}
+                  onChange={(e) => setQuickFilter(e.target.value)}
                 />
               </div>
             </div>
@@ -1124,13 +1179,22 @@ function PlayerPage() {
                 ))}
               </div>
             ) : (
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-6">
-                {content.map((item) => (
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4 md:gap-6">
+                {content
+                  .filter((item) =>
+                    !quickFilter.trim() ||
+                    String(item.name || item.title || "").toLowerCase().includes(quickFilter.trim().toLowerCase())
+                  )
+                  .map((item) => (
                   <ContentCard 
                     key={item.stream_id || item.series_id} 
                     item={item} 
                     type={activeView as "live" | "movie" | "series"} 
                     primaryColor={primaryColor} 
+                    enablePreview={activeView !== "live"}
+                    onTrailerClick={activeView !== "live" ? (i: any) => setTrailerItem({ ...i, __type: activeView === "series" ? "series" : "movie" }) : undefined}
+                    onToggleFavorite={(i: any) => handleToggleFavorite(i)}
+                    isFavorite={favorites.some(f => f.content_id === (item.stream_id || item.series_id)?.toString())}
                     onClick={(i) => {
                       debugClick(i, activeView as "live" | "movie" | "series");
                       setSelectedItem(i);
@@ -1219,6 +1283,17 @@ function PlayerPage() {
         }}
 
       />
+
+      {trailerItem && (
+        <TrailerModal
+          isOpen={!!trailerItem}
+          onClose={() => setTrailerItem(null)}
+          title={trailerItem.name || trailerItem.title || ""}
+          type={trailerItem.__type === "series" ? "series" : "movie"}
+        />
+      )}
+
+      
 
       
       {isSeriesOpen && selectedSeriesInfo && (
