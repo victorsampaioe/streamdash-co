@@ -69,7 +69,7 @@ export const WORKER_CAPABLE_TASKS: ReadonlySet<CoreTask> = new Set<CoreTask>([
 ]);
 
 export function canRunOnCore(task: CoreTask): boolean {
-  return WORKER_CAPABLE_TASKS.has(task);
+  return WORKER_CAPABLE_TASKS.has(task) || task === "iptv-player-proxy";
 }
 
 export function useCore(task?: CoreTask): boolean {
