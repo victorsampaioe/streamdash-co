@@ -59,23 +59,28 @@ function rewriteManifest(manifest: string, upstreamUrl: string, token: string, m
   let segmentos = 0;
   
   const toProxy = (raw: string) => {
-    // Resolve URL relativa (de segmentos, chaves, etc) para absoluta
-    const abs = new URL(raw, baseUrl).toString();
-    const segExt = (abs.match(/\.([a-z0-9]{2,4})(?:\?|$)/i)?.[1] ?? "ts").toLowerCase();
-    segmentos += 1;
-    
-    // Assinatura de cada segmento para permitir acesso à CDN final
-    const p = new URLSearchParams({
-      token,
-      mode,
-      type: "live",
-      ext: segExt,
-      via: "core", // Força o segmento a ser validado pelo bloco de assinatura
-      exp: String(segExp), // Usamos 'exp' em vez de 'pexp' para casar com a validação do handler
-      sig: signUpstream(abs, segExp), // Usamos 'sig' em vez de 'psig' para casar com a validação do handler
-      u: b64urlEncode(abs),
-    });
-    return `/api/public/core/stream?${p.toString()}`;
+    try {
+      // Resolve URL relativa (de segmentos, chaves, etc) para absoluta
+      const abs = new URL(raw, baseUrl).toString();
+      const segExt = (abs.match(/\.([a-z0-9]{2,4})(?:\?|$)/i)?.[1] ?? "ts").toLowerCase();
+      segmentos += 1;
+      
+      // Assinatura de cada segmento para permitir acesso à CDN final
+      const p = new URLSearchParams({
+        token,
+        mode,
+        type: "live",
+        ext: segExt,
+        via: "core", 
+        exp: String(segExp),
+        sig: signUpstream(abs, segExp),
+        u: b64urlEncode(abs),
+      });
+      return `/api/public/core/stream?${p.toString()}`;
+    } catch (e) {
+      console.warn(`[HLS][rewriteManifest] Falha ao resolver URL: ${raw}`, e);
+      return raw;
+    }
   };
 
   // Processa linhas do HLS: URLs, #EXT-X-STREAM-INF, #EXT-X-KEY, #EXT-X-MEDIA...
@@ -89,6 +94,10 @@ function rewriteManifest(manifest: string, upstreamUrl: string, token: string, m
       if (trimmed.startsWith("#EXT-X-KEY:")) {
         return line.replace(/URI="([^"]+)"/g, (_m, uri) => `URI="${toProxy(uri)}"`);
       }
+      // #EXT-X-MEDIA: URI="..."
+      if (trimmed.startsWith("#EXT-X-MEDIA:")) {
+        return line.replace(/URI="([^"]+)"/g, (_m, uri) => `URI="${toProxy(uri)}"`);
+      }
       // URLs de playlist/segmento (não iniciam com #)
       if (!trimmed.startsWith("#")) {
         return toProxy(trimmed);
@@ -97,7 +106,7 @@ function rewriteManifest(manifest: string, upstreamUrl: string, token: string, m
     })
     .join("\n");
     
-  console.log(`[HLS][rewriteManifest] URL original: ${upstreamUrl} | Segmentos reescritos: ${segmentos}`);
+  console.log(`[HLS][rewriteManifest] URL original: ${maskMedia(upstreamUrl)} | Segmentos reescritos: ${segmentos}`);
   return { manifest: out, segmentos };
 }
 
