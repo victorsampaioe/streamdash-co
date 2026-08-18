@@ -34,7 +34,7 @@ android {
 }
 
 dependencies {
-    implementation platformDep("androidx.compose:compose-bom:2024.09.02")
+    implementation(platform("androidx.compose:compose-bom:2024.09.02"))
     implementation("androidx.core:core-ktx:1.13.1")
     implementation("androidx.activity:activity-compose:1.9.2")
     implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.8.6")
@@ -52,5 +52,3 @@ dependencies {
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
     implementation("org.json:json:20240303")
 }
-
-fun platformDep(notation: String) = dependencies.platform(notation)
