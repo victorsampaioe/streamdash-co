@@ -60,12 +60,13 @@ function AndroidPlayAdminPage() {
     onError: () => toast.error("Erro ao atualizar licença")
   });
 
-  const getStatusBadge = (status: string) => {
-    switch (status) {
+  const getStatusBadge = (status: string | null) => {
+    const s = status || 'pending';
+    switch (s) {
       case 'active': return <Badge variant="outline" className="bg-green-500/10 text-green-500 border-green-500/20">Ativa</Badge>;
       case 'suspended': return <Badge variant="destructive">Suspensa</Badge>;
       case 'pending': return <Badge variant="outline" className="bg-yellow-500/10 text-yellow-500 border-yellow-500/20">Pendente</Badge>;
-      default: return <Badge variant="secondary">{status}</Badge>;
+      default: return <Badge variant="secondary">{s}</Badge>;
     }
   };
 
@@ -130,7 +131,7 @@ function AndroidPlayAdminPage() {
                           </div>
                         </TableCell>
                         <TableCell className="text-sm text-muted-foreground">
-                          {new Date(l.created_at).toLocaleDateString()}
+                          {l.created_at ? new Date(l.created_at).toLocaleDateString() : '-'}
                         </TableCell>
                         <TableCell className="text-right">
                           <div className="flex justify-end gap-2">
@@ -189,7 +190,7 @@ function AndroidPlayAdminPage() {
                           </div>
                         </TableCell>
                         <TableCell className="text-sm">
-                          {new Date(l.created_at).toLocaleString()}
+                          {l.created_at ? new Date(l.created_at).toLocaleString() : '-'}
                         </TableCell>
                         <TableCell className="text-right">
                           <div className="flex justify-end gap-2">
