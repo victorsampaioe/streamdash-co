@@ -29,11 +29,12 @@ function AndroidPlayAdminPage() {
     },
   });
 
-  const updateStatus = async (id: string, status: string) => {
+  const updateStatus = async (id: string, status: 'active' | 'suspended' | 'pending' | 'expired') => {
     const { error } = await supabase
       .from("reseller_licenses")
       .update({ status, updated_at: new Date().toISOString() })
       .eq("id", id);
+
     
     if (error) toast.error("Erro ao atualizar status");
     else {
