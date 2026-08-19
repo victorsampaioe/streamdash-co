@@ -71,6 +71,7 @@ import { Route as ApiPublicAndroidConfigRouteImport } from './routes/api/public/
 import { Route as AuthenticatedAppServersNewRouteImport } from './routes/_authenticated/app.servers.new'
 import { Route as AuthenticatedAppServersIdRouteImport } from './routes/_authenticated/app.servers.$id'
 import { Route as AuthenticatedAppAdminCoreLogsRouteImport } from './routes/_authenticated/app.admin_.core-logs'
+import { Route as AuthenticatedAppAdminAndroidPlayRouteImport } from './routes/_authenticated/app.admin.android-play'
 import { Route as AuthenticatedAppInteligenciaMediaIdRouteImport } from './routes/_authenticated/app.inteligencia.$media.$id'
 
 const VerifyEmailRoute = VerifyEmailRouteImport.update({
@@ -400,6 +401,12 @@ const AuthenticatedAppAdminCoreLogsRoute =
     path: '/admin/core-logs',
     getParentRoute: () => AuthenticatedAppRoute,
   } as any)
+const AuthenticatedAppAdminAndroidPlayRoute =
+  AuthenticatedAppAdminAndroidPlayRouteImport.update({
+    id: '/android-play',
+    path: '/android-play',
+    getParentRoute: () => AuthenticatedAppAdminRoute,
+  } as any)
 const AuthenticatedAppInteligenciaMediaIdRoute =
   AuthenticatedAppInteligenciaMediaIdRouteImport.update({
     id: '/inteligencia/$media/$id',
@@ -432,7 +439,7 @@ export interface FileRoutesByFullPath {
   '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
   '/app/achievements': typeof AuthenticatedAppAchievementsRoute
-  '/app/admin': typeof AuthenticatedAppAdminRoute
+  '/app/admin': typeof AuthenticatedAppAdminRouteWithChildren
   '/app/ai-integration': typeof AuthenticatedAppAiIntegrationRoute
   '/app/ajuda': typeof AuthenticatedAppAjudaRoute
   '/app/alerts': typeof AuthenticatedAppAlertsRoute
@@ -447,6 +454,7 @@ export interface FileRoutesByFullPath {
   '/api/public/health': typeof ApiPublicHealthRoute
   '/api/public/radar': typeof ApiPublicRadarRoute
   '/app/': typeof AuthenticatedAppIndexRoute
+  '/app/admin/android-play': typeof AuthenticatedAppAdminAndroidPlayRoute
   '/app/admin/core-logs': typeof AuthenticatedAppAdminCoreLogsRoute
   '/app/servers/$id': typeof AuthenticatedAppServersIdRoute
   '/app/servers/new': typeof AuthenticatedAppServersNewRoute
@@ -495,7 +503,7 @@ export interface FileRoutesByTo {
   '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
   '/app/achievements': typeof AuthenticatedAppAchievementsRoute
-  '/app/admin': typeof AuthenticatedAppAdminRoute
+  '/app/admin': typeof AuthenticatedAppAdminRouteWithChildren
   '/app/ai-integration': typeof AuthenticatedAppAiIntegrationRoute
   '/app/ajuda': typeof AuthenticatedAppAjudaRoute
   '/app/alerts': typeof AuthenticatedAppAlertsRoute
@@ -510,6 +518,7 @@ export interface FileRoutesByTo {
   '/api/public/health': typeof ApiPublicHealthRoute
   '/api/public/radar': typeof ApiPublicRadarRoute
   '/app': typeof AuthenticatedAppIndexRoute
+  '/app/admin/android-play': typeof AuthenticatedAppAdminAndroidPlayRoute
   '/app/admin/core-logs': typeof AuthenticatedAppAdminCoreLogsRoute
   '/app/servers/$id': typeof AuthenticatedAppServersIdRoute
   '/app/servers/new': typeof AuthenticatedAppServersNewRoute
@@ -561,7 +570,7 @@ export interface FileRoutesById {
   '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
   '/_authenticated/app/achievements': typeof AuthenticatedAppAchievementsRoute
-  '/_authenticated/app/admin': typeof AuthenticatedAppAdminRoute
+  '/_authenticated/app/admin': typeof AuthenticatedAppAdminRouteWithChildren
   '/_authenticated/app/ai-integration': typeof AuthenticatedAppAiIntegrationRoute
   '/_authenticated/app/ajuda': typeof AuthenticatedAppAjudaRoute
   '/_authenticated/app/alerts': typeof AuthenticatedAppAlertsRoute
@@ -576,6 +585,7 @@ export interface FileRoutesById {
   '/api/public/health': typeof ApiPublicHealthRoute
   '/api/public/radar': typeof ApiPublicRadarRoute
   '/_authenticated/app/': typeof AuthenticatedAppIndexRoute
+  '/_authenticated/app/admin/android-play': typeof AuthenticatedAppAdminAndroidPlayRoute
   '/_authenticated/app/admin_/core-logs': typeof AuthenticatedAppAdminCoreLogsRoute
   '/_authenticated/app/servers/$id': typeof AuthenticatedAppServersIdRoute
   '/_authenticated/app/servers/new': typeof AuthenticatedAppServersNewRoute
@@ -642,6 +652,7 @@ export interface FileRouteTypes {
     | '/api/public/health'
     | '/api/public/radar'
     | '/app/'
+    | '/app/admin/android-play'
     | '/app/admin/core-logs'
     | '/app/servers/$id'
     | '/app/servers/new'
@@ -705,6 +716,7 @@ export interface FileRouteTypes {
     | '/api/public/health'
     | '/api/public/radar'
     | '/app'
+    | '/app/admin/android-play'
     | '/app/admin/core-logs'
     | '/app/servers/$id'
     | '/app/servers/new'
@@ -770,6 +782,7 @@ export interface FileRouteTypes {
     | '/api/public/health'
     | '/api/public/radar'
     | '/_authenticated/app/'
+    | '/_authenticated/app/admin/android-play'
     | '/_authenticated/app/admin_/core-logs'
     | '/_authenticated/app/servers/$id'
     | '/_authenticated/app/servers/new'
@@ -1274,6 +1287,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAppAdminCoreLogsRouteImport
       parentRoute: typeof AuthenticatedAppRoute
     }
+    '/_authenticated/app/admin/android-play': {
+      id: '/_authenticated/app/admin/android-play'
+      path: '/android-play'
+      fullPath: '/app/admin/android-play'
+      preLoaderRoute: typeof AuthenticatedAppAdminAndroidPlayRouteImport
+      parentRoute: typeof AuthenticatedAppAdminRoute
+    }
     '/_authenticated/app/inteligencia/$media/$id': {
       id: '/_authenticated/app/inteligencia/$media/$id'
       path: '/inteligencia/$media/$id'
@@ -1284,9 +1304,22 @@ declare module '@tanstack/react-router' {
   }
 }
 
+interface AuthenticatedAppAdminRouteChildren {
+  AuthenticatedAppAdminAndroidPlayRoute: typeof AuthenticatedAppAdminAndroidPlayRoute
+}
+
+const AuthenticatedAppAdminRouteChildren: AuthenticatedAppAdminRouteChildren = {
+  AuthenticatedAppAdminAndroidPlayRoute: AuthenticatedAppAdminAndroidPlayRoute,
+}
+
+const AuthenticatedAppAdminRouteWithChildren =
+  AuthenticatedAppAdminRoute._addFileChildren(
+    AuthenticatedAppAdminRouteChildren,
+  )
+
 interface AuthenticatedAppRouteChildren {
   AuthenticatedAppAchievementsRoute: typeof AuthenticatedAppAchievementsRoute
-  AuthenticatedAppAdminRoute: typeof AuthenticatedAppAdminRoute
+  AuthenticatedAppAdminRoute: typeof AuthenticatedAppAdminRouteWithChildren
   AuthenticatedAppAiIntegrationRoute: typeof AuthenticatedAppAiIntegrationRoute
   AuthenticatedAppAjudaRoute: typeof AuthenticatedAppAjudaRoute
   AuthenticatedAppAlertsRoute: typeof AuthenticatedAppAlertsRoute
@@ -1310,7 +1343,7 @@ interface AuthenticatedAppRouteChildren {
 
 const AuthenticatedAppRouteChildren: AuthenticatedAppRouteChildren = {
   AuthenticatedAppAchievementsRoute: AuthenticatedAppAchievementsRoute,
-  AuthenticatedAppAdminRoute: AuthenticatedAppAdminRoute,
+  AuthenticatedAppAdminRoute: AuthenticatedAppAdminRouteWithChildren,
   AuthenticatedAppAiIntegrationRoute: AuthenticatedAppAiIntegrationRoute,
   AuthenticatedAppAjudaRoute: AuthenticatedAppAjudaRoute,
   AuthenticatedAppAlertsRoute: AuthenticatedAppAlertsRoute,
