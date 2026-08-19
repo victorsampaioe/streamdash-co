@@ -14,16 +14,19 @@ export const Route = createFileRoute('/api/public/android/status')({
         // Buscar status real do monitoramento (integrado com Uptime Kuma/Checks)
         const { data: check } = await supabaseAdmin
           .from('checks')
-          .select('status, last_ping, latency')
+          .select('status, checked_at, latency_ms')
           .eq('server_id', serverId)
-          .single();
+          .order('checked_at', { ascending: false })
+          .limit(1)
+          .maybeSingle();
 
         return new Response(JSON.stringify({
           status: check?.status || 'unknown',
-          last_check: check?.last_ping,
-          latency: check?.latency,
+          last_check: check?.checked_at,
+          latency: check?.latency_ms,
           message: check?.status === 'up' ? 'Tudo funcionando normalmente' : 'Identificamos instabilidades no servidor',
         }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+
       },
     },
   },

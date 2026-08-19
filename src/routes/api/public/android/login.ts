@@ -18,14 +18,18 @@ export const Route = createFileRoute('/api/public/android/login')({
           console.log(`[ANDROID LOGIN] Attempt for user: ${username}`);
 
           // 1. Verificar associação prévia (Login rápido)
-          const { data: association } = await supabaseAdmin
+          const { data: association, error: assocError } = await supabaseAdmin
             .from('android_client_associations')
-            .select('*, servers(*)')
+            .select('*, servers:server_id(*)')
             .eq('client_username', username)
             .eq('client_password', password)
-            .single();
+            .maybeSingle();
 
-          if (association) {
+          if (assocError) throw assocError;
+
+          if (association && association.servers) {
+            const server = association.servers as any;
+
             // Verificar licença do revendedor
             const { data: license } = await supabaseAdmin
               .rpc('validate_android_play_access', { _reseller_id: association.reseller_id });
@@ -39,12 +43,13 @@ export const Route = createFileRoute('/api/public/android/login')({
             return new Response(JSON.stringify({
               status: 'success',
               server: {
-                dns: association.servers.dns,
-                name: association.servers.name,
+                dns: server.dns,
+                name: server.name,
               },
               reseller_id: association.reseller_id,
             }), { status: 200, headers: { 'Content-Type': 'application/json' } });
           }
+
 
           // 2. Resolução Automática (Primeiro login ou falha na associação)
           // Aqui buscaríamos todos os servidores ativos e testaríamos o login (Simulado por enquanto)
