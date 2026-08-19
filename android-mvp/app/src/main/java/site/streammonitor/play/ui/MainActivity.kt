@@ -42,79 +42,84 @@ class MainActivity : ComponentActivity() {
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun ProbeScreen() {
-    var dns by remember { mutableStateOf(PRESETS[0].dns) }
-    var user by remember { mutableStateOf(PRESETS[0].user) }
-    var pass by remember { mutableStateOf(PRESETS[0].pass) }
-    var ua by remember { mutableStateOf(USER_AGENTS[0]) }
+    var user by remember { mutableStateOf("") }
+    var pass by remember { mutableStateOf("") }
     var running by remember { mutableStateOf(false) }
-    var result by remember { mutableStateOf<ProbeResult?>(null) }
-    var playing by remember { mutableStateOf<String?>(null) }
+    var result by remember { mutableStateOf<String?>(null) }
+    var error by remember { mutableStateOf<String?>(null) }
     val scope = rememberCoroutineScope()
 
     Column(
-        Modifier.fillMaxSize().padding(16.dp).verticalScroll(rememberScrollState()),
-        verticalArrangement = Arrangement.spacedBy(10.dp)
+        Modifier.fillMaxSize().padding(24.dp).verticalScroll(rememberScrollState()),
+        verticalArrangement = Arrangement.Center,
+        horizontalAlignment = androidx.compose.ui.Alignment.CenterHorizontally
     ) {
-        Text("Stream Monitor — Probe Android", style = MaterialTheme.typography.titleLarge)
-        Text("Conexão direta do dispositivo ao painel IPTV (sem Core AWS).", fontSize = 12.sp)
+        // Branding oficial Stream Monitor Play
+        Text("Stream Monitor Play", style = MaterialTheme.typography.headlineMedium, color = MaterialTheme.colorScheme.primary)
+        Spacer(Modifier.height(8.dp))
+        Text("Acesse seu conteúdo premium", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        
+        Spacer(Modifier.height(32.dp))
 
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            PRESETS.forEach { p ->
-                OutlinedButton(onClick = { dns = p.dns; user = p.user; pass = p.pass }) { Text(p.label) }
-            }
-        }
+        OutlinedTextField(
+            value = user,
+            onValueChange = { user = it },
+            label = { Text("Usuário") },
+            singleLine = true,
+            modifier = Modifier.fillMaxWidth()
+        )
+        Spacer(Modifier.height(16.dp))
+        OutlinedTextField(
+            value = pass,
+            onValueChange = { pass = it },
+            label = { Text("Senha") },
+            visualTransformation = androidx.compose.ui.text.input.PasswordVisualTransformation(),
+            singleLine = true,
+            modifier = Modifier.fillMaxWidth()
+        )
 
-        OutlinedTextField(dns, { dns = it }, label = { Text("DNS (http:// ou https://)") }, singleLine = true, modifier = Modifier.fillMaxWidth())
-        OutlinedTextField(user, { user = it }, label = { Text("Usuário") }, singleLine = true, modifier = Modifier.fillMaxWidth())
-        OutlinedTextField(pass, { pass = it }, label = { Text("Senha") }, singleLine = true, modifier = Modifier.fillMaxWidth())
-
-        Text("User-Agent", fontSize = 12.sp)
-        USER_AGENTS.forEach { candidate ->
-            Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
-                RadioButton(selected = ua == candidate, onClick = { ua = candidate })
-                Text(candidate, fontSize = 11.sp)
-            }
-        }
-        OutlinedTextField(ua, { ua = it }, label = { Text("User-Agent (editável)") }, singleLine = true, modifier = Modifier.fillMaxWidth())
+        Spacer(Modifier.height(24.dp))
 
         Button(
-            enabled = !running,
+            enabled = !running && user.isNotBlank() && pass.isNotBlank(),
             onClick = {
                 running = true
-                ProbeLog.clear()
-                playing = null
+                error = null
+                result = null
                 scope.launch {
-                    val r = withContext(Dispatchers.IO) {
-                        ProbeRunner.run(XtreamCreds(dns, user.trim(), pass.trim(), ua.trim()))
+                    // O fluxo real chamará Retrofit -> StreamMonitorApi
+                    // Aqui simulamos a resolução automática da Fase 1
+                    try {
+                        kotlinx.coroutines.delay(1500)
+                        result = "Servidor resolvido: NEW (newprivate.lat)"
+                    } catch (e: Exception) {
+                        error = e.message
+                    } finally {
+                        running = false
                     }
-                    result = r
-                    running = false
                 }
             },
-            modifier = Modifier.fillMaxWidth()
-        ) { Text(if (running) "Testando..." else "Rodar teste (login → catálogo → TV → filme → série)") }
-
-        result?.let { r ->
-            Text(r.summary, style = MaterialTheme.typography.titleMedium)
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                r.liveUrl?.let { u -> Button(onClick = { playing = u }) { Text("TV") } }
-                r.movieUrl?.let { u -> Button(onClick = { playing = u }) { Text("Filme") } }
-                r.episodeUrl?.let { u -> Button(onClick = { playing = u }) { Text("Episódio") } }
+            modifier = Modifier.fillMaxWidth().height(56.dp)
+        ) {
+            if (running) {
+                CircularProgressIndicator(modifier = Modifier.size(24.dp), strokeWidth = 2.dp, color = MaterialTheme.colorScheme.onPrimary)
+            } else {
+                Text("Entrar")
             }
         }
 
-        playing?.let { url ->
-            PlayerBox(url = url, userAgent = ua, modifier = Modifier.fillMaxWidth().height(230.dp))
-            TextButton(onClick = { playing = null }) { Text("Fechar player") }
+        error?.let {
+            Spacer(Modifier.height(16.dp))
+            Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
         }
 
-        HorizontalDivider()
-        Text("Logs de desenvolvimento", style = MaterialTheme.typography.titleSmall)
-        SelectionContainer {
-            Column {
-                ProbeLog.lines.forEach { Text(it, fontFamily = FontFamily.Monospace, fontSize = 11.sp) }
-            }
+        result?.let {
+            Spacer(Modifier.height(16.dp))
+            Text(it, color = MaterialTheme.colorScheme.secondary, style = MaterialTheme.typography.bodyMedium)
         }
-        Spacer(Modifier.height(40.dp))
+
+        Spacer(Modifier.height(48.dp))
+        Text("Powered by Stream Monitor", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f))
     }
 }
+
