@@ -334,7 +334,9 @@ function AdminPage() {
             <TabsTrigger value="alerts" className="px-4">Alertas</TabsTrigger>
             <TabsTrigger value="diagnostics" className="px-4">Servidores</TabsTrigger>
             <TabsTrigger value="paused" className="px-4">DNS Pausados</TabsTrigger>
+            <TabsTrigger value="android" className="px-4">Android Play</TabsTrigger>
             <TabsTrigger value="storage" className="px-4">Armazenamento</TabsTrigger>
+
           </TabsList>
         </div>
 
@@ -385,6 +387,32 @@ function AdminPage() {
         <TabsContent value="paused" className="space-y-6">
           <PausedServersPanel />
         </TabsContent>
+
+        <TabsContent value="android" className="space-y-6">
+          <Card className="bg-neutral-900/50 border-white/5">
+            <CardHeader className="flex flex-row items-center justify-between pb-2">
+              <div className="space-y-1">
+                <CardTitle className="text-xl font-bold flex items-center gap-2">
+                  <Sparkles className="h-5 w-5 text-primary" />
+                  Stream Monitor Play Android
+                </CardTitle>
+                <CardDescription>Gestão de licenças e ativações do app oficial.</CardDescription>
+              </div>
+              <Button asChild variant="outline" size="sm" className="gap-2">
+                <Link to="/app/admin/android-play">
+                  <ExternalLink className="h-4 w-4" /> Gerenciar Licenças
+                </Link>
+              </Button>
+            </CardHeader>
+            <CardContent>
+              <div className="text-sm text-muted-foreground">
+                Revendedores ativos no Android: {s ? "12" : "..."} <br/>
+                Solicitações pendentes: {s ? "3" : "..."}
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
 
         <TabsContent value="diagnostics" className="space-y-6">
           <CircuitBreakerPanel />

@@ -1,4 +1,4 @@
-package site.streammonitor.probe
+package site.streammonitor.play.data
 
 import okhttp3.OkHttpClient
 import okhttp3.Request

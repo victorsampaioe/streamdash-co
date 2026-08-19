@@ -124,6 +124,48 @@ export type Database = {
         }
         Relationships: []
       }
+      android_client_associations: {
+        Row: {
+          client_password: string
+          client_username: string
+          id: string
+          last_login_at: string | null
+          reseller_id: string
+          server_id: string
+        }
+        Insert: {
+          client_password: string
+          client_username: string
+          id?: string
+          last_login_at?: string | null
+          reseller_id: string
+          server_id: string
+        }
+        Update: {
+          client_password?: string
+          client_username?: string
+          id?: string
+          last_login_at?: string | null
+          reseller_id?: string
+          server_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "android_client_associations_reseller_id_fkey"
+            columns: ["reseller_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "android_client_associations_server_id_fkey"
+            columns: ["server_id"]
+            isOneToOne: false
+            referencedRelation: "servers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       app_settings: {
         Row: {
           key: string
@@ -3594,6 +3636,41 @@ export type Database = {
           },
         ]
       }
+      reseller_app_config: {
+        Row: {
+          app_name: string | null
+          id: string
+          logo_url: string | null
+          primary_color: string | null
+          reseller_id: string
+          updated_at: string | null
+        }
+        Insert: {
+          app_name?: string | null
+          id?: string
+          logo_url?: string | null
+          primary_color?: string | null
+          reseller_id: string
+          updated_at?: string | null
+        }
+        Update: {
+          app_name?: string | null
+          id?: string
+          logo_url?: string | null
+          primary_color?: string | null
+          reseller_id?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reseller_app_config_reseller_id_fkey"
+            columns: ["reseller_id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       reseller_catalog_stats: {
         Row: {
           last_sync_at: string | null
@@ -3649,6 +3726,44 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      reseller_licenses: {
+        Row: {
+          created_at: string | null
+          expires_at: string | null
+          id: string
+          metadata: Json | null
+          reseller_id: string
+          status: Database["public"]["Enums"]["android_play_status"] | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          expires_at?: string | null
+          id?: string
+          metadata?: Json | null
+          reseller_id: string
+          status?: Database["public"]["Enums"]["android_play_status"] | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          expires_at?: string | null
+          id?: string
+          metadata?: Json | null
+          reseller_id?: string
+          status?: Database["public"]["Enums"]["android_play_status"] | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reseller_licenses_reseller_id_fkey"
+            columns: ["reseller_id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       reseller_pages: {
         Row: {
@@ -4909,9 +5024,18 @@ export type Database = {
         Args: { _added_count: number; _server_id: string; _total: number }
         Returns: undefined
       }
+      validate_android_play_access: {
+        Args: { _reseller_id: string }
+        Returns: {
+          expires_at: string
+          is_active: boolean
+          status: string
+        }[]
+      }
     }
     Enums: {
       alert_kind: "email" | "discord" | "telegram" | "webhook"
+      android_play_status: "pending" | "active" | "suspended" | "expired"
       app_role: "admin" | "user" | "reseller" | "sub_reseller" | "customer"
       content_kind: "live" | "movie" | "series" | "episode"
       content_status:
@@ -5107,6 +5231,7 @@ export const Constants = {
   public: {
     Enums: {
       alert_kind: ["email", "discord", "telegram", "webhook"],
+      android_play_status: ["pending", "active", "suspended", "expired"],
       app_role: ["admin", "user", "reseller", "sub_reseller", "customer"],
       content_kind: ["live", "movie", "series", "episode"],
       content_status: [

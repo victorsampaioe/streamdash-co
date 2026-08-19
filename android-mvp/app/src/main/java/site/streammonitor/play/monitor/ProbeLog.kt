@@ -1,4 +1,4 @@
-package site.streammonitor.probe
+package site.streammonitor.play.monitor
 
 import android.util.Log
 import androidx.compose.runtime.mutableStateListOf
