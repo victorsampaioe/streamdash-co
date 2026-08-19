@@ -16,6 +16,7 @@
 
         <activity
             android:name=".ui.MainActivity"
+            android:theme="@style/Theme.Probe.Splash"
             android:exported="true"
             android:configChanges="orientation|screenSize|keyboardHidden|screenLayout"
             android:label="Stream Monitor Play"

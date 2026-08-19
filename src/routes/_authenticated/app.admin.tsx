@@ -399,7 +399,7 @@ function AdminPage() {
                 <CardDescription>Gestão de licenças e ativações do app oficial.</CardDescription>
               </div>
               <Button asChild variant="outline" size="sm" className="gap-2">
-                <Link to="/app/admin/android-play">
+                <Link to="/app/admin/android-play" search={{ tab: 'licenses' }}>
                   <ExternalLink className="h-4 w-4" /> Gerenciar Licenças
                 </Link>
               </Button>
