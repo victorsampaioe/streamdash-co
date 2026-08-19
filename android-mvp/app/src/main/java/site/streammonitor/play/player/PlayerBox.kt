@@ -1,4 +1,4 @@
-package site.streammonitor.probe
+package site.streammonitor.play.player
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect

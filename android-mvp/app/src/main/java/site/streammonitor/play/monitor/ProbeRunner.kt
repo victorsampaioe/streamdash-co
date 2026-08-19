@@ -1,4 +1,4 @@
-package site.streammonitor.probe
+package site.streammonitor.play.monitor
 
 import org.json.JSONArray
 import org.json.JSONObject

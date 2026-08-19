@@ -1,4 +1,4 @@
-package site.streammonitor.probe
+package site.streammonitor.play.ui
 
 import android.os.Bundle
 import androidx.activity.ComponentActivity
