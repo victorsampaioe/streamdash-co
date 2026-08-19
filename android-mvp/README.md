@@ -1,48 +1,53 @@
-# Stream Monitor Play — Probe Android (MVP técnico)
+# Stream Monitor Play
 
-Prova técnica **isolada**: não toca no Web Player, no Core AWS nem em nada do painel.
-Objetivo único: descobrir se um dispositivo Android real (IP residencial / operadora móvel)
-consegue acessar **diretamente** os painéis NEW e UNIPLAY, que hoje bloqueiam o IP da AWS.
+INSTRUÇÃO PRINCIPAL — ALTERAÇÃO EXPLICITAMENTE SOLICITADA
+O usuário pediu uma mudança real no projeto. Implemente diretamente o pedido, sem transformar a execução em uma simples explicação.
+Não invente requisitos. Preserve tudo que não fizer parte do pedido.
+Inspecione os arquivos/componentes responsáveis antes de editar e execute somente as mudanças necessárias.
+Não pare aguardando aprovação de um plano quando a alteração puder ser executada diretamente.
+
+PEDIDO ORIGINAL DO USUÁRIO:
+O projeto android-mvp atual é apenas um teste técnico.
+
+Quero criar agora o aplicativo Android oficial Stream Monitor Play.
+
+Não criar um Probe.
+
+Criar um app Android completo usando Kotlin + Jetpack Compose contendo:
+
+- Tela inicial com logo Stream Monitor Play
+- Login por usuário e senha
+- Integração com API Xtream
+- Carregar categorias de TV, filmes e séries
+- Lista com capas
+- Detalhes do conteúdo
+- Player usando ExoPlayer
+- Suporte HLS (.m3u8)
+- Histórico continuar assistindo
+- Interface estilo streaming premium
+
+Criar um novo projeto Android pronto para gerar APK.
+
+RESULTADO ESPERADO: implemente integralmente a alteração solicitada e preserve funcionalidades não relacionadas.
 
 ## Stack
 - Kotlin + Jetpack Compose
 - AndroidX Media3 / ExoPlayer (HLS, MP4 com seek/range, MPEG-TS)
 - OkHttp (User-Agent configurável, HTTP e HTTPS, aceita certificado self-signed)
+- Retrofit + OkHttp para comunicação com API Xtream e Stream Monitor
 
-## O que a APK faz
-1. Tela de login Xtream: DNS, usuário, senha, User-Agent (presets NEW e UNIPLAY já preenchidos)
-2. Botão "Rodar teste" executa, direto do dispositivo:
-   - `player_api.php` → `LOGIN_OK` / `LOGIN_FAIL`
-   - categorias + canais + filmes + séries → `API_OK`
-   - 1 canal ao vivo (tenta `.m3u8`, cai para `.ts`) → `LIVE_OK`
-   - 1 filme (usa o `container_extension` real, valida Range 206) → `MOVIE_OK`
-   - 1 episódio de série → `SERIES_OK`
-3. Cada passo registra `HTTP_STATUS`, Content-Type, tempo de resposta e o motivo exato da falha
-4. Botões TV / Filme / Episódio abrem o ExoPlayer com seek, retomada e troca de qualidade HLS
-
-Logs aparecem na tela (copiáveis) e no Logcat sob a tag `SMPROBE`. Senha nunca é logada.
+## Estrutura do Projeto
+1. Tela de login Xtream simplificada: resolução automática de DNS e validação de licença.
+2. Integração com Xtream:
+   - Login e carregamento de categorias
+   - Listagem de canais ao vivo, filmes e séries com posters
+   - Player ExoPlayer otimizado para HLS e Range Requests
+3. Interface Premium OTT: Estilo Netflix/Disney+, Mobile-first e compatível com Android TV.
 
 ## Build da APK
-
-Requer JDK 17 + Android SDK (Android Studio ou command line tools):
-
+Requer JDK 17 + Android SDK:
 ```bash
 cd android-mvp
-./gradlew assembleDebug        # gera app/build/outputs/apk/debug/app-debug.apk
-# ou
-./gradlew assembleRelease
+./gradlew assembleDebug
 ```
 
-No Android Studio: `File > Open` → pasta `android-mvp` → `Build > Build APK(s)`.
-
-> O wrapper do Gradle não está versionado aqui. Rode `gradle wrapper --gradle-version 8.7`
-> uma vez (ou abra no Android Studio, que gera o wrapper automaticamente).
-
-## Como validar a hipótese
-Instale a APK e rode o teste **duas vezes** em cada servidor:
-1. Com o celular no **Wi-Fi residencial**
-2. Com o celular no **4G/5G da operadora**
-
-Se `LOGIN_OK` aparecer em qualquer um dos dois, está confirmado que o bloqueio é por
-IP de datacenter e que a arquitetura "vídeo direto pelo dispositivo" resolve NEW/UNIPLAY
-sem proxy residencial pago.
