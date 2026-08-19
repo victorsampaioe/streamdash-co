@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ShieldCheck, UserCheck, Clock, Ban, CheckCircle2, AlertCircle } from "lucide-react";
+import { ShieldCheck, UserCheck, Clock, Ban, CheckCircle2 } from "lucide-react";
 import { z } from "zod";
 
 const searchSchema = z.object({
@@ -48,7 +48,6 @@ function AndroidPlayAdminPage() {
         .update({ 
           status, 
           updated_at: new Date().toISOString(),
-          // Se ativar, garantir que tem data de expiração se for nula
           ...(status === 'active' ? { expires_at: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString() } : {})
         })
         .eq("id", id);
@@ -84,7 +83,7 @@ function AndroidPlayAdminPage() {
 
       <Tabs 
         value={tab} 
-        onValueChange={(val) => navigate({ search: (prev) => ({ ...prev, tab: val as any }) })}
+        onValueChange={(val) => navigate({ search: (prev: any) => ({ ...prev, tab: val as any }) })}
         className="space-y-6"
       >
         <TabsList className="bg-neutral-900 border border-white/5">
@@ -119,8 +118,8 @@ function AndroidPlayAdminPage() {
                       <TableRow key={l.id} className="border-white/5 hover:bg-white/5">
                         <TableCell className="font-medium">
                           <div className="flex flex-col">
-                            <span>{l.profiles?.full_name || 'Sem nome'}</span>
-                            <span className="text-xs text-muted-foreground">{l.profiles?.email}</span>
+                            <span>{(l.profiles as any)?.full_name || 'Sem nome'}</span>
+                            <span className="text-xs text-muted-foreground">{(l.profiles as any)?.email}</span>
                           </div>
                         </TableCell>
                         <TableCell>{getStatusBadge(l.status)}</TableCell>
@@ -157,13 +156,6 @@ function AndroidPlayAdminPage() {
                         </TableCell>
                       </TableRow>
                     ))}
-                    {licenses?.filter(l => l.status !== 'pending').length === 0 && (
-                      <TableRow>
-                        <TableCell colSpan={5} className="text-center py-12 text-muted-foreground italic">
-                          Nenhuma licença processada encontrada.
-                        </TableCell>
-                      </TableRow>
-                    )}
                   </TableBody>
                 </Table>
               </div>
@@ -192,8 +184,8 @@ function AndroidPlayAdminPage() {
                       <TableRow key={l.id} className="border-white/5 hover:bg-white/5">
                         <TableCell className="font-medium">
                           <div className="flex flex-col">
-                            <span>{l.profiles?.full_name || 'Sem nome'}</span>
-                            <span className="text-xs text-muted-foreground">{l.profiles?.email}</span>
+                            <span>{(l.profiles as any)?.full_name || 'Sem nome'}</span>
+                            <span className="text-xs text-muted-foreground">{(l.profiles as any)?.email}</span>
                           </div>
                         </TableCell>
                         <TableCell className="text-sm">
@@ -220,16 +212,6 @@ function AndroidPlayAdminPage() {
                         </TableCell>
                       </TableRow>
                     ))}
-                    {licenses?.filter(l => l.status === 'pending').length === 0 && (
-                      <TableRow>
-                        <TableCell colSpan={3} className="text-center py-12">
-                          <div className="flex flex-col items-center gap-2 text-muted-foreground">
-                            <CheckCircle2 className="h-8 w-8 text-green-500/50" />
-                            <p>Tudo em dia! Nenhuma solicitação pendente.</p>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    )}
                   </TableBody>
                 </Table>
               </div>
