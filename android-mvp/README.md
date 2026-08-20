@@ -1,49 +1,44 @@
 # Stream Monitor Play
 
-INSTRUÇÃO PRINCIPAL — ALTERAÇÃO EXPLICITAMENTE SOLICITADA
-O usuário pediu uma mudança real no projeto. Implemente diretamente o pedido, sem transformar a execução em uma simples explicação.
-Não invente requisitos. Preserve tudo que não fizer parte do pedido.
-Inspecione os arquivos/componentes responsáveis antes de editar e execute somente as mudanças necessárias.
-Não pare aguardando aprovação de um plano quando a alteração puder ser executada diretamente.
+INSTRUÇÃO PRINCIPAL — RESPONDA, NÃO ALTERE O PROJETO
+Esta solicitação é uma consulta, pergunta, análise ou pedido de relatório para ser respondido na conversa.
+NÃO crie página, componente, rota, dashboard, relatório persistente, tabela de interface ou nova funcionalidade para responder.
+NÃO edite arquivos nem modifique código, banco, configurações ou estrutura do projeto.
+Use o projeto e os dados já existentes apenas para INSPECIONAR/CONSULTAR o que for necessário.
+Se o usuário pedir um relatório, gere o RELATÓRIO NA RESPOSTA usando os dados existentes; não transforme isso em uma página.
+Se ele pedir uma contagem, valor, lista, status ou informação, encontre o dado real disponível e responda diretamente.
+Não invente dados. Se não houver acesso suficiente para confirmar algo, diga claramente o que não pôde ser verificado.
+Não pare em modo plano e não proponha implementação, pois nenhuma alteração foi solicitada.
 
 PEDIDO ORIGINAL DO USUÁRIO:
-O projeto Android foi recriado com o novo layout do Stream Monitor Play.
+O ProbeRunner.kt foi corrigido, porém o build ainda falha.
 
-O APK não compila porque ficaram arquivos antigos de uma implementação anterior.
+Novo erro:
 
-Corrija totalmente a estrutura Kotlin.
+app/src/main/res/drawable/splash_screen.xml:3
+Android resource linking failed (AAPT)
 
-Erro atual:
+Preciso que você corrija todos os recursos Android restantes.
 
-ProbeRunner.kt:
-- Unresolved reference XtreamCreds
-- Unresolved reference XtreamClient
-- Unresolved reference userAgent
-- Unresolved reference optJSONObject
+Verifique:
 
-Não quero apenas criar arquivos vazios para sumir o erro.
+- splash_screen.xml
+- colors.xml
+- themes.xml
+- drawable resources
+- referências @color e @drawable
 
-Faça uma revisão completa:
+Não altere o layout OTT novo.
 
-1. Remova código antigo do ProbeRunner.kt que pertence ao protótipo anterior.
-2. Reestruture o monitor/probe usando a arquitetura atual do novo layout.
-3. Garanta que todas as classes chamadas existam:
-   - models
-   - network
-   - player
-   - monitor
-   - data
+Faça o projeto compilar completamente.
 
-4. Rode o build Android e corrija todos os erros até ficar:
+Execute uma validação final:
 
 BUILD SUCCESSFUL
 
-5. Não altere o layout novo do Stream Monitor Play.
-6. Não mexa no design, apenas deixe o projeto compilando e funcionando.
+Somente finalize quando o APK debug conseguir ser gerado sem nenhum erro.
 
-O objetivo final é gerar APK debug sem nenhum erro.
-
-RESULTADO ESPERADO: implemente integralmente a alteração solicitada e preserve funcionalidades não relacionadas.
+RESULTADO ESPERADO: responda ao usuário no chat e encerre sem alterar o projeto.
 
 ## Stack
 - Kotlin + Jetpack Compose
