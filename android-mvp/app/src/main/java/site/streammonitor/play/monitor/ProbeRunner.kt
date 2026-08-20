@@ -2,6 +2,8 @@ package site.streammonitor.play.monitor
 
 import org.json.JSONArray
 import org.json.JSONObject
+import site.streammonitor.play.data.XtreamClient
+import site.streammonitor.play.data.XtreamCreds
 
 data class ProbeResult(
     val loginOk: Boolean = false,
@@ -25,9 +27,13 @@ object ProbeRunner {
         // 1. LOGIN
         val login = c.login()
         ProbeLog.log("HTTP_STATUS", "player_api.php -> ${login.status} ct=${login.contentType} err=${login.error ?: "-"}", login.ms)
-        val authOk = try {
-            JSONObject(login.body ?: "").optJSONObject("user_info")?.optInt("auth", 0) == 1
-        } catch (_: Exception) { false }
+        
+        val bodyStr = login.body
+        val authOk = if (bodyStr != null) {
+            try {
+                JSONObject(bodyStr).optJSONObject("user_info")?.optInt("auth", 0) == 1
+            } catch (_: Exception) { false }
+        } else false
 
         if (!authOk) {
             val reason = when {
