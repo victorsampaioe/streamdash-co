@@ -7,65 +7,232 @@ Inspecione os arquivos/componentes responsáveis antes de editar e execute somen
 Não pare aguardando aprovação de um plano quando a alteração puder ser executada diretamente.
 
 PEDIDO ORIGINAL DO USUÁRIO:
-Precisamos refazer o APK do Stream Monitor Play Android usando o novo layout/interface, não quero voltar para o projeto antigo.
+FINALIZAÇÃO DO STREAM MONITOR PLAY ANDROID — MANTER LAYOUT NOVO
 
-O projeto anterior já existia, mas ficou com arquivos inconsistentes. Agora quero uma nova versão organizada baseada no novo design.
+Preciso que você continue o projeto Android atual e finalize ele.
 
-Objetivo:
+Atenção: não quero voltar para o MVP antigo e não quero recriar aquele projeto simples.
 
-Criar o APK Android do Stream Monitor Play com:
+O que eu quero é exatamente o projeto com o novo layout do Stream Monitor Play, porém com todos os erros corrigidos e compilando perfeitamente.
 
-Novo Layout
-Interface moderna igual ao conceito do Stream Monitor Play
-Tela inicial profissional
-Logo Stream Monitor
-Design dark premium
-Cards modernos
-Animações leves
-Preparado para virar aplicativo oficial
-Primeira versão funcional:
+O projeto já teve uma versão MVP validada em dispositivo real, funcionando com:
 
-Tela Login:
+Login Xtream;
+Conexão direta com servidor IPTV;
+Media3 / ExoPlayer;
+HLS;
+MP4;
+MPEG-TS;
+Range / Seek;
+Retomar reprodução;
+Compatibilidade validada com servidores como UNIPLAY.
 
-DNS
+Essa base técnica não pode ser quebrada.
+
+O objetivo agora é:
+
+Pegar o projeto novo, manter o design novo e corrigir toda a parte técnica até gerar APK.
+
+NÃO FAZER
+
+❌ Não criar outro aplicativo do zero.
+❌ Não voltar para a interface antiga.
+❌ Não remover funcionalidades já criadas.
+❌ Não substituir o player funcional por outro teste.
+❌ Não parar no primeiro erro encontrado.
+
+Fazer uma análise completa.
+
+Corrigir todos os problemas atuais
+
+O projeto atualmente apresenta erros como:
+
+Android resource linking failed;
+problemas no splash_screen.xml;
+erros Kotlin;
+referências quebradas;
+imports faltando;
+classes não encontradas;
+dependências incompatíveis;
+erros de compilação.
+
+Fazer uma varredura completa no projeto.
+
+Só finalizar quando estiver:
+
+✅ Gradle BUILD SUCCESSFUL
+✅ Nenhum erro vermelho no Android Studio
+✅ APK Debug gerado
+✅ Aplicativo abrindo normalmente
+
+Manter a nova arquitetura
+
+Organizar sem quebrar:
+
+data
+network
+domain
+ui
+player
+monitor
+
+A reprodução continua fora do Core:
+
+Android → servidor IPTV diretamente.
+
+O Stream Monitor fica responsável por:
+
+autenticação;
+identificação do servidor;
+licença;
+status;
+monitoramento;
+identidade do revendedor.
+Aplicativo final
+
+Nome:
+
+Stream Monitor Play
+
+Antes do login:
+
+Logo Stream Monitor;
+Splash profissional.
+
+Depois do login:
+
+Carregar automaticamente:
+
+logo do revendedor;
+nome do revendedor;
+identidade visual;
+"Powered by Stream Monitor" discreto.
+
+O cliente não deve ver:
+
+DNS;
+IP;
+player_api;
+configurações técnicas;
+servidores internos.
+Login novo
+
+A tela deve mostrar somente:
+
 Usuário
 Senha
-Seleção de servidor:
-NEW
-UNIPLAY
 
-Após login:
+O sistema faz:
 
-Mostrar tela de diagnóstico:
+Usuário + senha → identifica servidor autorizado → identifica revendedor → valida licença → libera catálogo.
 
-Status do servidor
-Login aprovado ou erro
-Tempo de resposta
-Informações da conexão
+Licença Stream Monitor Play
 
-Estrutura preparada para adicionar depois:
+A liberação deve depender do servidor:
+
+cliente → server_id → reseller_id → licença ativa.
+
+Sem licença:
+
+mostrar mensagem amigável.
+
+Nunca confiar somente no APK.
+
+Tela de status antes do catálogo
+
+Antes de carregar conteúdo:
+
+Mostrar:
+
+🟢 Serviço funcionando normalmente
+
+🟡 Instabilidade detectada
+
+🔴 Serviço indisponível
+
+Nunca mostrar tela preta ou erro técnico.
+
+Layout novo
+
+Manter o design profissional:
+
+tema escuro;
+estilo streaming premium;
+preparado para Android TV;
+controle remoto;
+celular;
+navegação fluida.
+
+Estrutura:
+
+Home:
+
+Destaques;
+Continuar assistindo;
+Filmes;
+Séries;
+TV ao vivo;
+Minha Lista;
+Busca.
+
+Não carregar milhares de conteúdos de uma vez.
+
+Usar:
+
+paginação;
+lazy loading;
+cache;
+carregamento sob demanda.
+Filmes e Séries
+
+Filmes:
+
+capa;
+backdrop;
+descrição;
+ano;
+gênero;
+duração;
+assistir.
+
+Séries:
+
+temporadas;
+episódios;
+progresso;
+próximo episódio.
+
+Usar o player que já existe.
 
 TV ao vivo
-Filmes
-Séries
-Player ExoPlayer
-Catálogo com capas
-Integração com Stream Monitor
-Importante:
+Categorias;
+canais;
+favoritos;
+troca rápida;
+EPG quando disponível.
+Performance
 
-Não reaproveitar arquivos quebrados do MVP antigo.
+O aplicativo precisa ser leve:
 
-Criar uma nova base Android limpa usando o novo layout.
+Coil/cache imagens;
+cancelar carregamentos fora da tela;
+evitar carregar catálogo inteiro;
+evitar travamentos.
+Depois de corrigir
 
-Antes de entregar:
+Executar:
 
-Abrir no Android Studio
-Rodar build
-Corrigir todos os erros
-Confirmar BUILD SUCCESSFUL
-Gerar APK debug funcionando
+Clean Project
+Rebuild Project
+Generate APK Debug
 
-Quero primeiro uma versão bonita e funcionando com login + diagnóstico. Depois evoluímos para catálogo e player.
+E me informar:
+
+se compilou;
+onde está o APK;
+quais erros foram corrigidos.
+
+Resumo: não quero um novo MVP. Quero o Stream Monitor Play com o layout novo que já foi criado, apenas totalmente corrigido e pronto para gerar APK.
 
 RESULTADO ESPERADO: implemente integralmente a alteração solicitada e preserve funcionalidades não relacionadas.
 
