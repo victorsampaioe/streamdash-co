@@ -7,26 +7,65 @@ Inspecione os arquivos/componentes responsáveis antes de editar e execute somen
 Não pare aguardando aprovação de um plano quando a alteração puder ser executada diretamente.
 
 PEDIDO ORIGINAL DO USUÁRIO:
-O projeto android-mvp atual é apenas um teste técnico.
+Precisamos refazer o APK do Stream Monitor Play Android usando o novo layout/interface, não quero voltar para o projeto antigo.
 
-Quero criar agora o aplicativo Android oficial Stream Monitor Play.
+O projeto anterior já existia, mas ficou com arquivos inconsistentes. Agora quero uma nova versão organizada baseada no novo design.
 
-Não criar um Probe.
+Objetivo:
 
-Criar um app Android completo usando Kotlin + Jetpack Compose contendo:
+Criar o APK Android do Stream Monitor Play com:
 
-- Tela inicial com logo Stream Monitor Play
-- Login por usuário e senha
-- Integração com API Xtream
-- Carregar categorias de TV, filmes e séries
-- Lista com capas
-- Detalhes do conteúdo
-- Player usando ExoPlayer
-- Suporte HLS (.m3u8)
-- Histórico continuar assistindo
-- Interface estilo streaming premium
+Novo Layout
+Interface moderna igual ao conceito do Stream Monitor Play
+Tela inicial profissional
+Logo Stream Monitor
+Design dark premium
+Cards modernos
+Animações leves
+Preparado para virar aplicativo oficial
+Primeira versão funcional:
 
-Criar um novo projeto Android pronto para gerar APK.
+Tela Login:
+
+DNS
+Usuário
+Senha
+Seleção de servidor:
+NEW
+UNIPLAY
+
+Após login:
+
+Mostrar tela de diagnóstico:
+
+Status do servidor
+Login aprovado ou erro
+Tempo de resposta
+Informações da conexão
+
+Estrutura preparada para adicionar depois:
+
+TV ao vivo
+Filmes
+Séries
+Player ExoPlayer
+Catálogo com capas
+Integração com Stream Monitor
+Importante:
+
+Não reaproveitar arquivos quebrados do MVP antigo.
+
+Criar uma nova base Android limpa usando o novo layout.
+
+Antes de entregar:
+
+Abrir no Android Studio
+Rodar build
+Corrigir todos os erros
+Confirmar BUILD SUCCESSFUL
+Gerar APK debug funcionando
+
+Quero primeiro uma versão bonita e funcionando com login + diagnóstico. Depois evoluímos para catálogo e player.
 
 RESULTADO ESPERADO: implemente integralmente a alteração solicitada e preserve funcionalidades não relacionadas.
 
