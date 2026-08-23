@@ -233,8 +233,8 @@ export const getResellerStats = createServerFn({ method: "GET" })
         .from("payments")
         .select("amount_cents")
         .eq("status", "approved")
-        .in("plan_id", planIds);
-      
+        .in("plan", planIds);
+
       revenue = payments?.reduce((sum, p) => sum + p.amount_cents, 0) || 0;
     }
 
