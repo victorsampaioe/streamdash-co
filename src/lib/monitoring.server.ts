@@ -255,9 +255,12 @@ async function performCheck(server: ServerRow) {
     lastKnownIp,
     regionConsensus,
     shouldDeclareOffline,
+    activeRegionCount,
+    OFFLINE_MIN_FAILURES_SINGLE_REGION,
     recheckDelaySeconds,
     computePriority,
   } = await import("./monitor-state.server");
+
 
   // O nome DNS falhou? Isso NÃO significa servidor offline: verificamos o
   // serviço real (HTTP/HTTPS/player_api) inclusive pelo último IP conhecido.
