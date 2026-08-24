@@ -523,7 +523,7 @@ export async function runDnsCheck(serverId: string): Promise<{ ok: boolean; scor
       dns_failure_count: failures,
       dns_last_success_at: resolved ? report.checked_at : (srv?.dns_last_success_at ?? null),
       dns_last_failure_at: resolved ? (srv?.dns_last_failure_at ?? null) : report.checked_at,
-      dns_regions: report.records ? { records: report.records.length } : null,
+      dns_regions: { types: Object.keys(report.records ?? {}) },
       ...(changed ? { dns_state_changed_at: report.checked_at } : {}),
     } as any)
     .eq("id", serverId);
