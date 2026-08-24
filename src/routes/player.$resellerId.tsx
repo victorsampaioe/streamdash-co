@@ -86,21 +86,36 @@ const SMART_LOADING_MESSAGES = [
 
 
 export const Route = createFileRoute("/player/$resellerId")({
-  loader: async ({ params, context }) => {
+  loader: async ({ params }) => {
     const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(params.resellerId);
-    
-    // Se for UUID, busca por profileId. Se não for, busca por slug.
-    const settings = await getPlayerSettings({ 
-      data: isUuid ? { profileId: params.resellerId } : { slug: params.resellerId } 
-    });
-    
-    if (!settings) {
+
+    try {
+      // Se for UUID, busca por profileId. Se não for, busca por slug.
+      const settings = await getPlayerSettings({
+        data: isUuid ? { profileId: params.resellerId } : { slug: params.resellerId },
+      });
+      return { settings: settings ?? null };
+    } catch {
+      // Falhas temporárias de rede/edge não devem derrubar a página inteira
       return { settings: null };
     }
-    return { settings };
   },
   component: PlayerPage,
+  errorComponent: () => (
+    <div className="min-h-screen bg-neutral-950 flex flex-col items-center justify-center p-6 text-center">
+      <h1 className="text-2xl font-bold text-white mb-2">Não foi possível carregar o player</h1>
+      <p className="text-white/60 max-w-md mb-8">Tente novamente em alguns instantes.</p>
+      <a href="/" className="text-white/80 underline">Voltar para o Início</a>
+    </div>
+  ),
+  notFoundComponent: () => (
+    <div className="min-h-screen bg-neutral-950 flex flex-col items-center justify-center p-6 text-center">
+      <h1 className="text-2xl font-bold text-white mb-2">Página não encontrada</h1>
+      <a href="/" className="text-white/80 underline">Voltar para o Início</a>
+    </div>
+  ),
 });
+
 
 function PlayerPage() {
   const navigate = useNavigate();
