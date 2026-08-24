@@ -29,6 +29,7 @@ fun PlayerBox(url: String, userAgent: String, modifier: Modifier = Modifier) {
     val context = LocalContext.current
 
     val player = remember(url, userAgent) {
+      try {
         val ok = OkHttpClient.Builder()
             .connectTimeout(15, TimeUnit.SECONDS)
             .readTimeout(25, TimeUnit.SECONDS)
@@ -62,9 +63,15 @@ fun PlayerBox(url: String, userAgent: String, modifier: Modifier = Modifier) {
                 prepare()
                 playWhenReady = true
             }
+      } catch (t: Throwable) {
+          ProbeLog.log("PLAYER_FAIL", "init: ${t.javaClass.simpleName}: ${t.message}")
+          null
+      }
     }
 
-    DisposableEffect(player) { onDispose { player.release() } }
+    if (player == null) return
+
+    DisposableEffect(player) { onDispose { runCatching { player.release() } } }
 
     AndroidView(
         modifier = modifier,
