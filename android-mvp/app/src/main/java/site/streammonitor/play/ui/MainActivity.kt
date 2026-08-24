@@ -42,6 +42,13 @@ private val USER_AGENTS = listOf(
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
+        // Registra as falhas não tratadas no Logcat (tag SMPROBE) antes de encerrar,
+        // para que qualquer crash residual fique rastreável.
+        val previous = Thread.getDefaultUncaughtExceptionHandler()
+        Thread.setDefaultUncaughtExceptionHandler { thread, throwable ->
+            Log.e(ProbeLog.TAG, "UNCAUGHT em ${thread.name}: ${throwable.javaClass.simpleName}: ${throwable.message}", throwable)
+            previous?.uncaughtException(thread, throwable)
+        }
         super.onCreate(savedInstanceState)
         setContent { MaterialTheme(colorScheme = darkColorScheme()) { Surface { ProbeScreen() } } }
     }
