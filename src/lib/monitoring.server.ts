@@ -255,9 +255,12 @@ async function performCheck(server: ServerRow) {
     lastKnownIp,
     regionConsensus,
     shouldDeclareOffline,
+    activeRegionCount,
+    OFFLINE_MIN_FAILURES_SINGLE_REGION,
     recheckDelaySeconds,
     computePriority,
   } = await import("./monitor-state.server");
+
 
   // O nome DNS falhou? Isso NÃO significa servidor offline: verificamos o
   // serviço real (HTTP/HTTPS/player_api) inclusive pelo último IP conhecido.
@@ -313,16 +316,22 @@ async function performCheck(server: ServerRow) {
       const ratio = fails / all.length;
       final = burst[burst.length - 1] ?? first;
       const consensus = await regionConsensus(server.id).catch(() => ({ failedRegions: [], okRegions: [] }));
+      const activeRegions = await activeRegionCount().catch(() => 1);
       const confirmedByRules = shouldDeclareOffline(
         server.consecutive_failures + fails,
         consensus.failedRegions.length,
+        activeRegions,
       );
       if (ratio >= DOWN_CONFIRM_RATIO && confirmedByRules) {
         downConfirmed = true;
         displayStatus = "down";
         confirmNote =
           `${fails}/${all.length} verificações falharam em ~2min` +
+          (activeRegions >= 2
+            ? ` · ${activeRegions} regiões ativas`
+            : ` · 1 região ativa (regra: ${OFFLINE_MIN_FAILURES_SINGLE_REGION} falhas consecutivas)`) +
           (consensus.failedRegions.length ? ` · regiões: ${consensus.failedRegions.join(", ")}` : "");
+
       } else {
         // Instabilidade isolada -> degradado, mas não muda status base se era UP
         displayStatus = wasDown ? "down" : "degraded";

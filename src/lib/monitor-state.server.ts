@@ -223,10 +223,60 @@ export async function regionConsensus(serverId: string, windowMinutes = 10) {
 
 /** Confirmação exigida antes de declarar OFFLINE. */
 export const OFFLINE_MIN_FAILURES = 2;
+/** Com um único agente/região não há consenso geográfico: exigimos mais falhas. */
+export const OFFLINE_MIN_FAILURES_SINGLE_REGION = 3;
 
-export function shouldDeclareOffline(consecutiveFailures: number, failedRegions: number): boolean {
-  return consecutiveFailures >= OFFLINE_MIN_FAILURES || failedRegions >= 2;
+/**
+ * Quantos agentes/regiões estão realmente reportando agora.
+ * Considera agentes VPS habilitados vistos recentemente e regiões que
+ * enviaram checagens na janela. Nunca retorna menos de 1 (a origem).
+ */
+export async function activeRegionCount(windowMinutes = 15): Promise<number> {
+  const since = new Date(Date.now() - windowMinutes * 60_000).toISOString();
+  const regions = new Set<string>();
+
+  try {
+    const { data } = await (supabaseAdmin as any)
+      .from("region_agents")
+      .select("region_code, enabled, last_seen_at")
+      .eq("enabled", true)
+      .gte("last_seen_at", since);
+    for (const a of data ?? []) if (a?.region_code) regions.add(String(a.region_code));
+  } catch {
+    /* tabela indisponível: segue com o que houver */
+  }
+
+  try {
+    const { data } = await supabaseAdmin
+      .from("region_checks")
+      .select("region_code")
+      .gte("checked_at", since)
+      .limit(2000);
+    for (const r of data ?? []) if ((r as any)?.region_code) regions.add(String((r as any).region_code));
+  } catch {
+    /* idem */
+  }
+
+  regions.delete("origin");
+  return Math.max(1, regions.size);
 }
+
+/**
+ * Regra dinâmica de confirmação de offline.
+ * - Múltiplas regiões ativas: 2 regiões falhando OU 2 falhas consecutivas.
+ * - Uma única região/agente: exige 3 falhas consecutivas.
+ */
+export function shouldDeclareOffline(
+  consecutiveFailures: number,
+  failedRegions: number,
+  activeRegions = 1,
+): boolean {
+  if (activeRegions >= 2) {
+    return consecutiveFailures >= OFFLINE_MIN_FAILURES || failedRegions >= 2;
+  }
+  return consecutiveFailures >= OFFLINE_MIN_FAILURES_SINGLE_REGION;
+}
+
 
 /** Backoff de recheck para servidores com problema (em segundos). */
 export function recheckDelaySeconds(status: ServerStatus | DnsStatus, failures: number, normal: number): number {
