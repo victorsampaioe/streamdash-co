@@ -134,15 +134,22 @@ private fun ProbeScreen() {
                 )
                 scope.launch {
                     try {
-                        val r = withContext(Dispatchers.IO) { ProbeRunner.run(creds) }
+                        val r = withContext(Dispatchers.IO) {
+                            try {
+                                ProbeRunner.run(creds)
+                            } catch (t: Throwable) {
+                                ProbeLog.log("FATAL", "${t.javaClass.simpleName}: ${t.message}")
+                                ProbeResult(summary = "FATAL: ${t.javaClass.simpleName}: ${t.message}")
+                            }
+                        }
                         result = r
                         if (!r.loginOk) {
                             error = r.summary
                         } else {
                             playUrl = r.liveUrl ?: r.movieUrl ?: r.episodeUrl
                         }
-                    } catch (e: Exception) {
-                        error = "${e.javaClass.simpleName}: ${e.message}"
+                    } catch (t: Throwable) {
+                        error = "${t.javaClass.simpleName}: ${t.message}"
                         ProbeLog.log("FATAL", error!!)
                     } finally {
                         running = false
