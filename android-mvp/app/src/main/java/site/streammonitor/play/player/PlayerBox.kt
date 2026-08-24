@@ -1,7 +1,6 @@
 package site.streammonitor.play.player
 
 import androidx.compose.runtime.Composable
-import site.streammonitor.play.monitor.ProbeLog
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
@@ -17,6 +16,7 @@ import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
 import androidx.media3.ui.PlayerView
 import okhttp3.OkHttpClient
+import site.streammonitor.play.monitor.ProbeLog
 import java.util.concurrent.TimeUnit
 
 /**
