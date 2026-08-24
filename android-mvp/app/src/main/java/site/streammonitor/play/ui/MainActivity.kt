@@ -9,13 +9,21 @@ import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import site.streammonitor.play.data.XtreamClient
+import site.streammonitor.play.data.XtreamCreds
+import site.streammonitor.play.monitor.ProbeLog
+import site.streammonitor.play.monitor.ProbeResult
+import site.streammonitor.play.monitor.ProbeRunner
+import site.streammonitor.play.player.PlayerBox
 
 private data class Preset(val label: String, val dns: String, val user: String, val pass: String)
 
@@ -39,28 +47,50 @@ class MainActivity : ComponentActivity() {
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun ProbeScreen() {
+    var dns by remember { mutableStateOf(PRESETS[0].dns) }
     var user by remember { mutableStateOf("") }
     var pass by remember { mutableStateOf("") }
+    var uaIndex by remember { mutableIntStateOf(0) }
     var running by remember { mutableStateOf(false) }
-    var result by remember { mutableStateOf<String?>(null) }
+    var result by remember { mutableStateOf<ProbeResult?>(null) }
     var error by remember { mutableStateOf<String?>(null) }
+    var playUrl by remember { mutableStateOf<String?>(null) }
     val scope = rememberCoroutineScope()
+    val userAgent = USER_AGENTS[uaIndex]
 
     Column(
         Modifier.fillMaxSize().padding(24.dp).verticalScroll(rememberScrollState()),
-        verticalArrangement = Arrangement.Center,
-        horizontalAlignment = androidx.compose.ui.Alignment.CenterHorizontally
+        horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        // Branding oficial Stream Monitor Play
+        Spacer(Modifier.height(24.dp))
         Text("Stream Monitor Play", style = MaterialTheme.typography.headlineMedium, color = MaterialTheme.colorScheme.primary)
         Spacer(Modifier.height(8.dp))
         Text("Acesse seu conteúdo premium", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        
-        Spacer(Modifier.height(32.dp))
+        Spacer(Modifier.height(24.dp))
 
+        // Presets rápidos
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            PRESETS.forEach { p ->
+                OutlinedButton(
+                    onClick = { dns = p.dns; user = p.user; pass = p.pass },
+                    modifier = Modifier.weight(1f),
+                    enabled = !running
+                ) { Text(p.label) }
+            }
+        }
+
+        Spacer(Modifier.height(16.dp))
+
+        OutlinedTextField(
+            value = dns,
+            onValueChange = { dns = it },
+            label = { Text("DNS / Servidor") },
+            singleLine = true,
+            modifier = Modifier.fillMaxWidth()
+        )
+        Spacer(Modifier.height(12.dp))
         OutlinedTextField(
             value = user,
             onValueChange = { user = it },
@@ -68,32 +98,52 @@ private fun ProbeScreen() {
             singleLine = true,
             modifier = Modifier.fillMaxWidth()
         )
-        Spacer(Modifier.height(16.dp))
+        Spacer(Modifier.height(12.dp))
         OutlinedTextField(
             value = pass,
             onValueChange = { pass = it },
             label = { Text("Senha") },
-            visualTransformation = androidx.compose.ui.text.input.PasswordVisualTransformation(),
+            visualTransformation = PasswordVisualTransformation(),
             singleLine = true,
             modifier = Modifier.fillMaxWidth()
         )
 
-        Spacer(Modifier.height(24.dp))
+        Spacer(Modifier.height(12.dp))
+        Text("User-Agent: $userAgent", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Spacer(Modifier.height(4.dp))
+        TextButton(
+            onClick = { uaIndex = (uaIndex + 1) % USER_AGENTS.size },
+            enabled = !running
+        ) { Text("Trocar User-Agent") }
+
+        Spacer(Modifier.height(16.dp))
 
         Button(
-            enabled = !running && user.isNotBlank() && pass.isNotBlank(),
+            enabled = !running && dns.isNotBlank() && user.isNotBlank() && pass.isNotBlank(),
             onClick = {
                 running = true
                 error = null
                 result = null
+                playUrl = null
+                ProbeLog.clear()
+                val creds = XtreamCreds(
+                    dns = XtreamClient.normalizeBase(dns),
+                    username = user.trim(),
+                    password = pass.trim(),
+                    userAgent = userAgent,
+                )
                 scope.launch {
-                    // O fluxo real chamará Retrofit -> StreamMonitorApi
-                    // Aqui simulamos a resolução automática da Fase 1
                     try {
-                        kotlinx.coroutines.delay(1500)
-                        result = "Servidor resolvido: NEW (newprivate.lat)"
+                        val r = withContext(Dispatchers.IO) { ProbeRunner.run(creds) }
+                        result = r
+                        if (!r.loginOk) {
+                            error = r.summary
+                        } else {
+                            playUrl = r.liveUrl ?: r.movieUrl ?: r.episodeUrl
+                        }
                     } catch (e: Exception) {
-                        error = e.message
+                        error = "${e.javaClass.simpleName}: ${e.message}"
+                        ProbeLog.log("FATAL", error!!)
                     } finally {
                         running = false
                     }
@@ -113,13 +163,33 @@ private fun ProbeScreen() {
             Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
         }
 
-        result?.let {
+        result?.takeIf { it.loginOk }?.let {
             Spacer(Modifier.height(16.dp))
-            Text(it, color = MaterialTheme.colorScheme.secondary, style = MaterialTheme.typography.bodyMedium)
+            Text("Login OK — ${it.summary}", color = MaterialTheme.colorScheme.secondary, style = MaterialTheme.typography.bodyMedium)
         }
 
-        Spacer(Modifier.height(48.dp))
+        playUrl?.let { url ->
+            Spacer(Modifier.height(16.dp))
+            Text("Reproduzindo: $url", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Spacer(Modifier.height(8.dp))
+            PlayerBox(url = url, userAgent = userAgent, modifier = Modifier.fillMaxWidth().height(220.dp))
+        }
+
+        if (ProbeLog.lines.isNotEmpty()) {
+            Spacer(Modifier.height(24.dp))
+            Text("Diagnóstico", style = MaterialTheme.typography.titleSmall)
+            Spacer(Modifier.height(8.dp))
+            SelectionContainer {
+                Column(Modifier.fillMaxWidth()) {
+                    ProbeLog.lines.forEach { line ->
+                        Text(line, fontFamily = FontFamily.Monospace, fontSize = 11.sp)
+                    }
+                }
+            }
+        }
+
+        Spacer(Modifier.height(32.dp))
         Text("Powered by Stream Monitor", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f))
+        Spacer(Modifier.height(24.dp))
     }
 }
-
