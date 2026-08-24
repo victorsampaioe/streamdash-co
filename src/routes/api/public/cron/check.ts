@@ -54,6 +54,7 @@ async function run() {
   const { migratePlaintextCredentials } = await import("@/lib/iptv-credentials.server");
   const { runDueContentScans } = await import("@/lib/content-monitor.server");
   const { syncServersPauseState } = await import("@/lib/service-status.server");
+  const { runMonitorSweep } = await import("@/lib/monitor-sweep.server");
 
   // Primeiro sincroniza o estado de pausa: contas expiradas ficam marcadas
   // como pausadas e contas reativadas voltam sozinhas para o monitoramento.
@@ -72,6 +73,13 @@ async function run() {
   const expiryNotice = await safe("expiryNotice", notifyExpiredAccessUsers, { sent: 0, skipped: 0 }, errors);
   // Rede de segurança: criptografa credenciais Xtream legadas em texto puro.
   const encrypted = await safe("encrypt", () => migratePlaintextCredentials(50), { migrated: 0 }, errors);
+  // Reconciliação: corrige estados errados e reenfileira servidores esquecidos.
+  const sweep = await safe(
+    "sweep",
+    () => runMonitorSweep("cron"),
+    { processed: 0, fixed: 0, requeued: 0, offlineFound: 0 } as any,
+    errors,
+  );
 
   return {
     ok: errors.length === 0,
@@ -89,6 +97,9 @@ async function run() {
     credentialsEncrypted: encrypted.migrated,
     contentServersScanned: contents.servers,
     contentsTested: contents.tested,
+    sweepProcessed: (sweep as any).processed ?? 0,
+    sweepFixed: (sweep as any).fixed ?? 0,
+    sweepRequeued: (sweep as any).requeued ?? 0,
     serversPaused: pauseSync.paused,
     serversResumed: pauseSync.resumed,
     ...(errors.length ? { errors } : {}),
