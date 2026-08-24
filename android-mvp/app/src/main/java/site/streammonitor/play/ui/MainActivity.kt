@@ -20,7 +20,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import site.streammonitor.play.data.XtreamClient
 import site.streammonitor.play.data.XtreamCreds
-import site.streammonitor.play.monitor.ProbeLog
+import site.streammonitor.play.core.logging.ProbeLog
 import site.streammonitor.play.monitor.ProbeResult
 import site.streammonitor.play.monitor.ProbeRunner
 import site.streammonitor.play.player.PlayerBox

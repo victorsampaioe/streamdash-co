@@ -16,7 +16,7 @@ import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
 import androidx.media3.ui.PlayerView
 import okhttp3.OkHttpClient
-import site.streammonitor.play.monitor.ProbeLog
+import site.streammonitor.play.core.logging.ProbeLog
 import java.util.concurrent.TimeUnit
 
 /**
