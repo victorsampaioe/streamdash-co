@@ -16,7 +16,7 @@ import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
 import androidx.media3.ui.PlayerView
 import okhttp3.OkHttpClient
-import site.streammonitor.play.monitor.ProbeLog
+import site.streammonitor.play.core.logging.ProbeLog
 import java.util.concurrent.TimeUnit
 
 /**
@@ -29,6 +29,7 @@ fun PlayerBox(url: String, userAgent: String, modifier: Modifier = Modifier) {
     val context = LocalContext.current
 
     val player = remember(url, userAgent) {
+      try {
         val ok = OkHttpClient.Builder()
             .connectTimeout(15, TimeUnit.SECONDS)
             .readTimeout(25, TimeUnit.SECONDS)
@@ -62,9 +63,15 @@ fun PlayerBox(url: String, userAgent: String, modifier: Modifier = Modifier) {
                 prepare()
                 playWhenReady = true
             }
+      } catch (t: Throwable) {
+          ProbeLog.log("PLAYER_FAIL", "init: ${t.javaClass.simpleName}: ${t.message}")
+          null
+      }
     }
 
-    DisposableEffect(player) { onDispose { player.release() } }
+    if (player == null) return
+
+    DisposableEffect(player) { onDispose { runCatching { player.release() } } }
 
     AndroidView(
         modifier = modifier,

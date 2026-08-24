@@ -1,6 +1,7 @@
 package site.streammonitor.play.ui
 
 import android.os.Bundle
+import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.*
@@ -20,7 +21,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import site.streammonitor.play.data.XtreamClient
 import site.streammonitor.play.data.XtreamCreds
-import site.streammonitor.play.monitor.ProbeLog
+import site.streammonitor.play.core.logging.ProbeLog
 import site.streammonitor.play.monitor.ProbeResult
 import site.streammonitor.play.monitor.ProbeRunner
 import site.streammonitor.play.player.PlayerBox
@@ -42,6 +43,13 @@ private val USER_AGENTS = listOf(
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
+        // Registra as falhas não tratadas no Logcat (tag SMPROBE) antes de encerrar,
+        // para que qualquer crash residual fique rastreável.
+        val previous = Thread.getDefaultUncaughtExceptionHandler()
+        Thread.setDefaultUncaughtExceptionHandler { thread, throwable ->
+            Log.e(ProbeLog.TAG, "UNCAUGHT em ${thread.name}: ${throwable.javaClass.simpleName}: ${throwable.message}", throwable)
+            previous?.uncaughtException(thread, throwable)
+        }
         super.onCreate(savedInstanceState)
         setContent { MaterialTheme(colorScheme = darkColorScheme()) { Surface { ProbeScreen() } } }
     }
@@ -126,23 +134,37 @@ private fun ProbeScreen() {
                 result = null
                 playUrl = null
                 ProbeLog.clear()
-                val creds = XtreamCreds(
-                    dns = XtreamClient.normalizeBase(dns),
-                    username = user.trim(),
-                    password = pass.trim(),
-                    userAgent = userAgent,
-                )
-                scope.launch {
+                val creds = try {
+                    XtreamCreds(
+                        dns = XtreamClient.normalizeBase(dns),
+                        username = user.trim(),
+                        password = pass.trim(),
+                        userAgent = userAgent,
+                    )
+                } catch (t: Throwable) {
+                    error = "${t.javaClass.simpleName}: ${t.message}"
+                    ProbeLog.log("FATAL", error!!)
+                    running = false
+                    null
+                }
+                if (creds != null) scope.launch {
                     try {
-                        val r = withContext(Dispatchers.IO) { ProbeRunner.run(creds) }
+                        val r = withContext(Dispatchers.IO) {
+                            try {
+                                ProbeRunner.run(creds)
+                            } catch (t: Throwable) {
+                                ProbeLog.log("FATAL", "${t.javaClass.simpleName}: ${t.message}")
+                                ProbeResult(summary = "FATAL: ${t.javaClass.simpleName}: ${t.message}")
+                            }
+                        }
                         result = r
                         if (!r.loginOk) {
                             error = r.summary
                         } else {
                             playUrl = r.liveUrl ?: r.movieUrl ?: r.episodeUrl
                         }
-                    } catch (e: Exception) {
-                        error = "${e.javaClass.simpleName}: ${e.message}"
+                    } catch (t: Throwable) {
+                        error = "${t.javaClass.simpleName}: ${t.message}"
                         ProbeLog.log("FATAL", error!!)
                     } finally {
                         running = false

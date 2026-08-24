@@ -1,5 +1,6 @@
 package site.streammonitor.play.monitor
 
+import site.streammonitor.play.core.logging.ProbeLog
 import org.json.JSONArray
 import org.json.JSONObject
 import site.streammonitor.play.data.XtreamClient
