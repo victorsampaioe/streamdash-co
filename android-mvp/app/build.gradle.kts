@@ -5,11 +5,11 @@ plugins {
 }
 
 android {
-    namespace = "site.streammonitor.probe"
+    namespace = "site.streammonitor.play"
     compileSdk = 34
 
     defaultConfig {
-        applicationId = "site.streammonitor.probe"
+        applicationId = "site.streammonitor.play"
         minSdk = 23
         targetSdk = 34
         versionCode = 1
