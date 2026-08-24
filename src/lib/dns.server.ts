@@ -494,7 +494,7 @@ export async function runDnsCheck(serverId: string): Promise<{ ok: boolean; scor
   }
 
   // ESTADO DO DNS — independente do estado do servidor.
-  const { data: srv } = await supabaseAdmin
+  const { data: dnsState } = await supabaseAdmin
     .from("servers")
     .select("dns_status, dns_failure_count, dns_last_success_at, dns_last_failure_at")
     .eq("id", serverId)
@@ -506,12 +506,12 @@ export async function runDnsCheck(serverId: string): Promise<{ ok: boolean; scor
     }>();
 
   const resolved = Boolean(report.primary_ip);
-  const failures = resolved ? 0 : (srv?.dns_failure_count ?? 0) + 1;
+  const failures = resolved ? 0 : (dnsState?.dns_failure_count ?? 0) + 1;
   let dnsStatus: "online" | "unstable" | "offline";
   if (resolved) dnsStatus = report.status === "ok" ? "online" : "unstable";
   else dnsStatus = failures >= 2 ? "offline" : "unstable";
 
-  const prevStatus = srv?.dns_status ?? "unknown";
+  const prevStatus = dnsState?.dns_status ?? "unknown";
   const changed = prevStatus !== dnsStatus;
 
   await supabaseAdmin
@@ -521,8 +521,8 @@ export async function runDnsCheck(serverId: string): Promise<{ ok: boolean; scor
       dns_health_score: report.health_score,
       dns_status: dnsStatus,
       dns_failure_count: failures,
-      dns_last_success_at: resolved ? report.checked_at : (srv?.dns_last_success_at ?? null),
-      dns_last_failure_at: resolved ? (srv?.dns_last_failure_at ?? null) : report.checked_at,
+      dns_last_success_at: resolved ? report.checked_at : (dnsState?.dns_last_success_at ?? null),
+      dns_last_failure_at: resolved ? (dnsState?.dns_last_failure_at ?? null) : report.checked_at,
       dns_regions: { types: Object.keys(report.records ?? {}) },
       ...(changed ? { dns_state_changed_at: report.checked_at } : {}),
     } as any)
