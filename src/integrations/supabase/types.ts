@@ -1369,6 +1369,7 @@ export type Database = {
           ended_at: string | null
           failure_count: number
           id: string
+          incident_type: string
           last_check_at: string | null
           notified: boolean
           reason: string | null
@@ -1381,6 +1382,7 @@ export type Database = {
           ended_at?: string | null
           failure_count?: number
           id?: string
+          incident_type?: string
           last_check_at?: string | null
           notified?: boolean
           reason?: string | null
@@ -1393,6 +1395,7 @@ export type Database = {
           ended_at?: string | null
           failure_count?: number
           id?: string
+          incident_type?: string
           last_check_at?: string | null
           notified?: boolean
           reason?: string | null
@@ -2607,6 +2610,54 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      monitor_sweeps: {
+        Row: {
+          errors: number
+          finished_at: string | null
+          fixed: number
+          id: string
+          notes: string | null
+          offline_found: number
+          processed: number
+          requeued: number
+          stale_reaped: number
+          started_at: string
+          status: string
+          total: number
+          trigger: string
+        }
+        Insert: {
+          errors?: number
+          finished_at?: string | null
+          fixed?: number
+          id?: string
+          notes?: string | null
+          offline_found?: number
+          processed?: number
+          requeued?: number
+          stale_reaped?: number
+          started_at?: string
+          status?: string
+          total?: number
+          trigger?: string
+        }
+        Update: {
+          errors?: number
+          finished_at?: string | null
+          fixed?: number
+          id?: string
+          notes?: string | null
+          offline_found?: number
+          processed?: number
+          requeued?: number
+          stale_reaped?: number
+          started_at?: string
+          status?: string
+          total?: number
+          trigger?: string
+        }
+        Relationships: []
       }
       monitored_contents: {
         Row: {
@@ -4065,13 +4116,20 @@ export type Database = {
           catalog_sync_ms: number | null
           catalog_synced_at: string | null
           category: string | null
+          check_priority: number
           consecutive_failures: number
           created_at: string
           current_status: Database["public"]["Enums"]["server_status"]
           description: string | null
           dns_enabled: boolean
+          dns_failure_count: number
           dns_health_score: number | null
           dns_interval_minutes: number
+          dns_last_failure_at: string | null
+          dns_last_success_at: string | null
+          dns_regions: Json | null
+          dns_state_changed_at: string | null
+          dns_status: string
           failure_threshold: number
           health_score: number | null
           host: string
@@ -4097,10 +4155,16 @@ export type Database = {
           kuma_tcp_port: number
           last_checked_at: string | null
           last_dns_check_at: string | null
+          last_error: string | null
+          last_failure_at: string | null
+          last_http_status: number | null
           last_iptv_sync_at: string | null
           last_latency_ms: number | null
+          last_state_change_at: string | null
+          last_success_at: string | null
           monitoring_paused: boolean
           name: string
+          next_check_at: string | null
           owner_id: string
           paused_at: string | null
           paused_reason: string | null
@@ -4117,13 +4181,20 @@ export type Database = {
           catalog_sync_ms?: number | null
           catalog_synced_at?: string | null
           category?: string | null
+          check_priority?: number
           consecutive_failures?: number
           created_at?: string
           current_status?: Database["public"]["Enums"]["server_status"]
           description?: string | null
           dns_enabled?: boolean
+          dns_failure_count?: number
           dns_health_score?: number | null
           dns_interval_minutes?: number
+          dns_last_failure_at?: string | null
+          dns_last_success_at?: string | null
+          dns_regions?: Json | null
+          dns_state_changed_at?: string | null
+          dns_status?: string
           failure_threshold?: number
           health_score?: number | null
           host: string
@@ -4149,10 +4220,16 @@ export type Database = {
           kuma_tcp_port?: number
           last_checked_at?: string | null
           last_dns_check_at?: string | null
+          last_error?: string | null
+          last_failure_at?: string | null
+          last_http_status?: number | null
           last_iptv_sync_at?: string | null
           last_latency_ms?: number | null
+          last_state_change_at?: string | null
+          last_success_at?: string | null
           monitoring_paused?: boolean
           name: string
+          next_check_at?: string | null
           owner_id: string
           paused_at?: string | null
           paused_reason?: string | null
@@ -4169,13 +4246,20 @@ export type Database = {
           catalog_sync_ms?: number | null
           catalog_synced_at?: string | null
           category?: string | null
+          check_priority?: number
           consecutive_failures?: number
           created_at?: string
           current_status?: Database["public"]["Enums"]["server_status"]
           description?: string | null
           dns_enabled?: boolean
+          dns_failure_count?: number
           dns_health_score?: number | null
           dns_interval_minutes?: number
+          dns_last_failure_at?: string | null
+          dns_last_success_at?: string | null
+          dns_regions?: Json | null
+          dns_state_changed_at?: string | null
+          dns_status?: string
           failure_threshold?: number
           health_score?: number | null
           host?: string
@@ -4201,10 +4285,16 @@ export type Database = {
           kuma_tcp_port?: number
           last_checked_at?: string | null
           last_dns_check_at?: string | null
+          last_error?: string | null
+          last_failure_at?: string | null
+          last_http_status?: number | null
           last_iptv_sync_at?: string | null
           last_latency_ms?: number | null
+          last_state_change_at?: string | null
+          last_success_at?: string | null
           monitoring_paused?: boolean
           name?: string
+          next_check_at?: string | null
           owner_id?: string
           paused_at?: string | null
           paused_reason?: string | null

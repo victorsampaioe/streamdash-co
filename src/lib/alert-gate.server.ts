@@ -32,6 +32,7 @@ export async function openOfflineIncident(
   serverId: string,
   reason: string,
   regions?: string[],
+  incidentType: "server" | "dns" = "server",
 ): Promise<OfflineGate> {
   const nowIso = new Date().toISOString();
   const regionsLabel = regions?.length ? regions.join(", ") : null;
@@ -45,6 +46,7 @@ export async function openOfflineIncident(
       last_check_at: nowIso,
       failure_count: 1,
       regions: regionsLabel,
+      incident_type: incidentType,
     } as any)
     .select("id")
     .maybeSingle();
@@ -55,6 +57,7 @@ export async function openOfflineIncident(
       .from("incidents")
       .select("id, failure_count")
       .eq("server_id", serverId)
+      .eq("incident_type", incidentType)
       .is("ended_at", null)
       .order("started_at", { ascending: false })
       .limit(1)
@@ -76,7 +79,7 @@ export async function openOfflineIncident(
   }
 
   // Idempotência extra: só um processo consegue reivindicar o envio.
-  if (!(await claimKey(`offline-alert:${serverId}:${inserted.id}`))) {
+  if (!(await claimKey(`offline-alert:${incidentType}:${serverId}:${inserted.id}`))) {
     return { notify: false, incidentId: inserted.id, reason: "duplicate" };
   }
 
@@ -105,18 +108,22 @@ export type RecoveryGate =
   | { notify: true; incidentId: string; startedAt: string; downtimeLabel: string };
 
 /** Fecha o incidente aberto e decide se envia a mensagem de restabelecimento. */
-export async function closeOfflineIncident(serverId: string): Promise<RecoveryGate> {
+export async function closeOfflineIncident(
+  serverId: string,
+  incidentType: "server" | "dns" = "server",
+): Promise<RecoveryGate> {
   const nowIso = new Date().toISOString();
   const { data: closed } = await supabaseAdmin
     .from("incidents")
     .update({ ended_at: nowIso })
     .eq("server_id", serverId)
+    .eq("incident_type", incidentType)
     .is("ended_at", null)
     .select("id, started_at")
     .maybeSingle();
 
   if (!closed) return { notify: false };
-  if (!(await claimKey(`recovery-alert:${serverId}:${closed.id}`))) return { notify: false };
+  if (!(await claimKey(`recovery-alert:${incidentType}:${serverId}:${closed.id}`))) return { notify: false };
 
   const secs = Math.max(0, Math.round((Date.now() - new Date(closed.started_at).getTime()) / 1000));
   const downtimeLabel =

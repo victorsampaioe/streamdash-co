@@ -493,10 +493,54 @@ export async function runDnsCheck(serverId: string): Promise<{ ok: boolean; scor
     await supabaseAdmin.from("dns_alerts").insert(alerts.map((a) => ({ ...a, server_id: serverId })));
   }
 
+  // ESTADO DO DNS — independente do estado do servidor.
+  const { data: dnsState } = await supabaseAdmin
+    .from("servers")
+    .select("dns_status, dns_failure_count, dns_last_success_at, dns_last_failure_at")
+    .eq("id", serverId)
+    .maybeSingle<{
+      dns_status: string | null;
+      dns_failure_count: number | null;
+      dns_last_success_at: string | null;
+      dns_last_failure_at: string | null;
+    }>();
+
+  const resolved = Boolean(report.primary_ip);
+  const failures = resolved ? 0 : (dnsState?.dns_failure_count ?? 0) + 1;
+  let dnsStatus: "online" | "unstable" | "offline";
+  if (resolved) dnsStatus = report.status === "ok" ? "online" : "unstable";
+  else dnsStatus = failures >= 2 ? "offline" : "unstable";
+
+  const prevStatus = dnsState?.dns_status ?? "unknown";
+  const changed = prevStatus !== dnsStatus;
+
   await supabaseAdmin
     .from("servers")
-    .update({ last_dns_check_at: report.checked_at, dns_health_score: report.health_score })
+    .update({
+      last_dns_check_at: report.checked_at,
+      dns_health_score: report.health_score,
+      dns_status: dnsStatus,
+      dns_failure_count: failures,
+      dns_last_success_at: resolved ? report.checked_at : (dnsState?.dns_last_success_at ?? null),
+      dns_last_failure_at: resolved ? (dnsState?.dns_last_failure_at ?? null) : report.checked_at,
+      dns_regions: { types: Object.keys(report.records ?? {}) },
+      ...(changed ? { dns_state_changed_at: report.checked_at } : {}),
+    } as any)
     .eq("id", serverId);
+
+  // Incidente/alerta exclusivo de DNS (não mistura com incidente de servidor).
+  if (changed) {
+    try {
+      const { openOfflineIncident, closeOfflineIncident } = await import("./alert-gate.server");
+      if (dnsStatus === "offline") {
+        await openOfflineIncident(serverId, "DNS não resolve o domínio", undefined, "dns");
+      } else if (prevStatus === "offline") {
+        await closeOfflineIncident(serverId, "dns");
+      }
+    } catch {
+      /* alerta é best-effort */
+    }
+  }
 
   return { ok: true, score: report.health_score, status: report.status, alerts: alerts.length };
 }
@@ -528,6 +572,11 @@ export async function runDueDnsChecks(limit = 25): Promise<{ checked: number; er
       checked++;
     } catch {
       errors++;
+      // Nunca deixa o servidor travado na fila quando a análise falha.
+      await supabaseAdmin
+        .from("servers")
+        .update({ last_dns_check_at: new Date().toISOString() })
+        .eq("id", s.id);
     }
   }
   return { checked, errors, paused };

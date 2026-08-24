@@ -58,7 +58,18 @@ export async function runDueChecks() {
   const due = (servers ?? []).filter((s: any) => {
     if (!activeOwners.has(s.owner_id)) return false;
     if (!s.last_checked_at) return true;
+    // next_check_at implementa o backoff/recheck de servidores com problema.
+    if (s.next_check_at) return now >= new Date(s.next_check_at).getTime();
     return now - new Date(s.last_checked_at).getTime() >= s.interval_seconds * 1000;
+  });
+  // PRIORIDADE: 1 (offline/DNS off/atrasado) → 2 (instável) → 3 (rotina).
+  due.sort((a: any, b: any) => {
+    const pa = a.check_priority ?? 3;
+    const pb = b.check_priority ?? 3;
+    if (pa !== pb) return pa - pb;
+    const ta = a.last_checked_at ? new Date(a.last_checked_at).getTime() : 0;
+    const tb = b.last_checked_at ? new Date(b.last_checked_at).getTime() : 0;
+    return ta - tb;
   });
   // Fila com limite de concorrência + jitter: evita rajadas simultâneas que
   // provocam bloqueio de IP nos servidores monitorados e mantém o uso de
@@ -237,6 +248,47 @@ async function performCheck(server: ServerRow) {
   const hostOk = normalizeHost(server.host) !== "";
   const first = await probeViaCore(server.host, server.id);
 
+  const {
+    classifyFailure,
+    isServerFault,
+    verifyService,
+    lastKnownIp,
+    regionConsensus,
+    shouldDeclareOffline,
+    recheckDelaySeconds,
+    computePriority,
+  } = await import("./monitor-state.server");
+
+  // O nome DNS falhou? Isso NÃO significa servidor offline: verificamos o
+  // serviço real (HTTP/HTTPS/player_api) inclusive pelo último IP conhecido.
+  let serviceNote: string | null = null;
+  let dnsBroken = false;
+  if (first.status === "down" && hostOk) {
+    const kind = classifyFailure(first.error, first.httpStatus);
+    dnsBroken = kind === "dns_not_resolved";
+    const fallbackIp = dnsBroken ? await lastKnownIp(server.id).catch(() => null) : null;
+    const verdict = await verifyService({
+      serverId: server.id,
+      host: normalizeHost(server.host),
+      fallbackIp,
+    }).catch(() => null);
+    if (verdict?.online) {
+      // Servidor vivo por outro caminho → nunca marcar OFFLINE por causa do DNS.
+      first.status = verdict.unstable ? "degraded" : "up";
+      first.httpStatus = verdict.httpStatus;
+      first.latency = verdict.latency;
+      first.error = dnsBroken
+        ? `DNS com falha, porém o servidor responde (${verdict.via}) — problema é de DNS`
+        : first.error;
+      serviceNote = `Serviço confirmado via ${verdict.via}`;
+    } else if (verdict && !isServerFault(verdict.kind)) {
+      // Credencial inválida / usuário expirado / 403 não provam servidor offline.
+      first.status = "degraded";
+      first.error = `Falha não conclusiva (${verdict.kind}) — servidor não declarado offline`;
+      serviceNote = `Falha classificada como ${verdict.kind}`;
+    }
+  }
+
   // SSL vem junto da sonda do Core (ou do fallback local).
   const sslDays: number | null = first.sslDays ?? null;
 
@@ -260,10 +312,17 @@ async function performCheck(server: ServerRow) {
       const fails = all.filter((p) => p.status === "down").length;
       const ratio = fails / all.length;
       final = burst[burst.length - 1] ?? first;
-      if (ratio >= DOWN_CONFIRM_RATIO) {
+      const consensus = await regionConsensus(server.id).catch(() => ({ failedRegions: [], okRegions: [] }));
+      const confirmedByRules = shouldDeclareOffline(
+        server.consecutive_failures + fails,
+        consensus.failedRegions.length,
+      );
+      if (ratio >= DOWN_CONFIRM_RATIO && confirmedByRules) {
         downConfirmed = true;
         displayStatus = "down";
-        confirmNote = `${fails}/${all.length} verificações falharam em ~2min`;
+        confirmNote =
+          `${fails}/${all.length} verificações falharam em ~2min` +
+          (consensus.failedRegions.length ? ` · regiões: ${consensus.failedRegions.join(", ")}` : "");
       } else {
         // Instabilidade isolada -> degradado, mas não muda status base se era UP
         displayStatus = wasDown ? "down" : "degraded";
@@ -287,13 +346,36 @@ async function performCheck(server: ServerRow) {
       ? server.consecutive_failures + 1
       : 0;
 
+  const nowIso = new Date().toISOString();
+  const changed = server.current_status !== displayStatus;
+  const delay = recheckDelaySeconds(displayStatus, newConsecutive, server.interval_seconds || 300);
+  const { data: openInc } = await supabaseAdmin
+    .from("incidents")
+    .select("id")
+    .eq("server_id", server.id)
+    .is("ended_at", null)
+    .limit(1)
+    .maybeSingle();
+
   await supabaseAdmin.from("servers").update({
     current_status: displayStatus,
-    last_checked_at: new Date().toISOString(),
+    last_checked_at: nowIso,
     last_latency_ms: final.latency,
     ssl_days_remaining: sslDays,
     consecutive_failures: newConsecutive,
-  }).eq("id", server.id);
+    last_error: final.error ?? first.error ?? null,
+    last_http_status: final.httpStatus ?? null,
+    last_success_at: displayStatus === "down" ? (server as any).last_success_at ?? null : nowIso,
+    last_failure_at: displayStatus === "down" ? nowIso : (server as any).last_failure_at ?? null,
+    ...(changed ? { last_state_change_at: nowIso } : {}),
+    next_check_at: new Date(Date.now() + delay * 1000).toISOString(),
+    check_priority: computePriority({
+      serverStatus: displayStatus,
+      dnsStatus: (server as any).dns_status ?? null,
+      hasOpenIncident: Boolean(openInc),
+      overdue: false,
+    }),
+  } as any).eq("id", server.id);
 
   const reason = final.error ?? first.error ?? `HTTP ${final.httpStatus ?? "-"}`;
 
@@ -305,7 +387,7 @@ async function performCheck(server: ServerRow) {
     // Abre ou apenas atualiza o incidente aberto — só notifica na transição real.
     const gate = await openOfflineIncident(server.id, reason, ["🇧🇷 São Paulo (VPS)"]);
     if (gate.notify) {
-      let confirmDetails = confirmNote || "Confirmado via múltiplas regiões";
+      let confirmDetails = [confirmNote, serviceNote].filter(Boolean).join(" · ") || "Confirmado via múltiplas regiões";
       try {
         const { analyzeCorrelation, recordCorrelationEvent } = await import("./correlation.server");
         const corr = await analyzeCorrelation(server as any);

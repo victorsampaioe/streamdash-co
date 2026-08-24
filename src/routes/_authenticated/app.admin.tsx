@@ -41,6 +41,7 @@ import { RadarAdminPanel } from "@/components/admin/radar-admin-panel";
 import { RadarClustersPanel } from "@/components/admin/radar-clusters-panel";
 import { ReactivationPanel } from "@/components/admin/reactivation-panel";
 import { CircuitBreakerPanel } from "@/components/admin/circuit-breaker-panel";
+import { MonitorHealthPanel } from "@/components/admin/monitor-health-panel";
 import { UserCog, History, PlusCircle, UserCheck, UserRoundCog, Settings2, Trash2, ShoppingBag as StoreIcon, Wallet, ExternalLink, Zap } from "lucide-react";
 
 
@@ -415,6 +416,7 @@ function AdminPage() {
 
 
         <TabsContent value="diagnostics" className="space-y-6">
+          <MonitorHealthPanel />
           <CircuitBreakerPanel />
         </TabsContent>
 
