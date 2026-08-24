@@ -1,6 +1,7 @@
 package site.streammonitor.play.ui
 
 import android.os.Bundle
+import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.*
@@ -133,13 +134,20 @@ private fun ProbeScreen() {
                 result = null
                 playUrl = null
                 ProbeLog.clear()
-                val creds = XtreamCreds(
-                    dns = XtreamClient.normalizeBase(dns),
-                    username = user.trim(),
-                    password = pass.trim(),
-                    userAgent = userAgent,
-                )
-                scope.launch {
+                val creds = try {
+                    XtreamCreds(
+                        dns = XtreamClient.normalizeBase(dns),
+                        username = user.trim(),
+                        password = pass.trim(),
+                        userAgent = userAgent,
+                    )
+                } catch (t: Throwable) {
+                    error = "${t.javaClass.simpleName}: ${t.message}"
+                    ProbeLog.log("FATAL", error!!)
+                    running = false
+                    null
+                }
+                if (creds != null) scope.launch {
                     try {
                         val r = withContext(Dispatchers.IO) {
                             try {
