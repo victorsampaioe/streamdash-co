@@ -1,8 +1,11 @@
 import { createFileRoute, Link, useNavigate, useSearch } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { z } from "zod";
 import { supabase } from "@/integrations/supabase/client";
-import { notifyAdminSignupFn as notifyAdminSignup } from "@/lib/admin-telegram.functions";
+import { getSignupConfig } from "@/lib/signup.functions";
+import { validateEmail, validateName, validatePhone, validateReferralCode } from "@/lib/signup-validation";
+import { TurnstileWidget, resetTurnstile } from "@/components/auth/turnstile-widget";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -33,13 +36,22 @@ function AuthPage() {
   const [password, setPassword] = useState("");
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
-  
+  const [honeypot, setHoneypot] = useState("");
+  const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
+
+  const { data: signupConfig } = useQuery({
+    queryKey: ["signup-config"],
+    queryFn: () => getSignupConfig(),
+    staleTime: 30 * 60 * 1000,
+  });
+  const siteKey = signupConfig?.turnstileSiteKey ?? null;
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => {
       if (data.user) navigate({ to: redirect ?? "/app", replace: true });
     });
   }, [navigate, redirect]);
+
 
   async function handleSignIn(e: React.FormEvent) {
     e.preventDefault();
@@ -53,30 +65,58 @@ function AuthPage() {
 
   async function handleSignUp(e: React.FormEvent) {
     e.preventDefault();
-    setLoading(true);
-    const { data, error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        emailRedirectTo: `${window.location.origin}/app`,
-        data: { full_name: name, phone },
-      },
-    });
 
-    setLoading(false);
-    if (error) return toast.error(error.message);
+    // Validações locais (mesmas regras aplicadas no backend)
+    const nameCheck = validateName(name);
+    if (!nameCheck.ok) return toast.error(nameCheck.error);
+    const phoneCheck = validatePhone(phone);
+    if (!phoneCheck.ok) return toast.error(phoneCheck.error);
+    const emailCheck = validateEmail(email);
+    if (!emailCheck.ok) return toast.error(emailCheck.error);
+    if (password.length < 6) return toast.error("A senha deve ter no mínimo 6 caracteres");
+    const refCheck = validateReferralCode(null);
+    if (!refCheck.ok) return toast.error(refCheck.error);
+    if (siteKey && !turnstileToken) return toast.error("Complete a verificação de segurança");
+
+    setLoading(true);
     try {
-      await notifyAdminSignup({ data: { email, name, phone, referralCode: "" } });
-    } catch { /* ignore */ }
-    
-    if (!data.session) {
-      toast.success("Conta criada! Verifique seu e-mail para continuar");
-      navigate({ to: "/verify-email", search: { email } });
-    } else {
-      toast.success("Conta criada!");
-      navigate({ to: "/app", replace: true });
+      const res = await fetch("/api/public/signup", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name,
+          email,
+          phone,
+          password,
+          referralCode: null,
+          turnstileToken,
+          company_website: honeypot,
+          redirectTo: `${window.location.origin}/app`,
+        }),
+      });
+      const json = (await res.json().catch(() => ({}))) as { error?: string; needsEmailConfirmation?: boolean };
+
+      if (!res.ok) {
+        setTurnstileToken(null);
+        resetTurnstile();
+        return toast.error(json.error || "Não foi possível criar a conta");
+      }
+
+      if (json.needsEmailConfirmation) {
+        toast.success("Conta criada! Verifique seu e-mail para continuar");
+        navigate({ to: "/verify-email", search: { email: emailCheck.value } });
+      } else {
+        toast.success("Conta criada!");
+        const { error } = await supabase.auth.signInWithPassword({ email: emailCheck.value, password });
+        navigate({ to: error ? "/auth" : "/app", replace: true });
+      }
+    } catch {
+      toast.error("Falha de conexão. Tente novamente.");
+    } finally {
+      setLoading(false);
     }
   }
+
 
 
   async function handleReset() {
@@ -116,16 +156,32 @@ function AuthPage() {
             <TabsContent value="signup">
               <form onSubmit={handleSignUp} className="space-y-4">
                 <Field label="Nome"><Input required value={name} onChange={(e) => setName(e.target.value)} placeholder="Seu nome" /></Field>
-                <Field label="Telefone"><Input type="tel" required value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="(11) 99999-9999" /></Field>
+                <Field label="Telefone"><Input type="tel" inputMode="numeric" required value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="(11) 99999-9999" /></Field>
                 <Field label="E-mail"><Input type="email" required value={email} onChange={(e) => setEmail(e.target.value)} /></Field>
                 <Field label="Senha"><Input type="password" required minLength={6} value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Mín. 6 caracteres" /></Field>
-                {/* Referral code field removed as per request */}
 
-                <Button type="submit" disabled={loading} className="w-full">
+                {/* Honeypot: invisível para humanos, preenchido por bots */}
+                <div aria-hidden="true" className="absolute left-[-9999px] h-0 w-0 overflow-hidden">
+                  <label htmlFor="company_website">Company website</label>
+                  <input
+                    id="company_website"
+                    name="company_website"
+                    type="text"
+                    tabIndex={-1}
+                    autoComplete="off"
+                    value={honeypot}
+                    onChange={(e) => setHoneypot(e.target.value)}
+                  />
+                </div>
+
+                {siteKey && <TurnstileWidget siteKey={siteKey} onToken={setTurnstileToken} />}
+
+                <Button type="submit" disabled={loading || (!!siteKey && !turnstileToken)} className="w-full">
                   {loading ? "Criando..." : "Criar conta"}
                 </Button>
 
               </form>
+
             </TabsContent>
           </Tabs>
         </Card>

@@ -42,6 +42,8 @@ import { RadarClustersPanel } from "@/components/admin/radar-clusters-panel";
 import { ReactivationPanel } from "@/components/admin/reactivation-panel";
 import { CircuitBreakerPanel } from "@/components/admin/circuit-breaker-panel";
 import { MonitorHealthPanel } from "@/components/admin/monitor-health-panel";
+import { SignupSecurityPanel } from "@/components/admin/signup-security-panel";
+
 import { UserCog, History, PlusCircle, UserCheck, UserRoundCog, Settings2, Trash2, ShoppingBag as StoreIcon, Wallet, ExternalLink, Zap } from "lucide-react";
 
 
@@ -325,7 +327,7 @@ function AdminPage() {
 
       <Tabs defaultValue="overview" className="space-y-6">
         <div className="overflow-x-auto pb-2 scrollbar-hide">
-          <TabsList className="flex w-max min-full sm:grid sm:grid-cols-10 sm:w-full">
+          <TabsList className="flex w-max min-full sm:grid sm:grid-cols-12 sm:w-full">
             <TabsTrigger value="overview" className="px-4">Usuários</TabsTrigger>
             <TabsTrigger value="resellers" className="px-4">Revendedores</TabsTrigger>
             <TabsTrigger value="core-audit" className="px-4">Auditoria Core</TabsTrigger>
@@ -337,11 +339,17 @@ function AdminPage() {
             <TabsTrigger value="paused" className="px-4">DNS Pausados</TabsTrigger>
             <TabsTrigger value="android" className="px-4">Android Play</TabsTrigger>
             <TabsTrigger value="storage" className="px-4">Armazenamento</TabsTrigger>
+            <TabsTrigger value="signup-security" className="px-4">Segurança de Cadastro</TabsTrigger>
 
           </TabsList>
         </div>
 
+        <TabsContent value="signup-security" className="space-y-6">
+          <SignupSecurityPanel />
+        </TabsContent>
+
         <TabsContent value="core-audit" className="space-y-6">
+
           <Card className="bg-neutral-900/50 border-white/5">
             <CardHeader className="flex flex-row items-center justify-between pb-2">
               <div className="space-y-1">
