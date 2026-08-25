@@ -362,6 +362,7 @@ async function performCheck(server: ServerRow) {
     .from("incidents")
     .select("id")
     .eq("server_id", server.id)
+    .eq("incident_type", "server")
     .is("ended_at", null)
     .limit(1)
     .maybeSingle();
