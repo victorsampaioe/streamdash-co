@@ -25,6 +25,9 @@ import site.streammonitor.play.core.logging.ProbeLog
 import site.streammonitor.play.monitor.ProbeResult
 import site.streammonitor.play.monitor.ProbeRunner
 import site.streammonitor.play.player.PlayerBox
+import site.streammonitor.play.domain.AuthRepository
+import site.streammonitor.play.domain.LoginOutcome
+import site.streammonitor.play.network.ApiConfig
 
 private data class Preset(val label: String, val dns: String, val user: String, val pass: String)
 
@@ -65,6 +68,8 @@ private fun ProbeScreen() {
     var result by remember { mutableStateOf<ProbeResult?>(null) }
     var error by remember { mutableStateOf<String?>(null) }
     var playUrl by remember { mutableStateOf<String?>(null) }
+    var autoMode by remember { mutableStateOf(true) }
+    var resolvedInfo by remember { mutableStateOf<String?>(null) }
     val scope = rememberCoroutineScope()
     val userAgent = USER_AGENTS[uaIndex]
 
@@ -78,26 +83,45 @@ private fun ProbeScreen() {
         Text("Acesse seu conteúdo premium", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
         Spacer(Modifier.height(24.dp))
 
-        // Presets rápidos
+        // Modo de acesso
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            PRESETS.forEach { p ->
-                OutlinedButton(
-                    onClick = { dns = p.dns; user = p.user; pass = p.pass },
-                    modifier = Modifier.weight(1f),
-                    enabled = !running
-                ) { Text(p.label) }
-            }
+            FilterChip(
+                selected = autoMode,
+                onClick = { autoMode = true },
+                enabled = !running,
+                label = { Text("Usuário e senha") },
+                modifier = Modifier.weight(1f)
+            )
+            FilterChip(
+                selected = !autoMode,
+                onClick = { autoMode = false },
+                enabled = !running,
+                label = { Text("DNS manual") },
+                modifier = Modifier.weight(1f)
+            )
         }
 
-        Spacer(Modifier.height(16.dp))
+        if (!autoMode) {
+            Spacer(Modifier.height(12.dp))
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                PRESETS.forEach { p ->
+                    OutlinedButton(
+                        onClick = { dns = p.dns; user = p.user; pass = p.pass },
+                        modifier = Modifier.weight(1f),
+                        enabled = !running
+                    ) { Text(p.label) }
+                }
+            }
+            Spacer(Modifier.height(12.dp))
+            OutlinedTextField(
+                value = dns,
+                onValueChange = { dns = it },
+                label = { Text("DNS / Servidor") },
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth()
+            )
+        }
 
-        OutlinedTextField(
-            value = dns,
-            onValueChange = { dns = it },
-            label = { Text("DNS / Servidor") },
-            singleLine = true,
-            modifier = Modifier.fillMaxWidth()
-        )
         Spacer(Modifier.height(12.dp))
         OutlinedTextField(
             value = user,
@@ -117,6 +141,7 @@ private fun ProbeScreen() {
         )
 
         Spacer(Modifier.height(12.dp))
+        Text("API: ${ApiConfig.BASE_URL}", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         Text("User-Agent: $userAgent", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         Spacer(Modifier.height(4.dp))
         TextButton(
@@ -127,28 +152,50 @@ private fun ProbeScreen() {
         Spacer(Modifier.height(16.dp))
 
         Button(
-            enabled = !running && dns.isNotBlank() && user.isNotBlank() && pass.isNotBlank(),
+            enabled = !running && user.isNotBlank() && pass.isNotBlank() && (autoMode || dns.isNotBlank()),
             onClick = {
                 running = true
                 error = null
                 result = null
                 playUrl = null
+                resolvedInfo = null
                 ProbeLog.clear()
-                val creds = try {
-                    XtreamCreds(
-                        dns = XtreamClient.normalizeBase(dns),
-                        username = user.trim(),
-                        password = pass.trim(),
-                        userAgent = userAgent,
-                    )
-                } catch (t: Throwable) {
-                    error = "${t.javaClass.simpleName}: ${t.message}"
-                    ProbeLog.log("FATAL", error!!)
-                    running = false
-                    null
-                }
-                if (creds != null) scope.launch {
+                scope.launch {
                     try {
+                        var targetDns = dns
+                        if (autoMode) {
+                            when (val outcome = withContext(Dispatchers.IO) {
+                                AuthRepository.login(user.trim(), pass.trim())
+                            }) {
+                                is LoginOutcome.Failure -> {
+                                    error = outcome.message
+                                    running = false
+                                    return@launch
+                                }
+                                is LoginOutcome.Success -> {
+                                    targetDns = outcome.dns
+                                    dns = outcome.dns
+                                    resolvedInfo = "Servidor: ${outcome.serverName ?: outcome.dns} • server_id=${outcome.serverId ?: "-"} • reseller_id=${outcome.resellerId ?: "-"}"
+                                    outcome.serverId?.let { sid ->
+                                        withContext(Dispatchers.IO) { AuthRepository.serverStatus(sid) }?.let { st ->
+                                            ProbeLog.log("SERVER_STATUS", "${st.status} — ${st.message} (${st.latency ?: "-"}ms)")
+                                        }
+                                    }
+                                    outcome.resellerId?.let { rid ->
+                                        withContext(Dispatchers.IO) { AuthRepository.appConfig(rid) }?.let { cfg ->
+                                            ProbeLog.log("BRANDING", "${cfg.app_name} cor=${cfg.primary_color}")
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
+                        val creds = XtreamCreds(
+                            dns = XtreamClient.normalizeBase(targetDns),
+                            username = user.trim(),
+                            password = pass.trim(),
+                            userAgent = userAgent,
+                        )
                         val r = withContext(Dispatchers.IO) {
                             try {
                                 ProbeRunner.run(creds)
@@ -158,11 +205,8 @@ private fun ProbeScreen() {
                             }
                         }
                         result = r
-                        if (!r.loginOk) {
-                            error = r.summary
-                        } else {
-                            playUrl = r.liveUrl ?: r.movieUrl ?: r.episodeUrl
-                        }
+                        if (!r.loginOk) error = r.summary
+                        else playUrl = r.liveUrl ?: r.movieUrl ?: r.episodeUrl
                     } catch (t: Throwable) {
                         error = "${t.javaClass.simpleName}: ${t.message}"
                         ProbeLog.log("FATAL", error!!)
@@ -171,6 +215,7 @@ private fun ProbeScreen() {
                     }
                 }
             },
+
             modifier = Modifier.fillMaxWidth().height(56.dp)
         ) {
             if (running) {
@@ -178,6 +223,11 @@ private fun ProbeScreen() {
             } else {
                 Text("Entrar")
             }
+        }
+
+        resolvedInfo?.let {
+            Spacer(Modifier.height(12.dp))
+            Text(it, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.secondary)
         }
 
         error?.let {

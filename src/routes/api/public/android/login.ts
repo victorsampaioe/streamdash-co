@@ -1,11 +1,34 @@
 import { createFileRoute } from '@tanstack/react-router';
 import { z } from 'zod';
 import { supabaseAdmin } from '@/integrations/supabase/client.server';
+import {
+  normalizeBase,
+  resolveServerForCredentials,
+  type ProbeTarget,
+} from '@/lib/android-resolve.server';
 
 const loginSchema = z.object({
-  username: z.string(),
-  password: z.string(),
+  username: z.string().min(1),
+  password: z.string().min(1),
 });
+
+const json = (body: unknown, status = 200) =>
+  new Response(JSON.stringify(body), {
+    status,
+    headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' },
+  });
+
+/** Licença do revendedor: bloqueia apenas quando existe registro e está inativo/vencido. */
+async function licenseBlocked(resellerId: string | null): Promise<string | null> {
+  if (!resellerId) return null;
+  const { data } = await supabaseAdmin.rpc('validate_android_play_access', {
+    _reseller_id: resellerId,
+  });
+  const row = Array.isArray(data) ? data[0] : null;
+  if (!row) return null; // sem licença cadastrada => não bloqueia
+  if (row.is_active) return null;
+  return 'Licença Stream Monitor Play inativa ou vencida para este provedor.';
+}
 
 export const Route = createFileRoute('/api/public/android/login')({
   server: {
@@ -13,55 +36,100 @@ export const Route = createFileRoute('/api/public/android/login')({
       POST: async ({ request }) => {
         try {
           const body = await request.json();
-          const { username, password } = loginSchema.parse(body);
+          const parsed = loginSchema.safeParse(body);
+          if (!parsed.success) return json({ error: 'Informe usuário e senha.' }, 400);
 
-          console.log(`[ANDROID LOGIN] Attempt for user: ${username}`);
+          const username = parsed.data.username.trim();
+          const password = parsed.data.password.trim();
+          console.log(`[ANDROID LOGIN] tentativa user=${username}`);
 
-          // 1. Verificar associação prévia (Login rápido)
-          const { data: association, error: assocError } = await supabaseAdmin
+          // 1) Associação já conhecida (login rápido)
+          const { data: association } = await supabaseAdmin
             .from('android_client_associations')
-            .select('*, servers:server_id(*)')
+            .select('reseller_id, server_id, servers:server_id(id, name, host, owner_id)')
             .eq('client_username', username)
             .eq('client_password', password)
             .maybeSingle();
 
-          if (assocError) throw assocError;
+          const known = (association?.servers ?? null) as ProbeTarget | null;
+          if (known?.host) {
+            const blocked = await licenseBlocked(association!.reseller_id ?? known.owner_id);
+            if (blocked) return json({ error: blocked }, 403);
 
-          if (association && association.servers) {
-            const server = association.servers as any;
+            await supabaseAdmin
+              .from('android_client_associations')
+              .update({ last_login_at: new Date().toISOString() })
+              .eq('client_username', username)
+              .eq('client_password', password);
 
-            // Verificar licença do revendedor
-            const { data: license } = await supabaseAdmin
-              .rpc('validate_android_play_access', { _reseller_id: association.reseller_id });
-
-            if (!license || !license[0]?.is_active) {
-              return new Response(JSON.stringify({ 
-                error: 'Licença Stream Monitor Play inativa ou vencida para este provedor.' 
-              }), { status: 403, headers: { 'Content-Type': 'application/json' } });
-            }
-
-            return new Response(JSON.stringify({
+            return json({
               status: 'success',
-              server: {
-                dns: server.dns,
-                name: server.name,
-              },
-              reseller_id: association.reseller_id,
-            }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+              resolved_by: 'association',
+              server: { id: known.id, dns: normalizeBase(known.host), name: known.name },
+              server_id: known.id,
+              reseller_id: association!.reseller_id ?? known.owner_id,
+            });
+          }
+
+          // 2) Resolução automática: testa as credenciais nos servidores monitorados
+          const { data: servers, error: serversError } = await supabaseAdmin
+            .from('servers')
+            .select('id, name, host, owner_id, monitoring_paused, iptv_username, last_checked_at')
+            .not('host', 'is', null)
+            .not('iptv_username', 'is', null)
+            .order('last_checked_at', { ascending: false })
+            .limit(60);
+
+          const targets: ProbeTarget[] = (servers ?? [])
+            .filter((s) => !s.monitoring_paused && !!s.host)
+            .map((s) => ({ id: s.id, name: s.name ?? '', host: s.host as string, owner_id: s.owner_id }));
+
+          if (serversError) console.error('[ANDROID LOGIN] servers query', serversError);
+          console.log(`[ANDROID LOGIN] candidatos=${targets.length}`);
+          if (targets.length === 0) {
+            return json({ error: 'Nenhum servidor autorizado disponível no momento.' }, 503);
+          }
+
+          const hit = await resolveServerForCredentials(targets, username, password);
+          if (!hit) {
+            // Muitos painéis bloqueiam IPs de datacenter (Cloudflare/WAF). Nesse caso
+            // devolvemos os candidatos para o app testar do próprio dispositivo (IP residencial).
+            return json({
+              status: 'resolve_client',
+              candidates: targets.slice(0, 25).map((t) => ({
+                id: t.id,
+                name: t.name,
+                dns: normalizeBase(t.host),
+              })),
+            });
           }
 
 
-          // 2. Resolução Automática (Primeiro login ou falha na associação)
-          // Aqui buscaríamos todos os servidores ativos e testaríamos o login (Simulado por enquanto)
-          // Para um ecossistema real, o app enviaria o ecossistema ou testaríamos os 10 mais prováveis.
-          
-          return new Response(JSON.stringify({ 
-            error: 'Usuário ou senha não encontrados em nenhum servidor autorizado.' 
-          }), { status: 401, headers: { 'Content-Type': 'application/json' } });
+          const resellerId = hit.server.owner_id;
+          const blocked = await licenseBlocked(resellerId);
+          if (blocked) return json({ error: blocked }, 403);
 
+          if (resellerId) {
+            await supabaseAdmin.from('android_client_associations').insert({
+              client_username: username,
+              client_password: password,
+              server_id: hit.server.id,
+              reseller_id: resellerId,
+              last_login_at: new Date().toISOString(),
+            });
+          }
+
+
+          return json({
+            status: 'success',
+            resolved_by: 'auto',
+            server: { id: hit.server.id, dns: hit.base, name: hit.server.name },
+            server_id: hit.server.id,
+            reseller_id: resellerId,
+          });
         } catch (error) {
           console.error('[ANDROID LOGIN ERROR]', error);
-          return new Response(JSON.stringify({ error: 'Erro interno no servidor' }), { status: 500 });
+          return json({ error: 'Erro interno no servidor' }, 500);
         }
       },
     },

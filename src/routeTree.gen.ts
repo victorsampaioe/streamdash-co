@@ -68,6 +68,7 @@ import { Route as ApiPublicCoreLiveDiagRouteImport } from './routes/api/public/c
 import { Route as ApiPublicAndroidStatusRouteImport } from './routes/api/public/android/status'
 import { Route as ApiPublicAndroidLoginRouteImport } from './routes/api/public/android/login'
 import { Route as ApiPublicAndroidConfigRouteImport } from './routes/api/public/android/config'
+import { Route as ApiPublicAndroidAssociateRouteImport } from './routes/api/public/android/associate'
 import { Route as AuthenticatedAppServersNewRouteImport } from './routes/_authenticated/app.servers.new'
 import { Route as AuthenticatedAppServersIdRouteImport } from './routes/_authenticated/app.servers.$id'
 import { Route as AuthenticatedAppAdminCoreLogsRouteImport } from './routes/_authenticated/app.admin_.core-logs'
@@ -383,6 +384,12 @@ const ApiPublicAndroidConfigRoute = ApiPublicAndroidConfigRouteImport.update({
   path: '/api/public/android/config',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicAndroidAssociateRoute =
+  ApiPublicAndroidAssociateRouteImport.update({
+    id: '/api/public/android/associate',
+    path: '/api/public/android/associate',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const AuthenticatedAppServersNewRoute =
   AuthenticatedAppServersNewRouteImport.update({
     id: '/servers/new',
@@ -458,6 +465,7 @@ export interface FileRoutesByFullPath {
   '/app/admin/core-logs': typeof AuthenticatedAppAdminCoreLogsRoute
   '/app/servers/$id': typeof AuthenticatedAppServersIdRoute
   '/app/servers/new': typeof AuthenticatedAppServersNewRoute
+  '/api/public/android/associate': typeof ApiPublicAndroidAssociateRoute
   '/api/public/android/config': typeof ApiPublicAndroidConfigRoute
   '/api/public/android/login': typeof ApiPublicAndroidLoginRoute
   '/api/public/android/status': typeof ApiPublicAndroidStatusRoute
@@ -522,6 +530,7 @@ export interface FileRoutesByTo {
   '/app/admin/core-logs': typeof AuthenticatedAppAdminCoreLogsRoute
   '/app/servers/$id': typeof AuthenticatedAppServersIdRoute
   '/app/servers/new': typeof AuthenticatedAppServersNewRoute
+  '/api/public/android/associate': typeof ApiPublicAndroidAssociateRoute
   '/api/public/android/config': typeof ApiPublicAndroidConfigRoute
   '/api/public/android/login': typeof ApiPublicAndroidLoginRoute
   '/api/public/android/status': typeof ApiPublicAndroidStatusRoute
@@ -589,6 +598,7 @@ export interface FileRoutesById {
   '/_authenticated/app/admin_/core-logs': typeof AuthenticatedAppAdminCoreLogsRoute
   '/_authenticated/app/servers/$id': typeof AuthenticatedAppServersIdRoute
   '/_authenticated/app/servers/new': typeof AuthenticatedAppServersNewRoute
+  '/api/public/android/associate': typeof ApiPublicAndroidAssociateRoute
   '/api/public/android/config': typeof ApiPublicAndroidConfigRoute
   '/api/public/android/login': typeof ApiPublicAndroidLoginRoute
   '/api/public/android/status': typeof ApiPublicAndroidStatusRoute
@@ -656,6 +666,7 @@ export interface FileRouteTypes {
     | '/app/admin/core-logs'
     | '/app/servers/$id'
     | '/app/servers/new'
+    | '/api/public/android/associate'
     | '/api/public/android/config'
     | '/api/public/android/login'
     | '/api/public/android/status'
@@ -720,6 +731,7 @@ export interface FileRouteTypes {
     | '/app/admin/core-logs'
     | '/app/servers/$id'
     | '/app/servers/new'
+    | '/api/public/android/associate'
     | '/api/public/android/config'
     | '/api/public/android/login'
     | '/api/public/android/status'
@@ -786,6 +798,7 @@ export interface FileRouteTypes {
     | '/_authenticated/app/admin_/core-logs'
     | '/_authenticated/app/servers/$id'
     | '/_authenticated/app/servers/new'
+    | '/api/public/android/associate'
     | '/api/public/android/config'
     | '/api/public/android/login'
     | '/api/public/android/status'
@@ -833,6 +846,7 @@ export interface RootRouteChildren {
   Char91DotmcpChar93InvokeToolToolRoute: typeof Char91DotmcpChar93InvokeToolToolRoute
   ApiPublicHealthRoute: typeof ApiPublicHealthRoute
   ApiPublicRadarRoute: typeof ApiPublicRadarRoute
+  ApiPublicAndroidAssociateRoute: typeof ApiPublicAndroidAssociateRoute
   ApiPublicAndroidConfigRoute: typeof ApiPublicAndroidConfigRoute
   ApiPublicAndroidLoginRoute: typeof ApiPublicAndroidLoginRoute
   ApiPublicAndroidStatusRoute: typeof ApiPublicAndroidStatusRoute
@@ -1266,6 +1280,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicAndroidConfigRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/android/associate': {
+      id: '/api/public/android/associate'
+      path: '/api/public/android/associate'
+      fullPath: '/api/public/android/associate'
+      preLoaderRoute: typeof ApiPublicAndroidAssociateRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/_authenticated/app/servers/new': {
       id: '/_authenticated/app/servers/new'
       path: '/servers/new'
@@ -1417,6 +1438,7 @@ const rootRouteChildren: RootRouteChildren = {
   Char91DotmcpChar93InvokeToolToolRoute: Char91DotmcpChar93InvokeToolToolRoute,
   ApiPublicHealthRoute: ApiPublicHealthRoute,
   ApiPublicRadarRoute: ApiPublicRadarRoute,
+  ApiPublicAndroidAssociateRoute: ApiPublicAndroidAssociateRoute,
   ApiPublicAndroidConfigRoute: ApiPublicAndroidConfigRoute,
   ApiPublicAndroidLoginRoute: ApiPublicAndroidLoginRoute,
   ApiPublicAndroidStatusRoute: ApiPublicAndroidStatusRoute,
