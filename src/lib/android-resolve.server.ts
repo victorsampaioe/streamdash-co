@@ -15,7 +15,7 @@ export function normalizeBase(raw: string): string {
   return v;
 }
 
-export type ProbeTarget = { id: string; name: string; host: string; owner_id: string | null };
+export type ProbeTarget = { id: string; name: string | null; host: string; owner_id: string | null };
 
 async function xtreamAuth(base: string, username: string, password: string): Promise<boolean> {
   const url = `${base}/player_api.php?username=${encodeURIComponent(username)}&password=${encodeURIComponent(password)}`;

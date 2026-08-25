@@ -74,15 +74,15 @@ export const Route = createFileRoute('/api/public/android/login')({
           // 2) Resolução automática: testa as credenciais nos servidores monitorados
           const { data: servers } = await supabaseAdmin
             .from('servers')
-            .select('id, name, host, owner_id, monitoring_paused, iptv_mode, last_checked_at')
+            .select('id, name, host, owner_id, monitoring_paused, iptv_username, last_checked_at')
             .not('host', 'is', null)
-            .neq('iptv_mode', 'none')
+            .not('iptv_username', 'is', null)
             .order('last_checked_at', { ascending: false })
             .limit(60);
 
           const targets: ProbeTarget[] = (servers ?? [])
             .filter((s) => !s.monitoring_paused && !!s.host)
-            .map((s) => ({ id: s.id, name: s.name, host: s.host as string, owner_id: s.owner_id }));
+            .map((s) => ({ id: s.id, name: s.name ?? '', host: s.host as string, owner_id: s.owner_id }));
 
           if (targets.length === 0) {
             return json({ error: 'Nenhum servidor autorizado disponível no momento.' }, 503);
