@@ -25,6 +25,9 @@ import site.streammonitor.play.core.logging.ProbeLog
 import site.streammonitor.play.monitor.ProbeResult
 import site.streammonitor.play.monitor.ProbeRunner
 import site.streammonitor.play.player.PlayerBox
+import site.streammonitor.play.domain.AuthRepository
+import site.streammonitor.play.domain.LoginOutcome
+import site.streammonitor.play.network.ApiConfig
 
 private data class Preset(val label: String, val dns: String, val user: String, val pass: String)
 
@@ -65,6 +68,8 @@ private fun ProbeScreen() {
     var result by remember { mutableStateOf<ProbeResult?>(null) }
     var error by remember { mutableStateOf<String?>(null) }
     var playUrl by remember { mutableStateOf<String?>(null) }
+    var autoMode by remember { mutableStateOf(true) }
+    var resolvedInfo by remember { mutableStateOf<String?>(null) }
     val scope = rememberCoroutineScope()
     val userAgent = USER_AGENTS[uaIndex]
 
@@ -218,6 +223,11 @@ private fun ProbeScreen() {
             } else {
                 Text("Entrar")
             }
+        }
+
+        resolvedInfo?.let {
+            Spacer(Modifier.height(12.dp))
+            Text(it, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.secondary)
         }
 
         error?.let {
