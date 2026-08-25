@@ -109,13 +109,16 @@ export const Route = createFileRoute('/api/public/android/login')({
           const blocked = await licenseBlocked(resellerId);
           if (blocked) return json({ error: blocked }, 403);
 
-          await supabaseAdmin.from('android_client_associations').insert({
-            client_username: username,
-            client_password: password,
-            server_id: hit.server.id,
-            reseller_id: resellerId,
-            last_login_at: new Date().toISOString(),
-          });
+          if (resellerId) {
+            await supabaseAdmin.from('android_client_associations').insert({
+              client_username: username,
+              client_password: password,
+              server_id: hit.server.id,
+              reseller_id: resellerId,
+              last_login_at: new Date().toISOString(),
+            });
+          }
+
 
           return json({
             status: 'success',
