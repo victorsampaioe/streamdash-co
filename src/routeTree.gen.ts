@@ -32,6 +32,7 @@ import { Route as AuthenticatedAppRouteImport } from './routes/_authenticated/ap
 import { Route as Char91DotwellKnownChar93OauthProtectedResourceRouteImport } from './routes/[.well-known]/oauth-protected-resource'
 import { Route as Char91DotmcpChar93ListToolsRouteImport } from './routes/[.mcp]/list-tools'
 import { Route as AuthenticatedAppIndexRouteImport } from './routes/_authenticated/app.index'
+import { Route as ApiPublicSignupRouteImport } from './routes/api/public/signup'
 import { Route as ApiPublicRadarRouteImport } from './routes/api/public/radar'
 import { Route as ApiPublicHealthRouteImport } from './routes/api/public/health'
 import { Route as AuthenticatedAppSubscriptionRouteImport } from './routes/_authenticated/app.subscription'
@@ -190,6 +191,11 @@ const AuthenticatedAppIndexRoute = AuthenticatedAppIndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => AuthenticatedAppRoute,
+} as any)
+const ApiPublicSignupRoute = ApiPublicSignupRouteImport.update({
+  id: '/api/public/signup',
+  path: '/api/public/signup',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const ApiPublicRadarRoute = ApiPublicRadarRouteImport.update({
   id: '/api/public/radar',
@@ -460,6 +466,7 @@ export interface FileRoutesByFullPath {
   '/app/subscription': typeof AuthenticatedAppSubscriptionRoute
   '/api/public/health': typeof ApiPublicHealthRoute
   '/api/public/radar': typeof ApiPublicRadarRoute
+  '/api/public/signup': typeof ApiPublicSignupRoute
   '/app/': typeof AuthenticatedAppIndexRoute
   '/app/admin/android-play': typeof AuthenticatedAppAdminAndroidPlayRoute
   '/app/admin/core-logs': typeof AuthenticatedAppAdminCoreLogsRoute
@@ -525,6 +532,7 @@ export interface FileRoutesByTo {
   '/app/subscription': typeof AuthenticatedAppSubscriptionRoute
   '/api/public/health': typeof ApiPublicHealthRoute
   '/api/public/radar': typeof ApiPublicRadarRoute
+  '/api/public/signup': typeof ApiPublicSignupRoute
   '/app': typeof AuthenticatedAppIndexRoute
   '/app/admin/android-play': typeof AuthenticatedAppAdminAndroidPlayRoute
   '/app/admin/core-logs': typeof AuthenticatedAppAdminCoreLogsRoute
@@ -593,6 +601,7 @@ export interface FileRoutesById {
   '/_authenticated/app/subscription': typeof AuthenticatedAppSubscriptionRoute
   '/api/public/health': typeof ApiPublicHealthRoute
   '/api/public/radar': typeof ApiPublicRadarRoute
+  '/api/public/signup': typeof ApiPublicSignupRoute
   '/_authenticated/app/': typeof AuthenticatedAppIndexRoute
   '/_authenticated/app/admin/android-play': typeof AuthenticatedAppAdminAndroidPlayRoute
   '/_authenticated/app/admin_/core-logs': typeof AuthenticatedAppAdminCoreLogsRoute
@@ -661,6 +670,7 @@ export interface FileRouteTypes {
     | '/app/subscription'
     | '/api/public/health'
     | '/api/public/radar'
+    | '/api/public/signup'
     | '/app/'
     | '/app/admin/android-play'
     | '/app/admin/core-logs'
@@ -726,6 +736,7 @@ export interface FileRouteTypes {
     | '/app/subscription'
     | '/api/public/health'
     | '/api/public/radar'
+    | '/api/public/signup'
     | '/app'
     | '/app/admin/android-play'
     | '/app/admin/core-logs'
@@ -793,6 +804,7 @@ export interface FileRouteTypes {
     | '/_authenticated/app/subscription'
     | '/api/public/health'
     | '/api/public/radar'
+    | '/api/public/signup'
     | '/_authenticated/app/'
     | '/_authenticated/app/admin/android-play'
     | '/_authenticated/app/admin_/core-logs'
@@ -846,6 +858,7 @@ export interface RootRouteChildren {
   Char91DotmcpChar93InvokeToolToolRoute: typeof Char91DotmcpChar93InvokeToolToolRoute
   ApiPublicHealthRoute: typeof ApiPublicHealthRoute
   ApiPublicRadarRoute: typeof ApiPublicRadarRoute
+  ApiPublicSignupRoute: typeof ApiPublicSignupRoute
   ApiPublicAndroidAssociateRoute: typeof ApiPublicAndroidAssociateRoute
   ApiPublicAndroidConfigRoute: typeof ApiPublicAndroidConfigRoute
   ApiPublicAndroidLoginRoute: typeof ApiPublicAndroidLoginRoute
@@ -1027,6 +1040,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/app/'
       preLoaderRoute: typeof AuthenticatedAppIndexRouteImport
       parentRoute: typeof AuthenticatedAppRoute
+    }
+    '/api/public/signup': {
+      id: '/api/public/signup'
+      path: '/api/public/signup'
+      fullPath: '/api/public/signup'
+      preLoaderRoute: typeof ApiPublicSignupRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/api/public/radar': {
       id: '/api/public/radar'
@@ -1438,6 +1458,7 @@ const rootRouteChildren: RootRouteChildren = {
   Char91DotmcpChar93InvokeToolToolRoute: Char91DotmcpChar93InvokeToolToolRoute,
   ApiPublicHealthRoute: ApiPublicHealthRoute,
   ApiPublicRadarRoute: ApiPublicRadarRoute,
+  ApiPublicSignupRoute: ApiPublicSignupRoute,
   ApiPublicAndroidAssociateRoute: ApiPublicAndroidAssociateRoute,
   ApiPublicAndroidConfigRoute: ApiPublicAndroidConfigRoute,
   ApiPublicAndroidLoginRoute: ApiPublicAndroidLoginRoute,

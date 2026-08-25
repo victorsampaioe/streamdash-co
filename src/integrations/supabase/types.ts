@@ -3228,6 +3228,7 @@ export type Database = {
           owner_account_id: string | null
           parent_id: string | null
           phone: string | null
+          phone_normalized: string | null
           referral_code: string | null
           referred_by: string | null
           signup_bonus_days: number
@@ -3247,6 +3248,7 @@ export type Database = {
           owner_account_id?: string | null
           parent_id?: string | null
           phone?: string | null
+          phone_normalized?: string | null
           referral_code?: string | null
           referred_by?: string | null
           signup_bonus_days?: number
@@ -3266,6 +3268,7 @@ export type Database = {
           owner_account_id?: string | null
           parent_id?: string | null
           phone?: string | null
+          phone_normalized?: string | null
           referral_code?: string | null
           referred_by?: string | null
           signup_bonus_days?: number
@@ -4308,6 +4311,78 @@ export type Database = {
         }
         Relationships: []
       }
+      signup_attempts: {
+        Row: {
+          created_at: string
+          email_norm: string | null
+          fingerprint: string | null
+          full_name: string | null
+          id: string
+          ip_hash: string | null
+          ip_masked: string | null
+          phone_norm: string | null
+          reason: string | null
+          status: string
+          user_agent: string | null
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          email_norm?: string | null
+          fingerprint?: string | null
+          full_name?: string | null
+          id?: string
+          ip_hash?: string | null
+          ip_masked?: string | null
+          phone_norm?: string | null
+          reason?: string | null
+          status: string
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          email_norm?: string | null
+          fingerprint?: string | null
+          full_name?: string | null
+          id?: string
+          ip_hash?: string | null
+          ip_masked?: string | null
+          phone_norm?: string | null
+          reason?: string | null
+          status?: string
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
+      signup_blocks: {
+        Row: {
+          attempts: number
+          blocked_until: string
+          created_at: string
+          key: string
+          reason: string
+          updated_at: string
+        }
+        Insert: {
+          attempts?: number
+          blocked_until: string
+          created_at?: string
+          key: string
+          reason: string
+          updated_at?: string
+        }
+        Update: {
+          attempts?: number
+          blocked_until?: string
+          created_at?: string
+          key?: string
+          reason?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       store_products: {
         Row: {
           created_at: string | null
@@ -4626,6 +4701,7 @@ export type Database = {
         Args: { _id: string; _note?: string }
         Returns: undefined
       }
+      admin_signup_security_report: { Args: never; Returns: Json }
       check_circuit_breaker: { Args: { p_server_id: string }; Returns: string }
       cleanup_diagnostic_slots: { Args: never; Returns: undefined }
       content_health_overview: { Args: { _server_id?: string }; Returns: Json }
