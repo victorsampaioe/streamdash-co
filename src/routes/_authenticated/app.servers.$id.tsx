@@ -262,7 +262,12 @@ function ServerDetail() {
                         <div className="font-mono text-xs">{new Date(i.started_at).toLocaleString()}</div>
                         <div className="text-xs text-muted-foreground">{i.reason ?? "—"}</div>
                       </div>
-                      {i.ended_at ? <Badge variant="outline" className="text-success">Resolvido</Badge> : <Badge variant="destructive">Em curso</Badge>}
+                      <div className="flex items-center gap-1.5">
+                        <Badge variant="outline" className="text-xs">
+                          {(i as any).incident_type === "dns" ? "DNS" : "Servidor"}
+                        </Badge>
+                        {i.ended_at ? <Badge variant="outline" className="text-success">Resolvido</Badge> : <Badge variant="destructive">Em curso</Badge>}
+                      </div>
                     </li>
                   ))}
                 </ul>
