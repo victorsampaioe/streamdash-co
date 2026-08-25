@@ -61,11 +61,13 @@ export const Route = createFileRoute('/api/public/android/associate')({
             client_username: username,
             client_password: password,
             server_id: server.id,
-            reseller_id: resellerId,
+            reseller_id: resellerId ?? '',
             last_login_at: new Date().toISOString(),
           };
 
-          if (existing?.id) {
+          if (!resellerId) {
+            // sem dono definido não persistimos a associação
+          } else if (existing?.id) {
             await supabaseAdmin
               .from('android_client_associations')
               .update(payload)
