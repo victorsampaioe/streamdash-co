@@ -56,7 +56,7 @@ function Dashboard() {
       const [dns, iptv, inc] = await Promise.all([
         supabase.from("dns_alerts").select("id, title, detail, severity, created_at, server_id").in("server_id", serverIds).order("created_at", { ascending: false }).limit(8),
         supabase.from("iptv_alerts").select("id, title, detail, severity, created_at, server_id").in("server_id", serverIds).order("created_at", { ascending: false }).limit(8),
-        supabase.from("incidents").select("id, started_at, ended_at, reason, server_id").in("server_id", serverIds).order("started_at", { ascending: false }).limit(8),
+        supabase.from("incidents").select("id, started_at, ended_at, reason, server_id").eq("incident_type", "server").in("server_id", serverIds).order("started_at", { ascending: false }).limit(8),
       ]);
       const items = [
         ...(dns.data ?? []).map((a: any) => ({ id: `dns-${a.id}`, kind: "DNS", title: a.title, detail: a.detail, at: a.created_at, severity: a.severity, server: nameById.get(a.server_id) })),

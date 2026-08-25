@@ -19,7 +19,7 @@ export default defineTool({
 
     const [{ data: servers }, { data: incidents }, { data: checks }] = await Promise.all([
       auth.supabase.from("servers").select("id, name, current_status, last_latency_ms"),
-      auth.supabase.from("incidents").select("server_id, started_at, ended_at").gte("started_at", since),
+      auth.supabase.from("incidents").select("server_id, started_at, ended_at").eq("incident_type", "server").gte("started_at", since),
       auth.supabase.from("checks").select("server_id, status, latency_ms, checked_at").gte("checked_at", since),
     ]);
 

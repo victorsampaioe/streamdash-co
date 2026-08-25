@@ -147,9 +147,11 @@ export async function buildDigestForUser(userId: string, since: Date): Promise<B
   // Incidentes
   const { data: started } = await supabaseAdmin
     .from("incidents").select("id, server_id, started_at, ended_at")
+    .eq("incident_type", "server")
     .in("server_id", ids).gte("started_at", sinceIso);
   const { data: resolved } = await supabaseAdmin
     .from("incidents").select("id, server_id, started_at, ended_at")
+    .eq("incident_type", "server")
     .in("server_id", ids).gte("ended_at", sinceIso).not("ended_at", "is", null);
   let offlineSeconds = 0;
   for (const i of resolved ?? []) {
