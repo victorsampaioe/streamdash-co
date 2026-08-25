@@ -92,11 +92,18 @@ export const Route = createFileRoute('/api/public/android/login')({
 
           const hit = await resolveServerForCredentials(targets, username, password);
           if (!hit) {
-            return json(
-              { error: 'Usuário ou senha não encontrados em nenhum servidor autorizado.' },
-              401,
-            );
+            // Muitos painéis bloqueiam IPs de datacenter (Cloudflare/WAF). Nesse caso
+            // devolvemos os candidatos para o app testar do próprio dispositivo (IP residencial).
+            return json({
+              status: 'resolve_client',
+              candidates: targets.slice(0, 25).map((t) => ({
+                id: t.id,
+                name: t.name,
+                dns: normalizeBase(t.host),
+              })),
+            });
           }
+
 
           const resellerId = hit.server.owner_id;
           const blocked = await licenseBlocked(resellerId);
