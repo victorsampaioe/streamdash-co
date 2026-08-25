@@ -1,7 +1,10 @@
 package site.streammonitor.play.domain
 
 import site.streammonitor.play.core.logging.ProbeLog
+import site.streammonitor.play.data.XtreamClient
+import site.streammonitor.play.data.XtreamCreds
 import site.streammonitor.play.network.ApiClient
+import site.streammonitor.play.network.AssociateRequest
 import site.streammonitor.play.network.LoginRequest
 import site.streammonitor.play.network.LoginResponse
 import site.streammonitor.play.network.ResellerAppConfig
@@ -46,6 +49,36 @@ object AuthRepository {
                         resellerId = body.reseller_id,
                         resolvedBy = body.resolved_by,
                     )
+                }
+
+                // Painel pediu para o dispositivo resolver (IP residencial)
+                if (res.isSuccessful && body?.status == "resolve_client") {
+                    val candidates = body.candidates.orEmpty()
+                    ProbeLog.log("RESOLVE_CLIENT", "testando ${candidates.size} servidores no dispositivo")
+                    for (c in candidates) {
+                        val ok = try {
+                            XtreamClient(
+                                XtreamCreds(c.dns, username, password, "IPTVSmartersPlayer")
+                            ).login().let { r ->
+                                r.body?.contains("\"auth\":1") == true
+                            }
+                        } catch (t: Throwable) { false }
+                        if (ok) {
+                            ProbeLog.log("RESOLVE_OK", "${c.name ?: c.dns} (${c.dns})")
+                            val assoc = try {
+                                api.associate(AssociateRequest(username, password, c.id)).body()
+                            } catch (t: Throwable) { null }
+                            if (assoc?.error != null) return LoginOutcome.Failure(assoc.error)
+                            return LoginOutcome.Success(
+                                dns = c.dns,
+                                serverName = c.name,
+                                serverId = c.id,
+                                resellerId = assoc?.reseller_id,
+                                resolvedBy = "client",
+                            )
+                        }
+                    }
+                    return LoginOutcome.Failure("Usuário ou senha não encontrados nos servidores autorizados.")
                 }
 
                 // Resposta do servidor com erro de negócio (401/403/503): não tenta outro host.
