@@ -166,6 +166,245 @@ export type Database = {
           },
         ]
       }
+      android_devices: {
+        Row: {
+          client_key: string | null
+          created_at: string
+          device_id: string
+          id: string
+          last_seen_at: string | null
+          reseller_id: string | null
+          revoked: boolean
+          server_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          client_key?: string | null
+          created_at?: string
+          device_id: string
+          id?: string
+          last_seen_at?: string | null
+          reseller_id?: string | null
+          revoked?: boolean
+          server_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          client_key?: string | null
+          created_at?: string
+          device_id?: string
+          id?: string
+          last_seen_at?: string | null
+          reseller_id?: string | null
+          revoked?: boolean
+          server_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "android_devices_server_id_fkey"
+            columns: ["server_id"]
+            isOneToOne: false
+            referencedRelation: "servers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      android_resolution_grants: {
+        Row: {
+          candidate_server_ids: string[]
+          client_key: string
+          created_at: string
+          expires_at: string
+          grant_hash: string
+          id: string
+          used_at: string | null
+        }
+        Insert: {
+          candidate_server_ids?: string[]
+          client_key: string
+          created_at?: string
+          expires_at: string
+          grant_hash: string
+          id?: string
+          used_at?: string | null
+        }
+        Update: {
+          candidate_server_ids?: string[]
+          client_key?: string
+          created_at?: string
+          expires_at?: string
+          grant_hash?: string
+          id?: string
+          used_at?: string | null
+        }
+        Relationships: []
+      }
+      android_sessions: {
+        Row: {
+          access_token_hash: string
+          client_key: string
+          created_at: string
+          device_uuid: string | null
+          expires_at: string
+          id: string
+          refresh_expires_at: string
+          refresh_token_hash: string
+          reseller_id: string | null
+          revoked_at: string | null
+          scopes: string[]
+          server_id: string | null
+        }
+        Insert: {
+          access_token_hash: string
+          client_key: string
+          created_at?: string
+          device_uuid?: string | null
+          expires_at: string
+          id?: string
+          refresh_expires_at: string
+          refresh_token_hash: string
+          reseller_id?: string | null
+          revoked_at?: string | null
+          scopes?: string[]
+          server_id?: string | null
+        }
+        Update: {
+          access_token_hash?: string
+          client_key?: string
+          created_at?: string
+          device_uuid?: string | null
+          expires_at?: string
+          id?: string
+          refresh_expires_at?: string
+          refresh_token_hash?: string
+          reseller_id?: string | null
+          revoked_at?: string | null
+          scopes?: string[]
+          server_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "android_sessions_device_uuid_fkey"
+            columns: ["device_uuid"]
+            isOneToOne: false
+            referencedRelation: "android_devices"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "android_sessions_server_id_fkey"
+            columns: ["server_id"]
+            isOneToOne: false
+            referencedRelation: "servers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      api_rate_limits: {
+        Row: {
+          bucket: string
+          created_at: string
+          hits: number
+          id: string
+          key_hash: string
+          window_start: string
+        }
+        Insert: {
+          bucket: string
+          created_at?: string
+          hits?: number
+          id?: string
+          key_hash: string
+          window_start: string
+        }
+        Update: {
+          bucket?: string
+          created_at?: string
+          hits?: number
+          id?: string
+          key_hash?: string
+          window_start?: string
+        }
+        Relationships: []
+      }
+      api_request_nonces: {
+        Row: {
+          created_at: string
+          expires_at: string
+          nonce_hash: string
+          scope: string
+        }
+        Insert: {
+          created_at?: string
+          expires_at: string
+          nonce_hash: string
+          scope: string
+        }
+        Update: {
+          created_at?: string
+          expires_at?: string
+          nonce_hash?: string
+          scope?: string
+        }
+        Relationships: []
+      }
+      app_releases: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          file_size: number | null
+          id: string
+          mandatory: boolean
+          message: string | null
+          minimum_version_code: number
+          published_at: string | null
+          recommended_version_code: number | null
+          sha256: string | null
+          signing_fingerprint: string | null
+          status: string
+          update_url: string
+          updated_at: string
+          version_code: number
+          version_name: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          file_size?: number | null
+          id?: string
+          mandatory?: boolean
+          message?: string | null
+          minimum_version_code?: number
+          published_at?: string | null
+          recommended_version_code?: number | null
+          sha256?: string | null
+          signing_fingerprint?: string | null
+          status?: string
+          update_url: string
+          updated_at?: string
+          version_code: number
+          version_name: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          file_size?: number | null
+          id?: string
+          mandatory?: boolean
+          message?: string | null
+          minimum_version_code?: number
+          published_at?: string | null
+          recommended_version_code?: number | null
+          sha256?: string | null
+          signing_fingerprint?: string | null
+          status?: string
+          update_url?: string
+          updated_at?: string
+          version_code?: number
+          version_name?: string
+        }
+        Relationships: []
+      }
       app_settings: {
         Row: {
           key: string
@@ -4042,6 +4281,42 @@ export type Database = {
           },
         ]
       }
+      security_audit_log: {
+        Row: {
+          action: string
+          actor_id: string | null
+          actor_label: string | null
+          created_at: string
+          id: string
+          ip_hash: string | null
+          metadata: Json
+          severity: string
+          target: string | null
+        }
+        Insert: {
+          action: string
+          actor_id?: string | null
+          actor_label?: string | null
+          created_at?: string
+          id?: string
+          ip_hash?: string | null
+          metadata?: Json
+          severity?: string
+          target?: string | null
+        }
+        Update: {
+          action?: string
+          actor_id?: string | null
+          actor_label?: string | null
+          created_at?: string
+          id?: string
+          ip_hash?: string | null
+          metadata?: Json
+          severity?: string
+          target?: string | null
+        }
+        Relationships: []
+      }
       server_analysis: {
         Row: {
           analyzed_at: string
@@ -4500,6 +4775,27 @@ export type Database = {
           sent_at?: string
           summary?: Json
           user_id?: string
+        }
+        Relationships: []
+      }
+      tmdb_cache: {
+        Row: {
+          cache_key: string
+          created_at: string
+          expires_at: string
+          payload: Json
+        }
+        Insert: {
+          cache_key: string
+          created_at?: string
+          expires_at: string
+          payload: Json
+        }
+        Update: {
+          cache_key?: string
+          created_at?: string
+          expires_at?: string
+          payload?: Json
         }
         Relationships: []
       }
