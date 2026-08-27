@@ -6,42 +6,70 @@ import {
   resolveServerForCredentials,
   type ProbeTarget,
 } from '@/lib/android-resolve.server';
+import {
+  apiError,
+  clientIp,
+  enforceRateLimits,
+  jsonResponse,
+  maskIdentifier,
+  safeLog,
+  auditLog,
+} from '@/lib/api-security.server';
+import { clientKeyOf, issueSession } from '@/lib/android-session.server';
+import { createResolutionGrant, licenseBlocked } from '@/lib/android-guard.server';
 
 const loginSchema = z.object({
-  username: z.string().min(1),
-  password: z.string().min(1),
+  username: z.string().min(1).max(120),
+  password: z.string().min(1).max(200),
+  device_id: z.string().min(4).max(128).optional(),
 });
 
-const json = (body: unknown, status = 200) =>
-  new Response(JSON.stringify(body), {
-    status,
-    headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' },
-  });
-
-/** Licença do revendedor: bloqueia apenas quando existe registro e está inativo/vencido. */
-async function licenseBlocked(resellerId: string | null): Promise<string | null> {
-  if (!resellerId) return null;
-  const { data } = await supabaseAdmin.rpc('validate_android_play_access', {
-    _reseller_id: resellerId,
-  });
-  const row = Array.isArray(data) ? data[0] : null;
-  if (!row) return null; // sem licença cadastrada => não bloqueia
-  if (row.is_active) return null;
-  return 'Licença Stream Monitor Play inativa ou vencida para este provedor.';
-}
+const MAX_BODY = 8 * 1024;
 
 export const Route = createFileRoute('/api/public/android/login')({
   server: {
     handlers: {
       POST: async ({ request }) => {
         try {
-          const body = await request.json();
+          const raw = await request.text();
+          if (raw.length > MAX_BODY) return apiError('invalid_payload');
+
+          let body: unknown;
+          try {
+            body = JSON.parse(raw);
+          } catch {
+            return apiError('invalid_payload');
+          }
+
           const parsed = loginSchema.safeParse(body);
-          if (!parsed.success) return json({ error: 'Informe usuário e senha.' }, 400);
+          if (!parsed.success) return apiError('invalid_payload', 'Informe usuário e senha.');
 
           const username = parsed.data.username.trim();
           const password = parsed.data.password.trim();
-          console.log(`[ANDROID LOGIN] tentativa user=${username}`);
+          const deviceId = parsed.data.device_id ?? null;
+          const ip = clientIp(request.headers);
+          const clientKey = clientKeyOf(username);
+
+          // Rate limit: IP (NAT tolerante), dispositivo e usuário (hash).
+          const limited = await enforceRateLimits([
+            { rule: { bucket: 'android_login_ip', limit: 60, windowSeconds: 300 }, key: ip },
+            ...(deviceId
+              ? [{ rule: { bucket: 'android_login_device', limit: 12, windowSeconds: 300 }, key: deviceId }]
+              : []),
+            { rule: { bucket: 'android_login_user', limit: 8, windowSeconds: 300 }, key: clientKey },
+            { rule: { bucket: 'android_login_user_h', limit: 30, windowSeconds: 3600 }, key: clientKey },
+          ]);
+          if (limited) {
+            await auditLog({
+              action: 'android.login.rate_limited',
+              severity: 'warning',
+              target: maskIdentifier(username),
+              ip,
+            });
+            return limited;
+          }
+
+          safeLog('ANDROID LOGIN', 'tentativa', { user: maskIdentifier(username) });
 
           // 1) Associação já conhecida (login rápido)
           const { data: association } = await supabaseAdmin
@@ -53,8 +81,8 @@ export const Route = createFileRoute('/api/public/android/login')({
 
           const known = (association?.servers ?? null) as ProbeTarget | null;
           if (known?.host) {
-            const blocked = await licenseBlocked(association!.reseller_id ?? known.owner_id);
-            if (blocked) return json({ error: blocked }, 403);
+            const resellerId = association!.reseller_id ?? known.owner_id;
+            if (await licenseBlocked(resellerId)) return apiError('license_inactive');
 
             await supabaseAdmin
               .from('android_client_associations')
@@ -62,12 +90,21 @@ export const Route = createFileRoute('/api/public/android/login')({
               .eq('client_username', username)
               .eq('client_password', password);
 
-            return json({
+            const session = await issueSession({
+              clientKey,
+              resellerId,
+              serverId: known.id,
+              deviceId,
+            });
+
+            return jsonResponse({
+              ok: true,
               status: 'success',
               resolved_by: 'association',
               server: { id: known.id, dns: normalizeBase(known.host), name: known.name },
               server_id: known.id,
-              reseller_id: association!.reseller_id ?? known.owner_id,
+              reseller_id: resellerId,
+              session,
             });
           }
 
@@ -80,34 +117,39 @@ export const Route = createFileRoute('/api/public/android/login')({
             .order('last_checked_at', { ascending: false })
             .limit(60);
 
+          if (serversError) safeLog('ANDROID LOGIN', 'falha ao listar servidores');
+
           const targets: ProbeTarget[] = (servers ?? [])
             .filter((s) => !s.monitoring_paused && !!s.host)
             .map((s) => ({ id: s.id, name: s.name ?? '', host: s.host as string, owner_id: s.owner_id }));
 
-          if (serversError) console.error('[ANDROID LOGIN] servers query', serversError);
-          console.log(`[ANDROID LOGIN] candidatos=${targets.length}`);
-          if (targets.length === 0) {
-            return json({ error: 'Nenhum servidor autorizado disponível no momento.' }, 503);
-          }
+          if (targets.length === 0) return apiError('unavailable');
 
           const hit = await resolveServerForCredentials(targets, username, password);
+
           if (!hit) {
-            // Muitos painéis bloqueiam IPs de datacenter (Cloudflare/WAF). Nesse caso
-            // devolvemos os candidatos para o app testar do próprio dispositivo (IP residencial).
-            return json({
+            // Muitos painéis bloqueiam IP de datacenter: o app valida localmente.
+            const candidates = targets.slice(0, 25);
+            const grant = await createResolutionGrant(
+              clientKey,
+              candidates.map((c) => c.id),
+            );
+            return jsonResponse({
+              ok: true,
               status: 'resolve_client',
-              candidates: targets.slice(0, 25).map((t) => ({
+              resolution_token: grant?.token ?? null,
+              resolution_expires_at: grant?.expires_at ?? null,
+              // contrato estável: sempre array de objetos { id, name, dns }
+              candidates: candidates.map((t) => ({
                 id: t.id,
-                name: t.name,
+                name: t.name ?? '',
                 dns: normalizeBase(t.host),
               })),
             });
           }
 
-
           const resellerId = hit.server.owner_id;
-          const blocked = await licenseBlocked(resellerId);
-          if (blocked) return json({ error: blocked }, 403);
+          if (await licenseBlocked(resellerId)) return apiError('license_inactive');
 
           if (resellerId) {
             await supabaseAdmin.from('android_client_associations').insert({
@@ -119,17 +161,32 @@ export const Route = createFileRoute('/api/public/android/login')({
             });
           }
 
+          const session = await issueSession({
+            clientKey,
+            resellerId,
+            serverId: hit.server.id,
+            deviceId,
+          });
 
-          return json({
+          await auditLog({
+            action: 'android.login.auto_resolved',
+            target: maskIdentifier(username),
+            metadata: { server_id: hit.server.id },
+            ip,
+          });
+
+          return jsonResponse({
+            ok: true,
             status: 'success',
             resolved_by: 'auto',
             server: { id: hit.server.id, dns: hit.base, name: hit.server.name },
             server_id: hit.server.id,
             reseller_id: resellerId,
+            session,
           });
         } catch (error) {
-          console.error('[ANDROID LOGIN ERROR]', error);
-          return json({ error: 'Erro interno no servidor' }, 500);
+          safeLog('ANDROID LOGIN', 'erro interno', { error: (error as Error).message });
+          return apiError('internal_error');
         }
       },
     },
