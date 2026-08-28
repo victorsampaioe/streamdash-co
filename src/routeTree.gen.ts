@@ -66,6 +66,7 @@ import { Route as ApiPublicCoreTaskRouteImport } from './routes/api/public/core/
 import { Route as ApiPublicCoreStreamRouteImport } from './routes/api/public/core/stream'
 import { Route as ApiPublicCoreReportRouteImport } from './routes/api/public/core/report'
 import { Route as ApiPublicCoreLiveDiagRouteImport } from './routes/api/public/core/live-diag'
+import { Route as ApiPublicAndroidVersionRouteImport } from './routes/api/public/android/version'
 import { Route as ApiPublicAndroidStatusRouteImport } from './routes/api/public/android/status'
 import { Route as ApiPublicAndroidRefreshRouteImport } from './routes/api/public/android/refresh'
 import { Route as ApiPublicAndroidLoginRouteImport } from './routes/api/public/android/login'
@@ -376,6 +377,11 @@ const ApiPublicCoreLiveDiagRoute = ApiPublicCoreLiveDiagRouteImport.update({
   path: '/api/public/core/live-diag',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicAndroidVersionRoute = ApiPublicAndroidVersionRouteImport.update({
+  id: '/api/public/android/version',
+  path: '/api/public/android/version',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiPublicAndroidStatusRoute = ApiPublicAndroidStatusRouteImport.update({
   id: '/api/public/android/status',
   path: '/api/public/android/status',
@@ -483,6 +489,7 @@ export interface FileRoutesByFullPath {
   '/api/public/android/login': typeof ApiPublicAndroidLoginRoute
   '/api/public/android/refresh': typeof ApiPublicAndroidRefreshRoute
   '/api/public/android/status': typeof ApiPublicAndroidStatusRoute
+  '/api/public/android/version': typeof ApiPublicAndroidVersionRoute
   '/api/public/core/live-diag': typeof ApiPublicCoreLiveDiagRoute
   '/api/public/core/report': typeof ApiPublicCoreReportRoute
   '/api/public/core/stream': typeof ApiPublicCoreStreamRoute
@@ -550,6 +557,7 @@ export interface FileRoutesByTo {
   '/api/public/android/login': typeof ApiPublicAndroidLoginRoute
   '/api/public/android/refresh': typeof ApiPublicAndroidRefreshRoute
   '/api/public/android/status': typeof ApiPublicAndroidStatusRoute
+  '/api/public/android/version': typeof ApiPublicAndroidVersionRoute
   '/api/public/core/live-diag': typeof ApiPublicCoreLiveDiagRoute
   '/api/public/core/report': typeof ApiPublicCoreReportRoute
   '/api/public/core/stream': typeof ApiPublicCoreStreamRoute
@@ -620,6 +628,7 @@ export interface FileRoutesById {
   '/api/public/android/login': typeof ApiPublicAndroidLoginRoute
   '/api/public/android/refresh': typeof ApiPublicAndroidRefreshRoute
   '/api/public/android/status': typeof ApiPublicAndroidStatusRoute
+  '/api/public/android/version': typeof ApiPublicAndroidVersionRoute
   '/api/public/core/live-diag': typeof ApiPublicCoreLiveDiagRoute
   '/api/public/core/report': typeof ApiPublicCoreReportRoute
   '/api/public/core/stream': typeof ApiPublicCoreStreamRoute
@@ -690,6 +699,7 @@ export interface FileRouteTypes {
     | '/api/public/android/login'
     | '/api/public/android/refresh'
     | '/api/public/android/status'
+    | '/api/public/android/version'
     | '/api/public/core/live-diag'
     | '/api/public/core/report'
     | '/api/public/core/stream'
@@ -757,6 +767,7 @@ export interface FileRouteTypes {
     | '/api/public/android/login'
     | '/api/public/android/refresh'
     | '/api/public/android/status'
+    | '/api/public/android/version'
     | '/api/public/core/live-diag'
     | '/api/public/core/report'
     | '/api/public/core/stream'
@@ -826,6 +837,7 @@ export interface FileRouteTypes {
     | '/api/public/android/login'
     | '/api/public/android/refresh'
     | '/api/public/android/status'
+    | '/api/public/android/version'
     | '/api/public/core/live-diag'
     | '/api/public/core/report'
     | '/api/public/core/stream'
@@ -876,6 +888,7 @@ export interface RootRouteChildren {
   ApiPublicAndroidLoginRoute: typeof ApiPublicAndroidLoginRoute
   ApiPublicAndroidRefreshRoute: typeof ApiPublicAndroidRefreshRoute
   ApiPublicAndroidStatusRoute: typeof ApiPublicAndroidStatusRoute
+  ApiPublicAndroidVersionRoute: typeof ApiPublicAndroidVersionRoute
   ApiPublicCoreLiveDiagRoute: typeof ApiPublicCoreLiveDiagRoute
   ApiPublicCoreReportRoute: typeof ApiPublicCoreReportRoute
   ApiPublicCoreStreamRoute: typeof ApiPublicCoreStreamRoute
@@ -1292,6 +1305,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicCoreLiveDiagRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/android/version': {
+      id: '/api/public/android/version'
+      path: '/api/public/android/version'
+      fullPath: '/api/public/android/version'
+      preLoaderRoute: typeof ApiPublicAndroidVersionRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/android/status': {
       id: '/api/public/android/status'
       path: '/api/public/android/status'
@@ -1484,6 +1504,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPublicAndroidLoginRoute: ApiPublicAndroidLoginRoute,
   ApiPublicAndroidRefreshRoute: ApiPublicAndroidRefreshRoute,
   ApiPublicAndroidStatusRoute: ApiPublicAndroidStatusRoute,
+  ApiPublicAndroidVersionRoute: ApiPublicAndroidVersionRoute,
   ApiPublicCoreLiveDiagRoute: ApiPublicCoreLiveDiagRoute,
   ApiPublicCoreReportRoute: ApiPublicCoreReportRoute,
   ApiPublicCoreStreamRoute: ApiPublicCoreStreamRoute,
