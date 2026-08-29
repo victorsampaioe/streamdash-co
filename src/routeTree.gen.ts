@@ -54,6 +54,7 @@ import { Route as AuthenticatedAppServersIndexRouteImport } from './routes/_auth
 import { Route as AuthenticatedAppInteligenciaIndexRouteImport } from './routes/_authenticated/app.inteligencia.index'
 import { Route as AuthenticatedAppDiagnosticoIndexRouteImport } from './routes/_authenticated/app.diagnostico.index'
 import { Route as ApiPublicWebhooksMercadopagoRouteImport } from './routes/api/public/webhooks/mercadopago'
+import { Route as ApiPublicTmdbCatalogRouteImport } from './routes/api/public/tmdb/catalog'
 import { Route as ApiPublicTelegramWebhookRouteImport } from './routes/api/public/telegram/webhook'
 import { Route as ApiPublicRegionsTargetsRouteImport } from './routes/api/public/regions/targets'
 import { Route as ApiPublicRegionsReportRouteImport } from './routes/api/public/regions/report'
@@ -75,6 +76,7 @@ import { Route as ApiPublicAndroidAssociateRouteImport } from './routes/api/publ
 import { Route as AuthenticatedAppServersNewRouteImport } from './routes/_authenticated/app.servers.new'
 import { Route as AuthenticatedAppServersIdRouteImport } from './routes/_authenticated/app.servers.$id'
 import { Route as AuthenticatedAppAdminCoreLogsRouteImport } from './routes/_authenticated/app.admin_.core-logs'
+import { Route as AuthenticatedAppAdminStreamPlayVersionsRouteImport } from './routes/_authenticated/app.admin.stream-play-versions'
 import { Route as AuthenticatedAppAdminAndroidPlayRouteImport } from './routes/_authenticated/app.admin.android-play'
 import { Route as AuthenticatedAppInteligenciaMediaIdRouteImport } from './routes/_authenticated/app.inteligencia.$media.$id'
 
@@ -314,6 +316,11 @@ const ApiPublicWebhooksMercadopagoRoute =
     path: '/api/public/webhooks/mercadopago',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiPublicTmdbCatalogRoute = ApiPublicTmdbCatalogRouteImport.update({
+  id: '/api/public/tmdb/catalog',
+  path: '/api/public/tmdb/catalog',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiPublicTelegramWebhookRoute =
   ApiPublicTelegramWebhookRouteImport.update({
     id: '/api/public/telegram/webhook',
@@ -426,6 +433,12 @@ const AuthenticatedAppAdminCoreLogsRoute =
     path: '/admin/core-logs',
     getParentRoute: () => AuthenticatedAppRoute,
   } as any)
+const AuthenticatedAppAdminStreamPlayVersionsRoute =
+  AuthenticatedAppAdminStreamPlayVersionsRouteImport.update({
+    id: '/stream-play-versions',
+    path: '/stream-play-versions',
+    getParentRoute: () => AuthenticatedAppAdminRoute,
+  } as any)
 const AuthenticatedAppAdminAndroidPlayRoute =
   AuthenticatedAppAdminAndroidPlayRouteImport.update({
     id: '/android-play',
@@ -481,6 +494,7 @@ export interface FileRoutesByFullPath {
   '/api/public/signup': typeof ApiPublicSignupRoute
   '/app/': typeof AuthenticatedAppIndexRoute
   '/app/admin/android-play': typeof AuthenticatedAppAdminAndroidPlayRoute
+  '/app/admin/stream-play-versions': typeof AuthenticatedAppAdminStreamPlayVersionsRoute
   '/app/admin/core-logs': typeof AuthenticatedAppAdminCoreLogsRoute
   '/app/servers/$id': typeof AuthenticatedAppServersIdRoute
   '/app/servers/new': typeof AuthenticatedAppServersNewRoute
@@ -502,6 +516,7 @@ export interface FileRoutesByFullPath {
   '/api/public/regions/report': typeof ApiPublicRegionsReportRoute
   '/api/public/regions/targets': typeof ApiPublicRegionsTargetsRoute
   '/api/public/telegram/webhook': typeof ApiPublicTelegramWebhookRoute
+  '/api/public/tmdb/catalog': typeof ApiPublicTmdbCatalogRoute
   '/api/public/webhooks/mercadopago': typeof ApiPublicWebhooksMercadopagoRoute
   '/app/diagnostico/': typeof AuthenticatedAppDiagnosticoIndexRoute
   '/app/inteligencia/': typeof AuthenticatedAppInteligenciaIndexRoute
@@ -549,6 +564,7 @@ export interface FileRoutesByTo {
   '/api/public/signup': typeof ApiPublicSignupRoute
   '/app': typeof AuthenticatedAppIndexRoute
   '/app/admin/android-play': typeof AuthenticatedAppAdminAndroidPlayRoute
+  '/app/admin/stream-play-versions': typeof AuthenticatedAppAdminStreamPlayVersionsRoute
   '/app/admin/core-logs': typeof AuthenticatedAppAdminCoreLogsRoute
   '/app/servers/$id': typeof AuthenticatedAppServersIdRoute
   '/app/servers/new': typeof AuthenticatedAppServersNewRoute
@@ -570,6 +586,7 @@ export interface FileRoutesByTo {
   '/api/public/regions/report': typeof ApiPublicRegionsReportRoute
   '/api/public/regions/targets': typeof ApiPublicRegionsTargetsRoute
   '/api/public/telegram/webhook': typeof ApiPublicTelegramWebhookRoute
+  '/api/public/tmdb/catalog': typeof ApiPublicTmdbCatalogRoute
   '/api/public/webhooks/mercadopago': typeof ApiPublicWebhooksMercadopagoRoute
   '/app/diagnostico': typeof AuthenticatedAppDiagnosticoIndexRoute
   '/app/inteligencia': typeof AuthenticatedAppInteligenciaIndexRoute
@@ -620,6 +637,7 @@ export interface FileRoutesById {
   '/api/public/signup': typeof ApiPublicSignupRoute
   '/_authenticated/app/': typeof AuthenticatedAppIndexRoute
   '/_authenticated/app/admin/android-play': typeof AuthenticatedAppAdminAndroidPlayRoute
+  '/_authenticated/app/admin/stream-play-versions': typeof AuthenticatedAppAdminStreamPlayVersionsRoute
   '/_authenticated/app/admin_/core-logs': typeof AuthenticatedAppAdminCoreLogsRoute
   '/_authenticated/app/servers/$id': typeof AuthenticatedAppServersIdRoute
   '/_authenticated/app/servers/new': typeof AuthenticatedAppServersNewRoute
@@ -641,6 +659,7 @@ export interface FileRoutesById {
   '/api/public/regions/report': typeof ApiPublicRegionsReportRoute
   '/api/public/regions/targets': typeof ApiPublicRegionsTargetsRoute
   '/api/public/telegram/webhook': typeof ApiPublicTelegramWebhookRoute
+  '/api/public/tmdb/catalog': typeof ApiPublicTmdbCatalogRoute
   '/api/public/webhooks/mercadopago': typeof ApiPublicWebhooksMercadopagoRoute
   '/_authenticated/app/diagnostico/': typeof AuthenticatedAppDiagnosticoIndexRoute
   '/_authenticated/app/inteligencia/': typeof AuthenticatedAppInteligenciaIndexRoute
@@ -691,6 +710,7 @@ export interface FileRouteTypes {
     | '/api/public/signup'
     | '/app/'
     | '/app/admin/android-play'
+    | '/app/admin/stream-play-versions'
     | '/app/admin/core-logs'
     | '/app/servers/$id'
     | '/app/servers/new'
@@ -712,6 +732,7 @@ export interface FileRouteTypes {
     | '/api/public/regions/report'
     | '/api/public/regions/targets'
     | '/api/public/telegram/webhook'
+    | '/api/public/tmdb/catalog'
     | '/api/public/webhooks/mercadopago'
     | '/app/diagnostico/'
     | '/app/inteligencia/'
@@ -759,6 +780,7 @@ export interface FileRouteTypes {
     | '/api/public/signup'
     | '/app'
     | '/app/admin/android-play'
+    | '/app/admin/stream-play-versions'
     | '/app/admin/core-logs'
     | '/app/servers/$id'
     | '/app/servers/new'
@@ -780,6 +802,7 @@ export interface FileRouteTypes {
     | '/api/public/regions/report'
     | '/api/public/regions/targets'
     | '/api/public/telegram/webhook'
+    | '/api/public/tmdb/catalog'
     | '/api/public/webhooks/mercadopago'
     | '/app/diagnostico'
     | '/app/inteligencia'
@@ -829,6 +852,7 @@ export interface FileRouteTypes {
     | '/api/public/signup'
     | '/_authenticated/app/'
     | '/_authenticated/app/admin/android-play'
+    | '/_authenticated/app/admin/stream-play-versions'
     | '/_authenticated/app/admin_/core-logs'
     | '/_authenticated/app/servers/$id'
     | '/_authenticated/app/servers/new'
@@ -850,6 +874,7 @@ export interface FileRouteTypes {
     | '/api/public/regions/report'
     | '/api/public/regions/targets'
     | '/api/public/telegram/webhook'
+    | '/api/public/tmdb/catalog'
     | '/api/public/webhooks/mercadopago'
     | '/_authenticated/app/diagnostico/'
     | '/_authenticated/app/inteligencia/'
@@ -901,6 +926,7 @@ export interface RootRouteChildren {
   ApiPublicRegionsReportRoute: typeof ApiPublicRegionsReportRoute
   ApiPublicRegionsTargetsRoute: typeof ApiPublicRegionsTargetsRoute
   ApiPublicTelegramWebhookRoute: typeof ApiPublicTelegramWebhookRoute
+  ApiPublicTmdbCatalogRoute: typeof ApiPublicTmdbCatalogRoute
   ApiPublicWebhooksMercadopagoRoute: typeof ApiPublicWebhooksMercadopagoRoute
 }
 
@@ -1221,6 +1247,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicWebhooksMercadopagoRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/tmdb/catalog': {
+      id: '/api/public/tmdb/catalog'
+      path: '/api/public/tmdb/catalog'
+      fullPath: '/api/public/tmdb/catalog'
+      preLoaderRoute: typeof ApiPublicTmdbCatalogRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/telegram/webhook': {
       id: '/api/public/telegram/webhook'
       path: '/api/public/telegram/webhook'
@@ -1368,6 +1401,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAppAdminCoreLogsRouteImport
       parentRoute: typeof AuthenticatedAppRoute
     }
+    '/_authenticated/app/admin/stream-play-versions': {
+      id: '/_authenticated/app/admin/stream-play-versions'
+      path: '/stream-play-versions'
+      fullPath: '/app/admin/stream-play-versions'
+      preLoaderRoute: typeof AuthenticatedAppAdminStreamPlayVersionsRouteImport
+      parentRoute: typeof AuthenticatedAppAdminRoute
+    }
     '/_authenticated/app/admin/android-play': {
       id: '/_authenticated/app/admin/android-play'
       path: '/android-play'
@@ -1387,10 +1427,13 @@ declare module '@tanstack/react-router' {
 
 interface AuthenticatedAppAdminRouteChildren {
   AuthenticatedAppAdminAndroidPlayRoute: typeof AuthenticatedAppAdminAndroidPlayRoute
+  AuthenticatedAppAdminStreamPlayVersionsRoute: typeof AuthenticatedAppAdminStreamPlayVersionsRoute
 }
 
 const AuthenticatedAppAdminRouteChildren: AuthenticatedAppAdminRouteChildren = {
   AuthenticatedAppAdminAndroidPlayRoute: AuthenticatedAppAdminAndroidPlayRoute,
+  AuthenticatedAppAdminStreamPlayVersionsRoute:
+    AuthenticatedAppAdminStreamPlayVersionsRoute,
 }
 
 const AuthenticatedAppAdminRouteWithChildren =
@@ -1517,6 +1560,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPublicRegionsReportRoute: ApiPublicRegionsReportRoute,
   ApiPublicRegionsTargetsRoute: ApiPublicRegionsTargetsRoute,
   ApiPublicTelegramWebhookRoute: ApiPublicTelegramWebhookRoute,
+  ApiPublicTmdbCatalogRoute: ApiPublicTmdbCatalogRoute,
   ApiPublicWebhooksMercadopagoRoute: ApiPublicWebhooksMercadopagoRoute,
 }
 export const routeTree = rootRouteImport
