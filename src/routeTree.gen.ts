@@ -76,6 +76,7 @@ import { Route as ApiPublicAndroidAssociateRouteImport } from './routes/api/publ
 import { Route as AuthenticatedAppServersNewRouteImport } from './routes/_authenticated/app.servers.new'
 import { Route as AuthenticatedAppServersIdRouteImport } from './routes/_authenticated/app.servers.$id'
 import { Route as AuthenticatedAppAdminCoreLogsRouteImport } from './routes/_authenticated/app.admin_.core-logs'
+import { Route as AuthenticatedAppAdminStreamPlayVersionsRouteImport } from './routes/_authenticated/app.admin.stream-play-versions'
 import { Route as AuthenticatedAppAdminAndroidPlayRouteImport } from './routes/_authenticated/app.admin.android-play'
 import { Route as AuthenticatedAppInteligenciaMediaIdRouteImport } from './routes/_authenticated/app.inteligencia.$media.$id'
 
@@ -432,6 +433,12 @@ const AuthenticatedAppAdminCoreLogsRoute =
     path: '/admin/core-logs',
     getParentRoute: () => AuthenticatedAppRoute,
   } as any)
+const AuthenticatedAppAdminStreamPlayVersionsRoute =
+  AuthenticatedAppAdminStreamPlayVersionsRouteImport.update({
+    id: '/stream-play-versions',
+    path: '/stream-play-versions',
+    getParentRoute: () => AuthenticatedAppAdminRoute,
+  } as any)
 const AuthenticatedAppAdminAndroidPlayRoute =
   AuthenticatedAppAdminAndroidPlayRouteImport.update({
     id: '/android-play',
@@ -487,6 +494,7 @@ export interface FileRoutesByFullPath {
   '/api/public/signup': typeof ApiPublicSignupRoute
   '/app/': typeof AuthenticatedAppIndexRoute
   '/app/admin/android-play': typeof AuthenticatedAppAdminAndroidPlayRoute
+  '/app/admin/stream-play-versions': typeof AuthenticatedAppAdminStreamPlayVersionsRoute
   '/app/admin/core-logs': typeof AuthenticatedAppAdminCoreLogsRoute
   '/app/servers/$id': typeof AuthenticatedAppServersIdRoute
   '/app/servers/new': typeof AuthenticatedAppServersNewRoute
@@ -556,6 +564,7 @@ export interface FileRoutesByTo {
   '/api/public/signup': typeof ApiPublicSignupRoute
   '/app': typeof AuthenticatedAppIndexRoute
   '/app/admin/android-play': typeof AuthenticatedAppAdminAndroidPlayRoute
+  '/app/admin/stream-play-versions': typeof AuthenticatedAppAdminStreamPlayVersionsRoute
   '/app/admin/core-logs': typeof AuthenticatedAppAdminCoreLogsRoute
   '/app/servers/$id': typeof AuthenticatedAppServersIdRoute
   '/app/servers/new': typeof AuthenticatedAppServersNewRoute
@@ -628,6 +637,7 @@ export interface FileRoutesById {
   '/api/public/signup': typeof ApiPublicSignupRoute
   '/_authenticated/app/': typeof AuthenticatedAppIndexRoute
   '/_authenticated/app/admin/android-play': typeof AuthenticatedAppAdminAndroidPlayRoute
+  '/_authenticated/app/admin/stream-play-versions': typeof AuthenticatedAppAdminStreamPlayVersionsRoute
   '/_authenticated/app/admin_/core-logs': typeof AuthenticatedAppAdminCoreLogsRoute
   '/_authenticated/app/servers/$id': typeof AuthenticatedAppServersIdRoute
   '/_authenticated/app/servers/new': typeof AuthenticatedAppServersNewRoute
@@ -700,6 +710,7 @@ export interface FileRouteTypes {
     | '/api/public/signup'
     | '/app/'
     | '/app/admin/android-play'
+    | '/app/admin/stream-play-versions'
     | '/app/admin/core-logs'
     | '/app/servers/$id'
     | '/app/servers/new'
@@ -769,6 +780,7 @@ export interface FileRouteTypes {
     | '/api/public/signup'
     | '/app'
     | '/app/admin/android-play'
+    | '/app/admin/stream-play-versions'
     | '/app/admin/core-logs'
     | '/app/servers/$id'
     | '/app/servers/new'
@@ -840,6 +852,7 @@ export interface FileRouteTypes {
     | '/api/public/signup'
     | '/_authenticated/app/'
     | '/_authenticated/app/admin/android-play'
+    | '/_authenticated/app/admin/stream-play-versions'
     | '/_authenticated/app/admin_/core-logs'
     | '/_authenticated/app/servers/$id'
     | '/_authenticated/app/servers/new'
@@ -1388,6 +1401,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAppAdminCoreLogsRouteImport
       parentRoute: typeof AuthenticatedAppRoute
     }
+    '/_authenticated/app/admin/stream-play-versions': {
+      id: '/_authenticated/app/admin/stream-play-versions'
+      path: '/stream-play-versions'
+      fullPath: '/app/admin/stream-play-versions'
+      preLoaderRoute: typeof AuthenticatedAppAdminStreamPlayVersionsRouteImport
+      parentRoute: typeof AuthenticatedAppAdminRoute
+    }
     '/_authenticated/app/admin/android-play': {
       id: '/_authenticated/app/admin/android-play'
       path: '/android-play'
@@ -1407,10 +1427,13 @@ declare module '@tanstack/react-router' {
 
 interface AuthenticatedAppAdminRouteChildren {
   AuthenticatedAppAdminAndroidPlayRoute: typeof AuthenticatedAppAdminAndroidPlayRoute
+  AuthenticatedAppAdminStreamPlayVersionsRoute: typeof AuthenticatedAppAdminStreamPlayVersionsRoute
 }
 
 const AuthenticatedAppAdminRouteChildren: AuthenticatedAppAdminRouteChildren = {
   AuthenticatedAppAdminAndroidPlayRoute: AuthenticatedAppAdminAndroidPlayRoute,
+  AuthenticatedAppAdminStreamPlayVersionsRoute:
+    AuthenticatedAppAdminStreamPlayVersionsRoute,
 }
 
 const AuthenticatedAppAdminRouteWithChildren =
