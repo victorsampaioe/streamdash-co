@@ -10,7 +10,11 @@ import { apiError, clientIp, enforceRateLimits, jsonResponse, safeLog, sha256 } 
 
 const querySchema = z.union([
   z.object({ kind: z.literal('search'), query: z.string().min(2).max(80) }),
-  z.object({ kind: z.literal('feed'), feed: z.enum(['trending', 'movies', 'series']), page: z.number().int().min(1).max(5).optional() }),
+  z.object({
+    kind: z.literal('feed'),
+    feed: z.enum(['movie_recent', 'movie_upcoming', 'movie_popular', 'tv_recent', 'tv_popular']),
+    page: z.number().int().min(1).max(5).optional(),
+  }),
   z.object({ kind: z.literal('detail'), media: z.enum(['movie', 'tv']), id: z.number().int().positive() }),
 ]);
 
@@ -55,7 +59,7 @@ export const Route = createFileRoute('/api/public/tmdb/catalog')({
           let data: unknown;
           if (parsed.data.kind === 'search') data = await searchTmdb(parsed.data.query);
           else if (parsed.data.kind === 'feed')
-            data = await fetchFeed(parsed.data.feed as never, parsed.data.page ?? 1);
+            data = await fetchFeed(parsed.data.feed, parsed.data.page ?? 1);
           else data = await fetchDetail(parsed.data.media, parsed.data.id);
 
           const expiresAt = new Date(Date.now() + (TTL_SECONDS[parsed.data.kind] ?? 3600) * 1000).toISOString();
