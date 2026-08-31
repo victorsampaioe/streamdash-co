@@ -10,7 +10,11 @@ import { apiError, clientIp, enforceRateLimits, jsonResponse, safeLog, sha256 } 
 
 const querySchema = z.union([
   z.object({ kind: z.literal('search'), query: z.string().min(2).max(80) }),
-  z.object({ kind: z.literal('feed'), feed: z.enum(['trending', 'movies', 'series']), page: z.number().int().min(1).max(5).optional() }),
+  z.object({
+    kind: z.literal('feed'),
+    feed: z.enum(['movie_recent', 'movie_upcoming', 'movie_popular', 'tv_recent', 'tv_popular']),
+    page: z.number().int().min(1).max(5).optional(),
+  }),
   z.object({ kind: z.literal('detail'), media: z.enum(['movie', 'tv']), id: z.number().int().positive() }),
 ]);
 
