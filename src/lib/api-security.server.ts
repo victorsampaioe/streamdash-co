@@ -226,7 +226,7 @@ export async function auditLog(entry: {
       actor_label: entry.actorLabel ?? null,
       target: entry.target ?? null,
       severity: entry.severity ?? "info",
-      metadata: (sanitizeForLog(entry.metadata ?? {}) ?? {}) as Record<string, unknown>,
+      metadata: JSON.parse(JSON.stringify(sanitizeForLog(entry.metadata ?? {}) ?? {})),
       ip_hash: entry.ip ? hashKey(entry.ip) : null,
     });
   } catch (error) {
