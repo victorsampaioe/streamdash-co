@@ -59,7 +59,7 @@ export const Route = createFileRoute('/api/public/tmdb/catalog')({
           let data: unknown;
           if (parsed.data.kind === 'search') data = await searchTmdb(parsed.data.query);
           else if (parsed.data.kind === 'feed')
-            data = await fetchFeed(parsed.data.feed as never, parsed.data.page ?? 1);
+            data = await fetchFeed(parsed.data.feed, parsed.data.page ?? 1);
           else data = await fetchDetail(parsed.data.media, parsed.data.id);
 
           const expiresAt = new Date(Date.now() + (TTL_SECONDS[parsed.data.kind] ?? 3600) * 1000).toISOString();
