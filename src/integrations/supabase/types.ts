@@ -4388,6 +4388,62 @@ export type Database = {
           },
         ]
       }
+      server_perf_runs: {
+        Row: {
+          api_ms: number | null
+          error: string | null
+          id: string
+          measured_at: string
+          ok: boolean
+          open_max_ms: number | null
+          open_min_ms: number | null
+          open_ms: number | null
+          samples: number
+          server_id: string
+          source: string
+          state: string
+          total_ms: number | null
+        }
+        Insert: {
+          api_ms?: number | null
+          error?: string | null
+          id?: string
+          measured_at?: string
+          ok?: boolean
+          open_max_ms?: number | null
+          open_min_ms?: number | null
+          open_ms?: number | null
+          samples?: number
+          server_id: string
+          source?: string
+          state?: string
+          total_ms?: number | null
+        }
+        Update: {
+          api_ms?: number | null
+          error?: string | null
+          id?: string
+          measured_at?: string
+          ok?: boolean
+          open_max_ms?: number | null
+          open_min_ms?: number | null
+          open_ms?: number | null
+          samples?: number
+          server_id?: string
+          source?: string
+          state?: string
+          total_ms?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "server_perf_runs_server_id_fkey"
+            columns: ["server_id"]
+            isOneToOne: false
+            referencedRelation: "servers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       servers: {
         Row: {
           catalog_hash: string | null
@@ -5140,6 +5196,25 @@ export type Database = {
           reseller_id: string
         }[]
       }
+      get_performance_ranking: {
+        Args: { _limit?: number }
+        Returns: {
+          api_ms: number
+          health_score: number
+          host: string
+          last_measured_at: string
+          measurements: number
+          name: string
+          open_avg_ms: number
+          open_best_ms: number
+          open_ms: number
+          open_ms_24h: number
+          open_worst_ms: number
+          server_id: string
+          stability_pct: number
+          status: string
+        }[]
+      }
       get_public_checks: {
         Args: { _limit?: number; _slug: string }
         Returns: {
@@ -5237,6 +5312,17 @@ export type Database = {
       get_server_concurrency_limit: {
         Args: { p_base_limit: number; p_server_id: string }
         Returns: number
+      }
+      get_server_perf_history: {
+        Args: { _limit?: number; _server_id: string }
+        Returns: {
+          api_ms: number
+          error: string
+          measured_at: string
+          ok: boolean
+          open_ms: number
+          state: string
+        }[]
       }
       get_stability_ranking: {
         Args: { _limit?: number }
