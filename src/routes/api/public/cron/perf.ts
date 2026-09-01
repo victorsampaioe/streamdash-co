@@ -16,7 +16,8 @@ async function run() {
   }
   const { runPerfBatch } = await import("@/lib/perf.server");
   const batch = Number(process.env.PERF_BATCH_SIZE ?? 5);
-  return { ok: true, ...(await runPerfBatch(Number.isFinite(batch) && batch > 0 ? batch : 5)) };
+  const result = await runPerfBatch(Number.isFinite(batch) && batch > 0 ? batch : 5);
+  return { ok: result.errors.length === 0, ...result };
 }
 
 export const Route = createFileRoute("/api/public/cron/perf")({
