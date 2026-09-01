@@ -102,13 +102,20 @@ function AuthPage() {
         return toast.error(json.error || "Não foi possível criar a conta");
       }
 
-      if (json.needsEmailConfirmation) {
+      // Tenta entrar imediatamente após criar a conta
+      const { error: signInError } = await supabase.auth.signInWithPassword({
+        email: emailCheck.value,
+        password,
+      });
+
+      if (!signInError) {
+        toast.success("Conta criada! Bem-vindo");
+        navigate({ to: redirect ?? "/app", replace: true });
+      } else if (json.needsEmailConfirmation) {
         toast.success("Conta criada! Verifique seu e-mail para continuar");
         navigate({ to: "/verify-email", search: { email: emailCheck.value } });
       } else {
-        toast.success("Conta criada!");
-        const { error } = await supabase.auth.signInWithPassword({ email: emailCheck.value, password });
-        navigate({ to: error ? "/auth" : "/app", replace: true });
+        toast.error(signInError.message);
       }
     } catch {
       toast.error("Falha de conexão. Tente novamente.");
