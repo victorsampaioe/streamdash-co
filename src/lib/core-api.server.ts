@@ -29,7 +29,8 @@ export type CoreTask =
   // Sondas stateless executadas pelo worker externo (sem banco)
   | "probe-http"
   | "probe-dns"
-  | "probe-iptv-login";
+  | "probe-iptv-login"
+  | "probe-perf";
 
 function normalize(url: string | undefined | null): string | null {
   const raw = (url ?? "").trim();
@@ -63,6 +64,7 @@ export const WORKER_CAPABLE_TASKS: ReadonlySet<CoreTask> = new Set<CoreTask>([
   "probe-http",
   "probe-dns",
   "probe-iptv-login",
+  "probe-perf",
   "iptv-detect",
   "iptv-validate",
   "iptv-ua-test",

@@ -27,6 +27,7 @@ import { MonitorBadge } from "@/components/monitor-badge";
 import { IptvPanel } from "@/components/iptv/iptv-panel";
 import { KumaPanel } from "@/components/kuma/kuma-panel";
 import { DnsPanel } from "@/components/dns/dns-panel";
+import { PerfPanel } from "@/components/performance/perf-panel";
 import { CorrelationPanel } from "@/components/dns/correlation-panel";
 
 
@@ -198,6 +199,7 @@ function ServerDetail() {
           <TabsTrigger value="dns">DNS</TabsTrigger>
           <TabsTrigger value="kuma">Monitoramento</TabsTrigger>
           <TabsTrigger value="iptv">IPTV</TabsTrigger>
+          <TabsTrigger value="performance">Performance</TabsTrigger>
           <TabsTrigger value="analysis">Análise</TabsTrigger>
           <TabsTrigger value="badge">Selo</TabsTrigger>
         </TabsList>
@@ -214,6 +216,10 @@ function ServerDetail() {
 
         <TabsContent value="iptv" className="mt-6">
           <IptvPanel serverId={id} server={server} />
+        </TabsContent>
+
+        <TabsContent value="performance" className="mt-6">
+          <PerfPanel serverId={id} />
         </TabsContent>
 
 
