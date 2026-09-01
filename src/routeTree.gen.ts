@@ -41,6 +41,7 @@ import { Route as AuthenticatedAppResellerRouteImport } from './routes/_authenti
 import { Route as AuthenticatedAppRankingRouteImport } from './routes/_authenticated/app.ranking'
 import { Route as AuthenticatedAppRadarRouteImport } from './routes/_authenticated/app.radar'
 import { Route as AuthenticatedAppPlayerRouteImport } from './routes/_authenticated/app.player'
+import { Route as AuthenticatedAppPerformanceRouteImport } from './routes/_authenticated/app.performance'
 import { Route as AuthenticatedAppPaginaRouteImport } from './routes/_authenticated/app.pagina'
 import { Route as AuthenticatedAppDetectorRouteImport } from './routes/_authenticated/app.detector'
 import { Route as AuthenticatedAppAlertsRouteImport } from './routes/_authenticated/app.alerts'
@@ -59,6 +60,7 @@ import { Route as ApiPublicTelegramWebhookRouteImport } from './routes/api/publi
 import { Route as ApiPublicRegionsTargetsRouteImport } from './routes/api/public/regions/targets'
 import { Route as ApiPublicRegionsReportRouteImport } from './routes/api/public/regions/report'
 import { Route as ApiPublicCronRadarRouteImport } from './routes/api/public/cron/radar'
+import { Route as ApiPublicCronPerfRouteImport } from './routes/api/public/cron/perf'
 import { Route as ApiPublicCronNotificationsRouteImport } from './routes/api/public/cron/notifications'
 import { Route as ApiPublicCronIptvNotificationsRouteImport } from './routes/api/public/cron/iptv-notifications'
 import { Route as ApiPublicCronDigestRouteImport } from './routes/api/public/cron/digest'
@@ -243,6 +245,12 @@ const AuthenticatedAppPlayerRoute = AuthenticatedAppPlayerRouteImport.update({
   path: '/player',
   getParentRoute: () => AuthenticatedAppRoute,
 } as any)
+const AuthenticatedAppPerformanceRoute =
+  AuthenticatedAppPerformanceRouteImport.update({
+    id: '/performance',
+    path: '/performance',
+    getParentRoute: () => AuthenticatedAppRoute,
+  } as any)
 const AuthenticatedAppPaginaRoute = AuthenticatedAppPaginaRouteImport.update({
   id: '/pagina',
   path: '/pagina',
@@ -340,6 +348,11 @@ const ApiPublicRegionsReportRoute = ApiPublicRegionsReportRouteImport.update({
 const ApiPublicCronRadarRoute = ApiPublicCronRadarRouteImport.update({
   id: '/api/public/cron/radar',
   path: '/api/public/cron/radar',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiPublicCronPerfRoute = ApiPublicCronPerfRouteImport.update({
+  id: '/api/public/cron/perf',
+  path: '/api/public/cron/perf',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiPublicCronNotificationsRoute =
@@ -483,6 +496,7 @@ export interface FileRoutesByFullPath {
   '/app/alerts': typeof AuthenticatedAppAlertsRoute
   '/app/detector': typeof AuthenticatedAppDetectorRoute
   '/app/pagina': typeof AuthenticatedAppPaginaRoute
+  '/app/performance': typeof AuthenticatedAppPerformanceRoute
   '/app/player': typeof AuthenticatedAppPlayerRoute
   '/app/radar': typeof AuthenticatedAppRadarRoute
   '/app/ranking': typeof AuthenticatedAppRankingRoute
@@ -512,6 +526,7 @@ export interface FileRoutesByFullPath {
   '/api/public/cron/digest': typeof ApiPublicCronDigestRoute
   '/api/public/cron/iptv-notifications': typeof ApiPublicCronIptvNotificationsRoute
   '/api/public/cron/notifications': typeof ApiPublicCronNotificationsRoute
+  '/api/public/cron/perf': typeof ApiPublicCronPerfRoute
   '/api/public/cron/radar': typeof ApiPublicCronRadarRoute
   '/api/public/regions/report': typeof ApiPublicRegionsReportRoute
   '/api/public/regions/targets': typeof ApiPublicRegionsTargetsRoute
@@ -553,6 +568,7 @@ export interface FileRoutesByTo {
   '/app/alerts': typeof AuthenticatedAppAlertsRoute
   '/app/detector': typeof AuthenticatedAppDetectorRoute
   '/app/pagina': typeof AuthenticatedAppPaginaRoute
+  '/app/performance': typeof AuthenticatedAppPerformanceRoute
   '/app/player': typeof AuthenticatedAppPlayerRoute
   '/app/radar': typeof AuthenticatedAppRadarRoute
   '/app/ranking': typeof AuthenticatedAppRankingRoute
@@ -582,6 +598,7 @@ export interface FileRoutesByTo {
   '/api/public/cron/digest': typeof ApiPublicCronDigestRoute
   '/api/public/cron/iptv-notifications': typeof ApiPublicCronIptvNotificationsRoute
   '/api/public/cron/notifications': typeof ApiPublicCronNotificationsRoute
+  '/api/public/cron/perf': typeof ApiPublicCronPerfRoute
   '/api/public/cron/radar': typeof ApiPublicCronRadarRoute
   '/api/public/regions/report': typeof ApiPublicRegionsReportRoute
   '/api/public/regions/targets': typeof ApiPublicRegionsTargetsRoute
@@ -626,6 +643,7 @@ export interface FileRoutesById {
   '/_authenticated/app/alerts': typeof AuthenticatedAppAlertsRoute
   '/_authenticated/app/detector': typeof AuthenticatedAppDetectorRoute
   '/_authenticated/app/pagina': typeof AuthenticatedAppPaginaRoute
+  '/_authenticated/app/performance': typeof AuthenticatedAppPerformanceRoute
   '/_authenticated/app/player': typeof AuthenticatedAppPlayerRoute
   '/_authenticated/app/radar': typeof AuthenticatedAppRadarRoute
   '/_authenticated/app/ranking': typeof AuthenticatedAppRankingRoute
@@ -655,6 +673,7 @@ export interface FileRoutesById {
   '/api/public/cron/digest': typeof ApiPublicCronDigestRoute
   '/api/public/cron/iptv-notifications': typeof ApiPublicCronIptvNotificationsRoute
   '/api/public/cron/notifications': typeof ApiPublicCronNotificationsRoute
+  '/api/public/cron/perf': typeof ApiPublicCronPerfRoute
   '/api/public/cron/radar': typeof ApiPublicCronRadarRoute
   '/api/public/regions/report': typeof ApiPublicRegionsReportRoute
   '/api/public/regions/targets': typeof ApiPublicRegionsTargetsRoute
@@ -699,6 +718,7 @@ export interface FileRouteTypes {
     | '/app/alerts'
     | '/app/detector'
     | '/app/pagina'
+    | '/app/performance'
     | '/app/player'
     | '/app/radar'
     | '/app/ranking'
@@ -728,6 +748,7 @@ export interface FileRouteTypes {
     | '/api/public/cron/digest'
     | '/api/public/cron/iptv-notifications'
     | '/api/public/cron/notifications'
+    | '/api/public/cron/perf'
     | '/api/public/cron/radar'
     | '/api/public/regions/report'
     | '/api/public/regions/targets'
@@ -769,6 +790,7 @@ export interface FileRouteTypes {
     | '/app/alerts'
     | '/app/detector'
     | '/app/pagina'
+    | '/app/performance'
     | '/app/player'
     | '/app/radar'
     | '/app/ranking'
@@ -798,6 +820,7 @@ export interface FileRouteTypes {
     | '/api/public/cron/digest'
     | '/api/public/cron/iptv-notifications'
     | '/api/public/cron/notifications'
+    | '/api/public/cron/perf'
     | '/api/public/cron/radar'
     | '/api/public/regions/report'
     | '/api/public/regions/targets'
@@ -841,6 +864,7 @@ export interface FileRouteTypes {
     | '/_authenticated/app/alerts'
     | '/_authenticated/app/detector'
     | '/_authenticated/app/pagina'
+    | '/_authenticated/app/performance'
     | '/_authenticated/app/player'
     | '/_authenticated/app/radar'
     | '/_authenticated/app/ranking'
@@ -870,6 +894,7 @@ export interface FileRouteTypes {
     | '/api/public/cron/digest'
     | '/api/public/cron/iptv-notifications'
     | '/api/public/cron/notifications'
+    | '/api/public/cron/perf'
     | '/api/public/cron/radar'
     | '/api/public/regions/report'
     | '/api/public/regions/targets'
@@ -922,6 +947,7 @@ export interface RootRouteChildren {
   ApiPublicCronDigestRoute: typeof ApiPublicCronDigestRoute
   ApiPublicCronIptvNotificationsRoute: typeof ApiPublicCronIptvNotificationsRoute
   ApiPublicCronNotificationsRoute: typeof ApiPublicCronNotificationsRoute
+  ApiPublicCronPerfRoute: typeof ApiPublicCronPerfRoute
   ApiPublicCronRadarRoute: typeof ApiPublicCronRadarRoute
   ApiPublicRegionsReportRoute: typeof ApiPublicRegionsReportRoute
   ApiPublicRegionsTargetsRoute: typeof ApiPublicRegionsTargetsRoute
@@ -1156,6 +1182,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAppPlayerRouteImport
       parentRoute: typeof AuthenticatedAppRoute
     }
+    '/_authenticated/app/performance': {
+      id: '/_authenticated/app/performance'
+      path: '/performance'
+      fullPath: '/app/performance'
+      preLoaderRoute: typeof AuthenticatedAppPerformanceRouteImport
+      parentRoute: typeof AuthenticatedAppRoute
+    }
     '/_authenticated/app/pagina': {
       id: '/_authenticated/app/pagina'
       path: '/pagina'
@@ -1280,6 +1313,13 @@ declare module '@tanstack/react-router' {
       path: '/api/public/cron/radar'
       fullPath: '/api/public/cron/radar'
       preLoaderRoute: typeof ApiPublicCronRadarRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/cron/perf': {
+      id: '/api/public/cron/perf'
+      path: '/api/public/cron/perf'
+      fullPath: '/api/public/cron/perf'
+      preLoaderRoute: typeof ApiPublicCronPerfRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/public/cron/notifications': {
@@ -1449,6 +1489,7 @@ interface AuthenticatedAppRouteChildren {
   AuthenticatedAppAlertsRoute: typeof AuthenticatedAppAlertsRoute
   AuthenticatedAppDetectorRoute: typeof AuthenticatedAppDetectorRoute
   AuthenticatedAppPaginaRoute: typeof AuthenticatedAppPaginaRoute
+  AuthenticatedAppPerformanceRoute: typeof AuthenticatedAppPerformanceRoute
   AuthenticatedAppPlayerRoute: typeof AuthenticatedAppPlayerRoute
   AuthenticatedAppRadarRoute: typeof AuthenticatedAppRadarRoute
   AuthenticatedAppRankingRoute: typeof AuthenticatedAppRankingRoute
@@ -1473,6 +1514,7 @@ const AuthenticatedAppRouteChildren: AuthenticatedAppRouteChildren = {
   AuthenticatedAppAlertsRoute: AuthenticatedAppAlertsRoute,
   AuthenticatedAppDetectorRoute: AuthenticatedAppDetectorRoute,
   AuthenticatedAppPaginaRoute: AuthenticatedAppPaginaRoute,
+  AuthenticatedAppPerformanceRoute: AuthenticatedAppPerformanceRoute,
   AuthenticatedAppPlayerRoute: AuthenticatedAppPlayerRoute,
   AuthenticatedAppRadarRoute: AuthenticatedAppRadarRoute,
   AuthenticatedAppRankingRoute: AuthenticatedAppRankingRoute,
@@ -1556,6 +1598,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPublicCronDigestRoute: ApiPublicCronDigestRoute,
   ApiPublicCronIptvNotificationsRoute: ApiPublicCronIptvNotificationsRoute,
   ApiPublicCronNotificationsRoute: ApiPublicCronNotificationsRoute,
+  ApiPublicCronPerfRoute: ApiPublicCronPerfRoute,
   ApiPublicCronRadarRoute: ApiPublicCronRadarRoute,
   ApiPublicRegionsReportRoute: ApiPublicRegionsReportRoute,
   ApiPublicRegionsTargetsRoute: ApiPublicRegionsTargetsRoute,

@@ -31,6 +31,7 @@ const Body = z.object({
     "probe-http",
     "probe-dns",
     "probe-iptv-login",
+    "probe-perf",
   ]),
   serverId: z.string().uuid().optional(),
   serverIds: z.array(z.string().uuid()).optional(),
@@ -66,6 +67,7 @@ const WORKER_TASKS = new Set<z.infer<typeof Body>["task"]>([
   "probe-http",
   "probe-dns",
   "probe-iptv-login",
+  "probe-perf",
   "iptv-detect",
   "iptv-validate",
   "iptv-ua-test",
@@ -89,6 +91,10 @@ async function execute(input: z.infer<typeof Body>) {
     case "probe-iptv-login": {
       const { probeIptvLoginStateless } = await import("@/lib/core-probes.server");
       return await probeIptvLoginStateless(input.host!, input.username!, input.password!);
+    }
+    case "probe-perf": {
+      const { measureServerPerformance } = await import("@/lib/perf.server");
+      return await measureServerPerformance(input.host!, input.username ?? null, input.password ?? null);
     }
     case "check": {
       const { runCheckForServer } = await import("@/lib/monitoring.server");
