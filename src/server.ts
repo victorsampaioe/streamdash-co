@@ -56,6 +56,8 @@ const SECURITY_HEADERS: Record<string, string> = {
     "base-uri 'self'",
     "object-src 'none'",
     "frame-ancestors 'self' https://*.lovable.app https://lovable.dev",
+    // Turnstile (verificação anti-bot do cadastro) roda dentro de um iframe da Cloudflare.
+    "frame-src 'self' https://challenges.cloudflare.com",
     "img-src 'self' data: blob: https:",
     "font-src 'self' data: https:",
     "style-src 'self' 'unsafe-inline' https:",
