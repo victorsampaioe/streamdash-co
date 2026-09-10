@@ -18,6 +18,7 @@ import { Route as MonitoramentoIptvRouteImport } from './routes/monitoramento-ip
 import { Route as MonitoramentoDnsRouteImport } from './routes/monitoramento-dns'
 import { Route as McpRouteImport } from './routes/mcp'
 import { Route as DnsRouteImport } from './routes/dns'
+import { Route as DevelopersRouteImport } from './routes/developers'
 import { Route as BlogRouteImport } from './routes/blog'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AlertasTelegramRouteImport } from './routes/alertas-telegram'
@@ -27,11 +28,16 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as StatusSlugRouteImport } from './routes/status.$slug'
 import { Route as PlayerResellerIdRouteImport } from './routes/player.$resellerId'
 import { Route as DownloadAndroidRouteImport } from './routes/download.android'
+import { Route as DevelopersChangelogRouteImport } from './routes/developers.changelog'
 import { Route as BlogComoEvitarQuedaIptvRouteImport } from './routes/blog.como-evitar-queda-iptv'
+import { Route as ApiV1RouteImport } from './routes/api/v1'
+import { Route as ApiOpenapiDotyamlRouteImport } from './routes/api/openapi[.]yaml'
+import { Route as ApiOpenapiDotjsonRouteImport } from './routes/api/openapi[.]json'
 import { Route as AuthenticatedAppRouteImport } from './routes/_authenticated/app'
 import { Route as Char91DotwellKnownChar93OauthProtectedResourceRouteImport } from './routes/[.well-known]/oauth-protected-resource'
 import { Route as Char91DotmcpChar93ListToolsRouteImport } from './routes/[.mcp]/list-tools'
 import { Route as AuthenticatedAppIndexRouteImport } from './routes/_authenticated/app.index'
+import { Route as ApiV1SplatRouteImport } from './routes/api/v1/$'
 import { Route as ApiPublicSignupRouteImport } from './routes/api/public/signup'
 import { Route as ApiPublicRadarRouteImport } from './routes/api/public/radar'
 import { Route as ApiPublicHealthRouteImport } from './routes/api/public/health'
@@ -44,6 +50,7 @@ import { Route as AuthenticatedAppPlayerRouteImport } from './routes/_authentica
 import { Route as AuthenticatedAppPerformanceRouteImport } from './routes/_authenticated/app.performance'
 import { Route as AuthenticatedAppPaginaRouteImport } from './routes/_authenticated/app.pagina'
 import { Route as AuthenticatedAppDetectorRouteImport } from './routes/_authenticated/app.detector'
+import { Route as AuthenticatedAppApiIntegrationsRouteImport } from './routes/_authenticated/app.api-integrations'
 import { Route as AuthenticatedAppAlertsRouteImport } from './routes/_authenticated/app.alerts'
 import { Route as AuthenticatedAppAjudaRouteImport } from './routes/_authenticated/app.ajuda'
 import { Route as AuthenticatedAppAiIntegrationRouteImport } from './routes/_authenticated/app.ai-integration'
@@ -65,6 +72,7 @@ import { Route as ApiPublicCronNotificationsRouteImport } from './routes/api/pub
 import { Route as ApiPublicCronIptvNotificationsRouteImport } from './routes/api/public/cron/iptv-notifications'
 import { Route as ApiPublicCronDigestRouteImport } from './routes/api/public/cron/digest'
 import { Route as ApiPublicCronCheckRouteImport } from './routes/api/public/cron/check'
+import { Route as ApiPublicCronApiWebhooksRouteImport } from './routes/api/public/cron/api-webhooks'
 import { Route as ApiPublicCoreTaskRouteImport } from './routes/api/public/core/task'
 import { Route as ApiPublicCoreStreamRouteImport } from './routes/api/public/core/stream'
 import { Route as ApiPublicCoreReportRouteImport } from './routes/api/public/core/report'
@@ -127,6 +135,11 @@ const DnsRoute = DnsRouteImport.update({
   path: '/dns',
   getParentRoute: () => rootRouteImport,
 } as any)
+const DevelopersRoute = DevelopersRouteImport.update({
+  id: '/developers',
+  path: '/developers',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const BlogRoute = BlogRouteImport.update({
   id: '/blog',
   path: '/blog',
@@ -171,10 +184,30 @@ const DownloadAndroidRoute = DownloadAndroidRouteImport.update({
   path: '/download/android',
   getParentRoute: () => rootRouteImport,
 } as any)
+const DevelopersChangelogRoute = DevelopersChangelogRouteImport.update({
+  id: '/changelog',
+  path: '/changelog',
+  getParentRoute: () => DevelopersRoute,
+} as any)
 const BlogComoEvitarQuedaIptvRoute = BlogComoEvitarQuedaIptvRouteImport.update({
   id: '/como-evitar-queda-iptv',
   path: '/como-evitar-queda-iptv',
   getParentRoute: () => BlogRoute,
+} as any)
+const ApiV1Route = ApiV1RouteImport.update({
+  id: '/api/v1',
+  path: '/api/v1',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiOpenapiDotyamlRoute = ApiOpenapiDotyamlRouteImport.update({
+  id: '/api/openapi.yaml',
+  path: '/api/openapi.yaml',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiOpenapiDotjsonRoute = ApiOpenapiDotjsonRouteImport.update({
+  id: '/api/openapi.json',
+  path: '/api/openapi.json',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const AuthenticatedAppRoute = AuthenticatedAppRouteImport.update({
   id: '/app',
@@ -197,6 +230,11 @@ const AuthenticatedAppIndexRoute = AuthenticatedAppIndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => AuthenticatedAppRoute,
+} as any)
+const ApiV1SplatRoute = ApiV1SplatRouteImport.update({
+  id: '/$',
+  path: '/$',
+  getParentRoute: () => ApiV1Route,
 } as any)
 const ApiPublicSignupRoute = ApiPublicSignupRouteImport.update({
   id: '/api/public/signup',
@@ -260,6 +298,12 @@ const AuthenticatedAppDetectorRoute =
   AuthenticatedAppDetectorRouteImport.update({
     id: '/detector',
     path: '/detector',
+    getParentRoute: () => AuthenticatedAppRoute,
+  } as any)
+const AuthenticatedAppApiIntegrationsRoute =
+  AuthenticatedAppApiIntegrationsRouteImport.update({
+    id: '/api-integrations',
+    path: '/api-integrations',
     getParentRoute: () => AuthenticatedAppRoute,
   } as any)
 const AuthenticatedAppAlertsRoute = AuthenticatedAppAlertsRouteImport.update({
@@ -377,6 +421,12 @@ const ApiPublicCronCheckRoute = ApiPublicCronCheckRouteImport.update({
   path: '/api/public/cron/check',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicCronApiWebhooksRoute =
+  ApiPublicCronApiWebhooksRouteImport.update({
+    id: '/api/public/cron/api-webhooks',
+    path: '/api/public/cron/api-webhooks',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiPublicCoreTaskRoute = ApiPublicCoreTaskRouteImport.update({
   id: '/api/public/core/task',
   path: '/api/public/core/task',
@@ -471,6 +521,7 @@ export interface FileRoutesByFullPath {
   '/alertas-telegram': typeof AlertasTelegramRoute
   '/auth': typeof AuthRoute
   '/blog': typeof BlogRouteWithChildren
+  '/developers': typeof DevelopersRouteWithChildren
   '/dns': typeof DnsRoute
   '/mcp': typeof McpRoute
   '/monitoramento-dns': typeof MonitoramentoDnsRoute
@@ -483,7 +534,11 @@ export interface FileRoutesByFullPath {
   '/.mcp/list-tools': typeof Char91DotmcpChar93ListToolsRoute
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   '/app': typeof AuthenticatedAppRouteWithChildren
+  '/api/openapi.json': typeof ApiOpenapiDotjsonRoute
+  '/api/openapi.yaml': typeof ApiOpenapiDotyamlRoute
+  '/api/v1': typeof ApiV1RouteWithChildren
   '/blog/como-evitar-queda-iptv': typeof BlogComoEvitarQuedaIptvRoute
+  '/developers/changelog': typeof DevelopersChangelogRoute
   '/download/android': typeof DownloadAndroidRoute
   '/player/$resellerId': typeof PlayerResellerIdRoute
   '/status/$slug': typeof StatusSlugRoute
@@ -494,6 +549,7 @@ export interface FileRoutesByFullPath {
   '/app/ai-integration': typeof AuthenticatedAppAiIntegrationRoute
   '/app/ajuda': typeof AuthenticatedAppAjudaRoute
   '/app/alerts': typeof AuthenticatedAppAlertsRoute
+  '/app/api-integrations': typeof AuthenticatedAppApiIntegrationsRoute
   '/app/detector': typeof AuthenticatedAppDetectorRoute
   '/app/pagina': typeof AuthenticatedAppPaginaRoute
   '/app/performance': typeof AuthenticatedAppPerformanceRoute
@@ -506,6 +562,7 @@ export interface FileRoutesByFullPath {
   '/api/public/health': typeof ApiPublicHealthRoute
   '/api/public/radar': typeof ApiPublicRadarRoute
   '/api/public/signup': typeof ApiPublicSignupRoute
+  '/api/v1/$': typeof ApiV1SplatRoute
   '/app/': typeof AuthenticatedAppIndexRoute
   '/app/admin/android-play': typeof AuthenticatedAppAdminAndroidPlayRoute
   '/app/admin/stream-play-versions': typeof AuthenticatedAppAdminStreamPlayVersionsRoute
@@ -522,6 +579,7 @@ export interface FileRoutesByFullPath {
   '/api/public/core/report': typeof ApiPublicCoreReportRoute
   '/api/public/core/stream': typeof ApiPublicCoreStreamRoute
   '/api/public/core/task': typeof ApiPublicCoreTaskRoute
+  '/api/public/cron/api-webhooks': typeof ApiPublicCronApiWebhooksRoute
   '/api/public/cron/check': typeof ApiPublicCronCheckRoute
   '/api/public/cron/digest': typeof ApiPublicCronDigestRoute
   '/api/public/cron/iptv-notifications': typeof ApiPublicCronIptvNotificationsRoute
@@ -544,6 +602,7 @@ export interface FileRoutesByTo {
   '/alertas-telegram': typeof AlertasTelegramRoute
   '/auth': typeof AuthRoute
   '/blog': typeof BlogRouteWithChildren
+  '/developers': typeof DevelopersRouteWithChildren
   '/dns': typeof DnsRoute
   '/mcp': typeof McpRoute
   '/monitoramento-dns': typeof MonitoramentoDnsRoute
@@ -555,7 +614,11 @@ export interface FileRoutesByTo {
   '/verify-email': typeof VerifyEmailRoute
   '/.mcp/list-tools': typeof Char91DotmcpChar93ListToolsRoute
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
+  '/api/openapi.json': typeof ApiOpenapiDotjsonRoute
+  '/api/openapi.yaml': typeof ApiOpenapiDotyamlRoute
+  '/api/v1': typeof ApiV1RouteWithChildren
   '/blog/como-evitar-queda-iptv': typeof BlogComoEvitarQuedaIptvRoute
+  '/developers/changelog': typeof DevelopersChangelogRoute
   '/download/android': typeof DownloadAndroidRoute
   '/player/$resellerId': typeof PlayerResellerIdRoute
   '/status/$slug': typeof StatusSlugRoute
@@ -566,6 +629,7 @@ export interface FileRoutesByTo {
   '/app/ai-integration': typeof AuthenticatedAppAiIntegrationRoute
   '/app/ajuda': typeof AuthenticatedAppAjudaRoute
   '/app/alerts': typeof AuthenticatedAppAlertsRoute
+  '/app/api-integrations': typeof AuthenticatedAppApiIntegrationsRoute
   '/app/detector': typeof AuthenticatedAppDetectorRoute
   '/app/pagina': typeof AuthenticatedAppPaginaRoute
   '/app/performance': typeof AuthenticatedAppPerformanceRoute
@@ -578,6 +642,7 @@ export interface FileRoutesByTo {
   '/api/public/health': typeof ApiPublicHealthRoute
   '/api/public/radar': typeof ApiPublicRadarRoute
   '/api/public/signup': typeof ApiPublicSignupRoute
+  '/api/v1/$': typeof ApiV1SplatRoute
   '/app': typeof AuthenticatedAppIndexRoute
   '/app/admin/android-play': typeof AuthenticatedAppAdminAndroidPlayRoute
   '/app/admin/stream-play-versions': typeof AuthenticatedAppAdminStreamPlayVersionsRoute
@@ -594,6 +659,7 @@ export interface FileRoutesByTo {
   '/api/public/core/report': typeof ApiPublicCoreReportRoute
   '/api/public/core/stream': typeof ApiPublicCoreStreamRoute
   '/api/public/core/task': typeof ApiPublicCoreTaskRoute
+  '/api/public/cron/api-webhooks': typeof ApiPublicCronApiWebhooksRoute
   '/api/public/cron/check': typeof ApiPublicCronCheckRoute
   '/api/public/cron/digest': typeof ApiPublicCronDigestRoute
   '/api/public/cron/iptv-notifications': typeof ApiPublicCronIptvNotificationsRoute
@@ -618,6 +684,7 @@ export interface FileRoutesById {
   '/alertas-telegram': typeof AlertasTelegramRoute
   '/auth': typeof AuthRoute
   '/blog': typeof BlogRouteWithChildren
+  '/developers': typeof DevelopersRouteWithChildren
   '/dns': typeof DnsRoute
   '/mcp': typeof McpRoute
   '/monitoramento-dns': typeof MonitoramentoDnsRoute
@@ -630,7 +697,11 @@ export interface FileRoutesById {
   '/.mcp/list-tools': typeof Char91DotmcpChar93ListToolsRoute
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   '/_authenticated/app': typeof AuthenticatedAppRouteWithChildren
+  '/api/openapi.json': typeof ApiOpenapiDotjsonRoute
+  '/api/openapi.yaml': typeof ApiOpenapiDotyamlRoute
+  '/api/v1': typeof ApiV1RouteWithChildren
   '/blog/como-evitar-queda-iptv': typeof BlogComoEvitarQuedaIptvRoute
+  '/developers/changelog': typeof DevelopersChangelogRoute
   '/download/android': typeof DownloadAndroidRoute
   '/player/$resellerId': typeof PlayerResellerIdRoute
   '/status/$slug': typeof StatusSlugRoute
@@ -641,6 +712,7 @@ export interface FileRoutesById {
   '/_authenticated/app/ai-integration': typeof AuthenticatedAppAiIntegrationRoute
   '/_authenticated/app/ajuda': typeof AuthenticatedAppAjudaRoute
   '/_authenticated/app/alerts': typeof AuthenticatedAppAlertsRoute
+  '/_authenticated/app/api-integrations': typeof AuthenticatedAppApiIntegrationsRoute
   '/_authenticated/app/detector': typeof AuthenticatedAppDetectorRoute
   '/_authenticated/app/pagina': typeof AuthenticatedAppPaginaRoute
   '/_authenticated/app/performance': typeof AuthenticatedAppPerformanceRoute
@@ -653,6 +725,7 @@ export interface FileRoutesById {
   '/api/public/health': typeof ApiPublicHealthRoute
   '/api/public/radar': typeof ApiPublicRadarRoute
   '/api/public/signup': typeof ApiPublicSignupRoute
+  '/api/v1/$': typeof ApiV1SplatRoute
   '/_authenticated/app/': typeof AuthenticatedAppIndexRoute
   '/_authenticated/app/admin/android-play': typeof AuthenticatedAppAdminAndroidPlayRoute
   '/_authenticated/app/admin/stream-play-versions': typeof AuthenticatedAppAdminStreamPlayVersionsRoute
@@ -669,6 +742,7 @@ export interface FileRoutesById {
   '/api/public/core/report': typeof ApiPublicCoreReportRoute
   '/api/public/core/stream': typeof ApiPublicCoreStreamRoute
   '/api/public/core/task': typeof ApiPublicCoreTaskRoute
+  '/api/public/cron/api-webhooks': typeof ApiPublicCronApiWebhooksRoute
   '/api/public/cron/check': typeof ApiPublicCronCheckRoute
   '/api/public/cron/digest': typeof ApiPublicCronDigestRoute
   '/api/public/cron/iptv-notifications': typeof ApiPublicCronIptvNotificationsRoute
@@ -693,6 +767,7 @@ export interface FileRouteTypes {
     | '/alertas-telegram'
     | '/auth'
     | '/blog'
+    | '/developers'
     | '/dns'
     | '/mcp'
     | '/monitoramento-dns'
@@ -705,7 +780,11 @@ export interface FileRouteTypes {
     | '/.mcp/list-tools'
     | '/.well-known/oauth-protected-resource'
     | '/app'
+    | '/api/openapi.json'
+    | '/api/openapi.yaml'
+    | '/api/v1'
     | '/blog/como-evitar-queda-iptv'
+    | '/developers/changelog'
     | '/download/android'
     | '/player/$resellerId'
     | '/status/$slug'
@@ -716,6 +795,7 @@ export interface FileRouteTypes {
     | '/app/ai-integration'
     | '/app/ajuda'
     | '/app/alerts'
+    | '/app/api-integrations'
     | '/app/detector'
     | '/app/pagina'
     | '/app/performance'
@@ -728,6 +808,7 @@ export interface FileRouteTypes {
     | '/api/public/health'
     | '/api/public/radar'
     | '/api/public/signup'
+    | '/api/v1/$'
     | '/app/'
     | '/app/admin/android-play'
     | '/app/admin/stream-play-versions'
@@ -744,6 +825,7 @@ export interface FileRouteTypes {
     | '/api/public/core/report'
     | '/api/public/core/stream'
     | '/api/public/core/task'
+    | '/api/public/cron/api-webhooks'
     | '/api/public/cron/check'
     | '/api/public/cron/digest'
     | '/api/public/cron/iptv-notifications'
@@ -766,6 +848,7 @@ export interface FileRouteTypes {
     | '/alertas-telegram'
     | '/auth'
     | '/blog'
+    | '/developers'
     | '/dns'
     | '/mcp'
     | '/monitoramento-dns'
@@ -777,7 +860,11 @@ export interface FileRouteTypes {
     | '/verify-email'
     | '/.mcp/list-tools'
     | '/.well-known/oauth-protected-resource'
+    | '/api/openapi.json'
+    | '/api/openapi.yaml'
+    | '/api/v1'
     | '/blog/como-evitar-queda-iptv'
+    | '/developers/changelog'
     | '/download/android'
     | '/player/$resellerId'
     | '/status/$slug'
@@ -788,6 +875,7 @@ export interface FileRouteTypes {
     | '/app/ai-integration'
     | '/app/ajuda'
     | '/app/alerts'
+    | '/app/api-integrations'
     | '/app/detector'
     | '/app/pagina'
     | '/app/performance'
@@ -800,6 +888,7 @@ export interface FileRouteTypes {
     | '/api/public/health'
     | '/api/public/radar'
     | '/api/public/signup'
+    | '/api/v1/$'
     | '/app'
     | '/app/admin/android-play'
     | '/app/admin/stream-play-versions'
@@ -816,6 +905,7 @@ export interface FileRouteTypes {
     | '/api/public/core/report'
     | '/api/public/core/stream'
     | '/api/public/core/task'
+    | '/api/public/cron/api-webhooks'
     | '/api/public/cron/check'
     | '/api/public/cron/digest'
     | '/api/public/cron/iptv-notifications'
@@ -839,6 +929,7 @@ export interface FileRouteTypes {
     | '/alertas-telegram'
     | '/auth'
     | '/blog'
+    | '/developers'
     | '/dns'
     | '/mcp'
     | '/monitoramento-dns'
@@ -851,7 +942,11 @@ export interface FileRouteTypes {
     | '/.mcp/list-tools'
     | '/.well-known/oauth-protected-resource'
     | '/_authenticated/app'
+    | '/api/openapi.json'
+    | '/api/openapi.yaml'
+    | '/api/v1'
     | '/blog/como-evitar-queda-iptv'
+    | '/developers/changelog'
     | '/download/android'
     | '/player/$resellerId'
     | '/status/$slug'
@@ -862,6 +957,7 @@ export interface FileRouteTypes {
     | '/_authenticated/app/ai-integration'
     | '/_authenticated/app/ajuda'
     | '/_authenticated/app/alerts'
+    | '/_authenticated/app/api-integrations'
     | '/_authenticated/app/detector'
     | '/_authenticated/app/pagina'
     | '/_authenticated/app/performance'
@@ -874,6 +970,7 @@ export interface FileRouteTypes {
     | '/api/public/health'
     | '/api/public/radar'
     | '/api/public/signup'
+    | '/api/v1/$'
     | '/_authenticated/app/'
     | '/_authenticated/app/admin/android-play'
     | '/_authenticated/app/admin/stream-play-versions'
@@ -890,6 +987,7 @@ export interface FileRouteTypes {
     | '/api/public/core/report'
     | '/api/public/core/stream'
     | '/api/public/core/task'
+    | '/api/public/cron/api-webhooks'
     | '/api/public/cron/check'
     | '/api/public/cron/digest'
     | '/api/public/cron/iptv-notifications'
@@ -914,6 +1012,7 @@ export interface RootRouteChildren {
   AlertasTelegramRoute: typeof AlertasTelegramRoute
   AuthRoute: typeof AuthRoute
   BlogRoute: typeof BlogRouteWithChildren
+  DevelopersRoute: typeof DevelopersRouteWithChildren
   DnsRoute: typeof DnsRoute
   McpRoute: typeof McpRoute
   MonitoramentoDnsRoute: typeof MonitoramentoDnsRoute
@@ -925,6 +1024,9 @@ export interface RootRouteChildren {
   VerifyEmailRoute: typeof VerifyEmailRoute
   Char91DotmcpChar93ListToolsRoute: typeof Char91DotmcpChar93ListToolsRoute
   Char91DotwellKnownChar93OauthProtectedResourceRoute: typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
+  ApiOpenapiDotjsonRoute: typeof ApiOpenapiDotjsonRoute
+  ApiOpenapiDotyamlRoute: typeof ApiOpenapiDotyamlRoute
+  ApiV1Route: typeof ApiV1RouteWithChildren
   DownloadAndroidRoute: typeof DownloadAndroidRoute
   PlayerResellerIdRoute: typeof PlayerResellerIdRoute
   StatusSlugRoute: typeof StatusSlugRoute
@@ -943,6 +1045,7 @@ export interface RootRouteChildren {
   ApiPublicCoreReportRoute: typeof ApiPublicCoreReportRoute
   ApiPublicCoreStreamRoute: typeof ApiPublicCoreStreamRoute
   ApiPublicCoreTaskRoute: typeof ApiPublicCoreTaskRoute
+  ApiPublicCronApiWebhooksRoute: typeof ApiPublicCronApiWebhooksRoute
   ApiPublicCronCheckRoute: typeof ApiPublicCronCheckRoute
   ApiPublicCronDigestRoute: typeof ApiPublicCronDigestRoute
   ApiPublicCronIptvNotificationsRoute: typeof ApiPublicCronIptvNotificationsRoute
@@ -1021,6 +1124,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DnsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/developers': {
+      id: '/developers'
+      path: '/developers'
+      fullPath: '/developers'
+      preLoaderRoute: typeof DevelopersRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/blog': {
       id: '/blog'
       path: '/blog'
@@ -1084,12 +1194,40 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DownloadAndroidRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/developers/changelog': {
+      id: '/developers/changelog'
+      path: '/changelog'
+      fullPath: '/developers/changelog'
+      preLoaderRoute: typeof DevelopersChangelogRouteImport
+      parentRoute: typeof DevelopersRoute
+    }
     '/blog/como-evitar-queda-iptv': {
       id: '/blog/como-evitar-queda-iptv'
       path: '/como-evitar-queda-iptv'
       fullPath: '/blog/como-evitar-queda-iptv'
       preLoaderRoute: typeof BlogComoEvitarQuedaIptvRouteImport
       parentRoute: typeof BlogRoute
+    }
+    '/api/v1': {
+      id: '/api/v1'
+      path: '/api/v1'
+      fullPath: '/api/v1'
+      preLoaderRoute: typeof ApiV1RouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/openapi.yaml': {
+      id: '/api/openapi.yaml'
+      path: '/api/openapi.yaml'
+      fullPath: '/api/openapi.yaml'
+      preLoaderRoute: typeof ApiOpenapiDotyamlRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/openapi.json': {
+      id: '/api/openapi.json'
+      path: '/api/openapi.json'
+      fullPath: '/api/openapi.json'
+      preLoaderRoute: typeof ApiOpenapiDotjsonRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/_authenticated/app': {
       id: '/_authenticated/app'
@@ -1118,6 +1256,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/app/'
       preLoaderRoute: typeof AuthenticatedAppIndexRouteImport
       parentRoute: typeof AuthenticatedAppRoute
+    }
+    '/api/v1/$': {
+      id: '/api/v1/$'
+      path: '/$'
+      fullPath: '/api/v1/$'
+      preLoaderRoute: typeof ApiV1SplatRouteImport
+      parentRoute: typeof ApiV1Route
     }
     '/api/public/signup': {
       id: '/api/public/signup'
@@ -1201,6 +1346,13 @@ declare module '@tanstack/react-router' {
       path: '/detector'
       fullPath: '/app/detector'
       preLoaderRoute: typeof AuthenticatedAppDetectorRouteImport
+      parentRoute: typeof AuthenticatedAppRoute
+    }
+    '/_authenticated/app/api-integrations': {
+      id: '/_authenticated/app/api-integrations'
+      path: '/api-integrations'
+      fullPath: '/app/api-integrations'
+      preLoaderRoute: typeof AuthenticatedAppApiIntegrationsRouteImport
       parentRoute: typeof AuthenticatedAppRoute
     }
     '/_authenticated/app/alerts': {
@@ -1350,6 +1502,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicCronCheckRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/cron/api-webhooks': {
+      id: '/api/public/cron/api-webhooks'
+      path: '/api/public/cron/api-webhooks'
+      fullPath: '/api/public/cron/api-webhooks'
+      preLoaderRoute: typeof ApiPublicCronApiWebhooksRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/core/task': {
       id: '/api/public/core/task'
       path: '/api/public/core/task'
@@ -1487,6 +1646,7 @@ interface AuthenticatedAppRouteChildren {
   AuthenticatedAppAiIntegrationRoute: typeof AuthenticatedAppAiIntegrationRoute
   AuthenticatedAppAjudaRoute: typeof AuthenticatedAppAjudaRoute
   AuthenticatedAppAlertsRoute: typeof AuthenticatedAppAlertsRoute
+  AuthenticatedAppApiIntegrationsRoute: typeof AuthenticatedAppApiIntegrationsRoute
   AuthenticatedAppDetectorRoute: typeof AuthenticatedAppDetectorRoute
   AuthenticatedAppPaginaRoute: typeof AuthenticatedAppPaginaRoute
   AuthenticatedAppPerformanceRoute: typeof AuthenticatedAppPerformanceRoute
@@ -1512,6 +1672,7 @@ const AuthenticatedAppRouteChildren: AuthenticatedAppRouteChildren = {
   AuthenticatedAppAiIntegrationRoute: AuthenticatedAppAiIntegrationRoute,
   AuthenticatedAppAjudaRoute: AuthenticatedAppAjudaRoute,
   AuthenticatedAppAlertsRoute: AuthenticatedAppAlertsRoute,
+  AuthenticatedAppApiIntegrationsRoute: AuthenticatedAppApiIntegrationsRoute,
   AuthenticatedAppDetectorRoute: AuthenticatedAppDetectorRoute,
   AuthenticatedAppPaginaRoute: AuthenticatedAppPaginaRoute,
   AuthenticatedAppPerformanceRoute: AuthenticatedAppPerformanceRoute,
@@ -1557,6 +1718,28 @@ const BlogRouteChildren: BlogRouteChildren = {
 
 const BlogRouteWithChildren = BlogRoute._addFileChildren(BlogRouteChildren)
 
+interface DevelopersRouteChildren {
+  DevelopersChangelogRoute: typeof DevelopersChangelogRoute
+}
+
+const DevelopersRouteChildren: DevelopersRouteChildren = {
+  DevelopersChangelogRoute: DevelopersChangelogRoute,
+}
+
+const DevelopersRouteWithChildren = DevelopersRoute._addFileChildren(
+  DevelopersRouteChildren,
+)
+
+interface ApiV1RouteChildren {
+  ApiV1SplatRoute: typeof ApiV1SplatRoute
+}
+
+const ApiV1RouteChildren: ApiV1RouteChildren = {
+  ApiV1SplatRoute: ApiV1SplatRoute,
+}
+
+const ApiV1RouteWithChildren = ApiV1Route._addFileChildren(ApiV1RouteChildren)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
@@ -1564,6 +1747,7 @@ const rootRouteChildren: RootRouteChildren = {
   AlertasTelegramRoute: AlertasTelegramRoute,
   AuthRoute: AuthRoute,
   BlogRoute: BlogRouteWithChildren,
+  DevelopersRoute: DevelopersRouteWithChildren,
   DnsRoute: DnsRoute,
   McpRoute: McpRoute,
   MonitoramentoDnsRoute: MonitoramentoDnsRoute,
@@ -1576,6 +1760,9 @@ const rootRouteChildren: RootRouteChildren = {
   Char91DotmcpChar93ListToolsRoute: Char91DotmcpChar93ListToolsRoute,
   Char91DotwellKnownChar93OauthProtectedResourceRoute:
     Char91DotwellKnownChar93OauthProtectedResourceRoute,
+  ApiOpenapiDotjsonRoute: ApiOpenapiDotjsonRoute,
+  ApiOpenapiDotyamlRoute: ApiOpenapiDotyamlRoute,
+  ApiV1Route: ApiV1RouteWithChildren,
   DownloadAndroidRoute: DownloadAndroidRoute,
   PlayerResellerIdRoute: PlayerResellerIdRoute,
   StatusSlugRoute: StatusSlugRoute,
@@ -1594,6 +1781,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPublicCoreReportRoute: ApiPublicCoreReportRoute,
   ApiPublicCoreStreamRoute: ApiPublicCoreStreamRoute,
   ApiPublicCoreTaskRoute: ApiPublicCoreTaskRoute,
+  ApiPublicCronApiWebhooksRoute: ApiPublicCronApiWebhooksRoute,
   ApiPublicCronCheckRoute: ApiPublicCronCheckRoute,
   ApiPublicCronDigestRoute: ApiPublicCronDigestRoute,
   ApiPublicCronIptvNotificationsRoute: ApiPublicCronIptvNotificationsRoute,

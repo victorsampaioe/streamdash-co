@@ -43,6 +43,7 @@ import { ReactivationPanel } from "@/components/admin/reactivation-panel";
 import { CircuitBreakerPanel } from "@/components/admin/circuit-breaker-panel";
 import { MonitorHealthPanel } from "@/components/admin/monitor-health-panel";
 import { SignupSecurityPanel } from "@/components/admin/signup-security-panel";
+import { ApiManagementPanel } from "@/components/admin/api-management-panel";
 
 import { UserCog, History, PlusCircle, UserCheck, UserRoundCog, Settings2, Trash2, ShoppingBag as StoreIcon, Wallet, ExternalLink, Zap } from "lucide-react";
 
@@ -327,7 +328,7 @@ function AdminPage() {
 
       <Tabs defaultValue="overview" className="space-y-6">
         <div className="overflow-x-auto pb-2 scrollbar-hide">
-          <TabsList className="flex w-max min-full sm:grid sm:grid-cols-12 sm:w-full">
+          <TabsList className="flex w-max min-full sm:grid sm:grid-cols-13 sm:w-full">
             <TabsTrigger value="overview" className="px-4">Usuários</TabsTrigger>
             <TabsTrigger value="resellers" className="px-4">Revendedores</TabsTrigger>
             <TabsTrigger value="core-audit" className="px-4">Auditoria Core</TabsTrigger>
@@ -340,9 +341,14 @@ function AdminPage() {
             <TabsTrigger value="android" className="px-4">Android Play</TabsTrigger>
             <TabsTrigger value="storage" className="px-4">Armazenamento</TabsTrigger>
             <TabsTrigger value="signup-security" className="px-4">Segurança de Cadastro</TabsTrigger>
+            <TabsTrigger value="commercial-api" className="px-4">API Comercial</TabsTrigger>
 
           </TabsList>
         </div>
+
+        <TabsContent value="commercial-api" className="space-y-6">
+          <ApiManagementPanel />
+        </TabsContent>
 
         <TabsContent value="signup-security" className="space-y-6">
           <SignupSecurityPanel />

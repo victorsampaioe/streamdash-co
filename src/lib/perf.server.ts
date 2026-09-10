@@ -248,18 +248,21 @@ export async function runPerfBatch(limit = 5): Promise<{ tested: number; ok: num
     .not("iptv_username", "is", null)
     .limit(200);
 
-  const candidates: string[] = [];
-  for (const s of servers ?? []) {
-    const { data: last } = await supabaseAdmin
+  const serverIds = (servers ?? []).map((server) => server.id);
+  const latestByServer = new Map<string, string>();
+  if (serverIds.length) {
+    const { data: runs } = await supabaseAdmin
       .from("server_perf_runs")
-      .select("measured_at")
-      .eq("server_id", s.id)
-      .order("measured_at", { ascending: false })
-      .limit(1)
-      .maybeSingle();
-    if (!last || last.measured_at < cutoff) candidates.push(s.id);
-    if (candidates.length >= limit) break;
+      .select("server_id, measured_at")
+      .in("server_id", serverIds)
+      .order("measured_at", { ascending: false });
+    for (const run of runs ?? []) {
+      if (!latestByServer.has(run.server_id)) latestByServer.set(run.server_id, run.measured_at);
+    }
   }
+  const candidates = serverIds
+    .filter((id) => !latestByServer.has(id) || String(latestByServer.get(id)) < cutoff)
+    .slice(0, limit);
 
   const { runPool } = await import("./pool");
   const errors: string[] = [];
