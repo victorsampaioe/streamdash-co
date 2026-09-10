@@ -5768,6 +5768,43 @@ export type Database = {
         Returns: undefined
       }
       admin_signup_security_report: { Args: never; Returns: Json }
+      api_consume_rate_limit: {
+        Args: {
+          p_bucket: string
+          p_key_hash: string
+          p_limit: number
+          p_window_start: string
+        }
+        Returns: {
+          allowed: boolean
+          hits: number
+        }[]
+      }
+      api_get_or_create_resource_id: {
+        Args: {
+          p_account_id: string
+          p_internal_id: string
+          p_public_id: string
+          p_resource_type: string
+        }
+        Returns: string
+      }
+      api_monthly_usage: {
+        Args: { p_account_id: string; p_environment: string }
+        Returns: number
+      }
+      api_record_usage: {
+        Args: {
+          p_account_id: string
+          p_duration_ms: number
+          p_endpoint: string
+          p_environment: string
+          p_key_id: string
+          p_status_code: number
+          p_usage_date: string
+        }
+        Returns: undefined
+      }
       check_circuit_breaker: { Args: { p_server_id: string }; Returns: string }
       cleanup_diagnostic_slots: { Args: never; Returns: undefined }
       content_health_overview: { Args: { _server_id?: string }; Returns: Json }

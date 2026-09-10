@@ -1,5 +1,5 @@
 import { Link, Outlet, useNavigate, useRouterState } from "@tanstack/react-router";
-import { Activity, LayoutDashboard, ServerIcon, Bell, Users, LogOut, Sun, Moon, Search, Plus, CreditCard, Gift, Radio, ShieldAlert, Trophy, Lock, Menu, Send, Bot, Sparkles, BookOpen, Globe, ShoppingBag, Zap , Gauge } from "lucide-react";
+import { Activity, LayoutDashboard, ServerIcon, Bell, Users, LogOut, Sun, Moon, Search, Plus, CreditCard, Gift, Radio, ShieldAlert, Trophy, Lock, Menu, Send, Bot, Sparkles, BookOpen, Globe, ShoppingBag, Zap, Gauge, Braces } from "lucide-react";
 import { SubscriptionBanner } from "@/components/subscription/subscription-banner";
 import { TelegramBanner } from "@/components/telegram-banner";
 import { WelcomeOnboarding } from "@/components/subscription/welcome-onboarding";
@@ -21,6 +21,7 @@ import { cn } from "@/lib/utils";
 const ALWAYS_OPEN_PATHS = [
   "/app/subscription",
   "/app/ai-integration",
+  "/app/api-integrations",
 ];
 
 export function AppShell({ children }: { children: ReactNode }) {
@@ -134,6 +135,7 @@ function useNavItems() {
     items.push({ to: "/app/subscription", label: "Minha Assinatura", icon: CreditCard });
   }
   
+  items.push({ to: "/app/api-integrations", label: "API & Integrações", icon: Braces });
   items.push({ to: "/app/ai-integration", label: "Integração IA", icon: Bot });
   items.push({ to: "/app/ajuda", label: "Central de Ajuda", icon: BookOpen });
 
