@@ -8,17 +8,43 @@ export const createPixPayment = createServerFn({ method: "POST" })
   .inputValidator((input) => z.object({ 
     plan: z.string().optional().nullable(), 
     storeProductId: z.string().optional().nullable(),
-    paymentType: z.enum(["subscription", "store"]).optional().nullable()
+    apiPlanCode: z.enum(["api_pro", "api_business", "api_ai", "enterprise"]).optional().nullable(),
+    paymentType: z.enum(["subscription", "store", "api_subscription"]).optional().nullable()
   }).parse(input))
   .handler(async ({ data, context }) => {
     let amountCents: number;
     let description: string;
     let planId = (data.plan || undefined) as PlanId | undefined;
     let storeProductId = data.storeProductId || undefined;
-    let paymentType = data.paymentType || (storeProductId ? "store" : "subscription");
+    const apiPlanCode = data.apiPlanCode || undefined;
+    let apiPlanId: string | undefined;
+    let paymentType = data.paymentType || (apiPlanCode ? "api_subscription" : storeProductId ? "store" : "subscription");
 
-
-    if (planId) {
+    if (apiPlanCode) {
+      const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+      const { data: owner } = await context.supabase.rpc("get_owner_account_id", { _user_id: context.userId });
+      if ((owner ?? context.userId) !== context.userId) {
+        throw new Error("Somente o titular da conta pode contratar a STREAM MONITOR API.");
+      }
+      const { data: eligible } = await supabaseAdmin.rpc("stream_monitor_account_active", { _account_id: context.userId });
+      if (!eligible) {
+        throw new Error("Você precisa de uma assinatura Stream Monitor ativa para contratar a API.");
+      }
+      const { data: apiPlan, error: apiPlanError } = await supabaseAdmin
+        .from("api_plans")
+        .select("id, name, monthly_price_cents")
+        .eq("code", apiPlanCode)
+        .eq("is_active", true)
+        .eq("is_public", true)
+        .single();
+      if (apiPlanError || !apiPlan || apiPlan.monthly_price_cents == null) throw new Error("Plano API indisponível.");
+      apiPlanId = apiPlan.id;
+      amountCents = apiPlan.monthly_price_cents;
+      description = `StreamMonitor API — ${apiPlan.name}`;
+      planId = undefined;
+      storeProductId = undefined;
+      paymentType = "api_subscription";
+    } else if (planId) {
       const standardPlan = PLANS.find((p) => p.id === planId);
       if (standardPlan) {
         amountCents = effectivePriceCents(standardPlan);
@@ -52,18 +78,21 @@ export const createPixPayment = createServerFn({ method: "POST" })
     const discountApplied = false;
 
     // Reuse a still-valid charge.
-    const { data: existing } = await supabase
+    let existingQuery = supabase
       .from("payments")
       .select("id, amount_cents, expires_at, pix_copy_paste, pix_qr_code")
       .eq("user_id", userId)
-      .eq(storeProductId ? "store_product_id" : "plan", (storeProductId || planId)!)
+      .eq("payment_type", paymentType)
       .eq("status", "pending")
       .eq("amount_cents", amountCents)
       .gt("expires_at", new Date().toISOString())
       .not("pix_qr_code", "is", null)
       .order("created_at", { ascending: false })
-      .limit(1)
-      .maybeSingle();
+      .limit(1);
+    if (apiPlanId) existingQuery = existingQuery.eq("api_plan_id", apiPlanId);
+    else if (storeProductId) existingQuery = existingQuery.eq("store_product_id", storeProductId);
+    else if (planId) existingQuery = existingQuery.eq("plan", planId);
+    const { data: existing } = await existingQuery.maybeSingle();
 
     const existingPixCode = typeof existing?.pix_copy_paste === "string"
       ? existing.pix_copy_paste.trim()
@@ -92,6 +121,7 @@ export const createPixPayment = createServerFn({ method: "POST" })
       amount_cents: amountCents,
       currency: "BRL",
       store_product_id: storeProductId || null,
+      api_plan_id: apiPlanId || null,
       payment_type: paymentType as any,
       expires_at: expiresAt,
     };

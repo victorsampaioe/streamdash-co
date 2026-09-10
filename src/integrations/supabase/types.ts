@@ -721,12 +721,15 @@ export type Database = {
           expires_at: string | null
           extra_requests: number
           id: string
+          last_payment_id: string | null
           metadata: Json
           monthly_limit_override: number | null
           per_minute_limit_override: number | null
           plan_id: string
           starts_at: string | null
           status: string
+          suspended_at: string | null
+          suspended_reason: string | null
           updated_at: string
         }
         Insert: {
@@ -737,12 +740,15 @@ export type Database = {
           expires_at?: string | null
           extra_requests?: number
           id?: string
+          last_payment_id?: string | null
           metadata?: Json
           monthly_limit_override?: number | null
           per_minute_limit_override?: number | null
           plan_id: string
           starts_at?: string | null
           status?: string
+          suspended_at?: string | null
+          suspended_reason?: string | null
           updated_at?: string
         }
         Update: {
@@ -753,12 +759,15 @@ export type Database = {
           expires_at?: string | null
           extra_requests?: number
           id?: string
+          last_payment_id?: string | null
           metadata?: Json
           monthly_limit_override?: number | null
           per_minute_limit_override?: number | null
           plan_id?: string
           starts_at?: string | null
           status?: string
+          suspended_at?: string | null
+          suspended_reason?: string | null
           updated_at?: string
         }
         Relationships: [
@@ -767,6 +776,13 @@ export type Database = {
             columns: ["account_id"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "api_subscriptions_last_payment_id_fkey"
+            columns: ["last_payment_id"]
+            isOneToOne: false
+            referencedRelation: "payments"
             referencedColumns: ["id"]
           },
           {
@@ -3813,6 +3829,7 @@ export type Database = {
       payments: {
         Row: {
           amount_cents: number
+          api_plan_id: string | null
           created_at: string
           currency: string
           expires_at: string | null
@@ -3835,6 +3852,7 @@ export type Database = {
         }
         Insert: {
           amount_cents: number
+          api_plan_id?: string | null
           created_at?: string
           currency?: string
           expires_at?: string | null
@@ -3857,6 +3875,7 @@ export type Database = {
         }
         Update: {
           amount_cents?: number
+          api_plan_id?: string | null
           created_at?: string
           currency?: string
           expires_at?: string | null
@@ -3878,6 +3897,13 @@ export type Database = {
           user_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "payments_api_plan_id_fkey"
+            columns: ["api_plan_id"]
+            isOneToOne: false
+            referencedRelation: "api_plans"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "payments_store_product_id_fkey"
             columns: ["store_product_id"]
@@ -6306,7 +6332,15 @@ export type Database = {
       rollup_metrics: { Args: { _hours?: number }; Returns: Json }
       rollup_regional: { Args: { _hours?: number }; Returns: Json }
       run_radar_batch_sync: { Args: never; Returns: Json }
+      stream_monitor_account_active: {
+        Args: { _account_id: string }
+        Returns: boolean
+      }
       subscription_is_active: { Args: { _user_id: string }; Returns: boolean }
+      sync_api_subscription_entitlement: {
+        Args: { _account_id: string }
+        Returns: undefined
+      }
       transfer_credits: {
         Args: { _amount: number; _recipient_id: string; _sender_id: string }
         Returns: undefined
