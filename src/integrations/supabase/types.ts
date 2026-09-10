@@ -300,6 +300,272 @@ export type Database = {
           },
         ]
       }
+      api_allowed_ips: {
+        Row: {
+          account_id: string
+          cidr: unknown
+          created_at: string
+          id: string
+          key_id: string
+          label: string | null
+        }
+        Insert: {
+          account_id: string
+          cidr: unknown
+          created_at?: string
+          id?: string
+          key_id: string
+          label?: string | null
+        }
+        Update: {
+          account_id?: string
+          cidr?: unknown
+          created_at?: string
+          id?: string
+          key_id?: string
+          label?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "api_allowed_ips_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "api_allowed_ips_key_id_fkey"
+            columns: ["key_id"]
+            isOneToOne: false
+            referencedRelation: "api_keys"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      api_allowed_origins: {
+        Row: {
+          account_id: string
+          created_at: string
+          id: string
+          key_id: string | null
+          origin: string
+        }
+        Insert: {
+          account_id: string
+          created_at?: string
+          id?: string
+          key_id?: string | null
+          origin: string
+        }
+        Update: {
+          account_id?: string
+          created_at?: string
+          id?: string
+          key_id?: string | null
+          origin?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "api_allowed_origins_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "api_allowed_origins_key_id_fkey"
+            columns: ["key_id"]
+            isOneToOne: false
+            referencedRelation: "api_keys"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      api_key_scopes: {
+        Row: {
+          account_id: string
+          created_at: string
+          id: string
+          key_id: string
+          scope: string
+        }
+        Insert: {
+          account_id: string
+          created_at?: string
+          id?: string
+          key_id: string
+          scope: string
+        }
+        Update: {
+          account_id?: string
+          created_at?: string
+          id?: string
+          key_id?: string
+          scope?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "api_key_scopes_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "api_key_scopes_key_id_fkey"
+            columns: ["key_id"]
+            isOneToOne: false
+            referencedRelation: "api_keys"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      api_keys: {
+        Row: {
+          account_id: string
+          created_at: string
+          created_by: string | null
+          environment: string
+          expires_at: string | null
+          id: string
+          key_hash: string
+          key_prefix: string
+          last_four: string
+          last_used_at: string | null
+          name: string
+          per_minute_limit_override: number | null
+          rotated_from_id: string | null
+          status: string
+          subscription_id: string
+          updated_at: string
+        }
+        Insert: {
+          account_id: string
+          created_at?: string
+          created_by?: string | null
+          environment: string
+          expires_at?: string | null
+          id?: string
+          key_hash: string
+          key_prefix: string
+          last_four: string
+          last_used_at?: string | null
+          name: string
+          per_minute_limit_override?: number | null
+          rotated_from_id?: string | null
+          status?: string
+          subscription_id: string
+          updated_at?: string
+        }
+        Update: {
+          account_id?: string
+          created_at?: string
+          created_by?: string | null
+          environment?: string
+          expires_at?: string | null
+          id?: string
+          key_hash?: string
+          key_prefix?: string
+          last_four?: string
+          last_used_at?: string | null
+          name?: string
+          per_minute_limit_override?: number | null
+          rotated_from_id?: string | null
+          status?: string
+          subscription_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "api_keys_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "api_keys_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "api_keys_rotated_from_id_fkey"
+            columns: ["rotated_from_id"]
+            isOneToOne: false
+            referencedRelation: "api_keys"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "api_keys_subscription_id_fkey"
+            columns: ["subscription_id"]
+            isOneToOne: false
+            referencedRelation: "api_subscriptions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      api_plans: {
+        Row: {
+          burst_limit: number
+          code: string
+          created_at: string
+          description: string | null
+          features: Json
+          history_days: number
+          id: string
+          is_active: boolean
+          is_public: boolean
+          max_keys: number
+          max_webhooks: number
+          monthly_price_cents: number | null
+          monthly_request_limit: number
+          name: string
+          per_minute_limit: number
+          retention_days: number
+          updated_at: string
+        }
+        Insert: {
+          burst_limit: number
+          code: string
+          created_at?: string
+          description?: string | null
+          features?: Json
+          history_days?: number
+          id?: string
+          is_active?: boolean
+          is_public?: boolean
+          max_keys?: number
+          max_webhooks?: number
+          monthly_price_cents?: number | null
+          monthly_request_limit: number
+          name: string
+          per_minute_limit: number
+          retention_days?: number
+          updated_at?: string
+        }
+        Update: {
+          burst_limit?: number
+          code?: string
+          created_at?: string
+          description?: string | null
+          features?: Json
+          history_days?: number
+          id?: string
+          is_active?: boolean
+          is_public?: boolean
+          max_keys?: number
+          max_webhooks?: number
+          monthly_price_cents?: number | null
+          monthly_request_limit?: number
+          name?: string
+          per_minute_limit?: number
+          retention_days?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       api_rate_limits: {
         Row: {
           bucket: string
@@ -327,6 +593,69 @@ export type Database = {
         }
         Relationships: []
       }
+      api_request_logs: {
+        Row: {
+          account_id: string | null
+          created_at: string
+          duration_ms: number
+          endpoint: string
+          environment: string | null
+          error_code: string | null
+          id: string
+          ip_hash: string | null
+          key_id: string | null
+          method: string
+          request_id: string
+          status_code: number
+          user_agent: string | null
+        }
+        Insert: {
+          account_id?: string | null
+          created_at?: string
+          duration_ms?: number
+          endpoint: string
+          environment?: string | null
+          error_code?: string | null
+          id?: string
+          ip_hash?: string | null
+          key_id?: string | null
+          method: string
+          request_id: string
+          status_code: number
+          user_agent?: string | null
+        }
+        Update: {
+          account_id?: string | null
+          created_at?: string
+          duration_ms?: number
+          endpoint?: string
+          environment?: string | null
+          error_code?: string | null
+          id?: string
+          ip_hash?: string | null
+          key_id?: string | null
+          method?: string
+          request_id?: string
+          status_code?: number
+          user_agent?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "api_request_logs_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "api_request_logs_key_id_fkey"
+            columns: ["key_id"]
+            isOneToOne: false
+            referencedRelation: "api_keys"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       api_request_nonces: {
         Row: {
           created_at: string
@@ -347,6 +676,391 @@ export type Database = {
           scope?: string
         }
         Relationships: []
+      }
+      api_resource_ids: {
+        Row: {
+          account_id: string
+          created_at: string
+          id: string
+          internal_id: string
+          public_id: string
+          resource_type: string
+        }
+        Insert: {
+          account_id: string
+          created_at?: string
+          id?: string
+          internal_id: string
+          public_id: string
+          resource_type: string
+        }
+        Update: {
+          account_id?: string
+          created_at?: string
+          id?: string
+          internal_id?: string
+          public_id?: string
+          resource_type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "api_resource_ids_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      api_subscriptions: {
+        Row: {
+          account_id: string
+          burst_limit_override: number | null
+          created_at: string
+          environment: string
+          expires_at: string | null
+          extra_requests: number
+          id: string
+          metadata: Json
+          monthly_limit_override: number | null
+          per_minute_limit_override: number | null
+          plan_id: string
+          starts_at: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          account_id: string
+          burst_limit_override?: number | null
+          created_at?: string
+          environment?: string
+          expires_at?: string | null
+          extra_requests?: number
+          id?: string
+          metadata?: Json
+          monthly_limit_override?: number | null
+          per_minute_limit_override?: number | null
+          plan_id: string
+          starts_at?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          account_id?: string
+          burst_limit_override?: number | null
+          created_at?: string
+          environment?: string
+          expires_at?: string | null
+          extra_requests?: number
+          id?: string
+          metadata?: Json
+          monthly_limit_override?: number | null
+          per_minute_limit_override?: number | null
+          plan_id?: string
+          starts_at?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "api_subscriptions_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "api_subscriptions_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: false
+            referencedRelation: "api_plans"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      api_usage_alerts: {
+        Row: {
+          account_id: string
+          alert_type: string
+          created_at: string
+          id: string
+          payload: Json
+          period_key: string
+          sent_at: string | null
+          status: string
+        }
+        Insert: {
+          account_id: string
+          alert_type: string
+          created_at?: string
+          id?: string
+          payload?: Json
+          period_key: string
+          sent_at?: string | null
+          status?: string
+        }
+        Update: {
+          account_id?: string
+          alert_type?: string
+          created_at?: string
+          id?: string
+          payload?: Json
+          period_key?: string
+          sent_at?: string | null
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "api_usage_alerts_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      api_usage_daily: {
+        Row: {
+          account_id: string
+          created_at: string
+          endpoint: string
+          environment: string
+          error_count: number
+          id: string
+          key_id: string | null
+          rate_limited_count: number
+          request_count: number
+          success_count: number
+          total_duration_ms: number
+          updated_at: string
+          usage_date: string
+        }
+        Insert: {
+          account_id: string
+          created_at?: string
+          endpoint: string
+          environment: string
+          error_count?: number
+          id?: string
+          key_id?: string | null
+          rate_limited_count?: number
+          request_count?: number
+          success_count?: number
+          total_duration_ms?: number
+          updated_at?: string
+          usage_date: string
+        }
+        Update: {
+          account_id?: string
+          created_at?: string
+          endpoint?: string
+          environment?: string
+          error_count?: number
+          id?: string
+          key_id?: string | null
+          rate_limited_count?: number
+          request_count?: number
+          success_count?: number
+          total_duration_ms?: number
+          updated_at?: string
+          usage_date?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "api_usage_daily_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "api_usage_daily_key_id_fkey"
+            columns: ["key_id"]
+            isOneToOne: false
+            referencedRelation: "api_keys"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      api_webhook_deliveries: {
+        Row: {
+          account_id: string
+          attempt: number
+          created_at: string
+          delivered_at: string | null
+          delivery_id: string
+          error_code: string | null
+          event_id: string
+          id: string
+          next_attempt_at: string | null
+          response_excerpt: string | null
+          response_status: number | null
+          status: string
+          updated_at: string
+          webhook_id: string
+        }
+        Insert: {
+          account_id: string
+          attempt?: number
+          created_at?: string
+          delivered_at?: string | null
+          delivery_id: string
+          error_code?: string | null
+          event_id: string
+          id?: string
+          next_attempt_at?: string | null
+          response_excerpt?: string | null
+          response_status?: number | null
+          status?: string
+          updated_at?: string
+          webhook_id: string
+        }
+        Update: {
+          account_id?: string
+          attempt?: number
+          created_at?: string
+          delivered_at?: string | null
+          delivery_id?: string
+          error_code?: string | null
+          event_id?: string
+          id?: string
+          next_attempt_at?: string | null
+          response_excerpt?: string | null
+          response_status?: number | null
+          status?: string
+          updated_at?: string
+          webhook_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "api_webhook_deliveries_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "api_webhook_deliveries_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "api_webhook_events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "api_webhook_deliveries_webhook_id_fkey"
+            columns: ["webhook_id"]
+            isOneToOne: false
+            referencedRelation: "api_webhooks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      api_webhook_events: {
+        Row: {
+          account_id: string
+          created_at: string
+          event_id: string
+          event_type: string
+          id: string
+          occurred_at: string
+          payload: Json
+          resource_public_id: string | null
+          resource_type: string | null
+        }
+        Insert: {
+          account_id: string
+          created_at?: string
+          event_id: string
+          event_type: string
+          id?: string
+          occurred_at: string
+          payload: Json
+          resource_public_id?: string | null
+          resource_type?: string | null
+        }
+        Update: {
+          account_id?: string
+          created_at?: string
+          event_id?: string
+          event_type?: string
+          id?: string
+          occurred_at?: string
+          payload?: Json
+          resource_public_id?: string | null
+          resource_type?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "api_webhook_events_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      api_webhooks: {
+        Row: {
+          account_id: string
+          created_at: string
+          created_by: string | null
+          event_types: string[]
+          failure_count: number
+          id: string
+          last_delivery_at: string | null
+          name: string
+          secret_ciphertext: string
+          secret_last_four: string
+          status: string
+          updated_at: string
+          url: string
+        }
+        Insert: {
+          account_id: string
+          created_at?: string
+          created_by?: string | null
+          event_types?: string[]
+          failure_count?: number
+          id?: string
+          last_delivery_at?: string | null
+          name: string
+          secret_ciphertext: string
+          secret_last_four: string
+          status?: string
+          updated_at?: string
+          url: string
+        }
+        Update: {
+          account_id?: string
+          created_at?: string
+          created_by?: string | null
+          event_types?: string[]
+          failure_count?: number
+          id?: string
+          last_delivery_at?: string | null
+          name?: string
+          secret_ciphertext?: string
+          secret_last_four?: string
+          status?: string
+          updated_at?: string
+          url?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "api_webhooks_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "api_webhooks_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       app_releases: {
         Row: {
