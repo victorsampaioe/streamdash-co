@@ -20,7 +20,9 @@ export async function authenticateApiRequest(request:Request, requiredScope?:Api
  const prefix=apiKeyPrefix(raw); const {data:key}=await supabaseAdmin.from("api_keys").select("id,account_id,subscription_id,environment,key_hash,status,expires_at,per_minute_limit_override").eq("key_prefix",prefix).maybeSingle();
  if(!key||!equal(hmac(raw),key.key_hash)) throw new CommercialApiError(401,"invalid_api_key","Chave de API ausente ou inválida.");
  if(key.status!=="active"||(key.expires_at&&new Date(key.expires_at)<=new Date())) throw new CommercialApiError(401,"inactive_api_key","Chave revogada, inativa ou expirada.");
+ await supabaseAdmin.rpc("sync_api_subscription_entitlement",{_account_id:key.account_id});
  const {data:sub}=await supabaseAdmin.from("api_subscriptions").select("status,starts_at,expires_at,monthly_limit_override,per_minute_limit_override,burst_limit_override,extra_requests,api_plans(monthly_request_limit,per_minute_limit,burst_limit)").eq("id",key.subscription_id).eq("account_id",key.account_id).maybeSingle();
+ if(sub?.status==="suspended") throw new CommercialApiError(403,"main_subscription_inactive","Sua API foi pausada porque sua assinatura Stream Monitor está inativa.");
  if(!sub||!["trial","active"].includes(sub.status)||(sub.starts_at&&new Date(sub.starts_at)>new Date())||(sub.expires_at&&new Date(sub.expires_at)<=new Date())) throw new CommercialApiError(403,"subscription_inactive","Assinatura da API inativa.");
  const plan=Array.isArray(sub.api_plans)?sub.api_plans[0]:sub.api_plans; if(!plan) throw new CommercialApiError(403,"plan_unavailable","Plano da API indisponível.");
  const {data:scopeRows}=await supabaseAdmin.from("api_key_scopes").select("scope").eq("key_id",key.id).eq("account_id",key.account_id); const scopes=new Set((scopeRows??[]).map(x=>x.scope));

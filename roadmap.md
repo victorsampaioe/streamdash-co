@@ -13,6 +13,6 @@
 
 ## Pendências comerciais
 
-- [ ] Checkout separado dos planos normais da plataforma
+- [x] Checkout separado dos planos normais da plataforma, reutilizando o PIX existente e ativação automática
 - [ ] Controles avançados de IP, origem, escopos e limites no painel administrativo
 - [ ] Validação visual autenticada (bloqueada: não há sessão de teste disponível)

@@ -12,7 +12,7 @@ async function processPayment(mpPaymentId: string) {
       const { notifyAdmin } = await import("@/lib/admin-telegram.server");
       const { data: pay } = await supabaseAdmin
         .from("payments")
-        .select("user_id, plan, store_product_id, amount_cents")
+        .select("user_id, plan, store_product_id, api_plan_id, payment_type, amount_cents")
         .eq("id", res.paymentId)
         .maybeSingle();
 
@@ -22,7 +22,16 @@ async function processPayment(mpPaymentId: string) {
 
       const brl = pay ? (pay.amount_cents / 100).toLocaleString("pt-BR", { style: "currency", currency: "BRL" }) : "-";
 
-      if (pay?.store_product_id) {
+      if (pay?.payment_type === "api_subscription" && pay.api_plan_id) {
+        const { data: apiPlan } = await supabaseAdmin
+          .from("api_plans")
+          .select("name")
+          .eq("id", pay.api_plan_id)
+          .maybeSingle();
+        await notifyAdmin(
+          `🔌 <b>Assinatura API confirmada</b>\nPlano: ${apiPlan?.name ?? "API"}\nValor: ${brl}\nUsuário: ${prof?.full_name ?? "-"} — ${prof?.email ?? "-"}\nValidade: ${res.subscriptionExpiresAt ? new Date(res.subscriptionExpiresAt).toLocaleString("pt-BR") : "-"}`
+        );
+      } else if (pay?.store_product_id) {
         const { data: product } = await supabaseAdmin
           .from("store_products")
           .select("name")
