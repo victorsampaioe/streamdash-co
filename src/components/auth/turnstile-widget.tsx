@@ -51,6 +51,7 @@ export function TurnstileWidget({ siteKey, onToken }: Props) {
         widgetId.current = window.turnstile.render(ref.current, {
           sitekey: siteKey,
           theme: "dark",
+          appearance: "interaction-only",
           callback: (token: string) => cb.current(token),
           "expired-callback": () => cb.current(null),
           "error-callback": () => cb.current(null),
@@ -68,7 +69,7 @@ export function TurnstileWidget({ siteKey, onToken }: Props) {
     };
   }, [siteKey]);
 
-  return <div ref={ref} className="flex justify-center" />;
+  return <div ref={ref} className="flex justify-center empty:hidden" aria-live="polite" />;
 }
 
 export function resetTurnstile() {

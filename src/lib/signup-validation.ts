@@ -59,6 +59,21 @@ export function validateName(raw: string | null | undefined): ValidationResult<s
   return { ok: true, value };
 }
 
+export function normalizeUsername(raw: string | null | undefined): string {
+  return String(raw ?? "").trim().toLowerCase();
+}
+
+export function validateUsername(raw: string | null | undefined): ValidationResult<string> {
+  const value = normalizeUsername(raw);
+  if (value.length < 3) return { ok: false, error: "O usuário precisa ter pelo menos 3 caracteres." };
+  if (value.length > 24) return { ok: false, error: "O usuário pode ter no máximo 24 caracteres." };
+  if (!/^[a-z0-9_]+$/.test(value)) {
+    return { ok: false, error: "Use apenas letras, números e sublinhado no usuário." };
+  }
+  if (!/[a-z]/.test(value)) return { ok: false, error: "Inclua pelo menos uma letra no usuário." };
+  return { ok: true, value };
+}
+
 const EMAIL_RE = /^[^\s@;,<>"'()[\]]{1,64}@[a-z0-9]([a-z0-9-]*[a-z0-9])?(\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)+$/i;
 
 export function validateEmail(raw: string | null | undefined): ValidationResult<string> {
@@ -83,7 +98,7 @@ export function validateReferralCode(raw: string | null | undefined): Validation
 
 export function validatePassword(raw: string | null | undefined): ValidationResult<string> {
   const value = String(raw ?? "");
-  if (value.length < 6) return { ok: false, error: "Senha deve ter no mínimo 6 caracteres" };
-  if (value.length > 128) return { ok: false, error: "Senha muito longa" };
+  if (value.length < 6) return { ok: false, error: "Sua senha precisa ter pelo menos 6 caracteres." };
+  if (value.length > 128) return { ok: false, error: "Sua senha é muito longa." };
   return { ok: true, value };
 }

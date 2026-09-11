@@ -1,5 +1,6 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
+import { Eye, EyeOff } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -21,6 +22,8 @@ function ResetPassword() {
   const navigate = useNavigate();
   const [ready, setReady] = useState(false);
   const [password, setPassword] = useState("");
+  const [confirmation, setConfirmation] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
@@ -34,10 +37,12 @@ function ResetPassword() {
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
+    if (password.length < 6) return toast.error("Sua senha precisa ter pelo menos 6 caracteres.");
+    if (password !== confirmation) return toast.error("As senhas digitadas são diferentes.");
     setLoading(true);
     const { error } = await supabase.auth.updateUser({ password });
     setLoading(false);
-    if (error) return toast.error(error.message);
+    if (error) return toast.error("Não conseguimos atualizar sua senha agora. Tente novamente.");
     toast.success("Senha atualizada");
     navigate({ to: "/app" });
   }
@@ -52,7 +57,17 @@ function ResetPassword() {
           <form onSubmit={submit} className="space-y-4">
             <div className="space-y-2">
               <Label>Nova senha</Label>
-              <Input type="password" required minLength={6} value={password} onChange={(e) => setPassword(e.target.value)} />
+              <div className="relative">
+                <Input type={showPassword ? "text" : "password"} required minLength={6} value={password} onChange={(e) => setPassword(e.target.value)} className="pr-10" />
+                <Button type="button" variant="ghost" size="icon" className="absolute right-0 top-0" onClick={() => setShowPassword((value) => !value)} aria-label={showPassword ? "Ocultar senha" : "Mostrar senha"}>
+                  {showPassword ? <EyeOff /> : <Eye />}
+                </Button>
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label>Confirmar nova senha</Label>
+              <Input type={showPassword ? "text" : "password"} required minLength={6} value={confirmation} onChange={(e) => setConfirmation(e.target.value)} />
+              {confirmation && password !== confirmation && <p className="text-xs text-destructive">As senhas digitadas são diferentes.</p>}
             </div>
             <Button type="submit" disabled={loading} className="w-full">
               {loading ? "Salvando..." : "Atualizar senha"}

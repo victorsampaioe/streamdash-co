@@ -8,8 +8,10 @@ export type SignupRejection =
   | "invalid_email"
   | "invalid_phone"
   | "invalid_password"
+  | "invalid_username"
   | "invalid_referral"
   | "duplicate_email"
+  | "duplicate_username"
   | "duplicate_phone"
   | "duplicate_request"
   | "rate_limit_exceeded"
@@ -49,56 +51,70 @@ export function maskIp(ip: string): string {
 }
 
 export function attemptFingerprint(email: string, phone: string, ipHash: string): string {
-  const bucket = Math.floor(Date.now() / 60_000); // janela de 60s
+  const bucket = Math.floor(Date.now() / (5 * 60_000)); // janela de 5 minutos
   return createHash("sha256").update(`${email}|${phone}|${ipHash}|${bucket}`).digest("hex");
 }
 
-export async function isBlocked(ipHash: string): Promise<{ blocked: boolean; until?: string; reason?: string }> {
+export function hashIdentity(identity: string): string {
+  return createHash("sha256").update(`identity|${identity.trim().toLowerCase()}|${IP_SALT}`).digest("hex");
+}
+
+export async function isBlocked(ipHash: string, identityHash?: string): Promise<{ blocked: boolean; until?: string; reason?: string }> {
   const { data } = await supabaseAdmin
     .from("signup_blocks" as any)
     .select("blocked_until, reason")
-    .eq("key", ipHash)
+    .in("key", [identityHash ? `identity:${identityHash}` : "", `ip:${ipHash}`, ipHash])
+    .gt("blocked_until", new Date().toISOString())
+    .order("blocked_until", { ascending: false })
+    .limit(1)
     .maybeSingle();
-  const row = data as any;
+  const row = data as { blocked_until?: string; reason?: string } | null;
   if (row?.blocked_until && new Date(row.blocked_until).getTime() > Date.now()) {
     return { blocked: true, until: row.blocked_until, reason: row.reason };
   }
   return { blocked: false };
 }
 
-export async function blockIp(ipHash: string, reason: string, attempts: number, hours = 6) {
-  const until = new Date(Date.now() + hours * 3600_000).toISOString();
+export async function blockKey(key: string, reason: string, attempts: number, minutes = 30) {
+  const until = new Date(Date.now() + minutes * 60_000).toISOString();
   await supabaseAdmin
     .from("signup_blocks" as any)
-    .upsert({ key: ipHash, reason, attempts, blocked_until: until } as any, { onConflict: "key" });
+    .upsert({ key, reason, attempts, blocked_until: until } as any, { onConflict: "key" });
   log("temporary block applied", { reason, attempts, until });
 }
 
-async function countAttempts(ipHash: string, minutes: number): Promise<number> {
+async function recentAttempts(field: "ip_hash" | "identity_hash", value: string, minutes: number) {
   const since = new Date(Date.now() - minutes * 60_000).toISOString();
-  const { count } = await supabaseAdmin
+  const { data } = await supabaseAdmin
     .from("signup_attempts" as any)
-    .select("id", { count: "exact", head: true })
-    .eq("ip_hash", ipHash)
-    .neq("reason", "rate_limit_exceeded")
+    .select("category, identity_hash, risk_score")
+    .eq(field, value)
     .gte("created_at", since);
-  return count || 0;
+  return (data ?? []) as Array<{ category?: string | null; identity_hash?: string | null; risk_score?: number | null }>;
 }
 
-/** 3 tentativas / 10 min · 5 tentativas / 1h · bloqueio temporário em burst. */
-export async function checkRateLimit(ipHash: string): Promise<{ allowed: boolean; reason?: SignupRejection }> {
-  const [last10, last60, last5] = await Promise.all([
-    countAttempts(ipHash, 10),
-    countAttempts(ipHash, 60),
-    countAttempts(ipHash, 5),
+/** Limite adaptativo: identidade primeiro; IP somente com vários sinais fortes distintos. */
+export async function checkRateLimit(ipHash: string, identityHash: string): Promise<{ allowed: boolean; reason?: SignupRejection }> {
+  const [identity10, identity60, ip10] = await Promise.all([
+    recentAttempts("identity_hash", identityHash, 10),
+    recentAttempts("identity_hash", identityHash, 60),
+    recentAttempts("ip_hash", ipHash, 10),
   ]);
 
-  if (last5 >= 10) {
-    await blockIp(ipHash, "burst_detected", last5, 6);
-    return { allowed: false, reason: "temporarily_blocked" };
-  }
-  if (last10 >= 3 || last60 >= 5) {
+  const countsTowardLimit = (row: { category?: string | null }) =>
+    !["created", "invalid_data", "existing_account"].includes(row.category ?? "");
+  const identity10Count = identity10.filter(countsTowardLimit).length;
+  const identity60Count = identity60.filter(countsTowardLimit).length;
+  if (identity10Count >= 5 || identity60Count >= 10) {
+    await blockKey(`identity:${identityHash}`, "identity_rate_limit", Math.max(identity10Count, identity60Count), 15);
     return { allowed: false, reason: "rate_limit_exceeded" };
+  }
+
+  const risk = ip10.reduce((sum, row) => sum + (row.risk_score ?? 0), 0);
+  const identities = new Set(ip10.map((row) => row.identity_hash).filter(Boolean)).size;
+  if (risk >= 20 && identities >= 8) {
+    await blockKey(`ip:${ipHash}`, "suspicious_network_burst", risk, 30);
+    return { allowed: false, reason: "temporarily_blocked" };
   }
   return { allowed: true };
 }
@@ -135,6 +151,10 @@ export interface AttemptRecord {
   fullName?: string | null;
   fingerprint?: string | null;
   userAgent?: string | null;
+  identityHash?: string | null;
+  category?: string | null;
+  riskScore?: number;
+  technicalDetail?: string | null;
 }
 
 /** Cria o registro da tentativa. Retorna null quando o fingerprint já existe (POST duplicado). */
@@ -150,6 +170,10 @@ export async function openAttempt(rec: AttemptRecord): Promise<string | null> {
       full_name: rec.fullName ?? null,
       fingerprint: rec.fingerprint ?? null,
       user_agent: rec.userAgent?.slice(0, 300) ?? null,
+      identity_hash: rec.identityHash ?? null,
+      category: rec.category ?? null,
+      risk_score: rec.riskScore ?? 0,
+      technical_detail: rec.technicalDetail?.slice(0, 500) ?? null,
     } as any)
     .select("id")
     .single();
@@ -167,11 +191,19 @@ export async function closeAttempt(
   status: "created" | "rejected",
   reason?: SignupRejection | null,
   userId?: string | null,
+  category?: string | null,
+  technicalDetail?: string | null,
 ) {
   if (!id || id === "unlogged") return;
   await supabaseAdmin
     .from("signup_attempts" as any)
-    .update({ status, reason: reason ?? null, user_id: userId ?? null } as any)
+    .update({
+      status,
+      reason: reason ?? null,
+      user_id: userId ?? null,
+      category: category ?? (status === "created" ? "created" : null),
+      technical_detail: technicalDetail?.slice(0, 500) ?? null,
+    } as any)
     .eq("id", id);
 }
 

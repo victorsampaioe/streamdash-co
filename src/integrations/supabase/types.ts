@@ -4214,6 +4214,7 @@ export type Database = {
           telegram_alert_style: string | null
           telegram_iptv_style: string | null
           trial_used: boolean
+          username: string | null
           whatsapp: string | null
         }
         Insert: {
@@ -4234,6 +4235,7 @@ export type Database = {
           telegram_alert_style?: string | null
           telegram_iptv_style?: string | null
           trial_used?: boolean
+          username?: string | null
           whatsapp?: string | null
         }
         Update: {
@@ -4254,6 +4256,7 @@ export type Database = {
           telegram_alert_style?: string | null
           telegram_iptv_style?: string | null
           trial_used?: boolean
+          username?: string | null
           whatsapp?: string | null
         }
         Relationships: [
@@ -5384,44 +5387,56 @@ export type Database = {
       }
       signup_attempts: {
         Row: {
+          category: string | null
           created_at: string
           email_norm: string | null
           fingerprint: string | null
           full_name: string | null
           id: string
+          identity_hash: string | null
           ip_hash: string | null
           ip_masked: string | null
           phone_norm: string | null
           reason: string | null
+          risk_score: number
           status: string
+          technical_detail: string | null
           user_agent: string | null
           user_id: string | null
         }
         Insert: {
+          category?: string | null
           created_at?: string
           email_norm?: string | null
           fingerprint?: string | null
           full_name?: string | null
           id?: string
+          identity_hash?: string | null
           ip_hash?: string | null
           ip_masked?: string | null
           phone_norm?: string | null
           reason?: string | null
+          risk_score?: number
           status: string
+          technical_detail?: string | null
           user_agent?: string | null
           user_id?: string | null
         }
         Update: {
+          category?: string | null
           created_at?: string
           email_norm?: string | null
           fingerprint?: string | null
           full_name?: string | null
           id?: string
+          identity_hash?: string | null
           ip_hash?: string | null
           ip_masked?: string | null
           phone_norm?: string | null
           reason?: string | null
+          risk_score?: number
           status?: string
+          technical_detail?: string | null
           user_agent?: string | null
           user_id?: string | null
         }
@@ -5794,6 +5809,7 @@ export type Database = {
         Returns: undefined
       }
       admin_signup_security_report: { Args: never; Returns: Json }
+      admin_unblock_signup: { Args: { _key: string }; Returns: boolean }
       api_consume_rate_limit: {
         Args: {
           p_bucket: string
