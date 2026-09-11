@@ -40,7 +40,9 @@ import { Route as AuthenticatedAppIndexRouteImport } from './routes/_authenticat
 import { Route as ApiV1SplatRouteImport } from './routes/api/v1/$'
 import { Route as ApiPublicSignupRouteImport } from './routes/api/public/signup'
 import { Route as ApiPublicRadarRouteImport } from './routes/api/public/radar'
+import { Route as ApiPublicLoginRouteImport } from './routes/api/public/login'
 import { Route as ApiPublicHealthRouteImport } from './routes/api/public/health'
+import { Route as ApiPublicAccountAvailabilityRouteImport } from './routes/api/public/account-availability'
 import { Route as AuthenticatedAppSubscriptionRouteImport } from './routes/_authenticated/app.subscription'
 import { Route as AuthenticatedAppStoreRouteImport } from './routes/_authenticated/app.store'
 import { Route as AuthenticatedAppResellerRouteImport } from './routes/_authenticated/app.reseller'
@@ -246,11 +248,22 @@ const ApiPublicRadarRoute = ApiPublicRadarRouteImport.update({
   path: '/api/public/radar',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicLoginRoute = ApiPublicLoginRouteImport.update({
+  id: '/api/public/login',
+  path: '/api/public/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiPublicHealthRoute = ApiPublicHealthRouteImport.update({
   id: '/api/public/health',
   path: '/api/public/health',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicAccountAvailabilityRoute =
+  ApiPublicAccountAvailabilityRouteImport.update({
+    id: '/api/public/account-availability',
+    path: '/api/public/account-availability',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const AuthenticatedAppSubscriptionRoute =
   AuthenticatedAppSubscriptionRouteImport.update({
     id: '/subscription',
@@ -559,7 +572,9 @@ export interface FileRoutesByFullPath {
   '/app/reseller': typeof AuthenticatedAppResellerRoute
   '/app/store': typeof AuthenticatedAppStoreRoute
   '/app/subscription': typeof AuthenticatedAppSubscriptionRoute
+  '/api/public/account-availability': typeof ApiPublicAccountAvailabilityRoute
   '/api/public/health': typeof ApiPublicHealthRoute
+  '/api/public/login': typeof ApiPublicLoginRoute
   '/api/public/radar': typeof ApiPublicRadarRoute
   '/api/public/signup': typeof ApiPublicSignupRoute
   '/api/v1/$': typeof ApiV1SplatRoute
@@ -639,7 +654,9 @@ export interface FileRoutesByTo {
   '/app/reseller': typeof AuthenticatedAppResellerRoute
   '/app/store': typeof AuthenticatedAppStoreRoute
   '/app/subscription': typeof AuthenticatedAppSubscriptionRoute
+  '/api/public/account-availability': typeof ApiPublicAccountAvailabilityRoute
   '/api/public/health': typeof ApiPublicHealthRoute
+  '/api/public/login': typeof ApiPublicLoginRoute
   '/api/public/radar': typeof ApiPublicRadarRoute
   '/api/public/signup': typeof ApiPublicSignupRoute
   '/api/v1/$': typeof ApiV1SplatRoute
@@ -722,7 +739,9 @@ export interface FileRoutesById {
   '/_authenticated/app/reseller': typeof AuthenticatedAppResellerRoute
   '/_authenticated/app/store': typeof AuthenticatedAppStoreRoute
   '/_authenticated/app/subscription': typeof AuthenticatedAppSubscriptionRoute
+  '/api/public/account-availability': typeof ApiPublicAccountAvailabilityRoute
   '/api/public/health': typeof ApiPublicHealthRoute
+  '/api/public/login': typeof ApiPublicLoginRoute
   '/api/public/radar': typeof ApiPublicRadarRoute
   '/api/public/signup': typeof ApiPublicSignupRoute
   '/api/v1/$': typeof ApiV1SplatRoute
@@ -805,7 +824,9 @@ export interface FileRouteTypes {
     | '/app/reseller'
     | '/app/store'
     | '/app/subscription'
+    | '/api/public/account-availability'
     | '/api/public/health'
+    | '/api/public/login'
     | '/api/public/radar'
     | '/api/public/signup'
     | '/api/v1/$'
@@ -885,7 +906,9 @@ export interface FileRouteTypes {
     | '/app/reseller'
     | '/app/store'
     | '/app/subscription'
+    | '/api/public/account-availability'
     | '/api/public/health'
+    | '/api/public/login'
     | '/api/public/radar'
     | '/api/public/signup'
     | '/api/v1/$'
@@ -967,7 +990,9 @@ export interface FileRouteTypes {
     | '/_authenticated/app/reseller'
     | '/_authenticated/app/store'
     | '/_authenticated/app/subscription'
+    | '/api/public/account-availability'
     | '/api/public/health'
+    | '/api/public/login'
     | '/api/public/radar'
     | '/api/public/signup'
     | '/api/v1/$'
@@ -1032,7 +1057,9 @@ export interface RootRouteChildren {
   StatusSlugRoute: typeof StatusSlugRoute
   DotlovableOauthConsentRoute: typeof DotlovableOauthConsentRoute
   Char91DotmcpChar93InvokeToolToolRoute: typeof Char91DotmcpChar93InvokeToolToolRoute
+  ApiPublicAccountAvailabilityRoute: typeof ApiPublicAccountAvailabilityRoute
   ApiPublicHealthRoute: typeof ApiPublicHealthRoute
+  ApiPublicLoginRoute: typeof ApiPublicLoginRoute
   ApiPublicRadarRoute: typeof ApiPublicRadarRoute
   ApiPublicSignupRoute: typeof ApiPublicSignupRoute
   ApiPublicAndroidAssociateRoute: typeof ApiPublicAndroidAssociateRoute
@@ -1278,11 +1305,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicRadarRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/login': {
+      id: '/api/public/login'
+      path: '/api/public/login'
+      fullPath: '/api/public/login'
+      preLoaderRoute: typeof ApiPublicLoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/health': {
       id: '/api/public/health'
       path: '/api/public/health'
       fullPath: '/api/public/health'
       preLoaderRoute: typeof ApiPublicHealthRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/account-availability': {
+      id: '/api/public/account-availability'
+      path: '/api/public/account-availability'
+      fullPath: '/api/public/account-availability'
+      preLoaderRoute: typeof ApiPublicAccountAvailabilityRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_authenticated/app/subscription': {
@@ -1768,7 +1809,9 @@ const rootRouteChildren: RootRouteChildren = {
   StatusSlugRoute: StatusSlugRoute,
   DotlovableOauthConsentRoute: DotlovableOauthConsentRoute,
   Char91DotmcpChar93InvokeToolToolRoute: Char91DotmcpChar93InvokeToolToolRoute,
+  ApiPublicAccountAvailabilityRoute: ApiPublicAccountAvailabilityRoute,
   ApiPublicHealthRoute: ApiPublicHealthRoute,
+  ApiPublicLoginRoute: ApiPublicLoginRoute,
   ApiPublicRadarRoute: ApiPublicRadarRoute,
   ApiPublicSignupRoute: ApiPublicSignupRoute,
   ApiPublicAndroidAssociateRoute: ApiPublicAndroidAssociateRoute,
