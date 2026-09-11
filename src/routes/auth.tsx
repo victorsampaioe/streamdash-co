@@ -90,7 +90,7 @@ function AuthPage() {
 
   async function signIn(loginIdentity = identity, loginPassword = password) {
     const response = await fetch("/api/public/login", {
-      method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ identity: loginIdentity, password: loginPassword }),
+      method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ identifier: loginIdentity, password: loginPassword }),
     });
     const result = await response.json() as { error?: string; session?: { access_token: string; refresh_token: string } };
     if (!response.ok || !result.session) throw new Error(result.error ?? "Usuário ou senha incorretos.");
