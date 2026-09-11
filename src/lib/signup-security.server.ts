@@ -51,7 +51,7 @@ export function maskIp(ip: string): string {
 }
 
 export function attemptFingerprint(email: string, phone: string, ipHash: string): string {
-  const bucket = Math.floor(Date.now() / 5 * 60_000); // janela de 5 minutos
+  const bucket = Math.floor(Date.now() / (5 * 60_000)); // janela de 5 minutos
   return createHash("sha256").update(`${email}|${phone}|${ipHash}|${bucket}`).digest("hex");
 }
 

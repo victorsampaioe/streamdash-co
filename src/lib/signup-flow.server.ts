@@ -167,8 +167,9 @@ export async function handleSignup(input: SignupInput, headers: Headers): Promis
     options: {
       emailRedirectTo: redirectTo && /^https?:\/\//.test(redirectTo) ? redirectTo : undefined,
       data: {
-        full_name: nameCheck.value,
-        phone,
+        full_name: displayName,
+        username,
+        ...(phone?.ok ? { phone: phone.value } : {}),
         ...(referralCode ? { referral_code: referralCode } : {}),
       },
     },
@@ -178,7 +179,14 @@ export async function handleSignup(input: SignupInput, headers: Headers): Promis
     const msg = signUpError?.message || "Não foi possível criar a conta.";
     sec.log("signup failed", { ip: ipMasked, message: msg });
     const duplicated = /already registered|already exists|duplicate/i.test(msg);
-    await sec.closeAttempt(attemptId, "rejected", duplicated ? "duplicate_email" : "signup_failed");
+    await sec.closeAttempt(
+      attemptId,
+      "rejected",
+      duplicated ? "duplicate_email" : "signup_failed",
+      null,
+      duplicated ? "existing_account" : "internal_failure",
+      msg,
+    );
     return {
       status: duplicated ? 409 : 400,
       body: { error: duplicated ? "Este e-mail já possui uma conta. Clique em Entrar." : "Não conseguimos criar sua conta agora. Tente novamente em alguns segundos.", code: duplicated ? "email_exists" : "signup_failed" },

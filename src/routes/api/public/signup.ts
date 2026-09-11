@@ -13,7 +13,7 @@ export const Route = createFileRoute("/api/public/signup")({
         try {
           payload = (await request.json()) as Record<string, unknown>;
         } catch {
-          return Response.json({ error: "Requisição inválida" }, { status: 400 });
+          return Response.json({ error: "Confira os dados preenchidos e tente novamente." }, { status: 400 });
         }
 
         const { handleSignup } = await import("@/lib/signup-flow.server");
@@ -22,7 +22,7 @@ export const Route = createFileRoute("/api/public/signup")({
           return Response.json(body, { status });
         } catch (e) {
           console.log("[SIGNUP SECURITY] unexpected error", (e as Error).message);
-          return Response.json({ error: "Não foi possível concluir o cadastro." }, { status: 500 });
+          return Response.json({ error: "Não conseguimos criar sua conta agora. Tente novamente em alguns segundos." }, { status: 500 });
         }
       },
     },
