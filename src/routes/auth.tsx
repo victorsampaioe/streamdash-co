@@ -125,13 +125,23 @@ function AuthPage() {
         if (result.code === "email_exists") setEmailExists(true);
         throw new Error(result.error ?? "Não conseguimos criar sua conta agora. Tente novamente em alguns segundos.");
       }
-      if (quickMode) setCreatedAccess({ username: usernameCheck.value, password, email: emailCheck.value });
+      const quickAccess = quickMode ? { username: usernameCheck.value, password, email: emailCheck.value } : null;
+      if (quickAccess) setCreatedAccess(quickAccess);
       setIdentity(emailCheck.value);
-      await signIn();
-      if (!quickMode) { toast.success("Sua conta foi criada com sucesso!"); navigate({ to: redirect ?? "/app", replace: true }); }
+      try {
+        await signIn();
+        if (!quickAccess) { toast.success("Sua conta foi criada com sucesso!"); navigate({ to: redirect ?? "/app", replace: true }); }
+      } catch {
+        if (!quickAccess && result.needsEmailConfirmation) {
+          toast.success("Conta criada! Confirme seu e-mail para continuar.");
+          navigate({ to: "/verify-email", search: { email: emailCheck.value } });
+        } else if (!quickAccess) {
+          throw new Error("Sua conta foi criada. Entre com seus novos dados.");
+        }
+      }
     } catch (error) {
       const message = error instanceof Error ? error.message : "Não conseguimos criar sua conta agora.";
-      if (!createdAccess) toast.error(message);
+      if (!quickMode) toast.error(message);
       setTurnstileToken(null); resetTurnstile();
     } finally { setLoading(false); }
   }
