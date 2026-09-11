@@ -48,13 +48,28 @@ async function notifyUserTelegram(userId: string, text: string) {
 export async function notifyNewlyExpiredSubscriptions(): Promise<{ notified: number }> {
   const { data: expired, error } = await supabaseAdmin
     .from("subscriptions")
-    .select("user_id, plan, expires_at")
+    .select("id, user_id, plan, expires_at")
     .lt("expires_at", new Date().toISOString())
     .in("status", ["trial", "active"]);
   if (error || !expired?.length) return { notified: 0 };
 
   let count = 0;
   for (const sub of expired) {
+    // Trava de idempotência: um único aviso de expiração por conta, para sempre.
+    // Se o insert falhar (já existe), o aviso NÃO é reenviado.
+    const { error: lockErr } = await supabaseAdmin
+      .from("expiry_notices")
+      .insert({ user_id: sub.user_id, kind: "subscription_expired" });
+
+    // Independente do aviso, o status precisa sair de active/trial.
+    const { error: updErr } = await supabaseAdmin
+      .from("subscriptions")
+      .update({ status: "expired" })
+      .eq("id", sub.id);
+    if (updErr) console.error("[expired] falha ao marcar assinatura como expirada", sub.id, updErr.message);
+
+    if (lockErr) continue;
+
     const { data: prof } = await supabaseAdmin
       .from("profiles")
       .select("email, full_name")
@@ -72,16 +87,11 @@ export async function notifyNewlyExpiredSubscriptions(): Promise<{ notified: num
       ? `⏰ <b>Seu teste gratuito expirou</b>\n\nPara continuar monitorando seus servidores, assine agora:\n👉 https://streammonitor.site/app/subscription\n\nPlanos: ${monthlyPrice}/mês ou ${yearlyPrice}/ano (via PIX).`
       : `⏰ <b>Sua assinatura expirou</b>\n\nSeus monitoramentos foram pausados. Renove pelo PIX para reativar:\n👉 https://streammonitor.site/app/subscription\n\nPlanos: ${monthlyPrice}/mês ou ${yearlyPrice}/ano.`;
     await notifyUserTelegram(sub.user_id, userMsg);
-
-    await supabaseAdmin
-      .from("subscriptions")
-      .update({ status: "expired" })
-      .eq("user_id", sub.user_id)
-      .in("status", ["trial", "active"]);
     count++;
   }
   return { notified: count };
 }
+
 
 function escape(s: string) {
   return String(s).replace(/[<>&]/g, (c) => ({ "<": "&lt;", ">": "&gt;", "&": "&amp;" }[c]!));
