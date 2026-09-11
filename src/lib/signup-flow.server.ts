@@ -6,6 +6,7 @@ import { notifyAdminSignup } from "./admin-telegram.server";
 
 export interface SignupInput {
   name?: unknown;
+  username?: unknown;
   email?: unknown;
   phone?: unknown;
   password?: unknown;
@@ -32,82 +33,82 @@ export async function handleSignup(input: SignupInput, headers: Headers): Promis
   const ipHash = sec.hashIp(ip);
   const ipMasked = sec.maskIp(ip);
   const userAgent = headers.get("user-agent");
+  const rawIdentity = str(input.username, 24) || str(input.email, 254);
+  const identityHash = sec.hashIdentity(rawIdentity);
 
   sec.log("request received", { ip: ipMasked });
 
   // 0. Bloqueio temporário ativo
-  const blocked = await sec.isBlocked(ipHash);
+  const blocked = await sec.isBlocked(ipHash, identityHash);
   if (blocked.blocked) {
     sec.log("temporarily blocked", { ip: ipMasked, until: blocked.until });
     return { status: 429, body: { error: "Muitas tentativas. Tente novamente mais tarde." } };
   }
 
-  // 1. Rate limit exclusivo do cadastro
-  const rl = await sec.checkRateLimit(ipHash);
-  if (!rl.allowed) {
-    sec.log("rate limit exceeded", { ip: ipMasked, reason: rl.reason });
-    const id = await sec.openAttempt({ ipHash, ipMasked, userAgent });
-    await sec.closeAttempt(id, "rejected", rl.reason ?? "rate_limit_exceeded");
-    return { status: 429, body: { error: "Muitas tentativas de cadastro. Aguarde alguns minutos." } };
-  }
-
-  // 2. Honeypot — mensagem genérica de propósito
+  // 1. Honeypot — nunca revela a proteção ao cliente
   if (str(input.company_website).trim().length > 0) {
     sec.log("honeypot triggered", { ip: ipMasked });
-    const id = await sec.openAttempt({ ipHash, ipMasked, userAgent });
-    await sec.closeAttempt(id, "rejected", "honeypot_triggered");
-    await sec.blockIp(ipHash, "honeypot_triggered", 1, 6);
-    return { status: 400, body: { error: "Não foi possível concluir o cadastro." } };
+    const id = await sec.openAttempt({ ipHash, ipMasked, userAgent, identityHash, category: "bot", riskScore: 5, technicalDetail: "honeypot field populated" });
+    await sec.closeAttempt(id, "rejected", "honeypot_triggered", null, "bot", "honeypot field populated");
+    return { status: 400, body: { error: "Não conseguimos criar sua conta agora. Tente novamente em alguns segundos." } };
   }
 
-  // 3. Validação de campos
-  const nameCheck = v.validateName(str(input.name, 200));
-  if (!nameCheck.ok) {
-    sec.log("invalid name", { ip: ipMasked });
-    await sec.closeAttempt(await sec.openAttempt({ ipHash, ipMasked, userAgent }), "rejected", "invalid_name");
-    return { status: 400, body: { error: nameCheck.error } };
+  // 2. Validação de campos
+  const usernameCheck = v.validateUsername(str(input.username, 24));
+  if (!usernameCheck.ok) {
+    const id = await sec.openAttempt({ ipHash, ipMasked, userAgent, identityHash, category: "invalid_data" });
+    await sec.closeAttempt(id, "rejected", "invalid_username", null, "invalid_data", usernameCheck.error);
+    return { status: 400, body: { error: usernameCheck.error, field: "username" } };
   }
 
   const emailCheck = v.validateEmail(str(input.email, 320));
   if (!emailCheck.ok) {
     sec.log("invalid email", { ip: ipMasked });
-    await sec.closeAttempt(await sec.openAttempt({ ipHash, ipMasked, userAgent }), "rejected", "invalid_email");
+    const id = await sec.openAttempt({ ipHash, ipMasked, userAgent, identityHash, category: "invalid_data" });
+    await sec.closeAttempt(id, "rejected", "invalid_email", null, "invalid_data", emailCheck.error);
     return { status: 400, body: { error: emailCheck.error } };
-  }
-
-  const phoneCheck = v.validatePhone(str(input.phone, 60));
-  if (!phoneCheck.ok) {
-    sec.log("invalid phone", { ip: ipMasked });
-    await sec.closeAttempt(await sec.openAttempt({ ipHash, ipMasked, userAgent }), "rejected", "invalid_phone");
-    return { status: 400, body: { error: "Telefone inválido" } };
   }
 
   const passCheck = v.validatePassword(str(input.password, 200));
   if (!passCheck.ok) {
-    await sec.closeAttempt(await sec.openAttempt({ ipHash, ipMasked, userAgent }), "rejected", "invalid_password");
+    const id = await sec.openAttempt({ ipHash, ipMasked, userAgent, identityHash, category: "invalid_data" });
+    await sec.closeAttempt(id, "rejected", "invalid_password", null, "invalid_data", passCheck.error);
     return { status: 400, body: { error: passCheck.error } };
   }
 
   const refCheck = v.validateReferralCode(str(input.referralCode, 64));
   if (!refCheck.ok) {
     sec.log("invalid referral", { ip: ipMasked });
-    await sec.closeAttempt(await sec.openAttempt({ ipHash, ipMasked, userAgent }), "rejected", "invalid_referral");
+    const id = await sec.openAttempt({ ipHash, ipMasked, userAgent, identityHash, category: "invalid_data" });
+    await sec.closeAttempt(id, "rejected", "invalid_referral", null, "invalid_data", refCheck.error);
     return { status: 400, body: { error: refCheck.error } };
   }
 
   const email = emailCheck.value;
-  const phone = phoneCheck.value;
+  const username = usernameCheck.value;
+  const displayName = v.validateName(str(input.name, 80)).ok ? str(input.name, 80).trim() : username;
+  const phone = str(input.phone, 60) ? v.validatePhone(str(input.phone, 60)) : null;
+
+  // 3. Limite por identidade; a rede inteira só é limitada com múltiplos sinais fortes.
+  const rl = await sec.checkRateLimit(ipHash, identityHash);
+  if (!rl.allowed) {
+    const id = await sec.openAttempt({ ipHash, ipMasked, userAgent, identityHash, category: "rate_limited", riskScore: 1 });
+    await sec.closeAttempt(id, "rejected", rl.reason ?? "rate_limit_exceeded", null, "rate_limited", "adaptive rate limit reached");
+    return { status: 429, body: { error: "Muitas tentativas foram realizadas. Aguarde alguns minutos." } };
+  }
 
   // 4. Idempotência: mesmo POST repetido não cria duas contas
-  const fingerprint = sec.attemptFingerprint(email, phone, ipHash);
+  const fingerprint = sec.attemptFingerprint(email, username, ipHash);
   const attemptId = await sec.openAttempt({
     ipHash,
     ipMasked,
     emailNorm: email,
-    phoneNorm: phone,
-    fullName: nameCheck.value,
+    phoneNorm: phone?.ok ? phone.value : null,
+    fullName: displayName,
     fingerprint,
     userAgent,
+    identityHash,
+    category: "processing",
   });
   if (attemptId === null) {
     sec.log("duplicate request ignored", { ip: ipMasked });
@@ -118,22 +119,28 @@ export async function handleSignup(input: SignupInput, headers: Headers): Promis
   const turnstileOk = await sec.verifyTurnstile(str(input.turnstileToken, 4096), ip);
   if (!turnstileOk) {
     sec.log("turnstile rejected", { ip: ipMasked });
-    await sec.closeAttempt(attemptId, "rejected", "turnstile_rejected");
-    return { status: 403, body: { error: "Verificação de segurança falhou. Recarregue a página e tente novamente." } };
+    await sec.closeAttempt(attemptId, "rejected", "turnstile_rejected", null, "turnstile", "Turnstile token rejected");
+    return { status: 403, body: { error: "Não conseguimos confirmar sua solicitação. Atualize a página e tente novamente." } };
   }
 
   // 6. Unicidade de e-mail e telefone
   const { data: dupEmail } = await supabaseAdmin.from("profiles").select("id").eq("email", email).maybeSingle();
   if (dupEmail) {
     sec.log("duplicate email", { ip: ipMasked });
-    await sec.closeAttempt(attemptId, "rejected", "duplicate_email");
-    return { status: 409, body: { error: "Este e-mail já possui uma conta cadastrada." } };
+    await sec.closeAttempt(attemptId, "rejected", "duplicate_email", null, "existing_account", "normalized email already exists");
+    return { status: 409, body: { error: "Este e-mail já possui uma conta. Clique em Entrar.", code: "email_exists" } };
   }
 
-  const { data: dupPhone } = await (supabaseAdmin.from("profiles") as any)
+  const { data: dupUsername } = await supabaseAdmin.from("profiles").select("id").eq("username", username).maybeSingle();
+  if (dupUsername) {
+    await sec.closeAttempt(attemptId, "rejected", "duplicate_username", null, "existing_account", "normalized username already exists");
+    return { status: 409, body: { error: "Este usuário já está cadastrado.", code: "username_exists" } };
+  }
+
+  const { data: dupPhone } = phone?.ok ? await (supabaseAdmin.from("profiles") as any)
     .select("id")
-    .eq("phone_normalized", phone)
-    .maybeSingle();
+    .eq("phone_normalized", phone.value)
+    .maybeSingle() : { data: null };
   if (dupPhone) {
     sec.log("duplicate phone", { ip: ipMasked });
     await sec.closeAttempt(attemptId, "rejected", "duplicate_phone");
@@ -174,12 +181,16 @@ export async function handleSignup(input: SignupInput, headers: Headers): Promis
     await sec.closeAttempt(attemptId, "rejected", duplicated ? "duplicate_email" : "signup_failed");
     return {
       status: duplicated ? 409 : 400,
-      body: { error: duplicated ? "Este e-mail já possui uma conta cadastrada." : msg },
+      body: { error: duplicated ? "Este e-mail já possui uma conta. Clique em Entrar." : "Não conseguimos criar sua conta agora. Tente novamente em alguns segundos.", code: duplicated ? "email_exists" : "signup_failed" },
     };
   }
 
   const userId = signUpData.user.id;
-  await sec.closeAttempt(attemptId, "created", null, userId);
+  const { error: profileError } = await supabaseAdmin.from("profiles").update({ username }).eq("id", userId);
+  if (profileError) {
+    sec.log("username profile update failed", { userId, code: profileError.code });
+  }
+  await sec.closeAttempt(attemptId, "created", null, userId, "created");
   sec.log("account created", { ip: ipMasked, userId });
 
   // 9. Telegram apenas para cadastro válido e uma única vez por usuário
@@ -187,8 +198,8 @@ export async function handleSignup(input: SignupInput, headers: Headers): Promis
     try {
       await notifyAdminSignup({
         email,
-        name: nameCheck.value,
-        phone,
+        name: displayName,
+        phone: phone?.ok ? phone.value : "Não informado",
         referralCode: referralCode ?? undefined,
       });
     } catch (e) {
@@ -203,6 +214,7 @@ export async function handleSignup(input: SignupInput, headers: Headers): Promis
       needsEmailConfirmation: !signUpData.session,
       referralApplied: !!referralCode,
       email,
+      username,
     },
   };
 }
