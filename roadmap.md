@@ -16,3 +16,12 @@
 - [x] Checkout separado dos planos normais da plataforma, reutilizando o PIX existente e ativação automática
 - [ ] Controles avançados de IP, origem, escopos e limites no painel administrativo
 - [ ] Validação visual autenticada (bloqueada: não há sessão de teste disponível)
+
+## Cadastro simples e seguro
+
+- [ ] Cadastro essencial com e-mail obrigatório, usuário exclusivo e confirmação de senha
+- [ ] Cadastro rápido com sugestão de usuário e senha segura
+- [ ] Validação em tempo real e recuperação de conta sem mensagens técnicas
+- [ ] Proteção adaptativa por IP + identidade, sem bloqueio injusto de redes compartilhadas
+- [ ] Painel administrativo com categorias e detalhe técnico seguro
+- [ ] Testes completos em desktop e celular
