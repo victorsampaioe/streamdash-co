@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { validatePassword, validateUsername } from "./signup-validation";
+import { normalizeUsername, validatePassword, validateUsername } from "./signup-validation";
 
 describe("signup validation", () => {
   it("normalizes and accepts a simple username", () => {
@@ -13,5 +13,13 @@ describe("signup validation", () => {
 
   it("returns a friendly password rule", () => {
     expect(validatePassword("123")).toEqual({ ok: false, error: "Sua senha precisa ter pelo menos 6 caracteres." });
+  });
+
+  it("accepts a six-character password", () => {
+    expect(validatePassword("123456")).toEqual({ ok: true, value: "123456" });
+  });
+
+  it("normalizes usernames consistently", () => {
+    expect(normalizeUsername(" Cliente_4821 ")).toBe("cliente_4821");
   });
 });
