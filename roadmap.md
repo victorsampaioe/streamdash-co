@@ -19,9 +19,9 @@
 
 ## Cadastro simples e seguro
 
-- [ ] Cadastro essencial com e-mail obrigatório, usuário exclusivo e confirmação de senha
-- [ ] Cadastro rápido com sugestão de usuário e senha segura
-- [ ] Validação em tempo real e recuperação de conta sem mensagens técnicas
-- [ ] Proteção adaptativa por IP + identidade, sem bloqueio injusto de redes compartilhadas
-- [ ] Painel administrativo com categorias e detalhe técnico seguro
-- [ ] Testes completos em desktop e celular
+- [x] Cadastro essencial com e-mail obrigatório, usuário exclusivo e confirmação de senha
+- [x] Cadastro rápido com sugestão de usuário e senha segura
+- [x] Validação em tempo real e recuperação de conta sem mensagens técnicas
+- [x] Proteção adaptativa por IP + identidade, sem bloqueio injusto de redes compartilhadas
+- [x] Painel administrativo com categorias e detalhe técnico seguro
+- [x] Testes de validação, compilação e interface em desktop e celular

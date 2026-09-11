@@ -81,7 +81,7 @@ export function SignupSecurityPanel() {
         </Card>
         <Card className="p-4">
           <div className="text-xs text-muted-foreground flex items-center gap-1">
-            <Ban className="h-3 w-3 text-warning" /> IPs em bloqueio ativo
+             <Ban className="h-3 w-3 text-warning" /> Bloqueios ativos
           </div>
           <div className="text-2xl font-bold">{isLoading ? "—" : data?.active_blocks?.length ?? 0}</div>
         </Card>

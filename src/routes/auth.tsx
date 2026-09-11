@@ -88,9 +88,9 @@ function AuthPage() {
     return () => window.clearTimeout(timer);
   }, [email, tab, username]);
 
-  async function signIn() {
+  async function signIn(loginIdentity = identity, loginPassword = password) {
     const response = await fetch("/api/public/login", {
-      method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ identity, password }),
+      method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ identity: loginIdentity, password: loginPassword }),
     });
     const result = await response.json() as { error?: string; session?: { access_token: string; refresh_token: string } };
     if (!response.ok || !result.session) throw new Error(result.error ?? "Usuário ou senha incorretos.");
@@ -127,9 +127,9 @@ function AuthPage() {
       }
       const quickAccess = quickMode ? { username: usernameCheck.value, password, email: emailCheck.value } : null;
       if (quickAccess) setCreatedAccess(quickAccess);
-      setIdentity(emailCheck.value);
       try {
-        await signIn();
+        await signIn(emailCheck.value, password);
+        setIdentity(emailCheck.value);
         if (!quickAccess) { toast.success("Sua conta foi criada com sucesso!"); navigate({ to: redirect ?? "/app", replace: true }); }
       } catch {
         if (!quickAccess && result.needsEmailConfirmation) {

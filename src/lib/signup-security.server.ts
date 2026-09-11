@@ -63,7 +63,7 @@ export async function isBlocked(ipHash: string, identityHash?: string): Promise<
   const { data } = await supabaseAdmin
     .from("signup_blocks" as any)
     .select("blocked_until, reason")
-    .in("key", [identityHash ? `identity:${identityHash}` : "", `ip:${ipHash}`])
+    .in("key", [identityHash ? `identity:${identityHash}` : "", `ip:${ipHash}`, ipHash])
     .gt("blocked_until", new Date().toISOString())
     .order("blocked_until", { ascending: false })
     .limit(1)
