@@ -5850,6 +5850,19 @@ export type Database = {
       check_circuit_breaker: { Args: { p_server_id: string }; Returns: string }
       cleanup_diagnostic_slots: { Args: never; Returns: undefined }
       content_health_overview: { Args: { _server_id?: string }; Returns: Json }
+      conversation_participants_match: {
+        Args: {
+          _buyer_id: string
+          _id: string
+          _listing_id: string
+          _seller_id: string
+        }
+        Returns: boolean
+      }
+      conversation_seller_is_listing_author: {
+        Args: { _listing_id: string; _seller_id: string }
+        Returns: boolean
+      }
       delete_server: { Args: { _id: string }; Returns: boolean }
       evaluate_achievements: { Args: { _user_id: string }; Returns: number }
       finalize_approved_payment: {
