@@ -456,6 +456,45 @@ async function performCheck(server: ServerRow) {
     }
   }
 
+  // INSTABILIDADE / OSCILAÇÃO: quedas curtas que não fecham "offline confirmado"
+  // (ou erro persistente 4xx) antes passavam em silêncio. Avisamos 1x a cada 2h.
+  if (displayStatus !== "down" && hostOk) {
+    try {
+      const since = new Date(Date.now() - 30 * 60_000).toISOString();
+      const { data: recent } = await supabaseAdmin
+        .from("checks")
+        .select("status")
+        .eq("server_id", server.id)
+        .gte("checked_at", since)
+        .order("checked_at", { ascending: true })
+        .limit(50);
+      const rows = (recent ?? []) as { status: string }[];
+      const bad = rows.filter((r) => r.status !== "up").length;
+      let flips = 0;
+      for (let i = 1; i < rows.length; i++) {
+        if ((rows[i].status === "up") !== (rows[i - 1].status === "up")) flips++;
+      }
+      const oscillating = flips >= 2 && bad >= 2;
+      const persistent = rows.length >= 3 && bad === rows.length;
+      if (oscillating || persistent) {
+        const bucket = Math.floor(Date.now() / (2 * 3600_000));
+        const { processTelegramAlert } = await import("./telegram-alerts.server");
+        await processTelegramAlert({
+          serverId: server.id,
+          incidentId: `unstable_${server.id}_${bucket}`,
+          event: "UNSTABLE",
+          reason: oscillating
+            ? `Oscilando: ${bad} falhas e ${flips} trocas de estado nos últimos 30 min — ${reason}`
+            : `Falhando em todas as ${rows.length} verificações dos últimos 30 min — ${reason}`,
+        });
+      }
+    } catch (e) {
+      console.error("[monitor] unstable alert failed", e);
+    }
+  }
+
+
+
 
   return {
     status: displayStatus,

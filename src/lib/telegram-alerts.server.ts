@@ -95,6 +95,17 @@ function formatAlertMessage(server: any, data: AlertData): string {
     );
   }
 
+  if (data.event === "UNSTABLE") {
+    return (
+      `⚠️ <b>Stream Monitor - SERVIDOR INSTÁVEL</b>\n\n` +
+      `<b>Servidor:</b> ${esc(server.name)}\n` +
+      `<b>Status:</b> 🟠 OSCILANDO / COM FALHAS\n` +
+      `<b>Motivo:</b> ${esc(data.reason)}\n` +
+      `<b>Horário:</b> ${timeStr} (${dateStr})\n` +
+      `<b>Host:</b> <code>${esc(server.host)}</code>`
+    );
+  }
+
   return `⚠️ <b>Aviso Stream Monitor</b>: ${esc(server.name)} - ${data.event}`;
 }
 
