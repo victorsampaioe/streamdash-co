@@ -9,152 +9,92 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as VerifyEmailRouteImport } from './routes/verify-email'
-import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
-import { Route as RobotsDottxtRouteImport } from './routes/robots[.]txt'
-import { Route as RevendedorStreamMonitorRouteImport } from './routes/revendedor-stream-monitor'
-import { Route as ResetPasswordRouteImport } from './routes/reset-password'
-import { Route as MonitoramentoIptvRouteImport } from './routes/monitoramento-iptv'
-import { Route as MonitoramentoDnsRouteImport } from './routes/monitoramento-dns'
-import { Route as McpRouteImport } from './routes/mcp'
-import { Route as DnsRouteImport } from './routes/dns'
-import { Route as DevelopersRouteImport } from './routes/developers'
-import { Route as BlogRouteImport } from './routes/blog'
-import { Route as AuthRouteImport } from './routes/auth'
-import { Route as AlertasTelegramRouteImport } from './routes/alertas-telegram'
+import { Route as IndexRouteImport } from './routes/index'
 import { Route as SlugRouteImport } from './routes/$slug'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
-import { Route as IndexRouteImport } from './routes/index'
-import { Route as StatusSlugRouteImport } from './routes/status.$slug'
-import { Route as PlayerResellerIdRouteImport } from './routes/player.$resellerId'
-import { Route as DownloadAndroidRouteImport } from './routes/download.android'
-import { Route as DevelopersChangelogRouteImport } from './routes/developers.changelog'
-import { Route as BlogComoEvitarQuedaIptvRouteImport } from './routes/blog.como-evitar-queda-iptv'
-import { Route as ApiV1RouteImport } from './routes/api/v1'
-import { Route as ApiOpenapiDotyamlRouteImport } from './routes/api/openapi[.]yaml'
-import { Route as ApiOpenapiDotjsonRouteImport } from './routes/api/openapi[.]json'
-import { Route as AuthenticatedAppRouteImport } from './routes/_authenticated/app'
-import { Route as Char91DotwellKnownChar93OauthProtectedResourceRouteImport } from './routes/[.well-known]/oauth-protected-resource'
+import { Route as AlertasTelegramRouteImport } from './routes/alertas-telegram'
+import { Route as AuthRouteImport } from './routes/auth'
+import { Route as BlogRouteImport } from './routes/blog'
+import { Route as DevelopersRouteImport } from './routes/developers'
+import { Route as DnsRouteImport } from './routes/dns'
+import { Route as McpRouteImport } from './routes/mcp'
+import { Route as MonitoramentoDnsRouteImport } from './routes/monitoramento-dns'
+import { Route as MonitoramentoIptvRouteImport } from './routes/monitoramento-iptv'
+import { Route as ResetPasswordRouteImport } from './routes/reset-password'
+import { Route as RevendedorStreamMonitorRouteImport } from './routes/revendedor-stream-monitor'
+import { Route as RobotsDottxtRouteImport } from './routes/robots[.]txt'
+import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
+import { Route as VerifyEmailRouteImport } from './routes/verify-email'
 import { Route as Char91DotmcpChar93ListToolsRouteImport } from './routes/[.mcp]/list-tools'
-import { Route as AuthenticatedAppIndexRouteImport } from './routes/_authenticated/app.index'
-import { Route as ApiV1SplatRouteImport } from './routes/api/v1/$'
-import { Route as ApiPublicSignupRouteImport } from './routes/api/public/signup'
-import { Route as ApiPublicRadarRouteImport } from './routes/api/public/radar'
-import { Route as ApiPublicLoginRouteImport } from './routes/api/public/login'
-import { Route as ApiPublicHealthRouteImport } from './routes/api/public/health'
-import { Route as ApiPublicAccountAvailabilityRouteImport } from './routes/api/public/account-availability'
-import { Route as AuthenticatedAppSubscriptionRouteImport } from './routes/_authenticated/app.subscription'
-import { Route as AuthenticatedAppStoreRouteImport } from './routes/_authenticated/app.store'
-import { Route as AuthenticatedAppResellerRouteImport } from './routes/_authenticated/app.reseller'
-import { Route as AuthenticatedAppRankingRouteImport } from './routes/_authenticated/app.ranking'
-import { Route as AuthenticatedAppRadarRouteImport } from './routes/_authenticated/app.radar'
-import { Route as AuthenticatedAppPlayerRouteImport } from './routes/_authenticated/app.player'
-import { Route as AuthenticatedAppPerformanceRouteImport } from './routes/_authenticated/app.performance'
-import { Route as AuthenticatedAppPaginaRouteImport } from './routes/_authenticated/app.pagina'
-import { Route as AuthenticatedAppDetectorRouteImport } from './routes/_authenticated/app.detector'
-import { Route as AuthenticatedAppApiIntegrationsRouteImport } from './routes/_authenticated/app.api-integrations'
-import { Route as AuthenticatedAppAlertsRouteImport } from './routes/_authenticated/app.alerts'
-import { Route as AuthenticatedAppAjudaRouteImport } from './routes/_authenticated/app.ajuda'
-import { Route as AuthenticatedAppAiIntegrationRouteImport } from './routes/_authenticated/app.ai-integration'
-import { Route as AuthenticatedAppAdminRouteImport } from './routes/_authenticated/app.admin'
-import { Route as AuthenticatedAppAchievementsRouteImport } from './routes/_authenticated/app.achievements'
-import { Route as Char91DotmcpChar93InvokeToolToolRouteImport } from './routes/[.mcp]/invoke-tool/$tool'
+import { Route as Char91DotwellKnownChar93OauthProtectedResourceRouteImport } from './routes/[.well-known]/oauth-protected-resource'
+import { Route as AuthenticatedAppRouteImport } from './routes/_authenticated/app'
+import { Route as ApiOpenapiDotjsonRouteImport } from './routes/api/openapi[.]json'
+import { Route as ApiOpenapiDotyamlRouteImport } from './routes/api/openapi[.]yaml'
+import { Route as ApiV1RouteImport } from './routes/api/v1'
+import { Route as BlogComoEvitarQuedaIptvRouteImport } from './routes/blog.como-evitar-queda-iptv'
+import { Route as DevelopersChangelogRouteImport } from './routes/developers.changelog'
+import { Route as DownloadAndroidRouteImport } from './routes/download.android'
+import { Route as PlayerResellerIdRouteImport } from './routes/player.$resellerId'
+import { Route as StatusSlugRouteImport } from './routes/status.$slug'
 import { Route as DotlovableOauthConsentRouteImport } from './routes/[.]lovable.oauth.consent'
-import { Route as AuthenticatedAppServersIndexRouteImport } from './routes/_authenticated/app.servers.index'
-import { Route as AuthenticatedAppInteligenciaIndexRouteImport } from './routes/_authenticated/app.inteligencia.index'
-import { Route as AuthenticatedAppDiagnosticoIndexRouteImport } from './routes/_authenticated/app.diagnostico.index'
-import { Route as ApiPublicWebhooksMercadopagoRouteImport } from './routes/api/public/webhooks/mercadopago'
-import { Route as ApiPublicTmdbCatalogRouteImport } from './routes/api/public/tmdb/catalog'
-import { Route as ApiPublicTelegramWebhookRouteImport } from './routes/api/public/telegram/webhook'
-import { Route as ApiPublicRegionsTargetsRouteImport } from './routes/api/public/regions/targets'
-import { Route as ApiPublicRegionsReportRouteImport } from './routes/api/public/regions/report'
-import { Route as ApiPublicCronRadarRouteImport } from './routes/api/public/cron/radar'
-import { Route as ApiPublicCronPerfRouteImport } from './routes/api/public/cron/perf'
-import { Route as ApiPublicCronNotificationsRouteImport } from './routes/api/public/cron/notifications'
-import { Route as ApiPublicCronIptvNotificationsRouteImport } from './routes/api/public/cron/iptv-notifications'
-import { Route as ApiPublicCronDigestRouteImport } from './routes/api/public/cron/digest'
-import { Route as ApiPublicCronCheckRouteImport } from './routes/api/public/cron/check'
-import { Route as ApiPublicCronApiWebhooksRouteImport } from './routes/api/public/cron/api-webhooks'
-import { Route as ApiPublicCoreTaskRouteImport } from './routes/api/public/core/task'
-import { Route as ApiPublicCoreStreamRouteImport } from './routes/api/public/core/stream'
-import { Route as ApiPublicCoreReportRouteImport } from './routes/api/public/core/report'
-import { Route as ApiPublicCoreLiveDiagRouteImport } from './routes/api/public/core/live-diag'
-import { Route as ApiPublicAndroidVersionRouteImport } from './routes/api/public/android/version'
-import { Route as ApiPublicAndroidStatusRouteImport } from './routes/api/public/android/status'
-import { Route as ApiPublicAndroidRefreshRouteImport } from './routes/api/public/android/refresh'
-import { Route as ApiPublicAndroidLoginRouteImport } from './routes/api/public/android/login'
-import { Route as ApiPublicAndroidConfigRouteImport } from './routes/api/public/android/config'
-import { Route as ApiPublicAndroidAssociateRouteImport } from './routes/api/public/android/associate'
-import { Route as AuthenticatedAppServersNewRouteImport } from './routes/_authenticated/app.servers.new'
-import { Route as AuthenticatedAppServersIdRouteImport } from './routes/_authenticated/app.servers.$id'
-import { Route as AuthenticatedAppAdminCoreLogsRouteImport } from './routes/_authenticated/app.admin_.core-logs'
-import { Route as AuthenticatedAppAdminStreamPlayVersionsRouteImport } from './routes/_authenticated/app.admin.stream-play-versions'
+import { Route as Char91DotmcpChar93InvokeToolToolRouteImport } from './routes/[.mcp]/invoke-tool/$tool'
+import { Route as AuthenticatedAppIndexRouteImport } from './routes/_authenticated/app.index'
+import { Route as AuthenticatedAppAchievementsRouteImport } from './routes/_authenticated/app.achievements'
+import { Route as AuthenticatedAppAdminRouteImport } from './routes/_authenticated/app.admin'
+import { Route as AuthenticatedAppAiIntegrationRouteImport } from './routes/_authenticated/app.ai-integration'
+import { Route as AuthenticatedAppAjudaRouteImport } from './routes/_authenticated/app.ajuda'
+import { Route as AuthenticatedAppAlertsRouteImport } from './routes/_authenticated/app.alerts'
+import { Route as AuthenticatedAppApiIntegrationsRouteImport } from './routes/_authenticated/app.api-integrations'
+import { Route as AuthenticatedAppDetectorRouteImport } from './routes/_authenticated/app.detector'
+import { Route as AuthenticatedAppPaginaRouteImport } from './routes/_authenticated/app.pagina'
+import { Route as AuthenticatedAppPerformanceRouteImport } from './routes/_authenticated/app.performance'
+import { Route as AuthenticatedAppPlayerRouteImport } from './routes/_authenticated/app.player'
+import { Route as AuthenticatedAppRadarRouteImport } from './routes/_authenticated/app.radar'
+import { Route as AuthenticatedAppRankingRouteImport } from './routes/_authenticated/app.ranking'
+import { Route as AuthenticatedAppResellerRouteImport } from './routes/_authenticated/app.reseller'
+import { Route as AuthenticatedAppStoreRouteImport } from './routes/_authenticated/app.store'
+import { Route as AuthenticatedAppSubscriptionRouteImport } from './routes/_authenticated/app.subscription'
+import { Route as ApiPublicAccountAvailabilityRouteImport } from './routes/api/public/account-availability'
+import { Route as ApiPublicHealthRouteImport } from './routes/api/public/health'
+import { Route as ApiPublicLoginRouteImport } from './routes/api/public/login'
+import { Route as ApiPublicRadarRouteImport } from './routes/api/public/radar'
+import { Route as ApiPublicSignupRouteImport } from './routes/api/public/signup'
+import { Route as ApiV1SplatRouteImport } from './routes/api/v1/$'
 import { Route as AuthenticatedAppAdminAndroidPlayRouteImport } from './routes/_authenticated/app.admin.android-play'
+import { Route as AuthenticatedAppAdminStreamPlayVersionsRouteImport } from './routes/_authenticated/app.admin.stream-play-versions'
+import { Route as AuthenticatedAppAdminCoreLogsRouteImport } from './routes/_authenticated/app.admin_.core-logs'
+import { Route as AuthenticatedAppDiagnosticoIndexRouteImport } from './routes/_authenticated/app.diagnostico.index'
+import { Route as AuthenticatedAppInteligenciaIndexRouteImport } from './routes/_authenticated/app.inteligencia.index'
+import { Route as AuthenticatedAppServersIndexRouteImport } from './routes/_authenticated/app.servers.index'
+import { Route as AuthenticatedAppServersIdRouteImport } from './routes/_authenticated/app.servers.$id'
+import { Route as AuthenticatedAppServersNewRouteImport } from './routes/_authenticated/app.servers.new'
+import { Route as ApiPublicAndroidAssociateRouteImport } from './routes/api/public/android/associate'
+import { Route as ApiPublicAndroidConfigRouteImport } from './routes/api/public/android/config'
+import { Route as ApiPublicAndroidLoginRouteImport } from './routes/api/public/android/login'
+import { Route as ApiPublicAndroidRefreshRouteImport } from './routes/api/public/android/refresh'
+import { Route as ApiPublicAndroidStatusRouteImport } from './routes/api/public/android/status'
+import { Route as ApiPublicAndroidVersionRouteImport } from './routes/api/public/android/version'
+import { Route as ApiPublicCoreLiveDiagRouteImport } from './routes/api/public/core/live-diag'
+import { Route as ApiPublicCoreReportRouteImport } from './routes/api/public/core/report'
+import { Route as ApiPublicCoreStreamRouteImport } from './routes/api/public/core/stream'
+import { Route as ApiPublicCoreTaskRouteImport } from './routes/api/public/core/task'
+import { Route as ApiPublicCronApiWebhooksRouteImport } from './routes/api/public/cron/api-webhooks'
+import { Route as ApiPublicCronCheckRouteImport } from './routes/api/public/cron/check'
+import { Route as ApiPublicCronDigestRouteImport } from './routes/api/public/cron/digest'
+import { Route as ApiPublicCronIptvNotificationsRouteImport } from './routes/api/public/cron/iptv-notifications'
+import { Route as ApiPublicCronNotificationsRouteImport } from './routes/api/public/cron/notifications'
+import { Route as ApiPublicCronPerfRouteImport } from './routes/api/public/cron/perf'
+import { Route as ApiPublicCronRadarRouteImport } from './routes/api/public/cron/radar'
+import { Route as ApiPublicRegionsReportRouteImport } from './routes/api/public/regions/report'
+import { Route as ApiPublicRegionsTargetsRouteImport } from './routes/api/public/regions/targets'
+import { Route as ApiPublicTelegramWebhookRouteImport } from './routes/api/public/telegram/webhook'
+import { Route as ApiPublicTmdbCatalogRouteImport } from './routes/api/public/tmdb/catalog'
+import { Route as ApiPublicWebhooksMercadopagoRouteImport } from './routes/api/public/webhooks/mercadopago'
 import { Route as AuthenticatedAppInteligenciaMediaIdRouteImport } from './routes/_authenticated/app.inteligencia.$media.$id'
 
-const VerifyEmailRoute = VerifyEmailRouteImport.update({
-  id: '/verify-email',
-  path: '/verify-email',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
-  id: '/sitemap.xml',
-  path: '/sitemap.xml',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const RobotsDottxtRoute = RobotsDottxtRouteImport.update({
-  id: '/robots.txt',
-  path: '/robots.txt',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const RevendedorStreamMonitorRoute = RevendedorStreamMonitorRouteImport.update({
-  id: '/revendedor-stream-monitor',
-  path: '/revendedor-stream-monitor',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ResetPasswordRoute = ResetPasswordRouteImport.update({
-  id: '/reset-password',
-  path: '/reset-password',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const MonitoramentoIptvRoute = MonitoramentoIptvRouteImport.update({
-  id: '/monitoramento-iptv',
-  path: '/monitoramento-iptv',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const MonitoramentoDnsRoute = MonitoramentoDnsRouteImport.update({
-  id: '/monitoramento-dns',
-  path: '/monitoramento-dns',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const McpRoute = McpRouteImport.update({
-  id: '/mcp',
-  path: '/mcp',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const DnsRoute = DnsRouteImport.update({
-  id: '/dns',
-  path: '/dns',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const DevelopersRoute = DevelopersRouteImport.update({
-  id: '/developers',
-  path: '/developers',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const BlogRoute = BlogRouteImport.update({
-  id: '/blog',
-  path: '/blog',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const AuthRoute = AuthRouteImport.update({
-  id: '/auth',
-  path: '/auth',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const AlertasTelegramRoute = AlertasTelegramRouteImport.update({
-  id: '/alertas-telegram',
-  path: '/alertas-telegram',
+const IndexRoute = IndexRouteImport.update({
+  id: '/',
+  path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
 const SlugRoute = SlugRouteImport.update({
@@ -166,39 +106,91 @@ const AuthenticatedRouteRoute = AuthenticatedRouteRouteImport.update({
   id: '/_authenticated',
   getParentRoute: () => rootRouteImport,
 } as any)
-const IndexRoute = IndexRouteImport.update({
-  id: '/',
-  path: '/',
+const AlertasTelegramRoute = AlertasTelegramRouteImport.update({
+  id: '/alertas-telegram',
+  path: '/alertas-telegram',
   getParentRoute: () => rootRouteImport,
 } as any)
-const StatusSlugRoute = StatusSlugRouteImport.update({
-  id: '/status/$slug',
-  path: '/status/$slug',
+const AuthRoute = AuthRouteImport.update({
+  id: '/auth',
+  path: '/auth',
   getParentRoute: () => rootRouteImport,
 } as any)
-const PlayerResellerIdRoute = PlayerResellerIdRouteImport.update({
-  id: '/player/$resellerId',
-  path: '/player/$resellerId',
+const BlogRoute = BlogRouteImport.update({
+  id: '/blog',
+  path: '/blog',
   getParentRoute: () => rootRouteImport,
 } as any)
-const DownloadAndroidRoute = DownloadAndroidRouteImport.update({
-  id: '/download/android',
-  path: '/download/android',
+const DevelopersRoute = DevelopersRouteImport.update({
+  id: '/developers',
+  path: '/developers',
   getParentRoute: () => rootRouteImport,
 } as any)
-const DevelopersChangelogRoute = DevelopersChangelogRouteImport.update({
-  id: '/changelog',
-  path: '/changelog',
-  getParentRoute: () => DevelopersRoute,
+const DnsRoute = DnsRouteImport.update({
+  id: '/dns',
+  path: '/dns',
+  getParentRoute: () => rootRouteImport,
 } as any)
-const BlogComoEvitarQuedaIptvRoute = BlogComoEvitarQuedaIptvRouteImport.update({
-  id: '/como-evitar-queda-iptv',
-  path: '/como-evitar-queda-iptv',
-  getParentRoute: () => BlogRoute,
+const McpRoute = McpRouteImport.update({
+  id: '/mcp',
+  path: '/mcp',
+  getParentRoute: () => rootRouteImport,
 } as any)
-const ApiV1Route = ApiV1RouteImport.update({
-  id: '/api/v1',
-  path: '/api/v1',
+const MonitoramentoDnsRoute = MonitoramentoDnsRouteImport.update({
+  id: '/monitoramento-dns',
+  path: '/monitoramento-dns',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const MonitoramentoIptvRoute = MonitoramentoIptvRouteImport.update({
+  id: '/monitoramento-iptv',
+  path: '/monitoramento-iptv',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ResetPasswordRoute = ResetPasswordRouteImport.update({
+  id: '/reset-password',
+  path: '/reset-password',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const RevendedorStreamMonitorRoute = RevendedorStreamMonitorRouteImport.update({
+  id: '/revendedor-stream-monitor',
+  path: '/revendedor-stream-monitor',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const RobotsDottxtRoute = RobotsDottxtRouteImport.update({
+  id: '/robots.txt',
+  path: '/robots.txt',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
+  id: '/sitemap.xml',
+  path: '/sitemap.xml',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const VerifyEmailRoute = VerifyEmailRouteImport.update({
+  id: '/verify-email',
+  path: '/verify-email',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const Char91DotmcpChar93ListToolsRoute =
+  Char91DotmcpChar93ListToolsRouteImport.update({
+    id: '/.mcp/list-tools',
+    path: '/.mcp/list-tools',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const Char91DotwellKnownChar93OauthProtectedResourceRoute =
+  Char91DotwellKnownChar93OauthProtectedResourceRouteImport.update({
+    id: '/.well-known/oauth-protected-resource',
+    path: '/.well-known/oauth-protected-resource',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const AuthenticatedAppRoute = AuthenticatedAppRouteImport.update({
+  id: '/app',
+  path: '/app',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const ApiOpenapiDotjsonRoute = ApiOpenapiDotjsonRouteImport.update({
+  id: '/api/openapi.json',
+  path: '/api/openapi.json',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiOpenapiDotyamlRoute = ApiOpenapiDotyamlRouteImport.update({
@@ -206,138 +198,50 @@ const ApiOpenapiDotyamlRoute = ApiOpenapiDotyamlRouteImport.update({
   path: '/api/openapi.yaml',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ApiOpenapiDotjsonRoute = ApiOpenapiDotjsonRouteImport.update({
-  id: '/api/openapi.json',
-  path: '/api/openapi.json',
+const ApiV1Route = ApiV1RouteImport.update({
+  id: '/api/v1',
+  path: '/api/v1',
   getParentRoute: () => rootRouteImport,
 } as any)
-const AuthenticatedAppRoute = AuthenticatedAppRouteImport.update({
-  id: '/app',
-  path: '/app',
-  getParentRoute: () => AuthenticatedRouteRoute,
+const BlogComoEvitarQuedaIptvRoute = BlogComoEvitarQuedaIptvRouteImport.update({
+  id: '/como-evitar-queda-iptv',
+  path: '/como-evitar-queda-iptv',
+  getParentRoute: () => BlogRoute,
 } as any)
-const Char91DotwellKnownChar93OauthProtectedResourceRoute =
-  Char91DotwellKnownChar93OauthProtectedResourceRouteImport.update({
-    id: '/.well-known/oauth-protected-resource',
-    path: '/.well-known/oauth-protected-resource',
-    getParentRoute: () => rootRouteImport,
-  } as any)
-const Char91DotmcpChar93ListToolsRoute =
-  Char91DotmcpChar93ListToolsRouteImport.update({
-    id: '/.mcp/list-tools',
-    path: '/.mcp/list-tools',
+const DevelopersChangelogRoute = DevelopersChangelogRouteImport.update({
+  id: '/changelog',
+  path: '/changelog',
+  getParentRoute: () => DevelopersRoute,
+} as any)
+const DownloadAndroidRoute = DownloadAndroidRouteImport.update({
+  id: '/download/android',
+  path: '/download/android',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PlayerResellerIdRoute = PlayerResellerIdRouteImport.update({
+  id: '/player/$resellerId',
+  path: '/player/$resellerId',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const StatusSlugRoute = StatusSlugRouteImport.update({
+  id: '/status/$slug',
+  path: '/status/$slug',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DotlovableOauthConsentRoute = DotlovableOauthConsentRouteImport.update({
+  id: '/.lovable/oauth/consent',
+  path: '/.lovable/oauth/consent',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const Char91DotmcpChar93InvokeToolToolRoute =
+  Char91DotmcpChar93InvokeToolToolRouteImport.update({
+    id: '/.mcp/invoke-tool/$tool',
+    path: '/.mcp/invoke-tool/$tool',
     getParentRoute: () => rootRouteImport,
   } as any)
 const AuthenticatedAppIndexRoute = AuthenticatedAppIndexRouteImport.update({
   id: '/',
   path: '/',
-  getParentRoute: () => AuthenticatedAppRoute,
-} as any)
-const ApiV1SplatRoute = ApiV1SplatRouteImport.update({
-  id: '/$',
-  path: '/$',
-  getParentRoute: () => ApiV1Route,
-} as any)
-const ApiPublicSignupRoute = ApiPublicSignupRouteImport.update({
-  id: '/api/public/signup',
-  path: '/api/public/signup',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ApiPublicRadarRoute = ApiPublicRadarRouteImport.update({
-  id: '/api/public/radar',
-  path: '/api/public/radar',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ApiPublicLoginRoute = ApiPublicLoginRouteImport.update({
-  id: '/api/public/login',
-  path: '/api/public/login',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ApiPublicHealthRoute = ApiPublicHealthRouteImport.update({
-  id: '/api/public/health',
-  path: '/api/public/health',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ApiPublicAccountAvailabilityRoute =
-  ApiPublicAccountAvailabilityRouteImport.update({
-    id: '/api/public/account-availability',
-    path: '/api/public/account-availability',
-    getParentRoute: () => rootRouteImport,
-  } as any)
-const AuthenticatedAppSubscriptionRoute =
-  AuthenticatedAppSubscriptionRouteImport.update({
-    id: '/subscription',
-    path: '/subscription',
-    getParentRoute: () => AuthenticatedAppRoute,
-  } as any)
-const AuthenticatedAppStoreRoute = AuthenticatedAppStoreRouteImport.update({
-  id: '/store',
-  path: '/store',
-  getParentRoute: () => AuthenticatedAppRoute,
-} as any)
-const AuthenticatedAppResellerRoute =
-  AuthenticatedAppResellerRouteImport.update({
-    id: '/reseller',
-    path: '/reseller',
-    getParentRoute: () => AuthenticatedAppRoute,
-  } as any)
-const AuthenticatedAppRankingRoute = AuthenticatedAppRankingRouteImport.update({
-  id: '/ranking',
-  path: '/ranking',
-  getParentRoute: () => AuthenticatedAppRoute,
-} as any)
-const AuthenticatedAppRadarRoute = AuthenticatedAppRadarRouteImport.update({
-  id: '/radar',
-  path: '/radar',
-  getParentRoute: () => AuthenticatedAppRoute,
-} as any)
-const AuthenticatedAppPlayerRoute = AuthenticatedAppPlayerRouteImport.update({
-  id: '/player',
-  path: '/player',
-  getParentRoute: () => AuthenticatedAppRoute,
-} as any)
-const AuthenticatedAppPerformanceRoute =
-  AuthenticatedAppPerformanceRouteImport.update({
-    id: '/performance',
-    path: '/performance',
-    getParentRoute: () => AuthenticatedAppRoute,
-  } as any)
-const AuthenticatedAppPaginaRoute = AuthenticatedAppPaginaRouteImport.update({
-  id: '/pagina',
-  path: '/pagina',
-  getParentRoute: () => AuthenticatedAppRoute,
-} as any)
-const AuthenticatedAppDetectorRoute =
-  AuthenticatedAppDetectorRouteImport.update({
-    id: '/detector',
-    path: '/detector',
-    getParentRoute: () => AuthenticatedAppRoute,
-  } as any)
-const AuthenticatedAppApiIntegrationsRoute =
-  AuthenticatedAppApiIntegrationsRouteImport.update({
-    id: '/api-integrations',
-    path: '/api-integrations',
-    getParentRoute: () => AuthenticatedAppRoute,
-  } as any)
-const AuthenticatedAppAlertsRoute = AuthenticatedAppAlertsRouteImport.update({
-  id: '/alerts',
-  path: '/alerts',
-  getParentRoute: () => AuthenticatedAppRoute,
-} as any)
-const AuthenticatedAppAjudaRoute = AuthenticatedAppAjudaRouteImport.update({
-  id: '/ajuda',
-  path: '/ajuda',
-  getParentRoute: () => AuthenticatedAppRoute,
-} as any)
-const AuthenticatedAppAiIntegrationRoute =
-  AuthenticatedAppAiIntegrationRouteImport.update({
-    id: '/ai-integration',
-    path: '/ai-integration',
-    getParentRoute: () => AuthenticatedAppRoute,
-  } as any)
-const AuthenticatedAppAdminRoute = AuthenticatedAppAdminRouteImport.update({
-  id: '/admin',
-  path: '/admin',
   getParentRoute: () => AuthenticatedAppRoute,
 } as any)
 const AuthenticatedAppAchievementsRoute =
@@ -346,27 +250,129 @@ const AuthenticatedAppAchievementsRoute =
     path: '/achievements',
     getParentRoute: () => AuthenticatedAppRoute,
   } as any)
-const Char91DotmcpChar93InvokeToolToolRoute =
-  Char91DotmcpChar93InvokeToolToolRouteImport.update({
-    id: '/.mcp/invoke-tool/$tool',
-    path: '/.mcp/invoke-tool/$tool',
-    getParentRoute: () => rootRouteImport,
-  } as any)
-const DotlovableOauthConsentRoute = DotlovableOauthConsentRouteImport.update({
-  id: '/.lovable/oauth/consent',
-  path: '/.lovable/oauth/consent',
-  getParentRoute: () => rootRouteImport,
+const AuthenticatedAppAdminRoute = AuthenticatedAppAdminRouteImport.update({
+  id: '/admin',
+  path: '/admin',
+  getParentRoute: () => AuthenticatedAppRoute,
 } as any)
-const AuthenticatedAppServersIndexRoute =
-  AuthenticatedAppServersIndexRouteImport.update({
-    id: '/servers/',
-    path: '/servers/',
+const AuthenticatedAppAiIntegrationRoute =
+  AuthenticatedAppAiIntegrationRouteImport.update({
+    id: '/ai-integration',
+    path: '/ai-integration',
     getParentRoute: () => AuthenticatedAppRoute,
   } as any)
-const AuthenticatedAppInteligenciaIndexRoute =
-  AuthenticatedAppInteligenciaIndexRouteImport.update({
-    id: '/inteligencia/',
-    path: '/inteligencia/',
+const AuthenticatedAppAjudaRoute = AuthenticatedAppAjudaRouteImport.update({
+  id: '/ajuda',
+  path: '/ajuda',
+  getParentRoute: () => AuthenticatedAppRoute,
+} as any)
+const AuthenticatedAppAlertsRoute = AuthenticatedAppAlertsRouteImport.update({
+  id: '/alerts',
+  path: '/alerts',
+  getParentRoute: () => AuthenticatedAppRoute,
+} as any)
+const AuthenticatedAppApiIntegrationsRoute =
+  AuthenticatedAppApiIntegrationsRouteImport.update({
+    id: '/api-integrations',
+    path: '/api-integrations',
+    getParentRoute: () => AuthenticatedAppRoute,
+  } as any)
+const AuthenticatedAppDetectorRoute =
+  AuthenticatedAppDetectorRouteImport.update({
+    id: '/detector',
+    path: '/detector',
+    getParentRoute: () => AuthenticatedAppRoute,
+  } as any)
+const AuthenticatedAppPaginaRoute = AuthenticatedAppPaginaRouteImport.update({
+  id: '/pagina',
+  path: '/pagina',
+  getParentRoute: () => AuthenticatedAppRoute,
+} as any)
+const AuthenticatedAppPerformanceRoute =
+  AuthenticatedAppPerformanceRouteImport.update({
+    id: '/performance',
+    path: '/performance',
+    getParentRoute: () => AuthenticatedAppRoute,
+  } as any)
+const AuthenticatedAppPlayerRoute = AuthenticatedAppPlayerRouteImport.update({
+  id: '/player',
+  path: '/player',
+  getParentRoute: () => AuthenticatedAppRoute,
+} as any)
+const AuthenticatedAppRadarRoute = AuthenticatedAppRadarRouteImport.update({
+  id: '/radar',
+  path: '/radar',
+  getParentRoute: () => AuthenticatedAppRoute,
+} as any)
+const AuthenticatedAppRankingRoute = AuthenticatedAppRankingRouteImport.update({
+  id: '/ranking',
+  path: '/ranking',
+  getParentRoute: () => AuthenticatedAppRoute,
+} as any)
+const AuthenticatedAppResellerRoute =
+  AuthenticatedAppResellerRouteImport.update({
+    id: '/reseller',
+    path: '/reseller',
+    getParentRoute: () => AuthenticatedAppRoute,
+  } as any)
+const AuthenticatedAppStoreRoute = AuthenticatedAppStoreRouteImport.update({
+  id: '/store',
+  path: '/store',
+  getParentRoute: () => AuthenticatedAppRoute,
+} as any)
+const AuthenticatedAppSubscriptionRoute =
+  AuthenticatedAppSubscriptionRouteImport.update({
+    id: '/subscription',
+    path: '/subscription',
+    getParentRoute: () => AuthenticatedAppRoute,
+  } as any)
+const ApiPublicAccountAvailabilityRoute =
+  ApiPublicAccountAvailabilityRouteImport.update({
+    id: '/api/public/account-availability',
+    path: '/api/public/account-availability',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const ApiPublicHealthRoute = ApiPublicHealthRouteImport.update({
+  id: '/api/public/health',
+  path: '/api/public/health',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiPublicLoginRoute = ApiPublicLoginRouteImport.update({
+  id: '/api/public/login',
+  path: '/api/public/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiPublicRadarRoute = ApiPublicRadarRouteImport.update({
+  id: '/api/public/radar',
+  path: '/api/public/radar',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiPublicSignupRoute = ApiPublicSignupRouteImport.update({
+  id: '/api/public/signup',
+  path: '/api/public/signup',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiV1SplatRoute = ApiV1SplatRouteImport.update({
+  id: '/$',
+  path: '/$',
+  getParentRoute: () => ApiV1Route,
+} as any)
+const AuthenticatedAppAdminAndroidPlayRoute =
+  AuthenticatedAppAdminAndroidPlayRouteImport.update({
+    id: '/android-play',
+    path: '/android-play',
+    getParentRoute: () => AuthenticatedAppAdminRoute,
+  } as any)
+const AuthenticatedAppAdminStreamPlayVersionsRoute =
+  AuthenticatedAppAdminStreamPlayVersionsRouteImport.update({
+    id: '/stream-play-versions',
+    path: '/stream-play-versions',
+    getParentRoute: () => AuthenticatedAppAdminRoute,
+  } as any)
+const AuthenticatedAppAdminCoreLogsRoute =
+  AuthenticatedAppAdminCoreLogsRouteImport.update({
+    id: '/admin_/core-logs',
+    path: '/admin/core-logs',
     getParentRoute: () => AuthenticatedAppRoute,
   } as any)
 const AuthenticatedAppDiagnosticoIndexRoute =
@@ -375,126 +381,16 @@ const AuthenticatedAppDiagnosticoIndexRoute =
     path: '/diagnostico/',
     getParentRoute: () => AuthenticatedAppRoute,
   } as any)
-const ApiPublicWebhooksMercadopagoRoute =
-  ApiPublicWebhooksMercadopagoRouteImport.update({
-    id: '/api/public/webhooks/mercadopago',
-    path: '/api/public/webhooks/mercadopago',
-    getParentRoute: () => rootRouteImport,
+const AuthenticatedAppInteligenciaIndexRoute =
+  AuthenticatedAppInteligenciaIndexRouteImport.update({
+    id: '/inteligencia/',
+    path: '/inteligencia/',
+    getParentRoute: () => AuthenticatedAppRoute,
   } as any)
-const ApiPublicTmdbCatalogRoute = ApiPublicTmdbCatalogRouteImport.update({
-  id: '/api/public/tmdb/catalog',
-  path: '/api/public/tmdb/catalog',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ApiPublicTelegramWebhookRoute =
-  ApiPublicTelegramWebhookRouteImport.update({
-    id: '/api/public/telegram/webhook',
-    path: '/api/public/telegram/webhook',
-    getParentRoute: () => rootRouteImport,
-  } as any)
-const ApiPublicRegionsTargetsRoute = ApiPublicRegionsTargetsRouteImport.update({
-  id: '/api/public/regions/targets',
-  path: '/api/public/regions/targets',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ApiPublicRegionsReportRoute = ApiPublicRegionsReportRouteImport.update({
-  id: '/api/public/regions/report',
-  path: '/api/public/regions/report',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ApiPublicCronRadarRoute = ApiPublicCronRadarRouteImport.update({
-  id: '/api/public/cron/radar',
-  path: '/api/public/cron/radar',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ApiPublicCronPerfRoute = ApiPublicCronPerfRouteImport.update({
-  id: '/api/public/cron/perf',
-  path: '/api/public/cron/perf',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ApiPublicCronNotificationsRoute =
-  ApiPublicCronNotificationsRouteImport.update({
-    id: '/api/public/cron/notifications',
-    path: '/api/public/cron/notifications',
-    getParentRoute: () => rootRouteImport,
-  } as any)
-const ApiPublicCronIptvNotificationsRoute =
-  ApiPublicCronIptvNotificationsRouteImport.update({
-    id: '/api/public/cron/iptv-notifications',
-    path: '/api/public/cron/iptv-notifications',
-    getParentRoute: () => rootRouteImport,
-  } as any)
-const ApiPublicCronDigestRoute = ApiPublicCronDigestRouteImport.update({
-  id: '/api/public/cron/digest',
-  path: '/api/public/cron/digest',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ApiPublicCronCheckRoute = ApiPublicCronCheckRouteImport.update({
-  id: '/api/public/cron/check',
-  path: '/api/public/cron/check',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ApiPublicCronApiWebhooksRoute =
-  ApiPublicCronApiWebhooksRouteImport.update({
-    id: '/api/public/cron/api-webhooks',
-    path: '/api/public/cron/api-webhooks',
-    getParentRoute: () => rootRouteImport,
-  } as any)
-const ApiPublicCoreTaskRoute = ApiPublicCoreTaskRouteImport.update({
-  id: '/api/public/core/task',
-  path: '/api/public/core/task',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ApiPublicCoreStreamRoute = ApiPublicCoreStreamRouteImport.update({
-  id: '/api/public/core/stream',
-  path: '/api/public/core/stream',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ApiPublicCoreReportRoute = ApiPublicCoreReportRouteImport.update({
-  id: '/api/public/core/report',
-  path: '/api/public/core/report',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ApiPublicCoreLiveDiagRoute = ApiPublicCoreLiveDiagRouteImport.update({
-  id: '/api/public/core/live-diag',
-  path: '/api/public/core/live-diag',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ApiPublicAndroidVersionRoute = ApiPublicAndroidVersionRouteImport.update({
-  id: '/api/public/android/version',
-  path: '/api/public/android/version',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ApiPublicAndroidStatusRoute = ApiPublicAndroidStatusRouteImport.update({
-  id: '/api/public/android/status',
-  path: '/api/public/android/status',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ApiPublicAndroidRefreshRoute = ApiPublicAndroidRefreshRouteImport.update({
-  id: '/api/public/android/refresh',
-  path: '/api/public/android/refresh',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ApiPublicAndroidLoginRoute = ApiPublicAndroidLoginRouteImport.update({
-  id: '/api/public/android/login',
-  path: '/api/public/android/login',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ApiPublicAndroidConfigRoute = ApiPublicAndroidConfigRouteImport.update({
-  id: '/api/public/android/config',
-  path: '/api/public/android/config',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ApiPublicAndroidAssociateRoute =
-  ApiPublicAndroidAssociateRouteImport.update({
-    id: '/api/public/android/associate',
-    path: '/api/public/android/associate',
-    getParentRoute: () => rootRouteImport,
-  } as any)
-const AuthenticatedAppServersNewRoute =
-  AuthenticatedAppServersNewRouteImport.update({
-    id: '/servers/new',
-    path: '/servers/new',
+const AuthenticatedAppServersIndexRoute =
+  AuthenticatedAppServersIndexRouteImport.update({
+    id: '/servers/',
+    path: '/servers/',
     getParentRoute: () => AuthenticatedAppRoute,
   } as any)
 const AuthenticatedAppServersIdRoute =
@@ -503,23 +399,127 @@ const AuthenticatedAppServersIdRoute =
     path: '/servers/$id',
     getParentRoute: () => AuthenticatedAppRoute,
   } as any)
-const AuthenticatedAppAdminCoreLogsRoute =
-  AuthenticatedAppAdminCoreLogsRouteImport.update({
-    id: '/admin_/core-logs',
-    path: '/admin/core-logs',
+const AuthenticatedAppServersNewRoute =
+  AuthenticatedAppServersNewRouteImport.update({
+    id: '/servers/new',
+    path: '/servers/new',
     getParentRoute: () => AuthenticatedAppRoute,
   } as any)
-const AuthenticatedAppAdminStreamPlayVersionsRoute =
-  AuthenticatedAppAdminStreamPlayVersionsRouteImport.update({
-    id: '/stream-play-versions',
-    path: '/stream-play-versions',
-    getParentRoute: () => AuthenticatedAppAdminRoute,
+const ApiPublicAndroidAssociateRoute =
+  ApiPublicAndroidAssociateRouteImport.update({
+    id: '/api/public/android/associate',
+    path: '/api/public/android/associate',
+    getParentRoute: () => rootRouteImport,
   } as any)
-const AuthenticatedAppAdminAndroidPlayRoute =
-  AuthenticatedAppAdminAndroidPlayRouteImport.update({
-    id: '/android-play',
-    path: '/android-play',
-    getParentRoute: () => AuthenticatedAppAdminRoute,
+const ApiPublicAndroidConfigRoute = ApiPublicAndroidConfigRouteImport.update({
+  id: '/api/public/android/config',
+  path: '/api/public/android/config',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiPublicAndroidLoginRoute = ApiPublicAndroidLoginRouteImport.update({
+  id: '/api/public/android/login',
+  path: '/api/public/android/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiPublicAndroidRefreshRoute = ApiPublicAndroidRefreshRouteImport.update({
+  id: '/api/public/android/refresh',
+  path: '/api/public/android/refresh',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiPublicAndroidStatusRoute = ApiPublicAndroidStatusRouteImport.update({
+  id: '/api/public/android/status',
+  path: '/api/public/android/status',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiPublicAndroidVersionRoute = ApiPublicAndroidVersionRouteImport.update({
+  id: '/api/public/android/version',
+  path: '/api/public/android/version',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiPublicCoreLiveDiagRoute = ApiPublicCoreLiveDiagRouteImport.update({
+  id: '/api/public/core/live-diag',
+  path: '/api/public/core/live-diag',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiPublicCoreReportRoute = ApiPublicCoreReportRouteImport.update({
+  id: '/api/public/core/report',
+  path: '/api/public/core/report',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiPublicCoreStreamRoute = ApiPublicCoreStreamRouteImport.update({
+  id: '/api/public/core/stream',
+  path: '/api/public/core/stream',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiPublicCoreTaskRoute = ApiPublicCoreTaskRouteImport.update({
+  id: '/api/public/core/task',
+  path: '/api/public/core/task',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiPublicCronApiWebhooksRoute =
+  ApiPublicCronApiWebhooksRouteImport.update({
+    id: '/api/public/cron/api-webhooks',
+    path: '/api/public/cron/api-webhooks',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const ApiPublicCronCheckRoute = ApiPublicCronCheckRouteImport.update({
+  id: '/api/public/cron/check',
+  path: '/api/public/cron/check',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiPublicCronDigestRoute = ApiPublicCronDigestRouteImport.update({
+  id: '/api/public/cron/digest',
+  path: '/api/public/cron/digest',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiPublicCronIptvNotificationsRoute =
+  ApiPublicCronIptvNotificationsRouteImport.update({
+    id: '/api/public/cron/iptv-notifications',
+    path: '/api/public/cron/iptv-notifications',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const ApiPublicCronNotificationsRoute =
+  ApiPublicCronNotificationsRouteImport.update({
+    id: '/api/public/cron/notifications',
+    path: '/api/public/cron/notifications',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const ApiPublicCronPerfRoute = ApiPublicCronPerfRouteImport.update({
+  id: '/api/public/cron/perf',
+  path: '/api/public/cron/perf',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiPublicCronRadarRoute = ApiPublicCronRadarRouteImport.update({
+  id: '/api/public/cron/radar',
+  path: '/api/public/cron/radar',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiPublicRegionsReportRoute = ApiPublicRegionsReportRouteImport.update({
+  id: '/api/public/regions/report',
+  path: '/api/public/regions/report',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiPublicRegionsTargetsRoute = ApiPublicRegionsTargetsRouteImport.update({
+  id: '/api/public/regions/targets',
+  path: '/api/public/regions/targets',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiPublicTelegramWebhookRoute =
+  ApiPublicTelegramWebhookRouteImport.update({
+    id: '/api/public/telegram/webhook',
+    path: '/api/public/telegram/webhook',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const ApiPublicTmdbCatalogRoute = ApiPublicTmdbCatalogRouteImport.update({
+  id: '/api/public/tmdb/catalog',
+  path: '/api/public/tmdb/catalog',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiPublicWebhooksMercadopagoRoute =
+  ApiPublicWebhooksMercadopagoRouteImport.update({
+    id: '/api/public/webhooks/mercadopago',
+    path: '/api/public/webhooks/mercadopago',
+    getParentRoute: () => rootRouteImport,
   } as any)
 const AuthenticatedAppInteligenciaMediaIdRoute =
   AuthenticatedAppInteligenciaMediaIdRouteImport.update({
@@ -1088,95 +1088,11 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/verify-email': {
-      id: '/verify-email'
-      path: '/verify-email'
-      fullPath: '/verify-email'
-      preLoaderRoute: typeof VerifyEmailRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/sitemap.xml': {
-      id: '/sitemap.xml'
-      path: '/sitemap.xml'
-      fullPath: '/sitemap.xml'
-      preLoaderRoute: typeof SitemapDotxmlRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/robots.txt': {
-      id: '/robots.txt'
-      path: '/robots.txt'
-      fullPath: '/robots.txt'
-      preLoaderRoute: typeof RobotsDottxtRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/revendedor-stream-monitor': {
-      id: '/revendedor-stream-monitor'
-      path: '/revendedor-stream-monitor'
-      fullPath: '/revendedor-stream-monitor'
-      preLoaderRoute: typeof RevendedorStreamMonitorRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/reset-password': {
-      id: '/reset-password'
-      path: '/reset-password'
-      fullPath: '/reset-password'
-      preLoaderRoute: typeof ResetPasswordRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/monitoramento-iptv': {
-      id: '/monitoramento-iptv'
-      path: '/monitoramento-iptv'
-      fullPath: '/monitoramento-iptv'
-      preLoaderRoute: typeof MonitoramentoIptvRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/monitoramento-dns': {
-      id: '/monitoramento-dns'
-      path: '/monitoramento-dns'
-      fullPath: '/monitoramento-dns'
-      preLoaderRoute: typeof MonitoramentoDnsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/mcp': {
-      id: '/mcp'
-      path: '/mcp'
-      fullPath: '/mcp'
-      preLoaderRoute: typeof McpRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/dns': {
-      id: '/dns'
-      path: '/dns'
-      fullPath: '/dns'
-      preLoaderRoute: typeof DnsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/developers': {
-      id: '/developers'
-      path: '/developers'
-      fullPath: '/developers'
-      preLoaderRoute: typeof DevelopersRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/blog': {
-      id: '/blog'
-      path: '/blog'
-      fullPath: '/blog'
-      preLoaderRoute: typeof BlogRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/auth': {
-      id: '/auth'
-      path: '/auth'
-      fullPath: '/auth'
-      preLoaderRoute: typeof AuthRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/alertas-telegram': {
-      id: '/alertas-telegram'
-      path: '/alertas-telegram'
-      fullPath: '/alertas-telegram'
-      preLoaderRoute: typeof AlertasTelegramRouteImport
+    '/': {
+      id: '/'
+      path: '/'
+      fullPath: '/'
+      preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/$slug': {
@@ -1193,81 +1109,95 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedRouteRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/': {
-      id: '/'
-      path: '/'
-      fullPath: '/'
-      preLoaderRoute: typeof IndexRouteImport
+    '/alertas-telegram': {
+      id: '/alertas-telegram'
+      path: '/alertas-telegram'
+      fullPath: '/alertas-telegram'
+      preLoaderRoute: typeof AlertasTelegramRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/status/$slug': {
-      id: '/status/$slug'
-      path: '/status/$slug'
-      fullPath: '/status/$slug'
-      preLoaderRoute: typeof StatusSlugRouteImport
+    '/auth': {
+      id: '/auth'
+      path: '/auth'
+      fullPath: '/auth'
+      preLoaderRoute: typeof AuthRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/player/$resellerId': {
-      id: '/player/$resellerId'
-      path: '/player/$resellerId'
-      fullPath: '/player/$resellerId'
-      preLoaderRoute: typeof PlayerResellerIdRouteImport
+    '/blog': {
+      id: '/blog'
+      path: '/blog'
+      fullPath: '/blog'
+      preLoaderRoute: typeof BlogRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/download/android': {
-      id: '/download/android'
-      path: '/download/android'
-      fullPath: '/download/android'
-      preLoaderRoute: typeof DownloadAndroidRouteImport
+    '/developers': {
+      id: '/developers'
+      path: '/developers'
+      fullPath: '/developers'
+      preLoaderRoute: typeof DevelopersRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/developers/changelog': {
-      id: '/developers/changelog'
-      path: '/changelog'
-      fullPath: '/developers/changelog'
-      preLoaderRoute: typeof DevelopersChangelogRouteImport
-      parentRoute: typeof DevelopersRoute
-    }
-    '/blog/como-evitar-queda-iptv': {
-      id: '/blog/como-evitar-queda-iptv'
-      path: '/como-evitar-queda-iptv'
-      fullPath: '/blog/como-evitar-queda-iptv'
-      preLoaderRoute: typeof BlogComoEvitarQuedaIptvRouteImport
-      parentRoute: typeof BlogRoute
-    }
-    '/api/v1': {
-      id: '/api/v1'
-      path: '/api/v1'
-      fullPath: '/api/v1'
-      preLoaderRoute: typeof ApiV1RouteImport
+    '/dns': {
+      id: '/dns'
+      path: '/dns'
+      fullPath: '/dns'
+      preLoaderRoute: typeof DnsRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/api/openapi.yaml': {
-      id: '/api/openapi.yaml'
-      path: '/api/openapi.yaml'
-      fullPath: '/api/openapi.yaml'
-      preLoaderRoute: typeof ApiOpenapiDotyamlRouteImport
+    '/mcp': {
+      id: '/mcp'
+      path: '/mcp'
+      fullPath: '/mcp'
+      preLoaderRoute: typeof McpRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/api/openapi.json': {
-      id: '/api/openapi.json'
-      path: '/api/openapi.json'
-      fullPath: '/api/openapi.json'
-      preLoaderRoute: typeof ApiOpenapiDotjsonRouteImport
+    '/monitoramento-dns': {
+      id: '/monitoramento-dns'
+      path: '/monitoramento-dns'
+      fullPath: '/monitoramento-dns'
+      preLoaderRoute: typeof MonitoramentoDnsRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/_authenticated/app': {
-      id: '/_authenticated/app'
-      path: '/app'
-      fullPath: '/app'
-      preLoaderRoute: typeof AuthenticatedAppRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
+    '/monitoramento-iptv': {
+      id: '/monitoramento-iptv'
+      path: '/monitoramento-iptv'
+      fullPath: '/monitoramento-iptv'
+      preLoaderRoute: typeof MonitoramentoIptvRouteImport
+      parentRoute: typeof rootRouteImport
     }
-    '/.well-known/oauth-protected-resource': {
-      id: '/.well-known/oauth-protected-resource'
-      path: '/.well-known/oauth-protected-resource'
-      fullPath: '/.well-known/oauth-protected-resource'
-      preLoaderRoute: typeof Char91DotwellKnownChar93OauthProtectedResourceRouteImport
+    '/reset-password': {
+      id: '/reset-password'
+      path: '/reset-password'
+      fullPath: '/reset-password'
+      preLoaderRoute: typeof ResetPasswordRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/revendedor-stream-monitor': {
+      id: '/revendedor-stream-monitor'
+      path: '/revendedor-stream-monitor'
+      fullPath: '/revendedor-stream-monitor'
+      preLoaderRoute: typeof RevendedorStreamMonitorRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/robots.txt': {
+      id: '/robots.txt'
+      path: '/robots.txt'
+      fullPath: '/robots.txt'
+      preLoaderRoute: typeof RobotsDottxtRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/sitemap.xml': {
+      id: '/sitemap.xml'
+      path: '/sitemap.xml'
+      fullPath: '/sitemap.xml'
+      preLoaderRoute: typeof SitemapDotxmlRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/verify-email': {
+      id: '/verify-email'
+      path: '/verify-email'
+      fullPath: '/verify-email'
+      preLoaderRoute: typeof VerifyEmailRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/.mcp/list-tools': {
@@ -1277,165 +1207,74 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof Char91DotmcpChar93ListToolsRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/_authenticated/app/': {
-      id: '/_authenticated/app/'
-      path: '/'
-      fullPath: '/app/'
-      preLoaderRoute: typeof AuthenticatedAppIndexRouteImport
-      parentRoute: typeof AuthenticatedAppRoute
-    }
-    '/api/v1/$': {
-      id: '/api/v1/$'
-      path: '/$'
-      fullPath: '/api/v1/$'
-      preLoaderRoute: typeof ApiV1SplatRouteImport
-      parentRoute: typeof ApiV1Route
-    }
-    '/api/public/signup': {
-      id: '/api/public/signup'
-      path: '/api/public/signup'
-      fullPath: '/api/public/signup'
-      preLoaderRoute: typeof ApiPublicSignupRouteImport
+    '/.well-known/oauth-protected-resource': {
+      id: '/.well-known/oauth-protected-resource'
+      path: '/.well-known/oauth-protected-resource'
+      fullPath: '/.well-known/oauth-protected-resource'
+      preLoaderRoute: typeof Char91DotwellKnownChar93OauthProtectedResourceRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/api/public/radar': {
-      id: '/api/public/radar'
-      path: '/api/public/radar'
-      fullPath: '/api/public/radar'
-      preLoaderRoute: typeof ApiPublicRadarRouteImport
+    '/_authenticated/app': {
+      id: '/_authenticated/app'
+      path: '/app'
+      fullPath: '/app'
+      preLoaderRoute: typeof AuthenticatedAppRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/api/openapi.json': {
+      id: '/api/openapi.json'
+      path: '/api/openapi.json'
+      fullPath: '/api/openapi.json'
+      preLoaderRoute: typeof ApiOpenapiDotjsonRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/api/public/login': {
-      id: '/api/public/login'
-      path: '/api/public/login'
-      fullPath: '/api/public/login'
-      preLoaderRoute: typeof ApiPublicLoginRouteImport
+    '/api/openapi.yaml': {
+      id: '/api/openapi.yaml'
+      path: '/api/openapi.yaml'
+      fullPath: '/api/openapi.yaml'
+      preLoaderRoute: typeof ApiOpenapiDotyamlRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/api/public/health': {
-      id: '/api/public/health'
-      path: '/api/public/health'
-      fullPath: '/api/public/health'
-      preLoaderRoute: typeof ApiPublicHealthRouteImport
+    '/api/v1': {
+      id: '/api/v1'
+      path: '/api/v1'
+      fullPath: '/api/v1'
+      preLoaderRoute: typeof ApiV1RouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/api/public/account-availability': {
-      id: '/api/public/account-availability'
-      path: '/api/public/account-availability'
-      fullPath: '/api/public/account-availability'
-      preLoaderRoute: typeof ApiPublicAccountAvailabilityRouteImport
+    '/blog/como-evitar-queda-iptv': {
+      id: '/blog/como-evitar-queda-iptv'
+      path: '/como-evitar-queda-iptv'
+      fullPath: '/blog/como-evitar-queda-iptv'
+      preLoaderRoute: typeof BlogComoEvitarQuedaIptvRouteImport
+      parentRoute: typeof BlogRoute
+    }
+    '/developers/changelog': {
+      id: '/developers/changelog'
+      path: '/changelog'
+      fullPath: '/developers/changelog'
+      preLoaderRoute: typeof DevelopersChangelogRouteImport
+      parentRoute: typeof DevelopersRoute
+    }
+    '/download/android': {
+      id: '/download/android'
+      path: '/download/android'
+      fullPath: '/download/android'
+      preLoaderRoute: typeof DownloadAndroidRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/_authenticated/app/subscription': {
-      id: '/_authenticated/app/subscription'
-      path: '/subscription'
-      fullPath: '/app/subscription'
-      preLoaderRoute: typeof AuthenticatedAppSubscriptionRouteImport
-      parentRoute: typeof AuthenticatedAppRoute
+    '/player/$resellerId': {
+      id: '/player/$resellerId'
+      path: '/player/$resellerId'
+      fullPath: '/player/$resellerId'
+      preLoaderRoute: typeof PlayerResellerIdRouteImport
+      parentRoute: typeof rootRouteImport
     }
-    '/_authenticated/app/store': {
-      id: '/_authenticated/app/store'
-      path: '/store'
-      fullPath: '/app/store'
-      preLoaderRoute: typeof AuthenticatedAppStoreRouteImport
-      parentRoute: typeof AuthenticatedAppRoute
-    }
-    '/_authenticated/app/reseller': {
-      id: '/_authenticated/app/reseller'
-      path: '/reseller'
-      fullPath: '/app/reseller'
-      preLoaderRoute: typeof AuthenticatedAppResellerRouteImport
-      parentRoute: typeof AuthenticatedAppRoute
-    }
-    '/_authenticated/app/ranking': {
-      id: '/_authenticated/app/ranking'
-      path: '/ranking'
-      fullPath: '/app/ranking'
-      preLoaderRoute: typeof AuthenticatedAppRankingRouteImport
-      parentRoute: typeof AuthenticatedAppRoute
-    }
-    '/_authenticated/app/radar': {
-      id: '/_authenticated/app/radar'
-      path: '/radar'
-      fullPath: '/app/radar'
-      preLoaderRoute: typeof AuthenticatedAppRadarRouteImport
-      parentRoute: typeof AuthenticatedAppRoute
-    }
-    '/_authenticated/app/player': {
-      id: '/_authenticated/app/player'
-      path: '/player'
-      fullPath: '/app/player'
-      preLoaderRoute: typeof AuthenticatedAppPlayerRouteImport
-      parentRoute: typeof AuthenticatedAppRoute
-    }
-    '/_authenticated/app/performance': {
-      id: '/_authenticated/app/performance'
-      path: '/performance'
-      fullPath: '/app/performance'
-      preLoaderRoute: typeof AuthenticatedAppPerformanceRouteImport
-      parentRoute: typeof AuthenticatedAppRoute
-    }
-    '/_authenticated/app/pagina': {
-      id: '/_authenticated/app/pagina'
-      path: '/pagina'
-      fullPath: '/app/pagina'
-      preLoaderRoute: typeof AuthenticatedAppPaginaRouteImport
-      parentRoute: typeof AuthenticatedAppRoute
-    }
-    '/_authenticated/app/detector': {
-      id: '/_authenticated/app/detector'
-      path: '/detector'
-      fullPath: '/app/detector'
-      preLoaderRoute: typeof AuthenticatedAppDetectorRouteImport
-      parentRoute: typeof AuthenticatedAppRoute
-    }
-    '/_authenticated/app/api-integrations': {
-      id: '/_authenticated/app/api-integrations'
-      path: '/api-integrations'
-      fullPath: '/app/api-integrations'
-      preLoaderRoute: typeof AuthenticatedAppApiIntegrationsRouteImport
-      parentRoute: typeof AuthenticatedAppRoute
-    }
-    '/_authenticated/app/alerts': {
-      id: '/_authenticated/app/alerts'
-      path: '/alerts'
-      fullPath: '/app/alerts'
-      preLoaderRoute: typeof AuthenticatedAppAlertsRouteImport
-      parentRoute: typeof AuthenticatedAppRoute
-    }
-    '/_authenticated/app/ajuda': {
-      id: '/_authenticated/app/ajuda'
-      path: '/ajuda'
-      fullPath: '/app/ajuda'
-      preLoaderRoute: typeof AuthenticatedAppAjudaRouteImport
-      parentRoute: typeof AuthenticatedAppRoute
-    }
-    '/_authenticated/app/ai-integration': {
-      id: '/_authenticated/app/ai-integration'
-      path: '/ai-integration'
-      fullPath: '/app/ai-integration'
-      preLoaderRoute: typeof AuthenticatedAppAiIntegrationRouteImport
-      parentRoute: typeof AuthenticatedAppRoute
-    }
-    '/_authenticated/app/admin': {
-      id: '/_authenticated/app/admin'
-      path: '/admin'
-      fullPath: '/app/admin'
-      preLoaderRoute: typeof AuthenticatedAppAdminRouteImport
-      parentRoute: typeof AuthenticatedAppRoute
-    }
-    '/_authenticated/app/achievements': {
-      id: '/_authenticated/app/achievements'
-      path: '/achievements'
-      fullPath: '/app/achievements'
-      preLoaderRoute: typeof AuthenticatedAppAchievementsRouteImport
-      parentRoute: typeof AuthenticatedAppRoute
-    }
-    '/.mcp/invoke-tool/$tool': {
-      id: '/.mcp/invoke-tool/$tool'
-      path: '/.mcp/invoke-tool/$tool'
-      fullPath: '/.mcp/invoke-tool/$tool'
-      preLoaderRoute: typeof Char91DotmcpChar93InvokeToolToolRouteImport
+    '/status/$slug': {
+      id: '/status/$slug'
+      path: '/status/$slug'
+      fullPath: '/status/$slug'
+      preLoaderRoute: typeof StatusSlugRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/.lovable/oauth/consent': {
@@ -1445,18 +1284,186 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DotlovableOauthConsentRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/_authenticated/app/servers/': {
-      id: '/_authenticated/app/servers/'
-      path: '/servers'
-      fullPath: '/app/servers/'
-      preLoaderRoute: typeof AuthenticatedAppServersIndexRouteImport
+    '/.mcp/invoke-tool/$tool': {
+      id: '/.mcp/invoke-tool/$tool'
+      path: '/.mcp/invoke-tool/$tool'
+      fullPath: '/.mcp/invoke-tool/$tool'
+      preLoaderRoute: typeof Char91DotmcpChar93InvokeToolToolRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/_authenticated/app/': {
+      id: '/_authenticated/app/'
+      path: '/'
+      fullPath: '/app/'
+      preLoaderRoute: typeof AuthenticatedAppIndexRouteImport
       parentRoute: typeof AuthenticatedAppRoute
     }
-    '/_authenticated/app/inteligencia/': {
-      id: '/_authenticated/app/inteligencia/'
-      path: '/inteligencia'
-      fullPath: '/app/inteligencia/'
-      preLoaderRoute: typeof AuthenticatedAppInteligenciaIndexRouteImport
+    '/_authenticated/app/achievements': {
+      id: '/_authenticated/app/achievements'
+      path: '/achievements'
+      fullPath: '/app/achievements'
+      preLoaderRoute: typeof AuthenticatedAppAchievementsRouteImport
+      parentRoute: typeof AuthenticatedAppRoute
+    }
+    '/_authenticated/app/admin': {
+      id: '/_authenticated/app/admin'
+      path: '/admin'
+      fullPath: '/app/admin'
+      preLoaderRoute: typeof AuthenticatedAppAdminRouteImport
+      parentRoute: typeof AuthenticatedAppRoute
+    }
+    '/_authenticated/app/ai-integration': {
+      id: '/_authenticated/app/ai-integration'
+      path: '/ai-integration'
+      fullPath: '/app/ai-integration'
+      preLoaderRoute: typeof AuthenticatedAppAiIntegrationRouteImport
+      parentRoute: typeof AuthenticatedAppRoute
+    }
+    '/_authenticated/app/ajuda': {
+      id: '/_authenticated/app/ajuda'
+      path: '/ajuda'
+      fullPath: '/app/ajuda'
+      preLoaderRoute: typeof AuthenticatedAppAjudaRouteImport
+      parentRoute: typeof AuthenticatedAppRoute
+    }
+    '/_authenticated/app/alerts': {
+      id: '/_authenticated/app/alerts'
+      path: '/alerts'
+      fullPath: '/app/alerts'
+      preLoaderRoute: typeof AuthenticatedAppAlertsRouteImport
+      parentRoute: typeof AuthenticatedAppRoute
+    }
+    '/_authenticated/app/api-integrations': {
+      id: '/_authenticated/app/api-integrations'
+      path: '/api-integrations'
+      fullPath: '/app/api-integrations'
+      preLoaderRoute: typeof AuthenticatedAppApiIntegrationsRouteImport
+      parentRoute: typeof AuthenticatedAppRoute
+    }
+    '/_authenticated/app/detector': {
+      id: '/_authenticated/app/detector'
+      path: '/detector'
+      fullPath: '/app/detector'
+      preLoaderRoute: typeof AuthenticatedAppDetectorRouteImport
+      parentRoute: typeof AuthenticatedAppRoute
+    }
+    '/_authenticated/app/pagina': {
+      id: '/_authenticated/app/pagina'
+      path: '/pagina'
+      fullPath: '/app/pagina'
+      preLoaderRoute: typeof AuthenticatedAppPaginaRouteImport
+      parentRoute: typeof AuthenticatedAppRoute
+    }
+    '/_authenticated/app/performance': {
+      id: '/_authenticated/app/performance'
+      path: '/performance'
+      fullPath: '/app/performance'
+      preLoaderRoute: typeof AuthenticatedAppPerformanceRouteImport
+      parentRoute: typeof AuthenticatedAppRoute
+    }
+    '/_authenticated/app/player': {
+      id: '/_authenticated/app/player'
+      path: '/player'
+      fullPath: '/app/player'
+      preLoaderRoute: typeof AuthenticatedAppPlayerRouteImport
+      parentRoute: typeof AuthenticatedAppRoute
+    }
+    '/_authenticated/app/radar': {
+      id: '/_authenticated/app/radar'
+      path: '/radar'
+      fullPath: '/app/radar'
+      preLoaderRoute: typeof AuthenticatedAppRadarRouteImport
+      parentRoute: typeof AuthenticatedAppRoute
+    }
+    '/_authenticated/app/ranking': {
+      id: '/_authenticated/app/ranking'
+      path: '/ranking'
+      fullPath: '/app/ranking'
+      preLoaderRoute: typeof AuthenticatedAppRankingRouteImport
+      parentRoute: typeof AuthenticatedAppRoute
+    }
+    '/_authenticated/app/reseller': {
+      id: '/_authenticated/app/reseller'
+      path: '/reseller'
+      fullPath: '/app/reseller'
+      preLoaderRoute: typeof AuthenticatedAppResellerRouteImport
+      parentRoute: typeof AuthenticatedAppRoute
+    }
+    '/_authenticated/app/store': {
+      id: '/_authenticated/app/store'
+      path: '/store'
+      fullPath: '/app/store'
+      preLoaderRoute: typeof AuthenticatedAppStoreRouteImport
+      parentRoute: typeof AuthenticatedAppRoute
+    }
+    '/_authenticated/app/subscription': {
+      id: '/_authenticated/app/subscription'
+      path: '/subscription'
+      fullPath: '/app/subscription'
+      preLoaderRoute: typeof AuthenticatedAppSubscriptionRouteImport
+      parentRoute: typeof AuthenticatedAppRoute
+    }
+    '/api/public/account-availability': {
+      id: '/api/public/account-availability'
+      path: '/api/public/account-availability'
+      fullPath: '/api/public/account-availability'
+      preLoaderRoute: typeof ApiPublicAccountAvailabilityRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/health': {
+      id: '/api/public/health'
+      path: '/api/public/health'
+      fullPath: '/api/public/health'
+      preLoaderRoute: typeof ApiPublicHealthRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/login': {
+      id: '/api/public/login'
+      path: '/api/public/login'
+      fullPath: '/api/public/login'
+      preLoaderRoute: typeof ApiPublicLoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/radar': {
+      id: '/api/public/radar'
+      path: '/api/public/radar'
+      fullPath: '/api/public/radar'
+      preLoaderRoute: typeof ApiPublicRadarRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/signup': {
+      id: '/api/public/signup'
+      path: '/api/public/signup'
+      fullPath: '/api/public/signup'
+      preLoaderRoute: typeof ApiPublicSignupRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/v1/$': {
+      id: '/api/v1/$'
+      path: '/$'
+      fullPath: '/api/v1/$'
+      preLoaderRoute: typeof ApiV1SplatRouteImport
+      parentRoute: typeof ApiV1Route
+    }
+    '/_authenticated/app/admin/android-play': {
+      id: '/_authenticated/app/admin/android-play'
+      path: '/android-play'
+      fullPath: '/app/admin/android-play'
+      preLoaderRoute: typeof AuthenticatedAppAdminAndroidPlayRouteImport
+      parentRoute: typeof AuthenticatedAppAdminRoute
+    }
+    '/_authenticated/app/admin/stream-play-versions': {
+      id: '/_authenticated/app/admin/stream-play-versions'
+      path: '/stream-play-versions'
+      fullPath: '/app/admin/stream-play-versions'
+      preLoaderRoute: typeof AuthenticatedAppAdminStreamPlayVersionsRouteImport
+      parentRoute: typeof AuthenticatedAppAdminRoute
+    }
+    '/_authenticated/app/admin_/core-logs': {
+      id: '/_authenticated/app/admin_/core-logs'
+      path: '/admin/core-logs'
+      fullPath: '/app/admin/core-logs'
+      preLoaderRoute: typeof AuthenticatedAppAdminCoreLogsRouteImport
       parentRoute: typeof AuthenticatedAppRoute
     }
     '/_authenticated/app/diagnostico/': {
@@ -1466,165 +1473,18 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAppDiagnosticoIndexRouteImport
       parentRoute: typeof AuthenticatedAppRoute
     }
-    '/api/public/webhooks/mercadopago': {
-      id: '/api/public/webhooks/mercadopago'
-      path: '/api/public/webhooks/mercadopago'
-      fullPath: '/api/public/webhooks/mercadopago'
-      preLoaderRoute: typeof ApiPublicWebhooksMercadopagoRouteImport
-      parentRoute: typeof rootRouteImport
+    '/_authenticated/app/inteligencia/': {
+      id: '/_authenticated/app/inteligencia/'
+      path: '/inteligencia'
+      fullPath: '/app/inteligencia/'
+      preLoaderRoute: typeof AuthenticatedAppInteligenciaIndexRouteImport
+      parentRoute: typeof AuthenticatedAppRoute
     }
-    '/api/public/tmdb/catalog': {
-      id: '/api/public/tmdb/catalog'
-      path: '/api/public/tmdb/catalog'
-      fullPath: '/api/public/tmdb/catalog'
-      preLoaderRoute: typeof ApiPublicTmdbCatalogRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/public/telegram/webhook': {
-      id: '/api/public/telegram/webhook'
-      path: '/api/public/telegram/webhook'
-      fullPath: '/api/public/telegram/webhook'
-      preLoaderRoute: typeof ApiPublicTelegramWebhookRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/public/regions/targets': {
-      id: '/api/public/regions/targets'
-      path: '/api/public/regions/targets'
-      fullPath: '/api/public/regions/targets'
-      preLoaderRoute: typeof ApiPublicRegionsTargetsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/public/regions/report': {
-      id: '/api/public/regions/report'
-      path: '/api/public/regions/report'
-      fullPath: '/api/public/regions/report'
-      preLoaderRoute: typeof ApiPublicRegionsReportRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/public/cron/radar': {
-      id: '/api/public/cron/radar'
-      path: '/api/public/cron/radar'
-      fullPath: '/api/public/cron/radar'
-      preLoaderRoute: typeof ApiPublicCronRadarRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/public/cron/perf': {
-      id: '/api/public/cron/perf'
-      path: '/api/public/cron/perf'
-      fullPath: '/api/public/cron/perf'
-      preLoaderRoute: typeof ApiPublicCronPerfRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/public/cron/notifications': {
-      id: '/api/public/cron/notifications'
-      path: '/api/public/cron/notifications'
-      fullPath: '/api/public/cron/notifications'
-      preLoaderRoute: typeof ApiPublicCronNotificationsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/public/cron/iptv-notifications': {
-      id: '/api/public/cron/iptv-notifications'
-      path: '/api/public/cron/iptv-notifications'
-      fullPath: '/api/public/cron/iptv-notifications'
-      preLoaderRoute: typeof ApiPublicCronIptvNotificationsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/public/cron/digest': {
-      id: '/api/public/cron/digest'
-      path: '/api/public/cron/digest'
-      fullPath: '/api/public/cron/digest'
-      preLoaderRoute: typeof ApiPublicCronDigestRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/public/cron/check': {
-      id: '/api/public/cron/check'
-      path: '/api/public/cron/check'
-      fullPath: '/api/public/cron/check'
-      preLoaderRoute: typeof ApiPublicCronCheckRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/public/cron/api-webhooks': {
-      id: '/api/public/cron/api-webhooks'
-      path: '/api/public/cron/api-webhooks'
-      fullPath: '/api/public/cron/api-webhooks'
-      preLoaderRoute: typeof ApiPublicCronApiWebhooksRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/public/core/task': {
-      id: '/api/public/core/task'
-      path: '/api/public/core/task'
-      fullPath: '/api/public/core/task'
-      preLoaderRoute: typeof ApiPublicCoreTaskRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/public/core/stream': {
-      id: '/api/public/core/stream'
-      path: '/api/public/core/stream'
-      fullPath: '/api/public/core/stream'
-      preLoaderRoute: typeof ApiPublicCoreStreamRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/public/core/report': {
-      id: '/api/public/core/report'
-      path: '/api/public/core/report'
-      fullPath: '/api/public/core/report'
-      preLoaderRoute: typeof ApiPublicCoreReportRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/public/core/live-diag': {
-      id: '/api/public/core/live-diag'
-      path: '/api/public/core/live-diag'
-      fullPath: '/api/public/core/live-diag'
-      preLoaderRoute: typeof ApiPublicCoreLiveDiagRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/public/android/version': {
-      id: '/api/public/android/version'
-      path: '/api/public/android/version'
-      fullPath: '/api/public/android/version'
-      preLoaderRoute: typeof ApiPublicAndroidVersionRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/public/android/status': {
-      id: '/api/public/android/status'
-      path: '/api/public/android/status'
-      fullPath: '/api/public/android/status'
-      preLoaderRoute: typeof ApiPublicAndroidStatusRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/public/android/refresh': {
-      id: '/api/public/android/refresh'
-      path: '/api/public/android/refresh'
-      fullPath: '/api/public/android/refresh'
-      preLoaderRoute: typeof ApiPublicAndroidRefreshRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/public/android/login': {
-      id: '/api/public/android/login'
-      path: '/api/public/android/login'
-      fullPath: '/api/public/android/login'
-      preLoaderRoute: typeof ApiPublicAndroidLoginRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/public/android/config': {
-      id: '/api/public/android/config'
-      path: '/api/public/android/config'
-      fullPath: '/api/public/android/config'
-      preLoaderRoute: typeof ApiPublicAndroidConfigRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/public/android/associate': {
-      id: '/api/public/android/associate'
-      path: '/api/public/android/associate'
-      fullPath: '/api/public/android/associate'
-      preLoaderRoute: typeof ApiPublicAndroidAssociateRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/_authenticated/app/servers/new': {
-      id: '/_authenticated/app/servers/new'
-      path: '/servers/new'
-      fullPath: '/app/servers/new'
-      preLoaderRoute: typeof AuthenticatedAppServersNewRouteImport
+    '/_authenticated/app/servers/': {
+      id: '/_authenticated/app/servers/'
+      path: '/servers'
+      fullPath: '/app/servers/'
+      preLoaderRoute: typeof AuthenticatedAppServersIndexRouteImport
       parentRoute: typeof AuthenticatedAppRoute
     }
     '/_authenticated/app/servers/$id': {
@@ -1634,26 +1494,166 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAppServersIdRouteImport
       parentRoute: typeof AuthenticatedAppRoute
     }
-    '/_authenticated/app/admin_/core-logs': {
-      id: '/_authenticated/app/admin_/core-logs'
-      path: '/admin/core-logs'
-      fullPath: '/app/admin/core-logs'
-      preLoaderRoute: typeof AuthenticatedAppAdminCoreLogsRouteImport
+    '/_authenticated/app/servers/new': {
+      id: '/_authenticated/app/servers/new'
+      path: '/servers/new'
+      fullPath: '/app/servers/new'
+      preLoaderRoute: typeof AuthenticatedAppServersNewRouteImport
       parentRoute: typeof AuthenticatedAppRoute
     }
-    '/_authenticated/app/admin/stream-play-versions': {
-      id: '/_authenticated/app/admin/stream-play-versions'
-      path: '/stream-play-versions'
-      fullPath: '/app/admin/stream-play-versions'
-      preLoaderRoute: typeof AuthenticatedAppAdminStreamPlayVersionsRouteImport
-      parentRoute: typeof AuthenticatedAppAdminRoute
+    '/api/public/android/associate': {
+      id: '/api/public/android/associate'
+      path: '/api/public/android/associate'
+      fullPath: '/api/public/android/associate'
+      preLoaderRoute: typeof ApiPublicAndroidAssociateRouteImport
+      parentRoute: typeof rootRouteImport
     }
-    '/_authenticated/app/admin/android-play': {
-      id: '/_authenticated/app/admin/android-play'
-      path: '/android-play'
-      fullPath: '/app/admin/android-play'
-      preLoaderRoute: typeof AuthenticatedAppAdminAndroidPlayRouteImport
-      parentRoute: typeof AuthenticatedAppAdminRoute
+    '/api/public/android/config': {
+      id: '/api/public/android/config'
+      path: '/api/public/android/config'
+      fullPath: '/api/public/android/config'
+      preLoaderRoute: typeof ApiPublicAndroidConfigRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/android/login': {
+      id: '/api/public/android/login'
+      path: '/api/public/android/login'
+      fullPath: '/api/public/android/login'
+      preLoaderRoute: typeof ApiPublicAndroidLoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/android/refresh': {
+      id: '/api/public/android/refresh'
+      path: '/api/public/android/refresh'
+      fullPath: '/api/public/android/refresh'
+      preLoaderRoute: typeof ApiPublicAndroidRefreshRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/android/status': {
+      id: '/api/public/android/status'
+      path: '/api/public/android/status'
+      fullPath: '/api/public/android/status'
+      preLoaderRoute: typeof ApiPublicAndroidStatusRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/android/version': {
+      id: '/api/public/android/version'
+      path: '/api/public/android/version'
+      fullPath: '/api/public/android/version'
+      preLoaderRoute: typeof ApiPublicAndroidVersionRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/core/live-diag': {
+      id: '/api/public/core/live-diag'
+      path: '/api/public/core/live-diag'
+      fullPath: '/api/public/core/live-diag'
+      preLoaderRoute: typeof ApiPublicCoreLiveDiagRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/core/report': {
+      id: '/api/public/core/report'
+      path: '/api/public/core/report'
+      fullPath: '/api/public/core/report'
+      preLoaderRoute: typeof ApiPublicCoreReportRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/core/stream': {
+      id: '/api/public/core/stream'
+      path: '/api/public/core/stream'
+      fullPath: '/api/public/core/stream'
+      preLoaderRoute: typeof ApiPublicCoreStreamRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/core/task': {
+      id: '/api/public/core/task'
+      path: '/api/public/core/task'
+      fullPath: '/api/public/core/task'
+      preLoaderRoute: typeof ApiPublicCoreTaskRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/cron/api-webhooks': {
+      id: '/api/public/cron/api-webhooks'
+      path: '/api/public/cron/api-webhooks'
+      fullPath: '/api/public/cron/api-webhooks'
+      preLoaderRoute: typeof ApiPublicCronApiWebhooksRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/cron/check': {
+      id: '/api/public/cron/check'
+      path: '/api/public/cron/check'
+      fullPath: '/api/public/cron/check'
+      preLoaderRoute: typeof ApiPublicCronCheckRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/cron/digest': {
+      id: '/api/public/cron/digest'
+      path: '/api/public/cron/digest'
+      fullPath: '/api/public/cron/digest'
+      preLoaderRoute: typeof ApiPublicCronDigestRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/cron/iptv-notifications': {
+      id: '/api/public/cron/iptv-notifications'
+      path: '/api/public/cron/iptv-notifications'
+      fullPath: '/api/public/cron/iptv-notifications'
+      preLoaderRoute: typeof ApiPublicCronIptvNotificationsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/cron/notifications': {
+      id: '/api/public/cron/notifications'
+      path: '/api/public/cron/notifications'
+      fullPath: '/api/public/cron/notifications'
+      preLoaderRoute: typeof ApiPublicCronNotificationsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/cron/perf': {
+      id: '/api/public/cron/perf'
+      path: '/api/public/cron/perf'
+      fullPath: '/api/public/cron/perf'
+      preLoaderRoute: typeof ApiPublicCronPerfRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/cron/radar': {
+      id: '/api/public/cron/radar'
+      path: '/api/public/cron/radar'
+      fullPath: '/api/public/cron/radar'
+      preLoaderRoute: typeof ApiPublicCronRadarRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/regions/report': {
+      id: '/api/public/regions/report'
+      path: '/api/public/regions/report'
+      fullPath: '/api/public/regions/report'
+      preLoaderRoute: typeof ApiPublicRegionsReportRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/regions/targets': {
+      id: '/api/public/regions/targets'
+      path: '/api/public/regions/targets'
+      fullPath: '/api/public/regions/targets'
+      preLoaderRoute: typeof ApiPublicRegionsTargetsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/telegram/webhook': {
+      id: '/api/public/telegram/webhook'
+      path: '/api/public/telegram/webhook'
+      fullPath: '/api/public/telegram/webhook'
+      preLoaderRoute: typeof ApiPublicTelegramWebhookRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/tmdb/catalog': {
+      id: '/api/public/tmdb/catalog'
+      path: '/api/public/tmdb/catalog'
+      fullPath: '/api/public/tmdb/catalog'
+      preLoaderRoute: typeof ApiPublicTmdbCatalogRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/webhooks/mercadopago': {
+      id: '/api/public/webhooks/mercadopago'
+      path: '/api/public/webhooks/mercadopago'
+      fullPath: '/api/public/webhooks/mercadopago'
+      preLoaderRoute: typeof ApiPublicWebhooksMercadopagoRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/_authenticated/app/inteligencia/$media/$id': {
       id: '/_authenticated/app/inteligencia/$media/$id'
