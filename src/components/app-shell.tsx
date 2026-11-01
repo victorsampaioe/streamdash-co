@@ -26,13 +26,13 @@ const ALWAYS_OPEN_PATHS = [
 
 export function AppShell({ children }: { children: ReactNode }) {
   return (
-    <div className="min-h-screen flex bg-background">
+    <div className="min-h-screen flex bg-background text-foreground">
       <Sidebar />
       <div className="flex-1 flex flex-col min-w-0">
         <Topbar />
         <SubscriptionBanner />
         <TelegramBanner />
-        <main id="main-content" className="flex-1 p-4 sm:p-6 md:p-8 max-w-[1600px] w-full mx-auto">{children}</main>
+        <main id="main-content" className="flex-1 p-4 sm:p-6 lg:p-8 max-w-[1680px] w-full mx-auto">{children}</main>
       </div>
       
     </div>
@@ -158,8 +158,8 @@ function NavList({ onNavigate }: { onNavigate?: () => void }) {
             to={it.to}
             onClick={onNavigate}
             className={cn(
-              "flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors",
-              active ? "bg-sidebar-accent text-sidebar-accent-foreground" : "hover:bg-sidebar-accent/50"
+              "group flex items-center gap-3 rounded-xl px-3 py-2.5 text-[13px] font-medium transition-all duration-200 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary",
+              active ? "bg-primary/12 text-primary shadow-sm ring-1 ring-primary/15" : "text-sidebar-foreground/75 hover:bg-sidebar-accent/65 hover:text-sidebar-foreground"
             )}
           >
             <it.icon className="h-4 w-4" />
@@ -173,8 +173,8 @@ function NavList({ onNavigate }: { onNavigate?: () => void }) {
 
 function Sidebar() {
   return (
-    <aside className="hidden md:flex w-60 flex-col border-r border-border/60 bg-sidebar text-sidebar-foreground">
-      <div className="p-5 flex items-center gap-2 border-b border-sidebar-border">
+    <aside className="hidden md:flex w-64 shrink-0 flex-col border-r border-sidebar-border bg-sidebar/95 text-sidebar-foreground shadow-xl shadow-black/5">
+      <div className="p-6 flex items-center gap-3 border-b border-sidebar-border">
         <Activity className="h-5 w-5 text-primary" />
         <span className="font-bold tracking-tight">stream<span className="text-primary">monitor</span></span>
       </div>
@@ -233,7 +233,7 @@ function MobileNav() {
 function Topbar() {
   const { theme, toggle } = useTheme();
   return (
-    <header className="h-14 border-b border-border/60 flex items-center gap-2 px-3 md:px-6 bg-background/70 backdrop-blur sticky top-0 z-30">
+    <header className="h-16 border-b border-border/60 flex items-center gap-2 px-3 md:px-6 bg-background/70 backdrop-blur sticky top-0 z-30">
       <MobileNav />
       <div className="flex items-center gap-2 md:hidden min-w-0">
         <Activity className="h-5 w-5 text-primary shrink-0" />
