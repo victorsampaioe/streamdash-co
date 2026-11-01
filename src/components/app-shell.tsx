@@ -149,7 +149,7 @@ function NavList({ onNavigate }: { onNavigate?: () => void }) {
   const pathname = useRouterState({ select: (r) => r.location.pathname });
   const items = useNavItems();
   return (
-    <nav className="p-3 space-y-1 flex-1">
+    <nav className="px-3 py-5 space-y-1 flex-1">
       {items.map((it) => {
         const active = (it as any).exact ? pathname === it.to : pathname.startsWith(it.to);
         return (
@@ -158,8 +158,8 @@ function NavList({ onNavigate }: { onNavigate?: () => void }) {
             to={it.to}
             onClick={onNavigate}
             className={cn(
-              "group flex items-center gap-3 rounded-xl px-3 py-2.5 text-[13px] font-medium transition-all duration-200 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary",
-              active ? "bg-primary/12 text-primary shadow-sm ring-1 ring-primary/15" : "text-sidebar-foreground/75 hover:bg-sidebar-accent/65 hover:text-sidebar-foreground"
+              "group relative flex items-center gap-3 rounded-lg px-3 py-2.5 text-[13px] font-medium transition-all duration-200 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary",
+              active ? "bg-primary/10 text-primary before:absolute before:left-0 before:top-2 before:bottom-2 before:w-[3px] before:rounded-full before:bg-primary" : "text-sidebar-foreground/65 hover:bg-sidebar-accent/65 hover:text-sidebar-foreground"
             )}
           >
             <it.icon className="h-4 w-4" />
@@ -173,10 +173,10 @@ function NavList({ onNavigate }: { onNavigate?: () => void }) {
 
 function Sidebar() {
   return (
-    <aside className="hidden md:flex w-64 shrink-0 flex-col border-r border-sidebar-border bg-sidebar/95 text-sidebar-foreground shadow-xl shadow-black/5">
+    <aside className="hidden md:flex w-64 shrink-0 flex-col border-r border-sidebar-border bg-sidebar text-sidebar-foreground">
       <div className="p-6 flex items-center gap-3 border-b border-sidebar-border">
-        <Activity className="h-5 w-5 text-primary" />
-        <span className="font-bold tracking-tight">stream<span className="text-primary">monitor</span></span>
+        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/15 ring-1 ring-primary/20"><Activity className="h-5 w-5 text-primary" /></div>
+        <div className="leading-tight"><div className="font-extrabold tracking-tight">stream<span className="text-primary">monitor</span></div><div className="text-[10px] uppercase tracking-[.2em] text-sidebar-foreground/45">Operations Center</div></div>
       </div>
       <div className="flex-1 overflow-y-auto custom-scrollbar">
         <NavList />
@@ -239,7 +239,8 @@ function Topbar() {
         <Activity className="h-5 w-5 text-primary shrink-0" />
         <span className="font-bold truncate">streammonitor</span>
       </div>
-      <div className="flex-1" />
+      <div className="hidden md:flex flex-1 items-center gap-2 text-xs font-medium text-muted-foreground"><span className="h-2 w-2 rounded-full bg-success" /> Centro de operações <span className="mx-2 text-border">/</span> Stream Monitor</div>
+      <div className="flex-1 md:hidden" />
       <div className="flex items-center gap-1 sm:gap-2">
         <Link to="/app/servers/new">
           <Button size="sm" className="px-2 sm:px-3">
