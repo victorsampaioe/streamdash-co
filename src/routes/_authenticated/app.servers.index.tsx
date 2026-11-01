@@ -47,7 +47,7 @@ function ServersList() {
         await supabase
           .from("servers")
           .select(
-            "id, name, description, category, current_status, last_latency_ms, last_checked_at, ssl_days_remaining, health_score, dns_health_score, dns_status, last_dns_check_at, is_public, public_slug, created_at, monitoring_paused, paused_reason",
+            "id, name, description, category, current_status, last_latency_ms, last_checked_at, ssl_days_remaining, health_score, dns_health_score, dns_status, dns_enabled, last_dns_check_at, is_public, public_slug, created_at, monitoring_paused, paused_reason",
           )
           .order("created_at", { ascending: false })
       ).data ?? [],
@@ -146,7 +146,9 @@ function ServersList() {
                   <div className="mt-2 flex flex-wrap items-center gap-2 text-[11px]">
                     <span className={s.dns_status === "offline" ? "text-red-400 font-semibold"
                       : s.dns_status === "unstable" ? "text-amber-400 font-semibold" : "text-primary"}>
-                      DNS: {s.dns_status === "offline" ? "Offline"
+                      DNS: {s.dns_enabled === false ? "Desativado"
+                        : s.last_dns_check_at && Date.now() - new Date(s.last_dns_check_at).getTime() > 3 * 60_000 ? "Atrasado"
+                        : s.dns_status === "offline" ? "Offline"
                         : s.dns_status === "unstable" ? "Instável"
                         : s.dns_status === "online" ? "Respondendo" : "Aguardando"}
                     </span>
