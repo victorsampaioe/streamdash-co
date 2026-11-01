@@ -470,9 +470,6 @@ export async function runDnsCheck(serverId: string): Promise<{ ok: boolean; scor
         alerts.push({ kind: "asn_changed", severity: "warning", title: "⚠ O IP mudou de ASN.", detail: `${prev.asn} → ${report.asn}` });
       }
     }
-    if (prev.status !== "down" && report.status === "down") {
-      alerts.push({ kind: "dns_down", severity: "critical", title: "⚠ O DNS deixou de responder.", detail: report.diagnosis[0] ?? null });
-    }
     if (prev.cloudflare_proxy && !report.cloudflare_proxy) {
       alerts.push({ kind: "cf_proxy_off", severity: "warning", title: "⚠ O Proxy Cloudflare foi desativado.", detail: "O domínio passou a expor o IP de origem." });
     }
@@ -517,10 +514,6 @@ export async function runDnsCheck(serverId: string): Promise<{ ok: boolean; scor
     diagnosis: report.diagnosis,
   });
 
-  if (alerts.length) {
-    await supabaseAdmin.from("dns_alerts").insert(alerts.map((a) => ({ ...a, server_id: serverId })));
-  }
-
   // ESTADO DO DNS — independente do estado do servidor.
   const { data: dnsState } = await supabaseAdmin
     .from("servers")
@@ -542,6 +535,26 @@ export async function runDnsCheck(serverId: string): Promise<{ ok: boolean; scor
   const prevStatus = dnsState?.dns_status ?? "unknown";
   const changed = prevStatus !== dnsStatus;
 
+  // Apenas falhas confirmadas (duas verificações) geram alerta crítico.
+  // A primeira falha é instabilidade, não queda definitiva.
+  if (changed && dnsStatus === "offline") {
+    alerts.push({ kind: "dns_down", severity: "critical",
+      title: "🚨 DNS offline confirmado",
+      detail: report.diagnosis[0] ?? "Falha consecutiva de resolução em múltiplos resolvedores." });
+  } else if (changed && prevStatus === "offline" && dnsStatus !== "offline") {
+    alerts.push({ kind: "dns_recovered", severity: "info",
+      title: "✅ DNS voltou a responder", detail: "Resolução confirmada novamente." });
+  } else if (changed && dnsStatus === "unstable") {
+    alerts.push({ kind: "dns_unstable", severity: "warning",
+      title: "⚠️ DNS instável — nova verificação necessária",
+      detail: report.diagnosis[0] ?? "Uma ou mais fontes não resolveram o domínio." });
+  }
+  if (alerts.length) {
+    const { error: alertsError } = await supabaseAdmin.from("dns_alerts")
+      .insert(alerts.map((a) => ({ ...a, server_id: serverId })));
+    if (alertsError) console.error("[DNS] Falha ao salvar alertas", serverId, alertsError);
+  }
+
   await supabaseAdmin
     .from("servers")
     .update({
@@ -556,17 +569,35 @@ export async function runDnsCheck(serverId: string): Promise<{ ok: boolean; scor
     } as any)
     .eq("id", serverId);
 
-  // Incidente/alerta exclusivo de DNS (não mistura com incidente de servidor).
-  if (changed) {
+  // DNS é independente do HTTP/IPTV. Não declare o SERVIDOR offline
+  // por falha isolada de resolução; notifique especificamente o DNS.
+  if (dnsStatus === "offline" || (changed && prevStatus === "offline")) {
     try {
       const { openOfflineIncident, closeOfflineIncident } = await import("./alert-gate.server");
+      const { processTelegramAlert } = await import("./telegram-alerts.server");
       if (dnsStatus === "offline") {
-        await openOfflineIncident(serverId, "DNS não resolve o domínio", undefined, "dns");
-      } else if (prevStatus === "offline") {
-        await closeOfflineIncident(serverId, "dns");
+        const gate = await openOfflineIncident(serverId,
+          "DNS não resolve após duas verificações consecutivas", undefined, "dns");
+        if (gate.incidentId && (gate.notify || gate.reason === "already_open")) {
+          await processTelegramAlert({
+            serverId, incidentId: gate.incidentId, kind: "dns",
+            event: "OFFLINE",
+            reason: "O domínio não resolveu em múltiplos provedores DNS após confirmação.",
+            regions: report.resolvers.filter((r) => !r.ok).map((r) => r.name),
+          });
+        }
+      } else {
+        const gate = await closeOfflineIncident(serverId, "dns");
+        if (gate.notify) {
+          await processTelegramAlert({
+            serverId, incidentId: gate.incidentId, kind: "dns",
+            event: "ONLINE", timeOffline: gate.downtimeLabel,
+            reason: "O DNS voltou a resolver.",
+          });
+        }
       }
-    } catch {
-      /* alerta é best-effort */
+    } catch (err) {
+      console.error("[DNS] Não foi possível registrar ou enviar aviso", serverId, err);
     }
   }
 
