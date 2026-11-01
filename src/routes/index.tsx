@@ -40,7 +40,7 @@ function Landing() {
   return (
     <div className="min-h-screen bg-background text-foreground">
       <main>
-      <header className="border-b border-border/60 backdrop-blur bg-background/70 sticky top-0 z-40">
+      <header className="border-b border-border/50 backdrop-blur-xl bg-background/85 sticky top-0 z-40">
         <div className="max-w-6xl mx-auto flex items-center justify-between px-4 sm:px-6 py-4 gap-2">
           <div className="flex items-center gap-2">
             <Activity className="h-5 w-5 text-primary" aria-hidden="true" />
@@ -64,8 +64,8 @@ function Landing() {
         </div>
       </header>
 
-      <section className="grid-bg relative">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 py-16 sm:py-24 md:py-32 text-center">
+      <section className="grid-bg relative isolate overflow-hidden before:pointer-events-none before:absolute before:inset-0 before:-z-10 before:bg-[radial-gradient(ellipse_at_top,oklch(0.58_0.13_215_/_0.13),transparent_65%)]">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 py-20 sm:py-28 md:py-36 text-center">
           <div className="inline-flex items-center gap-2 rounded-full border border-border/60 bg-card/50 px-3 py-1 text-xs text-muted-foreground mb-6 sm:mb-8">
             <span className="relative flex h-2 w-2">
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-success opacity-75" />
