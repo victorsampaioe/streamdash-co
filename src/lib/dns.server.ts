@@ -337,7 +337,12 @@ export async function analyzeDns(rawHost: string, recentChanges = 0): Promise<Dn
   const primary_ip = majority[0] ?? ipv4[0] ?? null;
   const cloudflare_proxy = ipv4.some((ip) => isCloudflareIp(ip));
 
-  const [geo, who] = await Promise.all([primary_ip ? geoIp(primary_ip) : Promise.resolve(null), rdap(host)]);
+  // Enriquecimento WHOIS/GeoIP é lento e sofre rate limit: cache em memória
+  // por processo, enquanto as resoluções DNS continuam sendo verificadas a cada ciclo.
+  const [geo, who] = await Promise.all([
+    primary_ip ? cachedGeoIp(primary_ip) : Promise.resolve(null),
+    cachedRdap(host),
+  ]);
 
   const base = {
     host,
@@ -371,6 +376,29 @@ export async function analyzeDns(rawHost: string, recentChanges = 0): Promise<Dn
   const { status, diagnosis } = diagnose(base);
   const { score } = scoreOf(base, recentChanges);
   return { ...base, status, diagnosis, health_score: score };
+}
+
+// Cache apenas para metadados complementares (nunca para o status DNS).
+// Assim nenhuma resposta em cache mascara uma queda real de resolução.
+const ENRICH_TTL_MS = 60 * 60_000;
+const geoCache = new Map<string, { at: number; data: Awaited<ReturnType<typeof geoIp>> }>();
+const rdapCache = new Map<string, { at: number; data: Awaited<ReturnType<typeof rdap>> }>();
+async function cachedGeoIp(ip: string) {
+  const cache = geoCache.get(ip);
+  if (cache && Date.now() - cache.at < ENRICH_TTL_MS) return cache.data;
+  const data = await geoIp(ip);
+  if (geoCache.size > 500) geoCache.clear();
+  geoCache.set(ip, { at: Date.now(), data });
+  return data;
+}
+async function cachedRdap(host: string) {
+  const apex = apexDomain(host);
+  const cache = rdapCache.get(apex);
+  if (cache && Date.now() - cache.at < ENRICH_TTL_MS) return cache.data;
+  const data = await rdap(host);
+  if (rdapCache.size > 500) rdapCache.clear();
+  rdapCache.set(apex, { at: Date.now(), data });
+  return data;
 }
 
 type PrevSnapshot = {
