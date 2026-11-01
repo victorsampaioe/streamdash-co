@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useSuspenseQuery } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { 
@@ -24,11 +24,15 @@ export const Route = createFileRoute("/_authenticated/app/radar")({
 });
 
 function RadarPage() {
-  const { data: snapshot } = useSuspenseQuery({
+  const { data: snapshot, isPending, isError, refetch, isFetching } = useQuery({
     queryKey: ["radar-snapshot"],
     queryFn: () => getRadarSnapshot(),
     refetchInterval: 60000,
+    retry: 2,
   });
+
+  if (isPending) return <div className="p-8 text-muted-foreground">Carregando informações do Radar Brasil...</div>;
+  if (isError || !snapshot) return <div className="space-y-4 p-6"><h2 className="text-2xl font-bold">Radar Brasil indisponível</h2><p className="text-muted-foreground">Não foi possível consultar os serviços agora. Tente novamente.</p><button type="button" onClick={() => refetch()} className="rounded-lg bg-primary px-4 py-2 text-primary-foreground">Tentar novamente</button></div>;
 
   const activeIncidents = snapshot.externalIncidents.filter(i => 
     i.status !== "operational" && i.status !== "unknown" && (i.active_incidents?.length ?? 0) > 0
@@ -40,6 +44,7 @@ function RadarPage() {
         <h2 className="text-3xl font-bold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-purple-400">
           Radar Brasil
         </h2>
+        <button type="button" disabled={isFetching} onClick={() => refetch()} className="w-fit rounded-lg border border-border bg-card px-3 py-2 text-xs font-semibold text-foreground disabled:opacity-50">{isFetching ? "Atualizando..." : "Atualizar radar"}</button>
         <p className="text-muted-foreground">
           Monitoramento profissional de incidentes em infraestrutura externa e serviços críticos.
         </p>
