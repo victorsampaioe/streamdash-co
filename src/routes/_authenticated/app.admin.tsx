@@ -287,7 +287,7 @@ function AdminPage() {
 
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 sm:space-y-8 [&_[data-slot=card]]:rounded-2xl [&_[data-slot=card]]:border-border/65 [&_[data-slot=card]]:shadow-sm">
       <div className="flex items-center gap-2">
         <ShieldCheck className="h-6 w-6 text-primary" />
         <div>
