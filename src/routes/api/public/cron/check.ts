@@ -154,6 +154,7 @@ async function guardedRun() {
 
   return {
     ...mainResult,
+    ok: !((mainResult as any)?.ok === false || ("errors" in dnsResult && dnsResult.errors > 0)),
     dnsChecked: "checked" in dnsResult ? dnsResult.checked : 0,
     dnsErrors: "errors" in dnsResult ? dnsResult.errors : 0,
     dnsSkipped: "skipped" in dnsResult ? dnsResult.skipped : false,
