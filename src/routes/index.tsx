@@ -139,17 +139,18 @@ function Landing() {
           <Feature icon={<Activity className="h-5 w-5" />} title="✅ Monitoramento IPTV real" desc="Monitoramento dedicado de painéis IPTV com Health Score exclusivo e verificação de fluxo." />
           <Feature icon={<Globe className="h-5 w-5" />} title="✅ Análise de conteúdo" desc="Acompanhe conteúdos recentes e status de servidores IPTV com integração TMDB." />
           <Feature icon={<LineChart className="h-5 w-5" />} title="✅ Sistema para revendedores" desc="Estrutura completa para gerenciar sub-revendas com sistema de créditos independente." />
-          <Feature icon={<PlayCircle className="h-5 w-5" />} title="🚀 Novo Módulo: Player Inteligente" desc="Painel para acompanhamento da disponibilidade, latência e desempenho dos serviços monitorados." />
+          <Feature icon={<PlayCircle className="h-5 w-5" />} title="Monitoramento e Diagnóstico" desc="Painel para acompanhamento da disponibilidade, latência e desempenho dos serviços monitorados." />
         </div>
       </section>
 
       <section className="max-w-6xl mx-auto px-4 sm:px-6 py-16 sm:py-24">
-        <h2 className="text-3xl font-bold text-center mb-12">Prova Social</h2>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-8 max-w-4xl mx-auto">
-          <Stat label="Servidores monitorados" value="1.240+" />
-          <Stat label="Checagens realizadas" value="4.5M+" />
-          <Stat label="Alertas enviados" value="850k+" />
-          <Stat label="Revendedores ativos" value="320+" />
+        <h2 className="text-3xl font-bold text-center mb-4">Mais controle para sua operação</h2>
+        <p className="mx-auto mb-12 max-w-2xl text-center text-muted-foreground">Recursos que ajudam revendedores a acompanhar seus serviços e investigar instabilidades.</p>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-6 max-w-5xl mx-auto">
+          <Stat label="Disponibilidade" value="DNS e HTTP" />
+          <Stat label="Alertas" value="Telegram" />
+          <Stat label="Histórico" value="Incidentes" />
+          <Stat label="Diagnóstico" value="IPTV" />
         </div>
       </section>
 
