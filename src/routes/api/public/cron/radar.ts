@@ -80,7 +80,7 @@ export const Route = createFileRoute("/api/public/cron/radar")({
         try {
           return Response.json(await guardedRun());
         } catch (e: any) {
-          return Response.json({ ok: false, error: e?.message ?? "unknown" }, { status: 200 });
+          return Response.json({ ok: false, error: e?.message ?? "unknown" }, { status: 503 });
         }
       },
       GET: async ({ request }) => {
