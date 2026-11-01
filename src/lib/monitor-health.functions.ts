@@ -103,27 +103,31 @@ export const prioritizeStaleServersNow = createServerFn({ method: "POST" })
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const cutoff = new Date(Date.now() - 15 * 60_000).toISOString();
     let prioritized = 0;
-    let page = 0;
+    let cursor = "";
     const batchSize = 200;
-    while (page < 25) {
-      const { data, error } = await supabaseAdmin.from("servers")
-        .select("id, last_checked_at")
+    let remainingMayExist = false;
+    // Keyset pagination ensures every stale server can be prioritized exactly
+    // once, without repeatedly scanning previously updated rows.
+    for (let page = 0; page < 25; page++) {
+      let query = supabaseAdmin.from("servers")
+        .select("id")
         .eq("monitoring_paused", false)
         .or(`last_checked_at.is.null,last_checked_at.lt.${cutoff}`)
-        .order("last_checked_at", { ascending: true, nullsFirst: true })
-        .range(0, batchSize - 1);
+        .order("id", { ascending: true })
+        .limit(batchSize);
+      if (cursor) query = query.gt("id", cursor);
+      const { data, error } = await query;
       if (error) throw new Error(error.message);
       if (!data?.length) break;
       const ids = data.map(s => s.id);
       const { error: updateError } = await supabaseAdmin.from("servers")
-        .update({ next_check_at: null, check_priority: 1 } as any).in("id", ids);
+        .update({ next_check_at: null, check_priority: 1 } as any)
+        .in("id", ids);
       if (updateError) throw new Error(updateError.message);
       prioritized += ids.length;
-      // The same stale rows remain stale until checked; avoid processing them
-      // repeatedly within this invocation.
+      cursor = ids[ids.length - 1]!;
       if (data.length < batchSize) break;
-      page++;
-      break;
+      if (page === 24) remainingMayExist = true;
     }
-    return { prioritized, remainingMayExist: prioritized >= batchSize };
+    return { prioritized, remainingMayExist };
   });
