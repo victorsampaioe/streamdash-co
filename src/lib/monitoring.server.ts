@@ -371,7 +371,7 @@ async function performCheck(server: ServerRow) {
     .limit(1)
     .maybeSingle();
 
-  await supabaseAdmin.from("servers").update({
+  const { error: stateError } = await supabaseAdmin.from("servers").update({
     current_status: displayStatus,
     last_checked_at: nowIso,
     last_latency_ms: final.latency,
@@ -390,6 +390,7 @@ async function performCheck(server: ServerRow) {
       overdue: false,
     }),
   } as any).eq("id", server.id);
+  if (stateError) throw new Error(`Falha ao persistir status do servidor: ${stateError.message}`);
 
   const reason = final.error ?? first.error ?? `HTTP ${final.httpStatus ?? "-"}`;
 
