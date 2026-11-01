@@ -549,7 +549,12 @@ function AdminPage() {
                             <PlanBadge plan={u.plan} />
                           )}
                         </td>
-                        <td className="p-3"><StatusBadge status={u.status} expired={expired} /></td>
+                        <td className="p-3">
+                          <StatusBadge status={u.status} expired={expired} />
+                          {!u.status && !u.is_admin && !(u as any).is_reseller && (
+                            <div className="mt-2"><VerifyCustomerPixButton userId={u.id} /></div>
+                          )}
+                        </td>
                         <td className="p-3">
                           {(u as any).is_reseller ? (
                             <span className="text-xs text-muted-foreground">—</span>
