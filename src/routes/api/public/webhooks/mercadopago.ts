@@ -66,7 +66,8 @@ async function handle(request: Request) {
   const rawPaymentId = url.searchParams.get("data.id") || body?.data?.id ||
     body?.resource || url.searchParams.get("id");
   const rawValue = String(rawPaymentId ?? "").trim();
-  const idCandidate = rawValue.split("?")[0].split("/").filter(Boolean).at(-1) ?? "";
+  const idParts = rawValue.split("?")[0].split("/").filter(Boolean);
+  const idCandidate = idParts[idParts.length - 1] ?? "";
   const paymentId = idCandidate && [...idCandidate].every(ch => ch >= "0" && ch <= "9") ? idCandidate : null;
 
   if (type && String(type) !== "payment") {
