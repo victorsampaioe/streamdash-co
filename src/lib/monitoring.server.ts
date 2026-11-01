@@ -62,14 +62,20 @@ export async function runDueChecks() {
     if (s.next_check_at) return now >= new Date(s.next_check_at).getTime();
     return now - new Date(s.last_checked_at).getTime() >= s.interval_seconds * 1000;
   });
-  // PRIORIDADE: 1 (offline/DNS off/atrasado) → 2 (instável) → 3 (rotina).
+  // Prioridade máxima aos que estão MAIS ATRASADOS. Uma fila fixa de
+  // servidores offline não pode impedir que os demais sejam verificados.
+  // Ordenar por atraso relativo ao intervalo faz a fila avançar de maneira justa.
+  const lateness = (s: any) => {
+    const next = s.next_check_at ? new Date(s.next_check_at).getTime()
+      : s.last_checked_at
+        ? new Date(s.last_checked_at).getTime() + Math.max(60, s.interval_seconds || 300) * 1000
+        : 0;
+    return now - (Number.isFinite(next) ? next : 0);
+  };
   due.sort((a: any, b: any) => {
-    const pa = a.check_priority ?? 3;
-    const pb = b.check_priority ?? 3;
-    if (pa !== pb) return pa - pb;
-    const ta = a.last_checked_at ? new Date(a.last_checked_at).getTime() : 0;
-    const tb = b.last_checked_at ? new Date(b.last_checked_at).getTime() : 0;
-    return ta - tb;
+    const delta = lateness(b) - lateness(a);
+    if (delta !== 0) return delta;
+    return (a.check_priority ?? 3) - (b.check_priority ?? 3);
   });
   // Fila com limite de concorrência + jitter: evita rajadas simultâneas que
   // provocam bloqueio de IP nos servidores monitorados e mantém o uso de
@@ -77,7 +83,7 @@ export async function runDueChecks() {
   const { runPool } = await import("./pool");
   // Limite o trabalho de cada requisição: um único ciclo não deve reter o cron
   // durante minutos quando vários destinos estiverem indisponíveis.
-  const batch = due.slice(0, 10);
+  const batch = due.slice(0, 20);
   const results = await runPool(batch as any[], (s: any) => performCheck(s as ServerRow));
   return {
     checked: results.length,
@@ -85,6 +91,8 @@ export async function runDueChecks() {
     errors: results.filter((r) => r.status === "rejected").length,
     pausedBySubscription: paused.length,
     queued: Math.max(0, due.length - results.length),
+    mostOverdueMinutes: due.length ? Math.max(0, Math.round(lateness(due[0]) / 60000)) : 0,
+    failedServerIds: results.flatMap((r, i) => r.status === "rejected" ? [batch[i]?.id] : []).filter(Boolean).slice(0, 10),
   };
 }
 
