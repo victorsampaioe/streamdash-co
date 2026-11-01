@@ -79,8 +79,8 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { name: "apple-mobile-web-app-capable", content: "yes" },
       { name: "apple-mobile-web-app-status-bar-style", content: "black-translucent" },
       { name: "theme-color", content: "#0A0A0A" },
-      { title: "Stream Monitor | Monitoramento IPTV, DNS e Servidores em Tempo Real" },
-      { name: "description", content: "Monitore servidores IPTV, DNS e infraestrutura 24 horas. Receba alertas inteligentes no Telegram e descubra problemas antes dos seus clientes." },
+      { title: "Stream Monitor | Monitoramento IPTV para Revendedores" },
+      { name: "description", content: "Plataforma de monitoramento IPTV para revendedores. Acompanhe servidores, DNS e latência e receba alertas pelo Telegram. Conheça o Stream Monitor." },
       { property: "og:site_name", content: "Stream Monitor" },
       { property: "og:title", content: "Stream Monitor | Monitoramento IPTV, DNS e Servidores em Tempo Real" },
       { property: "og:description", content: "Monitore servidores IPTV, DNS e infraestrutura 24 horas. Receba alertas inteligentes no Telegram e descubra problemas antes dos seus clientes." },
@@ -121,16 +121,19 @@ function RootShell({ children }: { children: ReactNode }) {
     },
     {
       "@context": "https://schema.org",
+      "@type": "WebSite",
+      "name": "Stream Monitor",
+      "url": "https://streammonitor.site",
+      "inLanguage": "pt-BR"
+    },
+    {
+      "@context": "https://schema.org",
       "@type": "SoftwareApplication",
       "name": "Stream Monitor",
       "operatingSystem": "Web",
       "applicationCategory": "InfrastructureMonitoring",
-      "description": "Monitore servidores IPTV, DNS e infraestrutura 24 horas com alertas inteligentes no Telegram.",
-      "offers": {
-        "@type": "Offer",
-        "price": "25.00",
-        "priceCurrency": "BRL"
-      }
+      "description": "Monitoramento de disponibilidade de servidores IPTV, DNS e infraestrutura com alertas pelo Telegram.",
+      "url": "https://streammonitor.site"
     }
   ];
 
