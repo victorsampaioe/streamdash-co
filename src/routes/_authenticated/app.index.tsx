@@ -37,12 +37,15 @@ function Dashboard() {
       const { data, error } = await supabase
         .from("servers")
         .select(
-          "id, name, description, category, current_status, last_latency_ms, last_checked_at, ssl_days_remaining, health_score, dns_health_score, is_public, public_slug, created_at, monitoring_paused",
+          "id, name, description, category, current_status, last_latency_ms, last_checked_at, ssl_days_remaining, health_score, dns_health_score, dns_status, last_dns_check_at, is_public, public_slug, created_at, monitoring_paused",
         )
         .order("created_at", { ascending: false });
       if (error) throw error;
       return data;
     },
+    staleTime: 5_000,
+    refetchInterval: 15_000,
+    refetchOnWindowFocus: true,
   });
 
   const serverIds = useMemo(() => servers.map((s: any) => s.id), [servers]);
@@ -343,6 +346,20 @@ function ServerCard({ server }: { server: any }) {
               <h3 className="font-semibold truncate">{server.name}</h3>
             </div>
             <div className={`text-xs ${healthTone(score)}`}>Saúde {score}% · {healthLabel(score)}</div>
+            <div className="mt-2 flex flex-wrap items-center gap-2 text-[11px]">
+              <span className={server.dns_status === "offline"
+                ? "rounded-md bg-red-500/15 px-2 py-1 font-semibold text-red-400"
+                : server.dns_status === "unstable"
+                  ? "rounded-md bg-amber-500/15 px-2 py-1 font-semibold text-amber-400"
+                  : "rounded-md bg-primary/10 px-2 py-1 font-semibold text-primary"}>
+                DNS: {server.dns_status === "offline" ? "OFFLINE"
+                  : server.dns_status === "unstable" ? "Instável"
+                  : server.dns_status === "online" ? "Respondendo" : "Aguardando"}
+              </span>
+              <span className="text-muted-foreground">
+                {server.last_dns_check_at ? `Verificado há ${timeAgo(server.last_dns_check_at)}` : "Sem checagem DNS"}
+              </span>
+            </div>
           </div>
           <ArrowRight className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors" />
         </div>
