@@ -417,15 +417,15 @@ async function performCheck(server: ServerRow) {
       }
       // O anti-flood do ADMIN nunca suprime o alerta do próprio revendedor.
       const { processTelegramAlert } = await import("./telegram-alerts.server");
-      await processTelegramAlert({
-        serverId: server.id,
-        incidentId: gate.incidentId,
-        event: "OFFLINE",
-        reason,
-        confirmNote: confirmDetails,
-        regions: ["🇧🇷 São Paulo (VPS)"],
-        suppressAdminCopy: gate.grouped,
-      });
+      try {
+        await processTelegramAlert({
+          serverId: server.id, incidentId: gate.incidentId,
+          event: "OFFLINE", reason, confirmNote: confirmDetails,
+          regions: ["🇧🇷 São Paulo (VPS)"], suppressAdminCopy: gate.grouped,
+        });
+      } catch (error) {
+        console.error("[monitor] Telegram offline delivery will be retried", error);
+      }
       await sendAlerts(server, "down", `🚨 ${server.name} está OFFLINE\n${reason}`, gate.incidentId);
     } else if (gate.incidentId && gate.reason === "already_open") {
       // Tenta novamente somente se a entrega anterior não foi confirmada.
@@ -452,12 +452,14 @@ async function performCheck(server: ServerRow) {
       } catch { /* ignore */ }
 
       const { processTelegramAlert } = await import("./telegram-alerts.server");
-      await processTelegramAlert({
-        serverId: server.id,
-        incidentId: gate.incidentId,
-        event: "ONLINE",
-        timeOffline: gate.downtimeLabel,
-      });
+      try {
+        await processTelegramAlert({
+          serverId: server.id, incidentId: gate.incidentId,
+          event: "ONLINE", timeOffline: gate.downtimeLabel,
+        });
+      } catch (error) {
+        console.error("[monitor] Telegram recovery notification failed", error);
+      }
 
       const timeStr = new Date().toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
       await sendAlerts(
