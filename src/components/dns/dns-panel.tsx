@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { supabase } from "@/integrations/supabase/client";
@@ -40,6 +40,7 @@ export function DnsPanel({ serverId }: { serverId: string }) {
   const qc = useQueryClient();
   const runNow = useServerFn(runDnsCheckNow);
   const ackAlert = useServerFn(acknowledgeDnsAlert);
+  const [checking, setChecking] = useState(false);
 
   const { data: dnsLive } = useQuery({
     queryKey: ["dns-live-status", serverId],
@@ -54,12 +55,18 @@ export function DnsPanel({ serverId }: { serverId: string }) {
     refetchOnWindowFocus: true,
   });
 
-  const { data: snapshots = [], isLoading } = useQuery({
+  const { data: snapshots = [], isLoading, isError: snapshotsError } = useQuery({
     queryKey: ["dns-snapshots", serverId],
-    queryFn: async () =>
-      (await supabase.from("dns_snapshots").select("*").eq("server_id", serverId)
-        .order("checked_at", { ascending: false }).limit(200)).data ?? [],
-    refetchInterval: 15_000,
+    queryFn: async () => {
+      const { data, error } = await supabase.from("dns_snapshots").select("*")
+        .eq("server_id", serverId)
+        .order("checked_at", { ascending: false }).limit(80);
+      if (error) throw error;
+      return data ?? [];
+    },
+    staleTime: 10_000,
+    refetchInterval: checking ? 5_000 : 30_000,
+    refetchOnWindowFocus: true,
   });
 
   const { data: history = [] } = useQuery({
@@ -91,14 +98,22 @@ export function DnsPanel({ serverId }: { serverId: string }) {
   );
 
   async function handleRun() {
+    if (checking) return;
+    setChecking(true);
     try {
       const r = await runNow({ data: { serverId } });
-      toast.success(`Análise concluída — Health Score ${r.score}%`);
-      qc.invalidateQueries({ queryKey: ["dns-snapshots", serverId] });
-      qc.invalidateQueries({ queryKey: ["dns-ip-history", serverId] });
-      qc.invalidateQueries({ queryKey: ["dns-alerts", serverId] });
+      toast.success(`DNS atualizado — Health Score ${r.score}%`);
+      // As consultas são atualizadas sem reiniciar toda a tela.
+      await Promise.all([
+        qc.invalidateQueries({ queryKey: ["dns-snapshots", serverId] }),
+        qc.invalidateQueries({ queryKey: ["dns-live-status", serverId] }),
+        qc.invalidateQueries({ queryKey: ["dns-ip-history", serverId] }),
+        qc.invalidateQueries({ queryKey: ["dns-alerts", serverId] }),
+      ]);
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Falha na análise");
+      toast.error(e instanceof Error ? e.message : "Não foi possível verificar o DNS. Tente novamente.");
+    } finally {
+      setChecking(false);
     }
   }
 
@@ -139,12 +154,23 @@ export function DnsPanel({ serverId }: { serverId: string }) {
             {latest ? `Última análise: ${new Date(latest.checked_at).toLocaleString()}` : "Ainda não analisado"}
           </p>
         </div>
-        <Button size="sm" variant="outline" onClick={handleRun}>
-          <RefreshCw className="h-4 w-4 mr-1" /> Analisar agora
+        <Button size="sm" variant="outline" onClick={handleRun} disabled={checking} aria-busy={checking}>
+          <RefreshCw className={`h-4 w-4 mr-1 ${checking ? "animate-spin" : ""}`} />
+          {checking ? "Verificando DNS..." : "Verificar DNS agora"}
         </Button>
       </div>
 
-      {!latest && !isLoading && (
+      {checking && (
+        <div role="status" className="rounded-xl border border-primary/20 bg-primary/5 px-4 py-3 text-sm text-primary">
+          Consultando os resolvedores DNS. Você pode continuar navegando enquanto a análise é executada.
+        </div>
+      )}
+      {snapshotsError && (
+        <div role="alert" className="rounded-lg border border-destructive/25 p-3 text-sm text-destructive">
+          Não foi possível atualizar o histórico DNS. Os dados exibidos podem estar desatualizados.
+        </div>
+      )}
+      {!latest && !isLoading && !snapshotsError && (
         <Card className="p-8 text-center text-sm text-muted-foreground border-dashed">
           Clique em <strong>Analisar agora</strong> para checar resolvedores, propagação, proxy Cloudflare, DNSSEC e WHOIS.
         </Card>
