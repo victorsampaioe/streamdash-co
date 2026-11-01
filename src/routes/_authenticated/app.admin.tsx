@@ -186,6 +186,9 @@ function AdminPage() {
     queryKey: ["admin-stats"],
     enabled: isAdmin,
     retry: 1,
+    staleTime: 0,
+    refetchInterval: 30_000,
+    refetchOnWindowFocus: true,
     queryFn: async () => {
       console.log("Fetching admin stats...");
       const { data, error } = await supabase.rpc("get_admin_stats");
@@ -201,6 +204,9 @@ function AdminPage() {
     queryKey: ["admin-users"],
     enabled: isAdmin,
     retry: 1,
+    staleTime: 0,
+    refetchInterval: 30_000,
+    refetchOnWindowFocus: true,
     queryFn: async () => {
       console.log("Fetching admin users...");
       const { data, error } = await supabase.rpc("get_admin_users_v2");
