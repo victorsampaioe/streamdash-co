@@ -19,7 +19,7 @@ export const verifyCustomerPix = createServerFn({ method: "POST" })
     if (roleError || !admin) throw new Error("Acesso restrito ao administrador");
 
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const { getMpToken, syncMpPayment, repairApprovedSubscriptionMismatches } = await import("./mercadopago.server");
+    const { getMpToken, syncMpPayment, repairApprovedSubscriptionMismatches, findMpPaymentByReference } = await import("./mercadopago.server");
     if (!getMpToken()) throw new Error("Integração com Mercado Pago não configurada.");
 
     const { data: profile, error: profileError } = await supabaseAdmin.from("profiles")
@@ -43,10 +43,9 @@ export const verifyCustomerPix = createServerFn({ method: "POST" })
       if (!subscriptionPlans.has(String(pay.plan))) continue;
       if (pay.payment_type && pay.payment_type !== "subscription") continue;
       const payload = pay.raw_payload as { id?: number | string } | null;
-      const providerId = pay.provider_payment_id || payload?.id;
-      if (!providerId) { unlinked++; continue; }
-
       try {
+        const providerId = pay.provider_payment_id || payload?.id || await findMpPaymentByReference(pay.id);
+        if (!providerId) { unlinked++; continue; }
         // syncMpPayment confirms approval directly with Mercado Pago and uses
         // finalize_approved_payment for atomic, idempotent activation.
         const result = await syncMpPayment(String(providerId), pay.id);

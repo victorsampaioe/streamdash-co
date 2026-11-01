@@ -228,11 +228,14 @@ export const getPaymentStatus = createServerFn({ method: "GET" })
       .select("id, status, paid_at, plan, provider_payment_id")
       .eq("id", data.paymentId)
       .maybeSingle();
-    if (!row || row.status === "approved" || !row.provider_payment_id) return row;
+    if (!row) return row;
 
     try {
-      const { syncMpPayment } = await import("./mercadopago.server");
-      const synced = await syncMpPayment(row.provider_payment_id);
+      const { syncMpPayment, findMpPaymentByReference, repairApprovedSubscriptionMismatches } = await import("./mercadopago.server");
+      const providerId = row.provider_payment_id || await findMpPaymentByReference(row.id);
+      if (!providerId) return row;
+      const synced = await syncMpPayment(providerId, row.id);
+      if (synced.status === "approved") await repairApprovedSubscriptionMismatches(20, context.userId);
       return { ...row, status: synced.status, paid_at: synced.paidAt };
     } catch (error) {
       console.error("[mercadopago] payment status sync failed:", error);
