@@ -1,4 +1,4 @@
-import { createFileRoute, Outlet, redirect, isRedirect, useRouter } from "@tanstack/react-router";
+import { createFileRoute, Outlet, redirect, isRedirect, useRouter, type ErrorComponentProps } from "@tanstack/react-router";
 import { useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { isChunkLoadError, recoverFromChunkError } from "@/lib/chunk-recovery";
@@ -29,7 +29,8 @@ export const Route = createFileRoute("/_authenticated")({
   errorComponent: AuthedError,
 });
 
-function AuthedError({ error, reset }: { error: Error; reset: () => void }) {
+function AuthedError({ error: unknownError, reset }: ErrorComponentProps) {
+  const error = unknownError instanceof Error ? unknownError : new Error("Não foi possível carregar o painel");
   const router = useRouter();
   const chunk = isChunkLoadError(error);
 
