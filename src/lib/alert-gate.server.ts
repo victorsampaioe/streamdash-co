@@ -42,7 +42,8 @@ export async function openOfflineIncident(
     .insert({
       server_id: serverId,
       reason,
-      alert_sent: true,
+      // A entrega é confirmada pelo motor de notificações, não na abertura.
+      alert_sent: false,
       last_check_at: nowIso,
       failure_count: 1,
       regions: regionsLabel,
