@@ -1,9 +1,12 @@
-
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
-import { supabaseAdmin } from "@/integrations/supabase/client.server";
-import { reconcilePendingPayments } from "./mercadopago.server";
+import { reconcilePendingPayments, repairApprovedSubscriptionMismatches } from "./mercadopago.server";
 
+/**
+ * Ferramenta administrativa de recuperação financeira.
+ * Consulta o status no Mercado Pago antes de alterar pagamentos/assinaturas.
+ * A reparação de assinaturas aprovadas é segura contra chamadas repetidas.
+ */
 export const reconcileAllPayments = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
@@ -13,66 +16,19 @@ export const reconcileAllPayments = createServerFn({ method: "POST" })
     });
     if (roleError || !isAdmin) throw new Error("Forbidden");
 
-    // 1. Usa a rotina existente que verifica no Mercado Pago pagamentos pendentes
-    const res = await reconcilePendingPayments(50);
+    // 1. Recupera webhooks perdidos (inclui as cobranças Pix de hoje).
+    const mp = await reconcilePendingPayments(100);
 
-    // 2. Busca pagamentos aprovados que por algum motivo não ativaram assinatura
-    const { data: approvedWithoutSub } = await supabaseAdmin
-      .from("payments")
-      .select("id, user_id, plan, provider_payment_id, raw_payload, status, payment_type")
-      .eq("status", "approved")
-      .eq("payment_type", "subscription");
-
-    let autoFixed = 0;
-    for (const pay of approvedWithoutSub ?? []) {
-      // Tenta finalizar para garantir que a assinatura existe e está correta
-      const { error: finalizeError } = await supabaseAdmin.rpc("finalize_approved_payment", {
-        _payment_id: pay.id,
-        _provider_payment_id: pay.provider_payment_id || "",
-        _raw_payload: pay.raw_payload || {},
-        _paid_at: new Date().toISOString()
-      });
-
-
-      if (!finalizeError) {
-        autoFixed++;
-
-        // Log de ativação
-        await supabaseAdmin.from("activation_logs").insert({
-          user_id: pay.user_id,
-          payment_id: pay.id,
-          plan: pay.plan,
-          status_payment: pay.status,
-          telegram_sent: false, // Será tentado abaixo
-        });
-
-        // Tentar enviar telegram se houver canal
-        const { data: channels } = await supabaseAdmin
-          .from("alert_channels")
-          .select("target, kind")
-          .eq("owner_id", pay.user_id)
-          .eq("kind", "telegram")
-          .eq("enabled", true);
-
-        if (channels && channels.length > 0) {
-          const { notifyUserActivation } = await import("./notifications.server");
-          try {
-            await notifyUserActivation(pay.user_id, pay.plan || "Mensal");
-            await supabaseAdmin.from("activation_logs")
-              .update({ telegram_sent: true } as never)
-              .eq("payment_id", pay.id);
-          } catch (e: any) {
-            await supabaseAdmin.from("activation_logs")
-              .update({ telegram_error: e.message } as never)
-              .eq("payment_id", pay.id);
-          }
-        }
-      }
-    }
+    // 2. Corrige apenas assinaturas aprovadas que continuam sem acesso.
+    // Não reenfileira todas as aprovações, evitando logs e ativações duplicados.
+    const repairs = await repairApprovedSubscriptionMismatches(100);
 
     return {
-      mp_checked: res.checked,
-      mp_approved: res.approved,
-      db_fixed: autoFixed
+      mp_checked: mp.checked,
+      mp_approved: mp.approved,
+      db_checked: repairs.checked,
+      db_fixed: repairs.repaired,
+      db_failed: repairs.failed,
+      needs_review: repairs.review,
     };
   });
