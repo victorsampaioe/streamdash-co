@@ -428,7 +428,21 @@ async function performCheck(server: ServerRow) {
         });
         await sendAlerts(server, "down", `🚨 ${server.name} está OFFLINE\n${reason}`, gate.incidentId);
       }
-    }
+    } else if (gate.incidentId && gate.reason === "already_open") {
+      // Tenta novamente somente se a entrega anterior não foi confirmada.
+      // A própria rotina Telegram mantém idempotência por incidente.
+      try {
+        const { processTelegramAlert } = await import("./telegram-alerts.server");
+        await processTelegramAlert({
+          serverId: server.id,
+          incidentId: gate.incidentId,
+          event: "OFFLINE",
+          reason,
+        });
+      } catch (error) {
+        console.error("[monitor] offline notification retry failed", error);
+      }
+}
   } else if (upConfirmed || wasDown) {
     // Transição: OFFLINE -> ONLINE (uma única mensagem de recuperação)
     const gate = await closeOfflineIncident(server.id);
