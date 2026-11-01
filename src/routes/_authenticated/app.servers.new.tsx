@@ -11,7 +11,6 @@ import { Switch } from "@/components/ui/switch";
 import { z } from "zod";
 import { toast } from "sonner";
 import { useServerFn } from "@tanstack/react-start";
-import { analyzeServer } from "@/lib/analysis.functions";
 import { validateHostEligibility } from "@/lib/validation.functions";
 import { PremiumGate } from "@/components/subscription/premium-gate";
 import { AlertCircle, CheckCircle2, XCircle, Clock, Info, Loader2 } from "lucide-react";
@@ -37,11 +36,10 @@ function slugify(s: string) {
 function NewServer() {
   const navigate = useNavigate();
   const qc = useQueryClient();
-  const runAnalyze = useServerFn(analyzeServer);
   const runValidation = useServerFn(validateHostEligibility);
   const [name, setName] = useState("");
   const [host, setHost] = useState("");
-  const [diagnosis, setDiagnosis] = useState<any>(null);
+  const [diagnosis, setDiagnosis] = useState<{ reason: string } | null>(null);
   const [isValidating, setIsValidating] = useState(false);
   
   const [description, setDescription] = useState("");
@@ -55,7 +53,7 @@ function NewServer() {
       setDiagnosis(res.diagnosis);
       
       if (!res.eligible) {
-        toast.error("Este host não está disponível para monitoramento no momento.");
+        toast.error(res.diagnosis.reason || "Informe um domínio ou IP válido.");
         setIsValidating(false);
         return;
       }
@@ -89,8 +87,7 @@ function NewServer() {
     },
     onSuccess: async (id) => {
       qc.invalidateQueries({ queryKey: ["servers"] });
-      toast.success("Servidor cadastrado — analisando DNS...");
-      runAnalyze({ data: { serverId: id } }).catch(() => { /* silencioso */ });
+      toast.success("Servidor cadastrado! A primeira verificação DNS entrará na próxima rodada automática.");
       navigate({ to: "/app/servers/$id", params: { id } });
     },
     onError: (e: Error) => {
@@ -107,7 +104,7 @@ function NewServer() {
     <div className="max-w-2xl mx-auto space-y-6">
       <div>
         <h1 className="text-2xl font-semibold tracking-tight">Novo servidor</h1>
-        <p className="text-sm text-muted-foreground">Só precisamos do nome, do host e uma descrição opcional. Verificações usam HTTP na porta 80.</p>
+        <p className="text-sm text-muted-foreground">Cadastro imediato: salve seu domínio agora. A análise de DNS e HTTP acontece automaticamente depois, sem travar esta tela.</p>
       </div>
 
       <PremiumGate title="Cadastro de servidores bloqueado">
@@ -122,43 +119,11 @@ function NewServer() {
             <Input value={host} onChange={(e) => setHost(e.target.value)} placeholder="api.exemplo.com" required className="font-mono" />
             <p className="text-xs text-muted-foreground">Somente o host, sem <code>http://</code> ou porta.</p>
             
-            {diagnosis && (
-              <Alert variant={diagnosis.dns_resolved ? "default" : "destructive"} className="mt-4 bg-muted/30 border-primary/10">
-                <div className="flex items-start gap-2">
-                  {diagnosis.dns_resolved ? <CheckCircle2 className="h-4 w-4 text-emerald-500 mt-1" /> : <XCircle className="h-4 w-4 text-destructive mt-1" />}
-                  <div className="flex-1">
-                    <AlertTitle className="text-sm font-bold flex items-center justify-between">
-                      Relatório de Diagnóstico
-                      {diagnosis.response_ms && <span className="text-[10px] font-mono text-muted-foreground bg-background px-1.5 py-0.5 rounded border border-border">{diagnosis.response_ms}ms</span>}
-                    </AlertTitle>
-                    <AlertDescription className="text-xs space-y-2 mt-2">
-                      <div className="grid grid-cols-2 gap-x-4 gap-y-1">
-                        <div className="flex items-center gap-2">
-                          <span className={diagnosis.dns_resolved ? "text-emerald-500" : "text-destructive"}>●</span>
-                          DNS resolveu? {diagnosis.dns_resolved ? "Sim" : "Não"}
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <span className={diagnosis.ip_found ? "text-emerald-500" : "text-destructive"}>●</span>
-                          IP encontrado? {diagnosis.ip_found ? "Sim" : "Não"}
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <span className={diagnosis.http_80_ok ? "text-emerald-500" : "text-destructive"}>●</span>
-                          HTTP 80 respondeu? {diagnosis.http_80_ok ? "Sim" : "Não"}
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <span className={diagnosis.https_443_ok ? "text-emerald-500" : "text-destructive"}>●</span>
-                          HTTPS 443 respondeu? {diagnosis.https_443_ok ? "Sim" : "Não"}
-                        </div>
-                      </div>
-                      {diagnosis.reason && (
-                        <div className="mt-2 p-2 rounded bg-background/50 border border-border/50 text-[11px] italic flex gap-2 items-center">
-                          <Info className="h-3 w-3 text-primary" />
-                          {diagnosis.reason}
-                        </div>
-                      )}
-                    </AlertDescription>
-                  </div>
-                </div>
+            {diagnosis?.reason && (
+              <Alert variant="default" className="mt-3 border-primary/20 bg-primary/5">
+                <CheckCircle2 className="h-4 w-4 text-primary" />
+                <AlertTitle className="text-sm">Cadastro rápido</AlertTitle>
+                <AlertDescription className="text-xs">{diagnosis.reason}</AlertDescription>
               </Alert>
             )}
           </div>
