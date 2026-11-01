@@ -77,8 +77,10 @@ export async function fetchMpPayment(paymentId: string | number): Promise<MpPixP
 export function mapMpStatus(status: string): "pending" | "approved" | "rejected" | "cancelled" | "refunded" {
   switch (status) {
     case "approved":
-    case "authorized":
       return "approved";
+    // "authorized" means authorized but not captured: do not activate a subscription.
+    case "authorized":
+      return "pending";
     case "rejected":
       return "rejected";
     case "cancelled":
@@ -116,7 +118,7 @@ export async function syncMpPayment(paymentId: string | number) {
   }
 
   if (row.status === "approved") {
-    return { paymentId: row.id, status: "approved" as const, paidAt: row.paid_at, subscriptionExpiresAt: null };
+    return { paymentId: row.id, status: "approved" as const, paidAt: row.paid_at, subscriptionExpiresAt: null, newlyApproved: false };
   }
 
   if (status === "approved") {
@@ -133,6 +135,7 @@ export async function syncMpPayment(paymentId: string | number) {
       status,
       paidAt,
       subscriptionExpiresAt: finalized?.[0]?.expires_at ?? null,
+      newlyApproved: finalized?.[0]?.applied === true,
     };
   }
 
@@ -147,7 +150,7 @@ export async function syncMpPayment(paymentId: string | number) {
     .neq("status", "approved");
   if (error) throw new Error(error.message);
 
-  return { paymentId: row.id, status, paidAt: row.paid_at, subscriptionExpiresAt: null };
+  return { paymentId: row.id, status, paidAt: row.paid_at, subscriptionExpiresAt: null, newlyApproved: false };
 }
 
 /**
