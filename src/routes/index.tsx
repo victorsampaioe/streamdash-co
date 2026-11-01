@@ -17,10 +17,10 @@ import poster_stAsset from "@/assets/radar/st.jpg.asset.json";
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "Stream Monitor | Monitoramento IPTV, DNS e Servidores" },
-      { name: "description", content: "Plataforma de monitoramento 24h para servidores IPTV, DNS e infraestrutura. Receba alertas inteligentes no Telegram e evite reclamações." },
-      { property: "og:title", content: "Stream Monitor | Monitoramento IPTV e DNS" },
-      { property: "og:description", content: "Monitore servidores IPTV e DNS 24 horas. Alertas no Telegram e diagnóstico inteligente." },
+      { title: "Stream Monitor | Monitoramento IPTV para Revendedores" },
+      { name: "description", content: "Monitore servidores IPTV, DNS e disponibilidade em um painel profissional. Alertas por Telegram e diagnóstico para revendedores. Conheça o Stream Monitor." },
+      { property: "og:title", content: "Stream Monitor | Monitoramento de Servidores IPTV" },
+      { property: "og:description", content: "Monitoramento IPTV para revendedores: servidores, DNS, latência e alertas no Telegram. Conheça a plataforma." },
       { property: "og:type", content: "website" },
       { property: "og:url", content: "https://streammonitor.site" },
       { property: "og:image", content: "https://storage.googleapis.com/gpt-engineer-file-uploads/zowG5KmEoBQiJwfUQDz2ZUEdQ2a2/social-images/social-1783131758542-ChatGPT_Image_3_de_jul._de_2026,_23_22_19.webp" },
@@ -139,7 +139,7 @@ function Landing() {
           <Feature icon={<Activity className="h-5 w-5" />} title="✅ Monitoramento IPTV real" desc="Monitoramento dedicado de painéis IPTV com Health Score exclusivo e verificação de fluxo." />
           <Feature icon={<Globe className="h-5 w-5" />} title="✅ Análise de conteúdo" desc="Acompanhe conteúdos recentes e status de servidores IPTV com integração TMDB." />
           <Feature icon={<LineChart className="h-5 w-5" />} title="✅ Sistema para revendedores" desc="Estrutura completa para gerenciar sub-revendas com sistema de créditos independente." />
-          <Feature icon={<PlayCircle className="h-5 w-5" />} title="🚀 Novo Módulo: Player Inteligente" desc="Web Player premium com busca global, Hero banners cinematográficos e carregamento progressivo para sua marca." />
+          <Feature icon={<PlayCircle className="h-5 w-5" />} title="🚀 Novo Módulo: Player Inteligente" desc="Painel para acompanhamento da disponibilidade, latência e desempenho dos serviços monitorados." />
         </div>
       </section>
 
