@@ -32,7 +32,7 @@ export function AppShell({ children }: { children: ReactNode }) {
         <Topbar />
         <SubscriptionBanner />
         <TelegramBanner />
-        <main id="main-content" className="flex-1 p-4 sm:p-6 lg:p-8 max-w-[1680px] w-full mx-auto">{children}</main>
+        <main id="main-content" className="flex-1 p-4 sm:p-7 xl:p-10 max-w-[1720px] w-full mx-auto">{children}</main>
       </div>
       
     </div>
@@ -149,7 +149,7 @@ function NavList({ onNavigate }: { onNavigate?: () => void }) {
   const pathname = useRouterState({ select: (r) => r.location.pathname });
   const items = useNavItems();
   return (
-    <nav className="px-3 py-5 space-y-1 flex-1">
+    <nav className="px-3 py-5 space-y-1 flex-1" aria-label="Navegação principal">
       {items.map((it) => {
         const active = (it as any).exact ? pathname === it.to : pathname.startsWith(it.to);
         return (
@@ -159,7 +159,7 @@ function NavList({ onNavigate }: { onNavigate?: () => void }) {
             onClick={onNavigate}
             className={cn(
               "group relative flex items-center gap-3 rounded-lg px-3 py-2.5 text-[13px] font-medium transition-all duration-200 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary",
-              active ? "bg-primary/10 text-primary before:absolute before:left-0 before:top-2 before:bottom-2 before:w-[3px] before:rounded-full before:bg-primary" : "text-sidebar-foreground/65 hover:bg-sidebar-accent/65 hover:text-sidebar-foreground"
+              active ? "bg-primary/15 text-primary font-semibold before:absolute before:left-0 before:top-2 before:bottom-2 before:w-[3px] before:rounded-full before:bg-primary" : "text-sidebar-foreground/65 hover:bg-sidebar-accent/65 hover:text-sidebar-foreground"
             )}
           >
             <it.icon className="h-4 w-4" />
@@ -173,15 +173,15 @@ function NavList({ onNavigate }: { onNavigate?: () => void }) {
 
 function Sidebar() {
   return (
-    <aside className="hidden md:flex w-64 shrink-0 flex-col border-r border-sidebar-border bg-sidebar text-sidebar-foreground">
+    <aside className="hidden lg:flex w-[272px] shrink-0 flex-col border-r border-sidebar-border bg-sidebar text-sidebar-foreground">
       <div className="p-6 flex items-center gap-3 border-b border-sidebar-border">
         <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/15 ring-1 ring-primary/20"><Activity className="h-5 w-5 text-primary" /></div>
-        <div className="leading-tight"><div className="font-extrabold tracking-tight">stream<span className="text-primary">monitor</span></div><div className="text-[10px] uppercase tracking-[.2em] text-sidebar-foreground/45">Operations Center</div></div>
+        <div className="leading-tight"><div className="font-extrabold tracking-tight">stream<span className="text-primary">monitor</span></div><div className="text-[10px] uppercase tracking-[.2em] text-sidebar-foreground/45">BLUE EDITION</div></div>
       </div>
       <div className="flex-1 overflow-y-auto custom-scrollbar">
         <NavList />
       </div>
-      <div className="p-3 border-t border-sidebar-border mt-auto space-y-1">
+      <div className="p-4 border-t border-sidebar-border mt-auto space-y-2">
         <TelegramLink />
         <SignOutButton />
       </div>
@@ -207,7 +207,7 @@ function MobileNav() {
   return (
     <Sheet open={open} onOpenChange={setOpen}>
       <SheetTrigger asChild>
-        <Button variant="ghost" size="icon" className="md:hidden" aria-label="Abrir menu">
+        <Button variant="ghost" size="icon" className="lg:hidden" aria-label="Abrir menu">
           <Menu className="h-5 w-5" />
         </Button>
       </SheetTrigger>
@@ -233,14 +233,14 @@ function MobileNav() {
 function Topbar() {
   const { theme, toggle } = useTheme();
   return (
-    <header className="h-16 border-b border-border/60 flex items-center gap-2 px-3 md:px-6 bg-background/70 backdrop-blur sticky top-0 z-30">
+    <header className="h-[72px] border-b border-border/60 flex items-center gap-2 px-4 lg:px-8 bg-background/90 backdrop-blur-xl sticky top-0 z-30">
       <MobileNav />
-      <div className="flex items-center gap-2 md:hidden min-w-0">
+      <div className="flex items-center gap-2 lg:hidden min-w-0">
         <Activity className="h-5 w-5 text-primary shrink-0" />
         <span className="font-bold truncate">streammonitor</span>
       </div>
-      <div className="hidden md:flex flex-1 items-center gap-2 text-xs font-medium text-muted-foreground"><span className="h-2 w-2 rounded-full bg-success" /> Centro de operações <span className="mx-2 text-border">/</span> Stream Monitor</div>
-      <div className="flex-1 md:hidden" />
+      <div className="hidden lg:flex flex-1 items-center gap-2 text-xs font-medium text-muted-foreground"><span className="h-2 w-2 rounded-full bg-primary" /> Centro de operações <span className="mx-2 text-border">/</span> Stream Monitor</div>
+      <div className="flex-1 lg:hidden" />
       <div className="flex items-center gap-1 sm:gap-2">
         <Link to="/app/servers/new">
           <Button size="sm" className="px-2 sm:px-3">
