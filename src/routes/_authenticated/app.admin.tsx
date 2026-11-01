@@ -34,6 +34,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, Dialog
 import { formatBRL } from "@/lib/payments";
 import { cn } from "@/lib/utils";
 import { broadcastTelegram } from "@/lib/telegram-broadcast.functions";
+import { verifyCustomerPix } from "@/lib/payment-recovery.functions";
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { PausedServersPanel } from "@/components/admin/paused-servers-panel";
@@ -570,6 +571,7 @@ function AdminPage() {
                         <td className="p-3 text-xs text-muted-foreground">{new Date(u.created_at).toLocaleDateString("pt-BR")}</td>
                         <td className="p-3 text-right">
                           <div className="flex justify-end gap-2">
+                            <VerifyCustomerPixButton userId={u.id} />
                             <GrantPlanDialog user={u} />
                             {!u.is_admin && !((u as any).is_reseller) && (
                               <>
@@ -967,6 +969,40 @@ function TelegramNoveltiesCampaign() {
       </div>
       {result && <p className="mt-4 text-sm font-medium text-primary" role="status">{result}</p>}
     </Card>
+  );
+}
+
+function VerifyCustomerPixButton({ userId }: { userId: string }) {
+  const verify = useServerFn(verifyCustomerPix);
+  const qc = useQueryClient();
+  const [busy, setBusy] = useState(false);
+  async function handleVerify() {
+    setBusy(true);
+    try {
+      const result = await verify({ data: { userId } });
+      await Promise.all([
+        qc.invalidateQueries({ queryKey: ["admin-users"] }),
+        qc.invalidateQueries({ queryKey: ["admin-stats"] }),
+        qc.invalidateQueries({ queryKey: ["subscription"] }),
+      ]);
+      const summary = `${result.message} Pix consultados: ${result.checked}; aprovados: ${result.approved}; assinaturas recuperadas: ${result.repaired}.`;
+      if (result.active && !result.failures && !result.needsReview && !result.unlinked) {
+        toast.success(summary, { duration: 10000 });
+      } else {
+        toast.warning(summary + (result.failures ? ` Erros: ${result.errors.join("; ") || result.failures}.` : ""), { duration: 12000 });
+      }
+    } catch (err: any) {
+      toast.error(err?.message ?? "Falha ao conferir Pix do cliente");
+    } finally {
+      setBusy(false);
+    }
+  }
+  return (
+    <Button type="button" variant="outline" size="sm" disabled={busy} onClick={handleVerify}
+      title="Conferir pagamentos do cliente diretamente no Mercado Pago e ativar apenas se aprovado"
+      className="shrink-0 border-primary/30 text-primary hover:bg-primary/10">
+      {busy ? "Verificando..." : "Verificar Pix"}
+    </Button>
   );
 }
 
