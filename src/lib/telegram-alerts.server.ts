@@ -6,6 +6,7 @@ export interface AlertData {
   serverId: string;
   incidentId?: string;
   kind?: "server" | "dns";
+  suppressAdminCopy?: boolean;
   event: AlertEvent;
   reason?: string;
   confirmNote?: string;
@@ -18,57 +19,65 @@ export interface AlertData {
  * Garante que alertas sejam enviados apenas baseados no estado real do banco.
  */
 export async function processTelegramAlert(data: AlertData) {
-  const { serverId, incidentId, event, reason, confirmNote, regions } = data;
-
-  // 1. Buscar dados do servidor e dono (Fonte única de verdade)
-  const { data: server, error: sErr } = (await (supabaseAdmin as any)
+  const { serverId, incidentId, event } = data;
+  const { data: server, error: sErr } = await supabaseAdmin
     .from("servers")
-    .select("*, profiles(*)")
+    .select("id, owner_id, name, host, iptv_username, profiles(email, full_name)")
     .eq("id", serverId)
-    .maybeSingle()) as { data: any; error: any };
+    .maybeSingle();
+  if (sErr || !server) throw new Error("Servidor não encontrado para alerta");
 
-  if (sErr || !server) {
-    console.error(`[TelegramAlert] Servidor ${serverId} não encontrado.`);
-    return;
-  }
-
-  // 2. Verificar idempotência para evitar spam
-  // Se for queda, a chave é baseada no incidentId. Se for retorno, também.
-  if (incidentId) {
-    const idempotencyKey = `tg_alert_${incidentId}_${event.toLowerCase()}`;
-    const { error: idError } = await supabaseAdmin
-      .from("alert_idempotency" as any)
-      .insert({ id: idempotencyKey });
-
-    if (idError) {
-      console.log(`[TelegramAlert] Alerta ${event} para incidente ${incidentId} já enviado. Pulando.`);
-      return;
-    }
-  }
-
-  // 3. Formatar Mensagem Padronizada
   const message = formatAlertMessage(server, data);
+  const logEvent = `tg_${data.kind ?? "server"}_${event.toLowerCase()}`;
 
-  // 4. Enviar para canais do usuário
-  const { data: channels } = await supabaseAdmin
-    .from("alert_channels")
-    .select("*")
-    .eq("owner_id", server.owner_id)
-    .eq("kind", "telegram")
-    .eq("enabled", true);
-
-  if (channels && channels.length > 0) {
-    const attempts = await Promise.allSettled(channels.map(ch => sendToTelegram(ch.target, message)));
-    for (const a of attempts) if (a.status === "rejected") console.error("[TelegramAlert] Falha de entrega:", a.reason);
-    // Se nenhum canal recebeu, libera a tentativa para posterior reenvio.
-    if (incidentId && attempts.length > 0 && attempts.every(a => a.status === "rejected")) {
-      await supabaseAdmin.from("alert_idempotency" as any)
-        .delete().eq("id", `tg_alert_${incidentId}_${event.toLowerCase()}`);
+  // A entrega é idempotente POR CANAL, não por incidente inteiro.
+  // Se um canal recebeu e outro falhou, somente o segundo é tentado novamente.
+  const delivered = new Set<string>();
+  let adminDelivered = false;
+  if (incidentId) {
+    const { data: previous, error } = await supabaseAdmin.from("notifications_log")
+      .select("channel_id")
+      .eq("incident_id", incidentId).eq("event", logEvent).eq("ok", true);
+    if (error) throw new Error(`Falha ao consultar histórico de alertas: ${error.message}`);
+    for (const item of previous ?? []) {
+      if (item.channel_id) delivered.add(item.channel_id);
+      else adminDelivered = true;
     }
   }
 
-  // 5. Enviar cópia para o Admin (Monitoramento Central)
-  await notifyAdminAlert(server, data, message);
+  const { data: channels, error: channelsError } = await supabaseAdmin
+    .from("alert_channels").select("id, target")
+    .eq("owner_id", server.owner_id).eq("kind", "telegram").eq("enabled", true);
+  if (channelsError) throw new Error(channelsError.message);
+
+  for (const channel of channels ?? []) {
+    if (delivered.has(channel.id)) continue;
+    let ok = false;
+    let response = "telegram_ok";
+    try {
+      await sendToTelegram(channel.target, message);
+      ok = true;
+    } catch (error) {
+      response = error instanceof Error ? error.message.slice(0, 120) : "telegram_failed";
+      console.error("[TelegramAlert] Entrega pendente para nova tentativa", serverId, response);
+    }
+    if (incidentId) {
+      const { error: logError } = await supabaseAdmin.from("notifications_log")
+        .insert({ incident_id: incidentId, server_id: serverId, channel_id: channel.id,
+          event: logEvent, ok, response });
+      if (logError) throw new Error(`Falha ao registrar entrega Telegram: ${logError.message}`);
+    }
+  }
+
+  if (!data.suppressAdminCopy && !adminDelivered) {
+    const ok = await notifyAdminAlert(server, data, message);
+    if (incidentId) {
+      const { error: logError } = await supabaseAdmin.from("notifications_log")
+        .insert({ incident_id: incidentId, server_id: serverId, channel_id: null,
+          event: logEvent, ok, response: ok ? "admin_ok" : "admin_failed" });
+      if (logError) console.error("[TelegramAlert] Falha no log de entrega admin", logError);
+    }
+  }
 }
 
 function formatAlertMessage(server: any, data: AlertData): string {
@@ -157,6 +166,7 @@ async function sendToTelegram(target: string, text: string) {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ chat_id: chatId, text, parse_mode: "HTML", disable_web_page_preview: true }),
+      signal: AbortSignal.timeout(10_000),
     });
     if (!response.ok) throw new Error(`Telegram HTTP ${response.status}`);
   } catch (e) {
@@ -168,7 +178,7 @@ async function sendToTelegram(target: string, text: string) {
 async function notifyAdminAlert(server: any, data: AlertData, userMessage: string) {
   const adminToken = process.env.TELEGRAM_BOT_TOKEN;
   const adminChatId = process.env.ADMIN_TELEGRAM_CHAT_ID;
-  if (!adminToken || !adminChatId) return;
+  if (!adminToken || !adminChatId) return false;
 
   const adminMsg = `🛡 <b>ADMIN LOG - MONITOR</b>\n` +
     `Usuário: ${server.profiles?.email || "N/A"}\n` +
@@ -176,12 +186,17 @@ async function notifyAdminAlert(server: any, data: AlertData, userMessage: strin
     userMessage;
 
   try {
-    await fetch(`https://api.telegram.org/bot${adminToken}/sendMessage`, {
+    const response = await fetch(`https://api.telegram.org/bot${adminToken}/sendMessage`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ chat_id: adminChatId, text: adminMsg, parse_mode: "HTML" }),
+      signal: AbortSignal.timeout(10_000),
     });
-  } catch {}
+    return response.ok;
+  } catch (error) {
+    console.error("[TelegramAlert] Falha de envio ao administrador", error);
+    return false;
+  }
 }
 
 /**
