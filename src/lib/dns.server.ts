@@ -482,7 +482,7 @@ export async function runDnsCheck(serverId: string): Promise<{ ok: boolean; scor
     alerts.push({ kind: "propagating", severity: "info", title: "⚠ O domínio está propagando.", detail: `Propagação em ${report.propagation_pct}%.` });
   }
 
-  await supabaseAdmin.from("dns_snapshots").insert({
+  const { error: snapshotError } = await supabaseAdmin.from("dns_snapshots").insert({
     server_id: serverId,
     checked_at: report.checked_at,
     health_score: report.health_score,
@@ -513,6 +513,7 @@ export async function runDnsCheck(serverId: string): Promise<{ ok: boolean; scor
     status: report.status,
     diagnosis: report.diagnosis,
   });
+  if (snapshotError) throw new Error(`Não foi possível salvar análise DNS: ${snapshotError.message}`);
 
   // ESTADO DO DNS — independente do estado do servidor.
   const { data: dnsState } = await supabaseAdmin
@@ -549,13 +550,7 @@ export async function runDnsCheck(serverId: string): Promise<{ ok: boolean; scor
       title: "⚠️ DNS instável — nova verificação necessária",
       detail: report.diagnosis[0] ?? "Uma ou mais fontes não resolveram o domínio." });
   }
-  if (alerts.length) {
-    const { error: alertsError } = await supabaseAdmin.from("dns_alerts")
-      .insert(alerts.map((a) => ({ ...a, server_id: serverId })));
-    if (alertsError) console.error("[DNS] Falha ao salvar alertas", serverId, alertsError);
-  }
-
-  await supabaseAdmin
+  const { error: stateError } = await supabaseAdmin
     .from("servers")
     .update({
       last_dns_check_at: report.checked_at,
@@ -568,6 +563,14 @@ export async function runDnsCheck(serverId: string): Promise<{ ok: boolean; scor
       ...(changed ? { dns_state_changed_at: report.checked_at } : {}),
     } as any)
     .eq("id", serverId);
+  // Nunca avisar que está offline se o estado não foi salvo no banco.
+  if (stateError) throw new Error(`Falha ao gravar estado do DNS: ${stateError.message}`);
+
+  if (alerts.length) {
+    const { error: alertsError } = await supabaseAdmin.from("dns_alerts")
+      .insert(alerts.map((a) => ({ ...a, server_id: serverId })));
+    if (alertsError) console.error("[DNS] Falha ao salvar alertas", serverId, alertsError);
+  }
 
   // DNS é independente do HTTP/IPTV. Não declare o SERVIDOR offline
   // por falha isolada de resolução; notifique especificamente o DNS.
