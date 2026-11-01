@@ -94,3 +94,36 @@ export const runMonitorSweepNow = createServerFn({ method: "POST" })
     const { runMonitorSweep } = await import("./monitor-sweep.server");
     return await runMonitorSweep("manual");
   });
+
+/** Reorganiza todos os registros atrasados sem simular resultados de checagem. */
+export const prioritizeStaleServersNow = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    await assertAdmin(context);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const cutoff = new Date(Date.now() - 15 * 60_000).toISOString();
+    let prioritized = 0;
+    let page = 0;
+    const batchSize = 200;
+    while (page < 25) {
+      const { data, error } = await supabaseAdmin.from("servers")
+        .select("id, last_checked_at")
+        .eq("monitoring_paused", false)
+        .or(`last_checked_at.is.null,last_checked_at.lt.${cutoff}`)
+        .order("last_checked_at", { ascending: true, nullsFirst: true })
+        .range(0, batchSize - 1);
+      if (error) throw new Error(error.message);
+      if (!data?.length) break;
+      const ids = data.map(s => s.id);
+      const { error: updateError } = await supabaseAdmin.from("servers")
+        .update({ next_check_at: null, check_priority: 1 } as any).in("id", ids);
+      if (updateError) throw new Error(updateError.message);
+      prioritized += ids.length;
+      // The same stale rows remain stale until checked; avoid processing them
+      // repeatedly within this invocation.
+      if (data.length < batchSize) break;
+      page++;
+      break;
+    }
+    return { prioritized, remainingMayExist: prioritized >= batchSize };
+  });
