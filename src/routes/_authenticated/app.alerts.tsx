@@ -109,9 +109,9 @@ function AlertsPage() {
   const hasValid = channels.some((c) => c.enabled && isValidChatId(String(c.target ?? "")));
 
   return (
-    <div className="space-y-6 max-w-4xl w-full">
+    <div className="space-y-6 sm:space-y-8 max-w-5xl w-full">
       <div>
-        <h1 className="text-2xl font-semibold tracking-tight">Alertas no Telegram</h1>
+        <h1 className="text-3xl font-bold tracking-tight">Central de Alertas</h1>
         <p className="text-sm text-muted-foreground">
           Os alertas do Stream Monitor são enviados pelo Telegram (@{BOT_USERNAME}): quedas de servidor, instabilidade e o resumo inteligente diário.
         </p>
