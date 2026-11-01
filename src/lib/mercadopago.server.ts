@@ -120,19 +120,22 @@ export async function syncMpPayment(paymentId: string | number, expectedPaymentI
     throw new Error("Pagamento pertence a outra cobrança; nenhuma ativação foi realizada");
   }
 
+  // Validação também para cobranças antigas marcadas como aprovadas no banco.
+  if (mp.external_reference && String(mp.external_reference) !== String(row.id)) {
+    throw new Error("Referência da cobrança divergente");
+  }
+  if (mp.transaction_amount !== undefined &&
+    Math.round(Number(mp.transaction_amount) * 100) !== Number(row.amount_cents)) {
+    throw new Error("Valor do pagamento diferente da cobrança");
+  }
   if (row.status === "approved") {
-    return { paymentId: row.id, status: "approved" as const, paidAt: row.paid_at, subscriptionExpiresAt: null, newlyApproved: false };
+    return {
+      paymentId: row.id, status, paidAt: row.paid_at,
+      subscriptionExpiresAt: null, newlyApproved: false,
+    };
   }
 
   if (status === "approved") {
-    // Confirme identidade e valor antes de ativar a assinatura.
-    if (mp.external_reference && String(mp.external_reference) !== String(row.id)) {
-      throw new Error("Referência da cobrança divergente");
-    }
-    if (mp.transaction_amount !== undefined &&
-      Math.round(Number(mp.transaction_amount) * 100) !== Number(row.amount_cents)) {
-      throw new Error("Valor do pagamento diferente da cobrança");
-    }
     const paidAt = new Date().toISOString();
     const { data: finalized, error } = await supabaseAdmin.rpc("finalize_approved_payment", {
       _payment_id: row.id,
