@@ -112,6 +112,7 @@ function useNavItems() {
   const items = [
     { to: "/app", label: "Dashboard", icon: LayoutDashboard, exact: true },
     { to: "/app/servers", label: "Servidores", icon: ServerIcon },
+    { to: "/app/central", label: "Central Inteligente", icon: ShieldAlert },
     { to: "/app/alerts", label: "Alertas", icon: Bell },
     { to: "/app/diagnostico", label: "Diagnóstico", icon: Activity },
     { to: "/app/radar", label: "Radar Brasil", icon: Radio },
