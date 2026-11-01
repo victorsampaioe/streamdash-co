@@ -43,7 +43,8 @@ export async function flushNotificationQueue() {
     const successfullyDelivered: string[] = [];
     if (style === "summary" && items.length > 1) {
       // Enviar resumo
-      const servers = items.map(i => `• ${i.servers?.name || "Desconhecido"}`).slice(0, 15);
+      const esc = (s: unknown) => String(s ?? "Desconhecido").replace(/[<>&]/g, char => ({ "<": "&lt;", ">": "&gt;", "&": "&amp;" })[char]!);
+      const servers = items.map(i => `• ${esc(i.servers?.name)}`).slice(0, 15);
       const more = items.length > 15 ? `\n...e mais ${items.length - 15} servidores.` : "";
       
       const summary = `✅ <b>RESUMO DE SERVIÇOS RESTABELECIDOS</b>\n\n` +
