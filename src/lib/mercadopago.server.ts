@@ -96,15 +96,24 @@ export async function syncMpPayment(paymentId: string | number) {
   const status = mapMpStatus(mp.status);
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
-  let query = supabaseAdmin.from("payments").select("*").limit(1);
-  query = mp.external_reference
-    ? query.eq("id", mp.external_reference)
-    : query.eq("provider_payment_id", String(mp.id));
-
-  const { data: rows, error: lookupError } = await query;
-  if (lookupError) throw new Error(lookupError.message);
-  const row = rows?.[0];
-  if (!row) throw new Error("Cobrança não encontrada");
+  // Priorize a referência interna, mas recupere pelo ID do provedor se vier ausente
+  // ou inválida. Não vincule pagamentos de outras cobranças.
+  let row: any = null;
+  if (mp.external_reference && /^[0-9a-f-]{36}$/i.test(mp.external_reference)) {
+    const { data, error } = await supabaseAdmin.from("payments")
+      .select("*").eq("id", mp.external_reference).maybeSingle();
+    if (error) throw new Error(error.message);
+    row = data;
+  }
+  if (!row) {
+    const { data, error } = await supabaseAdmin.from("payments")
+      .select("*").eq("provider_payment_id", String(mp.id)).maybeSingle();
+    if (error) throw new Error(error.message);
+    row = data;
+  }
+  if (!row || (row.provider_payment_id && row.provider_payment_id !== String(mp.id))) {
+    throw new Error("Cobrança não encontrada ou ID divergente");
+  }
 
   if (row.status === "approved") {
     return { paymentId: row.id, status: "approved" as const, paidAt: row.paid_at, subscriptionExpiresAt: null };
@@ -167,4 +176,80 @@ export async function reconcilePendingPayments(limit = 40) {
     }
   }
   return { checked: rows?.length ?? 0, approved };
+}
+
+/**
+ * Recupera uma assinatura não ativada mesmo quando o pagamento já está marcado
+ * como aprovado. Só considera pagamentos recentes e confirma o status no
+ * Mercado Pago antes de conceder acesso. Nunca adiciona créditos.
+ */
+export async function repairApprovedSubscriptionMismatches(limit = 50) {
+  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+  const since = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+  const { data: rows, error } = await supabaseAdmin.from("payments")
+    .select("id, user_id, plan, status, payment_type, provider_payment_id, paid_at, amount_cents")
+    .eq("status", "approved")
+    .eq("payment_type", "subscription")
+    .gte("paid_at", since)
+    .order("paid_at", { ascending: false })
+    .limit(limit);
+  if (error) throw new Error(error.message);
+
+  let repaired = 0;
+  let failed = 0;
+  let review = 0;
+  const seen = new Set<string>();
+  for (const pay of rows ?? []) {
+    if (seen.has(pay.user_id)) continue;
+    seen.add(pay.user_id);
+    const days: Record<string, number> = { monthly: 31, quarterly: 92, yearly: 365 };
+    const duration = days[String(pay.plan)] ?? 0;
+    if (!duration || !pay.provider_payment_id || !pay.paid_at) { review++; continue; }
+
+    try {
+      const { data: sub, error: subError } = await supabaseAdmin.from("subscriptions")
+        .select("user_id, status, expires_at").eq("user_id", pay.user_id).maybeSingle();
+      if (subError) throw subError;
+      // Assinatura ativa com validade futura: o pagamento já pode ter sido aplicado.
+      if (sub?.status === "active" && new Date(sub.expires_at).getTime() > Date.now()) continue;
+      // Uma assinatura cancelada manualmente não pode ser reativada automaticamente.
+      if (sub?.status === "cancelled") { review++; continue; }
+
+      const mp = await fetchMpPayment(pay.provider_payment_id);
+      const paidCents = Math.round(Number(mp.transaction_amount ?? 0) * 100);
+      if (mp.status !== "approved" || String(mp.external_reference ?? "") !== pay.id ||
+          paidCents !== pay.amount_cents) {
+        review++;
+        continue;
+      }
+
+      const activatedAt = new Date(pay.paid_at).toISOString();
+      const purchasedExpiry = new Date(new Date(activatedAt).getTime() + duration * 86400000).toISOString();
+      if (!sub) {
+        const { error: insertError } = await supabaseAdmin.from("subscriptions").insert({
+          user_id: pay.user_id, plan: pay.plan, status: "active",
+          started_at: activatedAt, expires_at: purchasedExpiry, cancelled_at: null,
+        } as any);
+        // Uma concorrência pode inserir a assinatura entre a consulta e o INSERT.
+        if (insertError?.code === "23505") continue;
+        if (insertError) throw insertError;
+        repaired++;
+      } else {
+        const currentExpiry = new Date(sub.expires_at).getTime();
+        const finalExpiry = new Date(Math.max(currentExpiry || 0, new Date(purchasedExpiry).getTime())).toISOString();
+        const { data: changed, error: updError } = await supabaseAdmin.from("subscriptions")
+          .update({ status: "active", plan: pay.plan, expires_at: finalExpiry, cancelled_at: null } as any)
+          .eq("user_id", pay.user_id)
+          .eq("status", sub.status)
+          .eq("expires_at", sub.expires_at)
+          .select("user_id").maybeSingle();
+        if (updError) throw updError;
+        if (changed) repaired++;
+      }
+    } catch (err) {
+      failed++;
+      console.error("[mercadopago] approved payment activation recovery failed", pay.id, err);
+    }
+  }
+  return { checked: rows?.length ?? 0, repaired, failed, review };
 }
