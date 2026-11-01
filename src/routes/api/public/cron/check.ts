@@ -49,7 +49,7 @@ async function run() {
   const { notifyNewlyExpiredSubscriptions, notifyExpiredAccessUsers } = await import("@/lib/admin-telegram.server");
   const { runDueIptvSyncs } = await import("@/lib/iptv.server");
   const { syncKumaStatuses, provisionPendingServers } = await import("@/lib/kuma.server");
-  const { runDueDnsChecks } = await import("@/lib/dns.server");
+
   const { reconcilePendingPayments, repairApprovedSubscriptionMismatches, getMpToken } = await import("@/lib/mercadopago.server");
   const { migratePlaintextCredentials } = await import("@/lib/iptv-credentials.server");
   const { runDueContentScans } = await import("@/lib/content-monitor.server");
@@ -59,13 +59,12 @@ async function run() {
   // Primeiro sincroniza o estado de pausa: contas expiradas ficam marcadas
   // como pausadas e contas reativadas voltam sozinhas para o monitoramento.
   const pauseSync = await safe("pauseSync", syncServersPauseState, { paused: 0, resumed: 0 }, errors);
-  const [checks, expired, iptv, kuma, kumaProv, dns, payments, contents] = await Promise.all([
+  const [checks, expired, iptv, kuma, kumaProv, payments, contents] = await Promise.all([
     safe("checks", runDueChecks, {} as any, errors),
     safe("expired", notifyNewlyExpiredSubscriptions, { notified: 0 }, errors),
     safe("iptv", runDueIptvSyncs, { synced: 0, errors: 0 }, errors),
     safe("kuma", syncKumaStatuses, { synced: 0 }, errors),
     safe("kumaProvision", provisionPendingServers, { provisioned: 0 } as any, errors),
-    safe("dns", runDueDnsChecks, { checked: 0, errors: 0 }, errors),
     safe("payments", reconcilePendingPayments, { checked: 0, approved: 0, failed: 0 }, errors),
     safe("contents", runDueContentScans, { servers: 0, tested: 0 }, errors),
   ]);
@@ -100,8 +99,6 @@ async function run() {
     iptvErrors: iptv.errors,
     kumaSynced: kuma.synced,
     kumaProvisioned: (kumaProv as any).provisioned ?? 0,
-    dnsChecked: dns.checked,
-    dnsErrors: dns.errors,
     paymentsChecked: payments.checked,
     paymentsApproved: payments.approved,
     subscriptionsRepaired: paymentRepairs.repaired,
@@ -131,14 +128,36 @@ async function reapStaleLogs() {
   return { reaped: data?.length ?? 0 };
 }
 
-/** Um ciclo por vez: o pg_cron dispara a cada minuto e o ciclo pode demorar mais. */
+/**
+ * DNS e verificações gerais têm travas independentes.
+ * Mesmo se um ciclo de catálogos/servidores demorar, cada disparo do cron
+ * pode iniciar o DNS sem ficar bloqueado pela execução geral anterior.
+ */
 async function guardedRun() {
   const { withCycleLock } = await import("@/lib/job-lock.server");
-  return await withCycleLock("cron-check", 300, async () => {
-    const reaped = await reapStaleLogs().catch(() => ({ reaped: 0 }));
-    const out = await run();
-    return { ...out, ...reaped };
-  });
+  if (process.env.IS_CORE === "true" || missingEnv().length) return run();
+
+  const [dnsResult, mainResult] = await Promise.all([
+    withCycleLock("cron-dns", 180, async () => {
+      const { runDueDnsChecks } = await import("@/lib/dns.server");
+      return runDueDnsChecks(40);
+    }).catch((error) => {
+      console.error("[cron-dns] Falha no ciclo", error);
+      return { checked: 0, errors: 1 };
+    }),
+    withCycleLock("cron-check", 300, async () => {
+      const reaped = await reapStaleLogs().catch(() => ({ reaped: 0 }));
+      const out = await run();
+      return { ...out, ...reaped };
+    }),
+  ]);
+
+  return {
+    ...mainResult,
+    dnsChecked: "checked" in dnsResult ? dnsResult.checked : 0,
+    dnsErrors: "errors" in dnsResult ? dnsResult.errors : 0,
+    dnsSkipped: "skipped" in dnsResult ? dnsResult.skipped : false,
+  };
 }
 
 export const Route = createFileRoute("/api/public/cron/check")({
