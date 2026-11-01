@@ -14,8 +14,9 @@ export const runDnsCheckNow = createServerFn({ method: "POST" })
     if (!srv) throw new Error("Servidor não encontrado ou sem permissão");
 
     const { runDnsCheck } = await import("./dns.server");
-    const { runOnCore } = await import("./core-api.server");
-    return await runOnCore("dns", { serverId: data.serverId }, () => runDnsCheck(data.serverId));
+    // A análise interativa usa o modo rápido. O cron continua executando
+    // a análise completa em intervalos regulares, sem bloquear o navegador.
+    return await runDnsCheck(data.serverId, { quick: true });
   });
 
 export const acknowledgeDnsAlert = createServerFn({ method: "POST" })
