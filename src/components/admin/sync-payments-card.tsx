@@ -1,5 +1,6 @@
 
 import { useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { reconcileAllPayments } from "@/lib/payments.functions";
 import { Card } from "@/components/ui/card";
@@ -10,16 +11,23 @@ import { toast } from "sonner";
 export function SyncPaymentsCard() {
   const [loading, setLoading] = useState(false);
   const reconcile = useServerFn(reconcileAllPayments);
+  const queryClient = useQueryClient();
+  const [lastResult, setLastResult] = useState<string | null>(null);
 
   const handleSync = async () => {
     setLoading(true);
+    setLastResult(null);
     const toastId = toast.loading("Sincronizando pagamentos com Mercado Pago...");
     try {
       const res = await reconcile();
-      toast.success(
-        `Sincronização concluída! \nMP: ${res.mp_checked} verificados, ${res.mp_approved} aprovados. \nBD: ${res.db_fixed} assinaturas ativadas.`,
-        { id: toastId, duration: 5000 }
-      );
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["admin-stats"] }),
+        queryClient.invalidateQueries({ queryKey: ["admin-users"] }),
+        queryClient.invalidateQueries({ queryKey: ["subscription"] }),
+      ]);
+      const summary = `Mercado Pago: ${res.mp_checked} consultados, ${res.mp_approved} pagos recuperados. Assinaturas corrigidas: ${res.db_fixed}. ${res.db_failed} falhas; ${res.needs_review} para revisão.`;
+      setLastResult(summary);
+      toast.success(summary, { id: toastId, duration: 7000 });
     } catch (e: any) {
       toast.error("Erro na sincronização: " + (e.message || "Erro desconhecido"), { id: toastId });
     } finally {
@@ -49,7 +57,8 @@ export function SyncPaymentsCard() {
         </Button>
       </div>
       
-      <div className="mt-4 flex gap-4 text-xs">
+      {lastResult && <p role="status" className="mt-4 rounded-lg border border-primary/20 bg-primary/10 p-3 text-sm font-medium">{lastResult}</p>}
+      <div className="mt-4 flex flex-wrap gap-4 text-xs">
         <div className="flex items-center gap-1.5 text-muted-foreground">
           <CheckCircle className="h-3.5 w-3.5 text-success" />
           <span>Verifica approved/paid</span>
@@ -60,7 +69,7 @@ export function SyncPaymentsCard() {
         </div>
         <div className="flex items-center gap-1.5 text-muted-foreground">
           <AlertTriangle className="h-3.5 w-3.5 text-amber-500" />
-          <span>Use apenas se houver atraso na ativação</span>
+          <span>Confira qualquer pendência no Mercado Pago</span>
         </div>
       </div>
     </Card>
