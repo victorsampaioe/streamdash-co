@@ -122,6 +122,14 @@ export async function syncMpPayment(paymentId: string | number) {
   }
 
   if (status === "approved") {
+    // Confirme identidade e valor antes de ativar a assinatura.
+    if (mp.external_reference && String(mp.external_reference) !== String(row.id)) {
+      throw new Error("Referência da cobrança divergente");
+    }
+    if (mp.transaction_amount !== undefined &&
+      Math.round(Number(mp.transaction_amount) * 100) !== Number(row.amount_cents)) {
+      throw new Error("Valor do pagamento diferente da cobrança");
+    }
     const paidAt = new Date().toISOString();
     const { data: finalized, error } = await supabaseAdmin.rpc("finalize_approved_payment", {
       _payment_id: row.id,
@@ -189,14 +197,16 @@ export async function reconcilePendingPayments(limit = 40) {
  * como aprovado. Só considera pagamentos recentes e confirma o status no
  * Mercado Pago antes de conceder acesso. Nunca adiciona créditos.
  */
-export async function repairApprovedSubscriptionMismatches(limit = 50) {
+export async function repairApprovedSubscriptionMismatches(limit = 50, userId?: string) {
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
   const since = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
-  const { data: rows, error } = await supabaseAdmin.from("payments")
+  let approvedQuery = supabaseAdmin.from("payments")
     .select("id, user_id, plan, status, payment_type, provider_payment_id, paid_at, amount_cents")
     .eq("status", "approved")
     .eq("payment_type", "subscription")
-    .gte("paid_at", since)
+    .gte("paid_at", since);
+  if (userId) approvedQuery = approvedQuery.eq("user_id", userId);
+  const { data: rows, error } = await approvedQuery
     .order("paid_at", { ascending: false })
     .limit(limit);
   if (error) throw new Error(error.message);
