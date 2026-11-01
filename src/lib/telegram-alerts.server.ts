@@ -57,7 +57,8 @@ export async function processTelegramAlert(data: AlertData) {
     .eq("enabled", true);
 
   if (channels && channels.length > 0) {
-    await Promise.allSettled(channels.map(ch => sendToTelegram(ch.target, message)));
+    const attempts = await Promise.allSettled(channels.map(ch => sendToTelegram(ch.target, message)));
+    for (const a of attempts) if (a.status === "rejected") console.error("[TelegramAlert] Falha de entrega:", a.reason);
   }
 
   // 5. Enviar cópia para o Admin (Monitoramento Central)
@@ -119,16 +120,18 @@ async function sendToTelegram(target: string, text: string) {
     botToken = t; chatId = c;
   }
 
-  if (!botToken || !chatId) return;
+  if (!botToken || !chatId) throw new Error("Canal Telegram sem token ou chat ID.");
 
   try {
-    await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+    const response = await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ chat_id: chatId, text, parse_mode: "HTML", disable_web_page_preview: true }),
     });
+    if (!response.ok) throw new Error(`Telegram HTTP ${response.status}`);
   } catch (e) {
     console.error("[TelegramAlert] Erro ao enviar para Telegram:", e);
+    throw e;
   }
 }
 
