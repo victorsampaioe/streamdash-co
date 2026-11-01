@@ -189,7 +189,7 @@ export const createPixPayment = createServerFn({ method: "POST" })
         throw new Error("O Mercado Pago não retornou um código PIX válido. Resposta: " + JSON.stringify(charge));
       }
       const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-      await supabaseAdmin
+      const { error: saveChargeError } = await supabaseAdmin
         .from("payments")
         .update({
           provider_payment_id: String(charge.id),
@@ -199,6 +199,10 @@ export const createPixPayment = createServerFn({ method: "POST" })
           raw_payload: charge as any,
         })
         .eq("id", payment.id);
+      if (saveChargeError) {
+        console.error("[mercadopago] Falha ao vincular cobrança", payment.id, saveChargeError);
+        throw new Error("O Pix foi criado, mas não pôde ser vinculado à sua conta. Contate o suporte antes de pagar.");
+      }
 
       return {
         paymentId: payment.id,
