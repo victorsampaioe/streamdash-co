@@ -641,6 +641,7 @@ export async function runDueDnsChecks(limit = 40): Promise<{ checked: number; er
   const pageSize = 200;
   const due: Array<{ id: string }> = [];
   let paused = 0;
+  const eligibleById = new Map<string, boolean>();
 
   // Paginação impede que os primeiros registros sempre ocupem a fila.
   // A ordenação por última checagem dá prioridade a DNS atrasados.
@@ -665,12 +666,18 @@ export async function runDueDnsChecks(limit = 40): Promise<{ checked: number; er
     for (const s of eligible) {
       if (!activeOwners.has(s.owner_id)) { paused++; continue; }
       due.push({ id: s.id });
+      eligibleById.set(s.id, !s.last_dns_check_at);
       if (due.length >= limit) break;
     }
     if (page.length < pageSize) break;
   }
 
-  const results = await runPool(due, (server) => runDnsCheck(server.id), {
+  const results = await runPool(due, (server) => {
+    // A primeira checagem prioriza a disponibilidade. A rotina seguinte
+    // complementa a ficha do DNS com WHOIS e geolocalização.
+    const firstCheck = eligibleById.get(server.id) === true;
+    return runDnsCheck(server.id, { quick: firstCheck });
+  }, {
     concurrency: 5, jitterMs: 100,
   });
   let checked = 0;
