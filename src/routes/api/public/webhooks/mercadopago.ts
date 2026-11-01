@@ -6,7 +6,8 @@ import { createFileRoute } from "@tanstack/react-router";
 async function processPayment(mpPaymentId: string) {
   const { syncMpPayment } = await import("@/lib/mercadopago.server");
   const res = await syncMpPayment(mpPaymentId);
-  if (res.status === "approved") {
+  // Notifica uma única vez na primeira aprovação, não a cada reenvio do webhook.
+  if (res.status === "approved" && res.newlyApproved) {
     try {
       const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
       const { notifyAdmin } = await import("@/lib/admin-telegram.server");
