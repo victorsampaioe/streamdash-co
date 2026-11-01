@@ -405,29 +405,24 @@ async function performCheck(server: ServerRow) {
         if (corr.verdict === "server_down") confirmDetails = "Queda Total Confirmada (Diagnóstico Inteligente)";
       } catch { /* ignore */ }
 
-      if (gate.grouped) {
-        // Anti-flood: muitas quedas simultâneas -> um único resumo por janela.
-        if (await claimFloodSummary()) {
-          try {
-            const { notifyAdmin } = await import("./admin-telegram.server");
-            await notifyAdmin(
-              `🚨 <b>ALERTA DE INSTABILIDADE</b>\n\n${gate.floodCount} servidores apresentaram falha nos últimos minutos.\n` +
-                `Consulte os detalhes no painel.`,
-            );
-          } catch { /* ignore */ }
-        }
-      } else {
-        const { processTelegramAlert } = await import("./telegram-alerts.server");
-        await processTelegramAlert({
-          serverId: server.id,
-          incidentId: gate.incidentId,
-          event: "OFFLINE",
-          reason,
-          confirmNote: confirmDetails,
-          regions: ["🇧🇷 São Paulo (VPS)"],
-        });
-        await sendAlerts(server, "down", `🚨 ${server.name} está OFFLINE\n${reason}`, gate.incidentId);
+      if (gate.grouped && await claimFloodSummary()) {
+        try {
+          const { notifyAdmin } = await import("./admin-telegram.server");
+          await notifyAdmin(`🚨 <b>ALERTA DE INSTABILIDADE</b>\n\n${gate.floodCount} servidores apresentaram falha nos últimos minutos.\nConsulte os detalhes no painel.`);
+        } catch (error) { console.error("[monitor] falha ao enviar resumo admin", error); }
       }
+      // O anti-flood do ADMIN nunca suprime o alerta do próprio revendedor.
+      const { processTelegramAlert } = await import("./telegram-alerts.server");
+      await processTelegramAlert({
+        serverId: server.id,
+        incidentId: gate.incidentId,
+        event: "OFFLINE",
+        reason,
+        confirmNote: confirmDetails,
+        regions: ["🇧🇷 São Paulo (VPS)"],
+        suppressAdminCopy: gate.grouped,
+      });
+      await sendAlerts(server, "down", `🚨 ${server.name} está OFFLINE\n${reason}`, gate.incidentId);
     } else if (gate.incidentId && gate.reason === "already_open") {
       // Tenta novamente somente se a entrega anterior não foi confirmada.
       // A própria rotina Telegram mantém idempotência por incidente.
@@ -561,8 +556,7 @@ async function sendAdminCopy(server: ServerRow, event: "up" | "down", message: s
 }
 
 async function sendAlerts(server: ServerRow, event: "up" | "down", message: string, incidentId: string | null) {
-  // Cópia para o Telegram do admin (independente dos canais da revenda)
-  await sendAdminCopy(server, event, message);
+  // Telegram e cópia para o admin são enviados e deduplicados em processTelegramAlert.
 
   const { data: channels } = await supabaseAdmin
     .from("alert_channels")
@@ -573,6 +567,7 @@ async function sendAlerts(server: ServerRow, event: "up" | "down", message: stri
 
 
   await Promise.allSettled(channels.map(async (ch: any) => {
+    if (ch.kind === "telegram") return; // envio unificado e confirmação por canal
     try {
       let ok = false;
       let response = "";
