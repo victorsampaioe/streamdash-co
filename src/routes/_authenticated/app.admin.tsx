@@ -303,6 +303,8 @@ function AdminPage() {
         </div>
       </div>
 
+      <TelegramNoveltiesCampaign />
+
       <div className="sm-workspace-grid">
         <Kpi icon={Users} label="Usuários totais" value={s?.total_users} tone="primary" sub={s ? `+${s.new_users_7d} nos últimos 7 dias` : undefined} />
         <Kpi icon={BadgeCheck} label="Assinantes ativos" value={s?.paid_active} tone="success" sub={s ? `${s.monthly_subs} mensal · ${s.yearly_subs} anual` : undefined} />
@@ -914,6 +916,53 @@ function ResellerDetailsDialog({ reseller }: { reseller: AdminReseller }) {
   );
 }
 
+
+const NOVELTY_TELEGRAM_MESSAGE = `🚀 <b>STREAM MONITOR — NOVIDADES!</b> 💙
+
+Nossa plataforma está de cara nova! O painel do cliente e a administração ganharam uma experiência mais moderna, organizada e fácil de usar.
+
+📊 Dashboard renovado e indicadores mais claros
+🖥️ Gerenciamento de servidores com visual melhorado
+🔔 Melhorias no acompanhamento dos alertas offline
+🇧🇷 Atualizações no Radar Brasil
+📱 Navegação aprimorada no celular e computador
+
+💙 <b>Já utiliza o Stream Monitor?</b> Acesse seu painel e confira as novidades!
+
+👋 <b>Está um tempo sem acessar?</b> Sua conta merece uma nova visita. Entre, conheça as melhorias e veja como podemos ajudar sua operação.
+
+👉 https://streammonitor.site
+
+Obrigado por fazer parte do Stream Monitor! 🚀`;
+
+function TelegramNoveltiesCampaign() {
+  const broadcast = useServerFn(broadcastTelegram);
+  const [sending, setSending] = useState(false);
+  const [result, setResult] = useState<string | null>(null);
+  return (
+    <Card className="border-primary/20 bg-primary/5 p-5 sm:p-6">
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+        <div className="space-y-2">
+          <h2 className="flex items-center gap-2 text-lg font-bold"><Send className="h-5 w-5 text-primary" /> Comunicado de novidades no Telegram</h2>
+          <p className="max-w-2xl text-sm text-muted-foreground">Envie uma única campanha para todos os chats Telegram conectados e habilitados, incluindo clientes ativos e inativos. Contas sem Telegram conectado não recebem mensagens.</p>
+        </div>
+        <Button disabled={sending} onClick={async () => {
+          if (!window.confirm("Enviar a campanha de novidades para todos os canais Telegram habilitados?")) return;
+          setSending(true);
+          setResult(null);
+          try {
+            const r = await broadcast({ data: { message: NOVELTY_TELEGRAM_MESSAGE } });
+            setResult(`Enviadas: ${r.sent} · Falhas: ${r.failed} · Canais: ${r.total}`);
+            toast.success("Campanha processada");
+          } catch (e: any) {
+            toast.error(e?.message ?? "Falha no envio da campanha");
+          } finally { setSending(false); }
+        }}><Send className="mr-2 h-4 w-4" />{sending ? "Enviando..." : "Enviar novidades para todos"}</Button>
+      </div>
+      {result && <p className="mt-4 text-sm font-medium text-primary" role="status">{result}</p>}
+    </Card>
+  );
+}
 
 function Kpi({ icon: Icon, label, value, sub, tone }: {
   icon: any; label: string; value: number | string | undefined; sub?: string;
