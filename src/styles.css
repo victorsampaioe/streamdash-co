@@ -181,3 +181,19 @@
     background: var(--color-muted-foreground);
   }
 }
+
+
+/* Stream Monitor — visual system 2026: shared by public pages, app and admin. */
+:root { --radius: 1rem; }
+html { scroll-behavior: smooth; }
+body { font-feature-settings: "cv11", "ss01"; -webkit-font-smoothing: antialiased; }
+.dark body { background-image: radial-gradient(ellipse 75% 40% at 50% -15%, oklch(0.33 0.09 220 / .22), transparent); }
+#main-content { animation: sm-enter .28s ease-out both; }
+@keyframes sm-enter { from { opacity: .5; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } #main-content { animation: none; } }
+#main-content :is(.rounded-lg, .rounded-xl) { border-radius: 1rem; }
+#main-content :is(button, a, input, select) { transition: background-color .18s ease, border-color .18s ease, box-shadow .18s ease; }
+#main-content :is(button, a, input, select):focus-visible { outline: 2px solid var(--ring); outline-offset: 2px; }
+#main-content .border { border-color: var(--border); }
+#main-content .shadow-sm { box-shadow: 0 6px 22px -12px oklch(0 0 0 / .24); }
+@media (max-width: 640px) { #main-content { overflow-wrap: anywhere; } #main-content table { font-size: .8125rem; } }
