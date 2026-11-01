@@ -59,6 +59,11 @@ export async function processTelegramAlert(data: AlertData) {
   if (channels && channels.length > 0) {
     const attempts = await Promise.allSettled(channels.map(ch => sendToTelegram(ch.target, message)));
     for (const a of attempts) if (a.status === "rejected") console.error("[TelegramAlert] Falha de entrega:", a.reason);
+    // Se nenhum canal recebeu, libera a tentativa para posterior reenvio.
+    if (incidentId && attempts.length > 0 && attempts.every(a => a.status === "rejected")) {
+      await supabaseAdmin.from("alert_idempotency" as any)
+        .delete().eq("id", `tg_alert_${incidentId}_${event.toLowerCase()}`);
+    }
   }
 
   // 5. Enviar cópia para o Admin (Monitoramento Central)
