@@ -83,12 +83,18 @@ async function run() {
   // Rede de segurança: criptografa credenciais Xtream legadas em texto puro.
   const encrypted = await safe("encrypt", () => migratePlaintextCredentials(50), { migrated: 0 }, errors);
   // Reconciliação: corrige estados errados e reenfileira servidores esquecidos.
-  const sweep = await safe(
-    "sweep",
-    () => runMonitorSweep("cron"),
-    { processed: 0, fixed: 0, requeued: 0, offlineFound: 0 } as any,
-    errors,
-  );
+  // A reconciliação percorre toda a base e pode fazer sondagens de rede.
+  // Rodá-la a cada minuto sufoca a fila principal. Execute no máximo em
+  // uma janela de 10 minutos; a checagem normal segue em todo ciclo.
+  const shouldSweep = Math.floor(Date.now() / 60_000) % 10 === 0;
+  const sweep = shouldSweep
+    ? await safe(
+        "sweep",
+        () => runMonitorSweep("cron"),
+        { processed: 0, fixed: 0, requeued: 0, offlineFound: 0 } as any,
+        errors,
+      )
+    : { processed: 0, fixed: 0, requeued: 0, offlineFound: 0 };
 
   return {
     ok: errors.length === 0,
@@ -171,8 +177,13 @@ export const Route = createFileRoute("/api/public/cron/check")({
       },
       GET: async ({ request }) => {
         if (!isAuthorized(request)) return new Response("Forbidden", { status: 403 });
-        try { return Response.json(await guardedRun()); }
-        catch (e: any) { return Response.json({ ok: false, error: e?.message ?? "unknown" }, { status: 200 }); }
+        try {
+          const result = await guardedRun();
+          return Response.json(result, { status: (result as any)?.ok === false ? 503 : 200 });
+        } catch (e) {
+          console.error("[cron/check] GET failed", e);
+          return Response.json({ ok: false, error: "cron_failed" }, { status: 503 });
+        }
       },
 
     },
