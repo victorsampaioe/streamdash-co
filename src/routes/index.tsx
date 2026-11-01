@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { lazy, Suspense, useState, useRef } from "react";
-import { Activity, Bell, Globe, Zap, ShieldCheck, LineChart, Send, BookOpen, UserCheck, TrendingUp, Search, Film, Tv, CheckCircle2, Cpu, PlayCircle, Play, Pause, Volume2, VolumeX } from "lucide-react";
+import { Activity, ServerIcon, Bell, Globe, Zap, ShieldCheck, LineChart, Send, BookOpen, UserCheck, TrendingUp, Search, Film, Tv, CheckCircle2, Cpu, PlayCircle, Play, Pause, Volume2, VolumeX } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 import heroVideoAsset from "@/assets/hero-video.mp4.asset.json";
@@ -64,42 +64,70 @@ function Landing() {
         </div>
       </header>
 
-      <section className="relative isolate overflow-hidden border-b border-border/50 before:pointer-events-none before:absolute before:inset-0 before:-z-10 before:bg-[radial-gradient(ellipse_at_75%_15%,oklch(0.42_0.19_260_/_0.22),transparent_58%)]">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 py-24 sm:py-32 md:py-40 text-center">
-          <div className="inline-flex items-center gap-2 rounded-full border border-border/60 bg-card/50 px-3 py-1 text-xs text-muted-foreground mb-6 sm:mb-8">
-            <span className="relative flex h-2 w-2">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-success opacity-75" />
-              <span className="relative inline-flex rounded-full h-2 w-2 bg-success" />
-            </span>
-            INTELIGÊNCIA E MONITORAMENTO 24/7
+      <section className="relative overflow-hidden border-b border-border/50 bg-background">
+        <div className="pointer-events-none absolute right-[-10%] top-[-20%] h-[600px] w-[600px] rounded-full bg-primary/10 blur-[120px]" />
+        <div className="relative mx-auto grid max-w-7xl items-center gap-12 px-5 py-16 sm:px-8 md:py-24 lg:grid-cols-[1fr_1.05fr] lg:gap-16 lg:py-32">
+          <div className="space-y-7">
+            <div className="inline-flex items-center gap-2 rounded-lg border border-primary/25 bg-primary/10 px-3 py-2 text-xs font-bold uppercase tracking-[.15em] text-primary">
+              <Activity className="h-4 w-4" /> Plataforma de observabilidade
+            </div>
+            <h1 className="max-w-2xl text-4xl font-extrabold leading-[1.07] tracking-[-.055em] sm:text-5xl xl:text-6xl">
+              Seus servidores.
+              <span className="mt-2 block text-primary">Uma visão completa.</span>
+            </h1>
+            <p className="max-w-lg text-base leading-relaxed text-muted-foreground sm:text-lg">
+              Acompanhe infraestrutura, disponibilidade e desempenho em um espaço organizado. Saiba quando algo precisa da sua atenção.
+            </p>
+            <div className="flex flex-col gap-3 sm:flex-row">
+              <Link to="/auth"><Button size="lg" className="h-12 w-full px-7 sm:w-auto">Começar a monitorar <Activity className="ml-2 h-4 w-4" /></Button></Link>
+              <Link to="/monitoramento-iptv"><Button variant="outline" size="lg" className="h-12 w-full px-7 sm:w-auto">Conhecer a plataforma</Button></Link>
+            </div>
+            <div className="grid max-w-lg grid-cols-3 gap-3 border-t border-border/60 pt-6">
+              <div><p className="font-bold text-foreground">DNS</p><p className="text-xs text-muted-foreground">Disponibilidade</p></div>
+              <div><p className="font-bold text-foreground">HTTP</p><p className="text-xs text-muted-foreground">Latência e resposta</p></div>
+              <div><p className="font-bold text-foreground">IPTV</p><p className="text-xs text-muted-foreground">Diagnóstico</p></div>
+            </div>
           </div>
-          <h1 className="text-4xl sm:text-6xl md:text-7xl font-extrabold tracking-[-0.055em] leading-[1.08] mb-5 sm:mb-7 break-words">
-            Infraestrutura sob controle.<br />
-            <span className="text-primary">Visibilidade em tempo real.</span>
-          </h1>
-          <p className="text-sm sm:text-base md:text-lg text-muted-foreground max-w-2xl mx-auto mb-6 sm:mb-10 px-2">
-            Monitoramento inteligente de IPTV, DNS e servidores com alertas automáticos no Telegram.
-          </p>
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-3 px-4">
-            <Link to="/auth" className="w-full sm:w-auto"><Button size="lg" className="w-full sm:w-auto glow-primary">✅ Testar sistema</Button></Link>
-            <Link to="/auth" className="w-full sm:w-auto"><Button size="lg" variant="outline" className="w-full sm:w-auto">✅ Seja revendedor</Button></Link>
-          </div>
-          <div className="mt-10 grid grid-cols-2 sm:grid-cols-4 gap-4 max-w-3xl mx-auto">
-            {[
-              { k: "30s", v: "Intervalo de checagem" },
-              { k: "4", v: "Regiões globais" },
-              { k: "< 1 min", v: "Alerta após a falha" },
-              { k: "24/7", v: "Vigilância contínua" },
-            ].map((m) => (
-              <div key={m.v} className="rounded-xl border border-border/60 bg-card/50 px-4 py-3">
-                <div className="text-xl font-bold text-primary">{m.k}</div>
-                <div className="text-[11px] uppercase tracking-wide text-muted-foreground">{m.v}</div>
+          <div className="relative min-w-0" aria-label="Ilustração da interface de monitoramento">
+            <div className="overflow-hidden rounded-[1.5rem] border border-border bg-card shadow-2xl shadow-primary/10">
+              <div className="flex items-center justify-between border-b border-border px-5 py-4">
+                <div className="flex items-center gap-3">
+                  <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary/15"><Activity className="h-5 w-5 text-primary" /></div>
+                  <div><div className="text-sm font-bold">Visão geral</div><div className="text-xs text-muted-foreground">Exemplo ilustrativo do painel</div></div>
+                </div>
+                <div className="rounded-lg border border-primary/25 bg-primary/10 px-3 py-1.5 text-[11px] font-semibold text-primary">Stream Monitor</div>
               </div>
-            ))}
+              <div className="grid grid-cols-3 gap-3 p-4 sm:p-5">
+                {[
+                  { label: "Servidores", value: "128", hint: "Monitorados" },
+                  { label: "Disponíveis", value: "121", hint: "Em operação" },
+                  { label: "Atenção", value: "07", hint: "Para investigar" },
+                ].map((item) => (
+                  <div key={item.label} className="min-w-0 rounded-xl border border-border bg-background/70 p-3 sm:p-4">
+                    <p className="truncate text-[11px] text-muted-foreground">{item.label}</p>
+                    <p className="mt-3 text-2xl font-extrabold tracking-tight text-foreground sm:text-3xl">{item.value}</p>
+                    <p className="mt-1 text-[10px] text-muted-foreground">{item.hint}</p>
+                  </div>
+                ))}
+              </div>
+              <div className="mx-4 mb-5 rounded-xl border border-border bg-background/60 sm:mx-5">
+                <div className="flex items-center justify-between border-b border-border p-4"><span className="text-sm font-bold">Status da infraestrutura</span><span className="text-xs text-muted-foreground">Exemplo</span></div>
+                {[
+                  { name: "Servidor principal", state: "Operacional", tone: "text-primary" },
+                  { name: "Rota secundária", state: "Operacional", tone: "text-primary" },
+                  { name: "Servidor de mídia", state: "Em análise", tone: "text-amber-500" },
+                ].map((item) => (
+                  <div key={item.name} className="flex items-center justify-between gap-3 border-b border-border/50 px-4 py-3 last:border-0">
+                    <div className="flex min-w-0 items-center gap-3"><ServerIcon className="h-4 w-4 shrink-0 text-muted-foreground" /><span className="truncate text-xs font-medium sm:text-sm">{item.name}</span></div>
+                    <span className={`shrink-0 text-[11px] font-semibold ${item.tone}`}>{item.state}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
           </div>
         </div>
       </section>
-      
+
       <RadarShowcase />
 
       <section id="recursos" className="max-w-6xl mx-auto px-4 sm:px-6 py-16 sm:py-20">
