@@ -117,13 +117,13 @@ function useNavItems() {
     { to: "/app/radar", label: "Radar Brasil", icon: Radio },
     { to: "/app/detector", label: "Detector", icon: ShieldAlert },
     { to: "/app/inteligencia", label: "Inteligência de Conteúdo", icon: Sparkles },
-    ...(navIsAdmin ? [{ to: "/app/player", label: "Web Player", icon: LayoutDashboard }] : []),
+
     
     
     { to: "/app/ranking", label: "Ranking", icon: Trophy },
     { to: "/app/performance", label: "Performance", icon: Gauge },
     { to: "/app/achievements", label: "Conquistas", icon: Trophy },
-    { to: "/app/store", label: "Loja Stream Monitor", icon: ShoppingBag },
+
 
   ];
 
