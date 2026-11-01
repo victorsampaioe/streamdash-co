@@ -5,6 +5,7 @@ export type AlertEvent = "OFFLINE" | "ONLINE" | "UNSTABLE";
 export interface AlertData {
   serverId: string;
   incidentId?: string;
+  kind?: "server" | "dns";
   event: AlertEvent;
   reason?: string;
   confirmNote?: string;
@@ -76,6 +77,30 @@ function formatAlertMessage(server: any, data: AlertData): string {
   const dateStr = now.toLocaleDateString("pt-BR");
   
   const esc = (s: any) => String(s ?? "-").replace(/[<>&]/g, (c) => ({ "<": "&lt;", ">": "&gt;", "&": "&amp;" }[c]!));
+
+  if (data.kind === "dns") {
+    if (data.event === "OFFLINE") {
+      return (
+        `🚨 <b>STREAM MONITOR — DNS OFFLINE CONFIRMADO</b>\n\n` +
+        `<b>Domínio:</b> <code>${esc(server.host)}</code>\n` +
+        `<b>Servidor:</b> ${esc(server.name)}\n` +
+        `<b>Status DNS:</b> 🔴 Não resolve\n` +
+        `<b>Confirmação:</b> falhas consecutivas em resolvedores independentes\n` +
+        `<b>Fontes:</b> ${esc(data.regions?.join(", ") || "DNS externos")}\n` +
+        `<b>Horário:</b> ${timeStr} (${dateStr})\n\n` +
+        `O estado do DNS não determina, sozinho, que o servidor IPTV está offline.`
+      );
+    }
+    if (data.event === "ONLINE") {
+      return (
+        `✅ <b>STREAM MONITOR — DNS RESTABELECIDO</b>\n\n` +
+        `<b>Domínio:</b> <code>${esc(server.host)}</code>\n` +
+        `<b>Servidor:</b> ${esc(server.name)}\n` +
+        `<b>Tempo de falha:</b> ${esc(data.timeOffline || "N/A")}\n` +
+        `<b>Horário:</b> ${timeStr} (${dateStr})`
+      );
+    }
+  }
 
   if (data.event === "OFFLINE") {
     return (
