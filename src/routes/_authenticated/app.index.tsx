@@ -172,9 +172,9 @@ function Dashboard() {
       </div>
 
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-5">
-        <Card className="p-6 xl:col-span-2">
+        <Card className="p-5 sm:p-7 xl:col-span-2 border-primary/15">
           <div className="text-xs uppercase tracking-wider text-muted-foreground mb-4">Resumo do monitoramento</div>
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
             <Summary emoji="✅" label="Monitorando" value={counts.up + counts.degraded + counts.down} tone="text-foreground" />
             <Summary emoji="🟢" label="Online" value={counts.up} tone="text-success" />
             <Summary emoji="🟡" label="Atenção" value={counts.degraded} tone="text-warning" />
@@ -182,7 +182,7 @@ function Dashboard() {
           </div>
         </Card>
 
-        <Card className="p-5 flex flex-col justify-between">
+        <Card className="p-5 sm:p-7 flex flex-col justify-between border-primary/15">
           <div className="flex items-center gap-2 text-xs uppercase tracking-wider text-muted-foreground mb-3">
             <HeartPulse className="h-3.5 w-3.5" /> Saúde geral
           </div>
@@ -296,8 +296,8 @@ function HealthBar({ value }: { value: number }) {
 function Summary({ emoji, label, value, tone }: { emoji: string; label: string; value: number; tone: string }) {
   return (
     <div>
-      <div className="text-xs text-muted-foreground mb-1">{emoji} {label}</div>
-      <div className={`text-3xl font-bold font-mono ${tone}`}>{value}</div>
+      <div className="text-xs text-muted-foreground mb-3 flex items-center gap-2"><span className="text-base">{emoji}</span> {label}</div>
+      <div className={`text-3xl sm:text-4xl font-extrabold tracking-tight tabular-nums ${tone}`}>{value}</div>
     </div>
   );
 }
@@ -335,7 +335,7 @@ function ServerCard({ server }: { server: any }) {
 
   return (
     <Link to="/app/servers/$id" params={{ id: server.id }}>
-      <Card className="p-5 hover:border-primary/50 transition-colors group">
+      <Card className="group p-5 sm:p-6 border-border/70 hover:border-primary/50 hover:bg-primary/[0.025] transition-colors">
         <div className="flex items-start justify-between mb-3">
           <div className="min-w-0">
             <div className="flex items-center gap-2 mb-1">
