@@ -1,5 +1,11 @@
 # STREAM MONITOR API
 
+## Correção PIX solicitada
+
+- [ ] Confirmar pagamento real do primeiro cliente da imagem e liberar o acesso comprado
+- [ ] Corrigir confirmação/ativação PIX e verificação administrativa para novos clientes
+- [ ] Validar reconciliação e testes sem duplicar benefícios
+
 - [x] Fase 1 — Auditoria e arquitetura
 - [x] Fase 2 — Banco, planos, API Keys, scopes e segurança
 - [x] Fase 3 — Gateway, autenticação, quotas, request ID e logs
