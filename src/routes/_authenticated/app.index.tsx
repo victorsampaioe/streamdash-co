@@ -159,18 +159,20 @@ function Dashboard() {
         </Alert>
       )}
 
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-xl sm:text-2xl font-semibold tracking-tight">
-            Olá{firstName ? `, ${capitalize(firstName)}` : ""} 👋
-          </h1>
-          <p className="text-sm text-muted-foreground">Resumo dos seus servidores em tempo real.</p>
+      <div className="sm-workspace-header">
+        <div className="flex items-center gap-4">
+          <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-primary/15"><HeartPulse className="h-7 w-7 text-primary" /></div>
+          <div>
+            <p className="mb-1 text-[11px] font-bold uppercase tracking-[.18em] text-primary">Workspace / Monitoramento</p>
+            <h1 className="text-2xl font-extrabold tracking-tight sm:text-3xl">Visão geral{firstName ? ` · ${capitalize(firstName)}` : ""}</h1>
+            <p className="mt-1 text-sm text-muted-foreground">Acompanhe disponibilidade, incidentes e desempenho em uma única tela.</p>
+          </div>
         </div>
-        <Link to="/app/servers/new" className="w-full sm:w-auto"><Button className="w-full sm:w-auto"><Plus className="h-4 w-4 mr-1" />Novo servidor</Button></Link>
+        <Link to="/app/servers/new" className="w-full sm:w-auto"><Button size="lg" className="w-full sm:w-auto"><Plus className="h-4 w-4 mr-1" />Adicionar servidor</Button></Link>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        <Card className="p-5 lg:col-span-2">
+      <div className="grid grid-cols-1 xl:grid-cols-3 gap-5">
+        <Card className="p-6 xl:col-span-2">
           <div className="text-xs uppercase tracking-wider text-muted-foreground mb-4">Resumo do monitoramento</div>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
             <Summary emoji="✅" label="Monitorando" value={counts.up + counts.degraded + counts.down} tone="text-foreground" />
