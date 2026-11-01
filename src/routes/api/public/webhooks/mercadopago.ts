@@ -61,23 +61,26 @@ async function handle(request: Request) {
   try { body = await request.json(); } catch { /* ignore */ }
 
   const type = url.searchParams.get("type") || body?.type || body?.topic;
-  const paymentId =
-    url.searchParams.get("data.id") ||
-    url.searchParams.get("id") ||
-    body?.data?.id ||
-    body?.resource;
+  // IPN pode trazer resource como URL; nunca confundir o ID da notificação com o do pagamento.
+  const rawPaymentId = url.searchParams.get("data.id") || body?.data?.id ||
+    body?.resource || url.searchParams.get("id");
+  const paymentId = String(rawPaymentId ?? "").trim().match(/(?:^|\\/)(\\d+)\\/?(?:\\?.*)?$/)?.[1];
 
   if (type && String(type) !== "payment") {
     return new Response("ignored", { status: 200 });
   }
-  if (!paymentId) return new Response("missing payment id", { status: 200 });
+  if (!paymentId) {
+    console.error("[mp-webhook] missing or invalid payment id", { type });
+    return new Response("invalid payment id", { status: 400 });
+  }
 
   try {
     await processPayment(String(paymentId));
     return new Response("ok", { status: 200 });
   } catch (e: any) {
     console.error("[mp-webhook] error:", e?.message ?? e);
-    return new Response(`error: ${e?.message ?? "unknown"}`, { status: 200 });
+    // Retornar 5xx permite que o Mercado Pago reenvie após erros temporários.
+    return new Response("payment sync failed", { status: 500 });
   }
 }
 
