@@ -25,9 +25,13 @@ export function SyncPaymentsCard() {
         queryClient.invalidateQueries({ queryKey: ["admin-users"] }),
         queryClient.invalidateQueries({ queryKey: ["subscription"] }),
       ]);
-      const summary = `Mercado Pago: ${res.mp_checked} consultados, ${res.mp_approved} pagos recuperados. Assinaturas corrigidas: ${res.db_fixed}. ${res.db_failed} falhas; ${res.needs_review} para revisão.`;
+      const summary = `Mercado Pago: ${res.mp_checked} consultados, ${res.mp_approved} pagamentos recuperados, ${res.mp_failed} erros de consulta. Assinaturas corrigidas: ${res.db_fixed}. ${res.db_failed} falhas de ativação; ${res.needs_review} para revisão.`;
       setLastResult(summary);
-      toast.success(summary, { id: toastId, duration: 7000 });
+      if (res.mp_failed || res.db_failed || res.needs_review) {
+        toast.warning(summary, { id: toastId, duration: 9000 });
+      } else {
+        toast.success(summary, { id: toastId, duration: 7000 });
+      }
     } catch (e: any) {
       toast.error("Erro na sincronização: " + (e.message || "Erro desconhecido"), { id: toastId });
     } finally {
