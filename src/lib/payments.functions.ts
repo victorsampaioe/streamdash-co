@@ -1,6 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
-import { reconcilePendingPayments, repairApprovedSubscriptionMismatches } from "./mercadopago.server";
+import { getMpToken, reconcilePendingPayments, repairApprovedSubscriptionMismatches } from "./mercadopago.server";
 
 /**
  * Ferramenta administrativa de recuperação financeira.
@@ -15,6 +15,7 @@ export const reconcileAllPayments = createServerFn({ method: "POST" })
       _role: "admin",
     });
     if (roleError || !isAdmin) throw new Error("Forbidden");
+    if (!getMpToken()) throw new Error("Mercado Pago não configurado nesta instância. Verifique MERCADOPAGO_ACCESS_TOKEN.");
 
     // 1. Recupera webhooks perdidos (inclui as cobranças Pix de hoje).
     const mp = await reconcilePendingPayments(100);
@@ -26,6 +27,7 @@ export const reconcileAllPayments = createServerFn({ method: "POST" })
     return {
       mp_checked: mp.checked,
       mp_approved: mp.approved,
+      mp_failed: mp.failed,
       db_checked: repairs.checked,
       db_fixed: repairs.repaired,
       db_failed: repairs.failed,
