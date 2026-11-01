@@ -41,12 +41,25 @@ export function DnsPanel({ serverId }: { serverId: string }) {
   const runNow = useServerFn(runDnsCheckNow);
   const ackAlert = useServerFn(acknowledgeDnsAlert);
 
+  const { data: dnsLive } = useQuery({
+    queryKey: ["dns-live-status", serverId],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("servers")
+        .select("dns_status, dns_health_score, last_dns_check_at, dns_failure_count, dns_enabled")
+        .eq("id", serverId).maybeSingle();
+      if (error) throw error;
+      return data;
+    },
+    refetchInterval: 15_000,
+    refetchOnWindowFocus: true,
+  });
+
   const { data: snapshots = [], isLoading } = useQuery({
     queryKey: ["dns-snapshots", serverId],
     queryFn: async () =>
       (await supabase.from("dns_snapshots").select("*").eq("server_id", serverId)
         .order("checked_at", { ascending: false }).limit(200)).data ?? [],
-    refetchInterval: 60_000,
+    refetchInterval: 15_000,
   });
 
   const { data: history = [] } = useQuery({
@@ -61,6 +74,7 @@ export function DnsPanel({ serverId }: { serverId: string }) {
     queryFn: async () =>
       (await supabase.from("dns_alerts").select("*").eq("server_id", serverId)
         .is("acknowledged_at", null).order("created_at", { ascending: false }).limit(20)).data ?? [],
+    refetchInterval: 15_000,
   });
 
   const latest = snapshots[0];
@@ -100,6 +114,24 @@ export function DnsPanel({ serverId }: { serverId: string }) {
 
   return (
     <div className="space-y-5">
+      <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-border/70 bg-card/70 px-4 py-3">
+        <div className="flex items-center gap-2 text-sm">
+          <span className="h-2.5 w-2.5 rounded-full bg-primary" />
+          <span className="font-medium">Estado do DNS</span>
+          <span className={dnsLive?.dns_status === "offline" ? "font-bold text-red-400"
+            : dnsLive?.dns_status === "unstable" ? "font-bold text-amber-400" : "font-semibold text-primary"}>
+            {dnsLive?.dns_enabled === false ? "Desativado"
+              : dnsLive?.dns_status === "offline" ? "Offline confirmado"
+              : dnsLive?.dns_status === "unstable" ? "Instável · aguardando confirmação"
+              : dnsLive?.dns_status === "online" ? "Respondendo" : "Aguardando"}
+          </span>
+        </div>
+        <span className="text-xs text-muted-foreground">
+          {dnsLive?.last_dns_check_at
+            ? `Última checagem: ${new Date(dnsLive.last_dns_check_at).toLocaleTimeString("pt-BR")}`
+            : "Ainda sem checagem"}
+        </span>
+      </div>
       <div className="flex items-center justify-between flex-wrap gap-2">
         <div>
           <h3 className="font-medium">Inteligência de DNS</h3>
