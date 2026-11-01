@@ -88,10 +88,14 @@ function ServersList() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
-        <div className="min-w-0">
-          <h1 className="text-2xl font-semibold tracking-tight">Servidores</h1>
-          <p className="text-sm text-muted-foreground">Todos os hosts monitorados. Porta fixa 80 / HTTP.</p>
+      <div className="sm-workspace-header">
+        <div className="flex min-w-0 items-center gap-4">
+          <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-primary/15 text-primary"><ServerIcon className="h-7 w-7" /></div>
+          <div className="min-w-0">
+            <p className="mb-1 text-[11px] font-bold uppercase tracking-[.16em] text-primary">Infraestrutura / Inventário</p>
+            <h1 className="text-2xl font-extrabold tracking-tight sm:text-3xl">Meus servidores</h1>
+            <p className="text-sm text-muted-foreground">Gerencie hosts, status e disponibilidade em um só lugar.</p>
+          </div>
         </div>
         <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
           <SearchInput value={q} onChange={setQ} />
@@ -99,7 +103,7 @@ function ServersList() {
         </div>
       </div>
 
-      <div className="flex flex-wrap gap-2">
+      <div className="flex flex-wrap gap-2 rounded-2xl border border-border/70 bg-card/60 p-3">
         {FILTERS.map((f) => (
           <Button
             key={f.key}
@@ -113,9 +117,9 @@ function ServersList() {
         ))}
       </div>
 
-      <Card className="overflow-hidden">
+      <Card className="overflow-hidden rounded-2xl border-border/70">
         <div className="overflow-x-auto scrollbar-hide">
-          <table className="w-full text-sm min-w-[640px]">
+          <table className="w-full text-sm min-w-[640px] border-separate border-spacing-0">
           <thead className="bg-muted/40 text-xs uppercase tracking-wider text-muted-foreground">
             <tr>
               <th className="text-left p-3 font-medium">Nome</th>
@@ -133,7 +137,7 @@ function ServersList() {
               </td></tr>
             )}
             {filtered.map((s) => (
-              <tr key={s.id} className="border-t border-border/60 hover:bg-muted/30">
+              <tr key={s.id} className="border-t border-border/60 hover:bg-primary/5 transition-colors">
                 <td className="p-3 font-medium">
                   <Link to="/app/servers/$id" params={{ id: s.id }} className="hover:text-primary">{s.name}</Link>
                 </td>
