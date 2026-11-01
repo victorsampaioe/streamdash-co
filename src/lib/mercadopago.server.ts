@@ -158,9 +158,9 @@ export async function syncMpPayment(paymentId: string | number) {
  * and finalizes any that were already paid (e.g. when the webhook was missed).
  */
 export async function reconcilePendingPayments(limit = 40) {
-  if (!getMpToken()) return { checked: 0, approved: 0 };
+  if (!getMpToken()) return { checked: 0, approved: 0, failed: 0 };
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-  const { data: rows } = await supabaseAdmin
+  const { data: rows, error: queryError } = await supabaseAdmin
     .from("payments")
     .select("id, provider_payment_id")
     .eq("status", "pending")
@@ -168,17 +168,20 @@ export async function reconcilePendingPayments(limit = 40) {
     .gt("created_at", new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString())
     .order("created_at", { ascending: false })
     .limit(limit);
+  if (queryError) throw new Error(queryError.message);
 
   let approved = 0;
+  let failed = 0;
   for (const row of rows ?? []) {
     try {
       const res = await syncMpPayment(row.provider_payment_id as string);
       if (res.status === "approved") approved++;
     } catch (e) {
+      failed++;
       console.error("[mercadopago] reconcile failed for", row.id, e);
     }
   }
-  return { checked: rows?.length ?? 0, approved };
+  return { checked: rows?.length ?? 0, approved, failed };
 }
 
 /**
