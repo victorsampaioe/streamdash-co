@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { lazy, Suspense, useState, useRef } from "react";
-import { Activity, ServerIcon, Bell, Globe, Zap, ShieldCheck, LineChart, Send, BookOpen, UserCheck, TrendingUp, Search, Film, Tv, CheckCircle2, Cpu, PlayCircle, Play, Pause, Volume2, VolumeX } from "lucide-react";
+import { Activity, ArrowRight, ServerIcon, Bell, Globe, Zap, ShieldCheck, LineChart, Send, BookOpen, UserCheck, TrendingUp, Search, Film, Tv, CheckCircle2, Cpu, PlayCircle, Play, Pause, Volume2, VolumeX } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 import heroVideoAsset from "@/assets/hero-video.mp4.asset.json";
@@ -164,37 +164,63 @@ function Landing() {
         </div>
       </section>
 
-      <section className="border-y border-border/60 bg-card/40">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 py-10 sm:py-12 text-center">
-          <h2 className="text-2xl font-bold tracking-tight mb-3">Pronto para profissionalizar sua operação?</h2>
-          <p className="text-muted-foreground mb-6 max-w-xl mx-auto">
-            Junte-se a centenas de revendedores que não perdem mais tempo respondendo reclamação de queda.
+      <section className="relative isolate overflow-hidden border-y border-blue-500/15 bg-[#071225]">
+        <div className="pointer-events-none absolute -right-36 -top-44 h-[440px] w-[440px] rounded-full bg-blue-600/20 blur-[110px]" />
+        <div className="pointer-events-none absolute -bottom-48 -left-40 h-[420px] w-[420px] rounded-full bg-blue-700/20 blur-[110px]" />
+        <div className="relative mx-auto max-w-5xl px-5 py-16 text-center sm:px-8 sm:py-24">
+          <div className="mx-auto mb-7 flex h-14 w-14 items-center justify-center rounded-2xl border border-blue-400/30 bg-blue-500/15 text-blue-400 shadow-lg shadow-blue-600/10">
+            <Activity className="h-7 w-7" />
+          </div>
+          <h2 className="mx-auto max-w-3xl text-3xl font-extrabold leading-tight tracking-tight text-white sm:text-5xl">
+            Pronto para profissionalizar <span className="text-blue-400">sua operação?</span>
+          </h2>
+          <p className="mx-auto mt-5 max-w-2xl text-base leading-relaxed text-slate-300 sm:text-lg">
+            Centralize o monitoramento, acompanhe seus servidores e tenha mais controle sobre a sua infraestrutura.
           </p>
-          <div className="flex flex-wrap justify-center gap-4">
-            <Link to="/auth"><Button size="lg" className="glow-primary">✅ Começar agora</Button></Link>
-            <a href="https://t.me/+RId642Ac4AFkOWFh" target="_blank" rel="noopener noreferrer">
-              <Button size="lg" variant="outline" className="gap-2">
-                <Send className="h-4 w-4" />Canal de Novidades
+          <div className="mx-auto mt-9 flex w-full max-w-md flex-col justify-center gap-3 sm:max-w-none sm:flex-row">
+            <Link to="/auth" className="w-full sm:w-auto">
+              <Button size="lg" className="h-12 w-full rounded-xl bg-blue-600 px-8 font-semibold text-white shadow-lg shadow-blue-600/20 hover:bg-blue-500 sm:w-auto">
+                Começar agora <ArrowRight className="ml-2 h-4 w-4" />
+              </Button>
+            </Link>
+            <a href="https://t.me/+RId642Ac4AFkOWFh" target="_blank" rel="noopener noreferrer" className="w-full sm:w-auto">
+              <Button size="lg" variant="outline" className="h-12 w-full rounded-xl border-blue-300/30 bg-white/5 px-7 text-white hover:bg-white/10 hover:text-white sm:w-auto">
+                <Send className="mr-2 h-4 w-4" /> Canal de Novidades
               </Button>
             </a>
           </div>
         </div>
       </section>
 
-      <footer className="border-t border-border/60">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 py-8 text-sm text-muted-foreground flex flex-col sm:flex-row items-center justify-between gap-3 text-center sm:text-left">
-          <span>© {new Date().getFullYear()} streammonitor.site</span>
-          <div className="flex items-center gap-4">
-            <a href="https://t.me/+RId642Ac4AFkOWFh" target="_blank" rel="noopener noreferrer" className="hover:text-primary inline-flex items-center gap-1.5">
-              <Send className="h-4 w-4" />Novidades no Telegram
-            </a>
-            <Link to="/monitoramento-iptv" className="hover:text-primary">Monitoramento IPTV</Link>
-            <Link to="/monitoramento-dns" className="hover:text-primary">Monitoramento DNS</Link>
-            <Link to="/alertas-telegram" className="hover:text-primary">Alertas</Link>
-            <Link to="/revendedor-stream-monitor" className="hover:text-primary">Revenda</Link>
-            <Link to="/blog" className="hover:text-primary">Blog</Link>
-            <Link to="/auth" className="hover:text-primary">Entrar</Link>
+      <footer className="border-t border-white/10 bg-[#050C19] text-slate-300">
+        <div className="mx-auto grid max-w-6xl gap-10 px-6 py-12 sm:grid-cols-2 sm:px-8 lg:grid-cols-[1.5fr_1fr_1fr] lg:gap-14 lg:py-16">
+          <div className="space-y-4">
+            <div className="flex items-center gap-3 text-white">
+              <Activity className="h-7 w-7 text-blue-400" />
+              <span className="text-xl font-extrabold tracking-tight">stream<span className="text-blue-400">monitor</span></span>
+            </div>
+            <p className="max-w-xs text-sm leading-relaxed text-slate-400">Tecnologia para monitorar servidores, DNS e infraestrutura em uma única plataforma.</p>
           </div>
+          <div>
+            <h3 className="mb-4 text-xs font-bold uppercase tracking-[.16em] text-white">Plataforma</h3>
+            <nav aria-label="Links da plataforma" className="grid gap-3 text-sm">
+              <Link to="/monitoramento-iptv" className="w-fit hover:text-blue-400">Monitoramento IPTV</Link>
+              <Link to="/monitoramento-dns" className="w-fit hover:text-blue-400">Monitoramento DNS</Link>
+              <Link to="/alertas-telegram" className="w-fit hover:text-blue-400">Alertas</Link>
+            </nav>
+          </div>
+          <div>
+            <h3 className="mb-4 text-xs font-bold uppercase tracking-[.16em] text-white">Links úteis</h3>
+            <nav aria-label="Links úteis" className="grid gap-3 text-sm">
+              <Link to="/revendedor-stream-monitor" className="w-fit hover:text-blue-400">Seja revendedor</Link>
+              <Link to="/blog" className="w-fit hover:text-blue-400">Blog</Link>
+              <Link to="/auth" className="w-fit hover:text-blue-400">Entrar na plataforma</Link>
+              <a href="https://t.me/+RId642Ac4AFkOWFh" target="_blank" rel="noopener noreferrer" className="w-fit hover:text-blue-400">Telegram</a>
+            </nav>
+          </div>
+        </div>
+        <div className="border-t border-white/10 px-6 py-5 text-center text-xs text-slate-500">
+          © {new Date().getFullYear()} Stream Monitor. Todos os direitos reservados.
         </div>
       </footer>
 
