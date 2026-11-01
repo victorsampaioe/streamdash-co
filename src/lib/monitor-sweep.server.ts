@@ -41,13 +41,22 @@ export async function runMonitorSweep(trigger = "cron"): Promise<SweepResult> {
   };
 
   try {
-    const { data: servers } = await supabaseAdmin
-      .from("servers")
-      .select("id, host, current_status, dns_status, last_checked_at, interval_seconds, consecutive_failures")
-      .eq("monitoring_paused", false)
-      .limit(500);
-
-    const list = servers ?? [];
+    // Paginação por ID: não deixa servidores além dos 500 primeiros sem reconciliação.
+    // Um lote por vez evita respostas enormes do PostgREST e permite processar
+    // todos os servidores ativos, mesmo quando a base cresce.
+    const list: any[] = [];
+    const PAGE_SIZE = 500;
+    for (let offset = 0; ; offset += PAGE_SIZE) {
+      const { data: page, error: pageError } = await supabaseAdmin
+        .from("servers")
+        .select("id, host, current_status, dns_status, last_checked_at, interval_seconds, consecutive_failures")
+        .eq("monitoring_paused", false)
+        .order("id", { ascending: true })
+        .range(offset, offset + PAGE_SIZE - 1);
+      if (pageError) throw pageError;
+      list.push(...(page ?? []));
+      if (!page || page.length < PAGE_SIZE) break;
+    }
     result.total = list.length;
 
     const { verifyService, lastKnownIp, computePriority } = await import("./monitor-state.server");
