@@ -37,7 +37,7 @@ function Dashboard() {
       const { data, error } = await supabase
         .from("servers")
         .select(
-          "id, name, description, category, current_status, last_latency_ms, last_checked_at, ssl_days_remaining, health_score, dns_health_score, dns_status, last_dns_check_at, is_public, public_slug, created_at, monitoring_paused",
+          "id, name, description, category, current_status, last_latency_ms, last_checked_at, ssl_days_remaining, health_score, dns_health_score, dns_status, dns_enabled, last_dns_check_at, is_public, public_slug, created_at, monitoring_paused",
         )
         .order("created_at", { ascending: false });
       if (error) throw error;
@@ -352,7 +352,9 @@ function ServerCard({ server }: { server: any }) {
                 : server.dns_status === "unstable"
                   ? "rounded-md bg-amber-500/15 px-2 py-1 font-semibold text-amber-400"
                   : "rounded-md bg-primary/10 px-2 py-1 font-semibold text-primary"}>
-                DNS: {server.dns_status === "offline" ? "OFFLINE"
+                DNS: {server.dns_enabled === false ? "Desativado"
+                  : server.last_dns_check_at && Date.now() - new Date(server.last_dns_check_at).getTime() > 3 * 60_000 ? "Atualização atrasada"
+                  : server.dns_status === "offline" ? "OFFLINE"
                   : server.dns_status === "unstable" ? "Instável"
                   : server.dns_status === "online" ? "Respondendo" : "Aguardando"}
               </span>
