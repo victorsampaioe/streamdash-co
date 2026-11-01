@@ -155,9 +155,14 @@ export async function flushIptvNotificationQueue() {
     .from("iptv_notification_queue")
     .select("*, servers(name)")
     .is("sent_at", null)
-    .order("created_at", { ascending: true });
+    .order("created_at", { ascending: true })
+    .limit(250);
 
-  if (!pending?.length) return;
+  if (!pending?.length) return { sent: 0, failed: 0 };
+
+  let sent = 0;
+  let failed = 0;
+  const escapeHtml = (value: unknown) => String(value ?? "").replace(/[<>&]/g, ch => ({ "<": "&lt;", ">": "&gt;", "&": "&amp;" })[ch]!);
 
   // Agrupa por owner_id
   const byOwner: Record<string, any[]> = {};
@@ -170,7 +175,7 @@ export async function flushIptvNotificationQueue() {
     const { data: channels } = await supabaseAdmin
       .from("alert_channels").select("*").eq("owner_id", ownerId).eq("enabled", true).eq("kind", "telegram");
     
-    if (!channels?.length) continue;
+    if (!channels?.length) { failed += items.length; continue; }
 
     const movies = items.filter(i => i.kind === 'vod');
     const series = items.filter(i => i.kind === 'series');
@@ -187,42 +192,59 @@ export async function flushIptvNotificationQueue() {
         `Foram encontrados ${items.length} novos conteúdos:\n\n`;
       
       if (movies.length > 0) {
-        message += `🎬 <b>Filmes:</b>\n` + movies.slice(0, 10).map(m => `• ${m.name}`).join("\n") + "\n";
+        message += `🎬 <b>Filmes:</b>\n` + movies.slice(0, 10).map(m => `• ${escapeHtml(m.name)}`).join("\n") + "\n";
         if (movies.length > 10) message += `<i>... e mais ${movies.length - 10} filmes</i>\n`;
         message += "\n";
       }
 
       if (series.length > 0) {
-        message += `📺 <b>Séries:</b>\n` + series.slice(0, 10).map(s => `• ${s.name}`).join("\n") + "\n";
+        message += `📺 <b>Séries:</b>\n` + series.slice(0, 10).map(s => `• ${escapeHtml(s.name)}`).join("\n") + "\n";
         if (series.length > 10) message += `<i>... e mais ${series.length - 10} séries</i>\n`;
         message += "\n";
       }
 
       if (servers.length > 0) {
-        message += `🏆 <b>Primeiros servidores a adicionar:</b>\n${servers.join(", ")}\n\n`;
+        message += `🏆 <b>Primeiros servidores a adicionar:</b>\n${servers.map(escapeHtml).join(", ")}\n\n`;
       }
 
       message += `⏰ <b>Período:</b>\nÚltimos 15 minutos`;
     }
 
     const token = process.env.TELEGRAM_BOT_TOKEN;
+    let allDelivered = true;
     for (const ch of channels) {
       let botToken = token ?? "";
       let chatId = ch.target?.trim() ?? "";
-      if (chatId.includes(":")) { const [t, c] = chatId.split(":"); botToken = t; chatId = c; }
-      if (!botToken || !chatId) continue;
-      
-      await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ chat_id: chatId, text: message, parse_mode: "HTML" }),
-      }).catch(() => {});
+      if (chatId.includes(":")) { const [t, target] = chatId.split(":"); botToken = t; chatId = target; }
+      if (!botToken || !chatId) { allDelivered = false; continue; }
+      try {
+        const response = await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ chat_id: chatId, text: message, parse_mode: "HTML" }),
+          signal: AbortSignal.timeout(10_000),
+        });
+        if (!response.ok) {
+          allDelivered = false;
+          console.error("[IPTV notifications] Telegram recusou envio", response.status);
+        }
+      } catch (error) {
+        allDelivered = false;
+        console.error("[IPTV notifications] Falha na entrega", error);
+      }
     }
 
-    // Marca como enviado
-    await supabaseAdmin
-      .from("iptv_notification_queue")
-      .update({ sent_at: new Date().toISOString() } as never)
-      .in("id", items.map(i => i.id));
+    // Só remove da fila depois de confirmação de todos os canais habilitados.
+    // Em entrega parcial pode ocorrer repetição no próximo ciclo (at-least-once).
+    if (allDelivered) {
+      const { error } = await supabaseAdmin.from("iptv_notification_queue")
+        .update({ sent_at: new Date().toISOString() } as never)
+        .in("id", items.map(i => i.id));
+      if (error) throw new Error(`Não foi possível confirmar fila IPTV: ${error.message}`);
+      sent += items.length;
+    } else {
+      failed += items.length;
+    }
   }
+  return { sent, failed };
 }
