@@ -67,13 +67,13 @@
 /* Dark first (observability) */
 :root {
   --radius: 0.75rem;
-  --background: oklch(0.16 0.02 260);
+  --background: oklch(0.125 0.018 255);
   --foreground: oklch(0.97 0.005 260);
-  --card: oklch(0.20 0.02 260);
+  --card: oklch(0.185 0.017 255);
   --card-foreground: oklch(0.97 0.005 260);
   --popover: oklch(0.20 0.02 260);
   --popover-foreground: oklch(0.97 0.005 260);
-  --primary: oklch(0.80 0.16 200);
+  --primary: oklch(0.77 0.16 170);
   --primary-foreground: oklch(0.16 0.03 260);
   --secondary: oklch(0.26 0.02 260);
   --secondary-foreground: oklch(0.97 0.005 260);
@@ -89,20 +89,20 @@
   --warning-foreground: oklch(0.16 0.03 260);
   --border: oklch(0.28 0.02 260);
   --input: oklch(0.26 0.02 260);
-  --ring: oklch(0.80 0.16 200);
+  --ring: oklch(0.77 0.16 170);
   --chart-1: oklch(0.80 0.16 200);
   --chart-2: oklch(0.72 0.18 150);
   --chart-3: oklch(0.80 0.16 75);
   --chart-4: oklch(0.63 0.22 25);
   --chart-5: oklch(0.70 0.15 300);
-  --sidebar: oklch(0.18 0.02 260);
+  --sidebar: oklch(0.105 0.018 255);
   --sidebar-foreground: oklch(0.90 0.01 260);
-  --sidebar-primary: oklch(0.80 0.16 200);
+  --sidebar-primary: oklch(0.77 0.16 170);
   --sidebar-primary-foreground: oklch(0.16 0.03 260);
-  --sidebar-accent: oklch(0.24 0.03 260);
+  --sidebar-accent: oklch(0.22 0.032 220);
   --sidebar-accent-foreground: oklch(0.97 0.005 260);
   --sidebar-border: oklch(0.26 0.02 260);
-  --sidebar-ring: oklch(0.80 0.16 200);
+  --sidebar-ring: oklch(0.77 0.16 170);
 }
 
 .light {
@@ -197,3 +197,20 @@ body { font-feature-settings: "cv11", "ss01"; -webkit-font-smoothing: antialiase
 #main-content .border { border-color: var(--border); }
 #main-content .shadow-sm { box-shadow: 0 6px 22px -12px oklch(0 0 0 / .24); }
 @media (max-width: 640px) { #main-content { overflow-wrap: anywhere; } #main-content table { font-size: .8125rem; } }
+
+/* NOVA IDENTIDADE: observability studio — navy + mint, deliberate flat panels */
+:root { --radius: .625rem; }
+.dark body { background-image: none; }
+#main-content { background-image: linear-gradient(135deg, oklch(0.25 0.045 215 / .12), transparent 38%); }
+#main-content :is(.rounded-lg,.rounded-xl) { border-radius: .75rem; }
+#main-content :is(.bg-card, [data-slot="card"]) { border: 1px solid var(--border); box-shadow: none; }
+#main-content :is(h1,h2) { letter-spacing: -.035em; }
+#main-content h1 { font-weight: 750; }
+#main-content table { border-collapse: separate; border-spacing: 0; }
+#main-content thead { background: var(--muted); }
+#main-content th { font-weight: 650; text-transform: uppercase; letter-spacing: .06em; font-size: .7rem; }
+#main-content tbody tr { transition: background-color .16s ease; }
+#main-content tbody tr:hover { background: var(--accent); }
+#main-content :is(input,textarea,select) { border-radius: .625rem; }
+#main-content :is(button,[role=tab]) { font-weight: 600; }
+@media (prefers-reduced-motion: reduce) { #main-content * { scroll-behavior: auto; } }
