@@ -64,18 +64,18 @@ function Landing() {
         </div>
       </header>
 
-      <section className="grid-bg relative isolate overflow-hidden before:pointer-events-none before:absolute before:inset-0 before:-z-10 before:bg-[radial-gradient(ellipse_at_top,oklch(0.58_0.13_215_/_0.13),transparent_65%)]">
+      <section className="relative isolate overflow-hidden border-b border-border/60 before:pointer-events-none before:absolute before:inset-0 before:-z-10 before:bg-[linear-gradient(145deg,oklch(0.23_0.06_210_/_0.42),transparent_58%)]">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 py-20 sm:py-28 md:py-36 text-center">
           <div className="inline-flex items-center gap-2 rounded-full border border-border/60 bg-card/50 px-3 py-1 text-xs text-muted-foreground mb-6 sm:mb-8">
             <span className="relative flex h-2 w-2">
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-success opacity-75" />
               <span className="relative inline-flex rounded-full h-2 w-2 bg-success" />
             </span>
-            Monitoramento ativo a cada 30 segundos
+            PLATAFORMA DE OBSERVABILIDADE
           </div>
-          <h1 className="text-3xl sm:text-5xl md:text-7xl font-bold tracking-tight mb-4 sm:mb-6 break-words">
-            Seu servidor IPTV caiu?<br />
-            <span className="text-primary">Descubra antes dos seus clientes.</span>
+          <h1 className="text-4xl sm:text-6xl md:text-7xl font-extrabold tracking-[-0.055em] leading-[1.08] mb-5 sm:mb-7 break-words">
+            Controle sua operação.<br />
+            <span className="text-primary">Antecipe cada interrupção.</span>
           </h1>
           <p className="text-sm sm:text-base md:text-lg text-muted-foreground max-w-2xl mx-auto mb-6 sm:mb-10 px-2">
             Monitoramento inteligente de IPTV, DNS e servidores com alertas automáticos no Telegram.
