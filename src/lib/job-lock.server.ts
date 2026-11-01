@@ -6,11 +6,14 @@
  * gera fila + timeouts. Estas travas fazem o novo ciclo desistir na hora.
  */
 
+const localLocks = new Set<string>();
+
 const HOLDER = `${process.env.IS_CORE === "true" ? "core" : "panel"}-${Math.random()
   .toString(36)
   .slice(2, 8)}`;
 
 export async function tryAcquireLock(name: string, ttlSeconds: number): Promise<boolean> {
+  if (localLocks.has(name)) return false;
   try {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { data, error } = await supabaseAdmin.rpc("try_acquire_cron_lock", {
@@ -20,11 +23,19 @@ export async function tryAcquireLock(name: string, ttlSeconds: number): Promise<
     } as never);
     if (error) {
       console.warn(`[lock] falha ao adquirir "${name}": ${error.message}`);
-      return true; // nunca bloqueia o ciclo por falha de infraestrutura
+      // Se a RPC estiver indisponível, usa uma trava local. Isso protege
+      // contra sobreposição nesta instância, mas não entre múltiplas instâncias.
+      if (localLocks.has(name)) return false;
+      localLocks.add(name);
+      return true;
     }
-    return Boolean(data);
+    if (!data || localLocks.has(name)) return false;
+    localLocks.add(name);
+    return true;
   } catch (e: any) {
     console.warn(`[lock] indisponível para "${name}": ${e?.message}`);
+    if (localLocks.has(name)) return false;
+    localLocks.add(name);
     return true;
   }
 }
@@ -34,7 +45,9 @@ export async function releaseLock(name: string): Promise<void> {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     await supabaseAdmin.rpc("release_cron_lock", { _name: name } as never);
   } catch {
-    /* a trava expira sozinha pelo TTL */
+    /* a trava distribuída expira sozinha pelo TTL */
+  } finally {
+    localLocks.delete(name);
   }
 }
 
