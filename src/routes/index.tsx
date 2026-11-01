@@ -76,11 +76,11 @@ function Landing() {
               <span className="mt-2 block text-primary">Uma visão completa.</span>
             </h1>
             <p className="max-w-lg text-base leading-relaxed text-muted-foreground sm:text-lg">
-              Acompanhe infraestrutura, disponibilidade e desempenho em um espaço organizado. Saiba quando algo precisa da sua atenção.
+              Monitoramento IPTV para revendedores: acompanhe servidores, DNS, latência e disponibilidade. Receba alertas e investigue falhas em um painel profissional.
             </p>
             <div className="flex flex-col gap-3 sm:flex-row">
               <Link to="/auth"><Button size="lg" className="h-12 w-full px-7 sm:w-auto">Começar a monitorar <Activity className="ml-2 h-4 w-4" /></Button></Link>
-              <Link to="/monitoramento-iptv"><Button variant="outline" size="lg" className="h-12 w-full px-7 sm:w-auto">Conhecer a plataforma</Button></Link>
+              <Link to="/revendedor-stream-monitor"><Button variant="outline" size="lg" className="h-12 w-full px-7 sm:w-auto">Soluções para revendedores</Button></Link>
             </div>
             <div className="grid max-w-lg grid-cols-3 gap-3 border-t border-border/60 pt-6">
               <div><p className="font-bold text-foreground">DNS</p><p className="text-xs text-muted-foreground">Disponibilidade</p></div>
