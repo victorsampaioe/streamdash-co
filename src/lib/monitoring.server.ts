@@ -5,10 +5,10 @@ import { supabaseAdmin } from "@/integrations/supabase/client.server";
 const FETCH_TIMEOUT_MS = 8000;
 const SSL_TIMEOUT_MS = 6000;
 // Modo "Confirmação de Queda": novas verificações a cada ~20s durante ~2 minutos.
-const CONFIRM_PROBE_INTERVAL_MS = 20_000;
-const DOWN_CONFIRM_PROBES = 6;   // ~2 minutos
-const UP_CONFIRM_PROBES = 3;     // ~1 minuto
-const DOWN_CONFIRM_RATIO = 0.8;  // 80% ou mais das checagens falhando
+const CONFIRM_PROBE_INTERVAL_MS = 8_000;
+const DOWN_CONFIRM_PROBES = 3;   // três confirmações adicionais em ~24 segundos + tempo de rede
+const UP_CONFIRM_PROBES = 2;     // duas confirmações adicionais antes da recuperação
+const DOWN_CONFIRM_RATIO = 0.75; // pelo menos 3 das 4 checagens falhando
 
 
 type ServerRow = {
@@ -75,12 +75,16 @@ export async function runDueChecks() {
   // provocam bloqueio de IP nos servidores monitorados e mantém o uso de
   // memória/soquetes estável na VPS 24/7.
   const { runPool } = await import("./pool");
-  const results = await runPool(due as any[], (s: any) => performCheck(s as ServerRow));
+  // Limite o trabalho de cada requisição: um único ciclo não deve reter o cron
+  // durante minutos quando vários destinos estiverem indisponíveis.
+  const batch = due.slice(0, 10);
+  const results = await runPool(batch as any[], (s: any) => performCheck(s as ServerRow));
   return {
     checked: results.length,
     ok: results.filter((r) => r.status === "fulfilled").length,
     errors: results.filter((r) => r.status === "rejected").length,
     pausedBySubscription: paused.length,
+    queued: Math.max(0, due.length - results.length),
   };
 }
 
@@ -326,7 +330,7 @@ async function performCheck(server: ServerRow) {
         downConfirmed = true;
         displayStatus = "down";
         confirmNote =
-          `${fails}/${all.length} verificações falharam em ~2min` +
+          `${fails}/${all.length} verificações de confirmação falharam` +
           (activeRegions >= 2
             ? ` · ${activeRegions} regiões ativas`
             : ` · 1 região ativa (regra: ${OFFLINE_MIN_FAILURES_SINGLE_REGION} falhas consecutivas)`) +
