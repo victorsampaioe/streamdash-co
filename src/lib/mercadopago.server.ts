@@ -1,5 +1,6 @@
 // Server-only helpers for Mercado Pago PIX integration.
 // Do NOT import this file from client bundles.
+import { providerPaymentIdSchema, validatePixCharge } from "./pix-validation";
 
 const MP_BASE = "https://api.mercadopago.com";
 
@@ -49,7 +50,7 @@ export async function createMpPixCharge(params: {
     headers: {
       "Content-Type": "application/json",
       Authorization: `Bearer ${token}`,
-      "X-Idempotency-Key": crypto.randomUUID(),
+      "X-Idempotency-Key": params.externalReference,
     },
     body: JSON.stringify(body),
   });
@@ -62,6 +63,7 @@ export async function createMpPixCharge(params: {
 }
 
 export async function fetchMpPayment(paymentId: string | number): Promise<MpPixPayment> {
+  providerPaymentIdSchema.parse(String(paymentId));
   const token = getMpToken();
   if (!token) throw new Error("MERCADOPAGO_ACCESS_TOKEN não configurado");
   const res = await fetch(`${MP_BASE}/v1/payments/${paymentId}`, {
@@ -121,13 +123,7 @@ export async function syncMpPayment(paymentId: string | number, expectedPaymentI
   }
 
   // Validação também para cobranças antigas marcadas como aprovadas no banco.
-  if (mp.external_reference && String(mp.external_reference) !== String(row.id)) {
-    throw new Error("Referência da cobrança divergente");
-  }
-  if (mp.transaction_amount !== undefined &&
-    Math.round(Number(mp.transaction_amount) * 100) !== Number(row.amount_cents)) {
-    throw new Error("Valor do pagamento diferente da cobrança");
-  }
+  validatePixCharge(mp, row);
   if (row.status === "approved") {
     return {
       paymentId: row.id, status, paidAt: row.paid_at,
@@ -178,7 +174,6 @@ export async function reconcilePendingPayments(limit = 40) {
     .from("payments")
     .select("id, provider_payment_id")
     .eq("status", "pending")
-    .not("provider_payment_id", "is", null)
     .gt("created_at", new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString())
     .order("created_at", { ascending: false })
     .limit(limit);
@@ -188,7 +183,9 @@ export async function reconcilePendingPayments(limit = 40) {
   let failed = 0;
   for (const row of rows ?? []) {
     try {
-      const res = await syncMpPayment(row.provider_payment_id as string);
+      const providerId = row.provider_payment_id || await findMpPaymentByReference(row.id);
+      if (!providerId) continue;
+      const res = await syncMpPayment(providerId, row.id);
       if (res.status === "approved") approved++;
     } catch (e) {
       failed++;
@@ -196,6 +193,24 @@ export async function reconcilePendingPayments(limit = 40) {
     }
   }
   return { checked: rows?.length ?? 0, approved, failed };
+}
+
+/** Recovers charges created before the provider ID could be saved locally. */
+export async function findMpPaymentByReference(paymentId: string): Promise<string | null> {
+  const token = getMpToken();
+  if (!token) throw new Error("Integração PIX indisponível");
+  const query = new URLSearchParams({ external_reference: paymentId, sort: "date_created", criteria: "desc", limit: "10" });
+  const response = await fetch(`${MP_BASE}/v1/payments/search?${query}`, {
+    headers: { Authorization: `Bearer ${token}` }, signal: AbortSignal.timeout(15000),
+  });
+  if (!response.ok) throw new Error("Não foi possível consultar a cobrança PIX");
+  const result = await response.json() as { results?: MpPixPayment[] };
+  const matches = (result.results ?? []).filter(item => item.external_reference === paymentId);
+  // Never guess between multiple paid transactions.
+  const approved = matches.filter(item => item.status === "approved");
+  if (approved.length > 1) throw new Error("Mais de um pagamento encontrado; revisão necessária");
+  const charge = approved[0] ?? matches[0];
+  return charge ? providerPaymentIdSchema.parse(String(charge.id)) : null;
 }
 
 /**

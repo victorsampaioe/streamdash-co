@@ -18,7 +18,7 @@ export const Route = createFileRoute("/_authenticated/app/detector")({
     ],
   }),
   errorComponent: ({ error }) => (
-    <Card className="p-6 text-center text-sm text-muted-foreground">{error.message}</Card>
+    <Card className="p-6 text-center text-sm text-muted-foreground">{error instanceof Error ? error.message : "Não foi possível concluir a consulta"}</Card>
   ),
   notFoundComponent: () => <div className="p-6">Não encontrado</div>,
   component: DetectorPage,

@@ -66,7 +66,7 @@ async function run() {
     safe("kuma", syncKumaStatuses, { synced: 0 }, errors),
     safe("kumaProvision", provisionPendingServers, { provisioned: 0 } as any, errors),
     safe("dns", runDueDnsChecks, { checked: 0, errors: 0 }, errors),
-    safe("payments", reconcilePendingPayments, { checked: 0, approved: 0 }, errors),
+    safe("payments", reconcilePendingPayments, { checked: 0, approved: 0, failed: 0 }, errors),
     safe("contents", runDueContentScans, { servers: 0, tested: 0 }, errors),
   ]);
   // Rede de segurança para pagamentos já aprovados mas sem assinatura ativa.

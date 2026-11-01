@@ -24,7 +24,6 @@ export const Route = createFileRoute('/sitemap.xml')({
   ${pages.map(page => `
   <url>
     <loc>https://streammonitor.site${page.url}</loc>
-    <lastmod>${lastmod}</lastmod>
     <changefreq>${page.changefreq}</changefreq>
     <priority>${page.priority}</priority>
   </url>`).join('').trim()}
