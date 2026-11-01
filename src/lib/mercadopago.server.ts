@@ -93,7 +93,7 @@ export function mapMpStatus(status: string): "pending" | "approved" | "rejected"
   }
 }
 
-export async function syncMpPayment(paymentId: string | number) {
+export async function syncMpPayment(paymentId: string | number, expectedPaymentId?: string) {
   const mp = await fetchMpPayment(paymentId);
   const status = mapMpStatus(mp.status);
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
@@ -115,6 +115,9 @@ export async function syncMpPayment(paymentId: string | number) {
   }
   if (!row || (row.provider_payment_id && row.provider_payment_id !== String(mp.id))) {
     throw new Error("Cobrança não encontrada ou ID divergente");
+  }
+  if (expectedPaymentId && row.id !== expectedPaymentId) {
+    throw new Error("Pagamento pertence a outra cobrança; nenhuma ativação foi realizada");
   }
 
   if (row.status === "approved") {
