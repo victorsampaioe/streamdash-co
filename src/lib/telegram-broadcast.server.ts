@@ -15,26 +15,34 @@ export async function broadcastToTelegramSubscribers(message: string) {
   let failed = 0;
   const errors: string[] = [];
 
-  await Promise.allSettled((channels ?? []).map(async (ch: any) => {
-    let chatId = (ch.target ?? "").trim();
+  const { runPool } = await import("./pool");
+  // Limite de vazão por bot para evitar bloqueio do Telegram (429).
+  // Não dispara centenas de solicitações simultâneas.
+  await runPool(channels ?? [], async (ch: any) => {
+    let chatId = String(ch.target ?? "").trim();
     let botToken = token;
     if (chatId.includes(":")) {
-      const [t, c] = chatId.split(":");
-      botToken = t; chatId = c;
+      const [overrideToken, overrideChat] = chatId.split(":");
+      botToken = overrideToken; chatId = overrideChat;
     }
-    if (!chatId) { failed++; return; }
+    if (!chatId || !botToken) { failed++; return; }
     try {
       const r = await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ chat_id: chatId, text: message, parse_mode: "HTML" }),
+        signal: AbortSignal.timeout(10_000),
       });
-      if (r.ok) sent++; else { failed++; errors.push(`${chatId}: HTTP ${r.status}`); }
-    } catch (e: any) {
+      if (r.ok) sent++;
+      else {
+        failed++;
+        errors.push(`Canal não entregue: HTTP ${r.status}`);
+      }
+    } catch (error) {
       failed++;
-      errors.push(`${chatId}: ${e?.message ?? "erro"}`);
+      errors.push(error instanceof Error ? error.message : "Falha no Telegram");
     }
-  }));
+  }, { concurrency: 3, jitterMs: 350 });
 
   return { total: channels?.length ?? 0, sent, failed, errors: errors.slice(0, 10) };
 }
