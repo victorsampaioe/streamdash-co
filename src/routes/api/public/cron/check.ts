@@ -50,7 +50,7 @@ async function run() {
   const { runDueIptvSyncs } = await import("@/lib/iptv.server");
   const { syncKumaStatuses, provisionPendingServers } = await import("@/lib/kuma.server");
   const { runDueDnsChecks } = await import("@/lib/dns.server");
-  const { reconcilePendingPayments } = await import("@/lib/mercadopago.server");
+  const { reconcilePendingPayments, repairApprovedSubscriptionMismatches, getMpToken } = await import("@/lib/mercadopago.server");
   const { migratePlaintextCredentials } = await import("@/lib/iptv-credentials.server");
   const { runDueContentScans } = await import("@/lib/content-monitor.server");
   const { syncServersPauseState } = await import("@/lib/service-status.server");
@@ -69,6 +69,16 @@ async function run() {
     safe("payments", reconcilePendingPayments, { checked: 0, approved: 0 }, errors),
     safe("contents", runDueContentScans, { servers: 0, tested: 0 }, errors),
   ]);
+  // Rede de segurança para pagamentos já aprovados mas sem assinatura ativa.
+  // Consulta o Mercado Pago antes de reativar e não duplica créditos.
+  const paymentRepairs = await safe(
+    "paymentRepair",
+    () => getMpToken()
+      ? repairApprovedSubscriptionMismatches(20)
+      : Promise.resolve({ checked: 0, repaired: 0, failed: 0, review: 0 }),
+    { checked: 0, repaired: 0, failed: 0, review: 0 },
+    errors,
+  );
   // Aviso único no Telegram para contas com acesso encerrado.
   const expiryNotice = await safe("expiryNotice", notifyExpiredAccessUsers, { sent: 0, skipped: 0 }, errors);
   // Rede de segurança: criptografa credenciais Xtream legadas em texto puro.
@@ -94,6 +104,8 @@ async function run() {
     dnsErrors: dns.errors,
     paymentsChecked: payments.checked,
     paymentsApproved: payments.approved,
+    subscriptionsRepaired: paymentRepairs.repaired,
+    subscriptionRepairErrors: paymentRepairs.failed,
     credentialsEncrypted: encrypted.migrated,
     contentServersScanned: contents.servers,
     contentsTested: contents.tested,
