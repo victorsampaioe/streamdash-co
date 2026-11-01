@@ -604,38 +604,60 @@ export async function runDnsCheck(serverId: string): Promise<{ ok: boolean; scor
   return { ok: true, score: report.health_score, status: report.status, alerts: alerts.length };
 }
 
-export async function runDueDnsChecks(limit = 25): Promise<{ checked: number; errors: number; paused?: number }> {
-  const { data: all } = await supabaseAdmin
-    .from("servers")
-    .select("id, owner_id, host, dns_interval_minutes, last_dns_check_at")
-    .eq("dns_enabled", true)
-    .eq("monitoring_paused", false)
-    .order("last_dns_check_at", { ascending: true, nullsFirst: true })
-    .limit(limit * 4);
-
-  // Ignora completamente DNS de contas expiradas / sem créditos.
+/**
+ * Ciclo DNS de baixa latência: cada domínio fica elegível após 60 segundos.
+ * O tempo efetivo também depende da frequência do cron, da fila e da latência
+ * dos resolvedores. Processa somente contas válidas, com concorrência limitada.
+ */
+export async function runDueDnsChecks(limit = 40): Promise<{ checked: number; errors: number; paused?: number }> {
   const { getActiveOwnerIds } = await import("./service-status.server");
-  const activeOwners = await getActiveOwnerIds((all ?? []).map((s: any) => s.owner_id));
-  const servers = (all ?? []).filter((s: any) => activeOwners.has(s.owner_id)).slice(0, limit);
-  const paused = (all ?? []).length - (all ?? []).filter((s: any) => activeOwners.has(s.owner_id)).length;
+  const { runPool } = await import("./pool");
+  const now = Date.now();
+  const pageSize = 200;
+  const due: Array<{ id: string }> = [];
+  let paused = 0;
 
+  // Paginação impede que os primeiros registros sempre ocupem a fila.
+  // A ordenação por última checagem dá prioridade a DNS atrasados.
+  for (let offset = 0; offset < 5_000 && due.length < limit; offset += pageSize) {
+    const { data: page, error } = await supabaseAdmin.from("servers")
+      .select("id, owner_id, dns_status, last_dns_check_at")
+      .eq("dns_enabled", true)
+      .eq("monitoring_paused", false)
+      .order("last_dns_check_at", { ascending: true, nullsFirst: true })
+      .order("id", { ascending: true })
+      .range(offset, offset + pageSize - 1);
+    if (error) throw new Error(error.message);
+    if (!page?.length) break;
+
+    // Não faz checagem de domínios que acabaram de ser verificados.
+    const eligible = page.filter((s) =>
+      !s.last_dns_check_at ||
+      now - new Date(s.last_dns_check_at).getTime() >= 60_000
+    );
+    if (!eligible.length) break;
+    const activeOwners = await getActiveOwnerIds(eligible.map((s) => s.owner_id));
+    for (const s of eligible) {
+      if (!activeOwners.has(s.owner_id)) { paused++; continue; }
+      due.push({ id: s.id });
+      if (due.length >= limit) break;
+    }
+    if (page.length < pageSize) break;
+  }
+
+  const results = await runPool(due, (server) => runDnsCheck(server.id), {
+    concurrency: 5, jitterMs: 100,
+  });
   let checked = 0;
   let errors = 0;
-  for (const s of servers ?? []) {
-    const due =
-      !s.last_dns_check_at ||
-      Date.now() - new Date(s.last_dns_check_at).getTime() >= (s.dns_interval_minutes ?? 10) * 60_000;
-    if (!due) continue;
-    try {
-      await runDnsCheck(s.id);
-      checked++;
-    } catch {
+  for (let i = 0; i < results.length; i++) {
+    const result = results[i]!;
+    if (result.status === "fulfilled") checked++;
+    else {
       errors++;
-      // Nunca deixa o servidor travado na fila quando a análise falha.
-      await supabaseAdmin
-        .from("servers")
-        .update({ last_dns_check_at: new Date().toISOString() })
-        .eq("id", s.id);
+      console.error("[DNS] Verificação falhou", due[i]?.id, result.reason);
+      // Mantém vencida na fila para uma nova tentativa; jamais transforma
+      // um erro interno em falso alerta de indisponibilidade do servidor.
     }
   }
   return { checked, errors, paused };
