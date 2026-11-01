@@ -64,7 +64,9 @@ async function handle(request: Request) {
   // IPN pode trazer resource como URL; nunca confundir o ID da notificação com o do pagamento.
   const rawPaymentId = url.searchParams.get("data.id") || body?.data?.id ||
     body?.resource || url.searchParams.get("id");
-  const paymentId = String(rawPaymentId ?? "").trim().match(/(?:^|\\/)(\\d+)\\/?(?:\\?.*)?$/)?.[1];
+  const rawValue = String(rawPaymentId ?? "").trim();
+  const idCandidate = rawValue.split("?")[0].split("/").filter(Boolean).at(-1) ?? "";
+  const paymentId = idCandidate && [...idCandidate].every(ch => ch >= "0" && ch <= "9") ? idCandidate : null;
 
   if (type && String(type) !== "payment") {
     return new Response("ignored", { status: 200 });
