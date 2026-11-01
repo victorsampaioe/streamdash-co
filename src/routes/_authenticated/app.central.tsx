@@ -4,6 +4,8 @@ import { useServerFn } from "@tanstack/react-start";
 import { useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { getFinancialPulse } from "@/lib/operations-finance.functions";
+import { prioritizeStaleServersNow } from "@/lib/monitor-health.functions";
+import { toast } from "sonner";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -31,6 +33,8 @@ function OperationsCenter() {
   const [left, setLeft] = useState("");
   const [right, setRight] = useState("");
   const financeFn = useServerFn(getFinancialPulse);
+  const prioritizeStale = useServerFn(prioritizeStaleServersNow);
+  const [prioritizing, setPrioritizing] = useState(false);
   const query = useQuery({
     queryKey: ["operations-center"],
     queryFn: async () => {
@@ -132,6 +136,20 @@ function OperationsCenter() {
       </div>}
 
       {tab==="sentinel" && <div className="space-y-3">
+        {query.data.isAdmin && <Card className="p-4 space-y-2">
+          <h3 className="font-semibold">Recuperar checagens atrasadas</h3>
+          <p className="text-sm text-muted-foreground">Prioriza servidores ativos sem checagem há mais de 15 minutos. A fila executará as verificações nas próximas rodadas; não altera status sem testar.</p>
+          <Button disabled={prioritizing} onClick={async () => {
+            setPrioritizing(true);
+            try {
+              const res = await prioritizeStale();
+              toast.success(`${res.prioritized} servidores atrasados priorizados para nova verificação.`);
+              await query.refetch();
+            } catch (error) {
+              toast.error(error instanceof Error ? error.message : "Não foi possível priorizar os servidores");
+            } finally { setPrioritizing(false); }
+          }}>{prioritizing ? "Reorganizando fila..." : "Priorizar todos os atrasados"}</Button>
+        </Card>}
         <Card className="p-4"><h2 className="font-semibold flex items-center gap-2"><Radar className="h-4 w-4 text-primary"/> Sentinel — anomalias observadas</h2><p className="text-xs text-muted-foreground mt-1">Regras determinísticas, sem previsão por IA. Não cria novas sondagens nem envia notificações automáticas.</p></Card>
         {anomalies.length===0?<Card className="p-5 flex items-center gap-2"><CheckCircle2 className="text-emerald-500 h-4 w-4"/> Nenhuma anomalia identificada pelos dados disponíveis.</Card>:
           anomalies.map(s=><Card className="p-4" key={s.id}><p className="font-medium flex items-center gap-2"><AlertTriangle className="text-amber-500 h-4 w-4"/>{s.name}</p><p className="text-sm mt-1">{diagnostic(s).why}</p><p className="text-xs text-muted-foreground">DNS: {s.dns_status ?? "?"} · HTTP: {s.current_status ?? "?"} · Última checagem: {date(s.last_checked_at)}</p></Card>)}
