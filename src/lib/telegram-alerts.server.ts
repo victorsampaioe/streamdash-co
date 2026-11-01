@@ -34,13 +34,14 @@ export async function processTelegramAlert(data: AlertData) {
   // Se um canal recebeu e outro falhou, somente o segundo é tentado novamente.
   const delivered = new Set<string>();
   let adminDelivered = false;
+  let customerDelivered = false;
   if (incidentId) {
     const { data: previous, error } = await supabaseAdmin.from("notifications_log")
       .select("channel_id")
       .eq("incident_id", incidentId).eq("event", logEvent).eq("ok", true);
     if (error) throw new Error(`Falha ao consultar histórico de alertas: ${error.message}`);
     for (const item of previous ?? []) {
-      if (item.channel_id) delivered.add(item.channel_id);
+      if (item.channel_id) { delivered.add(item.channel_id); customerDelivered = true; }
       else adminDelivered = true;
     }
   }
@@ -57,6 +58,7 @@ export async function processTelegramAlert(data: AlertData) {
     try {
       await sendToTelegram(channel.target, message);
       ok = true;
+      customerDelivered = true;
     } catch (error) {
       response = error instanceof Error ? error.message.slice(0, 120) : "telegram_failed";
       console.error("[TelegramAlert] Entrega pendente para nova tentativa", serverId, response);
@@ -67,6 +69,12 @@ export async function processTelegramAlert(data: AlertData) {
           event: logEvent, ok, response });
       if (logError) throw new Error(`Falha ao registrar entrega Telegram: ${logError.message}`);
     }
+  }
+
+  if (incidentId && event === "OFFLINE" && customerDelivered) {
+    const { error: stateError } = await supabaseAdmin.from("incidents")
+      .update({ alert_sent: true }).eq("id", incidentId);
+    if (stateError) console.error("[TelegramAlert] Não foi possível marcar entrega", stateError);
   }
 
   if (!data.suppressAdminCopy && !adminDelivered) {
