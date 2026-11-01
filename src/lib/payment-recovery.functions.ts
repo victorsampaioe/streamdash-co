@@ -49,7 +49,7 @@ export const verifyCustomerPix = createServerFn({ method: "POST" })
       try {
         // syncMpPayment confirms approval directly with Mercado Pago and uses
         // finalize_approved_payment for atomic, idempotent activation.
-        const result = await syncMpPayment(String(providerId));
+        const result = await syncMpPayment(String(providerId), pay.id);
         checked++;
         if (result.status === "approved") approved++;
       } catch (error) {
