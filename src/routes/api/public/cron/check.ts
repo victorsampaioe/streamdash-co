@@ -165,8 +165,8 @@ export const Route = createFileRoute("/api/public/cron/check")({
     handlers: {
       POST: async ({ request }) => {
         if (!isAuthorized(request)) return new Response("Forbidden", { status: 403 });
-        try { return Response.json(await guardedRun()); }
-        catch (e: any) { return Response.json({ ok: false, error: e?.message ?? "unknown" }, { status: 200 }); }
+        try { const result = await guardedRun(); return Response.json(result, { status: (result as any)?.ok === false ? 503 : 200 }); }
+        catch (e: any) { console.error("[cron/check]", e); return Response.json({ ok: false, error: "cron_failed" }, { status: 503 }); }
       },
       GET: async ({ request }) => {
         if (!isAuthorized(request)) return new Response("Forbidden", { status: 403 });
