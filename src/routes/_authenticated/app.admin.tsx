@@ -288,15 +288,22 @@ function AdminPage() {
 
   return (
     <div className="space-y-6 sm:space-y-8 [&_[data-slot=card]]:rounded-2xl [&_[data-slot=card]]:border-border/65 [&_[data-slot=card]]:shadow-sm">
-      <div className="flex items-center gap-2">
-        <ShieldCheck className="h-6 w-6 text-primary" />
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">Painel administrativo</h1>
-          <p className="text-sm text-muted-foreground">Visão geral de usuários, assinaturas e receita.</p>
+      <div className="sm-workspace-header">
+        <div className="flex items-center gap-4">
+          <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-primary/15 text-primary"><ShieldCheck className="h-7 w-7" /></div>
+          <div className="space-y-1">
+            <p className="text-xs font-bold uppercase tracking-[.18em] text-primary">Administração / Visão executiva</p>
+            <h1 className="text-3xl font-extrabold tracking-tight sm:text-4xl">Central de controle</h1>
+            <p className="text-sm text-muted-foreground">Usuários, infraestrutura, assinaturas e operação em um só lugar.</p>
+          </div>
+        </div>
+        <div className="flex items-center gap-2 rounded-xl border border-border bg-background/70 px-4 py-3">
+          <Activity className="h-4 w-4 text-primary" />
+          <span className="text-xs font-semibold">Painel administrativo</span>
         </div>
       </div>
 
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+      <div className="sm-workspace-grid">
         <Kpi icon={Users} label="Usuários totais" value={s?.total_users} tone="primary" sub={s ? `+${s.new_users_7d} nos últimos 7 dias` : undefined} />
         <Kpi icon={BadgeCheck} label="Assinantes ativos" value={s?.paid_active} tone="success" sub={s ? `${s.monthly_subs} mensal · ${s.yearly_subs} anual` : undefined} />
         <Kpi icon={Gift} label="Em teste grátis" value={s?.trial_active} tone="warning" />
@@ -326,9 +333,9 @@ function AdminPage() {
         />
       </div>
 
-      <Tabs defaultValue="overview" className="space-y-6">
-        <div className="overflow-x-auto pb-2 scrollbar-hide">
-          <TabsList className="flex w-max min-full sm:grid sm:grid-cols-13 sm:w-full">
+      <Tabs defaultValue="overview" className="sm-admin-tabs space-y-6">
+        <div className="w-full pb-2">
+          <TabsList className="flex flex-wrap w-full justify-start">
             <TabsTrigger value="overview" className="px-4">Usuários</TabsTrigger>
             <TabsTrigger value="resellers" className="px-4">Revendedores</TabsTrigger>
             <TabsTrigger value="core-audit" className="px-4">Auditoria Core</TabsTrigger>
