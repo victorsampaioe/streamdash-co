@@ -291,7 +291,7 @@ function diagnose(r: Omit<DnsReport, "health_score" | "status" | "diagnosis">): 
   return { status, diagnosis: d };
 }
 
-export async function analyzeDns(rawHost: string, recentChanges = 0): Promise<DnsReport> {
+export async function analyzeDns(rawHost: string, recentChanges = 0, opts: { quick?: boolean } = {}): Promise<DnsReport> {
   const host = normalizeHost(rawHost);
   if (!host) throw new Error("Domínio inválido");
 
@@ -339,10 +339,14 @@ export async function analyzeDns(rawHost: string, recentChanges = 0): Promise<Dn
 
   // Enriquecimento WHOIS/GeoIP é lento e sofre rate limit: cache em memória
   // por processo, enquanto as resoluções DNS continuam sendo verificadas a cada ciclo.
-  const [geo, who] = await Promise.all([
-    primary_ip ? cachedGeoIp(primary_ip) : Promise.resolve(null),
-    cachedRdap(host),
-  ]);
+  // A consulta manual precisa responder rapidamente. WHOIS e GeoIP são
+  // complementares: ficam fora do caminho crítico do botão "Analisar".
+  const [geo, who] = opts.quick
+    ? [null, { expires: null, registrar: null }]
+    : await Promise.all([
+        primary_ip ? cachedGeoIp(primary_ip) : Promise.resolve(null),
+        cachedRdap(host),
+      ]);
 
   const base = {
     host,
@@ -408,9 +412,15 @@ type PrevSnapshot = {
   cloudflare_proxy: boolean | null;
   status: string;
   checked_at: string;
+  country?: string | null;
+  city?: string | null;
+  org?: string | null;
+  datacenter?: string | null;
+  domain_expires_at?: string | null;
+  registrar?: string | null;
 };
 
-export async function runDnsCheck(serverId: string): Promise<{ ok: boolean; score: number; status: string; alerts: number }> {
+export async function runDnsCheck(serverId: string, opts: { quick?: boolean } = {}): Promise<{ ok: boolean; score: number; status: string; alerts: number }> {
   const { data: srv } = await supabaseAdmin
     .from("servers").select("id, host, owner_id").eq("id", serverId).maybeSingle();
   if (!srv) throw new Error("Servidor não encontrado");
@@ -429,15 +439,27 @@ export async function runDnsCheck(serverId: string): Promise<{ ok: boolean; scor
     .eq("server_id", serverId)
     .gte("changed_at", since);
 
-  const report = await analyzeDns(srv.host, recentChanges ?? 0);
+  const report = await analyzeDns(srv.host, recentChanges ?? 0, opts);
 
   const { data: prev } = await supabaseAdmin
     .from("dns_snapshots")
-    .select("primary_ip, asn, ttl_seconds, cloudflare_proxy, status, checked_at")
+    .select("primary_ip, asn, ttl_seconds, cloudflare_proxy, status, checked_at, country, city, org, datacenter, domain_expires_at, registrar")
     .eq("server_id", serverId)
     .order("checked_at", { ascending: false })
     .limit(1)
     .maybeSingle<PrevSnapshot>();
+
+  // A consulta rápida atualiza status e latência sem apagar os metadados já
+  // conhecidos. O ciclo completo em segundo plano continua atualizando WHOIS.
+  if (opts.quick && prev) {
+    report.asn = prev.asn ?? null;
+    report.country = prev.country ?? null;
+    report.city = prev.city ?? null;
+    report.org = prev.org ?? null;
+    report.datacenter = prev.datacenter ?? null;
+    report.domain_expires_at = prev.domain_expires_at ?? null;
+    report.registrar = prev.registrar ?? null;
+  }
 
   const alerts: Array<{ kind: string; severity: string; title: string; detail: string | null }> = [];
 
