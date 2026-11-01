@@ -20,11 +20,11 @@ export interface AlertData {
  */
 export async function processTelegramAlert(data: AlertData) {
   const { serverId, incidentId, event } = data;
-  const { data: server, error: sErr } = await supabaseAdmin
+  const { data: server, error: sErr } = (await (supabaseAdmin as any)
     .from("servers")
     .select("id, owner_id, name, host, iptv_username, profiles(email, full_name)")
     .eq("id", serverId)
-    .maybeSingle();
+    .maybeSingle()) as { data: any; error: any };
   if (sErr || !server) throw new Error("Servidor não encontrado para alerta");
 
   const message = formatAlertMessage(server, data);
