@@ -31,8 +31,7 @@ const FEEDS: Array<{ provider: string; url: string; kind: "statuspage"; impact: 
   { provider: "OpenAI",        url: "https://status.openai.com",          kind: "statuspage", impact: "API, Chat, Modelos IA" },
   { provider: "Twilio",        url: "https://status.twilio.com",          kind: "statuspage", impact: "SMS, Voz, Mensageria" },
   { provider: "Stripe",        url: "https://status.stripe.com",          kind: "statuspage", impact: "Pagamentos, Checkout" },
-  { provider: "Discord",       url: "https://discordstatus.com",          kind: "statuspage", impact: "Comunidade, Bots" },
-];
+ ];
 
 const STATUSPAGE_MAP: Record<string, ExternalIncident["status"]> = {
   none: "operational",
@@ -67,7 +66,7 @@ async function fetchStatuspage(provider: string, baseUrl: string, impact: string
       }
 
       const statusData = await statusRes.json();
-      const incidentsData = await incidentsRes.json();
+      const incidentsData = incidentsRes.ok ? await incidentsRes.json() : { incidents: [] };
       
       if (!statusData.status || !statusData.status.indicator) {
         return { provider, status: "unknown", summary: "⚪ Fonte indisponível", last_check_at: now, updated_at: null, url: baseUrl, impact };
@@ -77,7 +76,7 @@ async function fetchStatuspage(provider: string, baseUrl: string, impact: string
       const status = STATUSPAGE_MAP[ind] ?? "unknown";
       
       // Somente mostrar incidente se a API oficial retornar incidente ativo
-      const activeIncidents = incidentsData.incidents?.filter((i: any) => i.status !== 'resolved') || [];
+      const activeIncidents = (incidentsData.incidents ?? []).filter((i: any) => !["resolved", "completed", "postmortem"].includes(i.status));
       const hasActiveIncident = activeIncidents.length > 0;
       
       // Ajuste de status: Se a API diz "none" (operational) mas há incidentes não resolvidos, 
@@ -86,7 +85,7 @@ async function fetchStatuspage(provider: string, baseUrl: string, impact: string
       
       return {
         provider,
-        status: hasActiveIncident ? status : (status === "operational" ? "operational" : "unknown"),
+        status: hasActiveIncident && status === "operational" ? "degraded" : status,
         summary: statusData.status.description ?? "Operacional",
         description: hasActiveIncident ? activeIncidents[0]?.name : undefined,
         updated_at: statusData.status.updated_at ?? statusData.page?.updated_at ?? null,
@@ -122,6 +121,8 @@ async function syncExternalIncidents(incidents: ExternalIncident[]) {
       .is("resolved_at", null)
       .maybeSingle();
 
+    // Falha na consulta não significa queda do provedor: preserve o incidente até obter nova confirmação.
+    if (inc.status === "unknown") continue;
     if (inc.status !== "operational") {
       if (!active) {
         await supabaseAdmin.from("external_service_incidents").insert({
@@ -226,7 +227,8 @@ async function computeRadarSnapshot(): Promise<RadarSnapshot> {
   const incidents = await Promise.all(FEEDS.map((f) => fetchStatuspage(f.provider, f.url, f.impact)));
   const externalIncidents = incidents.filter((r): r is ExternalIncident => !!r);
   
-  syncExternalIncidents(externalIncidents).catch(console.error);
+  // Aguarda persistência antes de consultar histórico: evita resultados atrasados.
+  try { await syncExternalIncidents(externalIncidents); } catch (error) { console.error("[radar] Falha ao sincronizar incidentes", error); }
   const history = await getHistoricalIncidents();
 
   return {
