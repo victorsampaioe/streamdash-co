@@ -91,8 +91,12 @@ function OperationsCenter() {
   const find = (id: string) => servers.find(s => s.id === id);
   const diagnostic = (s: ServerItem) => {
     if (s.monitoring_paused) return { kind:"Pausado",why:"Monitoramento pausado. Verifique sua assinatura e as configurações.",color:"text-muted-foreground" };
-    if (stale(s.last_checked_at,15)) return {kind:"Dados atrasados",why:"Não há checagem recente; valide o agendador antes de concluir que houve queda.",color:"text-amber-500"};
-    if (s.dns_status === "offline" && s.current_status !== "down") return {kind:"Problema de DNS",why:"A resolução está indisponível, mas a queda completa do servidor não foi confirmada.",color:"text-red-400"};
+    if (s.dns_status === "offline" && s.dns_enabled !== false) return {
+      kind:"DNS OFFLINE — domínio indisponível",
+      why:"O DNS está offline confirmado. O servidor IPTV pode continuar respondendo por IP; a falha de acesso pelo domínio é real.",
+      color:"text-red-400"
+    };
+    if (stale(s.last_checked_at,15)) return {kind:"Dados de serviço atrasados",why:"A verificação de serviço está atrasada; valide o agendador. O estado do DNS é mostrado separadamente.",color:"text-amber-500"};
     if (s.current_status === "down") return {kind:"Servidor offline",why:"A última verificação marcou o servidor indisponível. Confira a linha do tempo e as regiões.",color:"text-red-400"};
     if (s.dns_status === "unstable" || s.current_status === "degraded") return {kind:"Instabilidade",why:"Há falhas parciais. Compare a latência e aguarde confirmação.",color:"text-amber-500"};
     return {kind:"Sem falha recente",why:"Os indicadores conhecidos estão normais. Isso não garante disponibilidade contínua.",color:"text-emerald-500"};
