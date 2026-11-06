@@ -15,6 +15,7 @@ export interface SignupInput {
   /** honeypot */
   company_website?: unknown;
   redirectTo?: unknown;
+  requestId?: unknown;
 }
 
 export interface SignupOutcome {
@@ -98,7 +99,7 @@ export async function handleSignup(input: SignupInput, headers: Headers): Promis
   }
 
   // 4. Idempotência: mesmo POST repetido não cria duas contas
-  const fingerprint = sec.attemptFingerprint(email, username, ipHash);
+  const fingerprint = sec.attemptFingerprint(email, username, ipHash, str(input.requestId, 64));
   const attemptId = await sec.openAttempt({
     ipHash,
     ipMasked,
