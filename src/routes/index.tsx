@@ -17,8 +17,8 @@ import poster_stAsset from "@/assets/radar/st.jpg.asset.json";
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "Stream Monitor | Monitoramento IPTV para Revendedores" },
-      { name: "description", content: "Monitore servidores IPTV, DNS e disponibilidade em um painel profissional. Alertas por Telegram e diagnóstico para revendedores. Conheça o Stream Monitor." },
+      { title: "Monitoramento IPTV para Revendedores | Stream Monitor" },
+      { name: "description", content: "Monitore servidores IPTV e DNS, latência e falhas em um só painel. Alertas no Telegram e diagnóstico para revendedores. Conheça o Stream Monitor." },
       { property: "og:title", content: "Stream Monitor | Monitoramento de Servidores IPTV" },
       { property: "og:description", content: "Monitoramento IPTV para revendedores: servidores, DNS, latência e alertas no Telegram. Conheça a plataforma." },
       { property: "og:type", content: "website" },
@@ -29,6 +29,7 @@ export const Route = createFileRoute("/")({
       { name: "twitter:description", content: "Evite quedas no seu servidor IPTV com nosso monitoramento inteligente." },
       { name: "twitter:image", content: "https://storage.googleapis.com/gpt-engineer-file-uploads/zowG5KmEoBQiJwfUQDz2ZUEdQ2a2/social-images/social-1783131758542-ChatGPT_Image_3_de_jul._de_2026,_23_22_19.webp" },
     ],
+    links: [{ rel: "canonical", href: "https://streammonitor.site/" }],
   }),
   component: Landing,
   loader: async ({ context }) => {
@@ -72,8 +73,8 @@ function Landing() {
               <Activity className="h-4 w-4" /> Plataforma de observabilidade
             </div>
             <h1 className="max-w-2xl text-4xl font-extrabold leading-[1.07] tracking-[-.055em] sm:text-5xl xl:text-6xl">
-              Seus servidores.
-              <span className="mt-2 block text-primary">Uma visão completa.</span>
+              Monitoramento IPTV e DNS
+              <span className="mt-2 block text-primary">para revendedores.</span>
             </h1>
             <p className="max-w-lg text-base leading-relaxed text-muted-foreground sm:text-lg">
               Monitoramento IPTV para revendedores: acompanhe servidores, DNS, latência e disponibilidade. Receba alertas e investigue falhas em um painel profissional.
@@ -130,12 +131,38 @@ function Landing() {
 
       <RadarShowcase />
 
+      <section aria-labelledby="solucoes-monitoramento" className="mx-auto max-w-6xl px-4 py-14 sm:px-6 sm:py-20">
+        <div className="mb-7">
+          <p className="mb-2 text-xs font-bold uppercase tracking-widest text-primary">Monitoramento para sua operação</p>
+          <h2 id="solucoes-monitoramento" className="text-3xl font-bold">Descubra o que está causando instabilidade nos seus servidores</h2>
+          <p className="mt-3 max-w-3xl text-muted-foreground">Cada problema exige um diagnóstico diferente. Monitore a resolução de nomes, a disponibilidade da aplicação e as notificações para agir com informações verificáveis.</p>
+        </div>
+        <div className="grid gap-4 md:grid-cols-3">
+          <Link to="/monitoramento-iptv" className="rounded-2xl border border-border/70 bg-card/50 p-6 transition-colors hover:border-primary/60">
+            <h3 className="mb-2 text-xl font-bold">Monitoramento de servidores IPTV</h3>
+            <p className="mb-4 text-sm leading-relaxed text-muted-foreground">Verifique o estado do servidor, latência e comportamento de endpoints autorizados. Diferencie queda geral de instabilidade da API.</p>
+            <span className="font-medium text-primary">Entenda o monitoramento IPTV →</span>
+          </Link>
+          <Link to="/monitoramento-dns" className="rounded-2xl border border-border/70 bg-card/50 p-6 transition-colors hover:border-primary/60">
+            <h3 className="mb-2 text-xl font-bold">Monitoramento DNS</h3>
+            <p className="mb-4 text-sm leading-relaxed text-muted-foreground">Acompanhe resolução DNS, mudanças de IP e propagação para identificar falhas de domínio antes de confundi-las com queda de servidor.</p>
+            <span className="font-medium text-primary">Verificar recursos DNS →</span>
+          </Link>
+          <Link to="/revendedor-stream-monitor" className="rounded-2xl border border-border/70 bg-card/50 p-6 transition-colors hover:border-primary/60">
+            <h3 className="mb-2 text-xl font-bold">Sistema para revendedores IPTV</h3>
+            <p className="mb-4 text-sm leading-relaxed text-muted-foreground">Organize servidores, recebimento de alertas e acompanhamento de infraestrutura em um painel pensado para revendas.</p>
+            <span className="font-medium text-primary">Conhecer solução para revenda →</span>
+          </Link>
+        </div>
+        <p className="mt-6 text-sm text-muted-foreground">Precisa investigar uma falha? Leia também <Link to="/blog/como-saber-se-servidor-iptv-caiu" className="text-primary underline">como descobrir se um servidor IPTV caiu</Link>.</p>
+      </section>
+
       <section id="recursos" className="max-w-6xl mx-auto px-4 sm:px-6 py-16 sm:py-20">
         <h2 className="text-3xl font-bold text-center mb-12">Por que usar o Stream Monitor?</h2>
         <div className="grid md:grid-cols-3 gap-6">
           <Feature icon={<Zap className="h-5 w-5" />} title="✅ Monitoramento 24 horas" desc="DNS, HTTP, latência e certificado SSL conferidos sem parar, de várias regiões." />
           <Feature icon={<ShieldCheck className="h-5 w-5" />} title="✅ Inteligência de diagnóstico" desc="Sistema anti-falso positivo com burst de confirmação e análise detalhada de falhas." />
-          <Feature icon={<Bell className="h-5 w-5" />} title="✅ Alertas Telegram" desc="Receba notificações instantâneas no seu Telegram antes dos seus clientes perceberem." />
+          <Feature icon={<Bell className="h-5 w-5" />} title="✅ Alertas Telegram" desc="Receba notificações no Telegram após a confirmação de falhas, com histórico para investigar incidentes." />
           <Feature icon={<Activity className="h-5 w-5" />} title="✅ Monitoramento IPTV real" desc="Monitoramento dedicado de painéis IPTV com Health Score exclusivo e verificação de fluxo." />
           <Feature icon={<Globe className="h-5 w-5" />} title="✅ Análise de conteúdo" desc="Acompanhe conteúdos recentes e status de servidores IPTV com integração TMDB." />
           <Feature icon={<LineChart className="h-5 w-5" />} title="✅ Sistema para revendedores" desc="Estrutura completa para gerenciar sub-revendas com sistema de créditos independente." />
@@ -157,9 +184,9 @@ function Landing() {
       <section className="max-w-4xl mx-auto px-4 sm:px-6 py-16 sm:py-20 border-t border-border/60" itemScope itemType="https://schema.org/FAQPage">
         <h2 className="text-3xl font-bold text-center mb-12 text-primary">Perguntas Frequentes (FAQ)</h2>
         <div className="space-y-6">
-          <FaqItem question="O que é o Stream Monitor?" answer="O Stream Monitor é uma plataforma profissional de monitoramento 24h para servidores IPTV, DNS e infraestrutura, com foco em diagnóstico inteligente e alertas instantâneos." />
+          <FaqItem question="O que é o Stream Monitor?" answer="O Stream Monitor é uma plataforma profissional de monitoramento 24h para servidores IPTV, DNS e infraestrutura, com foco em diagnóstico de falhas e alertas após a confirmação." />
           <FaqItem question="Como funciona o monitoramento IPTV?" answer="O sistema verifica a disponibilidade da API, status de fluxos e gera um Health Score exclusivo de 0 a 100%, alertando sobre qualquer instabilidade detectada." />
-          <FaqItem question="Recebo alertas no Telegram?" answer="Sim! O Stream Monitor envia notificações em tempo real no Telegram, permitindo que você resolva problemas antes que seus clientes percebam." />
+          <FaqItem question="Recebo alertas no Telegram?" answer="Sim! O Stream Monitor envia notificações em tempo real no Telegram, ajudando você a identificar problemas e organizar a resposta da sua operação." />
           <FaqItem question="Posso usar para revenda?" answer="Sim, oferecemos um sistema completo para revendedores gerenciarem suas próprias redes de monitoramento com autonomia e lucratividade." />
           <FaqItem question="Como contratar?" answer="Basta criar uma conta, escolher seu plano ou adquirir créditos e começar a monitorar sua infraestrutura em segundos." />
         </div>
