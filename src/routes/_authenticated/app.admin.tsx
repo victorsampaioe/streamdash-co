@@ -930,23 +930,23 @@ function ResellerDetailsDialog({ reseller }: { reseller: AdminReseller }) {
 }
 
 
-const NOVELTY_TELEGRAM_MESSAGE = `🚀 <b>STREAM MONITOR — NOVIDADES!</b> 💙
+const NOVELTY_TELEGRAM_MESSAGE = `🛡️ <b>STREAM MONITOR — SENTINEL EDGE 2.0!</b> 💙
 
-Nossa plataforma está de cara nova! O painel do cliente e a administração ganharam uma experiência mais moderna, organizada e fácil de usar.
+Tem novidade importante para quem monitora servidores IPTV e DNS!
 
-📊 Dashboard renovado e indicadores mais claros
-🖥️ Gerenciamento de servidores com visual melhorado
-🔔 Melhorias no acompanhamento dos alertas offline
-🇧🇷 Atualizações no Radar Brasil
-📱 Navegação aprimorada no celular e computador
+🌐 <b>Cloudflare Edge integrado:</b> mais uma fonte de verificação regional.
+📊 <b>Nova Central Sentinel:</b> painel moderno com cobertura das sondas e evidências em tempo real.
+🔎 <b>Diagnóstico mais claro:</b> diferencia quedas confirmadas, DNS offline, divergências e dados insuficientes.
+🔔 <b>Alertas e recuperação:</b> acompanhamento mais transparente de quedas e retornos dos servidores.
 
-💙 <b>Já utiliza o Stream Monitor?</b> Acesse seu painel e confira as novidades!
-
-👋 <b>Está um tempo sem acessar?</b> Sua conta merece uma nova visita. Entre, conheça as melhorias e veja como podemos ajudar sua operação.
+✅ <b>Conta ativa?</b> Entre no painel e confira a nova Central Inteligente.
+👋 <b>Conta inativa?</b> As novidades também são para você! Acesse sua conta e conheça a evolução da plataforma.
 
 👉 https://streammonitor.site
 
-Obrigado por fazer parte do Stream Monitor! 🚀`;
+💙 <b>Stream Monitor — inteligência para sua operação.</b>
+
+<i>A cobertura depende das sondas disponíveis. Alertas exigem um canal Telegram conectado e habilitado.</i>`
 
 function TelegramNoveltiesCampaign() {
   const broadcast = useServerFn(broadcastTelegram);
@@ -956,21 +956,21 @@ function TelegramNoveltiesCampaign() {
     <Card className="border-primary/20 bg-primary/5 p-5 sm:p-6">
       <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
         <div className="space-y-2">
-          <h2 className="flex items-center gap-2 text-lg font-bold"><Send className="h-5 w-5 text-primary" /> Comunicado de novidades no Telegram</h2>
-          <p className="max-w-2xl text-sm text-muted-foreground">Envie uma única campanha para todos os chats Telegram conectados e habilitados, incluindo clientes ativos e inativos. Contas sem Telegram conectado não recebem mensagens.</p>
+          <h2 className="flex items-center gap-2 text-lg font-bold"><Send className="h-5 w-5 text-primary" /> Novidade • Sentinel Edge 2.0 no Telegram</h2>
+          <p className="max-w-2xl text-sm text-muted-foreground">Comunicado do Sentinel Edge para clientes com plano ativo ou vencido que mantêm um canal Telegram habilitado. Revise a mensagem antes do envio; contas sem Telegram conectado não recebem.</p>
         </div>
         <Button disabled={sending} onClick={async () => {
-          if (!window.confirm("Enviar a campanha de novidades para todos os canais Telegram habilitados?")) return;
+          if (!window.confirm("Confirma o envio do comunicado Sentinel Edge 2.0 para todos os canais Telegram habilitados, inclusive contas com assinatura vencida?")) return;
           setSending(true);
           setResult(null);
           try {
             const r = await broadcast({ data: { message: NOVELTY_TELEGRAM_MESSAGE } });
-            setResult(`Enviadas: ${r.sent} · Falhas: ${r.failed} · Canais: ${r.total}`);
-            toast.success("Campanha processada");
+            setResult(`Aceitos: ${r.sent} · Falhas: ${r.failed} · Canais: ${r.total}`);
+            if (r.failed > 0) toast.warning("Campanha processada com falhas de entrega."); else toast.success("Campanha enviada aos canais habilitados.");
           } catch (e: any) {
             toast.error(e?.message ?? "Falha no envio da campanha");
           } finally { setSending(false); }
-        }}><Send className="mr-2 h-4 w-4" />{sending ? "Enviando..." : "Enviar novidades para todos"}</Button>
+        }}><Send className="mr-2 h-4 w-4" />{sending ? "Enviando..." : "Avisar todos sobre o Sentinel Edge"}</Button>
       </div>
       {result && <p className="mt-4 text-sm font-medium text-primary" role="status">{result}</p>}
     </Card>
