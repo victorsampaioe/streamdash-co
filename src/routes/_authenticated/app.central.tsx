@@ -4,6 +4,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { useMemo, useState } from "react";
 import { effectiveAccessStatus } from "@/lib/dns-state";
 import { SentinelEdgePanel } from "@/components/sentinel-edge-panel";
+import { HistoryReportPanel } from "@/components/history-report-panel";
 import { supabase } from "@/integrations/supabase/client";
 import { getFinancialPulse } from "@/lib/operations-finance.functions";
 import { prioritizeStaleServersNow } from "@/lib/monitor-health.functions";
@@ -203,13 +204,13 @@ function OperationsCenter() {
         {left&&right&&left!==right&&<div className="grid sm:grid-cols-2 gap-3">{[find(left),find(right)].map(s=>s&&<Card className="p-4 space-y-2" key={s.id}><h3 className="font-semibold">{s.name}</h3><p>DNS: {s.dns_status ?? "Desconhecido"}</p><p>Servidor: {s.current_status ?? "Desconhecido"} · Acesso: {effectiveAccessStatus(s)}</p><p>Health: {s.health_score==null?"Sem dados":s.health_score+"%"}</p><p>Latência: {s.last_latency_ms==null?"Sem dados":s.last_latency_ms+" ms"}</p><p className="text-xs text-muted-foreground">Última medição: {date(s.last_checked_at)}</p></Card>)}</div>}
       </div>}
 
-      {tab==="relatorio" && <Card className="p-5 space-y-3">
+      {tab==="relatorio" && <div className="space-y-3"><HistoryReportPanel servers={servers} /><Card className="p-5 space-y-3">
         <h2 className="font-semibold flex items-center gap-2"><ClipboardList className="h-4 w-4"/> Relatório operacional</h2>
         <p className="text-sm">Gerado em {stamp()} · {servers.length} servidores · {query.data.openIncidentCount} incidentes abertos.</p>
         <p className="text-xs text-muted-foreground">Exportação CSV dos estados atuais. Não é um certificado de SLA nem relatório histórico de 30 dias.</p>
         <Button onClick={reportCsv}><Download className="h-4 w-4 mr-2"/>Baixar CSV</Button>
         <Button variant="outline" onClick={()=>window.print()}>Imprimir / Salvar PDF</Button>
-      </Card>}
+      </Card></div>}
 
       {tab==="primeiros" && <Card className="p-5 space-y-4">
         <h2 className="font-semibold flex items-center gap-2"><Zap className="h-4 w-4"/> Seu primeiro monitoramento</h2>
