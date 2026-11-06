@@ -421,7 +421,7 @@ aside a[aria-current="page"],aside a[data-active="true"],[data-sidebar="menu-but
 .sm-command-content .sm-panel:hover { border-color: color-mix(in oklab, var(--border) 75%, var(--primary)); }
 .sm-command-content :is(.grid,.flex) > * { min-width: 0; }
 .sm-command-content :is(.overflow-x-auto,[data-radix-scroll-area-viewport]) { -webkit-overflow-scrolling: touch; }
-.sm-command-content :is(table,[role="table"]) { min-width: max-content; }
+.sm-command-content :is(.overflow-x-auto,[data-radix-scroll-area-viewport]) > :is(table,[role="table"]) { min-width: max-content; }
 .sm-command-content :is(.sm-admin-tabs,.sm-workspace-grid,.sm-workspace-header) { min-width: 0; }
 .sm-command-content :is(h1,h2,h3) { overflow-wrap: break-word; }
 @media (max-width: 1023px) {
