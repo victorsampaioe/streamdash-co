@@ -732,34 +732,68 @@ export async function sendRegionAlert(args: {
   const { openOfflineIncident, closeOfflineIncident, claimFloodSummary } =
     await import("./alert-gate.server");
 
-  // Estado persistente: enquanto o incidente estiver aberto, nada é reenviado.
+  // Os relatórios regionais usam o mesmo motor Telegram do monitor principal.
+  // sendAlerts não envia Telegram: isso evita duplicatas, mas o fluxo
+  // regional precisa chamar processTelegramAlert explicitamente.
+  const { processTelegramAlert } = await import("./telegram-alerts.server");
   if (args.event === "down") {
-    const gate = await openOfflineIncident(args.serverId, args.error ?? "Falha confirmada por regiões", regionLabels);
-    if (!gate.notify) return;
-    if (gate.grouped) {
-      if (await claimFloodSummary()) {
-        try {
-          const { notifyAdmin } = await import("./admin-telegram.server");
-          await notifyAdmin(
-            `🚨 <b>ALERTA DE INSTABILIDADE</b>\n\n${gate.floodCount} servidores apresentaram falha nos últimos minutos.\n` +
-              `Consulte os detalhes no painel.`,
-          );
-        } catch { /* ignore */ }
+    const reason = args.error ?? `Falha confirmada por ${downs} de ${total} regiões`;
+    const gate = await openOfflineIncident(args.serverId, reason, regionLabels);
+    if (!gate.notify && !(gate.incidentId && gate.reason === "already_open")) return;
+
+    const grouped = gate.notify && gate.grouped;
+    if (grouped && await claimFloodSummary()) {
+      try {
+        const { notifyAdmin } = await import("./admin-telegram.server");
+        await notifyAdmin(
+          `🚨 <b>ALERTA DE INSTABILIDADE</b>\n\n${gate.floodCount} servidores apresentaram falha nos últimos minutos.\nConsulte os detalhes no painel.`,
+        );
+      } catch (error) {
+        console.error("[region-alert] admin flood summary failed", error);
       }
-      return;
     }
-    const message =
-      `🚨 OFFLINE CONFIRMADO — ${downs} de ${total} regiões detectaram falha\n\n` +
-      `Servidor: ${server.name}\n\n` +
-      `Confirmação:\n${lines.join("\n")}\n\n` +
-      (args.error ? `Motivo: ${args.error}\n` : "") +
-      `Detectado às ${at}`;
-    await sendAlerts(server as ServerRow, "down", message, gate.incidentId);
+
+    if (gate.incidentId) {
+      try {
+        await processTelegramAlert({
+          serverId: args.serverId,
+          incidentId: gate.incidentId,
+          event: "OFFLINE",
+          reason: `${reason} — ${downs}/${total} regiões confirmaram`,
+          regions: lines,
+          suppressAdminCopy: grouped,
+        });
+      } catch (error) {
+        console.error("[region-alert] Telegram offline not delivered; retry on next probe", error);
+      }
+    }
+    // E-mail/webhooks somente na primeira transição; Telegram é
+    // idempotente por canal e retenta mesmo em incidentes já abertos.
+    if (gate.notify) {
+      const message =
+        `🚨 OFFLINE CONFIRMADO — ${downs} de ${total} regiões detectaram falha\n\n` +
+        `Servidor: ${server.name}\n\n` +
+        `Confirmação:\n${lines.join("\n")}\n\n` +
+        (args.error ? `Motivo: ${args.error}\n` : "") +
+        `Detectado às ${at}`;
+      await sendAlerts(server as ServerRow, "down", message, gate.incidentId);
+    }
     return;
   }
 
   const gate = await closeOfflineIncident(args.serverId);
   if (!gate.notify) return;
+  try {
+    await processTelegramAlert({
+      serverId: args.serverId,
+      incidentId: gate.incidentId,
+      event: "ONLINE",
+      timeOffline: gate.downtimeLabel,
+      regions: lines,
+    });
+  } catch (error) {
+    console.error("[region-alert] Telegram recovery not delivered", error);
+  }
   const message =
     `✅ SERVIÇO RESTABELECIDO — confirmado por ${total - downs} de ${total} regiões\n\n` +
     `Servidor: ${server.name}\n\n` +
