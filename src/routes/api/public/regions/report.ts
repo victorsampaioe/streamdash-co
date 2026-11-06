@@ -100,13 +100,16 @@ export const Route = createFileRoute("/api/public/regions/report")({
         for (const i of items) {
           const prevStatus = prevMap.get(`${i.server_id}|${i.region_code}`) ?? null;
           const goingDown = i.status === "down" && prevStatus !== "down";
+          const stillDown = i.status === "down" && prevStatus === "down";
           const recovering = i.status === "up" && prevStatus === "down";
-          if (!goingDown && !recovering) continue;
+          // Também reprocessa "down" contínuo para retentar canais Telegram
+          // que não confirmaram a entrega na primeira transição.
+          if (!goingDown && !recovering && !stillDown) continue;
           // Consenso: nunca alertar queda com apenas 1 região falhando,
           // e só confirmar recuperação quando o consenso voltar a "up".
           const { data: consensus } = await (supabaseAdmin as any)
             .rpc("region_consensus", { _server_id: i.server_id, _window_minutes: 15 });
-          if (goingDown && consensus?.verdict !== "down") continue;
+          if ((goingDown || stillDown) && consensus?.verdict !== "down") continue;
           if (recovering && consensus?.verdict !== "up") continue;
           try {
             const region = regionMap.get(i.region_code)!;
@@ -114,11 +117,13 @@ export const Route = createFileRoute("/api/public/regions/report")({
             await sendRegionAlert({
               serverId: i.server_id,
               region: { code: region.code, name: region.name, city: region.city, flag: region.flag },
-              event: goingDown ? "down" : "up",
+              event: goingDown || stillDown ? "down" : "up",
               latencyMs: i.latency_ms ?? null,
               error: i.error ?? null,
             });
-          } catch { /* non-fatal */ }
+          } catch (error) {
+            console.error("[regions/report] Alert delivery failed", { serverId: i.server_id, reason: error instanceof Error ? error.name : "unknown" });
+          }
         }
 
         if (agent) { try { await touchAgent(agent.id, items.length); } catch { /* noop */ } }
