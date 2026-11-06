@@ -524,6 +524,9 @@ aside a[aria-current="page"],aside a[data-active="true"],[data-sidebar="menu-but
 .sm-section-hero .text-muted-foreground { color: #afbed5; }
 .light .sm-section-hero { color: #f2f6ff; }
 
+.sm-section-hero.flex { flex-wrap: wrap; }
+.sm-section-hero.flex::before { flex: 0 0 100%; }
+.sm-section-hero.flex.flex-col::before { flex-basis: auto; }
 /* All operational cards, filter bars, and tables now use the same surface language. */
 #main-content .sm-page { min-width: 0; }
 #main-content :is(.sm-panel,.sm-workspace-card) {
