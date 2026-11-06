@@ -11,6 +11,7 @@ import { SearchInput } from "@/components/app-shell";
 import { ArrowRight, Plus, ServerIcon, Bell, HeartPulse, Tv, AlertCircle, CreditCard } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useSubscription } from "@/hooks/use-subscription";
+import { effectiveAccessStatus, accessStatusLabel } from "@/lib/dns-state";
 
 export const Route = createFileRoute("/_authenticated/app/")({
   component: Dashboard,
@@ -92,7 +93,7 @@ function Dashboard() {
     return servers.filter((s) => {
       // Ocultar servidores pausados/sem serviço da lista principal de monitoramento
       if (s.monitoring_paused) return false;
-      if (filter !== "all" && s.current_status !== filter) return false;
+      if (filter !== "all" && effectiveAccessStatus(s) !== filter) return false;
       if (query && !`${s.name} ${s.description ?? ""}`.toLowerCase().includes(query.toLowerCase())) return false;
       return true;
     });
@@ -102,9 +103,9 @@ function Dashboard() {
     const active = servers.filter(s => !s.monitoring_paused);
     return {
       total: active.length,
-      up: active.filter((s) => s.current_status === "up").length,
-      down: active.filter((s) => s.current_status === "down").length,
-      degraded: active.filter((s) => s.current_status === "degraded").length,
+      up: active.filter((s) => effectiveAccessStatus(s) === "up").length,
+      down: active.filter((s) => effectiveAccessStatus(s) === "down").length,
+      degraded: active.filter((s) => effectiveAccessStatus(s) === "degraded").length,
     };
   }, [servers]);
 
@@ -271,6 +272,8 @@ function scoreOf(servers: any[]) {
   if (!servers.length) return 100;
   const total = servers.reduce((sum, s) => {
     const explicit = s.health_score ?? s.dns_health_score;
+    if (s.dns_enabled !== false && s.dns_status === "offline") return sum;
+    if (s.dns_enabled !== false && s.dns_status === "unstable") return sum + Math.min(explicit ?? 60, 60);
     if (explicit != null) return sum + explicit;
     return sum + (s.current_status === "up" ? 100 : s.current_status === "degraded" ? 60 : s.current_status === "down" ? 0 : 80);
   }, 0);
@@ -342,10 +345,11 @@ function ServerCard({ server }: { server: any }) {
         <div className="flex items-start justify-between mb-3">
           <div className="min-w-0">
             <div className="flex items-center gap-2 mb-1">
-              <StatusDot status={server.current_status} />
+              <StatusDot status={effectiveAccessStatus(server)} />
               <h3 className="font-semibold truncate">{server.name}</h3>
             </div>
             <div className={`text-xs ${healthTone(score)}`}>Saúde {score}% · {healthLabel(score)}</div>
+            {server.dns_enabled !== false && server.dns_status === "offline" && <p className="mt-1 text-xs font-semibold text-red-400" role="status">{accessStatusLabel(server)}</p>}
             <div className="mt-2 flex flex-wrap items-center gap-2 text-[11px]">
               <span className={server.dns_status === "offline"
                 ? "rounded-md bg-red-500/15 px-2 py-1 font-semibold text-red-400"
@@ -353,8 +357,8 @@ function ServerCard({ server }: { server: any }) {
                   ? "rounded-md bg-amber-500/15 px-2 py-1 font-semibold text-amber-400"
                   : "rounded-md bg-primary/10 px-2 py-1 font-semibold text-primary"}>
                 DNS: {server.dns_enabled === false ? "Desativado"
+                  : server.dns_status === "offline" ? "OFFLINE · acesso pelo domínio"
                   : server.last_dns_check_at && Date.now() - new Date(server.last_dns_check_at).getTime() > 3 * 60_000 ? "Atualização atrasada"
-                  : server.dns_status === "offline" ? "OFFLINE"
                   : server.dns_status === "unstable" ? "Instável"
                   : server.dns_status === "online" ? "Respondendo" : "Aguardando"}
               </span>
