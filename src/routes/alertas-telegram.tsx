@@ -5,9 +5,10 @@ import { Send, Bell, Zap, MessageSquare } from "lucide-react";
 export const Route = createFileRoute('/alertas-telegram')({
   head: () => ({
     meta: [
-      { title: "Alertas no Telegram: Como Funciona - Stream Monitor" },
-      { name: "description", content: "Receba notificações instantâneas de queda no seu celular. Configure alertas no Telegram em menos de 1 minuto." },
+      { title: "Alertas de Queda IPTV no Telegram | Stream Monitor" },
+      { name: "description", content: "Receba alertas de quedas confirmadas e recuperação dos servidores IPTV no Telegram. Saiba como o monitoramento reduz alarmes falsos." },
     ],
+    links: [{ rel: "canonical", href: "https://streammonitor.site/alertas-telegram" }],
   }),
   component: AlertsPage,
 });
@@ -19,7 +20,7 @@ function AlertsPage() {
         <Link to="/" className="text-primary hover:underline mb-8 inline-block">← Voltar para o início</Link>
         <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold mb-6">Alertas Automáticos no Telegram</h1>
         <p className="text-xl text-muted-foreground mb-12">
-          A forma mais rápida e eficiente de ser avisado sobre problemas na sua infraestrutura.
+          Configure notificações para acompanhar falhas confirmadas, instabilidade e recuperação dos servidores monitorados.
         </p>
 
         <div className="space-y-12 mb-16">
@@ -34,10 +35,10 @@ function AlertsPage() {
 
           <section className="space-y-4">
             <h2 className="text-2xl font-bold flex items-center gap-2">
-              <Zap className="text-primary" /> Diagnóstico com link de Player
+              <Zap className="text-primary" /> Alertas com contexto da falha
             </h2>
             <p className="text-muted-foreground leading-relaxed">
-              Nossos alertas IPTV agora incluem botões de ação rápida para você abrir o Diagnóstico de Conteúdo ou testar o canal diretamente pelo seu Web Player White-label.
+              Os alertas podem mostrar qual servidor apresentou problema e informações de diagnóstico. O envio depende da configuração do bot, da confirmação da falha e da disponibilidade do Telegram.
             </p>
           </section>
 
@@ -52,6 +53,11 @@ function AlertsPage() {
           </section>
         </div>
 
+        <section className="mb-12 space-y-3 rounded-2xl border border-border/60 bg-card/40 p-6">
+          <h2 className="text-2xl font-bold">Quando o alerta é enviado?</h2>
+          <p className="text-muted-foreground">Uma única falha de rede pode ser temporária. O monitoramento utiliza novas verificações para reduzir falsos positivos antes de sinalizar a indisponibilidade. O tempo do aviso depende do intervalo de monitoramento, das confirmações e da entrega pelo Telegram.</p>
+          <p className="text-muted-foreground">Saiba <Link to="/blog/como-saber-se-servidor-iptv-caiu" className="text-primary underline">como identificar se um servidor IPTV realmente caiu</Link>.</p>
+        </section>
         <div className="bg-card/50 rounded-2xl p-8 border border-border/60 mb-16 text-center">
           <h2 className="text-2xl font-bold mb-4">Configure seus alertas agora</h2>
           <Link to="/auth"><Button size="lg" className="glow-primary">Começar agora</Button></Link>
