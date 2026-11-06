@@ -21,11 +21,18 @@ export const getFinancialPulse = createServerFn({ method: "POST" })
     let subscriptions: Array<{ user_id: string; status: string; expires_at: string | null }> = [];
     if (ids.length) {
       const { data, error } = await supabaseAdmin.from("subscriptions")
-        .select("user_id, status, expires_at").in("user_id", ids.slice(0, 400));
+        .select("user_id, status, expires_at")
+        .in("user_id", ids.slice(0, 400))
+        .order("expires_at", { ascending: false, nullsFirst: false });
       if (error) throw new Error(error.message);
       subscriptions = data ?? [];
     }
-    const byUser = new Map(subscriptions.map(s => [s.user_id, s]));
+    // Uma conta pode ter várias assinaturas históricas. Usar a mais
+    // recente/válida, não uma linha antiga retornada em ordem indefinida.
+    const byUser = new Map<string, (typeof subscriptions)[number]>();
+    for (const s of subscriptions) {
+      if (!byUser.has(s.user_id)) byUser.set(s.user_id, s);
+    }
     const needsReview = paid.filter(p => p.payment_type === "subscription" && (
       !byUser.has(p.user_id) ||
       byUser.get(p.user_id)?.status !== "active" ||
