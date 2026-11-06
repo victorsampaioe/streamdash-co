@@ -47,15 +47,11 @@ function ErrorComponent({ error: unknownError, reset }: ErrorComponentProps) {
   return (
     <div className="flex min-h-screen items-center justify-center bg-background px-4 py-10">
       <div className="w-full max-w-2xl text-left">
-        <h1 className="text-xl font-semibold">Erro real</h1>
-        <div className="mt-4 space-y-1 text-sm">
-          <p><span className="text-muted-foreground">endpoint:</span> {typeof window !== "undefined" ? window.location.pathname : "-"}</p>
-          <p><span className="text-muted-foreground">status:</span> {(error as any)?.status ?? (error as any)?.statusCode ?? "-"}</p>
-          <p><span className="text-muted-foreground">mensagem:</span> {error?.message ?? "-"}</p>
-        </div>
-        <pre className="mt-4 max-h-80 overflow-auto rounded-md border border-border bg-muted p-4 text-xs whitespace-pre-wrap">
-{error?.stack ?? "sem stack"}
-        </pre>
+        <h1 className="text-xl font-semibold">Não foi possível carregar a página</h1>
+        <p className="mt-4 text-sm text-muted-foreground">Houve uma falha ao carregar esta página. Tente novamente ou entre em contato com o suporte.</p>
+        {import.meta.env.DEV && (
+          <pre className="mt-4 max-h-80 overflow-auto rounded-md border border-border bg-muted p-4 text-xs whitespace-pre-wrap">{error.stack ?? error.message}</pre>
+        )}
         <div className="mt-6 flex flex-wrap gap-2">
           <button
             onClick={() => { router.invalidate(); reset(); }}
