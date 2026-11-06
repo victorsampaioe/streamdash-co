@@ -501,11 +501,11 @@ async function performCheck(server: ServerRow) {
       const oscillating = flips >= 2 && bad >= 2;
       const persistent = rows.length >= 3 && bad === rows.length;
       if (oscillating || persistent) {
-        const bucket = Math.floor(Date.now() / (2 * 3600_000));
         const { processTelegramAlert } = await import("./telegram-alerts.server");
         await processTelegramAlert({
           serverId: server.id,
-          incidentId: `unstable_${server.id}_${bucket}`,
+          // Uma oscilação não é incidente OFFLINE; não gerar UUID fictício.
+          // A deduplicação por 2h é feita no notifications_log.
           event: "UNSTABLE",
           reason: oscillating
             ? `Oscilando: ${bad} falhas e ${flips} trocas de estado nos últimos 30 min — ${reason}`
