@@ -45,7 +45,6 @@ async function run() {
     };
   }
 
-  const { runDueChecks } = await import("@/lib/monitoring.server");
   const { notifyNewlyExpiredSubscriptions, notifyExpiredAccessUsers } = await import("@/lib/admin-telegram.server");
   const { runDueIptvSyncs } = await import("@/lib/iptv.server");
   const { syncKumaStatuses, provisionPendingServers } = await import("@/lib/kuma.server");
@@ -59,8 +58,7 @@ async function run() {
   // Primeiro sincroniza o estado de pausa: contas expiradas ficam marcadas
   // como pausadas e contas reativadas voltam sozinhas para o monitoramento.
   const pauseSync = await safe("pauseSync", syncServersPauseState, { paused: 0, resumed: 0 }, errors);
-  const [checks, expired, iptv, kuma, kumaProv, payments, contents] = await Promise.all([
-    safe("checks", runDueChecks, {} as any, errors),
+  const [expired, iptv, kuma, kumaProv, payments, contents] = await Promise.all([
     safe("expired", notifyNewlyExpiredSubscriptions, { notified: 0 }, errors),
     safe("iptv", runDueIptvSyncs, { synced: 0, errors: 0 }, errors),
     safe("kuma", syncKumaStatuses, { synced: 0 }, errors),
@@ -98,7 +96,6 @@ async function run() {
 
   return {
     ok: errors.length === 0,
-    ...checks,
     expiredNotified: expired.notified,
     expiryNoticesSent: expiryNotice.sent,
     iptvSynced: iptv.synced,
@@ -143,13 +140,22 @@ async function guardedRun() {
   const { withCycleLock } = await import("@/lib/job-lock.server");
   if (process.env.IS_CORE === "true" || missingEnv().length) return run();
 
-  const [dnsResult, mainResult] = await Promise.all([
+  const [dnsResult, monitorResult, mainResult] = await Promise.all([
     withCycleLock("cron-dns", 180, async () => {
       const { runDueDnsChecks } = await import("@/lib/dns.server");
       return runDueDnsChecks(40);
     }).catch((error) => {
       console.error("[cron-dns] Falha no ciclo", error);
       return { checked: 0, errors: 1 };
+    }),
+    // A fila HTTP/IPTV deve continuar mesmo quando sincronização, pagamento
+    // ou varreduras deixam o ciclo principal travado durante muitos minutos.
+    withCycleLock("cron-monitor", 120, async () => {
+      const { runDueChecks } = await import("@/lib/monitoring.server");
+      return runDueChecks();
+    }).catch((error) => {
+      console.error("[cron-monitor] Falha no monitor", error);
+      return { checked: 0, ok: 0, errors: 1, queued: 0 };
     }),
     withCycleLock("cron-check", 300, async () => {
       const reaped = await reapStaleLogs().catch(() => ({ reaped: 0 }));
@@ -160,7 +166,13 @@ async function guardedRun() {
 
   return {
     ...mainResult,
-    ok: !((mainResult as any)?.ok === false || ("errors" in dnsResult && dnsResult.errors > 0)),
+    ok: !((mainResult as any)?.ok === false ||
+      ("errors" in dnsResult && dnsResult.errors > 0) ||
+      ("errors" in monitorResult && monitorResult.errors > 0)),
+    monitorChecked: "checked" in monitorResult ? monitorResult.checked : 0,
+    monitorErrors: "errors" in monitorResult ? monitorResult.errors : 0,
+    monitorQueued: "queued" in monitorResult ? monitorResult.queued : 0,
+    monitorSkipped: "skipped" in monitorResult ? monitorResult.skipped : false,
     dnsChecked: "checked" in dnsResult ? dnsResult.checked : 0,
     dnsErrors: "errors" in dnsResult ? dnsResult.errors : 0,
     dnsSkipped: "skipped" in dnsResult ? dnsResult.skipped : false,
