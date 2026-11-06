@@ -2,6 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useMemo, useState } from "react";
+import { effectiveAccessStatus } from "@/lib/dns-state";
 import { supabase } from "@/integrations/supabase/client";
 import { getFinancialPulse } from "@/lib/operations-finance.functions";
 import { prioritizeStaleServersNow } from "@/lib/monitor-health.functions";
@@ -26,7 +27,11 @@ type IncidentItem = { id: string; server_id: string; reason: string | null; star
 const stale = (t: string | null, minutes = 5) => !t || Date.now() - new Date(t).getTime() > minutes * 60000;
 const date = (t: string | null) => t ? new Date(t).toLocaleString("pt-BR") : "Não verificado";
 const stamp = () => new Date().toLocaleString("pt-BR");
-const csv = (s: string) => '"' + s.replace(/"/g, '""') + '"';
+const csv = (s: string) => {
+  // CSV opened by Excel must never execute formulas from user-supplied names.
+  const safe = /^[\s]*[=+@\-]/.test(s) ? "'" + s : s;
+  return '"' + safe.replace(/"/g, '""') + '"';
+};
 
 function OperationsCenter() {
   const [tab, setTab] = useState("diagnostico");
@@ -40,10 +45,18 @@ function OperationsCenter() {
     queryFn: async () => {
       const { data: user } = await supabase.auth.getUser();
       if (!user.user) throw new Error("Faça login para continuar.");
+      const { data: roles, error: rolesError } = await supabase.from("user_roles")
+        .select("role").eq("user_id", user.user.id);
+      if (rolesError) throw new Error(rolesError.message);
+      const isAdmin = !!roles?.some(r => r.role === "admin");
+      // Administradores precisam ver a operação inteira. A tabela já usa
+      // políticas RLS específicas para admin; usuários comuns só a própria.
+      let serversQuery = supabase.from("servers")
+        .select("id,name,host,current_status,dns_status,dns_enabled,last_checked_at,last_dns_check_at,last_latency_ms,health_score,dns_health_score,monitoring_paused,next_check_at")
+        .order("created_at", { ascending: false }).limit(1000);
+      if (!isAdmin) serversQuery = serversQuery.eq("owner_id", user.user.id);
       const [{ data: servers, error: sErr }, { data: channels, error: aErr }] = await Promise.all([
-        supabase.from("servers")
-          .select("id,name,host,current_status,dns_status,dns_enabled,last_checked_at,last_dns_check_at,last_latency_ms,health_score,dns_health_score,monitoring_paused,next_check_at")
-          .eq("owner_id", user.user.id).order("created_at", { ascending: false }).limit(200),
+        serversQuery,
         supabase.from("alert_channels").select("id").eq("owner_id", user.user.id).eq("kind", "telegram").eq("enabled", true).limit(1),
       ]);
       if (sErr) throw new Error(sErr.message);
@@ -51,14 +64,26 @@ function OperationsCenter() {
       const ids = (servers ?? []).map(s => s.id);
       let incidents: IncidentItem[] = [];
       if (ids.length) {
-        const { data, error } = await supabase.from("incidents")
-          .select("id,server_id,reason,started_at,ended_at,alert_sent")
-          .in("server_id", ids).order("started_at", { ascending: false }).limit(100);
-        if (error) throw new Error(error.message);
-        incidents = (data ?? []) as IncidentItem[];
+        // PostgREST URL/query limits: use page batches rather than 292 ids
+        // inside one in(...) query. Sort combined results globally.
+        const batches: string[][] = [];
+        for (let i = 0; i < ids.length; i += 75) batches.push(ids.slice(i, i + 75));
+        const results = await Promise.all(batches.map(batch =>
+          supabase.from("incidents")
+            .select("id,server_id,reason,started_at,ended_at,alert_sent")
+            .in("server_id", batch).order("started_at", { ascending: false }).limit(100)
+        ));
+        for (const result of results) {
+          if (result.error) throw new Error(result.error.message);
+          incidents.push(...(result.data ?? []) as IncidentItem[]);
+        }
+        incidents = incidents.sort((a,b) =>
+          new Date(b.started_at).getTime() - new Date(a.started_at).getTime()
+        ).slice(0,100);
       }
-      const { data: roles } = await supabase.from("user_roles").select("role").eq("user_id", user.user.id);
-      return { servers: (servers ?? []) as ServerItem[], incidents, telegram: (channels ?? []).length > 0, isAdmin: !!roles?.some(r => r.role === "admin"), limited: (servers ?? []).length === 200 };
+      return { servers: (servers ?? []) as ServerItem[], incidents,
+        telegram: (channels ?? []).length > 0, isAdmin,
+        limited: (servers ?? []).length === 1000, incidentLimited: incidents.length === 100 };
     },
     refetchInterval: 30_000,
     refetchOnWindowFocus: true,
@@ -72,7 +97,7 @@ function OperationsCenter() {
   });
   const servers = query.data?.servers ?? [];
   const incidents = query.data?.incidents ?? [];
-  const anomalies = useMemo(() => servers.filter(s => !s.monitoring_paused && (s.dns_status === "offline" || s.current_status === "down" || stale(s.last_checked_at, 15))), [servers, query.dataUpdatedAt]);
+  const anomalies = useMemo(() => servers.filter(s => !s.monitoring_paused && (s.dns_status === "offline" || effectiveAccessStatus(s) === "down" || stale(s.last_checked_at, 15) || (s.dns_enabled && stale(s.last_dns_check_at, 10)))), [servers, query.dataUpdatedAt]);
   const items = [
     ["diagnostico","Diagnóstico"],["incidentes","Incidentes"],["sentinel","Sentinel"],
     ["comparador","Comparador"],["relatorio","Relatórios"],["primeiros","Primeiros passos"],
@@ -91,6 +116,7 @@ function OperationsCenter() {
   const find = (id: string) => servers.find(s => s.id === id);
   const diagnostic = (s: ServerItem) => {
     if (s.monitoring_paused) return { kind:"Pausado",why:"Monitoramento pausado. Verifique sua assinatura e as configurações.",color:"text-muted-foreground" };
+    if (s.dns_enabled !== false && stale(s.last_dns_check_at, 15)) return {kind:"DNS sem dados recentes",why:"A última consulta DNS está atrasada. Não é seguro afirmar que o domínio continua offline sem uma nova verificação.",color:"text-amber-500"};
     if (s.dns_status === "offline" && s.dns_enabled !== false) return {
       kind:"DNS OFFLINE — domínio indisponível",
       why:"O DNS está offline confirmado. O servidor IPTV pode continuar respondendo por IP; a falha de acesso pelo domínio é real.",
@@ -110,11 +136,12 @@ function OperationsCenter() {
     {query.isLoading && <Card className="p-5">Buscando dados da operação...</Card>}
     {query.isError && <Card className="p-5 text-destructive">Falha ao carregar. {query.error?.message}</Card>}
     {!!query.data && <>
-      {query.data.limited && <p className="text-xs text-amber-500">Exibindo até 200 servidores. O relatório não representa a base inteira.</p>}
+      <p className="text-xs text-muted-foreground">{query.data.isAdmin ? "Visão administrativa — todos os servidores" : "Sua operação — servidores da sua conta"} · Atualizado em {new Date(query.dataUpdatedAt).toLocaleTimeString("pt-BR")}</p>
+      {query.data.limited && <p className="text-xs text-amber-500">Exibindo até 1.000 servidores. O relatório não representa a base inteira.</p>}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         <Card className="p-4"><p className="text-xs text-muted-foreground">Servidores</p><p className="text-2xl font-bold">{servers.length}</p></Card>
-        <Card className="p-4"><p className="text-xs text-muted-foreground">DNS offline</p><p className="text-2xl font-bold">{servers.filter(s=>s.dns_status==="offline").length}</p></Card>
-        <Card className="p-4"><p className="text-xs text-muted-foreground">Incidentes abertos</p><p className="text-2xl font-bold">{incidents.filter(i=>!i.ended_at).length}</p></Card>
+        <Card className="p-4"><p className="text-xs text-muted-foreground">DNS offline</p><p className="text-2xl font-bold">{servers.filter(s=>!s.monitoring_paused && s.dns_enabled !== false && s.dns_status==="offline").length}</p></Card>
+        <Card className="p-4"><p className="text-xs text-muted-foreground">Incidentes abertos</p><p className="text-2xl font-bold">{incidents.filter(i=>!i.ended_at).length}{query.data.incidentLimited ? "+" : ""}</p></Card>
         <Card className="p-4"><p className="text-xs text-muted-foreground">Checagens atrasadas</p><p className="text-2xl font-bold">{servers.filter(s=>!s.monitoring_paused&&stale(s.last_checked_at,15)).length}</p></Card>
       </div>
       <div className="flex flex-wrap gap-2">{items.map(([id,label])=><Button key={id} size="sm" variant={tab===id?"default":"outline"} onClick={()=>setTab(id)}>{label}</Button>)}</div>
@@ -130,7 +157,7 @@ function OperationsCenter() {
       </div>}
 
       {tab==="incidentes" && <div className="space-y-3">
-        <p className="text-sm text-muted-foreground">Histórico real dos últimos 100 incidentes acessíveis. “Alerta registrado” não comprova entrega no Telegram.</p>
+        <p className="text-sm text-muted-foreground">Histórico dos 100 incidentes mais recentes. {query.data.incidentLimited ? "Há mais incidentes fora deste recorte. " : ""}“Alerta registrado” não comprova entrega no Telegram.</p>
         {incidents.length===0&&<Card className="p-5">Nenhum incidente registrado.</Card>}
         {incidents.map(i=><Card key={i.id} className="p-4">
           <div className="flex flex-wrap justify-between gap-2"><strong>{find(i.server_id)?.name ?? "Servidor"}</strong><Badge>{i.ended_at?"Encerrado":"Em andamento"}</Badge></div>
@@ -162,7 +189,7 @@ function OperationsCenter() {
       {tab==="comparador" && <div className="space-y-3">
         <p className="text-sm text-muted-foreground">Compare disponibilidade e tempo de resposta das últimas verificações. Valores nulos não são tratados como zero.</p>
         <div className="grid sm:grid-cols-2 gap-3">{[left,right].map((selected,index)=><select key={index} aria-label={index===0?"Primeiro servidor":"Segundo servidor"} className="w-full rounded-lg border border-border bg-background p-3" value={selected} onChange={e=>index===0?setLeft(e.target.value):setRight(e.target.value)}><option value="">Selecionar servidor</option>{servers.map(s=><option value={s.id} key={s.id}>{s.name}</option>)}</select>)}</div>
-        {left&&right&&left!==right&&<div className="grid sm:grid-cols-2 gap-3">{[find(left),find(right)].map(s=>s&&<Card className="p-4 space-y-2" key={s.id}><h3 className="font-semibold">{s.name}</h3><p>DNS: {s.dns_status ?? "Desconhecido"}</p><p>Servidor: {s.current_status ?? "Desconhecido"}</p><p>Health: {s.health_score==null?"Sem dados":s.health_score+"%"}</p><p>Latência: {s.last_latency_ms==null?"Sem dados":s.last_latency_ms+" ms"}</p><p className="text-xs text-muted-foreground">Última medição: {date(s.last_checked_at)}</p></Card>)}</div>}
+        {left&&right&&left!==right&&<div className="grid sm:grid-cols-2 gap-3">{[find(left),find(right)].map(s=>s&&<Card className="p-4 space-y-2" key={s.id}><h3 className="font-semibold">{s.name}</h3><p>DNS: {s.dns_status ?? "Desconhecido"}</p><p>Servidor: {s.current_status ?? "Desconhecido"} · Acesso: {effectiveAccessStatus(s)}</p><p>Health: {s.health_score==null?"Sem dados":s.health_score+"%"}</p><p>Latência: {s.last_latency_ms==null?"Sem dados":s.last_latency_ms+" ms"}</p><p className="text-xs text-muted-foreground">Última medição: {date(s.last_checked_at)}</p></Card>)}</div>}
       </div>}
 
       {tab==="relatorio" && <Card className="p-5 space-y-3">
