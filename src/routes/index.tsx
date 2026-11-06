@@ -89,43 +89,7 @@ function Landing() {
               <div><p className="font-bold text-foreground">IPTV</p><p className="text-xs text-muted-foreground">Diagnóstico</p></div>
             </div>
           </div>
-          <div className="relative min-w-0" aria-label="Ilustração da interface de monitoramento">
-            <div className="overflow-hidden rounded-[1.5rem] border border-border bg-card shadow-2xl shadow-primary/10">
-              <div className="flex items-center justify-between border-b border-border px-5 py-4">
-                <div className="flex items-center gap-3">
-                  <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary/15"><Activity className="h-5 w-5 text-primary" /></div>
-                  <div><div className="text-sm font-bold">Visão geral</div><div className="text-xs text-muted-foreground">Exemplo ilustrativo do painel</div></div>
-                </div>
-                <div className="rounded-lg border border-primary/25 bg-primary/10 px-3 py-1.5 text-[11px] font-semibold text-primary">Stream Monitor</div>
-              </div>
-              <div className="grid grid-cols-3 gap-3 p-4 sm:p-5">
-                {[
-                  { label: "Servidores", value: "128", hint: "Monitorados" },
-                  { label: "Disponíveis", value: "121", hint: "Em operação" },
-                  { label: "Atenção", value: "07", hint: "Para investigar" },
-                ].map((item) => (
-                  <div key={item.label} className="min-w-0 rounded-xl border border-border bg-background/70 p-3 sm:p-4">
-                    <p className="truncate text-[11px] text-muted-foreground">{item.label}</p>
-                    <p className="mt-3 text-2xl font-extrabold tracking-tight text-foreground sm:text-3xl">{item.value}</p>
-                    <p className="mt-1 text-[10px] text-muted-foreground">{item.hint}</p>
-                  </div>
-                ))}
-              </div>
-              <div className="mx-4 mb-5 rounded-xl border border-border bg-background/60 sm:mx-5">
-                <div className="flex items-center justify-between border-b border-border p-4"><span className="text-sm font-bold">Status da infraestrutura</span><span className="text-xs text-muted-foreground">Exemplo</span></div>
-                {[
-                  { name: "Servidor principal", state: "Operacional", tone: "text-primary" },
-                  { name: "Rota secundária", state: "Operacional", tone: "text-primary" },
-                  { name: "Servidor de mídia", state: "Em análise", tone: "text-amber-500" },
-                ].map((item) => (
-                  <div key={item.name} className="flex items-center justify-between gap-3 border-b border-border/50 px-4 py-3 last:border-0">
-                    <div className="flex min-w-0 items-center gap-3"><ServerIcon className="h-4 w-4 shrink-0 text-muted-foreground" /><span className="truncate text-xs font-medium sm:text-sm">{item.name}</span></div>
-                    <span className={`shrink-0 text-[11px] font-semibold ${item.tone}`}>{item.state}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
+          <PresentationVideo />
         </div>
       </section>
 
@@ -291,66 +255,114 @@ function Feature({ icon, title, desc }: { icon: React.ReactNode; title: string; 
   );
 }
 
-function RadarShowcase() {
-  const videoRef = useRef<HTMLVideoElement>(null);
-  const [isPlaying, setIsPlaying] = useState(true);
-  const [isMuted, setIsMuted] = useState(false); // Try to start unmuted if possible, but browsers will likely block it
-  const [showPlayOverlay, setShowPlayOverlay] = useState(false);
 
-  const togglePlay = () => {
-    if (videoRef.current) {
-      if (videoRef.current.paused) {
-        videoRef.current.play();
-        setIsPlaying(true);
-      } else {
-        videoRef.current.pause();
-        setIsPlaying(false);
+/** The existing 16MB presentation video is the primary conversion asset.
+ * It does not autoplay/download on page load, protecting mobile performance.
+ */
+function PresentationVideo() {
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const [started, setStarted] = useState(false);
+  const [playing, setPlaying] = useState(false);
+  const [muted, setMuted] = useState(false);
+  const [error, setError] = useState(false);
+
+  const playVideo = async () => {
+    const player = videoRef.current;
+    if (!player) return;
+    try {
+      player.muted = false;
+      await player.play();
+      setStarted(true);
+      setPlaying(true);
+      setError(false);
+    } catch {
+      // Some devices need muted playback before the user can enable sound.
+      try {
+        player.muted = true;
+        await player.play();
+        setMuted(true);
+        setStarted(true);
+        setPlaying(true);
+        setError(false);
+      } catch {
+        setError(true);
+        setPlaying(false);
       }
     }
   };
 
-  const handleStartDemo = () => {
-    if (videoRef.current) {
-      videoRef.current.muted = false;
-      setIsMuted(false);
-      videoRef.current.play().then(() => {
-        setIsPlaying(true);
-        setShowPlayOverlay(false);
-      }).catch(err => {
-        console.error("Playback failed even after click:", err);
-      });
-    }
-  };
+  return (
+    <div className="relative min-w-0" aria-label="Vídeo de apresentação do Stream Monitor">
+      <div className="pointer-events-none absolute -inset-8 rounded-full bg-blue-600/15 blur-[70px]" />
+      <div className="relative overflow-hidden rounded-[1.5rem] border border-blue-400/25 bg-[#081223] shadow-2xl shadow-blue-600/15">
+        <div className="flex items-center justify-between gap-3 border-b border-white/10 px-4 py-3 sm:px-5">
+          <div className="flex items-center gap-2 text-sm font-semibold text-white">
+            <span className="inline-flex h-7 w-7 items-center justify-center rounded-lg bg-blue-500/20 text-blue-400"><Play className="h-4 w-4" /></span>
+            Apresentação do Stream Monitor
+          </div>
+          <span className="rounded-full border border-blue-400/30 bg-blue-500/10 px-2 py-1 text-[10px] font-bold text-blue-300">ASSISTA AO VÍDEO</span>
+        </div>
+        <div className="relative mx-auto flex min-h-[340px] items-center justify-center bg-gradient-to-br from-[#0b1c3b] via-[#060e1c] to-[#020711] py-4 sm:min-h-[400px]">
+          <div className="pointer-events-none absolute inset-0 opacity-70">
+            <div className="absolute left-[12%] top-[15%] h-36 w-36 rounded-full bg-blue-600/20 blur-[70px]" />
+            <div className="absolute bottom-[10%] right-[12%] h-44 w-44 rounded-full bg-cyan-500/15 blur-[70px]" />
+          </div>
+          <div className="relative w-[min(64%,225px)] overflow-hidden rounded-[1.5rem] border-[5px] border-slate-700/75 bg-slate-950 shadow-[0_15px_60px_rgba(0,0,0,0.7)]" style={{ aspectRatio: "9 / 16" }}>
+            <video
+              ref={videoRef}
+              src={heroVideoAsset.url}
+              preload="none"
+              playsInline
+              controls={started}
+              onPlay={() => setPlaying(true)}
+              onPause={() => setPlaying(false)}
+              onEnded={() => setPlaying(false)}
+              onError={() => setError(true)}
+              aria-label="Demonstração em vídeo do Stream Monitor"
+              className="h-full w-full object-contain"
+            />
+            {!started && (
+              <button
+                type="button"
+                onClick={playVideo}
+                className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-gradient-to-b from-[#102448] via-[#0a1630] to-[#030711] p-4 text-center text-white transition-colors hover:from-[#163360] focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue-400"
+                aria-label="Reproduzir vídeo de apresentação do Stream Monitor"
+              >
+                <Activity className="h-10 w-10 text-blue-400" aria-hidden="true" />
+                <span className="text-base font-black tracking-tight sm:text-lg">Veja como funciona</span>
+                <span className="flex h-16 w-16 items-center justify-center rounded-full bg-blue-600 shadow-lg shadow-blue-600/35">
+                  <Play className="ml-1 h-8 w-8 fill-white" />
+                </span>
+                <span className="text-xs text-slate-300">Toque para assistir com som</span>
+              </button>
+            )}
+          </div>
+          {started && !playing && !error && (
+            <button type="button" onClick={playVideo} className="absolute bottom-5 left-5 rounded-full bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-xl">
+              <Play className="mr-1 inline h-4 w-4" /> Continuar vídeo
+            </button>
+          )}
+          {error && (
+            <p role="alert" className="absolute bottom-3 left-3 right-3 rounded-lg border border-amber-500/30 bg-black/80 p-2 text-center text-xs text-amber-200">
+              Não foi possível reproduzir o vídeo agora. Você pode conhecer os planos abaixo.
+            </p>
+          )}
+        </div>
+        <div className="space-y-3 border-t border-white/10 bg-[#0a1426] p-4 sm:p-5">
+          <p className="text-center text-sm font-medium text-slate-200">Conheça a plataforma antes de escolher seu plano.</p>
+          <Link to="/auth" className="block">
+            <Button className="h-12 w-full rounded-xl bg-blue-600 text-base font-bold text-white hover:bg-blue-500">
+              Criar minha conta e assinar <ArrowRight className="ml-2 h-4 w-4" />
+            </Button>
+          </Link>
+          <p className="text-center text-xs text-slate-400">Cadastro simples · Planos disponíveis dentro do painel</p>
+        </div>
+      </div>
+    </div>
+  );
+}
 
-  const toggleMute = () => {
-    if (videoRef.current) {
-      videoRef.current.muted = !videoRef.current.muted;
-      setIsMuted(videoRef.current.muted);
-    }
-  };
-
-  const handleVideoLoad = () => {
-    if (videoRef.current) {
-      // Attempt autoplay with sound
-      videoRef.current.muted = false;
-      videoRef.current.play().then(() => {
-        setIsPlaying(true);
-        setIsMuted(false);
-      }).catch(() => {
-        // Autoplay with sound blocked, start muted
-        videoRef.current!.muted = true;
-        setIsMuted(true);
-        videoRef.current!.play().then(() => {
-          setIsPlaying(true);
-          setShowPlayOverlay(true);
-        }).catch(err => {
-          console.error("Autoplay completely blocked:", err);
-          setShowPlayOverlay(true);
-        });
-      });
-    }
-  };
-
+function RadarShowcase() {
   const films = [
     {
       title: "Duna: Parte Dois",
@@ -427,119 +439,6 @@ function RadarShowcase() {
       </div>
 
       <div className="max-w-6xl mx-auto px-4 sm:px-6 relative text-center">
-        {/* Hero Video Story Section */}
-        <div className="mb-20 relative flex justify-center">
-          {/* Main Glow Effect */}
-          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[300px] h-[500px] bg-primary/20 blur-[100px] rounded-full opacity-50 pointer-events-none" />
-          
-          <div className="relative group z-10">
-            {/* Phone-like Container */}
-            <div className="relative w-[280px] sm:w-[320px] aspect-[9/16] rounded-[3rem] p-3 bg-neutral-900 border-[8px] border-neutral-800 shadow-2xl overflow-hidden">
-              {/* Inner screen border */}
-              <div className="absolute inset-0 rounded-[2.5rem] border border-white/5 pointer-events-none z-20" />
-              
-              <video
-                ref={videoRef}
-                src={heroVideoAsset.url}
-                autoPlay
-                muted
-                loop
-                playsInline
-                onLoadedData={handleVideoLoad}
-                className="w-full h-full object-cover rounded-[2.2rem]"
-              />
-
-              {/* Play Overlay (if autoplay with sound is blocked) */}
-              {showPlayOverlay && (
-                <div className="absolute inset-0 z-40 flex items-center justify-center bg-black/40 backdrop-blur-[2px]">
-                  <Button
-                    onClick={handleStartDemo}
-                    className="group/btn relative px-6 py-8 rounded-2xl bg-primary hover:bg-primary/90 text-black font-bold text-lg flex flex-col items-center gap-3 shadow-[0_0_50px_rgba(var(--primary),0.3)] transition-all hover:scale-105"
-                  >
-                    <div className="h-12 w-12 rounded-full bg-black flex items-center justify-center group-hover/btn:scale-110 transition-transform">
-                      <Play className="h-6 w-6 text-primary ml-1" />
-                    </div>
-                    <span>▶ Ver demonstração</span>
-                  </Button>
-                </div>
-              )}
-
-              {/* Float Elements Overlay */}
-              <div className="absolute inset-0 pointer-events-none p-6 flex flex-col justify-between z-20">
-                <div className="space-y-3">
-                  <div className="bg-primary/20 backdrop-blur-md border border-primary/30 rounded-full px-3 py-1.5 self-start flex items-center gap-2 animate-bounce shadow-lg">
-                    <div className="h-1.5 w-1.5 rounded-full bg-primary animate-pulse" />
-                    <span className="text-[10px] font-bold text-white uppercase tracking-wider">Conteúdo encontrado</span>
-                  </div>
-                  
-                  <div className="bg-black/40 backdrop-blur-md border border-white/10 rounded-xl p-2.5 self-start flex items-center gap-2 transform translate-x-4">
-                    <CheckCircle2 className="h-3.5 w-3.5 text-success" />
-                    <span className="text-[10px] text-white font-medium">Análise inteligente</span>
-                  </div>
-                </div>
-
-                <div className="space-y-3">
-                  <div className="bg-blue-500/20 backdrop-blur-md border border-blue-500/30 rounded-xl p-2.5 self-end flex items-center gap-2 transform -translate-x-4">
-                    <Globe className="h-3.5 w-3.5 text-blue-400" />
-                    <span className="text-[10px] text-white font-medium">Disponível em 8 servidores</span>
-                  </div>
-                  
-                  <div className="bg-purple-500/20 backdrop-blur-md border border-purple-500/30 rounded-full px-3 py-1.5 self-start flex items-center gap-2 shadow-lg">
-                    <Zap className="h-1.5 w-1.5 rounded-full bg-purple-400 animate-pulse" />
-                    <span className="text-[10px] font-bold text-white uppercase tracking-wider">Tempo real</span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Floating Controls */}
-              <div className="absolute bottom-6 left-1/2 -translate-x-1/2 flex items-center gap-3 z-30 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                <Button
-                  variant="secondary"
-                  size="icon"
-                  className="h-10 w-10 rounded-full bg-black/60 backdrop-blur-md border-white/10 hover:bg-black/80 text-white shadow-xl"
-                  onClick={togglePlay}
-                >
-                  {isPlaying ? <Pause className="h-5 w-5" /> : <Play className="h-5 w-5 ml-0.5" />}
-                </Button>
-                
-                <div className="flex items-center gap-2 bg-black/60 backdrop-blur-md border border-white/10 rounded-full px-3 py-1">
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-8 w-8 text-white hover:bg-white/10 rounded-full"
-                    onClick={toggleMute}
-                  >
-                    {isMuted ? <VolumeX className="h-4 w-4" /> : <Volume2 className="h-4 w-4" />}
-                  </Button>
-                  <input 
-                    type="range" 
-                    min="0" 
-                    max="1" 
-                    step="0.1" 
-                    defaultValue="1"
-                    onChange={(e) => {
-                      if (videoRef.current) {
-                        videoRef.current.volume = parseFloat(e.target.value);
-                        if (videoRef.current.volume > 0) {
-                          videoRef.current.muted = false;
-                          setIsMuted(false);
-                        } else {
-                          videoRef.current.muted = true;
-                          setIsMuted(true);
-                        }
-                      }
-                    }}
-                    className="w-16 h-1 bg-white/20 rounded-lg appearance-none cursor-pointer accent-primary"
-                  />
-                </div>
-              </div>
-            </div>
-            
-            {/* Glow outer border */}
-            <div className="absolute -inset-1 bg-gradient-to-t from-primary/40 via-cyan-500/20 to-transparent rounded-[3.5rem] blur-xl -z-10 opacity-50 group-hover:opacity-100 transition duration-1000" />
-          </div>
-        </div>
-
         <div className="mb-16">
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-accent text-primary text-xs font-semibold mb-4 border border-primary/20 animate-pulse">
             <Cpu className="h-3.5 w-3.5" />
