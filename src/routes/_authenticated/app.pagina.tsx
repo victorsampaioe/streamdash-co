@@ -161,7 +161,7 @@ function ResellerPageEditor() {
 
   return (
     <div className="space-y-6">
-      <div>
+      <div data-section="White Label" className="sm-section-hero">
         <h1 className="text-2xl font-bold tracking-tight flex items-center gap-2">
           <Globe className="h-5 w-5 text-primary" /> Minha Página Pública
         </h1>
