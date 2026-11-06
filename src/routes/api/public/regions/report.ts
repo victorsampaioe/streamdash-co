@@ -29,7 +29,9 @@ export const Route = createFileRoute("/api/public/regions/report")({
         const { verifyRegionSignature } = await import("@/lib/region-auth.server");
         const { authenticateAgent, touchAgent } = await import("@/lib/region-agent.server");
         const agent = agentId ? await authenticateAgent(agentId, raw, sig) : null;
-        if (!agent && !verifyRegionSignature(raw, sig)) {
+        const { verifyCloudflareEdgeSignature } = await import("@/lib/region-cloudflare-auth.server");
+        const cfEdge = await verifyCloudflareEdgeSignature(raw, request.headers.get("x-cf-signature"));
+        if (!agent && !cfEdge && !verifyRegionSignature(raw, sig)) {
           return new Response("Forbidden", { status: 403 });
         }
 
@@ -47,7 +49,8 @@ export const Route = createFileRoute("/api/public/regions/report")({
         if (codes.some((c) => !regionMap.has(c))) {
           return new Response("Unknown region_code", { status: 400 });
         }
-        if (agent && codes.some((c) => c !== agent.region_code)) {
+        if ((agent && codes.some((c) => c !== agent.region_code)) ||
+            (cfEdge && codes.some((c) => c !== "cf-edge"))) {
           return new Response("Region not allowed for this agent", { status: 403 });
         }
 
@@ -91,7 +94,7 @@ export const Route = createFileRoute("/api/public/regions/report")({
             latency_ms: i.latency_ms ?? null,
             error: i.error ?? null,
             details: i.details ?? {},
-            source: agent ? "vps" : (i.source ?? "worker"),
+            source: cfEdge ? "worker" : agent ? "vps" : (i.source ?? "worker"),
           })),
         );
         if (error) return new Response(`DB error: ${error.message}`, { status: 500 });
@@ -127,6 +130,11 @@ export const Route = createFileRoute("/api/public/regions/report")({
         }
 
         if (agent) { try { await touchAgent(agent.id, items.length); } catch { /* noop */ } }
+        if (cfEdge) {
+          const { data: cloudAgent } = await supabaseAdmin.from("region_agents")
+            .select("id").eq("region_code", "cf-edge").eq("enabled", true).maybeSingle();
+          if (cloudAgent) await touchAgent(cloudAgent.id, items.length);
+        }
 
         return Response.json({ ok: true, inserted: items.length });
       },
