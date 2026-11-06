@@ -141,7 +141,7 @@ function OperationsCenter() {
   };
 
   return <div className="space-y-6">
-    <div className="flex flex-wrap items-center justify-between gap-3">
+    <div data-section="Sentinel Edge" className="sm-section-hero flex flex-wrap items-center justify-between gap-3">
       <div><h1 className="text-2xl font-bold flex items-center gap-2"><ShieldCheck className="h-6 w-6 text-primary"/> Central Inteligente</h1><p className="text-sm text-muted-foreground">Diagnóstico, Sentinel, incidentes, comparações e relatórios com os dados reais do seu monitoramento.</p></div>
       <Button variant="outline" onClick={() => query.refetch()} disabled={query.isFetching}><RefreshCw className={`h-4 w-4 mr-2 ${query.isFetching?"animate-spin":""}`}/>Atualizar</Button>
     </div>
