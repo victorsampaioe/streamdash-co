@@ -102,7 +102,7 @@ function NewServer() {
 
   return (
     <div className="max-w-2xl mx-auto space-y-6">
-      <div>
+      <div data-section="Infraestrutura" className="sm-section-hero">
         <h1 className="text-2xl font-semibold tracking-tight">Novo servidor</h1>
         <p className="text-sm text-muted-foreground">Cadastro imediato: salve seu domínio agora. A análise de DNS e HTTP acontece automaticamente depois, sem travar esta tela.</p>
       </div>
