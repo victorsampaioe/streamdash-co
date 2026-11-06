@@ -48,7 +48,7 @@ function DetectorPage() {
 
   return (
     <div className="space-y-6">
-      <header className="space-y-1">
+      <header data-section="Segurança DNS" className="sm-section-hero space-y-1">
 
         <h1 className="text-3xl font-bold tracking-tight">🚨 Detector de Bloqueios</h1>
         <p className="text-sm text-muted-foreground">
