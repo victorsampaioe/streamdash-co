@@ -76,6 +76,7 @@ const STATUS_HEX: Record<string, string> = {
   testing: "hsl(199 89% 55%)",
   unknown: "hsl(215 16% 55%)",
   nodata: "hsl(215 16% 40%)",
+  disconnected: "hsl(0 72% 55%)",
 };
 
 const dotBg: Record<string, string> = {
@@ -85,6 +86,7 @@ const dotBg: Record<string, string> = {
   testing: "bg-primary",
   unknown: "bg-muted-foreground",
   nodata: "bg-muted-foreground/40",
+  disconnected: "bg-destructive/80",
 };
 
 function humanAgo(iso: string): string {
@@ -104,6 +106,7 @@ function statusLabel(s: string): string {
     case "down": return "Offline";
     case "testing": return "Testando";
     case "nodata": return "Sem dados";
+    case "disconnected": return "Sem comunicação";
     default: return "Desconhecido";
   }
 }
@@ -227,35 +230,33 @@ export function GlobalCheckMap({ serverId }: { serverId: string }) {
 
   function effectiveStatus(code: string): { status: string; latest?: RegionCheck } {
     const latest = latestByRegion.get(code);
-    if (!latest) return { status: "nodata" };
-    if (Date.now() - new Date(latest.checked_at).getTime() > 25 * 60_000) return { status: "nodata", latest };
+    if (!latest) return { status: code === "origin" ? "nodata" : "disconnected" };
+    // Uma sonda antiga não é prova de que o servidor está offline.
+    // "Sem comunicação" qualifica o agente, e não o servidor do cliente.
+    if (Date.now() - new Date(latest.checked_at).getTime() > 5 * 60_000)
+      return { status: code === "origin" ? "nodata" : "disconnected", latest };
     return { status: latest.status, latest };
   }
 
-  // Só exibe regiões que realmente possuem um agente conectado (ou dados recentes).
-  const liveCodes = useMemo(() => {
-    const s = new Set<string>();
-    for (const w of workers) {
-      if (w.last_report_at && Date.now() - new Date(w.last_report_at).getTime() <= 60 * 60_000) s.add(w.region_code);
-    }
-    for (const r of matrix) if (r.checked_at) s.add(r.region_code);
-    return s;
-  }, [workers, matrix]);
-
-  const activeRegions = useMemo(
-    () => regions.filter((r) => r.code === "origin" || liveCodes.has(r.code)),
-    [regions, liveCodes],
-  );
-
-  const nonOrigin = activeRegions.filter((r) => r.code !== "origin");
-  const workersOnline = workers.filter((w) => w.last_report_at && Date.now() - new Date(w.last_report_at).getTime() <= 20 * 60_000).length;
-  const workersTotal = Math.max(nonOrigin.length, workersOnline);
+  // Exibir TODAS as regiões configuradas, inclusive as que perderam contato.
+  // Ocultar pontos antigos provocava a contagem falsa "0/0 Workers Online".
+  const activeRegions = regions;
+  const nonOrigin = regions.filter((r) => r.code !== "origin");
+  const workersTotal = nonOrigin.length;
+  const workersOnline = nonOrigin.filter((r) => {
+    const worker = workers.find((w) => w.region_code === r.code);
+    return !!worker?.last_report_at &&
+      Date.now() - new Date(worker.last_report_at).getTime() <= 5 * 60_000;
+  }).length;
   const workerBadgeColor =
     workersTotal > 0 && workersOnline === workersTotal ? "text-success border-success/40 bg-success/10" :
     workersOnline === 0 ? "text-destructive border-destructive/40 bg-destructive/10" :
     "text-warning border-warning/40 bg-warning/10";
 
-  const noWorkers = workersOnline === 0;
+  const noWorkers = workersTotal > 0 && workersOnline === 0;
+  const originLatest = latestByRegion.get("origin");
+  const originOnline = !!originLatest &&
+    Date.now() - new Date(originLatest.checked_at).getTime() <= 5 * 60_000;
   const v = verdict ?? null;
   const vui = VERDICT_UI[v?.verdict ?? "nodata"];
   const health = connectionHealth(v?.avg_latency_ms ?? null);
@@ -304,12 +305,18 @@ export function GlobalCheckMap({ serverId }: { serverId: string }) {
       </Card>
 
       <div className="flex items-center justify-between flex-wrap gap-2">
-        <h3 className="text-sm font-medium">Mapa Global de Falhas</h3>
+        <div className="space-y-1">
+          <h3 className="text-sm font-medium">Mapa Global de Falhas</h3>
+          <p className="text-xs text-muted-foreground">
+            Origem (Lovable): {originOnline ? "🟢 reportando" : "⚪ sem dados recentes"} ·
+            Regiões independentes: {workersOnline}/{workersTotal} ativas
+          </p>
+        </div>
         <div className="flex items-center gap-2">
           <Badge variant="outline" className={cn("text-xs font-mono", workerBadgeColor)}>
-            {workersOnline === workersTotal ? "🟢" : workersOnline === 0 ? "🔴" : "🟡"} {workersOnline}/{workersTotal} Workers Online
+            {workersTotal === 0 ? "⚪" : workersOnline === workersTotal ? "🟢" : workersOnline === 0 ? "🔴" : "🟡"} {workersOnline}/{workersTotal} agentes regionais ativos
           </Badge>
-          <span className="text-xs text-muted-foreground hidden sm:inline">Realtime</span>
+          <span className="text-xs text-muted-foreground hidden sm:inline">Atualização a cada 30s</span>
         </div>
       </div>
 
@@ -318,11 +325,11 @@ export function GlobalCheckMap({ serverId }: { serverId: string }) {
           <div className="flex items-start gap-3">
             <div className="text-2xl shrink-0">⚠️</div>
             <div className="space-y-2 text-sm min-w-0">
-              <p className="font-medium">Nenhum ponto regional está reportando ainda.</p>
+              <p className="font-medium">Agentes regionais sem comunicação</p>
               <p className="text-muted-foreground">
-                O monitoramento multi-região exige agentes rodando fisicamente em cada localidade —
-                seja a VPS de São Paulo (<code className="text-xs bg-muted px-1 py-0.5 rounded">vps-agent/</code>)
-                ou Cloudflare Workers (<code className="text-xs bg-muted px-1 py-0.5 rounded">docs/regional-workers.md</code>).
+                Há {workersTotal} {workersTotal === 1 ? "região configurada" : "regiões configuradas"}, mas nenhuma enviou relatório nos últimos 5 minutos.
+                O agente da VPS/Worker precisa estar em execução e autenticado para retomar o monitoramento independente.
+                A ausência de dados regionais não significa que o servidor do cliente esteja offline.
               </p>
             </div>
           </div>
@@ -338,7 +345,7 @@ export function GlobalCheckMap({ serverId }: { serverId: string }) {
             onSelect={setOpenRegion}
           />
           <p className="px-4 py-2 text-[11px] text-muted-foreground border-t border-border/50">
-            Clique em um ponto para ver DNS, HTTP, SSL, Player API e streams.
+            Regiões configuradas permanecem visíveis mesmo sem contato. Clique para ver as últimas medições disponíveis.
           </p>
         </Card>
 
@@ -396,7 +403,7 @@ export function GlobalCheckMap({ serverId }: { serverId: string }) {
               );
             })}
           </ul>
-          {activeRegions.length === 0 && (
+          {regions.length === 0 && (
             <p className="text-xs text-muted-foreground">Nenhum ponto regional conectado no momento.</p>
           )}
           <div className="mt-3 pt-3 border-t border-border/50 flex items-center gap-3 text-[11px] text-muted-foreground flex-wrap">
@@ -405,6 +412,7 @@ export function GlobalCheckMap({ serverId }: { serverId: string }) {
             <LegendItem status="down" />
             <LegendItem status="testing" />
             <LegendItem status="nodata" />
+            <LegendItem status="disconnected" />
           </div>
         </Card>
       </div>
