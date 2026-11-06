@@ -63,25 +63,34 @@ function OperationsCenter() {
       if (aErr) throw new Error(aErr.message);
       const ids = (servers ?? []).map(s => s.id);
       let incidents: IncidentItem[] = [];
+      let openIncidentCount = 0;
       if (ids.length) {
         // PostgREST URL/query limits: use page batches rather than 292 ids
         // inside one in(...) query. Sort combined results globally.
         const batches: string[][] = [];
         for (let i = 0; i < ids.length; i += 75) batches.push(ids.slice(i, i + 75));
-        const results = await Promise.all(batches.map(batch =>
-          supabase.from("incidents")
-            .select("id,server_id,reason,started_at,ended_at,alert_sent")
-            .in("server_id", batch).order("started_at", { ascending: false }).limit(100)
-        ));
+        const results = await Promise.all(batches.map(async batch => {
+          const [history, openCount] = await Promise.all([
+            supabase.from("incidents")
+              .select("id,server_id,reason,started_at,ended_at,alert_sent")
+              .in("server_id", batch).order("started_at", { ascending: false }).limit(100),
+            supabase.from("incidents")
+              .select("id", { count: "exact", head: true })
+              .in("server_id", batch).is("ended_at", null),
+          ]);
+          if (history.error) throw new Error(history.error.message);
+          if (openCount.error) throw new Error(openCount.error.message);
+          return { history: (history.data ?? []) as IncidentItem[], open: openCount.count ?? 0 };
+        }));
         for (const result of results) {
-          if (result.error) throw new Error(result.error.message);
-          incidents.push(...(result.data ?? []) as IncidentItem[]);
+          incidents.push(...result.history);
+          openIncidentCount += result.open;
         }
         incidents = incidents.sort((a,b) =>
           new Date(b.started_at).getTime() - new Date(a.started_at).getTime()
         ).slice(0,100);
       }
-      return { servers: (servers ?? []) as ServerItem[], incidents,
+      return { servers: (servers ?? []) as ServerItem[], incidents, openIncidentCount,
         telegram: (channels ?? []).length > 0, isAdmin,
         limited: (servers ?? []).length === 1000, incidentLimited: incidents.length === 100 };
     },
@@ -141,7 +150,7 @@ function OperationsCenter() {
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         <Card className="p-4"><p className="text-xs text-muted-foreground">Servidores</p><p className="text-2xl font-bold">{servers.length}</p></Card>
         <Card className="p-4"><p className="text-xs text-muted-foreground">DNS offline</p><p className="text-2xl font-bold">{servers.filter(s=>!s.monitoring_paused && s.dns_enabled !== false && s.dns_status==="offline").length}</p></Card>
-        <Card className="p-4"><p className="text-xs text-muted-foreground">Incidentes abertos</p><p className="text-2xl font-bold">{incidents.filter(i=>!i.ended_at).length}{query.data.incidentLimited ? "+" : ""}</p></Card>
+        <Card className="p-4"><p className="text-xs text-muted-foreground">Incidentes abertos</p><p className="text-2xl font-bold">{query.data.openIncidentCount}</p></Card>
         <Card className="p-4"><p className="text-xs text-muted-foreground">Checagens atrasadas</p><p className="text-2xl font-bold">{servers.filter(s=>!s.monitoring_paused&&stale(s.last_checked_at,15)).length}</p></Card>
       </div>
       <div className="flex flex-wrap gap-2">{items.map(([id,label])=><Button key={id} size="sm" variant={tab===id?"default":"outline"} onClick={()=>setTab(id)}>{label}</Button>)}</div>
@@ -194,7 +203,7 @@ function OperationsCenter() {
 
       {tab==="relatorio" && <Card className="p-5 space-y-3">
         <h2 className="font-semibold flex items-center gap-2"><ClipboardList className="h-4 w-4"/> Relatório operacional</h2>
-        <p className="text-sm">Gerado em {stamp()} · {servers.length} servidores · {incidents.filter(i=>!i.ended_at).length} incidentes abertos.</p>
+        <p className="text-sm">Gerado em {stamp()} · {servers.length} servidores · {query.data.openIncidentCount} incidentes abertos.</p>
         <p className="text-xs text-muted-foreground">Exportação CSV dos estados atuais. Não é um certificado de SLA nem relatório histórico de 30 dias.</p>
         <Button onClick={reportCsv}><Download className="h-4 w-4 mr-2"/>Baixar CSV</Button>
         <Button variant="outline" onClick={()=>window.print()}>Imprimir / Salvar PDF</Button>
