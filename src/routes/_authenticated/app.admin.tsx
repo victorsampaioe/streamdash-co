@@ -295,7 +295,7 @@ function AdminPage() {
 
   return (
     <div className="space-y-6 sm:space-y-8 [&_[data-slot=card]]:rounded-2xl [&_[data-slot=card]]:border-border/65 [&_[data-slot=card]]:shadow-sm">
-      <div className="sm-workspace-header">
+      <div data-section="Administração" className="sm-workspace-header sm-section-hero">
         <div className="flex items-center gap-4">
           <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-primary/15 text-primary"><ShieldCheck className="h-7 w-7" /></div>
           <div className="space-y-1">
@@ -342,7 +342,7 @@ function AdminPage() {
         />
       </div>
 
-      <Tabs defaultValue="overview" className="sm-admin-tabs space-y-6">
+      <Tabs defaultValue="overview" className="sm-admin-tabs sm-admin-control-tabs space-y-6">
         <div className="w-full pb-2">
           <TabsList className="flex flex-wrap w-full justify-start">
             <TabsTrigger value="overview" className="px-4">Usuários</TabsTrigger>
