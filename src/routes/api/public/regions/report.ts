@@ -6,7 +6,7 @@ const itemSchema = z.object({
   region_code: z.string().min(1).max(64),
   status: z.enum(["up", "down", "degraded", "unknown", "pending"]),
   http_status: z.number().int().nullable().optional(),
-  latency_ms: z.number().int().nullable().optional(),
+  latency_ms: z.number().int().nonnegative().max(120_000).nullable().optional(),
   error: z.string().max(500).nullable().optional(),
   details: z.record(z.any()).optional(),
   source: z.string().max(32).optional(),
@@ -23,7 +23,11 @@ export const Route = createFileRoute("/api/public/regions/report")({
   server: {
     handlers: {
       POST: async ({ request }) => {
+        // Reject oversized signed payloads before parsing or expensive DB work.
+        const length = Number(request.headers.get("content-length") || 0);
+        if (length > 160_000) return new Response("Payload too large", { status: 413 });
         const raw = await request.text();
+        if (raw.length > 160_000) return new Response("Payload too large", { status: 413 });
         const sig = request.headers.get("x-signature");
         const agentId = request.headers.get("x-agent-id");
         const { verifyRegionSignature } = await import("@/lib/region-auth.server");
