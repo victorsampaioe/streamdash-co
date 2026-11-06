@@ -20,14 +20,23 @@ export interface AlertData {
  */
 export async function processTelegramAlert(data: AlertData) {
   const { serverId, incidentId, event } = data;
-  const { data: server, error: sErr } = (await (supabaseAdmin as any)
+  // "servers.owner_id" não tem FK direta para "profiles" no banco do
+  // Lovable: um join PostgREST profiles(...) faz TODOS os alertas falharem.
+  const { data: server, error: sErr } = await supabaseAdmin
     .from("servers")
-    .select("id, owner_id, name, host, iptv_username, profiles(email, full_name)")
+    .select("id, owner_id, name, host, iptv_username")
     .eq("id", serverId)
-    .maybeSingle()) as { data: any; error: any };
-  if (sErr || !server) throw new Error("Servidor não encontrado para alerta");
+    .maybeSingle();
+  if (sErr || !server) throw new Error(`Não foi possível consultar o servidor do alerta: ${sErr?.message ?? "inexistente"}`);
+  const { data: profile, error: pErr } = await supabaseAdmin
+    .from("profiles")
+    .select("email, full_name")
+    .eq("id", server.owner_id)
+    .maybeSingle();
+  if (pErr) console.warn("[TelegramAlert] Perfil opcional não encontrado", pErr.code);
+  const serverView = { ...server, profiles: profile ?? null };
 
-  const message = formatAlertMessage(server, data);
+  const message = formatAlertMessage(serverView, data);
   // UNSTABLE não possui incidente offline (UUID). Deduplique por servidor,
   // destinatário e janela de 2h usando o log, sem inventar incident_id.
   const unstableWindow = event === "UNSTABLE" ? `_${Math.floor(Date.now() / (2 * 60 * 60_000))}` : "";
@@ -86,7 +95,7 @@ export async function processTelegramAlert(data: AlertData) {
   }
 
   if (!data.suppressAdminCopy && !adminDelivered) {
-    const ok = await notifyAdminAlert(server, data, message);
+    const ok = await notifyAdminAlert(serverView, data, message);
     if (trackDelivery) {
       const { error: logError } = await supabaseAdmin.from("notifications_log")
         .insert({ incident_id: incidentId ?? null, server_id: serverId, channel_id: null,
