@@ -47,7 +47,7 @@ export default {
       return new Response(request.method==="HEAD"?null:body,{status:res.status,headers});
     } catch(e) {
       console.error("status cache error",e instanceof Error?e.name:"unknown");
-      return Response.json({error:"temporarily_unavailable"},{status:503,headers:{"Cache-Control":"no-store"}});
+      return Response.json({error:"temporarily_unavailable",type:e instanceof Error?e.name:"unknown"},{status:503,headers:{"Cache-Control":"no-store"}});
     }
   },
 };
