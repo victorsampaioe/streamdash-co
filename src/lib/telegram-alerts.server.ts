@@ -142,7 +142,7 @@ function formatAlertMessage(server: any, data: AlertData): string {
       `<b>Servidor:</b> ${esc(server.name)}\n` +
       `<b>Status:</b> 🔴 OFFLINE\n` +
       `<b>Motivo:</b> ${esc(data.reason)}\n` +
-      `<b>Regiões que confirmaram:</b> ${data.regions?.join(", ") || "🇧🇷 São Paulo (VPS)"}\n` +
+      `<b>Regiões que confirmaram:</b> ${data.regions?.join(", ") || "Sondas de disponibilidade"}\n` +
       `<b>Horário:</b> ${timeStr} (${dateStr})\n` +
       `<b>Revendedor:</b> ${esc(server.profiles?.full_name)}\n` +
       `<b>Host:</b> <code>${esc(server.host)}</code>\n` +
@@ -156,7 +156,7 @@ function formatAlertMessage(server: any, data: AlertData): string {
       `<b>Tempo offline:</b> ${data.timeOffline || "N/A"}\n` +
       `<b>Horário do retorno:</b> ${timeStr}\n` +
       `<b>Host:</b> <code>${esc(server.host)}</code>\n\n` +
-      `O serviço foi validado em múltiplas regiões e está operando normalmente.`
+      `O monitoramento confirmou a recuperação do serviço nas verificações disponíveis.`
     );
   }
 
