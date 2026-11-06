@@ -5,8 +5,8 @@ import { Globe, Lock, Search, CheckCircle2 } from "lucide-react";
 export const Route = createFileRoute('/monitoramento-dns')({
   head: () => ({
     meta: [
-      { title: "Monitoramento DNS e Servidores | Stream Monitor" },
-      { name: "description", content: "Acompanhe DNS, IP, SSL, disponibilidade e desempenho dos seus servidores em tempo real." },
+      { title: "Monitoramento DNS: Detecte Falhas e Mudanças de IP | Stream Monitor" },
+      { name: "description", content: "Monitore DNS, mudanças de IP e propagação. Identifique falhas de resolução e diferencie problemas no domínio de quedas do servidor." },
       { property: "og:title", content: "Monitoramento DNS e Servidores | Stream Monitor" },
       { property: "og:description", content: "Acompanhe DNS, IP, SSL, disponibilidade e desempenho dos seus servidores em tempo real." },
       { property: "og:type", content: "website" },
@@ -14,6 +14,7 @@ export const Route = createFileRoute('/monitoramento-dns')({
       { property: "og:image", content: "https://storage.googleapis.com/gpt-engineer-file-uploads/zowG5KmEoBQiJwfUQDz2ZUEdQ2a2/social-images/social-1783131758542-ChatGPT_Image_3_de_jul._de_2026,_23_22_19.webp" },
       { name: "twitter:card", content: "summary_large_image" },
     ],
+    links: [{ rel: "canonical", href: "https://streammonitor.site/monitoramento-dns" }],
   }),
   component: DnsPage,
 });
@@ -25,7 +26,7 @@ function DnsPage() {
         <Link to="/" className="text-primary hover:underline mb-8 inline-block">← Voltar para o início</Link>
         <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold mb-6">Monitoramento DNS e Segurança</h1>
         <p className="text-xl text-muted-foreground mb-12">
-          Domínios fora do ar ou certificados SSL expirados são os principais causadores de perdas de clientes em serviços de streaming.
+          Quando um domínio não resolve, seus clientes podem ter dificuldades de acesso mesmo que o servidor esteja funcionando. Monitore DNS, IP e propagação para identificar a origem do problema.
         </p>
 
         <div className="grid md:grid-cols-2 gap-8 mb-16">
@@ -39,21 +40,27 @@ function DnsPage() {
             <h2 className="text-2xl font-bold flex items-center gap-2">
               <Search className="text-primary" /> Mudança de IP
             </h2>
-            <p className="text-muted-foreground">Se o seu servidor mudar de endereço sem você saber, o Stream Monitor detecta a divergência e alerta instantaneamente.</p>
+            <p className="text-muted-foreground">Acompanhe alterações do registro A e do IP do domínio. Mudanças podem ser legítimas, especialmente em CDNs, mas merecem atenção quando coincidem com uma falha.</p>
           </div>
           <div className="space-y-4">
             <h2 className="text-2xl font-bold flex items-center gap-2">
               <Lock className="text-primary" /> Alerta SSL
             </h2>
-            <p className="text-muted-foreground">Nunca mais deixe um certificado expirar. Receba avisos com 7, 3 e 1 dia de antecedência.</p>
+            <p className="text-muted-foreground">Acompanhe informações sobre certificados SSL e suas datas de validade junto dos indicadores de disponibilidade.</p>
           </div>
           <div className="space-y-4">
             <h2 className="text-2xl font-bold flex items-center gap-2">
               <CheckCircle2 className="text-primary" /> Ferramentas Integradas
             </h2>
-            <p className="text-muted-foreground">Acesse ferramentas de WHOIS, DNS Lookup, Ping Global e geradores de segurança diretamente no seu painel.</p>
+            <p className="text-muted-foreground">Consulte registros DNS, histórico de IP e resultados de diferentes resolvedores no painel de monitoramento.</p>
           </div>
         </div>
+
+        <section className="mb-12 space-y-4 rounded-2xl border border-border/60 bg-card/40 p-6">
+          <h2 className="text-2xl font-bold">Como diferenciar falha de DNS de queda do servidor?</h2>
+          <p className="text-muted-foreground">Uma resposta NXDOMAIN, SERVFAIL ou timeout de resolução não determina por si só que o serviço de origem está offline. Compare provedores DNS, horário da última verificação e respostas HTTP antes de comunicar uma indisponibilidade completa.</p>
+          <p className="text-muted-foreground">Consulte o guia <Link to="/blog/dns-iptv-nao-resolve" className="font-medium text-primary underline">DNS IPTV não resolve: causas e como investigar</Link> e veja também o <Link to="/monitoramento-iptv" className="font-medium text-primary underline">monitoramento de servidores IPTV</Link>.</p>
+        </section>
 
         <div className="bg-card/50 rounded-2xl p-8 border border-border/60 mb-16 text-center">
           <h2 className="text-2xl font-bold mb-4">Proteja seus domínios hoje mesmo</h2>
