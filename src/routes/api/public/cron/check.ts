@@ -140,22 +140,13 @@ async function guardedRun() {
   const { withCycleLock } = await import("@/lib/job-lock.server");
   if (process.env.IS_CORE === "true" || missingEnv().length) return run();
 
-  const [dnsResult, monitorResult, mainResult] = await Promise.all([
+  const [dnsResult, mainResult] = await Promise.all([
     withCycleLock("cron-dns", 180, async () => {
       const { runDueDnsChecks } = await import("@/lib/dns.server");
       return runDueDnsChecks(40);
     }).catch((error) => {
       console.error("[cron-dns] Falha no ciclo", error);
       return { checked: 0, errors: 1 };
-    }),
-    // A fila HTTP/IPTV deve continuar mesmo quando sincronização, pagamento
-    // ou varreduras deixam o ciclo principal travado durante muitos minutos.
-    withCycleLock("cron-monitor", 120, async () => {
-      const { runDueChecks } = await import("@/lib/monitoring.server");
-      return runDueChecks();
-    }).catch((error) => {
-      console.error("[cron-monitor] Falha no monitor", error);
-      return { checked: 0, ok: 0, errors: 1, queued: 0 };
     }),
     withCycleLock("cron-check", 300, async () => {
       const reaped = await reapStaleLogs().catch(() => ({ reaped: 0 }));
@@ -167,12 +158,8 @@ async function guardedRun() {
   return {
     ...mainResult,
     ok: !((mainResult as any)?.ok === false ||
-      ("errors" in dnsResult && dnsResult.errors > 0) ||
-      ("errors" in monitorResult && monitorResult.errors > 0)),
-    monitorChecked: "checked" in monitorResult ? monitorResult.checked : 0,
-    monitorErrors: "errors" in monitorResult ? monitorResult.errors : 0,
-    monitorQueued: "queued" in monitorResult ? monitorResult.queued : 0,
-    monitorSkipped: "skipped" in monitorResult ? monitorResult.skipped : false,
+      ("errors" in dnsResult && dnsResult.errors > 0)),
+    monitorMode: "separate-cron",
     dnsChecked: "checked" in dnsResult ? dnsResult.checked : 0,
     dnsErrors: "errors" in dnsResult ? dnsResult.errors : 0,
     dnsSkipped: "skipped" in dnsResult ? dnsResult.skipped : false,
