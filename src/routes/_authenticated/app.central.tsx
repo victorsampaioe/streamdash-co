@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useMemo, useState } from "react";
 import { effectiveAccessStatus } from "@/lib/dns-state";
+import { SentinelEdgePanel } from "@/components/sentinel-edge-panel";
 import { supabase } from "@/integrations/supabase/client";
 import { getFinancialPulse } from "@/lib/operations-finance.functions";
 import { prioritizeStaleServersNow } from "@/lib/monitor-health.functions";
@@ -176,6 +177,7 @@ function OperationsCenter() {
       </div>}
 
       {tab==="sentinel" && <div className="space-y-3">
+        <SentinelEdgePanel />
         {query.data.isAdmin && <Card className="p-4 space-y-2">
           <h3 className="font-semibold">Recuperar checagens atrasadas</h3>
           <p className="text-sm text-muted-foreground">Prioriza servidores ativos sem checagem há mais de 15 minutos. A fila executará as verificações nas próximas rodadas; não altera status sem testar.</p>
