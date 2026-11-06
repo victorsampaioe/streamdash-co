@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { StatusDot } from "@/components/status-dot";
 import { UptimeSparkline } from "@/components/uptime-sparkline";
 import { SearchInput } from "@/components/app-shell";
-import { ArrowRight, Plus, ServerIcon, Bell, HeartPulse, Tv, AlertCircle, CreditCard } from "lucide-react";
+import { ArrowRight, Plus, ServerIcon, Bell, HeartPulse, Tv, AlertCircle, CreditCard, RadioTower, Activity, Wifi, WifiOff, ChevronRight } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useSubscription } from "@/hooks/use-subscription";
 import { effectiveAccessStatus, accessStatusLabel } from "@/lib/dns-state";
@@ -163,47 +163,80 @@ function Dashboard() {
         </Alert>
       )}
 
-      <div className="sm-workspace-header">
-        <div className="flex items-center gap-4">
-          <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-primary/15"><HeartPulse className="h-7 w-7 text-primary" /></div>
-          <div>
-            <p className="mb-1 text-[11px] font-bold uppercase tracking-[.18em] text-primary">Workspace / Monitoramento</p>
-            <h1 className="text-2xl font-extrabold tracking-tight sm:text-3xl">Visão geral{firstName ? ` · ${capitalize(firstName)}` : ""}</h1>
-            <p className="mt-1 text-sm text-muted-foreground">Acompanhe disponibilidade, incidentes e desempenho em uma única tela.</p>
+
+      <section className="relative isolate overflow-hidden rounded-[28px] border border-blue-500/25 bg-[#08162c] p-5 text-white shadow-[0_25px_70px_-45px_rgba(25,100,255,.65)] sm:p-8">
+        <div className="pointer-events-none absolute -right-20 -top-32 h-80 w-80 rounded-full bg-blue-500/25 blur-[90px]" aria-hidden="true" />
+        <div className="relative z-10 flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
+          <div className="max-w-2xl">
+            <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-blue-400/25 bg-blue-400/10 px-3 py-1.5 text-[11px] font-bold uppercase tracking-[.16em] text-blue-300">
+              <span className="h-1.5 w-1.5 rounded-full bg-blue-400" /> Stream Monitor · Command Center
+            </div>
+            <h1 className="text-3xl font-extrabold leading-[1.08] tracking-tight sm:text-4xl lg:text-5xl">Sua operação sob <span className="text-blue-400">controle.</span></h1>
+            <p className="mt-3 max-w-lg text-sm leading-relaxed text-slate-300 sm:text-base">
+              {firstName ? "Bem-vindo, " + capitalize(firstName) + ". " : ""}Monitore DNS, disponibilidade e incidentes com informações organizadas em tempo real.
+            </p>
+            <div className="mt-5 flex flex-wrap gap-2 text-xs text-slate-300">
+              <span className="rounded-lg border border-white/10 bg-white/5 px-3 py-2"><Activity className="mr-1.5 inline h-3.5 w-3.5 text-blue-400" />Monitorando <b className="text-white">{counts.total}</b></span>
+              <span className="rounded-lg border border-white/10 bg-white/5 px-3 py-2"><HeartPulse className="mr-1.5 inline h-3.5 w-3.5 text-blue-400" />Saúde geral <b className="text-white">{health}%</b></span>
+            </div>
+          </div>
+          <div className="flex shrink-0 flex-col gap-2 sm:flex-row lg:flex-col">
+            <Link to="/app/servers/new" className="flex-1"><Button size="lg" className="h-12 w-full rounded-xl bg-blue-500 px-5 font-semibold text-white shadow-lg shadow-blue-600/20 hover:bg-blue-400"><Plus className="mr-2 h-4 w-4" />Adicionar servidor</Button></Link>
+            <Link to="/app/central" className="flex-1"><Button size="lg" variant="outline" className="h-12 w-full rounded-xl border-blue-300/30 bg-blue-300/10 px-5 text-white hover:bg-blue-500/20 hover:text-white"><RadioTower className="mr-2 h-4 w-4" />Abrir Sentinel Edge <ChevronRight className="ml-2 h-4 w-4" /></Button></Link>
           </div>
         </div>
-        <Link to="/app/servers/new" className="w-full sm:w-auto"><Button size="lg" className="w-full sm:w-auto"><Plus className="h-4 w-4 mr-1" />Adicionar servidor</Button></Link>
-      </div>
+      </section>
 
-      <div className="grid grid-cols-1 xl:grid-cols-3 gap-5">
-        <Card className="p-5 sm:p-7 xl:col-span-2 border-primary/15">
-          <div className="text-xs uppercase tracking-wider text-muted-foreground mb-4">Resumo do monitoramento</div>
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-            <Summary emoji="✅" label="Monitorando" value={counts.up + counts.degraded + counts.down} tone="text-foreground" />
-            <Summary emoji="🟢" label="Online" value={counts.up} tone="text-success" />
-            <Summary emoji="🟡" label="Atenção" value={counts.degraded} tone="text-warning" />
-            <Summary emoji="🔴" label="Offline" value={counts.down} tone="text-destructive" />
-          </div>
-        </Card>
-
-        <Card className="p-5 sm:p-7 flex flex-col justify-between border-primary/15">
-          <div className="flex items-center gap-2 text-xs uppercase tracking-wider text-muted-foreground mb-3">
-            <HeartPulse className="h-3.5 w-3.5" /> Saúde geral
-          </div>
-          <div>
-            <div className="flex items-end gap-2 mb-2">
-              <span className={`text-4xl font-bold font-mono ${healthTone(health)}`}>{health}%</span>
-              <span className="text-xs text-muted-foreground mb-1.5">{healthLabel(health)}</span>
+      <section aria-label="Resumo de monitoramento" className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+        {[
+          { label: "Monitorando", value: counts.total, icon: ServerIcon, accent: "text-blue-400", bg: "bg-blue-500/10", line: "bg-blue-500", detail: "Servidores ativos" },
+          { label: "Online", value: counts.up, icon: Wifi, accent: "text-emerald-400", bg: "bg-emerald-500/10", line: "bg-emerald-500", detail: "Em funcionamento" },
+          { label: "Atenção", value: counts.degraded, icon: Activity, accent: "text-amber-400", bg: "bg-amber-500/10", line: "bg-amber-500", detail: "Precisam de análise" },
+          { label: "Offline", value: counts.down, icon: WifiOff, accent: "text-red-400", bg: "bg-red-500/10", line: "bg-red-500", detail: "Falhas identificadas" },
+        ].map((item) => (
+          <Card key={item.label} className="relative overflow-hidden rounded-2xl border-border/60 p-4 sm:p-5">
+            <span className={"absolute inset-x-0 top-0 h-[2px] " + item.line} />
+            <div className="flex items-center justify-between gap-2">
+              <span className="text-xs font-medium text-muted-foreground">{item.label}</span>
+              <span className={"flex h-9 w-9 shrink-0 items-center justify-center rounded-xl " + item.bg + " " + item.accent}><item.icon className="h-4 w-4" /></span>
             </div>
-            <HealthBar value={health} />
-            {iptvHealth != null && (
-              <div className="mt-4 flex items-center justify-between text-xs">
-                <span className="flex items-center gap-1.5 text-muted-foreground"><Tv className="h-3.5 w-3.5" />IPTV Health Score</span>
-                <span className={`font-mono font-semibold ${healthTone(iptvHealth)}`}>{iptvHealth}%</span>
-              </div>
-            )}
+            <div className="mt-4 text-3xl font-extrabold tracking-tight tabular-nums sm:text-4xl">{item.value}</div>
+            <p className="mt-1 text-[11px] text-muted-foreground">{item.detail}</p>
+          </Card>
+        ))}
+      </section>
+
+      <div className="grid gap-4 lg:grid-cols-[1.2fr_1fr]">
+        <Card className="relative overflow-hidden rounded-2xl border-border/70 p-5 sm:p-6">
+          <div className="mb-4 flex items-center justify-between gap-3">
+            <div><div className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Saúde da infraestrutura</div><p className="mt-1 text-xs text-muted-foreground">Indicadores consolidados da operação</p></div>
+            <HeartPulse className="h-5 w-5 text-blue-400" />
           </div>
+          <div className="flex items-baseline gap-3">
+            <span className={"text-5xl font-extrabold tracking-tighter tabular-nums " + healthTone(health)}>{health}%</span>
+            <span className="text-sm text-muted-foreground">{healthLabel(health)}</span>
+          </div>
+          <div className="mt-5"><HealthBar value={health} /></div>
+          {iptvHealth != null && (
+            <div className="mt-5 flex items-center justify-between rounded-xl border border-border/60 bg-muted/25 px-3 py-3 text-xs">
+              <span className="inline-flex items-center gap-2 text-muted-foreground"><Tv className="h-4 w-4 text-blue-400" />IPTV Health Score</span>
+              <strong className={healthTone(iptvHealth)}>{iptvHealth}%</strong>
+            </div>
+          )}
         </Card>
+        <Link to="/app/central" className="group block min-w-0">
+          <Card className="relative flex h-full flex-col justify-between overflow-hidden rounded-2xl border-blue-500/25 bg-gradient-to-br from-blue-500/10 via-card to-card p-5 transition-colors group-hover:border-blue-400/60 sm:p-6">
+            <div className="flex items-start justify-between gap-3">
+              <span className="flex h-12 w-12 items-center justify-center rounded-2xl border border-blue-500/20 bg-blue-500/15 text-blue-400"><RadioTower className="h-6 w-6" /></span>
+              <span className="rounded-full border border-blue-500/20 bg-blue-500/10 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-blue-400">Sentinel Edge 2.0</span>
+            </div>
+            <div className="mt-6">
+              <h2 className="text-xl font-extrabold tracking-tight">Inteligência multi-região</h2>
+              <p className="mt-2 text-sm leading-relaxed text-muted-foreground">Compare evidências da origem e do Cloudflare, investigue falhas de DNS e identifique quedas confirmadas.</p>
+              <div className="mt-5 inline-flex items-center gap-2 text-sm font-semibold text-blue-400">Abrir central de evidências <ArrowRight className="h-4 w-4" /></div>
+            </div>
+          </Card>
+        </Link>
       </div>
 
       <Card className="p-5">
