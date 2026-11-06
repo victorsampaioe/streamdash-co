@@ -162,8 +162,11 @@ function AuthPage() {
       }
     } catch (error) {
       const message = error instanceof Error ? error.message : "Não conseguimos criar sua conta agora.";
-      if (!quickMode) toast.error(message);
-      setTurnstileToken(null); resetTurnstile();
+      // No modo acesso rápido o erro também precisa ser mostrado: ocultar
+      // a falha dava a impressão de botão travado e incentivava novos cliques.
+      toast.error(message);
+      setTurnstileToken(null);
+      resetTurnstile();
     } finally { setLoading(false); }
   }
 
