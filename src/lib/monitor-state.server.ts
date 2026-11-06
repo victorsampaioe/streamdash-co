@@ -212,13 +212,25 @@ export async function regionConsensus(serverId: string, windowMinutes = 10) {
     .select("region_code, status, checked_at")
     .eq("server_id", serverId)
     .gte("checked_at", since);
-  const failed = new Set<string>();
-  const ok = new Set<string>();
+  // Apenas o resultado mais recente de cada região é válido.
+  // Antes, uma falha antiga continuava contando como OFFLINE mesmo depois
+  // de a mesma região reportar ONLINE, causando falso consenso.
+  const latest = new Map<string, { status: string; checkedAt: number }>();
   for (const r of data ?? []) {
-    if ((r as any).status === "down") failed.add((r as any).region_code);
-    else ok.add((r as any).region_code);
+    const region = String((r as any).region_code ?? "");
+    const checkedAt = new Date((r as any).checked_at).getTime();
+    if (!region || !Number.isFinite(checkedAt)) continue;
+    if (checkedAt > (latest.get(region)?.checkedAt ?? -Infinity)) {
+      latest.set(region, { status: String((r as any).status ?? ""), checkedAt });
+    }
   }
-  return { failedRegions: [...failed], okRegions: [...ok] };
+  const failedRegions: string[] = [];
+  const okRegions: string[] = [];
+  for (const [region, result] of latest) {
+    if (result.status === "down") failedRegions.push(region);
+    else if (result.status === "up" || result.status === "degraded" || result.status === "online") okRegions.push(region);
+  }
+  return { failedRegions, okRegions };
 }
 
 /** Confirmação exigida antes de declarar OFFLINE. */
