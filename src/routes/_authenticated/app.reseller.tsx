@@ -222,7 +222,7 @@ function ResellerDashboard() {
         </Alert>
       )}
 
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div data-section="Gestão da Rede" className="sm-section-hero flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold">Painel do Revendedor</h1>
           <p className="text-muted-foreground text-sm">Gerencie seus créditos, rede e clientes.</p>
@@ -295,7 +295,7 @@ function ResellerDashboard() {
         </Card>
       </div>
 
-      <Tabs defaultValue="rede" className="w-full overflow-hidden">
+      <Tabs defaultValue="rede" className="sm-reseller-control-tabs w-full min-w-0">
         <div className="overflow-x-auto pb-2 scrollbar-hide">
           <TabsList className="flex w-max min-w-full sm:grid sm:w-full sm:grid-cols-6 sm:max-w-2xl">
             <TabsTrigger value="rede" className="px-4">Rede</TabsTrigger>
