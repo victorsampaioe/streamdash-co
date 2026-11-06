@@ -31,7 +31,7 @@ export const Route = createFileRoute("/auth")({
 });
 
 type Availability = "idle" | "checking" | "available" | "taken" | "invalid";
-type CreatedAccess = { username: string; password: string; email: string };
+type CreatedAccess = { username: string; password: string; email: string; needsConfirmation?: boolean };
 
 function generatePassword() {
   const alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789!@#$";
@@ -139,7 +139,11 @@ function AuthPage() {
       }
       if (result.needsEmailConfirmation) {
         toast.success("Conta criada! Confira seu e-mail para confirmar o acesso.");
-        navigate({ to: "/verify-email", search: { email: emailCheck.value } });
+        if (quickMode) {
+          setCreatedAccess({ username: usernameCheck.value, password, email: emailCheck.value, needsConfirmation: true });
+        } else {
+          navigate({ to: "/verify-email", search: { email: emailCheck.value } });
+        }
         return;
       }
       try {
@@ -199,9 +203,9 @@ function AuthPage() {
   if (createdAccess) return (
     <AuthShell><Card className="p-6 space-y-5 border-border/60 bg-card/90">
       <div className="flex h-11 w-11 items-center justify-center rounded-full bg-success/15 text-success"><Check className="h-6 w-6" /></div>
-      <div><h1 className="text-xl font-bold">Sua conta foi criada com sucesso!</h1><p className="text-sm text-muted-foreground mt-1">Guarde seu acesso em um local seguro.</p></div>
-      <div className="rounded-md border border-border bg-muted/40 p-4 space-y-2 text-sm"><p><span className="text-muted-foreground">Usuário:</span> <strong>{createdAccess.username}</strong></p><p><span className="text-muted-foreground">Senha:</span> <strong>{showPassword ? createdAccess.password : "••••••••••••••"}</strong></p></div>
-      <div className="grid grid-cols-2 gap-2"><Button variant="outline" onClick={() => { navigator.clipboard.writeText(`${createdAccess.username}\n${createdAccess.password}`); toast.success("Acesso copiado"); }}><Copy className="h-4 w-4" /> Copiar acesso</Button><Button onClick={() => navigate({ to: safeRedirect, replace: true })}>Entrar agora</Button></div>
+      <div><h1 className="text-xl font-bold">Sua conta foi criada com sucesso!</h1><p className="text-sm text-muted-foreground mt-1">{createdAccess.needsConfirmation ? "Confirme seu e-mail antes de entrar. Guarde seu usuário e senha." : "Guarde seu acesso em um local seguro."}</p></div>
+      <div className="rounded-md border border-border bg-muted/40 p-4 space-y-2 text-sm"><p><span className="text-muted-foreground">Usuário:</span> <strong>{createdAccess.username}</strong></p><p className="flex flex-wrap items-center gap-2"><span className="text-muted-foreground">Senha:</span> <strong>{showPassword ? createdAccess.password : "••••••••••••••"}</strong><button type="button" className="ml-auto text-primary underline" onClick={() => setShowPassword(!showPassword)}>{showPassword ? "Ocultar" : "Mostrar"}</button></p></div>
+      <div className="grid grid-cols-2 gap-2"><Button variant="outline" onClick={async () => { try { await navigator.clipboard.writeText(`${createdAccess.username}\n${createdAccess.password}`); toast.success("Acesso copiado"); } catch { toast.error("Não foi possível copiar. Selecione e guarde suas informações."); } }}><Copy className="h-4 w-4" /> Copiar acesso</Button><Button onClick={() => createdAccess.needsConfirmation ? navigate({ to: "/verify-email", search: { email: createdAccess.email } }) : navigate({ to: safeRedirect, replace: true })}>{createdAccess.needsConfirmation ? "Confirmar e-mail" : "Entrar agora"}</Button></div>
     </Card></AuthShell>
   );
 
