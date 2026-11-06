@@ -92,7 +92,7 @@ function RankingPage() {
 
   return (
     <div className="space-y-6">
-      <div>
+      <div data-section="Benchmark" className="sm-section-hero">
         <h1 className="text-2xl font-semibold tracking-tight flex items-center gap-2">
           <Trophy className="h-6 w-6 text-primary" /> Ranking IPTV Inteligente
         </h1>
