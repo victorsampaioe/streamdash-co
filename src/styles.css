@@ -437,7 +437,7 @@ aside a[aria-current="page"],aside a[data-active="true"],[data-sidebar="menu-but
 
 /* Stream Monitor 2026 — landing conversion hero, responsive and motion-safe. */
 .sm-public-header { box-shadow: 0 1px 0 rgba(70,135,255,.06); }
-.sm-landing-hero {
+.sm-landing .sm-landing-hero {
   background: linear-gradient(130deg, #071020 0%, #0b1d39 55%, #06101f 100%);
 }
 .sm-hero-grid {
