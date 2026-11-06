@@ -39,7 +39,7 @@ export const Route = createFileRoute("/")({
 
 function Landing() {
   return (
-    <div className="min-h-screen bg-background text-foreground">
+    <div className="sm-landing min-h-screen bg-background text-foreground">
       <main>
       <header className="border-b border-border/50 backdrop-blur-xl bg-background/85 sticky top-0 z-40">
         <div className="max-w-6xl mx-auto flex items-center justify-between px-4 sm:px-6 py-4 gap-2">
@@ -65,11 +65,11 @@ function Landing() {
         </div>
       </header>
 
-      <section className="relative overflow-hidden border-b border-border/50 bg-background">
+      <section className="sm-hero relative overflow-hidden border-b border-border/50 bg-background">
         <div className="pointer-events-none absolute right-[-10%] top-[-20%] h-[600px] w-[600px] rounded-full bg-primary/10 blur-[120px]" />
         <div className="relative mx-auto grid max-w-7xl items-center gap-12 px-5 py-16 sm:px-8 md:py-24 lg:grid-cols-[1fr_1.05fr] lg:gap-16 lg:py-32">
           <div className="space-y-7">
-            <div className="inline-flex items-center gap-2 rounded-lg border border-primary/25 bg-primary/10 px-3 py-2 text-xs font-bold uppercase tracking-[.15em] text-primary">
+            <div className="sm-hero-badge inline-flex items-center gap-2 rounded-lg border border-primary/25 bg-primary/10 px-3 py-2 text-xs font-bold uppercase tracking-[.15em] text-primary">
               <Activity className="h-4 w-4" /> Plataforma de observabilidade
             </div>
             <h1 className="max-w-2xl text-4xl font-extrabold leading-[1.07] tracking-[-.055em] sm:text-5xl xl:text-6xl">
@@ -80,7 +80,7 @@ function Landing() {
               Monitoramento IPTV para revendedores: acompanhe servidores, DNS, latência e disponibilidade. Receba alertas e investigue falhas em um painel profissional.
             </p>
             <div className="flex flex-col gap-3 sm:flex-row">
-              <Link to="/auth"><Button size="lg" className="h-12 w-full px-7 sm:w-auto">Começar a monitorar <Activity className="ml-2 h-4 w-4" /></Button></Link>
+              <Link to="/auth"><Button size="lg" className="sm-primary-cta h-12 w-full px-7 sm:w-auto">Começar a monitorar <Activity className="ml-2 h-4 w-4" /></Button></Link>
               <Link to="/revendedor-stream-monitor"><Button variant="outline" size="lg" className="h-12 w-full px-7 sm:w-auto">Soluções para revendedores</Button></Link>
             </div>
             <div className="grid max-w-lg grid-cols-3 gap-3 border-t border-border/60 pt-6">
