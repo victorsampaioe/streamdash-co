@@ -104,8 +104,8 @@ function SubscriptionPage() {
   }
 
   return (
-    <div className="space-y-6 max-w-4xl">
-      <div>
+    <div className="sm-page sm-page-subscription space-y-6 w-full max-w-6xl">
+      <div data-section="Planos & Créditos" className="sm-section-hero">
         <h1 className="text-2xl font-bold">Minha Assinatura</h1>
         <p className="text-sm text-muted-foreground mt-1">Gerencie seu plano e renovações.</p>
       </div>
