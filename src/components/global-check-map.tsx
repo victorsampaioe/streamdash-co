@@ -148,10 +148,14 @@ const projY = (lat: number) => ((90 - lat) / 180) * MAP_H;
 export function GlobalCheckMap({ serverId }: { serverId: string }) {
   const [openRegion, setOpenRegion] = useState<string | null>(null);
 
-  const { data: regions = [] } = useQuery<Region[]>({
+  const { data: regions = [], isLoading: loadingRegions, isError: regionsError } = useQuery<Region[]>({
     queryKey: ["check_regions"],
-    queryFn: async () =>
-      (await supabase.from("check_regions").select("*").eq("enabled", true).order("longitude")).data ?? [],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("check_regions")
+        .select("*").eq("enabled", true).order("longitude");
+      if (error) throw error;
+      return data ?? [];
+    },
     staleTime: 5 * 60_000,
   });
 
@@ -194,9 +198,13 @@ export function GlobalCheckMap({ serverId }: { serverId: string }) {
     },
   });
 
-  const { data: workers = [] } = useQuery<{ region_code: string; last_report_at: string | null; checks_60s: number }[]>({
+  const { data: workers = [], isError: workersError } = useQuery<{ region_code: string; last_report_at: string | null; checks_60s: number }[]>({
     queryKey: ["workers_health"],
-    queryFn: async () => (await supabase.rpc("get_workers_health")).data ?? [],
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc("get_workers_health");
+      if (error) throw error;
+      return data ?? [];
+    },
     refetchInterval: 30_000,
   });
 
@@ -258,7 +266,12 @@ export function GlobalCheckMap({ serverId }: { serverId: string }) {
   const originOnline = !!originLatest &&
     Date.now() - new Date(originLatest.checked_at).getTime() <= 5 * 60_000;
   const v = verdict ?? null;
-  const vui = VERDICT_UI[v?.verdict ?? "nodata"];
+  // A sonda da origem é uma única localização. Não apresentar consenso
+  // mundial ou "ONLINE CONFIRMADO" sem nenhuma região independente.
+  const noIndependentMeasurements = workersOnline === 0;
+  const vui = noIndependentMeasurements
+    ? VERDICT_UI.nodata
+    : VERDICT_UI[v?.verdict ?? "nodata"];
   const health = connectionHealth(v?.avg_latency_ms ?? null);
   const selected = openRegion ? regions.find((r) => r.code === openRegion) ?? null : null;
 
@@ -275,8 +288,14 @@ export function GlobalCheckMap({ serverId }: { serverId: string }) {
             <div className="text-3xl leading-none">{vui.emoji}</div>
             <div className="min-w-0">
               <div className="text-[11px] uppercase tracking-wider opacity-70">Veredito global do servidor</div>
-              <div className="text-xl font-semibold">{vui.title}</div>
-              <div className="text-sm text-muted-foreground">{v ? verdictSubtitle(v) : "Calculando consenso regional…"}</div>
+              <div className="text-xl font-semibold">{noIndependentMeasurements ? "SEM CONSENSO MULTIRREGIONAL" : vui.title}</div>
+              <div className="text-sm text-muted-foreground">
+                {noIndependentMeasurements
+                  ? originOnline
+                    ? "A origem está reportando, mas faltam sondas regionais independentes."
+                    : "Sem sondas regionais ativas e sem dados recentes da origem."
+                  : v ? verdictSubtitle(v) : "Calculando consenso regional…"}
+              </div>
             </div>
           </div>
           <div className="text-right">
@@ -314,13 +333,24 @@ export function GlobalCheckMap({ serverId }: { serverId: string }) {
         </div>
         <div className="flex items-center gap-2">
           <Badge variant="outline" className={cn("text-xs font-mono", workerBadgeColor)}>
-            {workersTotal === 0 ? "⚪" : workersOnline === workersTotal ? "🟢" : workersOnline === 0 ? "🔴" : "🟡"} {workersOnline}/{workersTotal} agentes regionais ativos
+            {loadingRegions ? "Carregando regiões…" : regionsError || workersError ? "Erro ao carregar agentes" :
+              <>{workersTotal === 0 ? "⚪" : workersOnline === workersTotal ? "🟢" : workersOnline === 0 ? "🔴" : "🟡"} {workersOnline}/{workersTotal} agentes regionais ativos</>}
           </Badge>
           <span className="text-xs text-muted-foreground hidden sm:inline">Atualização a cada 30s</span>
         </div>
       </div>
 
-      {noWorkers && (
+      {(regionsError || workersError) && (
+        <Card role="alert" className="border-destructive/40 bg-destructive/5 p-4 text-sm">
+          Não foi possível consultar o estado dos agentes regionais. Verifique a conexão com o banco e atualize esta página.
+        </Card>
+      )}
+      {!loadingRegions && !regionsError && workersTotal === 0 && (
+        <Card className="border-border/60 p-4 text-sm text-muted-foreground">
+          Nenhuma região externa está habilitada. As verificações da origem não substituem sondas independentes.
+        </Card>
+      )}
+      {noWorkers && !regionsError && !workersError && (
         <Card className="p-4 border-warning/40 bg-warning/5">
           <div className="flex items-start gap-3">
             <div className="text-2xl shrink-0">⚠️</div>
@@ -367,7 +397,9 @@ export function GlobalCheckMap({ serverId }: { serverId: string }) {
                       <div className="min-w-0">
                         <div className="text-sm font-medium truncate">{r.city}</div>
                         <div className="text-[11px] text-muted-foreground truncate">
-                          {latest ? `Última verificação: ${humanAgo(latest.checked_at)}` : "sem dados"}
+                          {s === "disconnected"
+                            ? "Agente sem comunicação recente"
+                            : latest ? `Última verificação: ${humanAgo(latest.checked_at)}` : "sem dados"}
                         </div>
                       </div>
                     </div>
