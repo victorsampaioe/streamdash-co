@@ -39,8 +39,8 @@ function RadarPage() {
   );
 
   return (
-    <div className="flex-1 space-y-6 p-4 md:p-8 pt-6">
-      <div className="flex flex-col gap-2">
+    <div className="sm-page sm-page-radar flex-1 space-y-6">
+      <div data-section="Inteligência Regional" className="sm-section-hero flex flex-col gap-2">
         <h2 className="text-3xl font-bold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-purple-400">
           Radar Brasil
         </h2>
