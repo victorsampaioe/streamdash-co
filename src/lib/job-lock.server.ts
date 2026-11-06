@@ -6,14 +6,30 @@
  * gera fila + timeouts. Estas travas fazem o novo ciclo desistir na hora.
  */
 
-const localLocks = new Set<string>();
+const localLocks = new Map<string, number>();
+
+// A execução pode ser encerrada antes de liberar a trava local. Assim como
+// a trava SQL, esta expira automaticamente após o TTL configurado.
+function localLockHeld(name: string): boolean {
+  const expiresAt = localLocks.get(name);
+  if (expiresAt === undefined) return false;
+  if (expiresAt <= Date.now()) {
+    localLocks.delete(name);
+    return false;
+  }
+  return true;
+}
+
+function setLocalLock(name: string, ttlSeconds: number): void {
+  localLocks.set(name, Date.now() + Math.max(1, ttlSeconds) * 1000);
+}
 
 const HOLDER = `${process.env.IS_CORE === "true" ? "core" : "panel"}-${Math.random()
   .toString(36)
   .slice(2, 8)}`;
 
 export async function tryAcquireLock(name: string, ttlSeconds: number): Promise<boolean> {
-  if (localLocks.has(name)) return false;
+  if (localLockHeld(name)) return false;
   try {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { data, error } = await supabaseAdmin.rpc("try_acquire_cron_lock", {
@@ -25,17 +41,17 @@ export async function tryAcquireLock(name: string, ttlSeconds: number): Promise<
       console.warn(`[lock] falha ao adquirir "${name}": ${error.message}`);
       // Se a RPC estiver indisponível, usa uma trava local. Isso protege
       // contra sobreposição nesta instância, mas não entre múltiplas instâncias.
-      if (localLocks.has(name)) return false;
-      localLocks.add(name);
+      if (localLockHeld(name)) return false;
+      setLocalLock(name, ttlSeconds);
       return true;
     }
-    if (!data || localLocks.has(name)) return false;
-    localLocks.add(name);
+    if (!data || localLockHeld(name)) return false;
+    setLocalLock(name, ttlSeconds);
     return true;
   } catch (e: any) {
     console.warn(`[lock] indisponível para "${name}": ${e?.message}`);
-    if (localLocks.has(name)) return false;
-    localLocks.add(name);
+    if (localLockHeld(name)) return false;
+    setLocalLock(name, ttlSeconds);
     return true;
   }
 }
