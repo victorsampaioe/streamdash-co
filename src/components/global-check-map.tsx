@@ -96,7 +96,9 @@ function humanAgo(iso: string): string {
   const m = Math.floor(s / 60);
   if (m < 60) return `há ${m}min`;
   const h = Math.floor(m / 60);
-  return `há ${h}h`;
+  if (h < 24) return `há ${h}h`;
+  const days = Math.floor(h / 24);
+  return `há ${days} ${days === 1 ? "dia" : "dias"}`;
 }
 
 function statusLabel(s: string): string {
@@ -358,6 +360,10 @@ export function GlobalCheckMap({ serverId }: { serverId: string }) {
               <p className="font-medium">Agentes regionais sem comunicação</p>
               <p className="text-muted-foreground">
                 Há {workersTotal} {workersTotal === 1 ? "região configurada" : "regiões configuradas"}, mas nenhuma enviou relatório nos últimos 5 minutos.
+                {workers.filter((w) => w.last_report_at).length > 0
+                  ? ` Último contato conhecido: ${humanAgo(workers.filter((w) => w.last_report_at)
+                    .sort((a, b) => new Date(b.last_report_at!).getTime() - new Date(a.last_report_at!).getTime())[0].last_report_at!)}.`
+                  : ""}
                 O agente da VPS/Worker precisa estar em execução e autenticado para retomar o monitoramento independente.
                 A ausência de dados regionais não significa que o servidor do cliente esteja offline.
               </p>
@@ -398,7 +404,9 @@ export function GlobalCheckMap({ serverId }: { serverId: string }) {
                         <div className="text-sm font-medium truncate">{r.city}</div>
                         <div className="text-[11px] text-muted-foreground truncate">
                           {s === "disconnected"
-                            ? "Agente sem comunicação recente"
+                            ? workers.find((w) => w.region_code === r.code)?.last_report_at
+                              ? `Agente sem comunicação · último contato ${humanAgo(workers.find((w) => w.region_code === r.code)!.last_report_at!)}`
+                              : "Agente sem comunicação · nenhum relatório recente"
                             : latest ? `Última verificação: ${humanAgo(latest.checked_at)}` : "sem dados"}
                         </div>
                       </div>
