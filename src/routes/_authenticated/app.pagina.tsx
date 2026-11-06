@@ -10,6 +10,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
 import { Globe, ExternalLink, Copy } from "lucide-react";
+import { ResellerStatusSettings } from "@/components/reseller/reseller-status-settings";
 
 export const Route = createFileRoute("/_authenticated/app/pagina")({
   component: ResellerPageEditor,
@@ -202,6 +203,8 @@ function ResellerPageEditor() {
           </Card>
         </div>
       )}
+
+      <ResellerStatusSettings />
 
       <Card className="p-5 space-y-4">
         <h2 className="font-semibold">Identidade</h2>
