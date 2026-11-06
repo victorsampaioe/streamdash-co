@@ -270,7 +270,13 @@ export function GlobalCheckMap({ serverId }: { serverId: string }) {
   const v = verdict ?? null;
   // A sonda da origem é uma única localização. Não apresentar consenso
   // mundial ou "ONLINE CONFIRMADO" sem nenhuma região independente.
-  const noIndependentMeasurements = workersOnline === 0;
+  // Um agente ativo não comprova que ESTE servidor recebeu duas sondas.
+  // Exigir medições independentes e recentes do servidor no próprio mapa.
+  const originSample = latestByRegion.get("origin");
+  const edgeSample = latestByRegion.get("cf-edge");
+  const recentForServer = (sample?: RegionCheck) => !!sample?.checked_at &&
+    Date.now() - new Date(sample.checked_at).getTime() <= 10 * 60_000;
+  const noIndependentMeasurements = !recentForServer(originSample) || !recentForServer(edgeSample);
   const vui = noIndependentMeasurements
     ? VERDICT_UI.nodata
     : VERDICT_UI[v?.verdict ?? "nodata"];
@@ -294,8 +300,8 @@ export function GlobalCheckMap({ serverId }: { serverId: string }) {
               <div className="text-sm text-muted-foreground">
                 {noIndependentMeasurements
                   ? originOnline
-                    ? "A origem está reportando, mas faltam sondas regionais independentes."
-                    : "Sem sondas regionais ativas e sem dados recentes da origem."
+                    ? "A origem tem dados, mas este servidor ainda não tem duas medições independentes e recentes."
+                    : "Este servidor ainda não tem duas medições independentes recentes (origem e Cloudflare)."
                   : v ? verdictSubtitle(v) : "Calculando consenso regional…"}
               </div>
             </div>
