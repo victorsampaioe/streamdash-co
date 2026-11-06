@@ -110,7 +110,7 @@ function AlertsPage() {
 
   return (
     <div className="space-y-6 sm:space-y-8 max-w-5xl w-full">
-      <div>
+      <div data-section="Comunicação" className="sm-section-hero">
         <h1 className="text-3xl font-bold tracking-tight">Central de Alertas</h1>
         <p className="text-sm text-muted-foreground">
           Os alertas do Stream Monitor são enviados pelo Telegram (@{BOT_USERNAME}): quedas de servidor, instabilidade e o resumo inteligente diário.
