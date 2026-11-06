@@ -179,28 +179,43 @@ export interface AttemptRecord {
 
 /** Cria o registro da tentativa. Retorna null quando o fingerprint já existe (POST duplicado). */
 export async function openAttempt(rec: AttemptRecord): Promise<string | null> {
-  const { data, error } = await supabaseAdmin
+  const payload = {
+    status: "processing",
+    ip_hash: rec.ipHash,
+    ip_masked: rec.ipMasked,
+    email_norm: rec.emailNorm ?? null,
+    phone_norm: rec.phoneNorm ?? null,
+    full_name: rec.fullName ?? null,
+    fingerprint: rec.fingerprint ?? null,
+    user_agent: rec.userAgent?.slice(0, 300) ?? null,
+    identity_hash: rec.identityHash ?? null,
+    category: rec.category ?? null,
+    risk_score: rec.riskScore ?? 0,
+    technical_detail: rec.technicalDetail?.slice(0, 500) ?? null,
+  };
+
+  let { data, error } = await supabaseAdmin
     .from("signup_attempts" as any)
-    .insert({
-      status: "processing",
-      ip_hash: rec.ipHash,
-      ip_masked: rec.ipMasked,
-      email_norm: rec.emailNorm ?? null,
-      phone_norm: rec.phoneNorm ?? null,
-      full_name: rec.fullName ?? null,
-      fingerprint: rec.fingerprint ?? null,
-      user_agent: rec.userAgent?.slice(0, 300) ?? null,
-      identity_hash: rec.identityHash ?? null,
-      category: rec.category ?? null,
-      risk_score: rec.riskScore ?? 0,
-      technical_detail: rec.technicalDetail?.slice(0, 500) ?? null,
-    } as any)
-    .select("id")
-    .single();
+    .insert(payload as any).select("id").single();
+
+  if (error && rec.fingerprint && ((error as any).code === "23505" || /duplicate key/i.test(error.message))) {
+    // O mesmo POST ainda em processamento deve continuar protegido.
+    // Mas uma tentativa anterior que terminou REJEITADA (CAPTCHA expirou,
+    // falha temporária do Auth etc.) não pode bloquear o novo envio.
+    const { data: previous } = await supabaseAdmin.from("signup_attempts" as any)
+      .select("status").eq("fingerprint", rec.fingerprint).maybeSingle();
+    if ((previous as { status?: string } | null)?.status === "rejected") {
+      const retryFingerprint = createHash("sha256")
+        .update(`${rec.fingerprint}|${randomUUID()}`).digest("hex");
+      ({ data, error } = await supabaseAdmin.from("signup_attempts" as any)
+        .insert({ ...payload, fingerprint: retryFingerprint } as any)
+        .select("id").single());
+    }
+  }
 
   if (error) {
     if ((error as any).code === "23505" || /duplicate key/i.test(error.message)) return null;
-    log("attempt log failed", { message: error.message });
+    log("attempt log failed", { type: (error as Error).name ?? "unknown" });
     return "unlogged";
   }
   return (data as any).id as string;
