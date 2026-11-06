@@ -695,11 +695,12 @@ export async function runDueDnsChecks(limit = 40): Promise<{ checked: number; er
     if (page.length < pageSize) break;
   }
 
-  const results = await runPool(due, async (server, index) => {
+  const enrichmentIds = new Set([due[0]?.id, due[20]?.id]);
+  const results = await runPool(due, async (server) => {
     // Priorize resolução em TODAS as sondas. Só duas por rodada coletam
     // metadados lentos (WHOIS/GeoIP), evitando filas extensas e timeouts.
     const firstCheck = eligibleById.get(server.id) === true;
-    const fullEnrichment = !firstCheck && (index === 0 || index === 20);
+    const fullEnrichment = !firstCheck && enrichmentIds.has(server.id);
     const first = await runDnsCheck(server.id, { quick: !fullEnrichment });
     if (first.severeFailure && first.dnsStatus !== "offline") {
       // Confirmação curta e independente, em vez de esperar outra volta
