@@ -25,7 +25,9 @@ export const Route = createFileRoute("/api/public/regions/targets")({
         const agentId = request.headers.get("x-agent-id");
         const { authenticateAgent } = await import("@/lib/region-agent.server");
         const agent = agentId ? await authenticateAgent(agentId, "targets", sig) : null;
-        if (!agent && !verifyRegionSignature("targets", sig)) {
+        const { verifyCloudflareEdgeSignature } = await import("@/lib/region-cloudflare-auth.server");
+        const cfEdge = await verifyCloudflareEdgeSignature("targets", request.headers.get("x-cf-signature"));
+        if (!agent && !cfEdge && !verifyRegionSignature("targets", sig)) {
           return new Response("Forbidden", { status: 403 });
         }
 
@@ -51,7 +53,7 @@ export const Route = createFileRoute("/api/public/regions/targets")({
               }
             : { server_id: s.id, host: s.host }));
 
-        return Response.json({ region: agent?.region_code ?? null, targets, count: targets.length }, {
+        return Response.json({ region: cfEdge ? "cf-edge" : (agent?.region_code ?? null), targets, count: targets.length }, {
           headers: { "cache-control": "no-store" },
         });
       },
