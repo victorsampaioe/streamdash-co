@@ -396,3 +396,41 @@ aside a[aria-current="page"],aside a[data-active="true"],[data-sidebar="menu-but
 @media (prefers-reduced-motion: reduce) {
   #main-content *, .sm-landing * { scroll-behavior: auto !important; transition-duration: 0.01ms !important; animation-duration: 0.01ms !important; }
 }
+
+
+/* Unified Command Center layout - customer and admin share these primitives. */
+.sm-app-shell { overflow-x: clip; }
+.sm-app-body { min-width: 0; }
+.sm-command-sidebar { position: sticky; top: 0; height: 100dvh; max-height: 100dvh; }
+.sm-command-sidebar > div:nth-child(2) { overscroll-behavior: contain; }
+.sm-command-nav-item { min-height: 42px; }
+.sm-command-nav-item[aria-current="page"] {
+  background: color-mix(in oklab, var(--primary) 15%, var(--sidebar));
+  box-shadow: inset 3px 0 0 var(--primary);
+  color: var(--foreground);
+}
+.sm-command-nav-item:not([aria-current="page"]):hover {
+  background: color-mix(in oklab, var(--primary) 7%, var(--sidebar));
+}
+.sm-command-content > * { min-width: 0; }
+.sm-command-content .sm-panel {
+  overflow-wrap: break-word;
+  background-image: linear-gradient(145deg, color-mix(in oklab, var(--card) 94%, var(--primary)), var(--card) 55%);
+  border-color: color-mix(in oklab, var(--border) 89%, var(--primary));
+}
+.sm-command-content .sm-panel:hover { border-color: color-mix(in oklab, var(--border) 75%, var(--primary)); }
+.sm-command-content :is(.grid,.flex) > * { min-width: 0; }
+.sm-command-content :is(.overflow-x-auto,[data-radix-scroll-area-viewport]) { -webkit-overflow-scrolling: touch; }
+.sm-command-content :is(table,[role="table"]) { min-width: max-content; }
+.sm-command-content :is(.sm-admin-tabs,.sm-workspace-grid,.sm-workspace-header) { min-width: 0; }
+.sm-command-content :is(h1,h2,h3) { overflow-wrap: break-word; }
+@media (max-width: 1023px) {
+  .sm-command-content { padding-bottom: max(1.5rem, env(safe-area-inset-bottom)); }
+  .sm-command-topbar { padding-top: env(safe-area-inset-top); }
+}
+@media (max-width: 639px) {
+  .sm-command-content { padding-inline: 1rem; }
+  .sm-command-content .sm-panel { border-radius: .95rem; }
+  .sm-command-content :is(.sm-workspace-grid,.sm-workspace-header) { gap: .75rem; }
+  .sm-command-content :is(button,[role="tab"]) { max-width: 100%; }
+}
