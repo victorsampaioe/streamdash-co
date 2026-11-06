@@ -4,7 +4,13 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 /** Chave pública do Turnstile (segura para o browser). */
 export const getSignupConfig = createServerFn({ method: "GET" }).handler(async () => {
   const siteKey = process.env.TURNSTILE_SITE_KEY?.trim() || null;
-  return { turnstileSiteKey: siteKey };
+  const secretSet = !!process.env.TURNSTILE_SECRET_KEY?.trim();
+  const externalValidation = process.env.SIGNUP_TURNSTILE_PROVIDER === "supabase";
+  const configProblem = (Boolean(siteKey) !== secretSet) && !externalValidation;
+  return {
+    turnstileSiteKey: configProblem ? null : siteKey,
+    captchaSetupIssue: configProblem || (externalValidation && !siteKey),
+  };
 });
 
 /** Painel admin: proteção de cadastros (24h, rejeições, bloqueios). */
