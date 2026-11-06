@@ -434,3 +434,37 @@ aside a[aria-current="page"],aside a[data-active="true"],[data-sidebar="menu-but
   .sm-command-content :is(.sm-workspace-grid,.sm-workspace-header) { gap: .75rem; }
   .sm-command-content :is(button,[role="tab"]) { max-width: 100%; }
 }
+
+/* Stream Monitor 2026 — landing conversion hero, responsive and motion-safe. */
+.sm-public-header { box-shadow: 0 1px 0 rgba(70,135,255,.06); }
+.sm-landing-hero {
+  background: linear-gradient(130deg, #071020 0%, #0b1d39 55%, #06101f 100%);
+}
+.sm-hero-grid {
+  background-image: linear-gradient(rgba(80,150,255,.035) 1px,transparent 1px),linear-gradient(90deg,rgba(80,150,255,.035) 1px,transparent 1px);
+  background-size: 52px 52px;
+  -webkit-mask-image: linear-gradient(to bottom, rgba(0,0,0,.65),transparent 82%);
+  mask-image: linear-gradient(to bottom, rgba(0,0,0,.65),transparent 82%);
+}
+.sm-hero-heading { text-wrap: balance; overflow-wrap: normal; }
+.sm-hero-preview .sm-preview-window { box-shadow: 0 25px 80px -45px rgba(36,107,255,.55); }
+.sm-hero-capabilities > div { transition: border-color .15s ease; }
+.sm-hero-capabilities > div:hover { border-color: rgba(89,155,255,.3); }
+@media (max-width: 639px) {
+  .sm-public-brand { gap: .4rem; }
+  .sm-public-brand > span:first-child { width: 2rem; height: 2rem; }
+  .sm-public-brand > span:last-child { font-size: 1rem; letter-spacing: -.045em; }
+  .sm-public-login { padding-inline: .45rem; }
+  .sm-public-start { padding-inline: .75rem; }
+  .sm-hero-heading { font-size: clamp(2.35rem,10.2vw,3.4rem); letter-spacing: -.061em; }
+  .sm-hero-copy { padding-inline: .1rem; }
+  .sm-hero-capabilities { gap: .4rem; }
+  .sm-hero-capabilities > div { padding: .65rem .45rem; }
+  .sm-hero-preview { margin-top: .25rem; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .sm-landing-hero *, .sm-landing-hero *::before, .sm-landing-hero *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
