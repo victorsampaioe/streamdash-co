@@ -71,7 +71,7 @@ function toCard(raw: RawItem, media: TmdbMediaType): TmdbCard {
   };
 }
 
-export type TmdbFeed = "movie_recent" | "movie_upcoming" | "movie_popular" | "tv_recent" | "tv_popular";
+export type TmdbFeed = "movie_recent" | "movie_upcoming" | "movie_popular" | "tv_recent" | "tv_popular" | "trending" | "movies" | "series";
 
 const FEEDS: Record<TmdbFeed, { path: string; media: TmdbMediaType }> = {
   movie_recent: { path: "/movie/now_playing", media: "movie" },
@@ -79,11 +79,23 @@ const FEEDS: Record<TmdbFeed, { path: string; media: TmdbMediaType }> = {
   movie_popular: { path: "/movie/popular", media: "movie" },
   tv_recent: { path: "/tv/on_the_air", media: "tv" },
   tv_popular: { path: "/tv/popular", media: "tv" },
+  // Compatibilidade com os feeds usados pela home e pelo Stream Play.
+  trending: { path: "/trending/all/week", media: "movie" },
+  movies: { path: "/movie/popular", media: "movie" },
+  series: { path: "/tv/popular", media: "tv" },
 };
 
 export async function fetchFeed(feed: TmdbFeed, page = 1): Promise<TmdbCard[]> {
   const cfg = FEEDS[feed];
-  const data = await tmdb<{ results: RawItem[] }>(cfg.path, { page: String(page), region: "BR" });
+  const data = await tmdb<{ results: (RawItem & { media_type?: string })[] }>(
+    cfg.path, { page: String(page), region: "BR" },
+  );
+  if (feed === "trending") {
+    // /trending/all inclui pessoas; não são cartões de filme ou série.
+    return (data.results ?? [])
+      .filter((r) => r.media_type === "movie" || r.media_type === "tv")
+      .map((r) => toCard(r, r.media_type as TmdbMediaType));
+  }
   return (data.results ?? []).map((r) => toCard(r, cfg.media));
 }
 
