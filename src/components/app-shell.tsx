@@ -103,14 +103,29 @@ function useNavItems() {
     },
   });
 
-  // Admin é uma permissão concedida no banco, nunca uma comparação de e-mail no frontend.
-  const isMaster = !!userRoles?.some(r => r === 'admin');
-  
-  const navIsAdmin = isMaster;
+  // Confirme a autorização no servidor: não dependa apenas da leitura da tabela de papéis.
+  // A rota protegida /app/admin continua validando o papel antes de liberar o acesso.
+  const { data: navIsAdmin = false } = useQuery({
+    queryKey: ["navigation-admin-access"],
+    queryFn: async () => {
+      const { data: { user }, error: authError } = await supabase.auth.getUser();
+      if (authError || !user) return false;
+      const { data, error } = await supabase.rpc("has_role", {
+        _user_id: user.id,
+        _role: "admin",
+      });
+      if (error) throw error;
+      return data === true;
+    },
+    staleTime: 60_000,
+    retry: 1,
+    refetchOnWindowFocus: true,
+  });
   const isResellerRole = userRoles?.includes('reseller') || userRoles?.includes('sub_reseller');
   const isResellerOrAdmin = navIsAdmin || isResellerRole || !!subData?.profile?.is_reseller;
 
   const items = [
+    ...(navIsAdmin ? [{ to: "/app/admin", label: "Admin · Central de controle", icon: Users }] : []),
     { to: "/app", label: "Dashboard", icon: LayoutDashboard, exact: true },
     { to: "/app/servers", label: "Servidores", icon: ServerIcon },
     { to: "/app/central", label: "Central Inteligente", icon: ShieldAlert },
@@ -141,9 +156,6 @@ function useNavItems() {
   items.push({ to: "/app/ai-integration", label: "Integração IA", icon: Bot });
   items.push({ to: "/app/ajuda", label: "Central de Ajuda", icon: BookOpen });
 
-  if (navIsAdmin) {
-    items.push({ to: "/app/admin", label: "Admin", icon: Users });
-  }
   return items;
 }
 
@@ -234,6 +246,18 @@ function MobileNav() {
 
 function Topbar() {
   const { theme, toggle } = useTheme();
+  const { data: canOpenAdmin } = useQuery({
+    queryKey: ["navigation-admin-access"],
+    queryFn: async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return false;
+      const { data, error } = await supabase.rpc("has_role", { _user_id: user.id, _role: "admin" });
+      if (error) throw error;
+      return data === true;
+    },
+    staleTime: 60_000,
+    retry: 1,
+  });
   return (
     <header className="h-[72px] border-b border-border/60 flex items-center gap-2 px-4 lg:px-8 bg-background/90 backdrop-blur-xl sticky top-0 z-30">
       <MobileNav />
@@ -244,6 +268,11 @@ function Topbar() {
       <div className="hidden lg:flex flex-1 items-center gap-2 text-xs font-medium text-muted-foreground"><span className="h-2 w-2 rounded-full bg-primary" /> Centro de operações <span className="mx-2 text-border">/</span> Stream Monitor</div>
       <div className="flex-1 lg:hidden" />
       <div className="flex items-center gap-1 sm:gap-2">
+        {canOpenAdmin && <Link to="/app/admin" aria-label="Abrir painel administrativo">
+          <Button size="sm" variant="outline" className="gap-1.5 border-primary/25 text-primary">
+            <ShieldAlert className="h-4 w-4" /><span className="hidden sm:inline">Admin</span>
+          </Button>
+        </Link>}
         <Link to="/app/servers/new">
           <Button size="sm" className="px-2 sm:px-3">
             <Plus className="h-4 w-4 sm:mr-1" />
