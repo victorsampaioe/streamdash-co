@@ -41,11 +41,11 @@ function Landing() {
   return (
     <div className="sm-landing min-h-screen bg-background text-foreground">
       <main>
-      <header className="border-b border-border/50 backdrop-blur-xl bg-background/85 sticky top-0 z-40">
-        <div className="max-w-6xl mx-auto flex items-center justify-between px-4 sm:px-6 py-4 gap-2">
-          <div className="flex items-center gap-2">
-            <Activity className="h-5 w-5 text-primary" aria-hidden="true" />
-            <span className="font-bold tracking-tight">stream<span className="text-primary">monitor</span></span>
+      <header className="sm-public-header border-b border-blue-400/10 backdrop-blur-xl bg-background/90 sticky top-0 z-40">
+        <div className="max-w-7xl mx-auto flex items-center justify-between px-4 sm:px-6 py-3.5 sm:py-4 gap-3">
+          <div className="sm-public-brand flex min-w-0 items-center gap-2.5">
+            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-blue-400/25 bg-blue-500/10"><Activity className="h-5 w-5 text-blue-400" aria-hidden="true" /></span>
+            <span className="font-extrabold tracking-tight text-[17px] sm:text-xl">stream<span className="text-blue-400">monitor</span></span>
           </div>
           <div className="flex items-center gap-2">
             <Link to="/blog" className="hidden sm:inline-flex">
@@ -58,38 +58,60 @@ function Landing() {
                 <Send className="h-4 w-4" />Telegram
               </Button>
             </a>
-            <Link to="/auth"><Button variant="ghost" size="sm">Entrar</Button></Link>
-            <Link to="/auth"><Button size="sm">Começar</Button></Link>
+            <Link to="/auth"><Button variant="ghost" size="sm" className="sm-public-login">Entrar</Button></Link>
+            <Link to="/auth"><Button size="sm" className="sm-public-start rounded-xl bg-blue-500 px-4 font-semibold text-white hover:bg-blue-400">Começar <ArrowRight className="hidden h-3.5 w-3.5 sm:inline" /></Button></Link>
           </div>
 
         </div>
       </header>
 
-      <section className="sm-hero relative overflow-hidden border-b border-border/50 bg-background">
-        <div className="pointer-events-none absolute right-[-10%] top-[-20%] h-[600px] w-[600px] rounded-full bg-primary/10 blur-[120px]" />
-        <div className="relative mx-auto grid max-w-7xl items-center gap-12 px-5 py-16 sm:px-8 md:py-24 lg:grid-cols-[1fr_1.05fr] lg:gap-16 lg:py-32">
-          <div className="space-y-7">
-            <div className="sm-hero-badge inline-flex items-center gap-2 rounded-lg border border-primary/25 bg-primary/10 px-3 py-2 text-xs font-bold uppercase tracking-[.15em] text-primary">
-              <Activity className="h-4 w-4" /> Plataforma de observabilidade
+      <section className="sm-hero sm-landing-hero relative isolate overflow-hidden border-b border-blue-400/10">
+        <div aria-hidden="true" className="sm-hero-grid pointer-events-none absolute inset-0" />
+        <div aria-hidden="true" className="pointer-events-none absolute -right-32 -top-28 h-[500px] w-[500px] rounded-full bg-blue-500/15 blur-[110px]" />
+        <div className="relative mx-auto grid max-w-7xl items-center gap-9 px-4 pb-14 pt-12 sm:gap-12 sm:px-8 sm:pb-20 sm:pt-20 lg:grid-cols-[1fr_1fr] lg:gap-14 lg:py-24">
+          <div className="sm-hero-copy min-w-0">
+            <div className="sm-hero-badge mb-6 inline-flex max-w-full items-center gap-2 rounded-full border border-blue-400/25 bg-blue-500/10 px-3.5 py-2 text-[10px] font-bold uppercase tracking-[.12em] text-blue-300 sm:text-xs">
+              <Activity className="h-4 w-4 shrink-0" /> <span>Inteligência para sua operação</span>
             </div>
-            <h1 className="max-w-2xl text-4xl font-extrabold leading-[1.07] tracking-[-.055em] sm:text-5xl xl:text-6xl">
-              Monitoramento IPTV e DNS
-              <span className="mt-2 block text-primary">para revendedores.</span>
+            <h1 className="sm-hero-heading max-w-[730px] text-[clamp(2.65rem,7.8vw,5rem)] font-black leading-[1.045] tracking-[-.065em] text-foreground">
+              Sua operação sob controle.
+              <span className="mt-2 block bg-gradient-to-r from-blue-400 via-blue-500 to-cyan-300 bg-clip-text text-transparent">Em tempo real.</span>
             </h1>
-            <p className="max-w-lg text-base leading-relaxed text-muted-foreground sm:text-lg">
-              Monitoramento IPTV para revendedores: acompanhe servidores, DNS, latência e disponibilidade. Receba alertas e investigue falhas em um painel profissional.
+            <p className="mt-6 max-w-xl text-[15px] leading-7 text-muted-foreground sm:text-lg sm:leading-8">
+              Monitore servidores IPTV, DNS e disponibilidade em um só lugar. Identifique falhas, acompanhe a performance e receba alertas no Telegram — tudo em um painel criado para revendedores.
             </p>
-            <div className="flex flex-col gap-3 sm:flex-row">
-              <Link to="/auth"><Button size="lg" className="sm-primary-cta h-12 w-full px-7 sm:w-auto">Começar a monitorar <Activity className="ml-2 h-4 w-4" /></Button></Link>
-              <Link to="/revendedor-stream-monitor"><Button variant="outline" size="lg" className="h-12 w-full px-7 sm:w-auto">Soluções para revendedores</Button></Link>
+            <div className="sm-hero-actions mt-8 grid gap-3 sm:flex sm:flex-wrap">
+              <Link to="/auth" className="block">
+                <Button size="lg" className="sm-primary-cta h-13 w-full rounded-xl bg-blue-600 px-7 text-sm font-bold text-white shadow-lg shadow-blue-600/20 hover:bg-blue-500 sm:w-auto sm:text-base">
+                  Começar a monitorar <ArrowRight className="ml-1 h-4 w-4" />
+                </Button>
+              </Link>
+              <Link to="/revendedor-stream-monitor" className="block">
+                <Button variant="outline" size="lg" className="h-13 w-full rounded-xl border-blue-300/20 bg-white/[.035] px-6 text-sm font-semibold hover:bg-blue-500/10 sm:w-auto sm:text-base">
+                  Soluções para revendedores
+                </Button>
+              </Link>
             </div>
-            <div className="grid max-w-lg grid-cols-3 gap-3 border-t border-border/60 pt-6">
-              <div><p className="font-bold text-foreground">DNS</p><p className="text-xs text-muted-foreground">Disponibilidade</p></div>
-              <div><p className="font-bold text-foreground">HTTP</p><p className="text-xs text-muted-foreground">Latência e resposta</p></div>
-              <div><p className="font-bold text-foreground">IPTV</p><p className="text-xs text-muted-foreground">Diagnóstico</p></div>
+            <div className="sm-hero-capabilities mt-8 grid grid-cols-3 gap-2 border-t border-blue-400/15 pt-6 sm:gap-4">
+              {[
+                { icon: <Globe className="h-4 w-4" />, label: "DNS", detail: "Disponibilidade" },
+                { icon: <Zap className="h-4 w-4" />, label: "HTTP", detail: "Latência" },
+                { icon: <Activity className="h-4 w-4" />, label: "IPTV", detail: "Diagnóstico" },
+              ].map((item) => (
+                <div key={item.label} className="min-w-0 rounded-xl border border-blue-400/10 bg-blue-500/[.035] p-3 sm:p-4">
+                  <div className="mb-2 flex items-center gap-1.5 text-blue-400">{item.icon}<span className="text-sm font-bold text-foreground">{item.label}</span></div>
+                  <p className="text-[11px] leading-snug text-muted-foreground sm:text-xs">{item.detail}</p>
+                </div>
+              ))}
             </div>
           </div>
-          <PresentationVideo />
+          <div className="sm-hero-preview min-w-0">
+            <div className="mb-3 flex items-center justify-between gap-3 px-1">
+              <span className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-[.13em] text-blue-300"><span className="h-2 w-2 rounded-full bg-blue-400" /> Conheça a plataforma</span>
+              <span className="text-[11px] text-muted-foreground">Vídeo demonstrativo</span>
+            </div>
+            <PresentationVideo />
+          </div>
         </div>
       </section>
 
@@ -294,20 +316,20 @@ function PresentationVideo() {
   return (
     <div className="relative min-w-0" aria-label="Vídeo de apresentação do Stream Monitor">
       <div className="pointer-events-none absolute -inset-8 rounded-full bg-blue-600/15 blur-[70px]" />
-      <div className="relative overflow-hidden rounded-[1.5rem] border border-blue-400/25 bg-[#081223] shadow-2xl shadow-blue-600/15">
-        <div className="flex items-center justify-between gap-3 border-b border-white/10 px-4 py-3 sm:px-5">
+      <div className="sm-preview-window relative overflow-hidden rounded-[1.35rem] border border-blue-400/25 bg-[#081223] shadow-2xl shadow-blue-600/10">
+        <div className="flex flex-wrap items-center justify-between gap-2 border-b border-white/10 px-3 py-3 sm:px-5">
           <div className="flex items-center gap-2 text-sm font-semibold text-white">
             <span className="inline-flex h-7 w-7 items-center justify-center rounded-lg bg-blue-500/20 text-blue-400"><Play className="h-4 w-4" /></span>
-            Apresentação do Stream Monitor
+            Stream Monitor em ação
           </div>
           <span className="rounded-full border border-blue-400/30 bg-blue-500/10 px-2 py-1 text-[10px] font-bold text-blue-300">ASSISTA AO VÍDEO</span>
         </div>
-        <div className="relative mx-auto flex min-h-[340px] items-center justify-center bg-gradient-to-br from-[#0b1c3b] via-[#060e1c] to-[#020711] py-4 sm:min-h-[400px]">
+        <div className="relative mx-auto flex min-h-[255px] items-center justify-center bg-gradient-to-br from-[#0b1c3b] via-[#060e1c] to-[#020711] py-5 sm:min-h-[360px]">
           <div className="pointer-events-none absolute inset-0 opacity-70">
             <div className="absolute left-[12%] top-[15%] h-36 w-36 rounded-full bg-blue-600/20 blur-[70px]" />
             <div className="absolute bottom-[10%] right-[12%] h-44 w-44 rounded-full bg-cyan-500/15 blur-[70px]" />
           </div>
-          <div className="relative w-[min(64%,225px)] overflow-hidden rounded-[1.5rem] border-[5px] border-slate-700/75 bg-slate-950 shadow-[0_15px_60px_rgba(0,0,0,0.7)]" style={{ aspectRatio: "9 / 16" }}>
+          <div className="relative w-[min(46%,176px)] sm:w-[min(50%,215px)] overflow-hidden rounded-[1.5rem] border-[5px] border-slate-700/75 bg-slate-950 shadow-[0_15px_60px_rgba(0,0,0,0.7)]" style={{ aspectRatio: "9 / 16" }}>
             <video
               ref={videoRef}
               src={heroVideoAsset.url}
