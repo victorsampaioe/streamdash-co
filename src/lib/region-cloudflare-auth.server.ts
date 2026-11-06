@@ -18,7 +18,7 @@ export async function verifyCloudflareEdgeSignature(
     const jwk = data.value as Record<string, unknown>;
     if (jwk.kty !== "EC" || jwk.crv !== "P-256" || typeof jwk.x !== "string" || typeof jwk.y !== "string")
       return false;
-    const key = createPublicKey({ key: jwk as JsonWebKey, format: "jwk" });
+    const key = createPublicKey({ key: jwk as any, format: "jwk" });
     return verify("sha256", Buffer.from(message), { key, dsaEncoding: "ieee-p1363" },
       Buffer.from(signature, "hex"));
   } catch {
