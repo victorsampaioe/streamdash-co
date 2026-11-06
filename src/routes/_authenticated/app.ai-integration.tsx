@@ -46,8 +46,8 @@ function AiIntegrationPage() {
   const lastUsed = activity.data?.[0]?.created_at ?? null;
 
   return (
-    <div className="space-y-6 max-w-5xl">
-      <header className="flex items-start gap-4 flex-wrap">
+    <div className="sm-page space-y-6 w-full max-w-6xl">
+      <header data-section="Automação" className="sm-section-hero flex items-start gap-4 flex-wrap">
         <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-primary/30 to-primary/10 flex items-center justify-center">
           <Bot className="h-6 w-6 text-primary" />
         </div>
