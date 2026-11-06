@@ -6,6 +6,7 @@ import { StatusDot, StatusLabel } from "@/components/status-dot";
 import { UptimeSparkline } from "@/components/uptime-sparkline";
 import { Card } from "@/components/ui/card";
 import { GlobalCheckMap } from "@/components/global-check-map";
+import { effectiveAccessStatus, accessStatusLabel } from "@/lib/dns-state";
 
 
 export const Route = createFileRoute("/status/$slug")({
@@ -24,10 +25,11 @@ export const Route = createFileRoute("/status/$slug")({
 
 function PublicStatus() {
   const { slug } = Route.useParams();
-  const { data: server, isLoading } = useQuery({
+  const { data: server, isLoading, isError } = useQuery({
     queryKey: ["public-server", slug],
     queryFn: async () => {
-      const { data } = await supabase.rpc("get_public_status", { _slug: slug });
+      const { data, error } = await (supabase as any).rpc("get_public_status_v2", { _slug: slug });
+      if (error) throw error;
       return (data as any[])?.[0] ?? null;
     },
     refetchInterval: 20000,
@@ -46,7 +48,13 @@ function PublicStatus() {
   const upCount = checks.filter((c: any) => c.status === "up").length;
   const uptimePct = checks.length ? (upCount / checks.length) * 100 : null;
   const lastIncident = checks.find((c: any) => c.status !== "up") ?? null;
-  const allGood = server?.current_status === "up";
+  const recentHttp = !!server?.last_checked_at && Date.now() - new Date(server.last_checked_at).getTime() <= 15 * 60_000;
+  const recentDns = !!server?.last_dns_check_at && Date.now() - new Date(server.last_dns_check_at).getTime() <= 15 * 60_000;
+  const monitored = !!server && !server.monitoring_paused;
+  const staleStatus = !monitored || !recentHttp || (server?.dns_enabled && !recentDns);
+  const accessState = server ? effectiveAccessStatus(server) : "unknown";
+  const allGood = !staleStatus && accessState === "up";
+  const definitelyDown = !staleStatus && accessState === "down";
 
   return (
     <div className="min-h-screen bg-background text-foreground grid-bg">
@@ -61,7 +69,8 @@ function PublicStatus() {
       </header>
       <main className="max-w-3xl mx-auto px-6 py-16">
         {isLoading && <p className="text-muted-foreground">Carregando...</p>}
-        {!isLoading && !server && (
+        {isError && <Card role="alert" className="p-6 text-center text-destructive">Não foi possível consultar o status. Tente atualizar esta página.</Card>}
+        {!isLoading && !isError && !server && (
           <Card className="p-10 text-center">
             <p className="text-muted-foreground">Página não encontrada ou tornada privada.</p>
           </Card>
@@ -70,23 +79,23 @@ function PublicStatus() {
           <>
             <div className="text-center mb-10">
               <div className="flex items-center justify-center gap-3 mb-3">
-                <StatusDot status={server.current_status} className="h-4 w-4" />
+                <StatusDot status={staleStatus ? "unknown" : accessState} className="h-4 w-4" />
                 <h1 className="text-3xl font-bold tracking-tight">{server.name}</h1>
               </div>
-              <StatusLabel status={server.current_status} />
+              <span>{staleStatus ? "Dados insuficientes ou atrasados" : accessStatusLabel(server)}</span>
               {server.description && <p className="mt-3 text-sm text-muted-foreground max-w-xl mx-auto">{server.description}</p>}
             </div>
 
             <Card
-              className={`p-6 mb-6 text-center border ${allGood ? "border-success/40 bg-success/5" : "border-destructive/40 bg-destructive/5"}`}
+              className={`p-6 mb-6 text-center border ${allGood ? "border-success/40 bg-success/5" : definitelyDown ? "border-destructive/40 bg-destructive/5" : "border-warning/40 bg-warning/5"}`}
             >
               <div className="text-2xl sm:text-3xl font-bold tracking-tight">
-                {allGood ? "🟢 Todos os serviços funcionando" : "🔴 Instabilidade detectada"}
+                {allGood ? "🟢 Acesso funcionando" : definitelyDown ? "🔴 Indisponibilidade confirmada" : "🟡 Dados insuficientes ou instabilidade"}
               </div>
               <p className="mt-2 text-sm text-muted-foreground">
-                {lastIncident
-                  ? `Último incidente: ${new Date(lastIncident.checked_at).toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })}`
-                  : "Nenhum incidente registrado no período monitorado."}
+                {staleStatus ? "Há verificações atrasadas, ou o monitoramento está pausado. O estado anterior não confirma disponibilidade atual." :
+                  lastIncident ? `Última verificação com problema: ${new Date(lastIncident.checked_at).toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })}`
+                  : "Nenhuma falha nas verificações exibidas."}
               </p>
             </Card>
 
@@ -94,7 +103,7 @@ function PublicStatus() {
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-center">
                 <div>
                   <div className="text-xs uppercase text-muted-foreground mb-1">Estado</div>
-                  <div className="text-lg font-semibold"><StatusLabel status={server.current_status} /></div>
+                  <div className="text-lg font-semibold">{staleStatus ? "Aguardando dados" : accessStatusLabel(server)}</div>
                 </div>
                 <div>
                   <div className="text-xs uppercase text-muted-foreground mb-1">Latência</div>
@@ -115,7 +124,7 @@ function PublicStatus() {
               <h3 className="text-sm font-medium mb-4">Últimos 60 checks</h3>
               <UptimeSparkline checks={[...checks].reverse()} />
               <p className="text-xs text-muted-foreground mt-3">
-                Última verificação: {server.last_checked_at ? new Date(server.last_checked_at).toLocaleString() : "—"}
+                Última verificação HTTP: {server.last_checked_at ? new Date(server.last_checked_at).toLocaleString("pt-BR") : "—"} · DNS: {server.last_dns_check_at ? new Date(server.last_dns_check_at).toLocaleString("pt-BR") : "—"}
               </p>
             </Card>
 
@@ -128,7 +137,7 @@ function PublicStatus() {
       </main>
       <footer className="max-w-3xl mx-auto px-6 py-8 text-center text-xs text-muted-foreground">
         <div className="flex flex-wrap items-center justify-center gap-4 mb-3">
-          <span className="inline-flex items-center gap-1.5"><Gauge className="h-3.5 w-3.5 text-primary" />Checagem a cada 30s</span>
+          <span className="inline-flex items-center gap-1.5"><Gauge className="h-3.5 w-3.5 text-primary" />Checagens periódicas</span>
           <span className="inline-flex items-center gap-1.5"><Clock className="h-3.5 w-3.5 text-primary" />Atualização automática</span>
           <span className="inline-flex items-center gap-1.5"><ShieldCheck className="h-3.5 w-3.5 text-success" />Monitorado 24/7</span>
         </div>
