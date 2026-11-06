@@ -41,7 +41,7 @@ export const Route = createFileRoute("/api/public/regions/targets")({
         const activeOwners = await getActiveOwnerIds((servers ?? []).map((s) => s.owner_id));
         const targets = (servers ?? [])
           .filter((s) => activeOwners.has(s.owner_id))
-          .map((s) => (agent
+          .map((s) => (agent && agent.region_code !== "cf-edge"
             ? {
                 server_id: s.id,
                 host: s.host,
