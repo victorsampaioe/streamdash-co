@@ -177,7 +177,7 @@ function ServerDetail() {
         <Link to="/app/servers" className="hover:text-foreground"><ArrowLeft className="h-4 w-4 inline mr-1" />Servidores</Link>
       </div>
 
-      <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
+      <div data-section="Infraestrutura" className="sm-section-hero flex flex-col sm:flex-row sm:items-start justify-between gap-4">
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2 sm:gap-3 mb-1 flex-wrap">
             <StatusDot status={server.current_status} />
