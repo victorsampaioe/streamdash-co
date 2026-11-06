@@ -67,7 +67,7 @@ function StreamPlayVersions() {
 
   return (
     <main className="space-y-6 p-4 md:p-8">
-      <header>
+      <header data-section="Versões do Aplicativo" className="sm-section-hero">
         <h1 className="text-2xl font-semibold">Stream Play — Versões</h1>
         <p className="text-muted-foreground text-sm">
           O hash SHA-256 é calculado pelo backend a partir do arquivo real. Somente URLs HTTPS são aceitas.
