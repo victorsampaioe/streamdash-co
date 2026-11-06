@@ -3,26 +3,35 @@
  * Cloudflare cron does NOT guarantee physical São Paulo placement.
  * Independent probe with ECDSA signature; no IPTV credentials in this runtime.
  *
- * Env: ENDPOINT_BASE, SIGNING_KEY_JWK, REGION_CODE.
- * SIGNING_KEY_JWK is a private secret on Cloudflare; Lovable stores only its public JWK.
+ * Env: ENDPOINT_BASE, REGION_CODE and one Cloudflare secret binding:
+ * REGION_WORKER_SECRET (same existing Lovable environment value) OR
+ * SIGNING_KEY_JWK (private ECDSA key; public JWK in Lovable app_settings).
  * Cron: every minute; limit 20 targets, 1 targets call, 1 report call.
  */
 const MAX_TARGETS = 20;
 const CONCURRENCY = 5;
 const TIMEOUT = 6500;
 
-async function sign(env, message) {
-  // Private signing key is a Cloudflare secret binding. The Lovable Cloud
-  // stores only the public JWK, so no cross-platform shared secret is copied.
-  const key = await crypto.subtle.importKey("jwk", JSON.parse(env.SIGNING_KEY_JWK),
-    { name: "ECDSA", namedCurve: "P-256" }, false, ["sign"]);
-  const signature = await crypto.subtle.sign({ name: "ECDSA", hash: "SHA-256" },
-    key, new TextEncoder().encode(message));
-  return [...new Uint8Array(signature)].map(b => b.toString(16).padStart(2, "0")).join("");
+async function signatureHeaders(env, message) {
+  // Support asymmetric key-pair signing and the existing shared regional
+  // secret. Neither secret is ever bundled into source code.
+  const bytes = new TextEncoder().encode(message);
+  if (env.SIGNING_KEY_JWK) {
+    const key = await crypto.subtle.importKey("jwk", JSON.parse(env.SIGNING_KEY_JWK),
+      { name: "ECDSA", namedCurve: "P-256" }, false, ["sign"]);
+    const signature = await crypto.subtle.sign({ name: "ECDSA", hash: "SHA-256" }, key, bytes);
+    return { "x-cf-signature": [...new Uint8Array(signature)]
+      .map(b => b.toString(16).padStart(2, "0")).join("") };
+  }
+  const key = await crypto.subtle.importKey("raw", new TextEncoder().encode(env.REGION_WORKER_SECRET),
+    { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
+  const signature = await crypto.subtle.sign("HMAC", key, bytes);
+  return { "x-signature": [...new Uint8Array(signature)]
+    .map(b => b.toString(16).padStart(2, "0")).join("") };
 }
 
 function config(env) {
-  if (!env.ENDPOINT_BASE || !env.SIGNING_KEY_JWK || !env.REGION_CODE)
+  if (!env.ENDPOINT_BASE || !(env.SIGNING_KEY_JWK || env.REGION_WORKER_SECRET) || !env.REGION_CODE)
     throw new Error("Worker configuration incomplete");
   if (new URL(env.ENDPOINT_BASE).protocol !== "https:") throw new Error("HTTPS required");
 }
@@ -36,7 +45,7 @@ async function jsonOrFail(res) {
 async function getTargets(env) {
   const message = "targets";
   return (await jsonOrFail(await fetch(`${env.ENDPOINT_BASE}/api/public/regions/targets`, {
-    headers: { "x-cf-signature": await sign(env, message) },
+    headers: await signatureHeaders(env, message),
     signal: AbortSignal.timeout(TIMEOUT),
   }))).targets ?? [];
 }
@@ -109,10 +118,10 @@ async function tick(env) {
   const targets = all.slice(slot * MAX_TARGETS, (slot + 1) * MAX_TARGETS);
   const reports = await pool(targets, env.REGION_CODE);
   const body = JSON.stringify({ reports });
-  const signature = await sign(env, body);
+  const authHeaders = await signatureHeaders(env, body);
   const reply = await jsonOrFail(await fetch(`${env.ENDPOINT_BASE}/api/public/regions/report`, {
     method: "POST",
-    headers: { "content-type": "application/json", "x-cf-signature": signature },
+    headers: { "content-type": "application/json", ...authHeaders },
     body, signal: AbortSignal.timeout(15000),
   }));
   return { ok: true, targets: all.length, checked: targets.length, reported: reply.inserted ?? 0, slot: slot + 1, totalSlots };
@@ -127,7 +136,7 @@ export default {
     const url = new URL(request.url);
     if (url.pathname === "/health") return Response.json({
       service: "Stream Monitor Cloudflare Edge", region: env.REGION_CODE ?? "unconfigured",
-      location: "Cloudflare edge (not guaranteed São Paulo)", configured: !!env.SIGNING_KEY_JWK,
+      location: "Cloudflare edge (not guaranteed São Paulo)", configured: !!(env.SIGNING_KEY_JWK || env.REGION_WORKER_SECRET),
     });
     // Only scheduled cron can initiate probes, never an anonymous HTTP caller.
     return new Response("Not found", { status: 404 });
