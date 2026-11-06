@@ -38,7 +38,7 @@ const ACTIVE_MESSAGE = [
   "🔵 <b>Acesse seu painel:</b> https://streammonitor.site/app",
   "",
   "Para deixar de receber comunicados, desative o canal Telegram nas configurações de alertas.",
-].join("\\n");
+].join("\n");
 
 const EXPIRED_MESSAGE = [
   "🌐 <b>STREAM MONITOR TEM NOVIDADE!</b>",
@@ -53,7 +53,7 @@ const EXPIRED_MESSAGE = [
   "",
   "Se você já renovou, desconsidere esta mensagem. Este é apenas um convite, sem obrigação de renovação.",
   "Para deixar de receber comunicados, desative o canal Telegram nas configurações de alertas.",
-].join("\\n");
+].join("\n");
 
 export async function sendCloudflareEdgeAnnouncement(): Promise<{
   campaign: string;
