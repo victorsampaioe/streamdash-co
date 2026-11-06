@@ -1,10 +1,10 @@
 /**
  * Stream Monitor: independent, low-cost Cloudflare edge probe.
  * Cloudflare cron does NOT guarantee physical São Paulo placement.
- * Dedicated agent identity + HMAC, no IPTV credentials in this runtime.
+ * Independent probe with ECDSA signature; no IPTV credentials in this runtime.
  *
  * Env: ENDPOINT_BASE, SIGNING_KEY_JWK, REGION_CODE.
- * SIGNING_KEY_JWK must match the server-side Lovable secret.
+ * SIGNING_KEY_JWK is a private secret on Cloudflare; Lovable stores only its public JWK.
  * Cron: every minute; limit 20 targets, 1 targets call, 1 report call.
  */
 const MAX_TARGETS = 20;
