@@ -6,7 +6,7 @@ import { supabaseAdmin } from "@/integrations/supabase/client.server";
  * Per-recipient idempotency lives in processTelegramAlert.
  */
 export async function retryConfirmedDnsAlerts(limit = 5): Promise<{
-  attempted: number; failed: number; skipped: number; found: number;
+  attempted: number; failed: number; skipped: number; found: number; failureReasons?: string[];
 }> {
   const { data: incidents, error } = await supabaseAdmin.from("incidents")
     .select("id, server_id, last_check_at")
@@ -50,6 +50,7 @@ export async function retryConfirmedDnsAlerts(limit = 5): Promise<{
   );
   const { processTelegramAlert } = await import("./telegram-alerts.server");
   let attempted = 0, failed = 0;
+  const failureReasons = new Set<string>();
   for (const i of eligible.slice(0, Math.max(1, Math.min(limit, 8)))) {
     attempted++;
     try {
@@ -60,8 +61,10 @@ export async function retryConfirmedDnsAlerts(limit = 5): Promise<{
       });
     } catch (err) {
       failed++;
-      console.error("[dns-alert-retry] Falha ao entregar", i.server_id, err instanceof Error ? err.name : "unknown");
+      const reason = err instanceof Error ? err.message.slice(0, 170) : "unknown";
+      failureReasons.add(reason);
+      console.error("[dns-alert-retry] Falha ao entregar", i.server_id, reason);
     }
   }
-  return { attempted, failed, skipped: incidents.length - eligible.length, found: incidents.length };
+  return { attempted, failed, skipped: incidents.length - eligible.length, found: incidents.length, failureReasons: [...failureReasons].slice(0, 3) };
 }
