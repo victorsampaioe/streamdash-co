@@ -33,3 +33,8 @@ jobs:
           VITE_SUPABASE_PUBLISHABLE_KEY: "sb_publishable_ci_placeholder"
           VITE_SUPABASE_PROJECT_ID: "ci"
         run: bun run build
+      - name: Verify published blog article routes
+        run: |
+          grep -Fq "BlogComoEvitarQuedaIptvRouteImport" src/routeTree.gen.ts
+          grep -Fq "BlogComoSaberSeServidorIptvCaiuRouteImport" src/routeTree.gen.ts
+          grep -Fq "BlogDnsIptvNaoResolveRouteImport" src/routeTree.gen.ts
