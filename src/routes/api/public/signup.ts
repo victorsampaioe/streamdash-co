@@ -1,28 +1,22 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { authRequestError, privateAuthResponse, readSmallAuthJson } from "@/lib/public-auth-guard.server";
 
-/**
- * Rota exclusiva de criação de conta.
- * Todas as proteções (rate limit, Turnstile, validações, idempotência) ficam aqui,
- * portanto chamadas diretas de bots recebem o mesmo tratamento do formulário.
- */
 export const Route = createFileRoute("/api/public/signup")({
   server: {
     handlers: {
       POST: async ({ request }) => {
-        let payload: Record<string, unknown> = {};
-        try {
-          payload = (await request.json()) as Record<string, unknown>;
-        } catch {
-          return Response.json({ error: "Confira os dados preenchidos e tente novamente." }, { status: 400 });
-        }
+        const guard = authRequestError(request);
+        if (guard) return guard;
+        const payload = await readSmallAuthJson(request);
+        if (!payload) return privateAuthResponse({ error: "Confira os dados preenchidos e tente novamente." }, 400);
 
-        const { handleSignup } = await import("@/lib/signup-flow.server");
         try {
+          const { handleSignup } = await import("@/lib/signup-flow.server");
           const { status, body } = await handleSignup(payload, request.headers);
-          return Response.json(body, { status });
-        } catch (e) {
-          console.log("[SIGNUP SECURITY] unexpected error", (e as Error).message);
-          return Response.json({ error: "Não conseguimos criar sua conta agora. Tente novamente em alguns segundos." }, { status: 500 });
+          return privateAuthResponse(body, status);
+        } catch (error) {
+          console.error("[signup] falha inesperada", error instanceof Error ? error.name : "unknown");
+          return privateAuthResponse({ error: "Não foi possível concluir o cadastro agora. Tente novamente." }, 503);
         }
       },
     },
