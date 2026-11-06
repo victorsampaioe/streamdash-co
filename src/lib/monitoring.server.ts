@@ -296,11 +296,12 @@ async function performCheck(server: ServerRow) {
         ? `DNS com falha, porém o servidor responde (${verdict.via}) — problema é de DNS`
         : first.error;
       serviceNote = `Serviço confirmado via ${verdict.via}`;
-    } else if (verdict && !isServerFault(verdict.kind)) {
-      // Credencial inválida / usuário expirado / 403 não provam servidor offline.
+    } else if (dnsBroken || (verdict && !isServerFault(verdict.kind))) {
+      // DNS isolado, credencial inválida ou resposta inconclusiva
+      // não comprovam interrupção do serviço IPTV.
       first.status = "degraded";
-      first.error = `Falha não conclusiva (${verdict.kind}) — servidor não declarado offline`;
-      serviceNote = `Falha classificada como ${verdict.kind}`;
+      first.error = `Falha não conclusiva (${dnsBroken ? "dns_not_resolved" : verdict?.kind ?? "unknown"}) — servidor não declarado offline`;
+      serviceNote = "Verificação do serviço inconclusiva";
     }
   }
 
@@ -354,7 +355,9 @@ async function performCheck(server: ServerRow) {
         consensus.failedRegions.length,
         activeRegions,
       );
-      if (ratio >= DOWN_CONFIRM_RATIO && confirmedByRules) {
+      // Uma região saudável recente contradiz a queda geral.
+      // Nesse cenário, marcar instabilidade em vez de OFFLINE.
+      if (ratio >= DOWN_CONFIRM_RATIO && confirmedByRules && consensus.okRegions.length === 0) {
         downConfirmed = true;
         displayStatus = "down";
         confirmNote =
