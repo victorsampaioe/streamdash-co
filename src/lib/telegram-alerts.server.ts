@@ -28,17 +28,25 @@ export async function processTelegramAlert(data: AlertData) {
   if (sErr || !server) throw new Error("Servidor não encontrado para alerta");
 
   const message = formatAlertMessage(server, data);
-  const logEvent = `tg_${data.kind ?? "server"}_${event.toLowerCase()}`;
+  // UNSTABLE não possui incidente offline (UUID). Deduplique por servidor,
+  // destinatário e janela de 2h usando o log, sem inventar incident_id.
+  const unstableWindow = event === "UNSTABLE" ? `_${Math.floor(Date.now() / (2 * 60 * 60_000))}` : "";
+  const logEvent = `tg_${data.kind ?? "server"}_${event.toLowerCase()}${unstableWindow}`;
+  const trackDelivery = !!incidentId || event === "UNSTABLE";
 
   // A entrega é idempotente POR CANAL, não por incidente inteiro.
   // Se um canal recebeu e outro falhou, somente o segundo é tentado novamente.
   const delivered = new Set<string>();
   let adminDelivered = false;
   let customerDelivered = false;
-  if (incidentId) {
-    const { data: previous, error } = await supabaseAdmin.from("notifications_log")
+  if (trackDelivery) {
+    let previousQuery = supabaseAdmin.from("notifications_log")
       .select("channel_id")
-      .eq("incident_id", incidentId).eq("event", logEvent).eq("ok", true);
+      .eq("event", logEvent).eq("ok", true);
+    previousQuery = incidentId
+      ? previousQuery.eq("incident_id", incidentId)
+      : previousQuery.eq("server_id", serverId).is("incident_id", null);
+    const { data: previous, error } = await previousQuery;
     if (error) throw new Error(`Falha ao consultar histórico de alertas: ${error.message}`);
     for (const item of previous ?? []) {
       if (item.channel_id) { delivered.add(item.channel_id); customerDelivered = true; }
@@ -63,9 +71,9 @@ export async function processTelegramAlert(data: AlertData) {
       response = error instanceof Error ? error.message.slice(0, 120) : "telegram_failed";
       console.error("[TelegramAlert] Entrega pendente para nova tentativa", serverId, response);
     }
-    if (incidentId) {
+    if (trackDelivery) {
       const { error: logError } = await supabaseAdmin.from("notifications_log")
-        .insert({ incident_id: incidentId, server_id: serverId, channel_id: channel.id,
+        .insert({ incident_id: incidentId ?? null, server_id: serverId, channel_id: channel.id,
           event: logEvent, ok, response });
       if (logError) throw new Error(`Falha ao registrar entrega Telegram: ${logError.message}`);
     }
@@ -79,9 +87,9 @@ export async function processTelegramAlert(data: AlertData) {
 
   if (!data.suppressAdminCopy && !adminDelivered) {
     const ok = await notifyAdminAlert(server, data, message);
-    if (incidentId) {
+    if (trackDelivery) {
       const { error: logError } = await supabaseAdmin.from("notifications_log")
-        .insert({ incident_id: incidentId, server_id: serverId, channel_id: null,
+        .insert({ incident_id: incidentId ?? null, server_id: serverId, channel_id: null,
           event: logEvent, ok, response: ok ? "admin_ok" : "admin_failed" });
       if (logError) console.error("[TelegramAlert] Falha no log de entrega admin", logError);
     }
