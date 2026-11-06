@@ -103,7 +103,8 @@ function useNavItems() {
     },
   });
 
-  const isMaster = userRoles?.some(r => r === 'admin') || subData?.profile?.email === 'victorsampaio133@gmail.com';
+  // Admin é uma permissão concedida no banco, nunca uma comparação de e-mail no frontend.
+  const isMaster = !!userRoles?.some(r => r === 'admin');
   
   const navIsAdmin = isMaster;
   const isResellerRole = userRoles?.includes('reseller') || userRoles?.includes('sub_reseller');
