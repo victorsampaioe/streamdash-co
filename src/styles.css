@@ -468,3 +468,108 @@ aside a[aria-current="page"],aside a[data-active="true"],[data-sidebar="menu-but
     transition-duration: 0.01ms !important;
   }
 }
+
+/* COMMAND CENTER V2 — consistent page-level design across authenticated sections. */
+.sm-section-hero {
+  position: relative;
+  isolation: isolate;
+  min-width: 0;
+  overflow: hidden;
+  padding: clamp(1.25rem, 3vw, 2rem) !important;
+  border: 1px solid rgba(79,144,255,.22) !important;
+  border-radius: 1.4rem !important;
+  background: radial-gradient(ellipse 55% 150% at 100% 0%,rgba(42,112,244,.19),transparent 80%),linear-gradient(135deg,#0b1c38 0%,#091426 75%) !important;
+  box-shadow: 0 24px 65px -48px rgba(31,105,255,.75), inset 0 1px rgba(255,255,255,.045);
+  color: #f2f6ff;
+}
+.sm-section-hero::before {
+  content: "STREAM MONITOR  /  " attr(data-section);
+  display: block;
+  flex-basis: 100%;
+  width: 100%;
+  margin-bottom: .9rem;
+  font-size: .625rem;
+  line-height: 1.4;
+  font-weight: 800;
+  letter-spacing: .17em;
+  text-transform: uppercase;
+  color: #83b4ff;
+}
+.sm-section-hero::after {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  pointer-events: none;
+  width: 12rem;
+  height: 12rem;
+  top: -9rem;
+  right: -4rem;
+  border: 1px solid rgba(111,166,255,.14);
+  border-radius: 50%;
+}
+.sm-section-hero :is(h1,h2) {
+  color: #f7faff !important;
+  font-weight: 800 !important;
+  letter-spacing: -.045em !important;
+  line-height: 1.15;
+  background: none !important;
+  -webkit-text-fill-color: currentColor;
+}
+.sm-section-hero p:not(.text-primary) { color: #abbcd6; }
+.sm-section-hero :is(button,[role="button"]) { border-radius: .8rem; }
+.sm-section-hero :is(input,[role="combobox"]) { background-color: rgba(6,16,33,.75); color: #f5f8ff; border-color: rgba(112,163,255,.25); }
+.sm-section-hero :is(input,[role="combobox"])::placeholder { color: #9daec6; }
+.sm-section-hero a { text-decoration-color: rgba(114,161,255,.45); }
+.sm-section-hero .text-primary { color: #6eabff; }
+.sm-section-hero .text-muted-foreground { color: #afbed5; }
+.light .sm-section-hero { color: #f2f6ff; }
+
+/* All operational cards, filter bars, and tables now use the same surface language. */
+#main-content .sm-page { min-width: 0; }
+#main-content :is(.sm-panel,.sm-workspace-card) {
+  border-color: color-mix(in oklab,var(--border) 82%,var(--primary) 18%);
+  background-image: linear-gradient(145deg,color-mix(in oklab,var(--card) 96%,var(--primary)),var(--card) 65%);
+  border-radius: 1rem;
+}
+#main-content :is(.sm-panel,.sm-workspace-card):hover { border-color: color-mix(in oklab,var(--border) 62%,var(--primary)); }
+#main-content :is(.sm-admin-control-tabs,.sm-reseller-control-tabs) [role="tablist"] {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-start;
+  width: 100%;
+  max-width: 100%;
+  height: auto;
+  padding: .5rem;
+  gap: .4rem;
+  background: color-mix(in oklab,var(--card) 92%,var(--primary));
+  border: 1px solid var(--border);
+  border-radius: 1.05rem;
+}
+#main-content :is(.sm-admin-control-tabs,.sm-reseller-control-tabs) [role="tab"] {
+  flex: 0 0 auto;
+  min-height: 2.5rem;
+  border-radius: .72rem;
+  padding: .55rem .85rem;
+  font-size: .775rem;
+}
+#main-content :is(.sm-admin-control-tabs,.sm-reseller-control-tabs) [role="tab"][data-state="active"] {
+  background: linear-gradient(125deg,#2875ec,#145ad0);
+  color: white;
+  box-shadow: 0 6px 15px -10px rgba(37,99,235,.9);
+}
+#main-content :is(.sm-admin-control-tabs,.sm-reseller-control-tabs) [role="tabpanel"] { min-width: 0; }
+#main-content [role="tablist"]:not(.ignore-command-style) { max-width: 100%; }
+#main-content :is(input,select,textarea) { max-width: 100%; }
+#main-content .overflow-x-auto { max-width: 100%; }
+#main-content .sm-page-radar { padding: 0; }
+@media(max-width:640px) {
+  .sm-section-hero { padding: 1.2rem !important; border-radius: 1.05rem !important; }
+  .sm-section-hero::before { font-size: .57rem; letter-spacing: .12em; }
+  .sm-section-hero :is(h1,h2) { font-size: clamp(1.45rem,6vw,2.1rem) !important; }
+  #main-content :is(.sm-admin-control-tabs,.sm-reseller-control-tabs) [role="tablist"] { flex-wrap: nowrap; overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: thin; }
+  #main-content :is(.sm-admin-control-tabs,.sm-reseller-control-tabs) [role="tab"] { white-space: nowrap; }
+}
+@media(prefers-reduced-motion:reduce) {
+  .sm-section-hero *, .sm-section-hero::before, .sm-section-hero::after { animation: none !important; transition: none !important; }
+}
