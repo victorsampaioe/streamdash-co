@@ -1,4 +1,4 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, Outlet, useRouterState } from "@tanstack/react-router";
 import { BookOpen, Clock, Tag } from "lucide-react";
 
 export const Route = createFileRoute("/blog")({
@@ -13,7 +13,7 @@ export const Route = createFileRoute("/blog")({
     ],
     links: [{ rel: "canonical", href: "https://streammonitor.site/blog" }],
   }),
-  component: BlogPage,
+  component: BlogRoute,
 });
 
 const posts = [
@@ -36,6 +36,13 @@ const posts = [
     category: "DNS",
   },
 ];
+
+// As rotas blog.* são filhas da rota /blog. Sem <Outlet/> o TanStack
+// mantinha a lista do blog na tela, mesmo ao abrir o URL de um artigo.
+function BlogRoute() {
+  const pathname = useRouterState({ select: (state) => state.location.pathname });
+  return pathname.replace(/\/+$/, "") === "/blog" ? <BlogPage /> : <Outlet />;
+}
 
 function BlogPage() {
   return (
