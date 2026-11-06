@@ -17,7 +17,7 @@ export const Route = createFileRoute("/_authenticated/app/central")({
 });
 type ServerItem = {
  id: string; name: string; host: string; current_status: string | null;
- dns_status: string | null; last_checked_at: string | null;
+ dns_status: string | null; dns_enabled: boolean | null; last_checked_at: string | null;
  last_dns_check_at: string | null; last_latency_ms: number | null;
  health_score: number | null; dns_health_score: number | null;
  monitoring_paused: boolean | null; next_check_at: string | null;
@@ -42,7 +42,7 @@ function OperationsCenter() {
       if (!user.user) throw new Error("Faça login para continuar.");
       const [{ data: servers, error: sErr }, { data: channels, error: aErr }] = await Promise.all([
         supabase.from("servers")
-          .select("id,name,host,current_status,dns_status,last_checked_at,last_dns_check_at,last_latency_ms,health_score,dns_health_score,monitoring_paused,next_check_at")
+          .select("id,name,host,current_status,dns_status,dns_enabled,last_checked_at,last_dns_check_at,last_latency_ms,health_score,dns_health_score,monitoring_paused,next_check_at")
           .eq("owner_id", user.user.id).order("created_at", { ascending: false }).limit(200),
         supabase.from("alert_channels").select("id").eq("owner_id", user.user.id).eq("kind", "telegram").eq("enabled", true).limit(1),
       ]);
