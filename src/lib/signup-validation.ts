@@ -98,7 +98,10 @@ export function validateReferralCode(raw: string | null | undefined): Validation
 
 export function validatePassword(raw: string | null | undefined): ValidationResult<string> {
   const value = String(raw ?? "");
-  if (value.length < 6) return { ok: false, error: "Sua senha precisa ter pelo menos 6 caracteres." };
+  if (value.length < 8) return { ok: false, error: "Sua senha precisa ter pelo menos 8 caracteres." };
   if (value.length > 128) return { ok: false, error: "Sua senha é muito longa." };
+  if (new Set(["12345678", "123456789", "password", "password123", "senha123", "qwerty123", "admin1234"]).has(value.trim().toLowerCase())) {
+    return { ok: false, error: "Escolha uma senha menos previsível." };
+  }
   return { ok: true, value };
 }
