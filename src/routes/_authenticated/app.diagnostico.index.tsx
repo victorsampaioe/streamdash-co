@@ -117,7 +117,7 @@ function ContentDiagnosticPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col gap-2">
+      <div data-section="Análise de Conteúdo" className="sm-section-hero flex flex-col gap-2">
         <div className="flex items-center gap-2 text-xs uppercase tracking-wider text-primary font-semibold">
           <Activity className="h-4 w-4" /> Diagnóstico de Conteúdo
         </div>
