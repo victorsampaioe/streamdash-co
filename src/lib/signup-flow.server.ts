@@ -124,14 +124,23 @@ export async function handleSignup(input: SignupInput, headers: Headers): Promis
   }
 
   // 6. Unicidade de e-mail e telefone
-  const { data: dupEmail } = await supabaseAdmin.from("profiles").select("id").eq("email", email).maybeSingle();
+  // Consultas independentes em paralelo para não segurar o formulário.
+  const [emailLookup, usernameLookup] = await Promise.all([
+    supabaseAdmin.from("profiles").select("id").eq("email", email).maybeSingle(),
+    supabaseAdmin.from("profiles").select("id").eq("username", username).maybeSingle(),
+  ]);
+  if (emailLookup.error || usernameLookup.error) {
+    await sec.closeAttempt(attemptId, "rejected", "signup_failed", null, "internal_failure", "availability query failed");
+    return { status: 503, body: { error: "Não foi possível conferir seu cadastro. Tente novamente." } };
+  }
+  const dupEmail = emailLookup.data;
+  const dupUsername = usernameLookup.data;
   if (dupEmail) {
     sec.log("duplicate email", { ip: ipMasked });
     await sec.closeAttempt(attemptId, "rejected", "duplicate_email", null, "existing_account", "normalized email already exists");
     return { status: 409, body: { error: "Este e-mail já possui uma conta. Clique em Entrar.", code: "email_exists" } };
   }
 
-  const { data: dupUsername } = await supabaseAdmin.from("profiles").select("id").eq("username", username).maybeSingle();
   if (dupUsername) {
     await sec.closeAttempt(attemptId, "rejected", "duplicate_username", null, "existing_account", "normalized username already exists");
     return { status: 409, body: { error: "Este usuário já está cadastrado.", code: "username_exists" } };
@@ -160,12 +169,17 @@ export async function handleSignup(input: SignupInput, headers: Headers): Promis
     auth: { persistSession: false, autoRefreshToken: false },
   });
 
-  const redirectTo = str(input.redirectTo, 300);
+  // Não permitir redirectTo fornecido pelo solicitante: evita enviar links
+  // de confirmação para domínios de terceiros.
+  const redirectTo = "https://streammonitor.site/app";
+  const captchaToken = str(input.turnstileToken, 4096);
+  const captchaBySupabase = process.env.SIGNUP_TURNSTILE_PROVIDER === "supabase";
   const { data: signUpData, error: signUpError } = await publicClient.auth.signUp({
     email,
     password: str(input.password, 200),
     options: {
-      emailRedirectTo: redirectTo && /^https?:\/\//.test(redirectTo) ? redirectTo : undefined,
+      emailRedirectTo: redirectTo,
+      ...(captchaBySupabase ? { captchaToken } : {}),
       data: {
         full_name: displayName,
         username,
