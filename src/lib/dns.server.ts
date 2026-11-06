@@ -2,6 +2,7 @@
 // Multi-resolver resolution, record inventory, propagation, Cloudflare proxy
 // detection, DNSSEC, RDAP/WHOIS expiry, health score, diagnosis and alerts.
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
+import { classifyDnsAvailability } from "./dns-state";
 
 const DNS_TIMEOUT_MS = 5000;
 
@@ -407,6 +408,7 @@ async function cachedRdap(host: string) {
 
 type PrevSnapshot = {
   primary_ip: string | null;
+  ipv4?: string[] | null;
   asn: string | null;
   ttl_seconds: number | null;
   cloudflare_proxy: boolean | null;
@@ -420,7 +422,7 @@ type PrevSnapshot = {
   registrar?: string | null;
 };
 
-export async function runDnsCheck(serverId: string, opts: { quick?: boolean } = {}): Promise<{ ok: boolean; score: number; status: string; alerts: number }> {
+export async function runDnsCheck(serverId: string, opts: { quick?: boolean } = {}): Promise<{ ok: boolean; score: number; status: string; dnsStatus: string; severeFailure: boolean; alerts: number }> {
   const { data: srv } = await supabaseAdmin
     .from("servers").select("id, host, owner_id").eq("id", serverId).maybeSingle();
   if (!srv) throw new Error("Servidor não encontrado");
@@ -443,7 +445,7 @@ export async function runDnsCheck(serverId: string, opts: { quick?: boolean } = 
 
   const { data: prev } = await supabaseAdmin
     .from("dns_snapshots")
-    .select("primary_ip, asn, ttl_seconds, cloudflare_proxy, status, checked_at, country, city, org, datacenter, domain_expires_at, registrar")
+    .select("primary_ip, ipv4, asn, ttl_seconds, cloudflare_proxy, status, checked_at, country, city, org, datacenter, domain_expires_at, registrar")
     .eq("server_id", serverId)
     .order("checked_at", { ascending: false })
     .limit(1)
@@ -464,7 +466,15 @@ export async function runDnsCheck(serverId: string, opts: { quick?: boolean } = 
   const alerts: Array<{ kind: string; severity: string; title: string; detail: string | null }> = [];
 
   if (prev) {
-    if (prev.primary_ip && report.primary_ip && prev.primary_ip !== report.primary_ip) {
+    // Round-robin/CDN troca o IP primário sem perder disponibilidade.
+    // Só registra alteração real quando o conjunto de IPs não se sobrepõe,
+    // ignorando trocas internas do próprio pool Cloudflare.
+    const prevIps = Array.isArray(prev.ipv4) && prev.ipv4.length ? prev.ipv4 : [prev.primary_ip].filter(Boolean) as string[];
+    const newIps = report.ipv4;
+    const cloudflarePool = prev.cloudflare_proxy && report.cloudflare_proxy;
+    const addressPoolChanged = prevIps.length > 0 && newIps.length > 0
+      && !prevIps.some(ip => newIps.includes(ip)) && !cloudflarePool;
+    if (addressPoolChanged && prev.primary_ip && report.primary_ip) {
       const { data: lastChange } = await supabaseAdmin
         .from("dns_ip_history")
         .select("changed_at")
@@ -484,8 +494,8 @@ export async function runDnsCheck(serverId: string, opts: { quick?: boolean } = 
       });
       alerts.push({
         kind: "a_record_changed",
-        severity: "critical",
-        title: "🚨 O registro A mudou.",
+        severity: "warning",
+        title: "⚠️ O conjunto de IPs do domínio mudou.",
         detail: `${prev.primary_ip} → ${report.primary_ip}`,
       });
       if (prev.asn && report.asn && prev.asn !== report.asn) {
@@ -495,12 +505,18 @@ export async function runDnsCheck(serverId: string, opts: { quick?: boolean } = 
     if (prev.cloudflare_proxy && !report.cloudflare_proxy) {
       alerts.push({ kind: "cf_proxy_off", severity: "warning", title: "⚠ O Proxy Cloudflare foi desativado.", detail: "O domínio passou a expor o IP de origem." });
     }
-    if (prev.ttl_seconds != null && report.ttl_seconds != null && prev.ttl_seconds !== report.ttl_seconds) {
-      alerts.push({ kind: "ttl_changed", severity: "info", title: "⚠ O TTL foi alterado.", detail: `${prev.ttl_seconds}s → ${report.ttl_seconds}s` });
+    if (prev.ttl_seconds != null && report.ttl_seconds != null) {
+      // O TTL naturalmente diminui com o cache: não alertar a cada segundo.
+      const ttlBand = (ttl: number) => ttl < 30 ? "very_low" : ttl > 86400 ? "very_high" : "normal";
+      if (ttlBand(prev.ttl_seconds) !== ttlBand(report.ttl_seconds)) {
+        alerts.push({ kind: "ttl_changed", severity: "info",
+          title: "⚠️ O TTL mudou de faixa.",
+          detail: `${prev.ttl_seconds}s → ${report.ttl_seconds}s` });
+      }
     }
   }
 
-  if (report.propagation_pct < 100 && report.propagation_pct > 0) {
+  if (prev && prev.status !== report.status && report.propagation_pct < 100 && report.propagation_pct > 0) {
     alerts.push({ kind: "propagating", severity: "info", title: "⚠ O domínio está propagando.", detail: `Propagação em ${report.propagation_pct}%.` });
   }
 
@@ -549,11 +565,18 @@ export async function runDnsCheck(serverId: string, opts: { quick?: boolean } = 
       dns_last_failure_at: string | null;
     }>();
 
-  const resolved = Boolean(report.primary_ip);
-  const failures = resolved ? 0 : (dnsState?.dns_failure_count ?? 0) + 1;
-  let dnsStatus: "online" | "unstable" | "offline";
-  if (resolved) dnsStatus = report.status === "ok" ? "online" : "unstable";
-  else dnsStatus = failures >= 2 ? "offline" : "unstable";
+  // Não confiar em um único resolvedor positivo quando quatro falham.
+  // Duas verificações severas consecutivas confirmam DNS offline; o status
+  // HTTP/IPTV continua independente para não afirmar que a VPS morreu.
+  const dnsDecision = classifyDnsAvailability({
+    successCount: report.resolved_ok,
+    resolverCount: report.resolver_count,
+    reportStatus: report.status,
+    previousFailureCount: dnsState?.dns_failure_count ?? 0,
+    previousStatus: dnsState?.dns_status,
+  });
+  const { status: dnsStatus, failureCount: failures, severeFailure } = dnsDecision;
+  const resolved = report.resolved_ok >= 2;
 
   const prevStatus = dnsState?.dns_status ?? "unknown";
   const changed = prevStatus !== dnsStatus;
@@ -563,14 +586,14 @@ export async function runDnsCheck(serverId: string, opts: { quick?: boolean } = 
   if (changed && dnsStatus === "offline") {
     alerts.push({ kind: "dns_down", severity: "critical",
       title: "🚨 DNS offline confirmado",
-      detail: report.diagnosis[0] ?? "Falha consecutiva de resolução em múltiplos resolvedores." });
+      detail: dnsDecision.reason });
   } else if (changed && prevStatus === "offline" && dnsStatus !== "offline") {
     alerts.push({ kind: "dns_recovered", severity: "info",
       title: "✅ DNS voltou a responder", detail: "Resolução confirmada novamente." });
   } else if (changed && dnsStatus === "unstable") {
     alerts.push({ kind: "dns_unstable", severity: "warning",
       title: "⚠️ DNS instável — nova verificação necessária",
-      detail: report.diagnosis[0] ?? "Uma ou mais fontes não resolveram o domínio." });
+      detail: dnsDecision.reason });
   }
   const { error: stateError } = await supabaseAdmin
     .from("servers")
@@ -581,7 +604,7 @@ export async function runDnsCheck(serverId: string, opts: { quick?: boolean } = 
       dns_failure_count: failures,
       dns_last_success_at: resolved ? report.checked_at : (dnsState?.dns_last_success_at ?? null),
       dns_last_failure_at: resolved ? (dnsState?.dns_last_failure_at ?? null) : report.checked_at,
-      dns_regions: { types: Object.keys(report.records ?? {}) },
+      dns_regions: { types: Object.keys(report.records ?? {}), resolved_ok: report.resolved_ok, total: report.resolver_count, reason: dnsDecision.reason },
       ...(changed ? { dns_state_changed_at: report.checked_at } : {}),
     } as any)
     .eq("id", serverId);
@@ -602,12 +625,12 @@ export async function runDnsCheck(serverId: string, opts: { quick?: boolean } = 
       const { processTelegramAlert } = await import("./telegram-alerts.server");
       if (dnsStatus === "offline") {
         const gate = await openOfflineIncident(serverId,
-          "DNS não resolve após duas verificações consecutivas", undefined, "dns");
+          dnsDecision.reason, undefined, "dns");
         if (gate.incidentId && (gate.notify || gate.reason === "already_open")) {
           await processTelegramAlert({
             serverId, incidentId: gate.incidentId, kind: "dns",
             event: "OFFLINE",
-            reason: "O domínio não resolveu em múltiplos provedores DNS após confirmação.",
+            reason: dnsDecision.reason,
             regions: report.resolvers.filter((r) => !r.ok).map((r) => r.name),
           });
         }
@@ -626,7 +649,7 @@ export async function runDnsCheck(serverId: string, opts: { quick?: boolean } = 
     }
   }
 
-  return { ok: true, score: report.health_score, status: report.status, alerts: alerts.length };
+  return { ok: true, score: report.health_score, status: report.status, dnsStatus, severeFailure, alerts: alerts.length };
 }
 
 /**
@@ -672,13 +695,21 @@ export async function runDueDnsChecks(limit = 40): Promise<{ checked: number; er
     if (page.length < pageSize) break;
   }
 
-  const results = await runPool(due, (server) => {
-    // A primeira checagem prioriza a disponibilidade. A rotina seguinte
-    // complementa a ficha do DNS com WHOIS e geolocalização.
+  const results = await runPool(due, async (server, index) => {
+    // Priorize resolução em TODAS as sondas. Só duas por rodada coletam
+    // metadados lentos (WHOIS/GeoIP), evitando filas extensas e timeouts.
     const firstCheck = eligibleById.get(server.id) === true;
-    return runDnsCheck(server.id, { quick: firstCheck });
+    const fullEnrichment = !firstCheck && (index === 0 || index === 20);
+    const first = await runDnsCheck(server.id, { quick: !fullEnrichment });
+    if (first.severeFailure && first.dnsStatus !== "offline") {
+      // Confirmação curta e independente, em vez de esperar outra volta
+      // de toda a fila. Um erro isolado permanece como instabilidade.
+      await new Promise((resolve) => setTimeout(resolve, 2_000));
+      return runDnsCheck(server.id, { quick: true });
+    }
+    return first;
   }, {
-    concurrency: 5, jitterMs: 100,
+    concurrency: 6, jitterMs: 80,
   });
   let checked = 0;
   let errors = 0;
