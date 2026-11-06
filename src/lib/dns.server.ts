@@ -587,9 +587,9 @@ export async function runDnsCheck(serverId: string, opts: { quick?: boolean } = 
     alerts.push({ kind: "dns_down", severity: "critical",
       title: "🚨 DNS offline confirmado",
       detail: dnsDecision.reason });
-  } else if (changed && prevStatus === "offline" && dnsStatus !== "offline") {
+  } else if (changed && dnsStatus === "online" && prevStatus !== "online") {
     alerts.push({ kind: "dns_recovered", severity: "info",
-      title: "✅ DNS voltou a responder", detail: "Resolução confirmada novamente." });
+      title: "✅ DNS voltou a responder", detail: "Resolução confirmada em todas as fontes." });
   } else if (changed && dnsStatus === "unstable") {
     alerts.push({ kind: "dns_unstable", severity: "warning",
       title: "⚠️ DNS instável — nova verificação necessária",
@@ -619,7 +619,11 @@ export async function runDnsCheck(serverId: string, opts: { quick?: boolean } = 
 
   // DNS é independente do HTTP/IPTV. Não declare o SERVIDOR offline
   // por falha isolada de resolução; notifique especificamente o DNS.
-  if (dnsStatus === "offline" || (changed && prevStatus === "offline")) {
+  // A recuperação só é confirmada quando a resolução está ONLINE.
+  // OFFLINE -> UNSTABLE não é recuperação: deixe o incidente aberto.
+  // UNSTABLE -> ONLINE também fecha incidentes DNS antigos que continuam
+  // abertos após uma recuperação gradual.
+  if (dnsStatus === "offline" || (changed && dnsStatus === "online")) {
     try {
       const { openOfflineIncident, closeOfflineIncident } = await import("./alert-gate.server");
       const { processTelegramAlert } = await import("./telegram-alerts.server");
