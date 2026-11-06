@@ -214,3 +214,185 @@ body { overscroll-behavior-x: none; }
 .sm-admin-tabs [role="tablist"] { height: auto; display: flex; flex-wrap: wrap; gap: .35rem; padding: .45rem; border: 1px solid var(--border); background: var(--card); border-radius: 1rem; }
 .sm-admin-tabs [role="tab"] { flex: 0 0 auto; border-radius: .6rem; padding: .7rem .9rem; }
 .sm-admin-tabs [role="tab"][data-state="active"] { background: var(--primary); color: var(--primary-foreground); }
+
+
+/* ───────────────────────────────────────────────────────────────
+   STREAM MONITOR | COMMAND CENTER 2026
+   Reusable premium design language, intentionally no layout transforms.
+   ─────────────────────────────────────────────────────────────── */
+:root {
+  --radius: 1rem;
+  --sm-electric: #3687ff;
+  --sm-cyan: #5ac8ff;
+  --sm-ink: #07101f;
+}
+.dark {
+  --background: oklch(0.115 0.021 258);
+  --card: oklch(0.17 0.025 258);
+  --popover: oklch(0.19 0.025 258);
+  --sidebar: oklch(0.105 0.023 258);
+  --border: oklch(0.29 0.026 255);
+  --muted: oklch(0.225 0.027 255);
+  --muted-foreground: oklch(0.74 0.02 255);
+  --accent: oklch(0.275 0.085 257);
+  --primary: oklch(0.68 0.19 258);
+}
+.light {
+  --background: oklch(0.974 0.008 255);
+  --card: oklch(1 0 0);
+  --sidebar: oklch(0.986 0.005 255);
+  --border: oklch(0.894 0.015 255);
+  --accent: oklch(0.94 0.028 255);
+  --muted-foreground: oklch(0.47 0.018 255);
+}
+
+html { scroll-behavior: auto; }
+body { min-width: 320px; }
+.dark body {
+  background-image:
+    radial-gradient(ellipse 70% 38% at 95% -5%, rgba(37,99,235,.14), transparent 72%),
+    radial-gradient(ellipse 50% 32% at 4% 20%, rgba(10,80,172,.055), transparent 75%);
+  background-attachment: scroll;
+}
+::selection { background: rgba(59,130,246,.3); }
+:where(a,button,input,select,textarea,[role="button"]):focus-visible {
+  outline: 2px solid var(--sm-electric);
+  outline-offset: 3px;
+}
+
+/* Dashboard and operations pages: polished yet deliberately stable while scrolling. */
+#main-content {
+  isolation: isolate;
+  min-width: 0;
+}
+#main-content :is(h1,h2,h3) {
+  text-wrap: balance;
+  letter-spacing: -.035em;
+}
+#main-content h1 {
+  font-weight: 800;
+  line-height: 1.12;
+}
+#main-content :is(.bg-card,[data-slot="card"],.sm-workspace-card) {
+  border: 1px solid color-mix(in oklab,var(--border) 86%,transparent);
+  border-radius: 1.125rem;
+  box-shadow: 0 12px 32px -26px rgba(0,0,0,.55), inset 0 1px 0 rgba(255,255,255,.025);
+}
+#main-content :is(.bg-card,[data-slot="card"]):hover {
+  border-color: color-mix(in oklab,var(--primary) 24%,var(--border));
+}
+#main-content :is(input,textarea,select,[role="combobox"]) {
+  min-width: 0;
+  border-radius: .75rem;
+}
+#main-content :is(button,[role="tab"],[role="combobox"]) {
+  border-radius: .75rem;
+}
+#main-content button:not(:disabled) {
+  transition: color .16s ease, border-color .16s ease, background-color .16s ease, box-shadow .16s ease;
+}
+#main-content button:disabled { cursor: not-allowed; opacity: .6; }
+#main-content :is(table,[role="table"]) { font-variant-numeric: tabular-nums; }
+#main-content table { width: 100%; border-collapse: separate; border-spacing: 0; }
+#main-content :is(th,td) { vertical-align: middle; }
+#main-content thead {
+  background: color-mix(in oklab,var(--muted) 70%,var(--card));
+}
+#main-content th {
+  color: var(--muted-foreground);
+  font-weight: 700;
+  letter-spacing: .07em;
+}
+#main-content tbody tr { transition: background-color .15s ease; }
+#main-content tbody tr:hover { background: color-mix(in oklab,var(--accent) 45%,transparent); }
+#main-content :is([role="tablist"],[data-slot="tabs-list"]) {
+  border-radius: .875rem;
+}
+#main-content :is([data-state="active"][role="tab"]) {
+  box-shadow: 0 1px 4px rgba(0,0,0,.15);
+}
+
+/* Shell: quiet navigation and a visual separation between controls and data. */
+aside, [data-sidebar="sidebar"] {
+  border-color: color-mix(in oklab,var(--border) 85%,transparent);
+}
+aside a, [data-sidebar="menu-button"] {
+  border-radius: .75rem;
+}
+aside a[aria-current="page"],aside a[data-active="true"],[data-sidebar="menu-button"][data-active="true"] {
+  background: color-mix(in oklab,var(--primary) 13%,transparent);
+  color: var(--foreground);
+  box-shadow: inset 3px 0 0 var(--primary);
+}
+.sm-workspace-header {
+  position: relative;
+  overflow: hidden;
+  background: linear-gradient(115deg,color-mix(in oklab,var(--card) 96%,var(--primary)),var(--background));
+  border-radius: 1.25rem;
+}
+.sm-workspace-header::before {
+  content: "";
+  pointer-events: none;
+  position: absolute;
+  top: 0;
+  left: 1.25rem;
+  right: 1.25rem;
+  height: 1px;
+  background: linear-gradient(90deg,transparent,var(--primary),transparent);
+  opacity: .4;
+}
+.sm-workspace-card {
+  padding: clamp(1rem,2vw,1.5rem);
+}
+.sm-workspace-grid { gap: clamp(.75rem,1.8vw,1.25rem); }
+
+/* Landing: editorial hero, technology dashboard atmosphere, restrained blue glow. */
+.sm-landing { overflow-x: clip; }
+.sm-landing header {
+  background: color-mix(in oklab,var(--background) 92%,transparent);
+  border-color: color-mix(in oklab,var(--border) 72%,transparent);
+}
+.sm-landing .sm-hero {
+  background:
+    radial-gradient(ellipse 45% 70% at 86% 32%, rgba(46,113,242,.15),transparent 85%),
+    linear-gradient(145deg,color-mix(in oklab,var(--background) 91%,#11336c),var(--background) 60%);
+}
+.sm-landing .sm-hero h1 {
+  text-wrap: balance;
+  letter-spacing: -.063em;
+}
+.sm-landing .sm-hero-badge {
+  border-radius: 999px;
+  background: rgba(42,113,236,.095);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.055);
+}
+.sm-landing .sm-primary-cta {
+  border-radius: .9rem;
+  background: linear-gradient(135deg,#2778ff,#185ee7);
+  color: white;
+  box-shadow: 0 14px 30px -16px rgba(40,113,255,.8);
+}
+.sm-landing .sm-primary-cta:hover {
+  background: linear-gradient(135deg,#398dff,#2670f7);
+}
+.sm-landing :is(section a.rounded-2xl,section .rounded-2xl.border) {
+  transition: border-color .2s ease, background-color .2s ease, box-shadow .2s ease;
+}
+.sm-landing :is(section a.rounded-2xl,section .rounded-2xl.border):hover {
+  border-color: rgba(67,142,255,.45);
+  box-shadow: 0 18px 36px -30px rgba(37,99,235,.5);
+}
+.sm-landing :is(section,footer) { min-width: 0; }
+.sm-landing p { text-wrap: pretty; }
+
+@media (max-width: 640px) {
+  #main-content { width: 100%; }
+  #main-content :is(h1,h2) { overflow-wrap: anywhere; }
+  #main-content :is(.sm-workspace-header,.sm-workspace-card) { padding: 1rem; }
+  #main-content :is(table,[role="table"]) { font-size: .8125rem; }
+  .sm-landing .sm-hero { padding-top: .5rem; }
+  .sm-landing .sm-hero h1 { font-size: clamp(2.45rem,10vw,3.35rem); line-height: 1.08; }
+}
+@media (prefers-reduced-motion: reduce) {
+  #main-content *, .sm-landing * { scroll-behavior: auto !important; transition-duration: 0.01ms !important; animation-duration: 0.01ms !important; }
+}
