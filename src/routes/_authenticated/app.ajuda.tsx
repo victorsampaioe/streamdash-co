@@ -266,7 +266,7 @@ function HelpCenterPage() {
 
   return (
     <div className="space-y-6">
-      <Card className="relative overflow-hidden p-6 sm:p-8 border-border/60">
+      <Card data-section="Conhecimento" className="sm-section-hero relative overflow-hidden p-6 sm:p-8 border-border/60">
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,_hsl(var(--primary)/0.18),transparent_60%)] pointer-events-none" />
         <div className="relative space-y-4">
           <div className="flex items-center gap-3">
