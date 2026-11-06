@@ -4,23 +4,7 @@ export const Route = createFileRoute("/api/public/regions/targets")({
   server: {
     handlers: {
       GET: async ({ request }) => {
-        const { verifyRegionSignature, secretFingerprint, getRegionSecret } = await import(
-          "@/lib/region-auth.server"
-        );
-        const url = new URL(request.url);
-
-        // Diagnostic mode: never returns the secret, only a hash prefix so the
-        // worker owner can confirm both sides share the same value.
-        if (url.searchParams.get("diag") === "1") {
-          return Response.json({
-            route: "ok",
-            secret_configured: Boolean(getRegionSecret()),
-            secret_fingerprint: secretFingerprint(),
-            signature_valid: verifyRegionSignature("targets", request.headers.get("x-signature")),
-            hint: "x-signature must be hex HMAC-SHA256 of the literal string 'targets'",
-          }, { headers: { "cache-control": "no-store" } });
-        }
-
+        const { verifyRegionSignature } = await import("@/lib/region-auth.server");
         const sig = request.headers.get("x-signature");
         const agentId = request.headers.get("x-agent-id");
         const { authenticateAgent } = await import("@/lib/region-agent.server");
