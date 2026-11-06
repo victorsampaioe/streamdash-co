@@ -5,7 +5,7 @@ import { ShieldCheck, Zap, Bell, CheckCircle2 } from "lucide-react";
 export const Route = createFileRoute('/monitoramento-iptv')({
   head: () => ({
     meta: [
-      { title: "Monitoramento de Servidor IPTV e Alertas | Stream Monitor" },
+      { title: "Monitoramento de Servidores IPTV | Stream Monitor" },
       { name: "description", content: "Monitoramento de servidores IPTV para revendedores: acompanhe disponibilidade, DNS, latência e receba alertas no Telegram quando houver falhas." },
       { property: "og:title", content: "Monitoramento IPTV Inteligente | Stream Monitor" },
       { property: "og:description", content: "Analise servidores IPTV, status, latência, disponibilidade e receba alertas automáticos quando houver problemas." },
@@ -14,6 +14,7 @@ export const Route = createFileRoute('/monitoramento-iptv')({
       { property: "og:image", content: "https://storage.googleapis.com/gpt-engineer-file-uploads/zowG5KmEoBQiJwfUQDz2ZUEdQ2a2/social-images/social-1783131758542-ChatGPT_Image_3_de_jul._de_2026,_23_22_19.webp" },
       { name: "twitter:card", content: "summary_large_image" },
     ],
+    links: [{ rel: "canonical", href: "https://streammonitor.site/monitoramento-iptv" }],
   }),
   component: IptvPage,
 });
@@ -34,9 +35,9 @@ function IptvPage() {
               <Zap className="text-primary" /> Benefícios
             </h2>
             <ul className="space-y-2 text-muted-foreground">
-              <li className="flex gap-2"><CheckCircle2 className="h-5 w-5 text-success shrink-0" /> Redução drástica de reclamações no suporte</li>
-              <li className="flex gap-2"><CheckCircle2 className="h-5 w-5 text-success shrink-0" /> Detecção proativa de quedas de canais ou VOD</li>
-              <li className="flex gap-2"><CheckCircle2 className="h-5 w-5 text-success shrink-0" /> Histórico real de uptime para provar qualidade</li>
+              <li className="flex gap-2"><CheckCircle2 className="h-5 w-5 text-success shrink-0" /> Mais visibilidade para investigar reclamações dos clientes</li>
+              <li className="flex gap-2"><CheckCircle2 className="h-5 w-5 text-success shrink-0" /> Verificação de disponibilidade e diagnóstico de conteúdo</li>
+              <li className="flex gap-2"><CheckCircle2 className="h-5 w-5 text-success shrink-0" /> Histórico de verificações e incidentes</li>
             </ul>
           </div>
           <div className="space-y-4">
@@ -52,10 +53,10 @@ function IptvPage() {
         <div className="grid md:grid-cols-2 gap-8 mb-16">
           <div className="space-y-4">
             <h2 className="text-2xl font-bold flex items-center gap-2">
-              <Zap className="text-primary" /> Web Player White-label
+              <Zap className="text-primary" /> Diagnóstico de Servidores e DNS
             </h2>
             <p className="text-muted-foreground text-sm leading-relaxed">
-              Agora você pode oferecer um Web Player completo com sua própria marca para seus clientes finais. Configure logos, cores e mensagens de boas-vindas diretamente no seu painel de revendedor.
+              Diferencie resolução de domínio, respostas HTTP, latência e comportamento da API para investigar indisponibilidades com mais contexto e menos alarmes falsos.
             </p>
           </div>
           <div className="space-y-4">
@@ -68,6 +69,11 @@ function IptvPage() {
           </div>
         </div>
 
+        <section className="mb-10 space-y-3 rounded-2xl border border-border/60 bg-card/40 p-6">
+          <h2 className="text-2xl font-bold">Servidor IPTV offline ou erro local?</h2>
+          <p className="text-muted-foreground">Uma tela preta não prova queda total. Compare o DNS, a resposta da API, as checagens recentes e a rede do cliente antes de concluir que toda a infraestrutura ficou indisponível.</p>
+          <p className="text-muted-foreground">Veja o passo a passo em <Link to="/blog/como-saber-se-servidor-iptv-caiu" className="font-medium text-primary underline">como saber se um servidor IPTV caiu</Link>, ou conheça o <Link to="/revendedor-stream-monitor" className="font-medium text-primary underline">sistema para revendedores IPTV</Link>.</p>
+        </section>
         <div className="bg-card/50 rounded-2xl p-8 border border-border/60 mb-16 text-center">
           <h2 className="text-2xl font-bold mb-4">Pronto para ter controle total do seu IPTV?</h2>
           <Link to="/auth"><Button size="lg" className="glow-primary">Começar agora</Button></Link>
