@@ -106,7 +106,7 @@ function ContentIntelligence() {
 
   return (
     <div className="space-y-5">
-      <Card className="p-5 sm:p-6 space-y-4 bg-gradient-to-br from-primary/10 to-transparent">
+      <Card data-section="Radar IPTV" className="sm-section-hero p-5 sm:p-6 space-y-4 bg-gradient-to-br from-primary/10 to-transparent">
         <div className="flex items-center gap-2 text-xs uppercase tracking-wider text-primary font-semibold">
           <Brain className="h-4 w-4" /> Inteligência de Conteúdo
         </div>
