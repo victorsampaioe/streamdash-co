@@ -17,6 +17,10 @@ export const getSignupConfig = createServerFn({ method: "GET" }).handler(async (
 export const getSignupSecurityReport = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
+    const { data: isAdmin, error: roleError } = await context.supabase.rpc("has_role", {
+      _user_id: context.userId, _role: "admin",
+    });
+    if (roleError || !isAdmin) throw new Error("Acesso restrito ao administrador.");
     const { data, error } = await context.supabase.rpc("admin_signup_security_report" as any);
     if (error) throw new Error(error.message);
     return data as {
@@ -49,6 +53,10 @@ export const unblockSignup = createServerFn({ method: "POST" })
     return input;
   })
   .handler(async ({ context, data }) => {
+    const { data: isAdmin, error: roleError } = await context.supabase.rpc("has_role", {
+      _user_id: context.userId, _role: "admin",
+    });
+    if (roleError || !isAdmin) throw new Error("Acesso restrito ao administrador.");
     const { data: removed, error } = await context.supabase.rpc("admin_unblock_signup", { _key: data.key });
     if (error) throw new Error(error.message);
     return { removed };
