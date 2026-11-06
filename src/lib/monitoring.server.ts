@@ -309,8 +309,28 @@ async function performCheck(server: ServerRow) {
 
   await recordCheck(server.id, first, sslDays);
 
-
+  // Persistir a sonda assim que ela conclui. Antes, last_checked_at só
+  // avançava DEPOIS de bursts lentos de confirmação. Em ambiente com
+  // timeout, o histórico tinha sondagens novas mas TODOS os servidores
+  // pareciam atrasados na Central Inteligente.
   const wasDown = server.current_status === "down";
+  const provisionalStatus = wasDown ? "down"
+    : first.status === "down" ? "degraded" : first.status;
+  const probeTimestamp = new Date().toISOString();
+  const { error: checkpointError } = await supabaseAdmin.from("servers").update({
+    last_checked_at: probeTimestamp,
+    last_latency_ms: first.latency,
+    last_error: first.error,
+    last_http_status: first.httpStatus,
+    // Queda só entra como OFFLINE após confirmação. Nunca elevar um
+    // servidor anteriormente OFFLINE só com uma única resposta positiva.
+    current_status: provisionalStatus,
+    ...(provisionalStatus !== server.current_status ? { last_state_change_at: probeTimestamp } : {}),
+  }).eq("id", server.id);
+  if (checkpointError) {
+    throw new Error(`Falha ao registrar verificação inicial: ${checkpointError.message}`);
+  }
+
   let final = first;
   let displayStatus: ProbeResult["status"] = first.status;
   let downConfirmed = false;
