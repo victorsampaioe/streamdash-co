@@ -72,7 +72,7 @@ function AndroidPlayAdminPage() {
 
   return (
     <div className="space-y-6 max-w-7xl mx-auto p-4 sm:p-6">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div data-section="Licenças Android" className="sm-section-hero flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-3xl font-bold tracking-tight flex items-center gap-2">
             <ShieldCheck className="h-8 w-8 text-primary" />
@@ -85,7 +85,7 @@ function AndroidPlayAdminPage() {
       <Tabs 
         value={tab} 
         onValueChange={(val) => navigate({ search: (prev: any) => ({ ...prev, tab: val as any }) })}
-        className="space-y-6"
+        className="sm-admin-control-tabs space-y-6"
       >
         <TabsList className="bg-neutral-900 border border-white/5">
           <TabsTrigger value="licenses" className="gap-2">
