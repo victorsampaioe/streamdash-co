@@ -12,11 +12,16 @@ describe("signup validation", () => {
   });
 
   it("returns a friendly password rule", () => {
-    expect(validatePassword("123")).toEqual({ ok: false, error: "Sua senha precisa ter pelo menos 6 caracteres." });
+    expect(validatePassword("123")).toEqual({ ok: false, error: "Sua senha precisa ter pelo menos 8 caracteres." });
   });
 
-  it("accepts a six-character password", () => {
-    expect(validatePassword("123456")).toEqual({ ok: true, value: "123456" });
+  it("requires at least eight characters for new accounts", () => {
+    expect(validatePassword("abc1234").ok).toBe(false);
+    expect(validatePassword("senhaBoa9021")).toEqual({ ok: true, value: "senhaBoa9021" });
+  });
+
+  it("rejects common passwords", () => {
+    expect(validatePassword("12345678").ok).toBe(false);
   });
 
   it("normalizes usernames consistently", () => {
