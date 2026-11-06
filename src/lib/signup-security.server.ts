@@ -121,11 +121,27 @@ export async function checkRateLimit(ipHash: string, identityHash: string): Prom
 
 export async function verifyTurnstile(token: string | null | undefined, ip: string): Promise<boolean> {
   const secret = process.env.TURNSTILE_SECRET_KEY?.trim();
-  if (!secret) {
-    log("turnstile not configured — skipping verification");
+  const siteKey = process.env.TURNSTILE_SITE_KEY?.trim();
+  const supabaseMode = process.env.SIGNUP_TURNSTILE_PROVIDER === "supabase";
+
+  // Um único verificador deve consumir o token de uso único do Turnstile.
+  // Neste modo, o Supabase Auth precisa ter CAPTCHA habilitado no projeto.
+  if (supabaseMode) {
+    if (!siteKey || !token) {
+      log("turnstile configuration incomplete (Supabase mode)");
+      return false;
+    }
     return true;
   }
-  if (!token) return false;
+  if (!secret && !siteKey) {
+    log("turnstile not configured; relying on other signup abuse controls");
+    return true;
+  }
+  // Não aceitar um CAPTCHA parcialmente configurado.
+  if (!secret || !siteKey || !token) {
+    log("turnstile missing site/secret/token");
+    return false;
+  }
   try {
     const body = new URLSearchParams({ secret, response: token });
     if (ip && ip !== "unknown") body.set("remoteip", ip);
@@ -133,12 +149,14 @@ export async function verifyTurnstile(token: string | null | undefined, ip: stri
       method: "POST",
       headers: { "Content-Type": "application/x-www-form-urlencoded" },
       body,
+      signal: AbortSignal.timeout(6_000),
     });
+    if (!res.ok) return false;
     const json = (await res.json()) as { success?: boolean; "error-codes"?: string[] };
     if (!json.success) log("turnstile rejected", { codes: json["error-codes"] });
-    return !!json.success;
+    return json.success === true;
   } catch (e) {
-    log("turnstile verification error", { message: (e as Error).message });
+    log("turnstile verification unavailable", { type: (e as Error).name });
     return false;
   }
 }
