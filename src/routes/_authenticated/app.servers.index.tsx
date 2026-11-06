@@ -13,6 +13,7 @@ import { SearchInput } from "@/components/app-shell";
 import { useSubscription } from "@/hooks/use-subscription";
 import { Plus, ServerIcon, Trash2, ExternalLink, Loader2 } from "lucide-react";
 import { toast } from "sonner";
+import { effectiveAccessStatus, accessStatusLabel } from "@/lib/dns-state";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
@@ -71,9 +72,9 @@ function ServersList() {
     switch (statusFilter) {
       case "paused": return isPaused(s);
       case "active": return !isPaused(s);
-      case "up": return !isPaused(s) && s.current_status === "up";
-      case "warning": return !isPaused(s) && (s.current_status === "degraded" || s.current_status === "unknown");
-      case "down": return !isPaused(s) && s.current_status === "down";
+      case "up": return !isPaused(s) && effectiveAccessStatus(s) === "up";
+      case "warning": return !isPaused(s) && (effectiveAccessStatus(s) === "degraded" || effectiveAccessStatus(s) === "unknown");
+      case "down": return !isPaused(s) && effectiveAccessStatus(s) === "down";
       default: return true;
     }
   };
@@ -83,9 +84,9 @@ function ServersList() {
   const counts = {
     all: searched.length,
     active: searched.filter((s: any) => !isPaused(s)).length,
-    up: searched.filter((s: any) => !isPaused(s) && s.current_status === "up").length,
-    warning: searched.filter((s: any) => !isPaused(s) && (s.current_status === "degraded" || s.current_status === "unknown")).length,
-    down: searched.filter((s: any) => !isPaused(s) && s.current_status === "down").length,
+    up: searched.filter((s: any) => !isPaused(s) && effectiveAccessStatus(s) === "up").length,
+    warning: searched.filter((s: any) => !isPaused(s) && (effectiveAccessStatus(s) === "degraded" || effectiveAccessStatus(s) === "unknown")).length,
+    down: searched.filter((s: any) => !isPaused(s) && effectiveAccessStatus(s) === "down").length,
     paused: searched.filter((s: any) => isPaused(s)).length,
   };
 
@@ -169,7 +170,7 @@ function ServersList() {
                       </div>
                     </div>
                   ) : (
-                    <div className="flex items-center gap-2"><StatusDot status={s.current_status} /><StatusLabel status={s.current_status} /></div>
+                    <div className="flex items-center gap-2"><StatusDot status={effectiveAccessStatus(s)} /><span className="text-xs font-medium">{s.dns_enabled !== false && s.dns_status === "offline" ? accessStatusLabel(s) : <StatusLabel status={s.current_status} />}</span></div>
                   )}
                 </td>
                 <td className="p-3 font-mono text-xs">{s.last_latency_ms ?? "—"} ms</td>
