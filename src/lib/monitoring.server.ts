@@ -43,7 +43,7 @@ export async function runCheckForServer(serverId: string) {
   return await performCheck(server as ServerRow);
 }
 
-export async function runDueChecks() {
+export async function runDueChecks(limit = 20) {
   const now = Date.now();
   const { data: servers, error } = await supabaseAdmin.from("servers").select("*").eq("monitoring_paused", false);
   if (error) throw error;
@@ -83,7 +83,7 @@ export async function runDueChecks() {
   const { runPool } = await import("./pool");
   // Limite o trabalho de cada requisição: um único ciclo não deve reter o cron
   // durante minutos quando vários destinos estiverem indisponíveis.
-  const batch = due.slice(0, 20);
+  const batch = due.slice(0, Math.max(1, Math.min(limit, 20)));
   const results = await runPool(batch as any[], (s: any) => performCheck(s as ServerRow));
   return {
     checked: results.length,
