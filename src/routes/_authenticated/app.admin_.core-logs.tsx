@@ -105,7 +105,7 @@ function CoreLogsPage() {
 
   return (
     <div className="p-6 space-y-6 animate-in fade-in duration-500">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div data-section="Auditoria Core" className="sm-section-hero flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h1 className="text-3xl font-bold flex items-center gap-2">
             <ShieldCheck className="h-8 w-8 text-primary" />
