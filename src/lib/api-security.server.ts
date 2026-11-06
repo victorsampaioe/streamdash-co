@@ -130,38 +130,70 @@ export type RateRule = { bucket: string; limit: number; windowSeconds: number };
 
 export type RateResult = { allowed: boolean; remaining: number; retryAfter: number };
 
-/** Contador por janela fixa persistido no banco (funciona em runtime stateless). */
+/**
+ * Proteção local de emergência: também bloqueia rajadas quando o banco de
+ * contadores estiver indisponível. Cada instância possui sua própria memória;
+ * WAF e rate limit nativo do Supabase continuam necessários em produção.
+ */
+const localRateCounters = new Map<string, { hits: number; expiresAt: number }>();
+
+function localRateLimit(rule: RateRule, keyHash: string, now: number): RateResult {
+  const windowMs = rule.windowSeconds * 1000;
+  const windowEnd = (Math.floor(now / windowMs) + 1) * windowMs;
+  const bucket = `${rule.bucket}:${keyHash}:${Math.floor(now / windowMs)}`;
+  if (localRateCounters.size > 10000) {
+    for (const [key, count] of localRateCounters) {
+      if (count.expiresAt <= now) localRateCounters.delete(key);
+    }
+    if (localRateCounters.size > 10000) localRateCounters.clear();
+  }
+  const existing = localRateCounters.get(bucket);
+  const hits = (existing?.hits ?? 0) + 1;
+  localRateCounters.set(bucket, { hits, expiresAt: windowEnd });
+  return {
+    allowed: hits <= rule.limit,
+    remaining: Math.max(0, rule.limit - hits),
+    retryAfter: Math.max(1, Math.ceil((windowEnd - now) / 1000)),
+  };
+}
+
+/** Rate limit por banco, com defesa local adicional caso a persistência falhe. */
 export async function rateLimit(rule: RateRule, key: string): Promise<RateResult> {
   const now = Date.now();
   const windowMs = rule.windowSeconds * 1000;
   const windowStart = new Date(Math.floor(now / windowMs) * windowMs).toISOString();
   const keyHash = hashKey(key);
+  const local = localRateLimit(rule, keyHash, now);
+  if (!local.allowed) return local;
 
   try {
-    const { data: existing } = await supabaseAdmin
+    const { data: existing, error: lookupError } = await supabaseAdmin
       .from("api_rate_limits")
       .select("id, hits")
       .eq("bucket", rule.bucket)
       .eq("key_hash", keyHash)
       .eq("window_start", windowStart)
       .maybeSingle();
+    if (lookupError) throw lookupError;
 
     const hits = (existing?.hits ?? 0) + 1;
+    const { error: writeError } = existing?.id
+      ? await supabaseAdmin.from("api_rate_limits").update({ hits }).eq("id", existing.id)
+      : await supabaseAdmin.from("api_rate_limits")
+          .insert({ bucket: rule.bucket, key_hash: keyHash, window_start: windowStart, hits });
+    if (writeError) throw writeError;
 
-    if (existing?.id) {
-      await supabaseAdmin.from("api_rate_limits").update({ hits }).eq("id", existing.id);
-    } else {
-      await supabaseAdmin
-        .from("api_rate_limits")
-        .insert({ bucket: rule.bucket, key_hash: keyHash, window_start: windowStart, hits });
-    }
-
-    const retryAfter = Math.max(1, Math.ceil((Math.floor(now / windowMs) * windowMs + windowMs - now) / 1000));
-    return { allowed: hits <= rule.limit, remaining: Math.max(0, rule.limit - hits), retryAfter };
+    return {
+      allowed: hits <= rule.limit,
+      remaining: Math.min(local.remaining, Math.max(0, rule.limit - hits)),
+      retryAfter: local.retryAfter,
+    };
   } catch (error) {
-    // Disponibilidade acima de tudo: falha do contador não derruba o endpoint.
-    safeLog("RATE LIMIT", "falha ao contabilizar", { bucket: rule.bucket, error: (error as Error).message });
-    return { allowed: true, remaining: rule.limit, retryAfter: 0 };
+    safeLog("RATE LIMIT", "contador persistido indisponível, usando limite local", {
+      bucket: rule.bucket,
+      reason: (error as Error).name ?? "unknown",
+    });
+    return local;
   }
 }
 
