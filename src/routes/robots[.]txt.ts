@@ -8,10 +8,10 @@ export const Route = createFileRoute('/robots.txt')({
 Allow: /
 Disallow: /app/
 Disallow: /admin/
+Disallow: /auth
 Disallow: /dashboard/
 Disallow: /config/
 Disallow: /api/
-Allow: /api/public/
 
 Sitemap: https://streammonitor.site/sitemap.xml`;
 
