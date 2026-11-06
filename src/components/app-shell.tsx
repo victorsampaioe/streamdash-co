@@ -26,13 +26,13 @@ const ALWAYS_OPEN_PATHS = [
 
 export function AppShell({ children }: { children: ReactNode }) {
   return (
-    <div className="min-h-screen flex bg-background text-foreground">
+    <div className="sm-app-shell min-h-dvh flex min-w-0 bg-background text-foreground">
       <Sidebar />
-      <div className="flex-1 flex flex-col min-w-0">
+      <div className="sm-app-body flex-1 flex flex-col min-w-0">
         <Topbar />
         <SubscriptionBanner />
         <TelegramBanner />
-        <main id="main-content" className="flex-1 p-4 sm:p-7 xl:p-10 max-w-[1720px] w-full mx-auto">{children}</main>
+        <main id="main-content" className="sm-command-content flex-1 min-w-0 px-4 py-5 sm:px-6 sm:py-7 xl:px-10 xl:py-9 max-w-[1720px] w-full mx-auto">{children}</main>
       </div>
       
     </div>
@@ -163,16 +163,17 @@ function NavList({ onNavigate }: { onNavigate?: () => void }) {
   const pathname = useRouterState({ select: (r) => r.location.pathname });
   const items = useNavItems();
   return (
-    <nav className="px-3 py-5 space-y-1 flex-1" aria-label="Navegação principal">
+    <nav className="sm-command-nav px-3 py-5 space-y-1 flex-1" aria-label="Navegação principal">
       {items.map((it) => {
         const active = (it as any).exact ? pathname === it.to : pathname.startsWith(it.to);
         return (
           <Link
             key={it.to}
             to={it.to}
+            aria-current={active ? "page" : undefined}
             onClick={onNavigate}
             className={cn(
-              "group relative flex items-center gap-3 rounded-lg px-3 py-2.5 text-[13px] font-medium transition-all duration-200 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary",
+              "sm-command-nav-item group relative flex items-center gap-3 rounded-xl px-3 py-2.5 text-[13px] font-medium transition-colors duration-150 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary",
               active ? "bg-primary/15 text-primary font-semibold before:absolute before:left-0 before:top-2 before:bottom-2 before:w-[3px] before:rounded-full before:bg-primary" : "text-sidebar-foreground/65 hover:bg-sidebar-accent/65 hover:text-sidebar-foreground"
             )}
           >
@@ -187,7 +188,7 @@ function NavList({ onNavigate }: { onNavigate?: () => void }) {
 
 function Sidebar() {
   return (
-    <aside className="hidden lg:flex w-[272px] shrink-0 flex-col border-r border-sidebar-border bg-sidebar text-sidebar-foreground">
+    <aside className="sm-command-sidebar hidden lg:flex w-[272px] xl:w-[290px] shrink-0 flex-col border-r border-sidebar-border bg-sidebar text-sidebar-foreground">
       <div className="p-6 flex items-center gap-3 border-b border-sidebar-border">
         <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/15 ring-1 ring-primary/20"><Activity className="h-5 w-5 text-primary" /></div>
         <div className="leading-tight"><div className="font-extrabold tracking-tight">stream<span className="text-primary">monitor</span></div><div className="text-[10px] uppercase tracking-[.2em] text-sidebar-foreground/45">BLUE EDITION</div></div>
@@ -259,7 +260,7 @@ function Topbar() {
     retry: 1,
   });
   return (
-    <header className="h-[72px] border-b border-border/60 flex items-center gap-2 px-4 lg:px-8 bg-background/90 backdrop-blur-xl sticky top-0 z-30">
+    <header className="sm-command-topbar min-h-[68px] border-b border-border/60 flex items-center gap-2 px-4 lg:px-8 bg-background/95 supports-[backdrop-filter]:bg-background/85 backdrop-blur-md sticky top-0 z-30">
       <MobileNav />
       <div className="flex items-center gap-2 lg:hidden min-w-0">
         <Activity className="h-5 w-5 text-primary shrink-0" />
