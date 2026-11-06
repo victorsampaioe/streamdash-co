@@ -1,4 +1,4 @@
-import { createHash } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 
 const IP_SALT = "sm-signup-ip-v1";
@@ -50,9 +50,11 @@ export function maskIp(ip: string): string {
   return "***";
 }
 
-export function attemptFingerprint(email: string, phone: string, ipHash: string): string {
-  const bucket = Math.floor(Date.now() / (5 * 60_000)); // janela de 5 minutos
-  return createHash("sha256").update(`${email}|${phone}|${ipHash}|${bucket}`).digest("hex");
+export function attemptFingerprint(email: string, username: string, ipHash: string, requestId?: string): string {
+  // Identifique o POST, não a pessoa durante 5 minutos: um CAPTCHA expirado
+  // não deve impedir uma nova tentativa legítima de cadastro.
+  const id = requestId && /^[a-zA-Z0-9-]{16,64}$/.test(requestId) ? requestId : randomUUID();
+  return createHash("sha256").update(`${email}|${username}|${ipHash}|${id}`).digest("hex");
 }
 
 export function hashIdentity(identity: string): string {
