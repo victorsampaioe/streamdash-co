@@ -14,7 +14,7 @@ import { Card } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
 
-const searchSchema = z.object({ redirect: z.string().optional() }).partial();
+const searchSchema = z.object({ redirect: z.string().optional(), ref: z.string().regex(/^[A-Za-z0-9]{4,16}$/).optional() }).partial();
 
 export const Route = createFileRoute("/auth")({
   validateSearch: searchSchema,
@@ -41,9 +41,9 @@ function generatePassword() {
 
 function AuthPage() {
   const navigate = useNavigate();
-  const { redirect } = useSearch({ from: "/auth" });
+  const { redirect, ref } = useSearch({ from: "/auth" });
   const safeRedirect = redirect && /^\/app(?:\/|$)/.test(redirect) ? redirect : "/app";
-  const [tab, setTab] = useState("signin");
+  const [tab, setTab] = useState(ref ? "signup" : "signin");
   const [loading, setLoading] = useState(false);
   const [identity, setIdentity] = useState("");
   const [email, setEmail] = useState("");
@@ -130,7 +130,7 @@ function AuthPage() {
     try {
       const response = await fetch("/api/public/signup", {
         method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ username: usernameCheck.value, email: emailCheck.value, password, turnstileToken, company_website: honeypot, requestId: crypto.randomUUID() }),
+        body: JSON.stringify({ username: usernameCheck.value, email: emailCheck.value, password, referralCode: ref?.toUpperCase(), turnstileToken, company_website: honeypot, requestId: crypto.randomUUID() }),
       });
       const result = await response.json() as { error?: string; code?: string; needsEmailConfirmation?: boolean };
       if (!response.ok) {
@@ -222,7 +222,7 @@ function AuthPage() {
         <Button type="submit" disabled={loading} className="w-full">{loading ? "Entrando..." : "Entrar"}</Button>
       </form></TabsContent>
       <TabsContent value="signup"><form onSubmit={handleSignUp} className="space-y-4">
-        <div><h1 className="text-xl font-bold">Criar sua conta</h1><p className="mt-1 text-sm text-muted-foreground">Comece em poucos segundos.</p></div>
+        <div><h1 className="text-xl font-bold">Criar sua conta</h1><p className="mt-1 text-sm text-muted-foreground">Comece em poucos segundos.</p>{ref && <p className="mt-2 rounded-lg border border-blue-500/25 bg-blue-500/10 p-3 text-xs text-blue-500">🎁 Convite de indicação <strong>{ref.toUpperCase()}</strong> aplicado. Quem te indicou ganha 30% de crédito a cada mensalidade que você pagar.</p>}</div>
         <Field label="Usuário"><Input required autoComplete="username" maxLength={24} value={username} onChange={(event) => setUsername(normalizeUsername(event.target.value))} placeholder="como quer ser chamado" /><AvailabilityLine state={availability} /></Field>
         <Field label="E-mail"><Input required type="email" autoComplete="email" value={email} onChange={(event) => setEmail(event.target.value)} placeholder="voce@empresa.com" />{emailExists && <div className="mt-2 text-xs text-destructive">Já encontramos uma conta com esse e-mail. <button type="button" className="underline" onClick={() => { setIdentity(email); setTab("signin"); }}>Entrar</button> ou <button type="button" className="underline" onClick={() => { setIdentity(email); handleReset(email); }}>recuperar senha</button>.</div>}</Field>
         <PasswordField value={password} setValue={setPassword} show={showPassword} setShow={setShowPassword} newAccount />
