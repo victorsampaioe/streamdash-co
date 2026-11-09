@@ -92,7 +92,22 @@ export async function runMonitorSweep(trigger = "cron"): Promise<SweepResult> {
                 check_priority: 2,
               } as any)
               .eq("id", s.id);
-            await closeOfflineIncident(s.id, "server").catch(() => null);
+            // A reconciliação também precisa entregar o aviso de retorno.
+            // Antes ela fechava o incidente silenciosamente, fazendo a
+            // rotina principal perder a transição ONLINE.
+            const gate = await closeOfflineIncident(s.id, "server");
+            if (gate.notify) {
+              try {
+                const { processTelegramAlert } = await import("./telegram-alerts.server");
+                await processTelegramAlert({
+                  serverId: s.id, incidentId: gate.incidentId, kind: "server",
+                  event: "ONLINE", timeOffline: gate.downtimeLabel,
+                });
+              } catch (error) {
+                // A fila de retry recupera envios não confirmados pelo log.
+                console.error("[monitor-sweep] Telegram recovery pending retry", s.id, error instanceof Error ? error.name : "unknown");
+              }
+            }
             result.fixed++;
             continue;
           }
