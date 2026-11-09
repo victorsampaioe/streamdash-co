@@ -81,7 +81,7 @@ export const createPixPayment = createServerFn({ method: "POST" })
     let discountApplied = false;
 
     // Reuse a still-valid charge.
-    let existingQuery = supabase
+    let existingQuery = (supabase as any)
       .from("payments")
       .select("id, amount_cents, referral_discount_cents, expires_at, pix_copy_paste, pix_qr_code")
       .eq("user_id", userId)
@@ -153,7 +153,7 @@ export const createPixPayment = createServerFn({ method: "POST" })
     // quando a cobrança for aprovada; expiração ou cancelamento o libera.
     if (eligibleReferralDiscount) {
       const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-      const { data: discountResult, error: discountError } = await supabaseAdmin.rpc("reserve_referral_discount", {
+      const { data: discountResult, error: discountError } = await (supabaseAdmin as any).rpc("reserve_referral_discount", {
         _payment_id: payment.id,
       });
       if (discountError) throw new Error(`Não foi possível aplicar o saldo de indicação: ${discountError.message}`);
@@ -162,7 +162,7 @@ export const createPixPayment = createServerFn({ method: "POST" })
       amountCents = discounted?.amount_to_pay_cents ?? grossAmountCents;
       discountApplied = referralDiscountCents > 0;
       if (amountCents === 0) {
-        const { data: finalized, error: finalizeError } = await supabaseAdmin.rpc("finalize_referral_credit_payment", {
+        const { data: finalized, error: finalizeError } = await (supabaseAdmin as any).rpc("finalize_referral_credit_payment", {
           _payment_id: payment.id,
         });
         if (finalizeError || !finalized?.[0]?.applied) {
