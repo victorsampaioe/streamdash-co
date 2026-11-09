@@ -63,8 +63,10 @@ export async function retryServerIncidentAlerts(limit = 4) {
     const recovering=!!i.ended_at;
     const event=recovering?"tg_server_online":"tg_server_offline";
     if(recovering){
-      // Never tell customer service recovered while DNS access remains broken.
-      if(srv.current_status!=="up"||(srv.dns_enabled!==false&&srv.dns_status==="offline"))return false;
+      // Status do SERVIÇO e do DNS são independentes. Se o serviço já
+      // foi confirmado como UP, um DNS atrasado não deve bloquear
+      // indefinidamente o aviso de recuperação do IPTV.
+      if(srv.current_status!=="up")return false;
     }else if(srv.current_status!=="down")return false;
     const incidentAt=new Date((recovering?i.ended_at:i.started_at)!).getTime();
     const last=lastAttempt.get(`${i.id}|${event}`)??incidentAt;
