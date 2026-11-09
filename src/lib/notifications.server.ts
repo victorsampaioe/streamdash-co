@@ -29,7 +29,7 @@ export async function flushNotificationQueue() {
     const [ownerId] = key.split(":");
     const channel = items[0].alert_channels;
     if (!channel) { failed += items.length; continue; }
-    const serverCount = new Set(items.map(i => i.server_id)).size;
+    const serverCount = new Set(items.filter(i => i.event !== "referral_launch_20261109").map(i => i.server_id)).size;
     
     // Obter preferência do usuário
     const { data: profile } = await supabaseAdmin
@@ -41,22 +41,31 @@ export async function flushNotificationQueue() {
     const style = profile?.telegram_alert_style || "summary";
 
     const successfullyDelivered: string[] = [];
-    if (style === "summary" && items.length > 1) {
+
+    // Comunicados institucionais não são eventos de recuperação.
+    // Enviar cada um integralmente, sem agrupá-los no resumo de servidores.
+    const announcements = items.filter(i => i.event === "referral_launch_20261109");
+    for (const item of announcements) {
+      if (await sendToChannel(channel, item.message, "up")) successfullyDelivered.push(item.id);
+    }
+    const recoveryItems = items.filter(i => i.event !== "referral_launch_20261109");
+
+    if (style === "summary" && recoveryItems.length > 1) {
       // Enviar resumo
       const esc = (s: unknown) => String(s ?? "Desconhecido").replace(/[<>&]/g, char => ({ "<": "&lt;", ">": "&gt;", "&": "&amp;" })[char]!);
-      const servers = items.map(i => `• ${esc(i.servers?.name)}`).slice(0, 15);
-      const more = items.length > 15 ? `\n...e mais ${items.length - 15} servidores.` : "";
+      const servers = recoveryItems.map(i => `• ${esc(i.servers?.name)}`).slice(0, 15);
+      const more = recoveryItems.length > 15 ? `\n...e mais ${recoveryItems.length - 15} servidores.` : "";
       
       const summary = `✅ <b>RESUMO DE SERVIÇOS RESTABELECIDOS</b>\n\n` +
-        `${items.length} eventos normalizados (${serverCount} servidores)\n\n` +
+        `${recoveryItems.length} eventos normalizados (${serverCount} servidores)\n\n` +
         `🌎 Região:\n🇧🇷 São Paulo\n\n` +
         `Servidores recuperados:\n${servers.join("\n")}${more}\n\n` +
         `Confira o histórico e o tempo exato de recuperação no painel.`;
 
-      if (await sendToChannel(channel, summary, "up")) successfullyDelivered.push(...items.map(i => i.id));
+      if (await sendToChannel(channel, summary, "up")) successfullyDelivered.push(...recoveryItems.map(i => i.id));
     } else {
       // Enviar individuais (respeitando anti-flood se necessário, mas aqui são recuperações)
-      for (const item of items) {
+      for (const item of recoveryItems) {
         if (await sendToChannel(channel, item.message, "up")) successfullyDelivered.push(item.id);
       }
     }
