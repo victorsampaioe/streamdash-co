@@ -107,8 +107,9 @@ export async function processTelegramAlert(data: AlertData) {
 
 function formatAlertMessage(server: any, data: AlertData): string {
   const now = new Date();
-  const timeStr = now.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
-  const dateStr = now.toLocaleDateString("pt-BR");
+  // Exibir sempre no horário de Brasília, independentemente do fuso da VPS/Worker (normalmente UTC).
+  const timeStr = now.toLocaleTimeString("pt-BR", { timeZone: "America/Sao_Paulo", hour: "2-digit", minute: "2-digit", second: "2-digit" });
+  const dateStr = now.toLocaleDateString("pt-BR", { timeZone: "America/Sao_Paulo" });
   
   const esc = (s: any) => String(s ?? "-").replace(/[<>&]/g, (c) => ({ "<": "&lt;", ">": "&gt;", "&": "&amp;" }[c]!));
 
