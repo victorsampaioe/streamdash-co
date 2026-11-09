@@ -89,7 +89,7 @@ function SubscriptionPage() {
     setPaymentError(null);
     try {
       const res = await createPix({ data: { plan } });
-      if (res.creditOnly || res.status === "approved") {
+      if (res.creditOnly) {
         await refetch();
         toast.success("Sua assinatura foi renovada usando os créditos de indicação!");
         setOpenPlan(null);
