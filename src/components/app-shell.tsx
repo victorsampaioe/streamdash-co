@@ -20,6 +20,7 @@ import { cn } from "@/lib/utils";
 // so the user can always renew and see their status.
 const ALWAYS_OPEN_PATHS = [
   "/app/subscription",
+  "/app/indique",
   "/app/ai-integration",
   "/app/api-integrations",
 ];
@@ -140,6 +141,7 @@ function useNavItems() {
     { to: "/app/ranking", label: "Ranking", icon: Trophy },
     { to: "/app/performance", label: "Performance", icon: Gauge },
     { to: "/app/achievements", label: "Conquistas", icon: Trophy },
+    { to: "/app/indique", label: "Indique e Ganhe · 30%", icon: Gift },
 
 
   ];
