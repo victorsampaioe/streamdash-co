@@ -118,7 +118,7 @@ export function PixDialog({ openPlan, onClose, pix, loading, error, onPaid }: Pi
                   {pix.discountApplied && (
                     <div className="mt-1 inline-flex items-center gap-1 rounded-full bg-success/15 px-2 py-0.5 text-[11px] text-success">
                       <Sparkles className="h-3 w-3 shrink-0" />
-                      <span>Desconto de indicação aplicado</span>
+                      <span>Crédito de indicação: -{formatBRL(pix.referralDiscountCents ?? 0)}</span>
                     </div>
                   )}
                 </div>
