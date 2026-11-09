@@ -82,6 +82,44 @@ export async function flushNotificationQueue() {
   return { sent, failed };
 }
 
+
+/**
+ * Dispara exclusivamente a campanha Indique e Ganhe; não toca na fila
+ * antiga de recuperação para não avisar quedas históricas.
+ * Chamado por um cron dedicado em pequenos lotes.
+ */
+export async function flushReferralLaunchCampaign(limit = 8) {
+  const { data: pending, error } = await supabaseAdmin
+    .from("notification_queue")
+    .select("id,owner_id,channel_id,message,alert_channels(*)")
+    .eq("event", "referral_launch_20261109")
+    .eq("processed", false)
+    .order("created_at", { ascending: true })
+    .limit(Math.max(1, Math.min(10, limit)));
+  if (error) throw error;
+  let sent = 0;
+  let failed = 0;
+  for (const item of pending ?? []) {
+    const channel = item.alert_channels;
+    if (!channel || channel.enabled !== true || channel.kind !== "telegram") {
+      failed++;
+      continue;
+    }
+    const ok = await sendToChannel(channel, item.message, "up");
+    if (!ok) { failed++; continue; }
+    const { error: updateError } = await supabaseAdmin.from("notification_queue")
+      .update({ processed: true }).eq("id", item.id).eq("processed", false);
+    if (updateError) throw updateError;
+    sent++;
+  }
+  const { count, error: countError } = await supabaseAdmin.from("notification_queue")
+    .select("id", { count: "exact", head: true })
+    .eq("event", "referral_launch_20261109")
+    .eq("processed", false);
+  if (countError) throw countError;
+  return { sent, failed, pending: count ?? 0 };
+}
+
 async function sendToChannel(ch: any, message: string, _event: "up" | "down"): Promise<boolean> {
   try {
     if (ch.kind === "telegram") {
