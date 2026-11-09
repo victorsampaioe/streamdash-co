@@ -89,7 +89,17 @@ function SubscriptionPage() {
     setPaymentError(null);
     try {
       const res = await createPix({ data: { plan } });
+      if (res.creditOnly || res.status === "approved") {
+        await refetch();
+        toast.success("Sua assinatura foi renovada usando os créditos de indicação!");
+        setOpenPlan(null);
+        setPix(null);
+        return;
+      }
       setPix(res);
+      if (res.referralDiscountCents > 0) {
+        toast.success(`Crédito de indicação aplicado: ${formatBRL(res.referralDiscountCents)}!`);
+      }
       if (!res.integrationReady) {
         toast.info("Estrutura de pagamento pronta. Configure o Mercado Pago para gerar o QR Code PIX.");
       }
@@ -108,6 +118,9 @@ function SubscriptionPage() {
       <div data-section="Planos & Créditos" className="sm-section-hero">
         <h1 className="text-2xl font-bold">Minha Assinatura</h1>
         <p className="text-sm text-muted-foreground mt-1">Gerencie seu plano e renovações.</p>
+        <a href="/app/indique" className="mt-3 inline-flex items-center gap-2 rounded-full border border-blue-500/25 bg-blue-500/10 px-4 py-2 text-xs font-semibold text-blue-500 hover:bg-blue-500/20">
+          🎁 Indique amigos, ganhe 30% de crédito recorrente na fatura
+        </a>
       </div>
 
       {isLoading ? (
