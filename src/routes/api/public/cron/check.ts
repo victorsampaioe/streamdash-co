@@ -54,6 +54,7 @@ async function run() {
   const { runDueContentScans } = await import("@/lib/content-monitor.server");
   const { syncServersPauseState } = await import("@/lib/service-status.server");
   const { runMonitorSweep } = await import("@/lib/monitor-sweep.server");
+  const { retryServerIncidentAlerts } = await import("@/lib/server-alert-retry.server");
 
   // Primeiro sincroniza o estado de pausa: contas expiradas ficam marcadas
   // como pausadas e contas reativadas voltam sozinhas para o monitoramento.
@@ -94,8 +95,19 @@ async function run() {
       )
     : { processed: 0, fixed: 0, requeued: 0, offlineFound: 0 };
 
+  // Reentrega avisos de queda/retorno ainda não confirmados por canal.
+  // Executa em todos os ciclos, mesmo quando a reconciliação não é agendada.
+  const incidentRetries = await safe(
+    "serverAlertRetry",
+    () => retryServerIncidentAlerts(6),
+    { found: 0, attempted: 0, failed: 0, skipped: 0 },
+    errors,
+  );
+
   return {
     ok: errors.length === 0,
+    serverAlertRetries: incidentRetries.attempted,
+    serverAlertRetryFailures: incidentRetries.failed,
     expiredNotified: expired.notified,
     expiryNoticesSent: expiryNotice.sent,
     iptvSynced: iptv.synced,
