@@ -75,16 +75,19 @@ export const createPixPayment = createServerFn({ method: "POST" })
 
     const { supabase, userId, claims } = context;
     const expiresAt = new Date(Date.now() + 30 * 60 * 1000).toISOString(); // PIX 30min
-    const discountApplied = false;
+    const eligibleReferralDiscount = paymentType === "subscription" && ["monthly", "quarterly", "yearly"].includes(planId ?? "");
+    const grossAmountCents = amountCents;
+    let referralDiscountCents = 0;
+    let discountApplied = false;
 
     // Reuse a still-valid charge.
     let existingQuery = supabase
       .from("payments")
-      .select("id, amount_cents, expires_at, pix_copy_paste, pix_qr_code")
+      .select("id, amount_cents, referral_discount_cents, expires_at, pix_copy_paste, pix_qr_code")
       .eq("user_id", userId)
       .eq("payment_type", paymentType)
       .eq("status", "pending")
-      .eq("amount_cents", amountCents)
+      .eq(eligibleReferralDiscount ? "gross_amount_cents" : "amount_cents", grossAmountCents)
       .gt("expires_at", new Date().toISOString())
       .not("pix_qr_code", "is", null)
       .order("created_at", { ascending: false })
@@ -108,7 +111,8 @@ export const createPixPayment = createServerFn({ method: "POST" })
         expiresAt: existing.expires_at ?? expiresAt,
         integrationReady: true,
         amountCents: existing.amount_cents,
-        discountApplied,
+        referralDiscountCents: existing.referral_discount_cents ?? 0,
+        discountApplied: (existing.referral_discount_cents ?? 0) > 0,
       };
     }
 
@@ -119,6 +123,8 @@ export const createPixPayment = createServerFn({ method: "POST" })
       method: "pix",
       status: "pending",
       amount_cents: amountCents,
+      gross_amount_cents: eligibleReferralDiscount ? grossAmountCents : null,
+      referral_discount_cents: 0,
       currency: "BRL",
       store_product_id: storeProductId || null,
       api_plan_id: apiPlanId || null,
@@ -143,6 +149,39 @@ export const createPixPayment = createServerFn({ method: "POST" })
       throw new Error(`Erro ao salvar pagamento no banco: ${error.message}`);
     }
 
+    // Reserva atomicamente o saldo de indicação. O saldo só é consumido
+    // quando a cobrança for aprovada; expiração ou cancelamento o libera.
+    if (eligibleReferralDiscount) {
+      const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+      const { data: discountResult, error: discountError } = await supabaseAdmin.rpc("reserve_referral_discount", {
+        _payment_id: payment.id,
+      });
+      if (discountError) throw new Error(`Não foi possível aplicar o saldo de indicação: ${discountError.message}`);
+      const discounted = discountResult?.[0];
+      referralDiscountCents = discounted?.discount_cents ?? 0;
+      amountCents = discounted?.amount_to_pay_cents ?? grossAmountCents;
+      discountApplied = referralDiscountCents > 0;
+      if (amountCents === 0) {
+        const { data: finalized, error: finalizeError } = await supabaseAdmin.rpc("finalize_referral_credit_payment", {
+          _payment_id: payment.id,
+        });
+        if (finalizeError || !finalized?.[0]?.applied) {
+          throw new Error(finalizeError?.message || "Não foi possível confirmar a renovação com saldo.");
+        }
+        return {
+          paymentId: payment.id,
+          status: "approved" as const,
+          copyPaste: null,
+          expiresAt,
+          integrationReady: true,
+          amountCents: 0,
+          referralDiscountCents,
+          discountApplied: true,
+          creditOnly: true,
+        };
+      }
+    }
+
     // 2) Try to create real MP PIX charge
     const { getMpToken, createMpPixCharge } = await import("./mercadopago.server");
     if (!getMpToken()) {
@@ -153,6 +192,7 @@ export const createPixPayment = createServerFn({ method: "POST" })
         expiresAt,
         integrationReady: false,
         amountCents,
+        referralDiscountCents,
         discountApplied,
       };
     }
@@ -211,6 +251,7 @@ export const createPixPayment = createServerFn({ method: "POST" })
         expiresAt,
         integrationReady: true,
         amountCents,
+        referralDiscountCents,
         discountApplied,
       };
     } catch (e) {
