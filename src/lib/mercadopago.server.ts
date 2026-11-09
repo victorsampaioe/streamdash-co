@@ -125,6 +125,14 @@ export async function syncMpPayment(paymentId: string | number, expectedPaymentI
   // Validação também para cobranças antigas marcadas como aprovadas no banco.
   validatePixCharge(mp, row);
   if (row.status === "approved") {
+    // Estorno comprovado pelo provedor: reverte as comissões ligadas a
+    // esta cobrança no trigger do banco. Não inventa comissões negativas.
+    if (status === "refunded") {
+      const { error: refundError } = await supabaseAdmin.from("payments")
+        .update({ status: "refunded", raw_payload: mp as any })
+        .eq("id", row.id).eq("status", "approved");
+      if (refundError) throw new Error(refundError.message);
+    }
     return {
       paymentId: row.id, status, paidAt: row.paid_at,
       subscriptionExpiresAt: null, newlyApproved: false,
