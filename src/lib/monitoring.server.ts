@@ -474,7 +474,7 @@ async function performCheck(server: ServerRow) {
         console.error("[monitor] offline notification retry failed", error);
       }
 }
-  } else if (wasDown && upConfirmed && displayStatus !== "down") {
+  } else if (wasDown && upConfirmed) {
     // Só fecha o incidente após confirmação de recuperação; uma única
     // resposta positiva com as sondas seguintes falhando não basta.
     const gate = await closeOfflineIncident(server.id);
