@@ -114,9 +114,11 @@ export function effectivePriceCents(plan: PlanDefinition, now: number = Date.now
   return plan.priceCents;
 }
 
-// Referral: novo usuário que se cadastrou com código de indicação ganha
-// 10% de desconto na PRIMEIRA compra (mensal ou anual).
-export const REFERRAL_FIRST_PURCHASE_DISCOUNT = 0.10;
+// Programa vigente: o INDICADOR acumula 30% do pagamento efetivo a
+// cada renovação do indicado. A primeira compra não tem desconto extra.
+export const REFERRAL_RECURRING_REWARD_RATE = 0.30;
+// Mantido por compatibilidade com possíveis consumidores antigos.
+export const REFERRAL_FIRST_PURCHASE_DISCOUNT = 0;
 
 
 export function formatBRL(cents: number) {
