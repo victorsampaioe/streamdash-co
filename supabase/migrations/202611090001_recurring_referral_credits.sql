@@ -75,7 +75,7 @@ BEGIN
  WHERE referred_id=NEW.user_id AND status IN ('pending','trial_active');
  RETURN NEW;
 END;
-$function$
+$function$;
 
 CREATE OR REPLACE FUNCTION public.finalize_referral_credit_payment(_payment_id uuid)
  RETURNS TABLE(applied boolean, expires_at timestamp with time zone)
@@ -121,7 +121,7 @@ BEGIN
  WHERE id=p.id;
  RETURN QUERY SELECT true,v_expires;
 END;
-$function$
+$function$;
 
 CREATE OR REPLACE FUNCTION public.referral_wallet_balance(_owner uuid)
  RETURNS TABLE(earned_cents bigint, used_cents bigint, reserved_cents bigint, available_cents bigint)
@@ -143,7 +143,7 @@ AS $function$
  SELECT earnings.n,uses.spent,uses.held,
         greatest(0::bigint,earnings.n-uses.spent-uses.held)
  FROM earnings CROSS JOIN uses;
-$function$
+$function$;
 
 CREATE OR REPLACE FUNCTION public.reserve_referral_discount(_payment_id uuid)
  RETURNS TABLE(discount_cents integer, amount_to_pay_cents integer)
@@ -184,7 +184,7 @@ BEGIN
   WHERE id=p.id;
   RETURN QUERY SELECT v_discount,p.gross_amount_cents-v_discount;
 END;
-$function$
+$function$;
 
 
 DROP TRIGGER IF EXISTS on_payment_recurring_referral ON public.payments;
