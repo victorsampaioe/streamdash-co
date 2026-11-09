@@ -95,7 +95,7 @@ function ReferralPage() {
           <p className="mt-1 text-xs text-muted-foreground">O crédito é liberado após o pagamento confirmado do indicado.</p>
           <div className="mt-4 space-y-3">
             {data.referrals.length === 0 && <p className="rounded-xl bg-muted/40 p-5 text-center text-sm text-muted-foreground">Ainda não há indicações. Compartilhe seu link para começar.</p>}
-            {data.referrals.map((referral, i) => <div key={i} className="flex items-center justify-between gap-3 border-b border-border/60 py-3 last:border-b-0">
+            {data.referrals.map((referral: { label: string; joinedAt: string; active: boolean; earnedCents: number }, i: number) => <div key={i} className="flex items-center justify-between gap-3 border-b border-border/60 py-3 last:border-b-0">
               <div><p className="text-sm font-medium">{referral.label}</p><p className="text-xs text-muted-foreground">{new Date(referral.joinedAt).toLocaleDateString("pt-BR")}</p></div>
               <div className="text-right"><Badge variant={referral.active ? "default" : "secondary"}>{referral.active ? "Assinou" : "Aguardando pagamento"}</Badge><p className="mt-1 text-sm font-semibold">{formatBRL(referral.earnedCents)}</p></div>
             </div>)}
@@ -107,7 +107,7 @@ function ReferralPage() {
           <p className="mt-1 text-xs text-muted-foreground">Toda renovação paga pelo indicado gera uma nova comissão.</p>
           <div className="mt-4 space-y-3">
             {data.recentRewards.length === 0 && <p className="rounded-xl bg-muted/40 p-5 text-center text-sm text-muted-foreground">Seus créditos aparecerão aqui após o primeiro pagamento aprovado.</p>}
-            {data.recentRewards.map((reward, i) => <div key={i} className="flex items-center justify-between gap-3 border-b border-border/60 py-3 last:border-b-0">
+            {data.recentRewards.map((reward: { paidAmountCents: number; rewardCents: number; createdAt: string }, i: number) => <div key={i} className="flex items-center justify-between gap-3 border-b border-border/60 py-3 last:border-b-0">
               <div className="flex items-center gap-3"><CheckCircle2 className="h-5 w-5 text-emerald-500" /><div><p className="text-sm font-medium">Pagamento de {formatBRL(reward.paidAmountCents)}</p><p className="text-xs text-muted-foreground">{new Date(reward.createdAt).toLocaleDateString("pt-BR")}</p></div></div>
               <p className="font-semibold text-emerald-500">+ {formatBRL(reward.rewardCents)}</p>
             </div>)}
