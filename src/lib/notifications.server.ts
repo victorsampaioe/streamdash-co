@@ -29,7 +29,7 @@ export async function flushNotificationQueue() {
     const [ownerId] = key.split(":");
     const channel = items[0].alert_channels;
     if (!channel) { failed += items.length; continue; }
-    const serverCount = new Set(items.filter(i => i.event !== "referral_launch_20261109").map(i => i.server_id)).size;
+    const serverCount = new Set(items.filter(i => !i.event.startsWith("referral_")).map(i => i.server_id)).size;
     
     // Obter preferência do usuário
     const { data: profile } = await supabaseAdmin
@@ -44,11 +44,11 @@ export async function flushNotificationQueue() {
 
     // Comunicados institucionais não são eventos de recuperação.
     // Enviar cada um integralmente, sem agrupá-los no resumo de servidores.
-    const announcements = items.filter(i => i.event === "referral_launch_20261109");
+    const announcements = items.filter(i => i.event.startsWith("referral_"));
     for (const item of announcements) {
       if (await sendToChannel(channel, item.message, "up")) successfullyDelivered.push(item.id);
     }
-    const recoveryItems = items.filter(i => i.event !== "referral_launch_20261109");
+    const recoveryItems = items.filter(i => !i.event.startsWith("referral_"));
 
     if (style === "summary" && recoveryItems.length > 1) {
       // Enviar resumo
@@ -92,7 +92,7 @@ export async function flushReferralLaunchCampaign(limit = 8) {
   const { data: pending, error } = await supabaseAdmin
     .from("notification_queue")
     .select("id,owner_id,channel_id,message,alert_channels(*)")
-    .eq("event", "referral_launch_20261109")
+    .in("event", ["referral_launch_20261109", "referral_trial_20261110"])
     .eq("processed", false)
     .order("created_at", { ascending: true })
     .limit(Math.max(1, Math.min(10, limit)));
@@ -114,7 +114,7 @@ export async function flushReferralLaunchCampaign(limit = 8) {
   }
   const { count, error: countError } = await supabaseAdmin.from("notification_queue")
     .select("id", { count: "exact", head: true })
-    .eq("event", "referral_launch_20261109")
+    .in("event", ["referral_launch_20261109", "referral_trial_20261110"])
     .eq("processed", false);
   if (countError) throw countError;
   return { sent, failed, pending: count ?? 0 };
