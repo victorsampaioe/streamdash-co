@@ -18,7 +18,7 @@ export type DoctorEvidence = {
   paused: boolean;
   recentChecks: Array<{ status: string; checked_at: string; http_status: number | null; latency_ms: number | null }>;
   regions: Array<{ region_code: string; status: string; checked_at: string }>;
-  incidents: Array<{ started_at: string; ended_at: string | null }>;
+  incidents: Array<{ started_at: string; ended_at: string | null; incident_type: string | null }>;
 };
 export type DoctorReport = {
   severity: "critical" | "warning" | "informational";
@@ -54,10 +54,10 @@ export function analyzeStreamDoctor(a: DoctorAnswers, e: DoctorEvidence, now = n
   const regionUp = regional.filter(r => ["up", "online", "degraded"].includes(r.status)).length;
   const recentDown = checks.filter(c => c.status === "down").length;
   const recentUp = checks.filter(c => ["up", "online", "degraded"].includes(c.status)).length;
-  const openedIncident = e.incidents.some(i => !i.ended_at);
+  const openedIncident = e.incidents.some(i => !i.ended_at && i.incident_type !== "dns");
   const snapshotRecent = isRecent(e.checkedAt);
   const dnsBroken = e.dnsStatus === "offline";
-  const confirmedOutage = !e.paused && (openedIncident || (snapshotRecent && e.status === "down" && recentDown >= 2 && regionDown >= 2 && regionUp === 0));
+  const confirmedOutage = !e.paused && snapshotRecent && e.status === "down" && regionUp === 0 && (openedIncident || (recentDown >= 2 && regionDown >= 2));
   let severity: DoctorReport["severity"] = "informational";
   let headline = "Diagnóstico inicial — mais informações necessárias";
   let confidence: DoctorReport["confidence"] = "Limitada";
