@@ -27,7 +27,7 @@ export const runStreamDoctor = createServerFn({ method: "POST" })
         .eq("server_id", server.id).order("checked_at", { ascending: false }).limit(15),
       context.supabase.from("region_checks").select("region_code,status,checked_at")
         .eq("server_id", server.id).order("checked_at", { ascending: false }).limit(24),
-      context.supabase.from("incidents").select("started_at,ended_at")
+      context.supabase.from("incidents").select("started_at,ended_at,incident_type")
         .eq("server_id", server.id).order("started_at", { ascending: false }).limit(5),
     ]);
     // Do not silently interpret database errors as "no incidents" or healthy.
@@ -48,7 +48,7 @@ export const runStreamDoctor = createServerFn({ method: "POST" })
         region_code: r.region_code, status: r.status, checked_at: r.checked_at
       })),
       incidents: (incidents.data ?? []).map(i => ({
-        started_at: i.started_at, ended_at: i.ended_at
+        started_at: i.started_at, ended_at: i.ended_at, incident_type: i.incident_type
       })),
     };
     return { serverName: server.name, report: analyzeStreamDoctor(data, snapshot) };
