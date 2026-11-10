@@ -135,23 +135,18 @@ export function useSubscription() {
       const ownerId = tree?.owner_id || null;
 
       if (!subData) {
-        // Check for signup bonus period
-        const createdAt = profile?.created_at ? new Date(profile.created_at).getTime() : 0;
-        const bonusMs = (profile?.signup_bonus_days || 0) * 24 * 60 * 60 * 1000;
-        const bonusExpired = createdAt + bonusMs <= now;
-        const isBonusActive = !bonusExpired && bonusMs > 0;
-
-        return { 
-          subscription: null, 
-          daysRemaining: isBonusActive ? Math.ceil((createdAt + bonusMs - now) / (24 * 60 * 60 * 1000)) : 0, 
-          // Resellers are active based on being a reseller, or if they have an active bonus
-          isActive: isReseller || isBonusActive,
-          isExpired: !isReseller && !isBonusActive,
-          isTrial: isBonusActive, 
-          isExpiringSoon: isBonusActive && (createdAt + bonusMs - now) / (24 * 60 * 60 * 1000) <= 7, 
+        // Sem assinatura, nenhum teste é concedido por tempo de cadastro.
+        // A indicação válida cria uma assinatura trial de 2 dias no banco.
+        return {
+          subscription: null,
+          daysRemaining: 0,
+          isActive: isReseller,
+          isExpired: !isReseller,
+          isTrial: false,
+          isExpiringSoon: false,
           parentId,
           ownerId,
-          profile: prof
+          profile: prof,
         };
       }
 
@@ -159,22 +154,19 @@ export function useSubscription() {
       const exp = new Date(sub.expires_at).getTime();
       const msPerDay = 24 * 60 * 60 * 1000;
       const daysRemaining = Math.max(0, Math.ceil((exp - now) / msPerDay));
-      const createdAt = profile?.created_at ? new Date(profile.created_at).getTime() : 0;
-      const bonusMs = (profile?.signup_bonus_days || 0) * 24 * 60 * 60 * 1000;
-      const isBonusActive = createdAt + bonusMs > now && bonusMs > 0;
       const isExpired = exp <= now || sub.status === "expired" || sub.status === "cancelled";
-      
-      // Reseller can always access panel. Clients are active if subscription is valid OR bonus is active.
-      const isActive = isReseller 
-        ? true 
-        : (isBonusActive || (!isExpired && (sub.status === "trial" || sub.status === "active")));
+
+      // Somente a assinatura real (teste de indicação ou plano pago) libera acesso.
+      const isActive = isReseller
+        ? true
+        : (!isExpired && (sub.status === "trial" || sub.status === "active"));
       
       return {
         subscription: sub,
         daysRemaining,
         isActive,
         isExpired,
-        isTrial: (sub.status === "trial" || isBonusActive) && !isExpired,
+        isTrial: sub.status === "trial" && !isExpired,
         isExpiringSoon: isActive && daysRemaining <= 7,
         parentId,
         ownerId,
