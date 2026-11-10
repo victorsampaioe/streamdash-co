@@ -132,6 +132,7 @@ function useNavItems() {
     { to: "/app/central", label: "Central Inteligente", icon: ShieldAlert },
     { to: "/app/alerts", label: "Alertas", icon: Bell },
     { to: "/app/diagnostico", label: "Diagnóstico", icon: Activity },
+    { to: "/app/stream-doctor", label: "Stream Doctor", icon: ShieldAlert },
     { to: "/app/radar", label: "Radar Brasil", icon: Radio },
     { to: "/app/inteligencia", label: "Inteligência de Conteúdo", icon: Sparkles },
 
