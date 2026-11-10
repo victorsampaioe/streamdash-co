@@ -133,7 +133,6 @@ function useNavItems() {
     { to: "/app/alerts", label: "Alertas", icon: Bell },
     { to: "/app/diagnostico", label: "Diagnóstico", icon: Activity },
     { to: "/app/radar", label: "Radar Brasil", icon: Radio },
-    { to: "/app/detector", label: "Detector", icon: ShieldAlert },
     { to: "/app/inteligencia", label: "Inteligência de Conteúdo", icon: Sparkles },
 
     
@@ -149,13 +148,12 @@ function useNavItems() {
   if (isResellerOrAdmin) {
     items.push({ to: "/app/reseller", label: "Painel Revendedor", icon: ShoppingBag });
     items.push({ to: "/app/pagina", label: "Minha Página", icon: Globe });
-    items.push({ to: "/app/subscription", label: "Comprar Créditos", icon: CreditCard });
+    // Compra de créditos permanece acessível dentro do fluxo de assinatura,
+    // mas não aparece como atalho público no menu.
   } else {
     items.push({ to: "/app/subscription", label: "Minha Assinatura", icon: CreditCard });
   }
   
-  items.push({ to: "/app/api-integrations", label: "API & Integrações", icon: Braces });
-  items.push({ to: "/app/ai-integration", label: "Integração IA", icon: Bot });
   items.push({ to: "/app/ajuda", label: "Central de Ajuda", icon: BookOpen });
 
   return items;
