@@ -51,6 +51,11 @@ function VitrineIA() {
   const [headline, setHeadline] = useState("Agora disponível.");
   const [confirmedOnly, setConfirmedOnly] = useState(false);
   const [search, setSearch] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedSearch(search.trim()), 350);
+    return () => clearTimeout(timer);
+  }, [search]);
   const [logoUpload, setLogoUpload] = useState("");
   const [backgroundColor, setBackgroundColor] = useState("#110407");
   const [textColor, setTextColor] = useState("#ffffff");
@@ -62,22 +67,36 @@ function VitrineIA() {
     queryKey: ["vitrine-brand"], queryFn: async () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Faça login para usar a Vitrine IA.");
-      const { data, error } = await supabase.from("promo_brand_settings" as any)
-        .select("brand_name,logo_url,whatsapp,primary_color").eq("owner_id", user.id).maybeSingle();
-      if (error) throw error;
-      const existing = data as Partial<Brand> | null;
-      if (existing) setBrand({
-        brand_name: existing.brand_name || defaultBrand.brand_name,
-        logo_url: existing.logo_url || "",
-        whatsapp: existing.whatsapp || "",
-        primary_color: existing.primary_color || defaultBrand.primary_color,
-      });
+      // As configurações da página do revendedor são a fonte de identidade
+      // já cadastrada no painel. A Vitrine IA pode sobrescrevê-las separadamente.
+      const [{ data: promo, error: promoError }, { data: page, error: pageError }, { data: profile, error: profileError }] = await Promise.all([
+        supabase.from("promo_brand_settings" as any)
+          .select("brand_name,logo_url,whatsapp,primary_color").eq("owner_id",user.id).maybeSingle(),
+        supabase.from("reseller_pages" as any)
+          .select("display_name,logo_url,whatsapp,primary_color").eq("owner_id",user.id).maybeSingle(),
+        supabase.from("profiles")
+          .select("full_name,phone,whatsapp").eq("id",user.id).maybeSingle(),
+      ]);
+      if (promoError) throw promoError;
+      if (pageError) throw pageError;
+      if (profileError) throw profileError;
+      const saved = promo as Partial<Brand> | null;
+      const registered = page as {display_name?:string|null;logo_url?:string|null;whatsapp?:string|null;primary_color?:string|null} | null;
+      const p = profile as {full_name?:string|null;phone?:string|null;whatsapp?:string|null} | null;
+      const resolveValue = (...values:(string|null|undefined)[]) => values.find(value=>!!value?.trim()) || "";
+      const merged: Brand = {
+        brand_name: resolveValue(saved?.brand_name === defaultBrand.brand_name ? "" : saved?.brand_name,registered?.display_name,p?.full_name,saved?.brand_name,defaultBrand.brand_name),
+        logo_url: resolveValue(saved?.logo_url,registered?.logo_url),
+        whatsapp: resolveValue(saved?.whatsapp,registered?.whatsapp,p?.whatsapp,p?.phone),
+        primary_color: resolveValue(saved?.primary_color,registered?.primary_color,defaultBrand.primary_color),
+      };
+      setBrand(merged);
       return user.id;
-    }, retry: 1,
+    }, retry:1,
   });
   const feed = useQuery({
-    queryKey: ["vitrine-feed",kind,search.trim()],
-    queryFn: async () => runFeed({ data: { feed: kind === "movie" ? "movie_recent" : "tv_recent", query: search.trim() || undefined } }),
+    queryKey: ["vitrine-feed",kind,debouncedSearch],
+    queryFn: async () => runFeed({ data: { feed: kind === "movie" ? "movie_recent" : "tv_recent", query: debouncedSearch || undefined } }),
     staleTime: 300000,
   });
   const history = useQuery({
@@ -272,9 +291,10 @@ function VitrineIA() {
                         <span style={{color:accentColor,fontSize:format==="story"?37:format==="feed"?32:22}}>◉</span>
                       </div>
                       <div style={{width:"100%",flex:1,minHeight:0,display:"grid",alignItems:"stretch",gridTemplateColumns:shown.length===1?"1fr":"repeat(2,minmax(0,1fr))",gridTemplateRows:shown.length<=2?"minmax(0,1fr)":`repeat(${Math.ceil(shown.length/2)},minmax(0,1fr))`,gap:format==="story"?28:format==="feed"?20:10}}>
-                        {shown.map((item,i)=><div key={item.tmdb_id} style={{position:"relative",minHeight:0,minWidth:0,overflow:"hidden",borderRadius:format==="story"?26:format==="feed"?20:12,boxShadow:"0 18px 45px #000c",border:`2px solid ${accentColor}55`,background:"linear-gradient(120deg,#1b1218,#080408)",display:"flex",flexDirection:"column"}}>
+                        {shown.map((item,i)=><div key={item.tmdb_id} style={{position:"relative",minHeight:0,minWidth:0,width:shown.length===1&&format!=="landscape"?"76%":"100%",justifySelf:"center",overflow:"hidden",borderRadius:format==="story"?26:format==="feed"?20:12,boxShadow:"0 18px 45px #000c",border:`2px solid ${accentColor}55`,background:"linear-gradient(120deg,#1b1218,#080408)",display:"flex",flexDirection:"column"}}>
                           <div style={{flex:1,minHeight:0,position:"relative",display:"flex",alignItems:"center",justifyContent:"center"}}>
-                            <img src={poster(item.poster_path)} crossOrigin="anonymous" alt={item.title} style={{width:"100%",height:"100%",position:"absolute",inset:0,objectFit:"contain",display:"block"}}/>
+                            <img src={poster(item.poster_path)} crossOrigin="anonymous" alt="" aria-hidden="true" style={{width:"100%",height:"100%",position:"absolute",inset:0,objectFit:"cover",filter:"blur(24px) brightness(.42)",transform:"scale(1.16)"}}/>
+                            <img src={poster(item.poster_path)} crossOrigin="anonymous" alt={item.title} style={{width:"100%",height:"100%",position:"absolute",inset:0,objectFit:"contain",display:"block",filter:"drop-shadow(0 12px 20px #000a)"}}/>
                           </div>
                           <div style={{fontWeight:800,fontSize:shown.length===1?(format==="story"?33:format==="feed"?27:16):(format==="story"?23:format==="feed"?19:13),textAlign:"center",padding:shown.length===1?"17px 15px":"9px 10px",background:"linear-gradient(90deg,#080408,#23090d,#080408)",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{item.title}</div>
                           <div style={{position:"absolute",top:0,left:0,right:0,height:5,background:`linear-gradient(90deg,transparent,${accentColor},transparent)`}}/>
@@ -307,6 +327,14 @@ function VitrineIA() {
         </Card>
         <Card className="p-4 space-y-3">
           <h2 className="font-bold">Escolha as capas {selected.length>0?`(${selected.length})`:"(seleção automática)"}</h2>
+          <div className="space-y-1">
+            <label htmlFor="vitrine-search-catalog" className="text-sm font-semibold">Pesquisar filme ou série pelo nome</label>
+            <div className="flex gap-2">
+              <Input id="vitrine-search-catalog" type="search" placeholder="Ex.: Irmã do Pecado, Tenzing..." value={search} onChange={e=>{setSearch(e.target.value);setSelected([]);}} />
+              {search && <Button type="button" variant="outline" onClick={()=>{setSearch("");setSelected([]);}}>Limpar</Button>}
+            </div>
+            <p className="text-xs text-muted-foreground">Resultados da TMDB para {kind==="movie"?"filmes":"séries"}; selecione uma capa para aplicar na arte.</p>
+          </div>
           {feed.isLoading && <p className="text-sm text-muted-foreground">Buscando títulos na TMDB...</p>}
           {feed.isError && <p className="text-sm text-destructive">Não foi possível consultar o catálogo: {String(feed.error)}</p>}
           {feed.data && sourceItems.length===0 && <p className="text-sm text-muted-foreground">Nenhum título encontrado para esse filtro.</p>}
