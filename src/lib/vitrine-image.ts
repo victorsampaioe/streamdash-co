@@ -9,7 +9,12 @@ export function clearOpaqueBlackEdges(rgba: Uint8ClampedArray, width: number, he
     const j = i * 4;
     return rgba[j + 3] > 240 && rgba[j] <= 74 && rgba[j + 1] <= 74 && rgba[j + 2] <= 74;
   };
-  // Never modify a transparent logo, or a dark image with a non-black edge.
+  // Preserve PNGs that already contain genuine alpha transparency. Removing
+  // near-black pixels from them could erase intentional details in the logo.
+  for (let i = 3; i < rgba.length; i += 4) {
+    if (rgba[i] < 250) return false;
+  }
+  // Only clean a uniformly opaque, near-black background touching the edges.
   if (corners.filter(isBlack).length < 3) return false;
   const seen = new Uint8Array(width * height);
   const queue = new Int32Array(width * height);
