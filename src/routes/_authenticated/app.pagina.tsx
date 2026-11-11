@@ -171,7 +171,7 @@ function ResellerPageEditor() {
       </div>
 
       {publicUrl && existing && (
-        <div className="grid gap-4 md:grid-cols-2">
+        <div className="grid gap-4">
           <Card className="p-4 flex flex-wrap items-center justify-between gap-3">
             <div className="flex flex-col gap-1">
               <span className="text-xs text-muted-foreground uppercase tracking-wider font-bold">Página Pública</span>
@@ -187,20 +187,7 @@ function ResellerPageEditor() {
             </div>
           </Card>
 
-          <Card className="p-4 flex flex-wrap items-center justify-between gap-3 border-primary/20 bg-primary/5">
-            <div className="flex flex-col gap-1">
-              <span className="text-xs text-primary uppercase tracking-wider font-bold">Web Player White-label</span>
-              <span className="font-mono text-sm truncate">https://streammonitor.site/player</span>
-            </div>
-            <div className="flex gap-2">
-              <Button size="sm" variant="secondary" className="gap-2" onClick={() => { navigator.clipboard.writeText(`${window.location.origin}/player`); toast.success("Link do Player copiado!"); }}>
-                <Copy className="h-3.5 w-3.5" /> Copiar
-              </Button>
-              <Button size="sm" className="gap-2 glow-primary" asChild>
-                <Link to="/app/player">Configurar Player</Link>
-              </Button>
-            </div>
-          </Card>
+
         </div>
       )}
 
