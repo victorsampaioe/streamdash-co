@@ -22,7 +22,14 @@ export const Route = createFileRoute("/api/public/cron/monitor")({
           // Five parallel probes bound each cycle. Confirming a real outage
           // can still take longer than a simple successful health check.
           const result = await withCycleLock("cron-monitor", 120, () => runDueChecks(5));
-          return Response.json({ ok: true, ...result }, { headers: { "Cache-Control": "no-store" } });
+          let telegramOutbox: unknown = null;
+          try {
+            const { processTelegramOutbox } = await import("@/lib/telegram-outbox.server");
+            telegramOutbox = await withCycleLock("telegram-outbox", 60, () => processTelegramOutbox(10));
+          } catch (e) {
+            console.error("[cron/monitor] telegram outbox", e instanceof Error ? e.message : "unknown");
+          }
+          return Response.json({ ok: true, ...result, telegramOutbox }, { headers: { "Cache-Control": "no-store" } });
         } catch (error) {
           console.error("[cron/monitor] failed", error instanceof Error ? error.name : "unknown");
           return Response.json({ ok: false, error: "monitor_cycle_failed" }, { status: 503 });
