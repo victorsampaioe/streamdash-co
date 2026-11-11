@@ -126,7 +126,7 @@ function useNavItems() {
   const isResellerOrAdmin = navIsAdmin || isResellerRole || !!subData?.profile?.is_reseller;
 
   const items = [
-    ...(navIsAdmin ? [{ to: "/app/admin", label: "Admin · Central de controle", icon: Users }] : []),
+    ...(navIsAdmin ? [{ to: "/app/admin", label: "Admin · Central de controle", icon: Users }, { to: "/app/admin/telegram-guard", label: "Admin · Entregas Telegram", icon: Bell }] : []),
     { to: "/app", label: "Dashboard", icon: LayoutDashboard, exact: true },
     { to: "/app/servers", label: "Servidores", icon: ServerIcon },
     { to: "/app/central", label: "Central Inteligente", icon: ShieldAlert },

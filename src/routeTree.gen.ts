@@ -71,6 +71,7 @@ import { Route as ApiV1SplatRouteImport } from './routes/api/v1/$'
 import { Route as StatusRevendaSlugRouteImport } from './routes/status.revenda.$slug'
 import { Route as AuthenticatedAppAdminAndroidPlayRouteImport } from './routes/_authenticated/app.admin.android-play'
 import { Route as AuthenticatedAppAdminStreamPlayVersionsRouteImport } from './routes/_authenticated/app.admin.stream-play-versions'
+import { Route as AuthenticatedAppAdminTelegramGuardRouteImport } from './routes/_authenticated/app.admin.telegram-guard'
 import { Route as AuthenticatedAppAdminCoreLogsRouteImport } from './routes/_authenticated/app.admin_.core-logs'
 import { Route as AuthenticatedAppDiagnosticoIndexRouteImport } from './routes/_authenticated/app.diagnostico.index'
 import { Route as AuthenticatedAppInteligenciaIndexRouteImport } from './routes/_authenticated/app.inteligencia.index'
@@ -435,6 +436,12 @@ const AuthenticatedAppAdminStreamPlayVersionsRoute =
     path: '/stream-play-versions',
     getParentRoute: () => AuthenticatedAppAdminRoute,
   } as any)
+const AuthenticatedAppAdminTelegramGuardRoute =
+  AuthenticatedAppAdminTelegramGuardRouteImport.update({
+    id: '/telegram-guard',
+    path: '/telegram-guard',
+    getParentRoute: () => AuthenticatedAppAdminRoute,
+  } as any)
 const AuthenticatedAppAdminCoreLogsRoute =
   AuthenticatedAppAdminCoreLogsRouteImport.update({
     id: '/admin_/core-logs',
@@ -695,6 +702,7 @@ export interface FileRoutesByFullPath {
   '/app/': typeof AuthenticatedAppIndexRoute
   '/app/admin/android-play': typeof AuthenticatedAppAdminAndroidPlayRoute
   '/app/admin/stream-play-versions': typeof AuthenticatedAppAdminStreamPlayVersionsRoute
+  '/app/admin/telegram-guard': typeof AuthenticatedAppAdminTelegramGuardRoute
   '/app/admin/core-logs': typeof AuthenticatedAppAdminCoreLogsRoute
   '/app/servers/$id': typeof AuthenticatedAppServersIdRoute
   '/app/servers/new': typeof AuthenticatedAppServersNewRoute
@@ -793,6 +801,7 @@ export interface FileRoutesByTo {
   '/app': typeof AuthenticatedAppIndexRoute
   '/app/admin/android-play': typeof AuthenticatedAppAdminAndroidPlayRoute
   '/app/admin/stream-play-versions': typeof AuthenticatedAppAdminStreamPlayVersionsRoute
+  '/app/admin/telegram-guard': typeof AuthenticatedAppAdminTelegramGuardRoute
   '/app/admin/core-logs': typeof AuthenticatedAppAdminCoreLogsRoute
   '/app/servers/$id': typeof AuthenticatedAppServersIdRoute
   '/app/servers/new': typeof AuthenticatedAppServersNewRoute
@@ -894,6 +903,7 @@ export interface FileRoutesById {
   '/_authenticated/app/': typeof AuthenticatedAppIndexRoute
   '/_authenticated/app/admin/android-play': typeof AuthenticatedAppAdminAndroidPlayRoute
   '/_authenticated/app/admin/stream-play-versions': typeof AuthenticatedAppAdminStreamPlayVersionsRoute
+  '/_authenticated/app/admin/telegram-guard': typeof AuthenticatedAppAdminTelegramGuardRoute
   '/_authenticated/app/admin_/core-logs': typeof AuthenticatedAppAdminCoreLogsRoute
   '/_authenticated/app/servers/$id': typeof AuthenticatedAppServersIdRoute
   '/_authenticated/app/servers/new': typeof AuthenticatedAppServersNewRoute
@@ -995,6 +1005,7 @@ export interface FileRouteTypes {
     | '/app/'
     | '/app/admin/android-play'
     | '/app/admin/stream-play-versions'
+    | '/app/admin/telegram-guard'
     | '/app/admin/core-logs'
     | '/app/servers/$id'
     | '/app/servers/new'
@@ -1093,6 +1104,7 @@ export interface FileRouteTypes {
     | '/app'
     | '/app/admin/android-play'
     | '/app/admin/stream-play-versions'
+    | '/app/admin/telegram-guard'
     | '/app/admin/core-logs'
     | '/app/servers/$id'
     | '/app/servers/new'
@@ -1193,6 +1205,7 @@ export interface FileRouteTypes {
     | '/_authenticated/app/'
     | '/_authenticated/app/admin/android-play'
     | '/_authenticated/app/admin/stream-play-versions'
+    | '/_authenticated/app/admin/telegram-guard'
     | '/_authenticated/app/admin_/core-logs'
     | '/_authenticated/app/servers/$id'
     | '/_authenticated/app/servers/new'
@@ -1734,6 +1747,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAppAdminStreamPlayVersionsRouteImport
       parentRoute: typeof AuthenticatedAppAdminRoute
     }
+    '/_authenticated/app/admin/telegram-guard': {
+      id: '/_authenticated/app/admin/telegram-guard'
+      path: '/telegram-guard'
+      fullPath: '/app/admin/telegram-guard'
+      preLoaderRoute: typeof AuthenticatedAppAdminTelegramGuardRouteImport
+      parentRoute: typeof AuthenticatedAppAdminRoute
+    }
     '/_authenticated/app/admin_/core-logs': {
       id: '/_authenticated/app/admin_/core-logs'
       path: '/admin/core-logs'
@@ -1992,12 +2012,15 @@ declare module '@tanstack/react-router' {
 interface AuthenticatedAppAdminRouteChildren {
   AuthenticatedAppAdminAndroidPlayRoute: typeof AuthenticatedAppAdminAndroidPlayRoute
   AuthenticatedAppAdminStreamPlayVersionsRoute: typeof AuthenticatedAppAdminStreamPlayVersionsRoute
+  AuthenticatedAppAdminTelegramGuardRoute: typeof AuthenticatedAppAdminTelegramGuardRoute
 }
 
 const AuthenticatedAppAdminRouteChildren: AuthenticatedAppAdminRouteChildren = {
   AuthenticatedAppAdminAndroidPlayRoute: AuthenticatedAppAdminAndroidPlayRoute,
   AuthenticatedAppAdminStreamPlayVersionsRoute:
     AuthenticatedAppAdminStreamPlayVersionsRoute,
+  AuthenticatedAppAdminTelegramGuardRoute:
+    AuthenticatedAppAdminTelegramGuardRoute,
 }
 
 const AuthenticatedAppAdminRouteWithChildren =
