@@ -80,6 +80,34 @@ function triage(server:PublicServer, symptom:Symptom, device:Device, message:str
   }else{
     tips.push("Anote o código da mensagem de erro e o horário.","Teste em outro dispositivo ou conexão para comparar.","Compartilhe o diagnóstico com o suporte da sua revenda.");
   }
+  // Interpretação local de códigos de erro frequentes: nenhuma consulta a IA é
+  // feita por visitantes anônimos e nenhuma senha precisa ser informada.
+  const normalized = message.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+  const code = normalized.match(/(?:^|[^0-9])(401|403|404|408|429|500|502|503|504)(?![0-9])/);
+  if(code) {
+    const details:Record<string,{meaning:string;action:string}>={
+      "401":{meaning:"Erro 401 indica falha de autenticação ou sessão inválida.",action:"Confira a validade do acesso com sua revenda. Nunca compartilhe senhas nesta página."},
+      "403":{meaning:"Erro 403 indica que o recurso foi recusado, por autorização ou regras do serviço.",action:"Peça ao suporte para verificar a permissão do recurso; não tente contornar bloqueios."},
+      "404":{meaning:"Erro 404 indica que o conteúdo ou endereço solicitado não foi encontrado.",action:"Confira se outros conteúdos autorizados funcionam e informe qual item falhou."},
+      "408":{meaning:"Erro 408 indica tempo esgotado durante uma solicitação.",action:"Verifique a estabilidade da conexão e compare novamente em outro aparelho."},
+      "429":{meaning:"Erro 429 indica excesso de requisições ao serviço.",action:"Evite repetir tentativas rapidamente; aguarde um pouco e procure o suporte se continuar."},
+      "500":{meaning:"Erro 500 sugere uma falha interna no serviço.",action:"Registre o horário e envie o erro ao suporte; reinstalar o aplicativo pode não ajudar."},
+      "502":{meaning:"Erro 502 indica falha de comunicação entre servidores ou intermediários.",action:"Tente novamente após alguns minutos e registre o horário da ocorrência."},
+      "503":{meaning:"Erro 503 normalmente indica indisponibilidade temporária do recurso.",action:"Aguarde a normalização e evite alterar configurações de acesso."},
+      "504":{meaning:"Erro 504 indica que um servidor intermediário não recebeu resposta a tempo.",action:"Anote o horário, verifique a conectividade e tente novamente sem repetir rapidamente."}
+    };
+    const match=details[code[1]];
+    if(match){
+      summary += " "+match.meaning;
+      tips.unshift(match.action);
+    }
+  }
+  if(normalized.includes("ssl")||normalized.includes("certificado")) {
+    tips.unshift("Verifique se a data e a hora do aparelho estão corretas. Se o certificado do serviço falhar, informe ao suporte; não desative a segurança do aparelho.");
+  }
+  if(normalized.includes("dns")&&server.status!=="dns_issue") {
+    tips.unshift("Um erro de DNS no aplicativo pode ter origem na rede ou no serviço. Teste outro site e registre se o problema aparece só neste aplicativo.");
+  }
   if(device==="smart")tips.push("Se o aplicativo não responder, desligue a TV da tomada por 30 segundos antes de ligar novamente.");
   if(device==="box")tips.push("Confira o espaço livre do TV Box e reinicie o aparelho.");
   const text=message.trim().slice(0,180);
