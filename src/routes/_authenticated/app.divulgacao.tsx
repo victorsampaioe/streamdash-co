@@ -20,6 +20,23 @@ type MediaItem = { tmdb_id: number; media_type: "movie" | "tv"; title: string; p
 type Brand = { brand_name: string; logo_url: string; whatsapp: string; primary_color: string };
 type Format = "feed" | "story" | "landscape";
 type Template = "four" | "featured" | "series" | "grid";
+type AiStyle = "automatico" | "acao" | "fantasia" | "terror" | "suspense" | "romance" | "drama" | "ficcao" | "animacao" | "documentario";
+const aiStyles: { id: AiStyle; label: string }[] = [
+  {id:"automatico",label:"Automático · baseado na sinopse"},
+  {id:"acao",label:"Ação cinematográfica"},
+  {id:"fantasia",label:"Fantasia épica"},
+  {id:"terror",label:"Terror atmosférico"},
+  {id:"suspense",label:"Suspense"},
+  {id:"romance",label:"Romance"},
+  {id:"drama",label:"Drama realista"},
+  {id:"ficcao",label:"Ficção científica"},
+  {id:"animacao",label:"Animação 3D original"},
+  {id:"documentario",label:"Documentário"},
+];
+const aiWorkerUrl = "https://streammonitor-vitrine-ai.victorsampaio133.workers.dev/generate";
+const todayFortaleza = () => new Intl.DateTimeFormat("sv-SE", {
+  timeZone:"America/Fortaleza", year:"numeric", month:"2-digit", day:"2-digit"
+}).format(new Date());
 const defaultBrand: Brand = { brand_name: "Minha Revenda", logo_url: "", whatsapp: "", primary_color: "#2563eb" };
 const adminBrand: Brand = { brand_name: "Stream Monitor", logo_url: "/favicon.ico", whatsapp: "", primary_color: "#2563eb" };
 const sizes: Record<Format, { w: number; h: number; label: string }> = {
@@ -88,6 +105,13 @@ function VitrineIA() {
   const [serverNames, setServerNames] = useState("");
   const [isMainAdmin, setIsMainAdmin] = useState(false);
   const [assetWarning, setAssetWarning] = useState("");
+  const [aiStyle, setAiStyle] = useState<AiStyle>("automatico");
+  const [generatingAi, setGeneratingAi] = useState(false);
+  const [aiBackground, setAiBackground] = useState("");
+  const [grantedArtSignature, setGrantedArtSignature] = useState("");
+  const grantedArtRef = useRef("");
+  const creditInFlight = useRef<Promise<void> | null>(null);
+  const today = todayFortaleza();
 
 
   const settings = useQuery({
@@ -143,6 +167,19 @@ function VitrineIA() {
       return (data??[]) as {id:string;title:string;format:string;storage_path:string|null;created_at:string}[];
     },staleTime:30000
   });
+  const aiQuota = useQuery({
+    queryKey:["vitrine-ai-quota",settings.data,today],
+    enabled:!!settings.data,
+    queryFn: async () => {
+      const {data,error} = await supabase.from("vitrine_ai_daily_quota" as any)
+        .select("used_count").eq("owner_id",settings.data!).eq("quota_day",today).maybeSingle();
+      if (error) throw error;
+      return Number((data as {used_count?:number}|null)?.used_count ?? 0);
+    },
+    staleTime:15000,
+  });
+  const remainingArts = Math.max(0,5-(aiQuota.data ?? 0));
+
   async function openSaved(path:string|null){
     if(!path)return toast.error("Imagem não armazenada para este registro.");
     const {data,error}=await supabase.storage.from("promo-arts").createSignedUrl(path,120);
@@ -156,6 +193,17 @@ function VitrineIA() {
     ? selected.map(id => sourceItems.find(x => x.tmdb_id === id)).filter((x): x is MediaItem => !!x)
     : sourceItems.slice(0, templates.find(x=>x.id===template)?.count ?? 4);
   const shown = chosen.slice(0, templates.find(x=>x.id===template)?.count ?? 4);
+  // A cota é cobrada por nova composição; baixar/compartilhar a mesma prévia
+  // novamente não consome outra criação dentro desta sessão.
+  const artSignature = JSON.stringify({
+    items:shown.map(x=>[x.tmdb_id,x.media_type]),
+    kind,template,format,headline,serverNames,
+    brand:[brand.brand_name,brand.whatsapp,brand.logo_url,brand.primary_color],
+    localLogo:[logoUpload.length,logoUpload.slice(-32)],
+    backgroundColor,textColor,accentColor,hideStudioMark,
+  });
+  const canReusePreview = grantedArtSignature === artSignature;
+
   const featuredDetail = useQuery({
     queryKey: ["vitrine-featured-details", shown[0]?.media_type, shown[0]?.tmdb_id],
     enabled: shown.length === 1 && !!shown[0]?.tmdb_id && !shown[0]?.overview?.trim(),
@@ -163,6 +211,10 @@ function VitrineIA() {
     staleTime: 600000,
     retry: 1,
   });
+  useEffect(() => {
+    // Nunca reutilizar o cenário de outro título ou formato sem gerar novamente.
+    setAiBackground("");
+  },[shown[0]?.tmdb_id,kind,template,format]);
   const dimensions = sizes[format];
   const posterKeys = shown.map(item => item.poster_path || "").filter(Boolean);
   const posterSignature = posterKeys.join("|");
@@ -236,6 +288,57 @@ function VitrineIA() {
     reader.readAsDataURL(file);
   }
 
+  async function claimCreditForPreview() {
+    if (grantedArtRef.current === artSignature) return;
+    if (creditInFlight.current) return creditInFlight.current;
+    const job = (async () => {
+      const {data,error} = await supabase.rpc("claim_vitrine_ai_art" as any);
+      void qc.invalidateQueries({queryKey:["vitrine-ai-quota"]});
+      if (error) throw new Error("Não foi possível validar as artes de hoje. " + error.message);
+      const outcome = data as {allowed?:boolean}|null;
+      if (!outcome?.allowed) throw new Error("Limite de 5 artes por dia atingido. Volte amanhã.");
+      grantedArtRef.current = artSignature;
+      setGrantedArtSignature(artSignature);
+    })();
+    creditInFlight.current = job;
+    try { await job; } finally { creditInFlight.current = null; }
+  }
+
+  async function generateAiBanner() {
+    if (!settings.data || generatingAi || shown.length !== 1) return;
+    setGeneratingAi(true);
+    try {
+      const {data:{session},error} = await supabase.auth.getSession();
+      if (error || !session?.access_token) throw new Error("Faça login novamente para usar a IA.");
+      const item = shown[0];
+      const overview = item.overview || (
+        featuredDetail.data?.detail?.tmdb_id === item.tmdb_id
+          ? featuredDetail.data.detail.overview : ""
+      ) || "";
+      const response = await fetch(aiWorkerUrl,{
+        method:"POST",
+        headers:{
+          "Authorization":"Bearer " + session.access_token,
+          "apikey":import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+          "Content-Type":"application/json"
+        },
+        body:JSON.stringify({title:item.title,mediaType:item.media_type,overview,style:aiStyle,format})
+      });
+      const result = await response.json().catch(() => ({})) as {image?:string;error?:string};
+      if (!response.ok || !result.image) throw new Error(result.error || "Não foi possível gerar esta arte.");
+      if (!/^data:image\/(png|jpeg);base64,/.test(result.image)) throw new Error("A IA retornou uma imagem inválida.");
+      setAiBackground(result.image);
+      grantedArtRef.current = artSignature;
+      setGrantedArtSignature(artSignature);
+      toast.success("Arte criada com IA! Veja a prévia e baixe o PNG.");
+    } catch(error) {
+      toast.error(error instanceof Error ? error.message : "Falha ao gerar a arte com IA.");
+    } finally {
+      void qc.invalidateQueries({queryKey:["vitrine-ai-quota"]});
+      setGeneratingAi(false);
+    }
+  }
+
   async function makePng() {
     if (!artRef.current || shown.length===0) throw new Error("Escolha pelo menos uma capa.");
     if (!imagesReady) throw new Error(imageError || "As imagens ainda estão sendo preparadas.");
@@ -252,6 +355,7 @@ function VitrineIA() {
       const blob=await (await fetch(src)).blob();
       const file=new File([blob], "vitrine-stream-monitor.png", {type:"image/png"});
       if (navigator.canShare?.({ files:[file] }) && navigator.share) {
+        await claimCreditForPreview();
         await navigator.share({ files:[file], title:headline });
       } else {
         toast.info("O dispositivo não oferece compartilhamento de arquivos. Baixe o PNG e envie pelo Telegram.");
@@ -287,6 +391,7 @@ function VitrineIA() {
     try {
       const src = await makePng();
       const image = await (await fetch(src)).blob();
+      await claimCreditForPreview();
       const filename = `vitrine-${format}-${Date.now()}.png`;
       const url = URL.createObjectURL(image);
       const link = document.createElement("a");
@@ -364,11 +469,32 @@ function VitrineIA() {
           <label className="text-sm block">Formato<select className="w-full mt-1 rounded-md border bg-background p-2" value={format} onChange={e=>setFormat(e.target.value as Format)}>{Object.entries(sizes).map(([key,val])=><option value={key} key={key}>{val.label}</option>)}</select></label>
           <label className="text-sm flex items-center gap-2"><input type="checkbox" checked={confirmedOnly} onChange={e=>{setConfirmedOnly(e.target.checked);setSelected([]);}}/>Somente títulos encontrados no catálogo monitorado</label>
           <p className="text-xs text-muted-foreground">Para anunciar “já disponível”, confirme a presença no servidor específico. O filtro de catálogo monitorado não garante que o vídeo reproduza.</p>
+          <div className="rounded-xl border border-blue-400/30 bg-gradient-to-br from-blue-950/55 via-slate-950/60 to-blue-950/30 p-4 space-y-3">
+            <div className="flex flex-wrap gap-2 items-center justify-between">
+              <h3 className="text-sm font-bold text-blue-200 flex items-center gap-2"><Sparkles size={17}/> Gerador de banner com IA</h3>
+              <span className="rounded-full bg-blue-500/15 border border-blue-400/30 px-3 py-1 text-xs font-semibold text-blue-200">
+                {aiQuota.isLoading?"Consultando créditos...":aiQuota.isError?"Cota indisponível":remainingArts+" de 5 artes restantes"}
+              </span>
+            </div>
+            <p className="text-xs text-muted-foreground">A Cloudflare cria um cenário cinematográfico original com base na sinopse. A marca, a capa e o título são adicionados pelo Stream Monitor.</p>
+            <label className="text-sm block">Estilo visual
+              <select className="w-full mt-1 rounded-md border border-blue-500/30 bg-background p-2" value={aiStyle} onChange={e=>setAiStyle(e.target.value as AiStyle)}>
+                {aiStyles.map(item=><option key={item.id} value={item.id}>{item.label}</option>)}
+              </select>
+            </label>
+            <Button type="button" onClick={generateAiBanner} className="w-full bg-blue-600 hover:bg-blue-500 text-white"
+              disabled={generatingAi || shown.length!==1 || !settings.data || remainingArts===0 || aiQuota.isError}>
+              <Sparkles size={17} className="mr-2"/>{generatingAi?"IA criando seu cenário...":"Gerar banner premium com IA"}
+            </Button>
+            {shown.length!==1 && <p className="text-xs text-amber-300">Para gerar com IA, escolha um modelo de 1 título em destaque.</p>}
+            {aiBackground && <p className="text-xs text-blue-300">Cenário exclusivo aplicado à prévia. Ajuste os textos e exporte a arte.</p>}
+            <p className="text-xs text-muted-foreground">5 novas artes por conta a cada dia, no horário de Fortaleza. Uma nova geração com IA consome 1 crédito; repetir o download da mesma prévia não consome outro.</p>
+          </div>
           {imagesLoading && <p className="text-xs text-muted-foreground">Preparando capas e logo para exportação...</p>}
           {imageError && <p className="text-xs text-destructive">Falha ao preparar imagem: {imageError}</p>}
           {assetWarning && <p className="text-xs text-amber-500">{assetWarning}</p>}
-          <Button className="w-full" disabled={exporting || !imagesReady || settings.isLoading} onClick={download}><Download size={17} className="mr-2"/>{exporting?"Gerando imagem...":"Baixar PNG"}</Button>
-          <Button variant="outline" className="w-full" disabled={sharing||!imagesReady} onClick={shareTelegram}><Share2 size={17} className="mr-2"/>{sharing?"Preparando...":"Compartilhar PNG (Telegram)"}</Button>
+          <Button className="w-full" disabled={exporting || generatingAi || !imagesReady || settings.isLoading || (remainingArts===0 && !canReusePreview)} onClick={download}><Download size={17} className="mr-2"/>{exporting?"Preparando PNG...":"Baixar PNG"}</Button>
+          <Button variant="outline" className="w-full" disabled={sharing || generatingAi || !imagesReady || (remainingArts===0 && !canReusePreview)} onClick={shareTelegram}><Share2 size={17} className="mr-2"/>{sharing?"Preparando...":"Compartilhar PNG (Telegram)"}</Button>
           <Button variant="outline" className="w-full" onClick={()=>{navigator.clipboard.writeText(caption).then(()=>toast.success("Legenda copiada")).catch(()=>toast.error("Não foi possível copiar"));}}>Copiar legenda</Button>
         </Card>
       </div>
@@ -379,7 +505,8 @@ function VitrineIA() {
             <div className="relative mx-auto overflow-hidden rounded-lg" style={{width:dimensions.w*previewScale,height:dimensions.h*previewScale}}>
               <div style={{width:dimensions.w,height:dimensions.h,position:"absolute",top:0,left:0,transform:`scale(${previewScale})`,transformOrigin:"top left"}}>
                 <div ref={artRef} style={{width:dimensions.w,height:dimensions.h,overflow:"hidden",position:"relative",boxSizing:"border-box",fontFamily:"Arial,Helvetica,sans-serif",color:textColor,backgroundColor}}>
-                  <div style={{position:"absolute",inset:0,background:`radial-gradient(ellipse at 97% 12%, ${brand.primary_color}b0 0%, transparent 54%), radial-gradient(ellipse at 0% 87%, ${brand.primary_color}80 0%, transparent 50%), linear-gradient(145deg, ${backgroundColor} 0%, #040205 63%, ${backgroundColor} 100%)`}}/>
+                  {aiBackground && <img src={aiBackground} alt="" aria-hidden="true" style={{position:"absolute",inset:0,width:"100%",height:"100%",objectFit:"cover",objectPosition:"center",filter:"saturate(1.18) contrast(1.06) brightness(.85)"}}/>}
+                  <div style={{position:"absolute",inset:0,background:aiBackground ? "linear-gradient(100deg,#020817d9,#06152b83 65%,#030914b5),linear-gradient(0deg,#020716a8,transparent 68%)" : `radial-gradient(ellipse at 97% 12%, ${brand.primary_color}b0 0%, transparent 54%), radial-gradient(ellipse at 0% 87%, ${brand.primary_color}80 0%, transparent 50%), linear-gradient(145deg, ${backgroundColor} 0%, #040205 63%, ${backgroundColor} 100%)`}}/>
                   <div style={{position:"absolute",inset:0,opacity:0.14,backgroundImage:"repeating-linear-gradient(128deg,transparent 0px,transparent 79px,#ffffff 80px,transparent 82px)"}}/>
                   <div style={{position:"absolute",top:format==="story"?80:format==="feed"?42:8,left:-46,right:-46,fontSize:format==="story"?115:format==="feed"?85:60,fontWeight:900,lineHeight:1,color:"transparent",WebkitTextStroke:"2px #ffffff1c",letterSpacing:2,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"clip",textTransform:"uppercase",textAlign:"center",pointerEvents:"none"}}>{serverNames.trim() || brand.brand_name || "STREAM MONITOR"}</div>
                   <div style={{position:"absolute",inset:0,boxShadow:"inset 0 0 130px #0009",pointerEvents:"none"}}/>
@@ -403,13 +530,13 @@ function VitrineIA() {
                           const vertical = format==="story";
                           const cover = embeddedPosters[item.poster_path||""] || fallbackPoster(item.title);
                           const synopsis = shortOverview(item.overview || (featuredDetail.data?.detail?.tmdb_id===item.tmdb_id ? featuredDetail.data.detail.overview : ""),vertical?320:format==="feed"?210:145);
-                          return <div key={item.tmdb_id} style={{position:"relative",minWidth:0,minHeight:0,overflow:"hidden",borderRadius:featured?28:format==="story"?22:14,border:`2px solid ${accentColor}55`,boxShadow:"0 16px 44px #0009",background:"linear-gradient(135deg,#08172c,#050a15)",display:"flex",flexDirection:featured?(vertical?"column":"row"):"column"}}>
+                          return <div key={item.tmdb_id} style={{position:"relative",minWidth:0,minHeight:0,overflow:"hidden",borderRadius:featured?28:format==="story"?22:14,border:`2px solid ${accentColor}55`,boxShadow:"0 16px 44px #0009",background:aiBackground&&featured?"linear-gradient(135deg,#07192acc,#071023a0)":"linear-gradient(135deg,#08172c,#050a15)",display:"flex",flexDirection:featured?(vertical?"column":"row"):"column"}}>
                             <div style={{position:"relative",minWidth:0,minHeight:0,overflow:"hidden",flex:featured?(vertical?"1 1 61%":"0 0 43%"):"1 1 auto",background:"#081528"}}>
                               <img src={cover} alt="" aria-hidden="true" style={{position:"absolute",inset:0,width:"100%",height:"100%",objectFit:"cover",filter:"blur(25px) brightness(.25)",transform:"scale(1.14)"}}/>
                               <img src={cover} alt={item.title} style={{position:"absolute",inset:0,width:"100%",height:"100%",objectFit:"contain",padding:featured?(vertical?18:10):6,boxSizing:"border-box",filter:"drop-shadow(0 12px 20px #0009)"}}/>
                               <div style={{position:"absolute",top:featured?18:8,left:featured?18:8,borderRadius:30,background:"#071326e8",border:`1px solid ${accentColor}88`,padding:featured?"9px 17px":"4px 9px",fontWeight:800,fontSize:featured?(vertical?23:format==="feed"?18:12):(vertical?15:10),letterSpacing:1}}>{item.media_type==="movie"?"FILME":"SÉRIE"}</div>
                             </div>
-                            <div style={{flex:featured?(vertical?"0 0 auto":"1 1 57%"):"0 0 auto",minWidth:0,display:"flex",flexDirection:"column",justifyContent:"center",gap:featured?(vertical?16:format==="feed"?11:6):3,padding:featured?(vertical?"22px 28px 26px":format==="feed"?"22px 23px":"8px 15px"):(format==="story"?"10px 12px":"7px 9px"),background:"linear-gradient(145deg,#08182f,#050b18)"}}>
+                            <div style={{flex:featured?(vertical?"0 0 auto":"1 1 57%"):"0 0 auto",minWidth:0,display:"flex",flexDirection:"column",justifyContent:"center",gap:featured?(vertical?16:format==="feed"?11:6):3,padding:featured?(vertical?"22px 28px 26px":format==="feed"?"22px 23px":"8px 15px"):(format==="story"?"10px 12px":"7px 9px"),background:aiBackground&&featured?"linear-gradient(145deg,#08182fd9,#050b18c2)":"linear-gradient(145deg,#08182f,#050b18)"}}>
                               {featured && <div style={{fontSize:vertical?20:format==="feed"?14:10,fontWeight:800,letterSpacing:2,color:accentColor,textTransform:"uppercase"}}>DESTAQUE ESPECIAL</div>}
                               <div style={{fontSize:featured?(vertical?41:format==="feed"?36:20):(vertical?22:format==="feed"?19:12),fontWeight:900,lineHeight:1.12,overflowWrap:"anywhere",display:"-webkit-box",WebkitBoxOrient:"vertical",WebkitLineClamp:featured?3:2,overflow:"hidden",textShadow:"0 2px 8px #0008"}}>{item.title}</div>
                               {featured && !!year(item.release_date) && <div style={{fontSize:vertical?21:format==="feed"?17:12,color:"#c5d8fa",fontWeight:700}}>{year(item.release_date)}</div>}
