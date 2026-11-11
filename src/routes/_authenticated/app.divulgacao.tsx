@@ -16,7 +16,7 @@ export const Route = createFileRoute("/_authenticated/app/divulgacao")({
   head: () => ({ meta: [{ title: "Vitrine IA | Stream Monitor" }] }),
 });
 
-type MediaItem = { tmdb_id: number; media_type: "movie" | "tv"; title: string; poster_path: string | null; release_date: string | null; found_count?: number };
+type MediaItem = { tmdb_id: number; media_type: "movie" | "tv"; title: string; poster_path: string | null; release_date: string | null; overview?: string | null; found_count?: number };
 type Brand = { brand_name: string; logo_url: string; whatsapp: string; primary_color: string };
 type Format = "feed" | "story" | "landscape";
 type Template = "four" | "featured" | "series" | "grid";
@@ -66,7 +66,7 @@ function VitrineIA() {
   const [template, setTemplate] = useState<Template>("featured");
   const [kind, setKind] = useState<"movie" | "tv">("movie");
   const [selected, setSelected] = useState<number[]>([]);
-  const [headline, setHeadline] = useState("Agora disponível.");
+  const [headline, setHeadline] = useState("Destaque da semana");
   const [confirmedOnly, setConfirmedOnly] = useState(false);
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
@@ -75,9 +75,9 @@ function VitrineIA() {
     return () => clearTimeout(timer);
   }, [search]);
   const [logoUpload, setLogoUpload] = useState("");
-  const [backgroundColor, setBackgroundColor] = useState("#110407");
+  const [backgroundColor, setBackgroundColor] = useState("#050e23");
   const [textColor, setTextColor] = useState("#ffffff");
-  const [accentColor, setAccentColor] = useState("#ff3854");
+  const [accentColor, setAccentColor] = useState("#60a5fa");
   const [hideStudioMark, setHideStudioMark] = useState(true);
   const [sharing, setSharing] = useState(false);
   const [embeddedPosters, setEmbeddedPosters] = useState<Record<string,string>>({});
@@ -215,6 +215,7 @@ function VitrineIA() {
     return () => observer.disconnect();
   }, []);
   const year = (s: string | null) => s?.slice(0,4) || "";
+  const shortOverview = (value?: string | null, limit = 240) => { const clean = value?.trim() || ""; return clean.length > limit ? `${clean.slice(0,limit).trimEnd()}…` : clean; };
   const caption = isMainAdmin ? `🚀 ${headline.trim()} Confira os destaques do Stream Monitor. #StreamMonitor` : `🎬 ${headline.trim()}! Confira os destaques com ${brand.brand_name.trim()}.${brand.whatsapp ? ` Fale conosco: ${brand.whatsapp}` : ""} #VitrineIA`;
 
   function uploadLogo(file?: File) {
@@ -388,15 +389,27 @@ function VitrineIA() {
                         <span style={{fontWeight:600,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis",padding:"0 12px"}}>{headline || "Agora disponível"}</span>
                         <span style={{color:accentColor,fontSize:format==="story"?37:format==="feed"?32:22}}>◉</span>
                       </div>
-                      <div style={{width:"100%",flex:1,minHeight:0,display:"grid",alignItems:"stretch",gridTemplateColumns:shown.length===1?"1fr":"repeat(2,minmax(0,1fr))",gridTemplateRows:shown.length<=2?"minmax(0,1fr)":`repeat(${Math.ceil(shown.length/2)},minmax(0,1fr))`,gap:format==="story"?28:format==="feed"?20:10}}>
-                        {shown.map((item,i)=><div key={item.tmdb_id} style={{position:"relative",minHeight:0,minWidth:0,width:shown.length===1&&format!=="landscape"?"76%":"100%",justifySelf:"center",overflow:"hidden",borderRadius:format==="story"?26:format==="feed"?20:12,boxShadow:"0 20px 50px #000d, inset 0 0 25px #0008",border:`2px solid ${accentColor}55`,background:"linear-gradient(120deg,#1b1218,#080408)",display:"flex",flexDirection:"column"}}>
-                          <div style={{flex:1,minHeight:0,position:"relative",display:"flex",alignItems:"center",justifyContent:"center"}}>
-                            <img src={embeddedPosters[item.poster_path || ""] || ""} alt="" aria-hidden="true" style={{width:"100%",height:"100%",position:"absolute",inset:0,objectFit:"cover",filter:"blur(26px) brightness(.34)",transform:"scale(1.16)"}}/>
-                            <img src={embeddedPosters[item.poster_path || ""] || ""} alt={item.title} style={{width:"100%",height:"100%",position:"absolute",inset:0,objectFit:"contain",display:"block",filter:"drop-shadow(0 12px 20px #000a)"}}/>
-                          </div>
-                          <div style={{fontWeight:800,fontSize:shown.length===1?(format==="story"?33:format==="feed"?27:16):(format==="story"?23:format==="feed"?19:13),textAlign:"center",padding:shown.length===1?"17px 15px":"9px 10px",background:"linear-gradient(90deg,#080408,#23090d,#080408)",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{item.title}</div>
-                          <div style={{position:"absolute",top:0,left:0,right:0,height:5,background:`linear-gradient(90deg,transparent,${accentColor},transparent)`}}/>
-                        </div>)}
+                      <div style={{width:"100%",flex:1,minHeight:0,display:"grid",gridTemplateColumns:shown.length===1?"1fr":"repeat(2,minmax(0,1fr))",gridTemplateRows:shown.length<=2?"minmax(0,1fr)":`repeat(${Math.ceil(shown.length/2)},minmax(0,1fr))`,gap:format==="story"?22:format==="feed"?16:8}}>
+                        {shown.map(item=>{
+                          const featured = shown.length===1;
+                          const vertical = format==="story";
+                          const cover = embeddedPosters[item.poster_path||""] || fallbackPoster(item.title);
+                          const synopsis = shortOverview(item.overview,vertical?320:format==="feed"?210:145);
+                          return <div key={item.tmdb_id} style={{position:"relative",minWidth:0,minHeight:0,overflow:"hidden",borderRadius:featured?28:format==="story"?22:14,border:`2px solid ${accentColor}55`,boxShadow:"0 16px 44px #0009",background:"linear-gradient(135deg,#08172c,#050a15)",display:"flex",flexDirection:featured?(vertical?"column":"row"):"column"}}>
+                            <div style={{position:"relative",minWidth:0,minHeight:0,overflow:"hidden",flex:featured?(vertical?"1 1 61%":"0 0 43%"):"1 1 auto",background:"#081528"}}>
+                              <img src={cover} alt="" aria-hidden="true" style={{position:"absolute",inset:0,width:"100%",height:"100%",objectFit:"cover",filter:"blur(25px) brightness(.25)",transform:"scale(1.14)"}}/>
+                              <img src={cover} alt={item.title} style={{position:"absolute",inset:0,width:"100%",height:"100%",objectFit:"contain",padding:featured?(vertical?18:10):6,boxSizing:"border-box",filter:"drop-shadow(0 12px 20px #0009)"}}/>
+                              <div style={{position:"absolute",top:featured?18:8,left:featured?18:8,borderRadius:30,background:"#071326e8",border:`1px solid ${accentColor}88`,padding:featured?"9px 17px":"4px 9px",fontWeight:800,fontSize:featured?(vertical?23:format==="feed"?18:12):(vertical?15:10),letterSpacing:1}}>{item.media_type==="movie"?"FILME":"SÉRIE"}</div>
+                            </div>
+                            <div style={{flex:featured?(vertical?"0 0 auto":"1 1 57%"):"0 0 auto",minWidth:0,display:"flex",flexDirection:"column",justifyContent:"center",gap:featured?(vertical?16:format==="feed"?11:6):3,padding:featured?(vertical?"22px 28px 26px":format==="feed"?"22px 23px":"8px 15px"):(format==="story"?"10px 12px":"7px 9px"),background:"linear-gradient(145deg,#08182f,#050b18)"}}>
+                              {featured && <div style={{fontSize:vertical?20:format==="feed"?14:10,fontWeight:800,letterSpacing:2,color:accentColor,textTransform:"uppercase"}}>DESTAQUE ESPECIAL</div>}
+                              <div style={{fontSize:featured?(vertical?41:format==="feed"?36:20):(vertical?22:format==="feed"?19:12),fontWeight:900,lineHeight:1.12,overflowWrap:"anywhere",display:"-webkit-box",WebkitBoxOrient:"vertical",WebkitLineClamp:featured?3:2,overflow:"hidden",textShadow:"0 2px 8px #0008"}}>{item.title}</div>
+                              {featured && !!year(item.release_date) && <div style={{fontSize:vertical?21:format==="feed"?17:12,color:"#c5d8fa",fontWeight:700}}>{year(item.release_date)}</div>}
+                              {featured && <div style={{fontSize:vertical?21:format==="feed"?17:12,lineHeight:1.45,color:"#d6e3f8",display:"-webkit-box",WebkitBoxOrient:"vertical",WebkitLineClamp:vertical?6:format==="feed"?6:3,overflow:"hidden"}}>{synopsis || "Sinopse não informada pela TMDB."}</div>}
+                              {featured && <div style={{height:3,width:"38%",background:accentColor,borderRadius:3,marginTop:4}}/>}
+                            </div>
+                          </div>;
+                        })}
                       </div>
                     </div>
                     {!isMainAdmin && <div style={{width:"100%",height:format==="story"?89:format==="feed"?72:48,boxSizing:"border-box",clipPath:"polygon(3% 0,97% 0,100% 28%,100% 75%,97% 100%,3% 100%,0 75%,0 28%)",padding:6,background:`linear-gradient(125deg,${accentColor},#63000b,${accentColor})`,boxShadow:"0 0 30px #e11d2e77",flexShrink:0}}>
