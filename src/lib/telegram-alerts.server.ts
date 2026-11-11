@@ -93,7 +93,7 @@ export async function processTelegramAlert(data: AlertData) {
     let response = "telegram_ok";
     try {
       await sendToTelegram(channel.target, message, {
-        idempotencyKey: `monitor:${serverId}:${incidentId??"no-incident"}:${channel.id}:${logEvent}`,
+        idempotencyKey: `monitor:${serverId}:${incidentId??`window-${Math.floor(Date.now()/(10*60_000))}`}:${channel.id}:${logEvent}`,
         serverId,incidentId,channelId:channel.id,alertEvent:logEvent
       });
       ok = true;
@@ -233,7 +233,7 @@ async function notifyAdminAlert(server: any, data: AlertData, userMessage: strin
   try {
     const eventKey=`tg_${data.kind??"server"}_${data.event.toLowerCase()}`;
     await sendToTelegram(adminChatId,adminMsg,{
-      idempotencyKey:`monitor-admin:${server.id}:${data.incidentId??"no-incident"}:${eventKey}`,
+      idempotencyKey:`monitor-admin:${server.id}:${data.incidentId??`window-${Math.floor(Date.now()/(10*60_000))}`}:${eventKey}`,
       serverId:server.id,incidentId:data.incidentId,alertEvent:eventKey
     });
     return true;
