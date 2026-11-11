@@ -204,6 +204,32 @@ function ResellerPageEditor() {
         </div>
       )}
 
+      {publicUrl && existing && form.published && (
+        <Card className="overflow-hidden border-blue-500/25 bg-gradient-to-br from-[#07182f] to-[#112c55] p-5 text-white sm:p-6">
+          <div className="flex flex-wrap items-start justify-between gap-4">
+            <div className="max-w-xl space-y-2">
+              <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-sky-300">
+                <Globe className="h-4 w-4"/> Nova central de ajuda para seus clientes
+              </div>
+              <h2 className="text-xl font-extrabold">Seu suporte público, com a sua marca</h2>
+              <p className="text-sm leading-relaxed text-slate-300">Seus clientes escolhem o servidor, informam o erro e recebem soluções guiadas, sem login e sem informar senhas. Só aparecem servidores que você autorizou nesta página.</p>
+              <p className="break-all rounded-xl border border-white/10 bg-white/5 p-3 font-mono text-xs text-sky-200">
+                {">"} https://streammonitor.site/ajuda/{slugify(form.slug)}
+              </p>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <Button type="button" variant="secondary" className="gap-2" onClick={() => {
+                navigator.clipboard.writeText(`https://streammonitor.site/ajuda/${slugify(form.slug)}`);
+                toast.success("Link da central de ajuda copiado!");
+              }}><Copy className="h-4 w-4"/> Copiar link</Button>
+              <Button type="button" variant="outline" className="gap-2 border-white/20 text-white hover:bg-white/10" asChild>
+                <a href={`/ajuda/${slugify(form.slug)}`} target="_blank" rel="noopener noreferrer"><ExternalLink className="h-4 w-4"/> Abrir central</a>
+              </Button>
+            </div>
+          </div>
+        </Card>
+      )}
+
       <ResellerStatusSettings />
 
       <Card className="p-5 space-y-4">
