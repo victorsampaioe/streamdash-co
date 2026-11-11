@@ -3,7 +3,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { toPng } from "html-to-image";
 import { useEffect, useRef, useState } from "react";
-import { getTmdbFeed } from "@/lib/tmdb.functions";
+import { getTmdbFeed, getTmdbDetail } from "@/lib/tmdb.functions";
 import { supabase } from "@/integrations/supabase/client";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -55,6 +55,7 @@ function fallbackPoster(title: string): string {
 
 function VitrineIA() {
   const runFeed = useServerFn(getTmdbFeed);
+  const runDetail = useServerFn(getTmdbDetail);
   const qc = useQueryClient();
   const artRef = useRef<HTMLDivElement>(null);
   const previewRef = useRef<HTMLDivElement>(null);
@@ -155,6 +156,13 @@ function VitrineIA() {
     ? selected.map(id => sourceItems.find(x => x.tmdb_id === id)).filter((x): x is MediaItem => !!x)
     : sourceItems.slice(0, templates.find(x=>x.id===template)?.count ?? 4);
   const shown = chosen.slice(0, templates.find(x=>x.id===template)?.count ?? 4);
+  const featuredDetail = useQuery({
+    queryKey: ["vitrine-featured-details", shown[0]?.media_type, shown[0]?.tmdb_id],
+    enabled: shown.length === 1 && !!shown[0]?.tmdb_id && !shown[0]?.overview?.trim(),
+    queryFn: async () => runDetail({ data: { media: shown[0].media_type, id: shown[0].tmdb_id } }),
+    staleTime: 600000,
+    retry: 1,
+  });
   const dimensions = sizes[format];
   const posterKeys = shown.map(item => item.poster_path || "").filter(Boolean);
   const posterSignature = posterKeys.join("|");
@@ -394,7 +402,7 @@ function VitrineIA() {
                           const featured = shown.length===1;
                           const vertical = format==="story";
                           const cover = embeddedPosters[item.poster_path||""] || fallbackPoster(item.title);
-                          const synopsis = shortOverview(item.overview,vertical?320:format==="feed"?210:145);
+                          const synopsis = shortOverview(item.overview || (featuredDetail.data?.detail?.tmdb_id===item.tmdb_id ? featuredDetail.data.detail.overview : ""),vertical?320:format==="feed"?210:145);
                           return <div key={item.tmdb_id} style={{position:"relative",minWidth:0,minHeight:0,overflow:"hidden",borderRadius:featured?28:format==="story"?22:14,border:`2px solid ${accentColor}55`,boxShadow:"0 16px 44px #0009",background:"linear-gradient(135deg,#08172c,#050a15)",display:"flex",flexDirection:featured?(vertical?"column":"row"):"column"}}>
                             <div style={{position:"relative",minWidth:0,minHeight:0,overflow:"hidden",flex:featured?(vertical?"1 1 61%":"0 0 43%"):"1 1 auto",background:"#081528"}}>
                               <img src={cover} alt="" aria-hidden="true" style={{position:"absolute",inset:0,width:"100%",height:"100%",objectFit:"cover",filter:"blur(25px) brightness(.25)",transform:"scale(1.14)"}}/>
