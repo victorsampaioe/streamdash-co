@@ -143,6 +143,17 @@ function PublicResellerHelp(){
     },refetchInterval:60_000,staleTime:30_000
   });
   const server=useMemo(()=>page?.servers?.find(s=>s.id===serverId)??null,[page,serverId]);
+  const memory = useQuery<{solution:string;outcome:string}[]>({
+    queryKey:["public-help-memory",slug,serverId,symptom],
+    enabled:step===3 && !!serverId,
+    queryFn:async()=>{
+      const {data,error}=await (supabase as any).rpc("get_public_help_resolutions",{
+        _slug:slug,_server_id:serverId,_error_kind:symptom
+      });
+      if(error)throw error;
+      return Array.isArray(data)?data:[];
+    },staleTime:60000,retry:1,
+  });
   const selectedStatus=statusInfo(server);
   const result=server?triage(server,symptom,device,detail):null;
   const wa=normalizeWa(page?.whatsapp??null);
@@ -207,6 +218,11 @@ function PublicResellerHelp(){
                 </div>
                 <div><h2 className="text-xl font-bold">{result.headline}</h2><p className="mt-2 text-sm leading-relaxed text-slate-300">{result.summary}</p></div>
                 <div className="space-y-3"><h3 className="font-bold text-sky-300">O que fazer agora</h3>{result.tips.map((tip,i)=><div key={i} className="flex items-start gap-3 rounded-xl bg-white/[0.04] p-3.5 text-sm leading-relaxed"><CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-sky-400"/>{tip}</div>)}</div>
+                {!!memory.data?.length && <div className="space-y-2 rounded-xl border border-sky-500/25 bg-blue-500/10 p-4">
+                  <h3 className="font-bold text-sky-200">Soluções de casos semelhantes</h3>
+                  <p className="text-xs text-slate-400">Registros resolvidos e anonimizados, autorizados pela revenda. Podem não corresponder à causa do seu problema.</p>
+                  {memory.data.map((item,i)=><p key={i} className="rounded-lg bg-white/5 p-3 text-sm">{item.solution}</p>)}
+                </div>}
                 <div className="flex flex-wrap gap-2"><button onClick={()=>{setStep(1);refetch();}} className="flex items-center gap-2 rounded-xl border border-white/15 px-4 py-2.5 text-sm"><RefreshCw className="h-4 w-4"/> Novo diagnóstico</button><button onClick={()=>copy(result.supportText)} className="flex items-center gap-2 rounded-xl border border-white/15 px-4 py-2.5 text-sm"><Copy className="h-4 w-4"/> Copiar resumo</button></div>
                 {waLink&&<a target="_blank" rel="noopener noreferrer" className="flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-emerald-600 font-bold text-white" href={waLink}><MessageCircle className="h-4 w-4"/> Enviar diagnóstico ao suporte</a>}
                 <p className="text-[11px] leading-relaxed text-slate-500">Esta orientação é preliminar. Se o erro persistir, procure seu revendedor. A página não realiza alterações no seu aparelho ou serviço.</p>
