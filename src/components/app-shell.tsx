@@ -153,6 +153,7 @@ function useNavItems() {
     items.push({ to: "/app/central-clientes", label: "Ajuda para Clientes", icon: BookOpen });
     items.push({ to: "/app/divulgacao", label: "Vitrine IA · Divulgação", icon: Sparkles });
     items.push({ to: "/app/memoria", label: "Memória de Diagnósticos", icon: Bot });
+    items.push({ to: "/app/evidencias", label: "Biblioteca de Evidências", icon: BookOpen });
     // Compra de créditos permanece acessível dentro do fluxo de assinatura,
     // mas não aparece como atalho público no menu.
   } else {
