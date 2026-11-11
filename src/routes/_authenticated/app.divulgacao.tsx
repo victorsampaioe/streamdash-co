@@ -33,6 +33,19 @@ const templates: { id: Template; name: string; count: number }[] = [
   { id: "grid", name: "Grid de 6 capas", count: 6 },
 ];
 const poster = (path: string | null) => path ? `https://image.tmdb.org/t/p/w500${path}` : "";
+async function toEmbeddedImage(url: string): Promise<string> {
+  if (url.startsWith("data:image/")) return url;
+  const response = await fetch(url, { mode: "cors", cache: "force-cache" });
+  if (!response.ok) throw new Error(`Imagem indisponível (HTTP ${response.status})`);
+  const blob = await response.blob();
+  if (!blob.type.startsWith("image/")) throw new Error("A URL não retornou uma imagem.");
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result));
+    reader.onerror = () => reject(new Error("Não foi possível preparar a imagem."));
+    reader.readAsDataURL(blob);
+  });
+}
 const sanitize = (value: string) => value.replace(/[^\d]/g, "").slice(0, 13);
 
 function VitrineIA() {
@@ -62,6 +75,12 @@ function VitrineIA() {
   const [accentColor, setAccentColor] = useState("#ff3854");
   const [hideStudioMark, setHideStudioMark] = useState(true);
   const [sharing, setSharing] = useState(false);
+  const [embeddedPosters, setEmbeddedPosters] = useState<Record<string,string>>({});
+  const [embeddedLogo, setEmbeddedLogo] = useState("");
+  const [imageError, setImageError] = useState("");
+  const [imagesLoading, setImagesLoading] = useState(false);
+  const [serverNames, setServerNames] = useState("");
+
 
   const settings = useQuery({
     queryKey: ["vitrine-brand"], queryFn: async () => {
@@ -124,6 +143,42 @@ function VitrineIA() {
     : sourceItems.slice(0, templates.find(x=>x.id===template)?.count ?? 4);
   const shown = chosen.slice(0, templates.find(x=>x.id===template)?.count ?? 4);
   const dimensions = sizes[format];
+  const posterKeys = shown.map(item => item.poster_path || "").filter(Boolean);
+  const posterSignature = posterKeys.join("|");
+  const requestedLogo = logoUpload || brand.logo_url;
+  const imagesReady = !imagesLoading && !imageError && shown.length > 0 &&
+    posterKeys.every(key => !!embeddedPosters[key]) &&
+    (!requestedLogo || !!embeddedLogo);
+  useEffect(() => {
+    let active = true;
+    setImagesLoading(true);
+    setImageError("");
+    async function prepareAssets() {
+      const required = posterSignature ? posterSignature.split("|") : [];
+      try {
+        const posters = await Promise.all(required.map(async path =>
+          [path, await toEmbeddedImage(poster(path))] as const
+        ));
+        const logo = requestedLogo ? await toEmbeddedImage(requestedLogo) : "";
+        if (active) {
+          setEmbeddedPosters(Object.fromEntries(posters));
+          setEmbeddedLogo(logo);
+          setImageError("");
+        }
+      } catch (error) {
+        if (active) {
+          setEmbeddedPosters({});
+          setEmbeddedLogo("");
+          setImageError(error instanceof Error ? error.message : "Não foi possível carregar as capas.");
+        }
+      } finally {
+        if (active) setImagesLoading(false);
+      }
+    }
+    void prepareAssets();
+    return () => { active = false; };
+  }, [posterSignature, requestedLogo]);
+
   const previewScale = Math.min(1, Math.max(0.1, (previewWidth - 16) / dimensions.w));
   useEffect(() => {
     const element = previewRef.current;
@@ -149,6 +204,7 @@ function VitrineIA() {
 
   async function makePng() {
     if (!artRef.current || shown.length===0) throw new Error("Escolha pelo menos uma capa.");
+    if (!imagesReady) throw new Error(imageError || "As imagens ainda estão sendo preparadas.");
     return toPng(artRef.current, {
       width: dimensions.w, height: dimensions.h, pixelRatio:1, cacheBust:true,
       backgroundColor, style: { transform:"none", transformOrigin:"top left" },
@@ -168,7 +224,7 @@ function VitrineIA() {
       }
     } catch(error) {
       if (error instanceof Error && error.name==="AbortError") return;
-      toast.error("Falha ao compartilhar. Tente baixar o PNG.");
+      toast.error(error instanceof Error ? error.message : "Falha ao compartilhar. Tente baixar o PNG.");
     } finally {setSharing(false);}
   }
 
@@ -197,27 +253,40 @@ function VitrineIA() {
     try {
       const src = await makePng();
       const image = await (await fetch(src)).blob();
-      if(image.size>5*1024*1024)throw new Error("Imagem grande demais para o armazenamento.");
-      const path=`${settings.data}/${crypto.randomUUID()}.png`;
-      const {error:storageError}=await supabase.storage.from("promo-arts")
-        .upload(path,image,{contentType:"image/png",upsert:false});
-      if(storageError)throw storageError;
-      const { error } = await supabase.from("promo_generations" as any).insert({
-        owner_id: settings.data, media_type: kind, template, format,
-        title: headline.trim().slice(0,140),
-        items: shown.map(x=>({ tmdb_id:x.tmdb_id, media_type:x.media_type, title:x.title })),
-        caption,storage_path:path,
-      });
+      const filename = `vitrine-${format}-${Date.now()}.png`;
+      const url = URL.createObjectURL(image);
       const link = document.createElement("a");
-      link.download = `vitrine-${format}-${Date.now()}.png`;
-      link.href = src;
+      link.download = filename;
+      link.href = url;
+      document.body.appendChild(link);
       link.click();
-      if (error) toast.warning("PNG armazenado, mas não foi possível registrar o histórico.");
-      else toast.success("Arte salva no Lovable Cloud e exportada em PNG.");
-      qc.invalidateQueries({queryKey:["vitrine-history"]});
-    } catch {
-      toast.error("Falha ao exportar PNG. Verifique se as imagens permitem exportação e tente novamente.");
-    } finally { setExporting(false); }
+      link.remove();
+      window.setTimeout(() => URL.revokeObjectURL(url), 60000);
+      toast.success("PNG gerado. Confira seus downloads ou arquivos.");
+
+      // A gravação no Cloud é complementar: não deve impedir o download.
+      try {
+        if (image.size > 5 * 1024 * 1024) throw new Error("PNG acima do limite do histórico (5 MB).");
+        const path = `${settings.data}/${crypto.randomUUID()}.png`;
+        const { error: storageError } = await supabase.storage.from("promo-arts")
+          .upload(path, image, { contentType: "image/png", upsert: false });
+        if (storageError) throw storageError;
+        const { error } = await supabase.from("promo_generations" as any).insert({
+          owner_id: settings.data, media_type: kind, template, format,
+          title: headline.trim().slice(0, 140),
+          items: shown.map(x => ({ tmdb_id: x.tmdb_id, media_type: x.media_type, title: x.title })),
+          caption, storage_path: path,
+        });
+        if (error) throw error;
+        void qc.invalidateQueries({ queryKey: ["vitrine-history"] });
+      } catch {
+        toast.warning("O PNG foi gerado, mas não foi possível salvar no histórico do Cloud.");
+      }
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Falha ao exportar PNG.");
+    } finally {
+      setExporting(false);
+    }
   }
 
   return <div className="space-y-5 max-w-7xl mx-auto">
@@ -249,6 +318,7 @@ function VitrineIA() {
         </Card>
         <Card className="p-4 space-y-3">
           <h2 className="font-bold flex gap-2 items-center"><LayoutTemplate size={18}/> Configurar arte</h2>
+          <label className="text-sm block">Nomes dos servidores no fundo (separe por •)<Input className="mt-1" maxLength={160} placeholder="Ex.: Gold • Diamante • Premium" value={serverNames} onChange={e=>setServerNames(e.target.value)}/></label>
           <label className="text-sm block">Título<Input className="mt-1" maxLength={100} value={headline} onChange={e=>setHeadline(e.target.value)}/></label>
           <div className="grid grid-cols-2 gap-2">
             <Button variant={kind==="movie"?"default":"outline"} onClick={()=>{setKind("movie");setSelected([]);}}><Film className="h-4 w-4 mr-2"/>Filmes</Button>
@@ -260,8 +330,10 @@ function VitrineIA() {
           <label className="text-sm block">Formato<select className="w-full mt-1 rounded-md border bg-background p-2" value={format} onChange={e=>setFormat(e.target.value as Format)}>{Object.entries(sizes).map(([key,val])=><option value={key} key={key}>{val.label}</option>)}</select></label>
           <label className="text-sm flex items-center gap-2"><input type="checkbox" checked={confirmedOnly} onChange={e=>{setConfirmedOnly(e.target.checked);setSelected([]);}}/>Somente títulos encontrados no catálogo monitorado</label>
           <p className="text-xs text-muted-foreground">Para anunciar “já disponível”, confirme a presença no servidor específico. O filtro de catálogo monitorado não garante que o vídeo reproduza.</p>
-          <Button className="w-full" disabled={exporting || shown.length===0 || settings.isLoading} onClick={download}><Download size={17} className="mr-2"/>{exporting?"Gerando imagem...":"Baixar PNG"}</Button>
-          <Button variant="outline" className="w-full" disabled={sharing||shown.length===0} onClick={shareTelegram}><Share2 size={17} className="mr-2"/>{sharing?"Preparando...":"Compartilhar PNG (Telegram)"}</Button>
+          {imagesLoading && <p className="text-xs text-muted-foreground">Preparando capas e logo para exportação...</p>}
+          {imageError && <p className="text-xs text-destructive">Falha ao preparar imagem: {imageError}. Verifique se a origem permite acesso CORS.</p>}
+          <Button className="w-full" disabled={exporting || !imagesReady || settings.isLoading} onClick={download}><Download size={17} className="mr-2"/>{exporting?"Gerando imagem...":"Baixar PNG"}</Button>
+          <Button variant="outline" className="w-full" disabled={sharing||!imagesReady} onClick={shareTelegram}><Share2 size={17} className="mr-2"/>{sharing?"Preparando...":"Compartilhar PNG (Telegram)"}</Button>
           <Button variant="outline" className="w-full" onClick={()=>{navigator.clipboard.writeText(caption).then(()=>toast.success("Legenda copiada")).catch(()=>toast.error("Não foi possível copiar"));}}>Copiar legenda</Button>
         </Card>
       </div>
@@ -274,27 +346,27 @@ function VitrineIA() {
                 <div ref={artRef} style={{width:dimensions.w,height:dimensions.h,overflow:"hidden",position:"relative",boxSizing:"border-box",fontFamily:"Arial,Helvetica,sans-serif",color:textColor,backgroundColor}}>
                   <div style={{position:"absolute",inset:0,background:`radial-gradient(ellipse at 97% 12%, ${brand.primary_color}b0 0%, transparent 54%), radial-gradient(ellipse at 0% 87%, ${brand.primary_color}80 0%, transparent 50%), linear-gradient(145deg, ${backgroundColor} 0%, #040205 63%, ${backgroundColor} 100%)`}}/>
                   <div style={{position:"absolute",inset:0,opacity:0.14,backgroundImage:"repeating-linear-gradient(128deg,transparent 0px,transparent 79px,#ffffff 80px,transparent 82px)"}}/>
-                  <div style={{position:"absolute",top:format==="story"?80:format==="feed"?42:8,left:-46,right:-46,fontSize:format==="story"?390:format==="feed"?280:180,fontWeight:900,lineHeight:1,color:"transparent",WebkitTextStroke:"2px #ffffff1c",letterSpacing:-30,whiteSpace:"nowrap",textAlign:"center",pointerEvents:"none"}}>NEW</div>
+                  <div style={{position:"absolute",top:format==="story"?80:format==="feed"?42:8,left:-46,right:-46,fontSize:format==="story"?115:format==="feed"?85:60,fontWeight:900,lineHeight:1,color:"transparent",WebkitTextStroke:"2px #ffffff1c",letterSpacing:2,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"clip",textTransform:"uppercase",textAlign:"center",pointerEvents:"none"}}>{serverNames.trim() || brand.brand_name || "STREAM MONITOR"}</div>
                   <div style={{position:"absolute",inset:0,boxShadow:"inset 0 0 130px #0009",pointerEvents:"none"}}/>
 
                   <div style={{position:"relative",zIndex:1,height:"100%",boxSizing:"border-box",padding:format==="story"?"98px 100px 115px":format==="feed"?"54px 78px 68px":"30px 58px",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"space-between",gap:format==="landscape"?12:26}}>
                     <div style={{display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:10,minHeight:format==="story"?150:format==="feed"?92:44,maxWidth:"100%"}}>
-                      {(logoUpload || brand.logo_url) && <img src={logoUpload || brand.logo_url} crossOrigin="anonymous" alt="" style={{width:format==="story"?245:format==="feed"?170:110,height:format==="story"?100:format==="feed"?62:36,objectFit:"contain"}}/>}
+                      {embeddedLogo && <img src={embeddedLogo} alt="" style={{width:format==="story"?245:format==="feed"?170:110,height:format==="story"?100:format==="feed"?62:36,objectFit:"contain"}}/>}
                       <div style={{fontSize:format==="story"?45:format==="feed"?35:24,fontWeight:800,maxWidth:"100%",textAlign:"center",overflowWrap:"anywhere",letterSpacing:-0.8,textShadow:"0 3px 18px #000c"}}>{brand.brand_name || "Minha Revenda"}</div>
                       {!hideStudioMark && <div style={{fontSize:format==="story"?17:12,letterSpacing:5,color:accentColor}}>VITRINE IA</div>}
                     </div>
 
                     <div style={{width:"100%",flex:1,minHeight:0,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:format==="story"?52:format==="feed"?26:12}}>
-                      <div style={{width:"100%",height:format==="story"?90:format==="feed"?70:46,borderRadius:format==="landscape"?18:30,border:`3px solid ${accentColor}`,background:"linear-gradient(100deg,#090407ed,#41040be3)",boxSizing:"border-box",display:"flex",alignItems:"center",justifyContent:"space-between",padding:format==="landscape"?"0 22px":"0 28px",boxShadow:`0 0 30px ${brand.primary_color}33`,fontSize:format==="story"?30:format==="feed"?26:19}}>
+                      <div style={{width:"100%",height:format==="story"?90:format==="feed"?70:46,borderRadius:format==="landscape"?18:30,border:`3px solid ${accentColor}`,background:"linear-gradient(100deg,#090407ed,#41040be3)",boxSizing:"border-box",display:"flex",alignItems:"center",justifyContent:"space-between",padding:format==="landscape"?"0 22px":"0 28px",boxShadow:`0 0 32px ${brand.primary_color}55, inset 0 1px 12px #ffffff16`,fontSize:format==="story"?30:format==="feed"?26:19}}>
                         <span style={{color:accentColor,fontSize:format==="story"?42:format==="feed"?35:26}}>⌕</span>
                         <span style={{fontWeight:600,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis",padding:"0 12px"}}>{headline || "Agora disponível"}</span>
                         <span style={{color:accentColor,fontSize:format==="story"?37:format==="feed"?32:22}}>◉</span>
                       </div>
                       <div style={{width:"100%",flex:1,minHeight:0,display:"grid",alignItems:"stretch",gridTemplateColumns:shown.length===1?"1fr":"repeat(2,minmax(0,1fr))",gridTemplateRows:shown.length<=2?"minmax(0,1fr)":`repeat(${Math.ceil(shown.length/2)},minmax(0,1fr))`,gap:format==="story"?28:format==="feed"?20:10}}>
-                        {shown.map((item,i)=><div key={item.tmdb_id} style={{position:"relative",minHeight:0,minWidth:0,width:shown.length===1&&format!=="landscape"?"76%":"100%",justifySelf:"center",overflow:"hidden",borderRadius:format==="story"?26:format==="feed"?20:12,boxShadow:"0 18px 45px #000c",border:`2px solid ${accentColor}55`,background:"linear-gradient(120deg,#1b1218,#080408)",display:"flex",flexDirection:"column"}}>
+                        {shown.map((item,i)=><div key={item.tmdb_id} style={{position:"relative",minHeight:0,minWidth:0,width:shown.length===1&&format!=="landscape"?"76%":"100%",justifySelf:"center",overflow:"hidden",borderRadius:format==="story"?26:format==="feed"?20:12,boxShadow:"0 20px 50px #000d, inset 0 0 25px #0008",border:`2px solid ${accentColor}55`,background:"linear-gradient(120deg,#1b1218,#080408)",display:"flex",flexDirection:"column"}}>
                           <div style={{flex:1,minHeight:0,position:"relative",display:"flex",alignItems:"center",justifyContent:"center"}}>
-                            <img src={poster(item.poster_path)} crossOrigin="anonymous" alt="" aria-hidden="true" style={{width:"100%",height:"100%",position:"absolute",inset:0,objectFit:"cover",filter:"blur(24px) brightness(.42)",transform:"scale(1.16)"}}/>
-                            <img src={poster(item.poster_path)} crossOrigin="anonymous" alt={item.title} style={{width:"100%",height:"100%",position:"absolute",inset:0,objectFit:"contain",display:"block",filter:"drop-shadow(0 12px 20px #000a)"}}/>
+                            <img src={embeddedPosters[item.poster_path || ""] || ""} alt="" aria-hidden="true" style={{width:"100%",height:"100%",position:"absolute",inset:0,objectFit:"cover",filter:"blur(26px) brightness(.34)",transform:"scale(1.16)"}}/>
+                            <img src={embeddedPosters[item.poster_path || ""] || ""} alt={item.title} style={{width:"100%",height:"100%",position:"absolute",inset:0,objectFit:"contain",display:"block",filter:"drop-shadow(0 12px 20px #000a)"}}/>
                           </div>
                           <div style={{fontWeight:800,fontSize:shown.length===1?(format==="story"?33:format==="feed"?27:16):(format==="story"?23:format==="feed"?19:13),textAlign:"center",padding:shown.length===1?"17px 15px":"9px 10px",background:"linear-gradient(90deg,#080408,#23090d,#080408)",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{item.title}</div>
                           <div style={{position:"absolute",top:0,left:0,right:0,height:5,background:`linear-gradient(90deg,transparent,${accentColor},transparent)`}}/>
