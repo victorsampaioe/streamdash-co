@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { toPng } from "html-to-image";
 import { useRef, useState } from "react";
@@ -37,6 +37,7 @@ const sanitize = (value: string) => value.replace(/[^\d]/g, "").slice(0, 13);
 
 function VitrineIA() {
   const runFeed = useServerFn(getTmdbFeed);
+  const qc = useQueryClient();
   const artRef = useRef<HTMLDivElement>(null);
   const [brand, setBrand] = useState<Brand>(defaultBrand);
   const [saving, setSaving] = useState(false);
@@ -70,6 +71,23 @@ function VitrineIA() {
     queryFn: async () => runFeed({ data: { feed: kind === "movie" ? "movie_recent" : "tv_recent" } }),
     staleTime: 300000,
   });
+  const history = useQuery({
+    queryKey:["vitrine-history",settings.data],
+    enabled:!!settings.data,
+    queryFn:async()=>{
+      const {data,error}=await supabase.from("promo_generations" as any)
+        .select("id,title,format,storage_path,created_at").eq("owner_id",settings.data!)
+        .order("created_at",{ascending:false}).limit(30);
+      if(error)throw error;
+      return (data??[]) as {id:string;title:string;format:string;storage_path:string|null;created_at:string}[];
+    },staleTime:30000
+  });
+  async function openSaved(path:string|null){
+    if(!path)return toast.error("Imagem não armazenada para este registro.");
+    const {data,error}=await supabase.storage.from("promo-arts").createSignedUrl(path,120);
+    if(error||!data?.signedUrl)return toast.error("Não foi possível abrir a arte.");
+    window.open(data.signedUrl,"_blank","noopener,noreferrer");
+  }
   const sourceItems = ((feed.data?.items ?? []) as MediaItem[])
     .filter(x => x.poster_path && x.media_type === kind && (!confirmedOnly || (x.found_count ?? 0) > 0))
     .slice(0, 30);
@@ -109,18 +127,25 @@ function VitrineIA() {
         pixelRatio: 1, cacheBust: true, backgroundColor: "#081224",
         style: { transform: "none", transformOrigin: "top left" },
       });
-      const link = document.createElement("a");
-      link.download = `vitrine-${format}-${Date.now()}.png`;
-      link.href = src;
-      link.click();
+      const image = await (await fetch(src)).blob();
+      if(image.size>5*1024*1024)throw new Error("Imagem grande demais para o armazenamento.");
+      const path=`${settings.data}/${crypto.randomUUID()}.png`;
+      const {error:storageError}=await supabase.storage.from("promo-arts")
+        .upload(path,image,{contentType:"image/png",upsert:false});
+      if(storageError)throw storageError;
       const { error } = await supabase.from("promo_generations" as any).insert({
         owner_id: settings.data, media_type: kind, template, format,
         title: headline.trim().slice(0,140),
         items: shown.map(x=>({ tmdb_id:x.tmdb_id, media_type:x.media_type, title:x.title })),
-        caption,
+        caption,storage_path:path,
       });
-      if (error) toast.warning("PNG salvo, mas o histórico não pôde ser registrado.");
-      else toast.success("Arte PNG gerada e registrada!");
+      const link = document.createElement("a");
+      link.download = `vitrine-${format}-${Date.now()}.png`;
+      link.href = src;
+      link.click();
+      if (error) toast.warning("PNG armazenado, mas não foi possível registrar o histórico.");
+      else toast.success("Arte salva no Lovable Cloud e exportada em PNG.");
+      qc.invalidateQueries({queryKey:["vitrine-history"]});
     } catch {
       toast.error("Falha ao exportar PNG. Verifique se as imagens permitem exportação e tente novamente.");
     } finally { setExporting(false); }
@@ -185,6 +210,19 @@ function VitrineIA() {
                 <div style={{fontSize:format==="landscape"?12:18,color:"#aebfdb",marginTop:10}}>Dados e imagens: TMDB · TMDB não é afiliada ao Stream Monitor</div>
               </div>
             </div>
+          </div>
+        </Card>
+        <Card className="p-4 space-y-3">
+          <h2 className="font-bold">Histórico de artes — Lovable Cloud</h2>
+          <p className="text-xs text-muted-foreground">Arquivos privados por revendedor. Links temporários válidos por 2 minutos.</p>
+          {history.isLoading && <p className="text-sm">Buscando artes salvas...</p>}
+          {history.isError && <p className="text-sm text-destructive">Não foi possível carregar o histórico.</p>}
+          {!history.isLoading && history.data?.length===0 && <p className="text-sm text-muted-foreground">Nenhuma arte salva até agora.</p>}
+          <div className="grid sm:grid-cols-2 gap-2">
+            {history.data?.map(item=><div key={item.id} className="rounded-xl border p-3 flex justify-between items-center gap-3">
+              <div className="min-w-0"><p className="text-sm font-semibold truncate">{item.title}</p><p className="text-xs text-muted-foreground">{new Date(item.created_at).toLocaleString("pt-BR")} · {item.format}</p></div>
+              <Button size="sm" variant="outline" disabled={!item.storage_path} onClick={()=>openSaved(item.storage_path)}><Download size={15}/></Button>
+            </div>)}
           </div>
         </Card>
         <Card className="p-4 space-y-3">
