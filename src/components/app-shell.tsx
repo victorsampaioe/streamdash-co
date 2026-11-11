@@ -150,6 +150,7 @@ function useNavItems() {
     items.push({ to: "/app/reseller", label: "Painel Revendedor", icon: ShoppingBag });
     items.push({ to: "/app/pagina", label: "Minha Página", icon: Globe });
     items.push({ to: "/app/central-clientes", label: "Ajuda para Clientes", icon: BookOpen });
+    items.push({ to: "/app/divulgacao", label: "Vitrine IA · Divulgação", icon: Sparkles });
     // Compra de créditos permanece acessível dentro do fluxo de assinatura,
     // mas não aparece como atalho público no menu.
   } else {
