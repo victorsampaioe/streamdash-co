@@ -36,7 +36,7 @@ export async function processTelegramAlert(data: AlertData) {
   if (pErr) console.warn("[TelegramAlert] Perfil opcional não encontrado", pErr.code);
   const serverView = { ...server, profiles: profile ?? null };
 
-  const message = formatAlertMessage(serverView, data);
+  const baseMessage = formatAlertMessage(serverView, data);
   // UNSTABLE não possui incidente offline (UUID). Deduplique por servidor,
   // destinatário e janela de 2h usando o log, sem inventar incident_id.
   const unstableWindow = event === "UNSTABLE" ? `_${Math.floor(Date.now() / (2 * 60 * 60_000))}` : "";
@@ -67,6 +67,25 @@ export async function processTelegramAlert(data: AlertData) {
     .from("alert_channels").select("id, target")
     .eq("owner_id", server.owner_id).eq("kind", "telegram").eq("enabled", true);
   if (channelsError) throw new Error(channelsError.message);
+
+  // Keep every original alert immediate even when the model/quota is unavailable.
+  // Skip LLM when every destination has already received this event.
+  const pendingRecipients = (channels ?? []).some(c => !delivered.has(c.id))
+    || (!data.suppressAdminCopy && !adminDelivered);
+  let message = baseMessage;
+  if (pendingRecipients) {
+    try {
+      const { explainTelegramAlert, guardianAlertFooter } = await import("./telegram-guardian.server");
+      const explanation = await explainTelegramAlert({
+        serverId: server.id, incidentId, event, kind: data.kind ?? "server",
+        reason: data.reason, regions: data.regions
+      });
+      message += guardianAlertFooter(explanation);
+    } catch {
+      // If even formatting fails, never interrupt delivery of the verified alert.
+    }
+  }
+
 
   for (const channel of channels ?? []) {
     if (delivered.has(channel.id)) continue;
