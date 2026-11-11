@@ -34,7 +34,8 @@ const todayFortaleza = () => new Intl.DateTimeFormat("sv-SE", {
   timeZone:"America/Fortaleza", year:"numeric", month:"2-digit", day:"2-digit"
 }).format(new Date());
 const defaultBrand: Brand = { brand_name: "Minha Revenda", logo_url: "", whatsapp: "", primary_color: "#2563eb" };
-const adminBrand: Brand = { brand_name: "Stream Monitor", logo_url: "/favicon.ico", whatsapp: "", primary_color: "#2563eb" };
+const officialLogoUrl = "/__l5e/assets-v1/6c2c6658-faca-42c7-9e11-89b20a23a3dd/logo-official.png";
+const adminBrand: Brand = { brand_name: "Stream Monitor", logo_url: officialLogoUrl, whatsapp: "", primary_color: "#2563eb" };
 const sizes: Record<Format, { w: number; h: number; label: string }> = {
   feed: { w: 1080, h: 1080, label: "Feed 1080×1080" },
   story: { w: 1080, h: 1920, label: "Story 1080×1920" },
@@ -164,14 +165,21 @@ export function VitrineStudio({ mode }: { mode: "ai" | "banner" }) {
         whatsapp: resolveValue(saved?.whatsapp,registered?.whatsapp,p?.whatsapp,p?.phone),
         primary_color: resolveValue(saved?.primary_color,registered?.primary_color,defaultBrand.primary_color),
       };
-      setBrand(admin ? { ...adminBrand, logo_url: resolveValue(saved?.logo_url, registered?.logo_url, adminBrand.logo_url) } : merged);
+      setBrand(admin ? { ...adminBrand, logo_url: mode === "banner" ? (resolveValue(saved?.logo_url,registered?.logo_url).replace(/^\/?favicon\.ico$/i, "") || officialLogoUrl) : resolveValue(saved?.logo_url, registered?.logo_url, adminBrand.logo_url) } : merged);
       return user.id;
     }, retry:1,
+    refetchOnWindowFocus: mode !== "banner",
+    refetchOnReconnect: mode !== "banner",
+    refetchOnMount: mode !== "banner",
+    staleTime: mode === "banner" ? Infinity : 0,
   });
   const feed = useQuery({
     queryKey: ["vitrine-feed",kind,debouncedSearch],
     queryFn: async () => runFeed({ data: { feed: kind === "movie" ? "movie_recent" : "tv_recent", query: debouncedSearch || undefined } }),
-    staleTime: 300000,
+    staleTime: mode === "banner" ? Infinity : 300000,
+    refetchOnWindowFocus: mode !== "banner",
+    refetchOnReconnect: mode !== "banner",
+    refetchOnMount: mode !== "banner",
   });
   const history = useQuery({
     queryKey:["vitrine-history",settings.data],
@@ -182,11 +190,14 @@ export function VitrineStudio({ mode }: { mode: "ai" | "banner" }) {
         .order("created_at",{ascending:false}).limit(30);
       if(error)throw error;
       return (data??[]) as {id:string;title:string;format:string;storage_path:string|null;created_at:string}[];
-    },staleTime:30000
+    },staleTime:mode === "banner" ? Infinity : 30000,
+    refetchOnWindowFocus: mode !== "banner",
+    refetchOnReconnect: mode !== "banner",
+    refetchOnMount: mode !== "banner",
   });
   const aiQuota = useQuery({
     queryKey:["vitrine-ai-quota",settings.data,today],
-    enabled:!!settings.data,
+    enabled: mode === "ai" && !!settings.data,
     queryFn: async () => {
       const {data,error} = await supabase.from("vitrine_ai_daily_quota" as any)
         .select("used_count").eq("owner_id",settings.data!).eq("quota_day",today).maybeSingle();
@@ -259,7 +270,7 @@ export function VitrineStudio({ mode }: { mode: "ai" | "banner" }) {
           catch {
             logoFailed = true;
             if (isMainAdmin) {
-              try { logo = await toEmbeddedImage("/favicon.ico"); } catch { /* Keep text branding */ }
+              try { logo = await toEmbeddedImage(mode === "banner" ? officialLogoUrl : "/favicon.ico"); } catch { /* Keep text branding */ }
             }
           }
         }
@@ -564,8 +575,8 @@ export function VitrineStudio({ mode }: { mode: "ai" | "banner" }) {
                   <div style={{position:"absolute",inset:0,boxShadow:"inset 0 0 130px #0009",pointerEvents:"none"}}/>
 
                   <div style={{position:"relative",zIndex:1,height:"100%",boxSizing:"border-box",padding:format==="story"?"98px 100px 115px":format==="feed"?"54px 78px 68px":"30px 58px",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"space-between",gap:format==="landscape"?12:26}}>
-                    <div style={{display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:10,minHeight:mode==="banner"?188:format==="story"?150:format==="feed"?92:44,maxWidth:"100%"}}>
-                      {embeddedLogo && <img src={embeddedLogo} alt="" style={{width:mode==="banner"?360:format==="story"?245:format==="feed"?170:110,height:mode==="banner"?150:format==="story"?100:format==="feed"?62:36,objectFit:"contain"}}/>}
+                    <div style={{display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:10,minHeight:mode==="banner"?180:format==="story"?150:format==="feed"?92:44,maxWidth:"100%"}}>
+                      {embeddedLogo && <img src={embeddedLogo} alt="" style={{width:mode==="banner"?320:format==="story"?245:format==="feed"?170:110,height:mode==="banner"?126:format==="story"?100:format==="feed"?62:36,objectFit:"contain",objectPosition:"center",display:"block",maxWidth:"100%",flexShrink:0}}/>}
                       <div style={{fontSize:format==="story"?45:format==="feed"?35:24,fontWeight:800,maxWidth:"100%",textAlign:"center",overflowWrap:"anywhere",letterSpacing:-0.8,textShadow:"0 3px 18px #000c"}}>{brand.brand_name || "Minha Revenda"}</div>
                       {!hideStudioMark && <div style={{fontSize:format==="story"?17:12,letterSpacing:5,color:accentColor}}>VITRINE IA</div>}
                     </div>
