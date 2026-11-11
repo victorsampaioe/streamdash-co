@@ -195,28 +195,15 @@ function formatAlertMessage(server: any, data: AlertData): string {
 }
 
 async function sendToTelegram(target: string, text: string) {
-  const sharedToken = process.env.TELEGRAM_BOT_TOKEN;
-  let botToken = sharedToken ?? "";
-  let chatId = target?.trim() ?? "";
-  
-  if (chatId.includes(":")) {
-    const [t, c] = chatId.split(":");
-    botToken = t; chatId = c;
-  }
-
-  if (!botToken || !chatId) throw new Error("Canal Telegram sem token ou chat ID.");
-
+  const { rawTelegramSend, enqueueTelegramRetry } = await import("./telegram-outbox.server");
   try {
-    const response = await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ chat_id: chatId, text, parse_mode: "HTML", disable_web_page_preview: true }),
-      signal: AbortSignal.timeout(10_000),
-    });
-    if (!response.ok) throw new Error(`Telegram HTTP ${response.status}`);
+    await rawTelegramSend(target, text);
   } catch (e) {
-    console.error("[TelegramAlert] Erro ao enviar para Telegram:", e);
-    throw e;
+    console.error("[TelegramAlert] Envio falhou; entregando ao Delivery Guard:", (e as Error)?.message);
+    // Falha transitória vai para a fila durável; o histórico marca o canal
+    // como entregue ao guard, evitando que o ciclo antigo reenvie em duplicidade.
+    const { queued } = await enqueueTelegramRetry(target, text, e, "monitor_alert");
+    if (!queued) throw e;
   }
 }
 

@@ -5814,6 +5814,54 @@ export type Database = {
         }
         Relationships: []
       }
+      telegram_outbox: {
+        Row: {
+          attempts: number
+          created_at: string
+          delivered_at: string | null
+          id: string
+          idempotency_key: string
+          last_error: string | null
+          max_attempts: number
+          next_attempt_at: string
+          source: string
+          status: string
+          target: string
+          text: string
+          updated_at: string
+        }
+        Insert: {
+          attempts?: number
+          created_at?: string
+          delivered_at?: string | null
+          id?: string
+          idempotency_key: string
+          last_error?: string | null
+          max_attempts?: number
+          next_attempt_at?: string
+          source?: string
+          status?: string
+          target: string
+          text: string
+          updated_at?: string
+        }
+        Update: {
+          attempts?: number
+          created_at?: string
+          delivered_at?: string | null
+          id?: string
+          idempotency_key?: string
+          last_error?: string | null
+          max_attempts?: number
+          next_attempt_at?: string
+          source?: string
+          status?: string
+          target?: string
+          text?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       tmdb_cache: {
         Row: {
           cache_key: string
