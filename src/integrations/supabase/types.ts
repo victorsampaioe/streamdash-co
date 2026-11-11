@@ -2188,6 +2188,45 @@ export type Database = {
           },
         ]
       }
+      doctor_ai_cache: {
+        Row: {
+          cache_key: string
+          created_at: string
+          generated_text: string
+        }
+        Insert: {
+          cache_key: string
+          created_at?: string
+          generated_text: string
+        }
+        Update: {
+          cache_key?: string
+          created_at?: string
+          generated_text?: string
+        }
+        Relationships: []
+      }
+      doctor_ai_daily_usage: {
+        Row: {
+          owner_id: string
+          requests: number
+          updated_at: string
+          usage_day: string
+        }
+        Insert: {
+          owner_id: string
+          requests?: number
+          updated_at?: string
+          usage_day: string
+        }
+        Update: {
+          owner_id?: string
+          requests?: number
+          updated_at?: string
+          usage_day?: string
+        }
+        Relationships: []
+      }
       expiry_notices: {
         Row: {
           id: string
@@ -2245,6 +2284,24 @@ export type Database = {
           source_url?: string | null
           started_at?: string
           status?: string
+        }
+        Relationships: []
+      }
+      guardian_telegram_explanations: {
+        Row: {
+          alert_key: string
+          created_at: string
+          explanation: string
+        }
+        Insert: {
+          alert_key: string
+          created_at?: string
+          explanation: string
+        }
+        Update: {
+          alert_key?: string
+          created_at?: string
+          explanation?: string
         }
         Relationships: []
       }
@@ -3833,6 +3890,7 @@ export type Database = {
           created_at: string
           currency: string
           expires_at: string | null
+          gross_amount_cents: number | null
           id: string
           method: Database["public"]["Enums"]["payment_method"]
           paid_at: string | null
@@ -3844,6 +3902,7 @@ export type Database = {
           provider: string
           provider_payment_id: string | null
           raw_payload: Json | null
+          referral_discount_cents: number
           status: Database["public"]["Enums"]["payment_status"]
           store_product_id: string | null
           subscription_id: string | null
@@ -3856,6 +3915,7 @@ export type Database = {
           created_at?: string
           currency?: string
           expires_at?: string | null
+          gross_amount_cents?: number | null
           id?: string
           method?: Database["public"]["Enums"]["payment_method"]
           paid_at?: string | null
@@ -3867,6 +3927,7 @@ export type Database = {
           provider?: string
           provider_payment_id?: string | null
           raw_payload?: Json | null
+          referral_discount_cents?: number
           status?: Database["public"]["Enums"]["payment_status"]
           store_product_id?: string | null
           subscription_id?: string | null
@@ -3879,6 +3940,7 @@ export type Database = {
           created_at?: string
           currency?: string
           expires_at?: string | null
+          gross_amount_cents?: number | null
           id?: string
           method?: Database["public"]["Enums"]["payment_method"]
           paid_at?: string | null
@@ -3890,6 +3952,7 @@ export type Database = {
           provider?: string
           provider_payment_id?: string | null
           raw_payload?: Json | null
+          referral_discount_cents?: number
           status?: Database["public"]["Enums"]["payment_status"]
           store_product_id?: string | null
           subscription_id?: string | null
@@ -4421,6 +4484,79 @@ export type Database = {
           },
         ]
       }
+      referral_commissions: {
+        Row: {
+          amount_cents: number
+          created_at: string
+          id: string
+          paid_amount_cents: number
+          rate_bps: number
+          referred_id: string
+          referrer_id: string
+          reversed_at: string | null
+          source_payment_id: string
+        }
+        Insert: {
+          amount_cents: number
+          created_at?: string
+          id?: string
+          paid_amount_cents: number
+          rate_bps?: number
+          referred_id: string
+          referrer_id: string
+          reversed_at?: string | null
+          source_payment_id: string
+        }
+        Update: {
+          amount_cents?: number
+          created_at?: string
+          id?: string
+          paid_amount_cents?: number
+          rate_bps?: number
+          referred_id?: string
+          referrer_id?: string
+          reversed_at?: string | null
+          source_payment_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "referral_commissions_source_payment_id_fkey"
+            columns: ["source_payment_id"]
+            isOneToOne: true
+            referencedRelation: "payments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      referral_credit_redemptions: {
+        Row: {
+          amount_cents: number
+          created_at: string
+          owner_id: string
+          payment_id: string
+        }
+        Insert: {
+          amount_cents: number
+          created_at?: string
+          owner_id: string
+          payment_id: string
+        }
+        Update: {
+          amount_cents?: number
+          created_at?: string
+          owner_id?: string
+          payment_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "referral_credit_redemptions_payment_id_fkey"
+            columns: ["payment_id"]
+            isOneToOne: true
+            referencedRelation: "payments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       referrals: {
         Row: {
           approved_at: string | null
@@ -4763,6 +4899,65 @@ export type Database = {
         }
         Relationships: []
       }
+      reseller_help_servers: {
+        Row: {
+          owner_id: string
+          server_id: string
+        }
+        Insert: {
+          owner_id: string
+          server_id: string
+        }
+        Update: {
+          owner_id?: string
+          server_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reseller_help_servers_server_id_fkey"
+            columns: ["server_id"]
+            isOneToOne: false
+            referencedRelation: "servers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      reseller_help_settings: {
+        Row: {
+          created_at: string
+          display_name: string
+          enabled: boolean
+          logo_url: string | null
+          owner_id: string
+          slug: string
+          tagline: string
+          updated_at: string
+          whatsapp: string | null
+        }
+        Insert: {
+          created_at?: string
+          display_name: string
+          enabled?: boolean
+          logo_url?: string | null
+          owner_id: string
+          slug: string
+          tagline?: string
+          updated_at?: string
+          whatsapp?: string | null
+        }
+        Update: {
+          created_at?: string
+          display_name?: string
+          enabled?: boolean
+          logo_url?: string | null
+          owner_id?: string
+          slug?: string
+          tagline?: string
+          updated_at?: string
+          whatsapp?: string | null
+        }
+        Relationships: []
+      }
       reseller_licenses: {
         Row: {
           created_at: string | null
@@ -4948,6 +5143,36 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      reseller_status_pages: {
+        Row: {
+          created_at: string
+          description: string
+          display_name: string
+          is_public: boolean
+          owner_id: string
+          slug: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string
+          display_name: string
+          is_public?: boolean
+          owner_id: string
+          slug: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string
+          display_name?: string
+          is_public?: boolean
+          owner_id?: string
+          slug?: string
+          updated_at?: string
+        }
+        Relationships: []
       }
       reseller_tree: {
         Row: {
@@ -5879,6 +6104,13 @@ export type Database = {
           user_id: string
         }[]
       }
+      finalize_referral_credit_payment: {
+        Args: { _payment_id: string }
+        Returns: {
+          applied: boolean
+          expires_at: string
+        }[]
+      }
       generate_referral_code: { Args: never; Returns: string }
       get_admin_paused_owners: {
         Args: never
@@ -5926,6 +6158,7 @@ export type Database = {
         }[]
       }
       get_admin_stats: { Args: never; Returns: Json }
+      get_admin_telegram_delivery_health: { Args: never; Returns: Json }
       get_admin_users: {
         Args: never
         Returns: {
@@ -6046,6 +6279,8 @@ export type Database = {
           status: string
         }[]
       }
+      get_public_reseller_help: { Args: { _slug: string }; Returns: Json }
+      get_public_reseller_status: { Args: { _slug: string }; Returns: Json }
       get_public_status: {
         Args: { _slug: string }
         Returns: {
@@ -6054,6 +6289,22 @@ export type Database = {
           id: string
           last_checked_at: string
           last_latency_ms: number
+          name: string
+          ssl_days_remaining: number
+        }[]
+      }
+      get_public_status_v2: {
+        Args: { _slug: string }
+        Returns: {
+          current_status: Database["public"]["Enums"]["server_status"]
+          description: string
+          dns_enabled: boolean
+          dns_status: string
+          id: string
+          last_checked_at: string
+          last_dns_check_at: string
+          last_latency_ms: number
+          monitoring_paused: boolean
           name: string
           ssl_days_remaining: number
         }[]
@@ -6115,9 +6366,14 @@ export type Database = {
         }[]
       }
       get_reseller_page: { Args: { _slug: string }; Returns: Json }
+      get_sentinel_edge_summary: { Args: never; Returns: Json }
       get_server_concurrency_limit: {
         Args: { p_base_limit: number; p_server_id: string }
         Returns: number
+      }
+      get_server_history_report: {
+        Args: { _days?: number; _server_id: string }
+        Returns: Json
       }
       get_server_perf_history: {
         Args: { _limit?: number; _server_id: string }
@@ -6341,6 +6597,15 @@ export type Database = {
         Args: { p_server_id: string }
         Returns: undefined
       }
+      referral_wallet_balance: {
+        Args: { _owner: string }
+        Returns: {
+          available_cents: number
+          earned_cents: number
+          reserved_cents: number
+          used_cents: number
+        }[]
+      }
       region_consensus: {
         Args: { _server_id: string; _window_minutes?: number }
         Returns: Json
@@ -6357,6 +6622,14 @@ export type Database = {
       request_payout: {
         Args: { _pix_key: string; _pix_name: string; _pix_type: string }
         Returns: string
+      }
+      reserve_doctor_ai_request: { Args: { _owner: string }; Returns: Json }
+      reserve_referral_discount: {
+        Args: { _payment_id: string }
+        Returns: {
+          amount_to_pay_cents: number
+          discount_cents: number
+        }[]
       }
       rollup_metrics: { Args: { _hours?: number }; Returns: Json }
       rollup_regional: { Args: { _hours?: number }; Returns: Json }
