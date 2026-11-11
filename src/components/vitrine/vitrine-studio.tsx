@@ -61,6 +61,25 @@ async function toEmbeddedImage(url: string): Promise<string> {
   });
 }
 const sanitize = (value: string) => value.replace(/[^\d]/g, "").slice(0, 13);
+/** Convert local canvas PNG without a fetch request (browser/VPN-safe). */
+function pngDataUrlToBlob(src: string): Blob {
+  const prefix = "data:image/png;base64,";
+  if (!src.startsWith(prefix)) throw new Error("O gerador não retornou um PNG válido.");
+  const binary = atob(src.slice(prefix.length));
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+  return new Blob([bytes], { type: "image/png" });
+}
+function savePngLocally(image: Blob, filename: string) {
+  const url = URL.createObjectURL(image);
+  const link = document.createElement("a");
+  link.download = filename;
+  link.href = url;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  window.setTimeout(() => URL.revokeObjectURL(url), 60000);
+}
 function fallbackPoster(title: string): string {
   const safe = title.replace(/[&<>"']/g, "").slice(0, 100);
   return "data:image/svg+xml;charset=utf-8," + encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" width="500" height="750" viewBox="0 0 500 750"><rect width="500" height="750" fill="#101f38"/><rect x="18" y="18" width="464" height="714" rx="22" fill="none" stroke="#60a5fa" stroke-width="4"/><text x="250" y="360" fill="white" font-size="30" font-family="Arial" text-anchor="middle">STREAM MONITOR</text><text x="250" y="410" fill="#93c5fd" font-size="20" font-family="Arial" text-anchor="middle">Imagem indisponível</text><title>${safe}</title></svg>`);
@@ -343,23 +362,38 @@ export function VitrineStudio({ mode }: { mode: "ai" | "banner" }) {
     if (!artRef.current || shown.length===0) throw new Error(mode === "banner" ? "Escolha um título e clique em Gerar banner." : "Escolha um título e gere o cenário com IA.");
     if (mode === "ai" && !aiBackground) throw new Error("Gere primeiro o cenário da obra com IA.");
     if (!imagesReady) throw new Error(imageError || "As imagens ainda estão sendo preparadas.");
-    return toPng(artRef.current, {
-      width: dimensions.w, height: dimensions.h, pixelRatio:1, cacheBust:true,
-      backgroundColor, style: { transform:"none", transformOrigin:"top left" },
-    });
+    try {
+      return await toPng(artRef.current, {
+        width: dimensions.w, height: dimensions.h, pixelRatio: 1,
+        // Images are already inlined; avoid cross-origin font and cache-bust fetches.
+        cacheBust: false, skipFonts: true,
+        backgroundColor, style: { transform: "none", transformOrigin: "top left" },
+      });
+    } catch (error) {
+      throw new Error("Falha ao renderizar o PNG. " + (error instanceof Error ? error.message : String(error)));
+    }
   }
 
   async function shareTelegram() {
     setSharing(true);
     try {
       const src=await makePng();
-      const blob=await (await fetch(src)).blob();
-      const file=new File([blob], "vitrine-stream-monitor.png", {type:"image/png"});
-      if (navigator.canShare?.({ files:[file] }) && navigator.share) {
+      const blob = pngDataUrlToBlob(src);
+      const file = new File([blob], "vitrine-stream-monitor.png", { type: "image/png" });
+      if (navigator.canShare?.({ files: [file] }) && navigator.share) {
         await claimCreditForPreview();
-        await navigator.share({ files:[file], title:headline });
+        await navigator.share({ files: [file], title: headline });
+      } else if (typeof ClipboardItem !== "undefined" && navigator.clipboard?.write) {
+        try {
+          await navigator.clipboard.write([new ClipboardItem({ "image/png": blob })]);
+          toast.success("Imagem copiada! Abra o Telegram e pressione Ctrl+V na conversa.");
+        } catch {
+          savePngLocally(blob, "vitrine-stream-monitor.png");
+          toast.info("PNG baixado. Anexe o arquivo à sua conversa no Telegram.");
+        }
       } else {
-        toast.info("O dispositivo não oferece compartilhamento de arquivos. Baixe o PNG e envie pelo Telegram.");
+        savePngLocally(blob, "vitrine-stream-monitor.png");
+        toast.info("PNG baixado. Anexe o arquivo à sua conversa no Telegram.");
       }
     } catch(error) {
       if (error instanceof Error && error.name==="AbortError") return;
@@ -391,17 +425,10 @@ export function VitrineStudio({ mode }: { mode: "ai" | "banner" }) {
     setExporting(true);
     try {
       const src = await makePng();
-      const image = await (await fetch(src)).blob();
+      const image = pngDataUrlToBlob(src);
       await claimCreditForPreview();
       const filename = `vitrine-${format}-${Date.now()}.png`;
-      const url = URL.createObjectURL(image);
-      const link = document.createElement("a");
-      link.download = filename;
-      link.href = url;
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
-      window.setTimeout(() => URL.revokeObjectURL(url), 60000);
+      savePngLocally(image, filename);
       toast.success("PNG gerado. Confira seus downloads ou arquivos.");
 
       // A gravação no Cloud é complementar: não deve impedir o download.
@@ -537,8 +564,8 @@ export function VitrineStudio({ mode }: { mode: "ai" | "banner" }) {
                   <div style={{position:"absolute",inset:0,boxShadow:"inset 0 0 130px #0009",pointerEvents:"none"}}/>
 
                   <div style={{position:"relative",zIndex:1,height:"100%",boxSizing:"border-box",padding:format==="story"?"98px 100px 115px":format==="feed"?"54px 78px 68px":"30px 58px",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"space-between",gap:format==="landscape"?12:26}}>
-                    <div style={{display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:10,minHeight:format==="story"?150:format==="feed"?92:44,maxWidth:"100%"}}>
-                      {embeddedLogo && <img src={embeddedLogo} alt="" style={{width:format==="story"?245:format==="feed"?170:110,height:format==="story"?100:format==="feed"?62:36,objectFit:"contain"}}/>}
+                    <div style={{display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:10,minHeight:mode==="banner"?188:format==="story"?150:format==="feed"?92:44,maxWidth:"100%"}}>
+                      {embeddedLogo && <img src={embeddedLogo} alt="" style={{width:mode==="banner"?360:format==="story"?245:format==="feed"?170:110,height:mode==="banner"?150:format==="story"?100:format==="feed"?62:36,objectFit:"contain"}}/>}
                       <div style={{fontSize:format==="story"?45:format==="feed"?35:24,fontWeight:800,maxWidth:"100%",textAlign:"center",overflowWrap:"anywhere",letterSpacing:-0.8,textShadow:"0 3px 18px #000c"}}>{brand.brand_name || "Minha Revenda"}</div>
                       {!hideStudioMark && <div style={{fontSize:format==="story"?17:12,letterSpacing:5,color:accentColor}}>VITRINE IA</div>}
                     </div>
