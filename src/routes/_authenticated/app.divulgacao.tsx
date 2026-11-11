@@ -506,7 +506,7 @@ function VitrineIA() {
               <div style={{width:dimensions.w,height:dimensions.h,position:"absolute",top:0,left:0,transform:`scale(${previewScale})`,transformOrigin:"top left"}}>
                 <div ref={artRef} style={{width:dimensions.w,height:dimensions.h,overflow:"hidden",position:"relative",boxSizing:"border-box",fontFamily:"Arial,Helvetica,sans-serif",color:textColor,backgroundColor}}>
                   {aiBackground && <img src={aiBackground} alt="" aria-hidden="true" style={{position:"absolute",inset:0,width:"100%",height:"100%",objectFit:"cover",objectPosition:"center",filter:"saturate(1.18) contrast(1.06) brightness(.85)"}}/>}
-                  <div style={{position:"absolute",inset:0,background:aiBackground ? "linear-gradient(100deg,#020817d9,#06152b83 65%,#030914b5),linear-gradient(0deg,#020716a8,transparent 68%)" : `radial-gradient(ellipse at 97% 12%, ${brand.primary_color}b0 0%, transparent 54%), radial-gradient(ellipse at 0% 87%, ${brand.primary_color}80 0%, transparent 50%), linear-gradient(145deg, ${backgroundColor} 0%, #040205 63%, ${backgroundColor} 100%)`}}/>
+                  <div style={{position:"absolute",inset:0,background:aiBackground ? "linear-gradient(105deg,#020817bf 0%,#03112344 54%,#07112b70 100%),linear-gradient(0deg,#020715c7,transparent 66%)" : `radial-gradient(ellipse at 97% 12%, ${brand.primary_color}b0 0%, transparent 54%), radial-gradient(ellipse at 0% 87%, ${brand.primary_color}80 0%, transparent 50%), linear-gradient(145deg, ${backgroundColor} 0%, #040205 63%, ${backgroundColor} 100%)`}}/>
                   <div style={{position:"absolute",inset:0,opacity:0.14,backgroundImage:"repeating-linear-gradient(128deg,transparent 0px,transparent 79px,#ffffff 80px,transparent 82px)"}}/>
                   <div style={{position:"absolute",top:format==="story"?80:format==="feed"?42:8,left:-46,right:-46,fontSize:format==="story"?115:format==="feed"?85:60,fontWeight:900,lineHeight:1,color:"transparent",WebkitTextStroke:"2px #ffffff1c",letterSpacing:2,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"clip",textTransform:"uppercase",textAlign:"center",pointerEvents:"none"}}>{serverNames.trim() || brand.brand_name || "STREAM MONITOR"}</div>
                   <div style={{position:"absolute",inset:0,boxShadow:"inset 0 0 130px #0009",pointerEvents:"none"}}/>
@@ -530,6 +530,24 @@ function VitrineIA() {
                           const vertical = format==="story";
                           const cover = embeddedPosters[item.poster_path||""] || fallbackPoster(item.title);
                           const synopsis = shortOverview(item.overview || (featuredDetail.data?.detail?.tmdb_id===item.tmdb_id ? featuredDetail.data.detail.overview : ""),vertical?320:format==="feed"?210:145);
+                          if (featured && aiBackground) {
+                            return <div key={item.tmdb_id} style={{position:"relative",width:"100%",height:"100%",minWidth:0,minHeight:0,overflow:"hidden",borderRadius:28,border:"2px solid "+accentColor+"88",background:"transparent",boxShadow:"inset 0 0 50px #0008,0 16px 44px #0008"}}>
+                              <div style={{position:"absolute",inset:0,background:"linear-gradient(0deg,#020714f5 0%,#04132bba 30%,#04142b4a 58%,transparent 86%)"}}/>
+                              <div style={{position:"absolute",top:format==="story"?28:14,left:format==="story"?32:22,display:"flex",alignItems:"center",gap:12}}>
+                                <span style={{background:"#071a36d9",border:"1px solid "+accentColor+"aa",borderRadius:30,padding:format==="story"?"10px 18px":"5px 11px",fontSize:format==="story"?20:format==="feed"?15:11,fontWeight:900,letterSpacing:2}}>{item.media_type==="movie"?"FILME":"SÉRIE"}</span>
+                                {!!year(item.release_date) && <span style={{fontWeight:800,fontSize:format==="story"?21:format==="feed"?16:12,textShadow:"0 2px 10px #000"}}>{year(item.release_date)}</span>}
+                              </div>
+                              <div style={{position:"absolute",left:format==="story"?30:format==="feed"?24:14,right:format==="story"?30:format==="feed"?24:14,bottom:format==="story"?36:format==="feed"?27:12,display:"flex",alignItems:"flex-end",gap:format==="story"?28:format==="feed"?22:15}}>
+                                <img src={cover} alt={item.title} style={{flexShrink:0,height:format==="story"?390:format==="feed"?240:145,maxWidth:"29%",objectFit:"contain",objectPosition:"bottom",borderRadius:12,filter:"drop-shadow(0 12px 18px #000b)"}}/>
+                                <div style={{flex:1,minWidth:0,display:"flex",flexDirection:"column",gap:format==="story"?18:format==="feed"?10:5}}>
+                                  <div style={{fontWeight:900,color:accentColor,letterSpacing:format==="story"?3:2,fontSize:format==="story"?20:format==="feed"?14:11,textShadow:"0 2px 8px #000"}}>DESTAQUE ESPECIAL</div>
+                                  <div style={{fontWeight:900,lineHeight:1.08,fontSize:format==="story"?58:format==="feed"?43:29,overflowWrap:"anywhere",display:"-webkit-box",WebkitBoxOrient:"vertical",WebkitLineClamp:2,overflow:"hidden",textShadow:"0 4px 15px #000"}}>{item.title}</div>
+                                  <div style={{fontSize:format==="story"?22:format==="feed"?17:12,lineHeight:1.42,color:"#e2edff",display:"-webkit-box",WebkitBoxOrient:"vertical",WebkitLineClamp:format==="landscape"?2:format==="feed"?4:5,overflow:"hidden",textShadow:"0 2px 10px #000"}}>{synopsis || "Sinopse não informada pela TMDB."}</div>
+                                  <div style={{height:3,width:"35%",borderRadius:5,background:accentColor,marginTop:format==="landscape"?1:6}}/>
+                                </div>
+                              </div>
+                            </div>;
+                          }
                           return <div key={item.tmdb_id} style={{position:"relative",minWidth:0,minHeight:0,overflow:"hidden",borderRadius:featured?28:format==="story"?22:14,border:`2px solid ${accentColor}55`,boxShadow:"0 16px 44px #0009",background:aiBackground&&featured?"linear-gradient(135deg,#07192acc,#071023a0)":"linear-gradient(135deg,#08172c,#050a15)",display:"flex",flexDirection:featured?(vertical?"column":"row"):"column"}}>
                             <div style={{position:"relative",minWidth:0,minHeight:0,overflow:"hidden",flex:featured?(vertical?"1 1 61%":"0 0 43%"):"1 1 auto",background:"#081528"}}>
                               <img src={cover} alt="" aria-hidden="true" style={{position:"absolute",inset:0,width:"100%",height:"100%",objectFit:"cover",filter:"blur(25px) brightness(.25)",transform:"scale(1.14)"}}/>
