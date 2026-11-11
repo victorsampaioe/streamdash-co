@@ -31,3 +31,8 @@
 - [x] Proteção adaptativa por IP + identidade, sem bloqueio injusto de redes compartilhadas
 - [x] Painel administrativo com categorias e detalhe técnico seguro
 - [x] Testes de validação, compilação e interface em desktop e celular
+
+## 7 módulos
+- [x] 3) Telegram Delivery Guard (fila, retry, dead letter, admin)
+- [ ] 1) Escudo de Segurança  - [ ] 2) Central de Diagnóstico com Memória  - [ ] 4) Evidências
+- [ ] 5) Auditoria Visual  - [ ] 6) Radar de Falhas Históricas  - [ ] 7) Vitrine IA
