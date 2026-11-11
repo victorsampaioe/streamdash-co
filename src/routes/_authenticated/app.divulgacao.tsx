@@ -9,7 +9,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
-import { Download, Sparkles, Save, Film, Tv, LayoutTemplate, Search, Share2, Upload } from "lucide-react";
+import { Download, Sparkles, Save, Film, Tv, LayoutTemplate, Share2 } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/app/divulgacao")({
   component: VitrineIA,
@@ -55,7 +55,6 @@ function VitrineIA() {
   const [accentColor, setAccentColor] = useState("#bfdbfe");
   const [hideStudioMark, setHideStudioMark] = useState(true);
   const [sharing, setSharing] = useState(false);
-  const [searchedItems, setSearchedItems] = useState<MediaItem[]>([]);
 
   const settings = useQuery({
     queryKey: ["vitrine-brand"], queryFn: async () => {
@@ -96,7 +95,7 @@ function VitrineIA() {
     if(error||!data?.signedUrl)return toast.error("Não foi possível abrir a arte.");
     window.open(data.signedUrl,"_blank","noopener,noreferrer");
   }
-  const sourceItems = ([...searchedItems.filter(x=>x.media_type===kind), ...((feed.data?.items ?? []) as MediaItem[])] as MediaItem[])
+  const sourceItems = ((feed.data?.items ?? []) as MediaItem[])
     .filter(x => x.poster_path && x.media_type === kind && (!confirmedOnly || (x.found_count ?? 0) > 0))
     .filter((item,index,list)=>list.findIndex(other=>other.tmdb_id===item.tmdb_id && other.media_type===item.media_type)===index).slice(0, 30);
   const chosen = selected.length
