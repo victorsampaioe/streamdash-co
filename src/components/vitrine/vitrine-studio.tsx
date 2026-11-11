@@ -626,7 +626,7 @@ export function VitrineStudio({ mode }: { mode: "ai" | "banner" }) {
           {feed.isError && <p className="text-sm text-destructive">Não foi possível consultar o catálogo: {String(feed.error)}</p>}
           {feed.data && sourceItems.length===0 && <p className="text-sm text-muted-foreground">Nenhum título encontrado para esse filtro.</p>}
           <div className="grid grid-cols-3 sm:grid-cols-5 lg:grid-cols-6 gap-3">
-            {sourceItems.map(item=><button type="button" key={item.tmdb_id} title={item.title} onClick={()=>setSelected(old=>old.includes(item.tmdb_id)?old.filter(x=>x!==item.tmdb_id):[...old.slice(-(templates.find(t=>t.id===template)?.count??4)+1),item.tmdb_id])} className={`rounded-xl overflow-hidden text-left border-2 transition-colors ${selected.includes(item.tmdb_id)?"border-blue-500":"border-transparent"}`}>
+            {sourceItems.map(item=><button type="button" key={item.tmdb_id} title={item.title} onClick={()=>setSelected(old=>old.includes(item.tmdb_id)?[]:[item.tmdb_id])} className={`rounded-xl overflow-hidden text-left border-2 transition-colors ${selected.includes(item.tmdb_id)?"border-blue-500":"border-transparent"}`}>
               <img src={poster(item.poster_path)} alt={item.title} loading="lazy" className="aspect-[2/3] w-full object-cover"/>
               <span className="block text-[11px] font-medium truncate px-1 mt-1">{item.title} {year(item.release_date)}</span>
             </button>)}
