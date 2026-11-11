@@ -76,11 +76,11 @@ export function VitrineStudio({ mode }: { mode: "ai" | "banner" }) {
   const [brand, setBrand] = useState<Brand>(defaultBrand);
   const [saving, setSaving] = useState(false);
   const [exporting, setExporting] = useState(false);
-  const [format, setFormat] = useState<Format>(mode === "banner" ? "landscape" : "feed");
+  const [format, setFormat] = useState<Format>("feed");
   const [template, setTemplate] = useState<Template>("featured");
   const [kind, setKind] = useState<"movie" | "tv">("movie");
   const [selected, setSelected] = useState<number[]>([]);
-  const [headline, setHeadline] = useState(mode === "banner" ? "JÁ DISPONÍVEL" : "Destaque da semana");
+  const [headline, setHeadline] = useState("Destaque da semana");
   const [confirmedOnly, setConfirmedOnly] = useState(false);
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
@@ -190,7 +190,7 @@ export function VitrineStudio({ mode }: { mode: "ai" | "banner" }) {
   const chosen = selected.length
     ? selected.map(id => sourceItems.find(x => x.tmdb_id === id)).filter((x): x is MediaItem => !!x)
     : [];
-  const shown = mode === "banner" && !bannerReady ? [] : chosen.slice(0, templates.find(x=>x.id===template)?.count ?? 4);
+  const shown = mode === "banner" ? (bannerReady ? chosen.slice(0, 1) : []) : chosen.slice(0, templates.find(x=>x.id===template)?.count ?? 4);
   // A cota é cobrada por nova composição; baixar/compartilhar a mesma prévia
   // novamente não consome outra criação dentro desta sessão.
   const artSignature = JSON.stringify({
@@ -438,12 +438,12 @@ export function VitrineStudio({ mode }: { mode: "ai" | "banner" }) {
     <Card className="p-6 bg-gradient-to-r from-blue-950/70 to-slate-950/70 border-blue-500/25">
       <div className="flex items-center gap-2 text-blue-300 text-xs uppercase tracking-widest"><Sparkles size={18}/> Stream Monitor Studio</div>
       <h1 className="text-3xl font-extrabold mt-2">{mode === "ai" ? "Vitrine IA" : "Vitrine Banner"}</h1>
-      <p className="text-muted-foreground mt-2 max-w-2xl">{mode === "ai" ? "Gere um cenário original por IA de acordo com o filme ou série escolhido, sua sinopse e seu gênero." : "Escolha Filme ou Série, pesquise o título e clique em Gerar banner. A capa aparece inteira, sem cortes."} O catálogo TMDB não comprova disponibilidade nos servidores.</p>
+      <p className="text-muted-foreground mt-2 max-w-2xl">{mode === "ai" ? "Gere um cenário original por IA de acordo com o filme ou série escolhido, sua sinopse e seu gênero." : "Modelo profissional como o da prévia: sua marca, pôster inteiro, nome e sinopse do título, e WhatsApp em destaque. Escolha o filme ou série e gere a arte quadrada."} O catálogo TMDB não comprova disponibilidade nos servidores.</p>
     </Card>
     <div className="grid gap-5 lg:grid-cols-[360px_minmax(0,1fr)] items-start">
       <div className="space-y-4">
-        <details open={mode === "ai"} className="rounded-xl border border-border/70">
-          <summary className={mode === "ai" ? "hidden" : "cursor-pointer px-4 py-3 font-semibold text-sm"}>Personalizar marca e logo (opcional)</summary>
+        <details open className="rounded-xl border border-border/70">
+          <summary className={mode === "ai" ? "hidden" : "cursor-pointer px-4 py-3 font-semibold text-sm"}>Identidade da marca, logo e WhatsApp</summary>
           <Card className="p-4 space-y-3">
           <h2 className="font-bold">{isMainAdmin ? "Identidade oficial · Stream Monitor" : "Identidade da revenda"}</h2>
           <label className="text-sm block">Nome da marca<Input disabled={isMainAdmin} className="mt-1" maxLength={100} value={isMainAdmin ? "Stream Monitor" : brand.brand_name} onChange={e=>setBrand({...brand,brand_name:e.target.value})}/></label>
@@ -469,7 +469,7 @@ export function VitrineStudio({ mode }: { mode: "ai" | "banner" }) {
         <Card className="p-4 space-y-3">
           <h2 className="font-bold flex gap-2 items-center"><LayoutTemplate size={18}/> Configurar arte</h2>
           {mode === "ai" && <label className="text-sm block">Nomes dos servidores no fundo (separe por •)<Input className="mt-1" maxLength={160} placeholder="Ex.: Gold • Diamante • Premium" value={serverNames} onChange={e=>setServerNames(e.target.value)}/></label>}
-          {mode === "ai" && <label className="text-sm block">Título<Input className="mt-1" maxLength={100} value={headline} onChange={e=>setHeadline(e.target.value)}/></label>}
+          <label className="text-sm block">{mode === "banner" ? "Frase de destaque" : "Título"}<Input className="mt-1" maxLength={100} value={headline} onChange={e=>setHeadline(e.target.value)}/></label>
           <div className="grid grid-cols-2 gap-2">
             <Button variant={kind==="movie"?"default":"outline"} onClick={()=>{setKind("movie");setSelected([]);setBannerReady(false);}}><Film className="h-4 w-4 mr-2"/>Filmes</Button>
             <Button variant={kind==="tv"?"default":"outline"} onClick={()=>{setKind("tv");setSelected([]);setBannerReady(false);}}><Tv className="h-4 w-4 mr-2"/>Séries</Button>
@@ -478,6 +478,7 @@ export function VitrineStudio({ mode }: { mode: "ai" | "banner" }) {
           <label className="text-sm block">Pesquisar filme ou série<Input className="mt-1" placeholder="Digite o nome para buscar na TMDB" value={search} onChange={e=>{setSearch(e.target.value);setSelected([]);setBannerReady(false);}}/></label>
           {mode === "ai" && <label className="text-sm flex gap-2 items-center"><input type="checkbox" checked={hideStudioMark} onChange={e=>setHideStudioMark(e.target.checked)}/>Ocultar marca Vitrine IA na arte</label>}
           {mode === "ai" && <label className="text-sm block">Formato<select className="w-full mt-1 rounded-md border bg-background p-2" value={format} onChange={e=>setFormat(e.target.value as Format)}>{Object.entries(sizes).map(([key,val])=><option value={key} key={key}>{val.label}</option>)}</select></label>}
+          {mode === "banner" && <p className="text-xs text-blue-300">Modelo da arte: quadrado 1080×1080, com marca no topo, pôster completo à esquerda, sinopse à direita e WhatsApp no rodapé.</p>}
           {mode === "ai" && <label className="text-sm flex items-center gap-2"><input type="checkbox" checked={confirmedOnly} onChange={e=>{setConfirmedOnly(e.target.checked);setSelected([]);}}/>Somente títulos encontrados no catálogo monitorado</label>}
           {mode === "ai" && <p className="text-xs text-muted-foreground">Para anunciar “já disponível”, confirme a presença no servidor específico. O filtro de catálogo monitorado não garante que o vídeo reproduza.</p>}
           {mode === "ai" && <div className="rounded-xl border border-blue-400/30 bg-gradient-to-br from-blue-950/55 via-slate-950/60 to-blue-950/30 p-4 space-y-3">
@@ -504,14 +505,15 @@ export function VitrineStudio({ mode }: { mode: "ai" | "banner" }) {
           {mode === "banner" && <div className="space-y-2">
             <p className="text-xs text-muted-foreground">{feed.isLoading ? "Pesquisando filmes e séries..." : "Selecione a capa do título desejado:"}</p>
             {feed.isError && <p className="text-sm text-destructive">Não foi possível pesquisar este título.</p>}
-            <div className="grid grid-cols-3 gap-2">
-              {sourceItems.slice(0, 9).map(item => <button type="button" key={`${item.media_type}-${item.tmdb_id}`} onClick={() => { setSelected([item.tmdb_id]); setBannerReady(false); }} className={`overflow-hidden rounded-lg border-2 p-1 text-left ${selected.includes(item.tmdb_id) ? "border-blue-500 bg-blue-500/10" : "border-border/50"}`} aria-pressed={selected.includes(item.tmdb_id)}>
+            <div className="grid grid-cols-3 gap-2 max-h-[400px] overflow-y-auto pr-1">
+              {sourceItems.slice(0, 18).map(item => <button type="button" key={`${item.media_type}-${item.tmdb_id}`} onClick={() => { setSelected([item.tmdb_id]); setBannerReady(false); }} className={`overflow-hidden rounded-lg border-2 p-1 text-left ${selected.includes(item.tmdb_id) ? "border-blue-500 bg-blue-500/10" : "border-border/50"}`} aria-pressed={selected.includes(item.tmdb_id)}>
                 <img className="aspect-[2/3] w-full rounded-md object-contain bg-slate-900" src={poster(item.poster_path)} alt={item.title} loading="lazy"/>
                 <span className="block truncate text-[11px] mt-1">{item.title}</span>
               </button>)}
             </div>
             {feed.data && !sourceItems.length && <p className="text-sm text-muted-foreground">Nenhum título encontrado. Confira o nome pesquisado.</p>}
-            <Button className="w-full bg-blue-600 hover:bg-blue-500 text-white" disabled={selected.length !== 1 || !chosen.length || feed.isLoading} onClick={() => { setBannerReady(true); toast.success("Banner pronto! Confira a prévia e baixe o PNG."); }}><LayoutTemplate size={17} className="mr-2"/>Gerar banner</Button>
+            {!isMainAdmin && sanitize(brand.whatsapp).length < 10 && <p className="text-xs text-amber-300">Informe seu WhatsApp com DDD na identidade da revenda para gerar um banner com contato válido.</p>}
+            <Button className="w-full bg-blue-600 hover:bg-blue-500 text-white" disabled={selected.length !== 1 || !chosen.length || feed.isLoading || (!isMainAdmin && sanitize(brand.whatsapp).length < 10)} onClick={() => { setBannerReady(true); toast.success("Banner pronto! Confira a prévia e baixe o PNG."); }}><LayoutTemplate size={17} className="mr-2"/>Gerar banner</Button>
           </div>}
           {imagesLoading && <p className="text-xs text-muted-foreground">Preparando capas e logo para exportação...</p>}
           {imageError && <p className="text-xs text-destructive">Falha ao preparar imagem: {imageError}</p>}
