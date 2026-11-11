@@ -130,6 +130,7 @@ function useNavItems() {
     { to: "/app", label: "Dashboard", icon: LayoutDashboard, exact: true },
     { to: "/app/servers", label: "Servidores", icon: ServerIcon },
     { to: "/app/central", label: "Central Inteligente", icon: ShieldAlert },
+    { to: "/app/falhas", label: "Radar de Falhas", icon: Gauge },
     { to: "/app/alerts", label: "Alertas", icon: Bell },
     { to: "/app/diagnostico", label: "Diagnóstico", icon: Activity },
     { to: "/app/stream-doctor", label: "Stream Guardian IA", icon: Sparkles },
