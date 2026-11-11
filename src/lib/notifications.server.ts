@@ -29,7 +29,7 @@ export async function flushNotificationQueue() {
     const [ownerId] = key.split(":");
     const channel = items[0].alert_channels;
     if (!channel) { failed += items.length; continue; }
-    const serverCount = new Set(items.filter(i => !i.event.startsWith("referral_")).map(i => i.server_id)).size;
+    const serverCount = new Set(items.filter(i => !(i.event.startsWith("referral_") || i.event === "customer_help_launch_20261111")).map(i => i.server_id)).size;
     
     // Obter preferência do usuário
     const { data: profile } = await supabaseAdmin
@@ -48,7 +48,7 @@ export async function flushNotificationQueue() {
     for (const item of announcements) {
       if (await sendToChannel(channel, item.message, "up")) successfullyDelivered.push(item.id);
     }
-    const recoveryItems = items.filter(i => !i.event.startsWith("referral_"));
+    const recoveryItems = items.filter(i => !(i.event.startsWith("referral_") || i.event === "customer_help_launch_20261111"));
 
     if (style === "summary" && recoveryItems.length > 1) {
       // Enviar resumo
@@ -89,14 +89,27 @@ export async function flushNotificationQueue() {
  * Chamado por um cron dedicado em pequenos lotes.
  */
 export async function flushReferralLaunchCampaign(limit = 8) {
-  const { data: pending, error } = await supabaseAdmin
+  // Prioritize the newly requested customer-help launch without mixing it with
+  // old incident recoveries or sending past campaigns to new subscribers.
+  const cap = Math.max(1, Math.min(10, limit));
+  const { data: launch, error: launchError } = await supabaseAdmin
     .from("notification_queue")
     .select("id,owner_id,channel_id,message,alert_channels(*)")
-    .in("event", ["referral_launch_20261109", "referral_trial_20261110"])
+    .eq("event", "customer_help_launch_20261111")
     .eq("processed", false)
     .order("created_at", { ascending: true })
-    .limit(Math.max(1, Math.min(10, limit)));
-  if (error) throw error;
+    .limit(cap);
+  if (launchError) throw launchError;
+  const other = (launch ?? []).length < cap
+    ? await supabaseAdmin.from("notification_queue")
+      .select("id,owner_id,channel_id,message,alert_channels(*)")
+      .in("event", ["customer_help_launch_20261111", "referral_launch_20261109", "referral_trial_20261110"])
+      .eq("processed", false)
+      .order("created_at", { ascending: true })
+      .limit(cap - (launch ?? []).length)
+    : { data: [], error: null };
+  if (other.error) throw other.error;
+  const pending = [...(launch ?? []), ...(other.data ?? [])];
   let sent = 0;
   let failed = 0;
   for (const item of pending ?? []) {
@@ -114,7 +127,7 @@ export async function flushReferralLaunchCampaign(limit = 8) {
   }
   const { count, error: countError } = await supabaseAdmin.from("notification_queue")
     .select("id", { count: "exact", head: true })
-    .in("event", ["referral_launch_20261109", "referral_trial_20261110"])
+    .in("event", ["customer_help_launch_20261111", "referral_launch_20261109", "referral_trial_20261110"])
     .eq("processed", false);
   if (countError) throw countError;
   return { sent, failed, pending: count ?? 0 };
