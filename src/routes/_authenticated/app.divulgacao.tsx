@@ -20,7 +20,8 @@ type MediaItem = { tmdb_id: number; media_type: "movie" | "tv"; title: string; p
 type Brand = { brand_name: string; logo_url: string; whatsapp: string; primary_color: string };
 type Format = "feed" | "story" | "landscape";
 type Template = "four" | "featured" | "series" | "grid";
-const defaultBrand: Brand = { brand_name: "Minha Revenda", logo_url: "", whatsapp: "", primary_color: "#e11d2e" };
+const defaultBrand: Brand = { brand_name: "Minha Revenda", logo_url: "", whatsapp: "", primary_color: "#2563eb" };
+const adminBrand: Brand = { brand_name: "Stream Monitor", logo_url: "/favicon.ico", whatsapp: "", primary_color: "#2563eb" };
 const sizes: Record<Format, { w: number; h: number; label: string }> = {
   feed: { w: 1080, h: 1080, label: "Feed 1080×1080" },
   story: { w: 1080, h: 1920, label: "Story 1080×1920" },
@@ -35,10 +36,10 @@ const templates: { id: Template; name: string; count: number }[] = [
 const poster = (path: string | null) => path ? `https://image.tmdb.org/t/p/w500${path}` : "";
 async function toEmbeddedImage(url: string): Promise<string> {
   if (url.startsWith("data:image/")) return url;
-  const response = await fetch(url, { mode: "cors", cache: "force-cache" });
+  const response = await fetch(url, { mode: "cors", cache: "no-store" });
   if (!response.ok) throw new Error(`Imagem indisponível (HTTP ${response.status})`);
   const blob = await response.blob();
-  if (!blob.type.startsWith("image/")) throw new Error("A URL não retornou uma imagem.");
+  if (!blob.type.startsWith("image/") && !/\.ico(?:\?|$)/i.test(url)) throw new Error("A URL não retornou uma imagem.");
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.onload = () => resolve(String(reader.result));
@@ -47,6 +48,10 @@ async function toEmbeddedImage(url: string): Promise<string> {
   });
 }
 const sanitize = (value: string) => value.replace(/[^\d]/g, "").slice(0, 13);
+function fallbackPoster(title: string): string {
+  const safe = title.replace(/[&<>"']/g, "").slice(0, 100);
+  return "data:image/svg+xml;charset=utf-8," + encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" width="500" height="750" viewBox="0 0 500 750"><rect width="500" height="750" fill="#101f38"/><rect x="18" y="18" width="464" height="714" rx="22" fill="none" stroke="#60a5fa" stroke-width="4"/><text x="250" y="360" fill="white" font-size="30" font-family="Arial" text-anchor="middle">STREAM MONITOR</text><text x="250" y="410" fill="#93c5fd" font-size="20" font-family="Arial" text-anchor="middle">Imagem indisponível</text><title>${safe}</title></svg>`);
+}
 
 function VitrineIA() {
   const runFeed = useServerFn(getTmdbFeed);
@@ -80,12 +85,20 @@ function VitrineIA() {
   const [imageError, setImageError] = useState("");
   const [imagesLoading, setImagesLoading] = useState(false);
   const [serverNames, setServerNames] = useState("");
+  const [isMainAdmin, setIsMainAdmin] = useState(false);
+  const [assetWarning, setAssetWarning] = useState("");
 
 
   const settings = useQuery({
     queryKey: ["vitrine-brand"], queryFn: async () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Faça login para usar a Vitrine IA.");
+      const { data: adminAccess, error: adminError } = await supabase.rpc("has_role", {
+        _user_id: user.id, _role: "admin",
+      });
+      if (adminError) throw adminError;
+      const admin = adminAccess === true;
+      setIsMainAdmin(admin);
       // As configurações da página do revendedor são a fonte de identidade
       // já cadastrada no painel. A Vitrine IA pode sobrescrevê-las separadamente.
       const [{ data: promo, error: promoError }, { data: page, error: pageError }, { data: profile, error: profileError }] = await Promise.all([
@@ -109,7 +122,7 @@ function VitrineIA() {
         whatsapp: resolveValue(saved?.whatsapp,registered?.whatsapp,p?.whatsapp,p?.phone),
         primary_color: resolveValue(saved?.primary_color,registered?.primary_color,defaultBrand.primary_color),
       };
-      setBrand(merged);
+      setBrand(admin ? { ...adminBrand, logo_url: resolveValue(saved?.logo_url, registered?.logo_url, adminBrand.logo_url) } : merged);
       return user.id;
     }, retry:1,
   });
@@ -146,38 +159,50 @@ function VitrineIA() {
   const posterKeys = shown.map(item => item.poster_path || "").filter(Boolean);
   const posterSignature = posterKeys.join("|");
   const requestedLogo = logoUpload || brand.logo_url;
-  const imagesReady = !imagesLoading && !imageError && shown.length > 0 &&
-    posterKeys.every(key => !!embeddedPosters[key]) &&
-    (!requestedLogo || !!embeddedLogo);
+  const imagesReady = !imagesLoading && shown.length > 0 && posterKeys.every(key => !!embeddedPosters[key]);
   useEffect(() => {
     let active = true;
     setImagesLoading(true);
     setImageError("");
+    setAssetWarning("");
     async function prepareAssets() {
-      const required = posterSignature ? posterSignature.split("|") : [];
+      const required = shown.filter(item => !!item.poster_path);
       try {
-        const posters = await Promise.all(required.map(async path =>
-          [path, await toEmbeddedImage(poster(path))] as const
-        ));
-        const logo = requestedLogo ? await toEmbeddedImage(requestedLogo) : "";
+        const posterResults = await Promise.all(required.map(async item => {
+          try {
+            return [item.poster_path!, await toEmbeddedImage(poster(item.poster_path))] as const;
+          } catch {
+            return [item.poster_path!, fallbackPoster(item.title)] as const;
+          }
+        }));
+        let logo = "";
+        let logoFailed = false;
+        if (requestedLogo) {
+          try { logo = await toEmbeddedImage(requestedLogo); }
+          catch {
+            logoFailed = true;
+            if (isMainAdmin) {
+              try { logo = await toEmbeddedImage("/favicon.ico"); } catch { /* Keep text branding */ }
+            }
+          }
+        }
         if (active) {
-          setEmbeddedPosters(Object.fromEntries(posters));
+          setEmbeddedPosters(Object.fromEntries(posterResults));
           setEmbeddedLogo(logo);
-          setImageError("");
+          setAssetWarning([
+            posterResults.some(([,data]) => data.startsWith("data:image/svg+xml")) ? "Algumas capas não puderam ser carregadas; foi usado um fundo alternativo." : "",
+            logoFailed ? "A URL da logo não permitiu carregamento. Envie um PNG pelo dispositivo ou use uma URL pública com CORS." : "",
+          ].filter(Boolean).join(" "));
         }
       } catch (error) {
-        if (active) {
-          setEmbeddedPosters({});
-          setEmbeddedLogo("");
-          setImageError(error instanceof Error ? error.message : "Não foi possível carregar as capas.");
-        }
+        if (active) setImageError(error instanceof Error ? error.message : "Erro ao preparar a arte.");
       } finally {
         if (active) setImagesLoading(false);
       }
     }
     void prepareAssets();
     return () => { active = false; };
-  }, [posterSignature, requestedLogo]);
+  }, [posterSignature, requestedLogo, isMainAdmin]);
 
   const previewScale = Math.min(1, Math.max(0.1, (previewWidth - 16) / dimensions.w));
   useEffect(() => {
@@ -190,7 +215,7 @@ function VitrineIA() {
     return () => observer.disconnect();
   }, []);
   const year = (s: string | null) => s?.slice(0,4) || "";
-  const caption = `🎬 ${headline.trim()}! Confira os destaques com ${brand.brand_name.trim()}.${brand.whatsapp ? ` Fale conosco: ${brand.whatsapp}` : ""} #VitrineIA`;
+  const caption = isMainAdmin ? `🚀 ${headline.trim()} Confira os destaques do Stream Monitor. #StreamMonitor` : `🎬 ${headline.trim()}! Confira os destaques com ${brand.brand_name.trim()}.${brand.whatsapp ? ` Fale conosco: ${brand.whatsapp}` : ""} #VitrineIA`;
 
   function uploadLogo(file?: File) {
     if (!file) return;
@@ -233,9 +258,9 @@ function VitrineIA() {
     try {
       if (!settings.data) throw new Error("Sessão indisponível");
       const payload = {
-        owner_id: settings.data, brand_name: brand.brand_name.trim().slice(0,100),
-        logo_url: brand.logo_url.trim() || null, whatsapp: sanitize(brand.whatsapp) || null,
-        primary_color: brand.primary_color,
+        owner_id: settings.data, brand_name: isMainAdmin ? "Stream Monitor" : brand.brand_name.trim().slice(0,100),
+        logo_url: brand.logo_url.trim() || null, whatsapp: isMainAdmin ? null : sanitize(brand.whatsapp) || null,
+        primary_color: isMainAdmin ? "#2563eb" : brand.primary_color,
         updated_at: new Date().toISOString(),
       };
       if (!payload.brand_name) throw new Error("Informe o nome da sua marca.");
@@ -298,13 +323,13 @@ function VitrineIA() {
     <div className="grid gap-5 lg:grid-cols-[360px_minmax(0,1fr)] items-start">
       <div className="space-y-4">
         <Card className="p-4 space-y-3">
-          <h2 className="font-bold">Identidade da revenda</h2>
-          <label className="text-sm block">Nome da marca<Input className="mt-1" maxLength={100} value={brand.brand_name} onChange={e=>setBrand({...brand,brand_name:e.target.value})}/></label>
-          <label className="text-sm block">WhatsApp<Input className="mt-1" placeholder="DDD + número" value={brand.whatsapp} onChange={e=>setBrand({...brand,whatsapp:e.target.value})}/></label>
+          <h2 className="font-bold">{isMainAdmin ? "Identidade oficial · Stream Monitor" : "Identidade da revenda"}</h2>
+          <label className="text-sm block">Nome da marca<Input disabled={isMainAdmin} className="mt-1" maxLength={100} value={isMainAdmin ? "Stream Monitor" : brand.brand_name} onChange={e=>setBrand({...brand,brand_name:e.target.value})}/></label>
+          {!isMainAdmin && <label className="text-sm block">WhatsApp<Input className="mt-1" placeholder="DDD + número" value={brand.whatsapp} onChange={e=>setBrand({...brand,whatsapp:e.target.value})}/></label>}
           <label className="text-sm block">URL HTTPS da logo<Input className="mt-1" placeholder="https://..." value={brand.logo_url} onChange={e=>setBrand({...brand,logo_url:e.target.value})}/></label>
           <label className="text-sm block">Enviar logo do dispositivo<input aria-label="Enviar logo" className="mt-1 block w-full text-xs" type="file" accept="image/png,image/jpeg,image/webp" onChange={e=>uploadLogo(e.target.files?.[0])}/></label>
           {logoUpload && <div className="flex items-center gap-2 text-xs"><img src={logoUpload} alt="Logo enviada" className="h-10 w-16 object-contain"/><span>Upload aplicado à prévia</span><Button variant="ghost" size="sm" onClick={()=>setLogoUpload("")}>Remover</Button></div>}
-          <p className="text-xs text-muted-foreground">O upload funciona nesta edição; para manter a logo entre sessões, salve uma URL HTTPS.</p>
+          <p className="text-xs text-muted-foreground">Para manter a logo após recarregar, salve uma URL HTTPS pública que permita CORS. O envio local já serve para gerar e baixar a arte atual.</p>
           <div className="space-y-2">
             <p className="text-xs font-medium">Temas prontos — escolha e personalize</p>
             <div className="grid grid-cols-4 gap-2">
@@ -331,7 +356,8 @@ function VitrineIA() {
           <label className="text-sm flex items-center gap-2"><input type="checkbox" checked={confirmedOnly} onChange={e=>{setConfirmedOnly(e.target.checked);setSelected([]);}}/>Somente títulos encontrados no catálogo monitorado</label>
           <p className="text-xs text-muted-foreground">Para anunciar “já disponível”, confirme a presença no servidor específico. O filtro de catálogo monitorado não garante que o vídeo reproduza.</p>
           {imagesLoading && <p className="text-xs text-muted-foreground">Preparando capas e logo para exportação...</p>}
-          {imageError && <p className="text-xs text-destructive">Falha ao preparar imagem: {imageError}. Verifique se a origem permite acesso CORS.</p>}
+          {imageError && <p className="text-xs text-destructive">Falha ao preparar imagem: {imageError}</p>}
+          {assetWarning && <p className="text-xs text-amber-500">{assetWarning}</p>}
           <Button className="w-full" disabled={exporting || !imagesReady || settings.isLoading} onClick={download}><Download size={17} className="mr-2"/>{exporting?"Gerando imagem...":"Baixar PNG"}</Button>
           <Button variant="outline" className="w-full" disabled={sharing||!imagesReady} onClick={shareTelegram}><Share2 size={17} className="mr-2"/>{sharing?"Preparando...":"Compartilhar PNG (Telegram)"}</Button>
           <Button variant="outline" className="w-full" onClick={()=>{navigator.clipboard.writeText(caption).then(()=>toast.success("Legenda copiada")).catch(()=>toast.error("Não foi possível copiar"));}}>Copiar legenda</Button>
@@ -373,11 +399,11 @@ function VitrineIA() {
                         </div>)}
                       </div>
                     </div>
-                    <div style={{width:"100%",height:format==="story"?89:format==="feed"?72:48,boxSizing:"border-box",clipPath:"polygon(3% 0,97% 0,100% 28%,100% 75%,97% 100%,3% 100%,0 75%,0 28%)",padding:6,background:`linear-gradient(125deg,${accentColor},#63000b,${accentColor})`,boxShadow:"0 0 30px #e11d2e77",flexShrink:0}}>
+                    {!isMainAdmin && <div style={{width:"100%",height:format==="story"?89:format==="feed"?72:48,boxSizing:"border-box",clipPath:"polygon(3% 0,97% 0,100% 28%,100% 75%,97% 100%,3% 100%,0 75%,0 28%)",padding:6,background:`linear-gradient(125deg,${accentColor},#63000b,${accentColor})`,boxShadow:"0 0 30px #e11d2e77",flexShrink:0}}>
                       <div style={{height:"100%",width:"100%",clipPath:"polygon(3% 0,97% 0,100% 28%,100% 75%,97% 100%,3% 100%,0 75%,0 28%)",background:"linear-gradient(90deg,#130207,#300007,#090205)",display:"flex",alignItems:"center",justifyContent:"center",gap:12,fontSize:format==="story"?26:format==="feed"?22:15,fontWeight:900,textAlign:"center",whiteSpace:"nowrap"}}>
                         <span>FALE PELO</span><span style={{color:accentColor}}>WHATSAPP</span><span>{sanitize(brand.whatsapp) || "SEU NÚMERO"}</span>
                       </div>
-                    </div>
+                    </div>}
                   </div>
                 </div>
               </div>
