@@ -9,7 +9,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
-import { Download, Sparkles, Save, Film, Tv, LayoutTemplate } from "lucide-react";
+import { Download, Sparkles, Save, Film, Tv, LayoutTemplate, Search, Share2, Upload } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/app/divulgacao")({
   component: VitrineIA,
@@ -28,8 +28,8 @@ const sizes: Record<Format, { w: number; h: number; label: string }> = {
 };
 const templates: { id: Template; name: string; count: number }[] = [
   { id: "four", name: "Carrossel de 4 capas", count: 4 },
-  { id: "featured", name: "Filme em destaque", count: 4 },
-  { id: "series", name: "Série em destaque", count: 4 },
+  { id: "featured", name: "1 título em destaque", count: 1 },
+  { id: "series", name: "1 série em destaque", count: 1 },
   { id: "grid", name: "Grid de 6 capas", count: 6 },
 ];
 const poster = (path: string | null) => path ? `https://image.tmdb.org/t/p/w500${path}` : "";
@@ -48,6 +48,14 @@ function VitrineIA() {
   const [selected, setSelected] = useState<number[]>([]);
   const [headline, setHeadline] = useState("Novidades para você");
   const [confirmedOnly, setConfirmedOnly] = useState(false);
+  const [search, setSearch] = useState("");
+  const [logoUpload, setLogoUpload] = useState("");
+  const [backgroundColor, setBackgroundColor] = useState("#081224");
+  const [textColor, setTextColor] = useState("#ffffff");
+  const [accentColor, setAccentColor] = useState("#bfdbfe");
+  const [hideStudioMark, setHideStudioMark] = useState(true);
+  const [sharing, setSharing] = useState(false);
+  const [searchedItems, setSearchedItems] = useState<MediaItem[]>([]);
 
   const settings = useQuery({
     queryKey: ["vitrine-brand"], queryFn: async () => {
@@ -67,8 +75,8 @@ function VitrineIA() {
     }, retry: 1,
   });
   const feed = useQuery({
-    queryKey: ["vitrine-feed",kind],
-    queryFn: async () => runFeed({ data: { feed: kind === "movie" ? "movie_recent" : "tv_recent" } }),
+    queryKey: ["vitrine-feed",kind,search.trim()],
+    queryFn: async () => runFeed({ data: { feed: kind === "movie" ? "movie_recent" : "tv_recent", query: search.trim() || undefined } }),
     staleTime: 300000,
   });
   const history = useQuery({
@@ -88,9 +96,9 @@ function VitrineIA() {
     if(error||!data?.signedUrl)return toast.error("Não foi possível abrir a arte.");
     window.open(data.signedUrl,"_blank","noopener,noreferrer");
   }
-  const sourceItems = ((feed.data?.items ?? []) as MediaItem[])
+  const sourceItems = ([...searchedItems.filter(x=>x.media_type===kind), ...((feed.data?.items ?? []) as MediaItem[])] as MediaItem[])
     .filter(x => x.poster_path && x.media_type === kind && (!confirmedOnly || (x.found_count ?? 0) > 0))
-    .slice(0, 30);
+    .filter((item,index,list)=>list.findIndex(other=>other.tmdb_id===item.tmdb_id && other.media_type===item.media_type)===index).slice(0, 30);
   const chosen = selected.length
     ? selected.map(id => sourceItems.find(x => x.tmdb_id === id)).filter((x): x is MediaItem => !!x)
     : sourceItems.slice(0, templates.find(x=>x.id===template)?.count ?? 4);
@@ -98,6 +106,41 @@ function VitrineIA() {
   const dimensions = sizes[format];
   const year = (s: string | null) => s?.slice(0,4) || "";
   const caption = `🎬 ${headline.trim()}! Confira os destaques com ${brand.brand_name.trim()}.${brand.whatsapp ? ` Fale conosco: ${brand.whatsapp}` : ""} #VitrineIA`;
+
+  function uploadLogo(file?: File) {
+    if (!file) return;
+    if (!["image/png","image/jpeg","image/webp"].includes(file.type)) return toast.error("Envie uma logo PNG, JPG ou WEBP.");
+    if (file.size > 2*1024*1024) return toast.error("A logo deve ter no máximo 2 MB.");
+    const reader = new FileReader();
+    reader.onload = () => { setLogoUpload(String(reader.result || "")); toast.success("Logo aplicada à arte. Para reutilizá-la futuramente, mantenha também uma URL HTTPS salva."); };
+    reader.onerror = () => toast.error("Não foi possível ler a logo.");
+    reader.readAsDataURL(file);
+  }
+
+  async function makePng() {
+    if (!artRef.current || shown.length===0) throw new Error("Escolha pelo menos uma capa.");
+    return toPng(artRef.current, {
+      width: dimensions.w, height: dimensions.h, pixelRatio:1, cacheBust:true,
+      backgroundColor, style: { transform:"none", transformOrigin:"top left" },
+    });
+  }
+
+  async function shareTelegram() {
+    setSharing(true);
+    try {
+      const src=await makePng();
+      const blob=await (await fetch(src)).blob();
+      const file=new File([blob], "vitrine-stream-monitor.png", {type:"image/png"});
+      if (navigator.canShare?.({ files:[file] }) && navigator.share) {
+        await navigator.share({ files:[file], title:headline });
+      } else {
+        toast.info("O dispositivo não oferece compartilhamento de arquivos. Baixe o PNG e envie pelo Telegram.");
+      }
+    } catch(error) {
+      if (error instanceof Error && error.name==="AbortError") return;
+      toast.error("Falha ao compartilhar. Tente baixar o PNG.");
+    } finally {setSharing(false);}
+  }
 
   async function saveBrand() {
     setSaving(true);
@@ -122,11 +165,7 @@ function VitrineIA() {
     if (!artRef.current || !settings.data || shown.length === 0) return;
     setExporting(true);
     try {
-      const src = await toPng(artRef.current, {
-        width: dimensions.w, height: dimensions.h,
-        pixelRatio: 1, cacheBust: true, backgroundColor: "#081224",
-        style: { transform: "none", transformOrigin: "top left" },
-      });
+      const src = await makePng();
       const image = await (await fetch(src)).blob();
       if(image.size>5*1024*1024)throw new Error("Imagem grande demais para o armazenamento.");
       const path=`${settings.data}/${crypto.randomUUID()}.png`;
@@ -164,7 +203,12 @@ function VitrineIA() {
           <label className="text-sm block">Nome da marca<Input className="mt-1" maxLength={100} value={brand.brand_name} onChange={e=>setBrand({...brand,brand_name:e.target.value})}/></label>
           <label className="text-sm block">WhatsApp<Input className="mt-1" placeholder="DDD + número" value={brand.whatsapp} onChange={e=>setBrand({...brand,whatsapp:e.target.value})}/></label>
           <label className="text-sm block">URL HTTPS da logo<Input className="mt-1" placeholder="https://..." value={brand.logo_url} onChange={e=>setBrand({...brand,logo_url:e.target.value})}/></label>
-          <label className="text-sm flex items-center gap-3">Cor principal<input aria-label="Cor principal" type="color" value={brand.primary_color} onChange={e=>setBrand({...brand,primary_color:e.target.value})}/>{brand.primary_color}</label>
+          <label className="text-sm block">Enviar logo do dispositivo<input aria-label="Enviar logo" className="mt-1 block w-full text-xs" type="file" accept="image/png,image/jpeg,image/webp" onChange={e=>uploadLogo(e.target.files?.[0])}/></label>
+          {logoUpload && <div className="flex items-center gap-2 text-xs"><img src={logoUpload} alt="Logo enviada" className="h-10 w-16 object-contain"/><span>Upload aplicado à prévia</span><Button variant="ghost" size="sm" onClick={()=>setLogoUpload("")}>Remover</Button></div>}
+          <p className="text-xs text-muted-foreground">O upload funciona nesta edição; para manter a logo entre sessões, salve uma URL HTTPS.</p>
+          <div className="grid grid-cols-2 gap-3">
+            {([{label:"Cor principal",value:brand.primary_color,change:(v:string)=>setBrand({...brand,primary_color:v})},{label:"Fundo",value:backgroundColor,change:setBackgroundColor},{label:"Texto",value:textColor,change:setTextColor},{label:"Detalhes",value:accentColor,change:setAccentColor}]).map(c=><label key={c.label} className="text-xs flex gap-2 items-center"><input aria-label={c.label} type="color" value={c.value} onChange={e=>c.change(e.target.value)}/>{c.label}</label>)}
+          </div>
           <Button onClick={saveBrand} disabled={saving || settings.isLoading} variant="outline" className="w-full"><Save className="h-4 w-4 mr-2"/>Salvar identidade</Button>
         </Card>
         <Card className="p-4 space-y-3">
@@ -175,10 +219,13 @@ function VitrineIA() {
             <Button variant={kind==="tv"?"default":"outline"} onClick={()=>{setKind("tv");setSelected([]);}}><Tv className="h-4 w-4 mr-2"/>Séries</Button>
           </div>
           <label className="text-sm block">Modelo<select className="w-full mt-1 rounded-md border bg-background p-2" value={template} onChange={e=>{setTemplate(e.target.value as Template);setSelected([]);}}>{templates.map(t=><option key={t.id} value={t.id}>{t.name}</option>)}</select></label>
+          <label className="text-sm block">Pesquisar filme ou série<Input className="mt-1" placeholder="Digite o nome para buscar na TMDB" value={search} onChange={e=>{setSearch(e.target.value);setSelected([]);}}/></label>
+          <label className="text-sm flex gap-2 items-center"><input type="checkbox" checked={hideStudioMark} onChange={e=>setHideStudioMark(e.target.checked)}/>Ocultar marca Vitrine IA na arte</label>
           <label className="text-sm block">Formato<select className="w-full mt-1 rounded-md border bg-background p-2" value={format} onChange={e=>setFormat(e.target.value as Format)}>{Object.entries(sizes).map(([key,val])=><option value={key} key={key}>{val.label}</option>)}</select></label>
           <label className="text-sm flex items-center gap-2"><input type="checkbox" checked={confirmedOnly} onChange={e=>{setConfirmedOnly(e.target.checked);setSelected([]);}}/>Somente títulos encontrados no catálogo monitorado</label>
           <p className="text-xs text-muted-foreground">Para anunciar “já disponível”, confirme a presença no servidor específico. O filtro de catálogo monitorado não garante que o vídeo reproduza.</p>
           <Button className="w-full" disabled={exporting || shown.length===0 || settings.isLoading} onClick={download}><Download size={17} className="mr-2"/>{exporting?"Gerando imagem...":"Baixar PNG"}</Button>
+          <Button variant="outline" className="w-full" disabled={sharing||shown.length===0} onClick={shareTelegram}><Share2 size={17} className="mr-2"/>{sharing?"Preparando...":"Compartilhar PNG (Telegram)"}</Button>
           <Button variant="outline" className="w-full" onClick={()=>{navigator.clipboard.writeText(caption).then(()=>toast.success("Legenda copiada")).catch(()=>toast.error("Não foi possível copiar"));}}>Copiar legenda</Button>
         </Card>
       </div>
@@ -187,13 +234,13 @@ function VitrineIA() {
           <p className="font-semibold mb-3">Prévia da sua arte</p>
           <div className="overflow-auto rounded-xl bg-slate-900 p-2" style={{maxHeight:610}}>
             <div style={{width:dimensions.w,height:dimensions.h,zoom:Math.min(1, 540/dimensions.w),margin:"0 auto"}}>
-              <div ref={artRef} style={{width:dimensions.w,height:dimensions.h,position:"relative",overflow:"hidden",color:"white",background:`radial-gradient(ellipse at 80% 10%, ${brand.primary_color} 0%, #101d36 44%, #050b18 100%)`,fontFamily:"Arial,sans-serif",padding:format==="landscape"?50:70,display:"flex",flexDirection:"column",justifyContent:"space-between",boxSizing:"border-box"}}>
+              <div ref={artRef} style={{width:dimensions.w,height:dimensions.h,position:"relative",overflow:"hidden",color:textColor,background:`radial-gradient(ellipse at 80% 10%, ${brand.primary_color} 0%, ${backgroundColor} 64%, ${backgroundColor} 100%)`,fontFamily:"Arial,sans-serif",padding:format==="landscape"?50:70,display:"flex",flexDirection:"column",justifyContent:"space-between",boxSizing:"border-box"}}>
                 <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:28}}>
                   <div style={{display:"flex",gap:22,alignItems:"center"}}>
-                    {brand.logo_url && <img src={brand.logo_url} crossOrigin="anonymous" alt="" style={{height:format==="landscape"?70:94,maxWidth:160,objectFit:"contain"}} />}
+                    {(logoUpload || brand.logo_url) && <img src={logoUpload || brand.logo_url} crossOrigin="anonymous" alt="" style={{height:format==="landscape"?70:94,maxWidth:160,objectFit:"contain"}} />}
                     <span style={{fontWeight:900,fontSize:format==="landscape"?34:55,letterSpacing:-1}}>{brand.brand_name || "Minha Revenda"}</span>
                   </div>
-                  <span style={{fontSize:format==="landscape"?22:28,color:"#bfdbfe",textTransform:"uppercase",letterSpacing:3}}>Vitrine IA</span>
+                  {!hideStudioMark && <span style={{fontSize:format==="landscape"?22:28,color:accentColor,textTransform:"uppercase",letterSpacing:3}}>Vitrine IA</span>}
                 </div>
                 <div style={{flex:1,display:"flex",flexDirection:"column",justifyContent:"center",minHeight:0,gap:22,marginTop:format==="landscape"?4:38}}>
                   <div style={{fontWeight:900,fontSize:format==="landscape"?46:format==="story"?100:76,lineHeight:1.06,maxWidth:"100%",overflowWrap:"anywhere"}}>{headline || "Novidades para você"}</div>
@@ -207,7 +254,7 @@ function VitrineIA() {
                 <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",gap:20,fontSize:format==="landscape"?25:36,fontWeight:800}}>
                   <span>🎬 Filmes e séries em destaque</span><span>{brand.whatsapp ? `WhatsApp: ${sanitize(brand.whatsapp)}` : "Sua diversão começa aqui"}</span>
                 </div>
-                <div style={{fontSize:format==="landscape"?12:18,color:"#aebfdb",marginTop:10}}>Dados e imagens: TMDB · TMDB não é afiliada ao Stream Monitor</div>
+
               </div>
             </div>
           </div>
