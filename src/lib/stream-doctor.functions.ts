@@ -8,6 +8,8 @@ const input = z.object({
   serverId: z.string().uuid(),
   device: z.enum(["smart_tv", "tv_box", "phone", "computer", "other"]),
   app: z.string().trim().max(60),
+  complaint: z.string().trim().max(400).optional(),
+  accessToken: z.string().max(4096).optional(),
   symptom: z.enum(["buffering", "black_screen", "login", "vod", "channels", "audio", "other"]),
   when: z.enum(["now", "today", "recurring", "unknown"]),
 });
@@ -51,5 +53,76 @@ export const runStreamDoctor = createServerFn({ method: "POST" })
         started_at: i.started_at, ended_at: i.ended_at, incident_type: i.incident_type
       })),
     };
-    return { serverName: server.name, report: analyzeStreamDoctor(data, snapshot) };
+    const report = analyzeStreamDoctor(data, snapshot);
+    const local = (reason: string, remaining?: number) => ({
+      serverName: server.name, report,
+      assistant: { mode: "local" as const, text: "", reason, remaining, cached: false },
+    });
+
+    // Never rely on browser controls to restrict free Workers AI usage.
+    // No personal data or Xtream credentials are sent to the model.
+    try {
+      const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+      const { createHash } = await import("node:crypto");
+      const token = data.accessToken ?? "";
+      if (!token || !context.userId) return local("sessao_indisponivel");
+      const authenticated = await supabaseAdmin.auth.getUser(token);
+      if (authenticated.error || authenticated.data.user?.id !== context.userId) return local("sessao_indisponivel");
+
+      const evidence = [
+        "Resultado: " + report.headline,
+        "Nível de evidência: " + report.confidence,
+        ...report.evidence.slice(0, 5).map(x => "Fato: " + x),
+        ...report.hypotheses.slice(0, 3).map(x => "Hipótese não confirmada: " + x),
+        ...report.steps.slice(0, 4).map(x => "Teste sugerido: " + x),
+      ].join("\n").slice(0, 3600);
+      const problem = [
+        "Aparelho: " + data.device, "App: " + data.app,
+        "Problema: " + data.symptom, "Horário: " + data.when,
+        "Relato: " + (data.complaint ?? ""),
+      ].join(". ").slice(0, 430);
+
+      const cacheKey = createHash("sha256").update(JSON.stringify({
+        owner: context.userId, server: server.id, problem, evidence
+      })).digest("hex");
+      const cache = await (supabaseAdmin.from("doctor_ai_cache" as any) as any)
+        .select("generated_text,created_at").eq("cache_key", cacheKey)
+        .gte("created_at", new Date(Date.now() - 12 * 60_000).toISOString()).maybeSingle();
+      if (!cache.error && typeof cache.data?.generated_text === "string") {
+        return { serverName: server.name, report, assistant: {
+          mode: "cloudflare" as const, text: cache.data.generated_text,
+          reason: "cache", remaining: undefined, cached: true
+        }};
+      }
+
+      const quota = await (supabaseAdmin as any).rpc("reserve_doctor_ai_request", { _owner: context.userId });
+      if (quota.error || quota.data?.allowed !== true) return local("limite_gratuito", quota.data?.remaining ?? 0);
+
+      const abort = new AbortController();
+      const timeout = setTimeout(() => abort.abort(), 12_000);
+      try {
+        const res = await fetch("https://streammonitor-doctor-ai.victorsampaio133.workers.dev/analyze", {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "Authorization": "Bearer " + token },
+          body: JSON.stringify({ context: evidence, problem }),
+          signal: abort.signal,
+        });
+        if (!res.ok) return local(res.status === 429 ? "limite_gratuito" : "modelo_indisponivel", quota.data?.remaining);
+        const answer = await res.json() as { answer?: string };
+        if (typeof answer.answer !== "string" || !answer.answer.trim()) return local("modelo_indisponivel");
+        const text = answer.answer.trim().slice(0, 1250);
+        await (supabaseAdmin.from("doctor_ai_cache" as any) as any)
+          .upsert({ cache_key: cacheKey, generated_text: text, created_at: new Date().toISOString() }, { onConflict: "cache_key" });
+        return { serverName: server.name, report, assistant: {
+          mode: "cloudflare" as const, text,
+          reason: "inference", remaining: quota.data?.remaining ?? undefined, cached: false
+        }};
+      } finally {
+        clearTimeout(timeout);
+      }
+    } catch {
+      // The deterministic engine stays operational if AI quota, auth,
+      // network or provider are unavailable; never throw away measured data.
+      return local("modelo_indisponivel");
+    }
   });
