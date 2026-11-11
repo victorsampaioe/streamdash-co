@@ -92,7 +92,10 @@ export async function processTelegramAlert(data: AlertData) {
     let ok = false;
     let response = "telegram_ok";
     try {
-      await sendToTelegram(channel.target, message);
+      await sendToTelegram(channel.target, message, {
+        idempotencyKey: `monitor:${serverId}:${incidentId??"no-incident"}:${channel.id}:${logEvent}`,
+        serverId,incidentId,channelId:channel.id,alertEvent:logEvent
+      });
       ok = true;
       customerDelivered = true;
     } catch (error) {
@@ -194,16 +197,26 @@ function formatAlertMessage(server: any, data: AlertData): string {
   return `⚠️ <b>Aviso Stream Monitor</b>: ${esc(server.name)} - ${data.event}`;
 }
 
-async function sendToTelegram(target: string, text: string) {
-  const { rawTelegramSend, enqueueTelegramRetry } = await import("./telegram-outbox.server");
-  try {
-    await rawTelegramSend(target, text);
-  } catch (e) {
-    console.error("[TelegramAlert] Envio falhou; entregando ao Delivery Guard:", (e as Error)?.message);
-    // Falha transitória vai para a fila durável; o histórico marca o canal
-    // como entregue ao guard, evitando que o ciclo antigo reenvie em duplicidade.
-    const { queued } = await enqueueTelegramRetry(target, text, e, "monitor_alert");
-    if (!queued) throw e;
+async function sendToTelegram(
+  target:string,text:string,meta:import("./telegram-outbox.server").TelegramRetryMeta
+) {
+  const { rawTelegramSend,enqueueTelegramRetry }=await import("./telegram-outbox.server");
+  // An already scheduled delivery must not be sent again by the old retry cycle.
+  if(meta.idempotencyKey){
+    const {data:existing,error}=await supabaseAdmin.from("telegram_outbox" as any)
+      .select("status").eq("idempotency_key",meta.idempotencyKey).maybeSingle();
+    if(error)throw new Error("telegram_queue_check_failed");
+    if(existing?.status==="sent")return;
+    if(existing?.status==="pending"||existing?.status==="processing"||existing?.status==="sending")
+      throw new Error("telegram_delivery_queued");
+    if(existing?.status==="dead")throw new Error("telegram_delivery_dead_letter");
+  }
+  try{
+    await rawTelegramSend(target,text);
+  }catch(err){
+    const {queued}=await enqueueTelegramRetry(target,text,err,"monitor_alert",meta);
+    // Being queued is not a delivered alert; do not mark the incident notified.
+    throw new Error(queued?"telegram_delivery_queued":"telegram_delivery_dead_letter");
   }
 }
 
@@ -218,13 +231,12 @@ async function notifyAdminAlert(server: any, data: AlertData, userMessage: strin
     userMessage;
 
   try {
-    const response = await fetch(`https://api.telegram.org/bot${adminToken}/sendMessage`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ chat_id: adminChatId, text: adminMsg, parse_mode: "HTML" }),
-      signal: AbortSignal.timeout(10_000),
+    const eventKey=`tg_${data.kind??"server"}_${data.event.toLowerCase()}`;
+    await sendToTelegram(adminChatId,adminMsg,{
+      idempotencyKey:`monitor-admin:${server.id}:${data.incidentId??"no-incident"}:${eventKey}`,
+      serverId:server.id,incidentId:data.incidentId,alertEvent:eventKey
     });
-    return response.ok;
+    return true;
   } catch (error) {
     console.error("[TelegramAlert] Falha de envio ao administrador", error);
     return false;
