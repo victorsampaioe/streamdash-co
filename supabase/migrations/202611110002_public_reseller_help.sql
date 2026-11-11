@@ -15,7 +15,7 @@ WITH page AS (
    CASE WHEN (SELECT show_dns FROM public.reseller_pages WHERE owner_id=s.owner_id AND published=true LIMIT 1)
      THEN COALESCE(NULLIF(s.public_dns_label,''),'DNS monitorado') ELSE NULL END AS dns_label,
    CASE
-     WHEN s.monitoring_paused OR s.last_checked_at IS NULL OR s.last_checked_at < now()-interval '20 minutes'
+     WHEN s.monitoring_paused OR s.last_checked_at IS NULL OR s.last_checked_at < now()-interval '20 minutes' OR (s.dns_enabled=true AND (s.last_dns_check_at IS NULL OR s.last_dns_check_at < now()-interval '20 minutes'))
        THEN 'unknown'
      WHEN s.current_status::text = 'down' THEN 'down'
      WHEN s.dns_enabled=true AND s.dns_status='offline'
