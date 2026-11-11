@@ -48,7 +48,7 @@ function VitrineIA() {
   const [template, setTemplate] = useState<Template>("featured");
   const [kind, setKind] = useState<"movie" | "tv">("movie");
   const [selected, setSelected] = useState<number[]>([]);
-  const [headline, setHeadline] = useState("Novidades para você");
+  const [headline, setHeadline] = useState("Agora disponível.");
   const [confirmedOnly, setConfirmedOnly] = useState(false);
   const [search, setSearch] = useState("");
   const [logoUpload, setLogoUpload] = useState("");
@@ -217,6 +217,12 @@ function VitrineIA() {
           <label className="text-sm block">Enviar logo do dispositivo<input aria-label="Enviar logo" className="mt-1 block w-full text-xs" type="file" accept="image/png,image/jpeg,image/webp" onChange={e=>uploadLogo(e.target.files?.[0])}/></label>
           {logoUpload && <div className="flex items-center gap-2 text-xs"><img src={logoUpload} alt="Logo enviada" className="h-10 w-16 object-contain"/><span>Upload aplicado à prévia</span><Button variant="ghost" size="sm" onClick={()=>setLogoUpload("")}>Remover</Button></div>}
           <p className="text-xs text-muted-foreground">O upload funciona nesta edição; para manter a logo entre sessões, salve uma URL HTTPS.</p>
+          <div className="space-y-2">
+            <p className="text-xs font-medium">Temas prontos — escolha e personalize</p>
+            <div className="grid grid-cols-4 gap-2">
+              {([{name:"Vermelho",main:"#e11d2e",bg:"#110407",detail:"#ff3854"},{name:"Azul",main:"#2563eb",bg:"#050e23",detail:"#60a5fa"},{name:"Roxo",main:"#9333ea",bg:"#140521",detail:"#c084fc"},{name:"Dourado",main:"#a16207",bg:"#1d1305",detail:"#fbbf24"}]).map(c=><button key={c.name} type="button" aria-label={`Aplicar tema ${c.name}`} onClick={()=>{setBrand(b=>({...b,primary_color:c.main}));setBackgroundColor(c.bg);setAccentColor(c.detail);}} className="flex flex-col items-center gap-1 rounded-lg border px-1 py-2 text-[10px] hover:border-current"><span className="h-6 w-6 rounded-full border border-white/30" style={{background:`linear-gradient(135deg,${c.main},${c.bg})`}}/>{c.name}</button>)}
+            </div>
+          </div>
           <div className="grid grid-cols-2 gap-3">
             {([{label:"Cor principal",value:brand.primary_color,change:(v:string)=>setBrand({...brand,primary_color:v})},{label:"Fundo",value:backgroundColor,change:setBackgroundColor},{label:"Texto",value:textColor,change:setTextColor},{label:"Detalhes",value:accentColor,change:setAccentColor}]).map(c=><label key={c.label} className="text-xs flex gap-2 items-center"><input aria-label={c.label} type="color" value={c.value} onChange={e=>c.change(e.target.value)}/>{c.label}</label>)}
           </div>
