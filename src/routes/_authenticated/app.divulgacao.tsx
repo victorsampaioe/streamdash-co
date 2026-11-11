@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { toPng } from "html-to-image";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { getTmdbFeed } from "@/lib/tmdb.functions";
 import { supabase } from "@/integrations/supabase/client";
 import { Card } from "@/components/ui/card";
@@ -20,7 +20,7 @@ type MediaItem = { tmdb_id: number; media_type: "movie" | "tv"; title: string; p
 type Brand = { brand_name: string; logo_url: string; whatsapp: string; primary_color: string };
 type Format = "feed" | "story" | "landscape";
 type Template = "four" | "featured" | "series" | "grid";
-const defaultBrand: Brand = { brand_name: "Minha Revenda", logo_url: "", whatsapp: "", primary_color: "#2563eb" };
+const defaultBrand: Brand = { brand_name: "Minha Revenda", logo_url: "", whatsapp: "", primary_color: "#e11d2e" };
 const sizes: Record<Format, { w: number; h: number; label: string }> = {
   feed: { w: 1080, h: 1080, label: "Feed 1080×1080" },
   story: { w: 1080, h: 1920, label: "Story 1080×1920" },
@@ -39,20 +39,22 @@ function VitrineIA() {
   const runFeed = useServerFn(getTmdbFeed);
   const qc = useQueryClient();
   const artRef = useRef<HTMLDivElement>(null);
+  const previewRef = useRef<HTMLDivElement>(null);
+  const [previewWidth, setPreviewWidth] = useState(540);
   const [brand, setBrand] = useState<Brand>(defaultBrand);
   const [saving, setSaving] = useState(false);
   const [exporting, setExporting] = useState(false);
   const [format, setFormat] = useState<Format>("feed");
-  const [template, setTemplate] = useState<Template>("four");
+  const [template, setTemplate] = useState<Template>("featured");
   const [kind, setKind] = useState<"movie" | "tv">("movie");
   const [selected, setSelected] = useState<number[]>([]);
   const [headline, setHeadline] = useState("Novidades para você");
   const [confirmedOnly, setConfirmedOnly] = useState(false);
   const [search, setSearch] = useState("");
   const [logoUpload, setLogoUpload] = useState("");
-  const [backgroundColor, setBackgroundColor] = useState("#081224");
+  const [backgroundColor, setBackgroundColor] = useState("#110407");
   const [textColor, setTextColor] = useState("#ffffff");
-  const [accentColor, setAccentColor] = useState("#bfdbfe");
+  const [accentColor, setAccentColor] = useState("#ff3854");
   const [hideStudioMark, setHideStudioMark] = useState(true);
   const [sharing, setSharing] = useState(false);
 
@@ -103,6 +105,16 @@ function VitrineIA() {
     : sourceItems.slice(0, templates.find(x=>x.id===template)?.count ?? 4);
   const shown = chosen.slice(0, templates.find(x=>x.id===template)?.count ?? 4);
   const dimensions = sizes[format];
+  const previewScale = Math.min(1, Math.max(0.1, (previewWidth - 16) / dimensions.w));
+  useEffect(() => {
+    const element = previewRef.current;
+    if (!element) return;
+    const update = () => setPreviewWidth(element.clientWidth);
+    update();
+    const observer = new ResizeObserver(update);
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, []);
   const year = (s: string | null) => s?.slice(0,4) || "";
   const caption = `🎬 ${headline.trim()}! Confira os destaques com ${brand.brand_name.trim()}.${brand.whatsapp ? ` Fale conosco: ${brand.whatsapp}` : ""} #VitrineIA`;
 
@@ -231,29 +243,45 @@ function VitrineIA() {
       <div className="min-w-0 space-y-4">
         <Card className="p-4 overflow-hidden">
           <p className="font-semibold mb-3">Prévia da sua arte</p>
-          <div className="overflow-auto rounded-xl bg-slate-900 p-2" style={{maxHeight:610}}>
-            <div style={{width:dimensions.w,height:dimensions.h,zoom:Math.min(1, 540/dimensions.w),margin:"0 auto"}}>
-              <div ref={artRef} style={{width:dimensions.w,height:dimensions.h,position:"relative",overflow:"hidden",color:textColor,background:`radial-gradient(ellipse at 80% 10%, ${brand.primary_color} 0%, ${backgroundColor} 64%, ${backgroundColor} 100%)`,fontFamily:"Arial,sans-serif",padding:format==="landscape"?50:70,display:"flex",flexDirection:"column",justifyContent:"space-between",boxSizing:"border-box"}}>
-                <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:28}}>
-                  <div style={{display:"flex",gap:22,alignItems:"center"}}>
-                    {(logoUpload || brand.logo_url) && <img src={logoUpload || brand.logo_url} crossOrigin="anonymous" alt="" style={{height:format==="landscape"?70:94,maxWidth:160,objectFit:"contain"}} />}
-                    <span style={{fontWeight:900,fontSize:format==="landscape"?34:55,letterSpacing:-1}}>{brand.brand_name || "Minha Revenda"}</span>
-                  </div>
-                  {!hideStudioMark && <span style={{fontSize:format==="landscape"?22:28,color:accentColor,textTransform:"uppercase",letterSpacing:3}}>Vitrine IA</span>}
-                </div>
-                <div style={{flex:1,display:"flex",flexDirection:"column",justifyContent:"center",minHeight:0,gap:22,marginTop:format==="landscape"?4:38}}>
-                  <div style={{fontWeight:900,fontSize:format==="landscape"?46:format==="story"?100:76,lineHeight:1.06,maxWidth:"100%",overflowWrap:"anywhere"}}>{headline || "Novidades para você"}</div>
-                  <div style={{display:"grid",gridTemplateColumns:`repeat(${shown.length || 1},minmax(0,1fr))`,gap:format==="landscape"?18:22,alignItems:"center"}}>
-                    {shown.map((item,i)=><div key={item.tmdb_id} style={{minWidth:0,position:"relative",borderRadius:20,overflow:"hidden",background:"#16243d",boxShadow:"0 14px 30px #0008",border:i===0&&template==="featured"?`5px solid ${brand.primary_color}`:"2px solid #ffffff33"}}>
-                      <img crossOrigin="anonymous" src={poster(item.poster_path)} alt={item.title} style={{width:"100%",height:format==="landscape"?185:format==="story"?470:365,objectFit:"cover",display:"block"}}/>
-                      <div style={{fontWeight:800,fontSize:format==="landscape"?15:21,padding:"13px",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{item.title}</div>
-                    </div>)}
-                  </div>
-                </div>
-                <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",gap:20,fontSize:format==="landscape"?25:36,fontWeight:800}}>
-                  <span>🎬 Filmes e séries em destaque</span><span>{brand.whatsapp ? `WhatsApp: ${sanitize(brand.whatsapp)}` : "Sua diversão começa aqui"}</span>
-                </div>
+          <div ref={previewRef} className="w-full min-w-0 overflow-hidden rounded-xl bg-[#080307] p-2">
+            <div className="relative mx-auto overflow-hidden rounded-lg" style={{width:dimensions.w*previewScale,height:dimensions.h*previewScale}}>
+              <div style={{width:dimensions.w,height:dimensions.h,position:"absolute",top:0,left:0,transform:`scale(${previewScale})`,transformOrigin:"top left"}}>
+                <div ref={artRef} style={{width:dimensions.w,height:dimensions.h,overflow:"hidden",position:"relative",boxSizing:"border-box",fontFamily:"Arial,Helvetica,sans-serif",color:textColor,backgroundColor}}>
+                  <div style={{position:"absolute",inset:0,background:`radial-gradient(ellipse at 97% 12%, ${brand.primary_color}b0 0%, transparent 54%), radial-gradient(ellipse at 0% 87%, ${brand.primary_color}80 0%, transparent 50%), linear-gradient(145deg, ${backgroundColor} 0%, #040205 63%, ${backgroundColor} 100%)`}}/>
+                  <div style={{position:"absolute",inset:0,opacity:0.14,backgroundImage:"repeating-linear-gradient(128deg,transparent 0px,transparent 79px,#ffffff 80px,transparent 82px)"}}/>
+                  <div style={{position:"absolute",top:format==="story"?80:format==="feed"?42:8,left:-46,right:-46,fontSize:format==="story"?390:format==="feed"?280:180,fontWeight:900,lineHeight:1,color:"transparent",WebkitTextStroke:"2px #ffffff1c",letterSpacing:-30,whiteSpace:"nowrap",textAlign:"center",pointerEvents:"none"}}>NEW</div>
+                  <div style={{position:"absolute",inset:0,boxShadow:"inset 0 0 130px #0009",pointerEvents:"none"}}/>
 
+                  <div style={{position:"relative",zIndex:1,height:"100%",boxSizing:"border-box",padding:format==="story"?"98px 100px 115px":format==="feed"?"54px 78px 68px":"30px 58px",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"space-between",gap:format==="landscape"?12:26}}>
+                    <div style={{display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:10,minHeight:format==="story"?150:format==="feed"?92:44,maxWidth:"100%"}}>
+                      {(logoUpload || brand.logo_url) && <img src={logoUpload || brand.logo_url} crossOrigin="anonymous" alt="" style={{width:format==="story"?245:format==="feed"?170:110,height:format==="story"?100:format==="feed"?62:36,objectFit:"contain"}}/>}
+                      <div style={{fontSize:format==="story"?45:format==="feed"?35:24,fontWeight:800,maxWidth:"100%",textAlign:"center",overflowWrap:"anywhere",letterSpacing:-0.8,textShadow:"0 3px 18px #000c"}}>{brand.brand_name || "Minha Revenda"}</div>
+                      {!hideStudioMark && <div style={{fontSize:format==="story"?17:12,letterSpacing:5,color:accentColor}}>VITRINE IA</div>}
+                    </div>
+
+                    <div style={{width:"100%",flex:1,minHeight:0,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:format==="story"?52:format==="feed"?26:12}}>
+                      <div style={{width:"100%",height:format==="story"?90:format==="feed"?70:46,borderRadius:format==="landscape"?18:30,border:`3px solid ${accentColor}`,background:"linear-gradient(100deg,#090407ed,#41040be3)",boxSizing:"border-box",display:"flex",alignItems:"center",justifyContent:"space-between",padding:format==="landscape"?"0 22px":"0 28px",boxShadow:`0 0 30px ${brand.primary_color}33`,fontSize:format==="story"?30:format==="feed"?26:19}}>
+                        <span style={{color:accentColor,fontSize:format==="story"?42:format==="feed"?35:26}}>⌕</span>
+                        <span style={{fontWeight:600,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis",padding:"0 12px"}}>{headline || "Agora disponível"}</span>
+                        <span style={{color:accentColor,fontSize:format==="story"?37:format==="feed"?32:22}}>◉</span>
+                      </div>
+                      <div style={{width:"100%",flex:1,minHeight:0,display:"grid",alignItems:"stretch",gridTemplateColumns:shown.length===1?"1fr":"repeat(2,minmax(0,1fr))",gridTemplateRows:shown.length<=2?"minmax(0,1fr)":`repeat(${Math.ceil(shown.length/2)},minmax(0,1fr))`,gap:format==="story"?28:format==="feed"?20:10}}>
+                        {shown.map((item,i)=><div key={item.tmdb_id} style={{position:"relative",minHeight:0,minWidth:0,overflow:"hidden",borderRadius:format==="story"?26:format==="feed"?20:12,boxShadow:"0 18px 45px #000c",border:`2px solid ${accentColor}55`,background:"linear-gradient(120deg,#1b1218,#080408)",display:"flex",flexDirection:"column"}}>
+                          <div style={{flex:1,minHeight:0,position:"relative",display:"flex",alignItems:"center",justifyContent:"center"}}>
+                            <img src={poster(item.poster_path)} crossOrigin="anonymous" alt={item.title} style={{width:"100%",height:"100%",position:"absolute",inset:0,objectFit:"contain",display:"block"}}/>
+                          </div>
+                          <div style={{fontWeight:800,fontSize:shown.length===1?(format==="story"?33:format==="feed"?27:16):(format==="story"?23:format==="feed"?19:13),textAlign:"center",padding:shown.length===1?"17px 15px":"9px 10px",background:"linear-gradient(90deg,#080408,#23090d,#080408)",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{item.title}</div>
+                          <div style={{position:"absolute",top:0,left:0,right:0,height:5,background:`linear-gradient(90deg,transparent,${accentColor},transparent)`}}/>
+                        </div>)}
+                      </div>
+                    </div>
+                    <div style={{width:"100%",height:format==="story"?89:format==="feed"?72:48,boxSizing:"border-box",clipPath:"polygon(3% 0,97% 0,100% 28%,100% 75%,97% 100%,3% 100%,0 75%,0 28%)",padding:6,background:`linear-gradient(125deg,${accentColor},#63000b,${accentColor})`,boxShadow:"0 0 30px #e11d2e77",flexShrink:0}}>
+                      <div style={{height:"100%",width:"100%",clipPath:"polygon(3% 0,97% 0,100% 28%,100% 75%,97% 100%,3% 100%,0 75%,0 28%)",background:"linear-gradient(90deg,#130207,#300007,#090205)",display:"flex",alignItems:"center",justifyContent:"center",gap:12,fontSize:format==="story"?26:format==="feed"?22:15,fontWeight:900,textAlign:"center",whiteSpace:"nowrap"}}>
+                        <span>FALE PELO</span><span style={{color:accentColor}}>WHATSAPP</span><span>{sanitize(brand.whatsapp) || "SEU NÚMERO"}</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
