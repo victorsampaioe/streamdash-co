@@ -152,8 +152,6 @@ function useNavItems() {
     items.push({ to: "/app/reseller", label: "Painel Revendedor", icon: ShoppingBag });
     items.push({ to: "/app/pagina", label: "Minha Página", icon: Globe });
     items.push({ to: "/app/central-clientes", label: "Ajuda para Clientes", icon: BookOpen });
-    items.push({ to: "/vitrine-banner", label: "Vitrine Banner", icon: Sparkles });
-    items.push({ to: "/vitrine-ai", label: "Vitrine IA", icon: Sparkles });
     items.push({ to: "/app/memoria", label: "Memória de Diagnósticos", icon: Bot });
     items.push({ to: "/app/evidencias", label: "Biblioteca de Evidências", icon: BookOpen });
     // Compra de créditos permanece acessível dentro do fluxo de assinatura,
@@ -162,6 +160,10 @@ function useNavItems() {
     items.push({ to: "/app/subscription", label: "Minha Assinatura", icon: CreditCard });
   }
   
+  // Vitrines liberadas para toda conta autenticada, inclusive revendedores
+  // sem saldo/assinatura ativa. Apenas funções administrativas permanecem restritas.
+  items.push({ to: "/vitrine-banner", label: "Vitrine Banner · ilimitada", icon: Sparkles });
+  items.push({ to: "/vitrine-ai", label: "Vitrine IA · 5 por dia", icon: Sparkles });
   items.push({ to: "/app/ajuda", label: "Central de Ajuda", icon: BookOpen });
 
   return items;
