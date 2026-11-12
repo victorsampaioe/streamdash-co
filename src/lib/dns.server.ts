@@ -554,7 +554,7 @@ export async function runDnsCheck(serverId: string, opts: { quick?: boolean } = 
   if (snapshotError) throw new Error(`Não foi possível salvar análise DNS: ${snapshotError.message}`);
 
   // ESTADO DO DNS — independente do estado do servidor.
-  const { data: dnsState } = await supabaseAdmin
+  const { data: dnsState } = await (supabaseAdmin as any)
     .from("servers")
     .select("dns_status, dns_failure_count, dns_last_success_at, dns_last_failure_at, dns_recovery_success_streak")
     .eq("id", serverId)
@@ -755,7 +755,7 @@ export async function runDueDnsRecoveryChecks(limit = 16): Promise<{
   const { runPool } = await import("./pool");
   const now = Date.now();
   const maxBatch = Math.max(1, Math.min(24, limit));
-  const { data: candidates, error } = await supabaseAdmin.from("servers")
+  const { data: candidates, error } = await (supabaseAdmin as any).from("servers")
     .select("id,owner_id,dns_status,last_dns_check_at,dns_recovery_last_probe_at")
     .eq("dns_enabled", true)
     .eq("monitoring_paused", false)
