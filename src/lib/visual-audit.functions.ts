@@ -135,7 +135,7 @@ export const saveVisualAuditBrowserProbe=createServerFn({method:"POST"})
     if(url.hostname!=="streammonitor.site"||url.protocol!=="https:"||
       !(["/","/auth","/api/public/health"].includes(url.pathname)||/^\/ajuda\/[a-z0-9-]{2,40}$/.test(url.pathname)))
       throw new Error("Destino não autorizado.");
-    if(check.http_status!==null||Date.now()-new Date(check.checked_at).getTime()>5*60*1000)
+    if(check.http_status!==null||!check.checked_at||Date.now()-new Date(check.checked_at).getTime()>5*60*1000)
       return {updated:false};
     const success=data.httpStatus!==null&&data.httpStatus>=200&&data.httpStatus<300&&data.hasExpectedContent;
     const status=success?"partial":data.httpStatus===null?"unavailable":"failed";
