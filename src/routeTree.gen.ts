@@ -29,6 +29,8 @@ import { Route as VerifyEmailRouteImport } from './routes/verify-email'
 import { Route as Char91DotmcpChar93ListToolsRouteImport } from './routes/[.mcp]/list-tools'
 import { Route as Char91DotwellKnownChar93OauthProtectedResourceRouteImport } from './routes/[.well-known]/oauth-protected-resource'
 import { Route as AuthenticatedAppRouteImport } from './routes/_authenticated/app'
+import { Route as AuthenticatedVitrineAiRouteImport } from './routes/_authenticated/vitrine-ai'
+import { Route as AuthenticatedVitrineBannerRouteImport } from './routes/_authenticated/vitrine-banner'
 import { Route as AjudaSlugRouteImport } from './routes/ajuda.$slug'
 import { Route as ApiOpenapiDotjsonRouteImport } from './routes/api/openapi[.]json'
 import { Route as ApiOpenapiDotyamlRouteImport } from './routes/api/openapi[.]yaml'
@@ -48,10 +50,15 @@ import { Route as AuthenticatedAppAiIntegrationRouteImport } from './routes/_aut
 import { Route as AuthenticatedAppAjudaRouteImport } from './routes/_authenticated/app.ajuda'
 import { Route as AuthenticatedAppAlertsRouteImport } from './routes/_authenticated/app.alerts'
 import { Route as AuthenticatedAppApiIntegrationsRouteImport } from './routes/_authenticated/app.api-integrations'
+import { Route as AuthenticatedAppAuditoriaRouteImport } from './routes/_authenticated/app.auditoria'
 import { Route as AuthenticatedAppCentralRouteImport } from './routes/_authenticated/app.central'
 import { Route as AuthenticatedAppCentralClientesRouteImport } from './routes/_authenticated/app.central-clientes'
 import { Route as AuthenticatedAppDetectorRouteImport } from './routes/_authenticated/app.detector'
+import { Route as AuthenticatedAppDivulgacaoRouteImport } from './routes/_authenticated/app.divulgacao'
+import { Route as AuthenticatedAppEvidenciasRouteImport } from './routes/_authenticated/app.evidencias'
+import { Route as AuthenticatedAppFalhasRouteImport } from './routes/_authenticated/app.falhas'
 import { Route as AuthenticatedAppIndiqueRouteImport } from './routes/_authenticated/app.indique'
+import { Route as AuthenticatedAppMemoriaRouteImport } from './routes/_authenticated/app.memoria'
 import { Route as AuthenticatedAppPaginaRouteImport } from './routes/_authenticated/app.pagina'
 import { Route as AuthenticatedAppPerformanceRouteImport } from './routes/_authenticated/app.performance'
 import { Route as AuthenticatedAppRadarRouteImport } from './routes/_authenticated/app.radar'
@@ -106,6 +113,7 @@ import { Route as ApiPublicRegionsTargetsRouteImport } from './routes/api/public
 import { Route as ApiPublicStatusSlugRouteImport } from './routes/api/public/status/$slug'
 import { Route as ApiPublicTelegramWebhookRouteImport } from './routes/api/public/telegram/webhook'
 import { Route as ApiPublicTmdbCatalogRouteImport } from './routes/api/public/tmdb/catalog'
+import { Route as ApiPublicVitrineExemplosSlugRouteImport } from './routes/api/public/vitrine-exemplos/$slug'
 import { Route as ApiPublicWebhooksMercadopagoRouteImport } from './routes/api/public/webhooks/mercadopago'
 import { Route as AuthenticatedAppInteligenciaMediaIdRouteImport } from './routes/_authenticated/app.inteligencia.$media.$id'
 
@@ -210,6 +218,17 @@ const AuthenticatedAppRoute = AuthenticatedAppRouteImport.update({
   path: '/app',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedVitrineAiRoute = AuthenticatedVitrineAiRouteImport.update({
+  id: '/vitrine-ai',
+  path: '/vitrine-ai',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedVitrineBannerRoute =
+  AuthenticatedVitrineBannerRouteImport.update({
+    id: '/vitrine-banner',
+    path: '/vitrine-banner',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AjudaSlugRoute = AjudaSlugRouteImport.update({
   id: '/ajuda/$slug',
   path: '/ajuda/$slug',
@@ -310,6 +329,12 @@ const AuthenticatedAppApiIntegrationsRoute =
     path: '/api-integrations',
     getParentRoute: () => AuthenticatedAppRoute,
   } as any)
+const AuthenticatedAppAuditoriaRoute =
+  AuthenticatedAppAuditoriaRouteImport.update({
+    id: '/auditoria',
+    path: '/auditoria',
+    getParentRoute: () => AuthenticatedAppRoute,
+  } as any)
 const AuthenticatedAppCentralRoute = AuthenticatedAppCentralRouteImport.update({
   id: '/central',
   path: '/central',
@@ -327,9 +352,31 @@ const AuthenticatedAppDetectorRoute =
     path: '/detector',
     getParentRoute: () => AuthenticatedAppRoute,
   } as any)
+const AuthenticatedAppDivulgacaoRoute =
+  AuthenticatedAppDivulgacaoRouteImport.update({
+    id: '/divulgacao',
+    path: '/divulgacao',
+    getParentRoute: () => AuthenticatedAppRoute,
+  } as any)
+const AuthenticatedAppEvidenciasRoute =
+  AuthenticatedAppEvidenciasRouteImport.update({
+    id: '/evidencias',
+    path: '/evidencias',
+    getParentRoute: () => AuthenticatedAppRoute,
+  } as any)
+const AuthenticatedAppFalhasRoute = AuthenticatedAppFalhasRouteImport.update({
+  id: '/falhas',
+  path: '/falhas',
+  getParentRoute: () => AuthenticatedAppRoute,
+} as any)
 const AuthenticatedAppIndiqueRoute = AuthenticatedAppIndiqueRouteImport.update({
   id: '/indique',
   path: '/indique',
+  getParentRoute: () => AuthenticatedAppRoute,
+} as any)
+const AuthenticatedAppMemoriaRoute = AuthenticatedAppMemoriaRouteImport.update({
+  id: '/memoria',
+  path: '/memoria',
   getParentRoute: () => AuthenticatedAppRoute,
 } as any)
 const AuthenticatedAppPaginaRoute = AuthenticatedAppPaginaRouteImport.update({
@@ -627,6 +674,12 @@ const ApiPublicTmdbCatalogRoute = ApiPublicTmdbCatalogRouteImport.update({
   path: '/api/public/tmdb/catalog',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicVitrineExemplosSlugRoute =
+  ApiPublicVitrineExemplosSlugRouteImport.update({
+    id: '/api/public/vitrine-exemplos/$slug',
+    path: '/api/public/vitrine-exemplos/$slug',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiPublicWebhooksMercadopagoRoute =
   ApiPublicWebhooksMercadopagoRouteImport.update({
     id: '/api/public/webhooks/mercadopago',
@@ -660,6 +713,8 @@ export interface FileRoutesByFullPath {
   '/.mcp/list-tools': typeof Char91DotmcpChar93ListToolsRoute
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   '/app': typeof AuthenticatedAppRouteWithChildren
+  '/vitrine-ai': typeof AuthenticatedVitrineAiRoute
+  '/vitrine-banner': typeof AuthenticatedVitrineBannerRoute
   '/ajuda/$slug': typeof AjudaSlugRoute
   '/api/openapi.json': typeof ApiOpenapiDotjsonRoute
   '/api/openapi.yaml': typeof ApiOpenapiDotyamlRoute
@@ -678,10 +733,15 @@ export interface FileRoutesByFullPath {
   '/app/ajuda': typeof AuthenticatedAppAjudaRoute
   '/app/alerts': typeof AuthenticatedAppAlertsRoute
   '/app/api-integrations': typeof AuthenticatedAppApiIntegrationsRoute
+  '/app/auditoria': typeof AuthenticatedAppAuditoriaRoute
   '/app/central': typeof AuthenticatedAppCentralRoute
   '/app/central-clientes': typeof AuthenticatedAppCentralClientesRoute
   '/app/detector': typeof AuthenticatedAppDetectorRoute
+  '/app/divulgacao': typeof AuthenticatedAppDivulgacaoRoute
+  '/app/evidencias': typeof AuthenticatedAppEvidenciasRoute
+  '/app/falhas': typeof AuthenticatedAppFalhasRoute
   '/app/indique': typeof AuthenticatedAppIndiqueRoute
+  '/app/memoria': typeof AuthenticatedAppMemoriaRoute
   '/app/pagina': typeof AuthenticatedAppPaginaRoute
   '/app/performance': typeof AuthenticatedAppPerformanceRoute
   '/app/radar': typeof AuthenticatedAppRadarRoute
@@ -734,6 +794,7 @@ export interface FileRoutesByFullPath {
   '/api/public/status/$slug': typeof ApiPublicStatusSlugRoute
   '/api/public/telegram/webhook': typeof ApiPublicTelegramWebhookRoute
   '/api/public/tmdb/catalog': typeof ApiPublicTmdbCatalogRoute
+  '/api/public/vitrine-exemplos/$slug': typeof ApiPublicVitrineExemplosSlugRoute
   '/api/public/webhooks/mercadopago': typeof ApiPublicWebhooksMercadopagoRoute
   '/app/diagnostico/': typeof AuthenticatedAppDiagnosticoIndexRoute
   '/app/inteligencia/': typeof AuthenticatedAppInteligenciaIndexRoute
@@ -759,6 +820,8 @@ export interface FileRoutesByTo {
   '/verify-email': typeof VerifyEmailRoute
   '/.mcp/list-tools': typeof Char91DotmcpChar93ListToolsRoute
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
+  '/vitrine-ai': typeof AuthenticatedVitrineAiRoute
+  '/vitrine-banner': typeof AuthenticatedVitrineBannerRoute
   '/ajuda/$slug': typeof AjudaSlugRoute
   '/api/openapi.json': typeof ApiOpenapiDotjsonRoute
   '/api/openapi.yaml': typeof ApiOpenapiDotyamlRoute
@@ -777,10 +840,15 @@ export interface FileRoutesByTo {
   '/app/ajuda': typeof AuthenticatedAppAjudaRoute
   '/app/alerts': typeof AuthenticatedAppAlertsRoute
   '/app/api-integrations': typeof AuthenticatedAppApiIntegrationsRoute
+  '/app/auditoria': typeof AuthenticatedAppAuditoriaRoute
   '/app/central': typeof AuthenticatedAppCentralRoute
   '/app/central-clientes': typeof AuthenticatedAppCentralClientesRoute
   '/app/detector': typeof AuthenticatedAppDetectorRoute
+  '/app/divulgacao': typeof AuthenticatedAppDivulgacaoRoute
+  '/app/evidencias': typeof AuthenticatedAppEvidenciasRoute
+  '/app/falhas': typeof AuthenticatedAppFalhasRoute
   '/app/indique': typeof AuthenticatedAppIndiqueRoute
+  '/app/memoria': typeof AuthenticatedAppMemoriaRoute
   '/app/pagina': typeof AuthenticatedAppPaginaRoute
   '/app/performance': typeof AuthenticatedAppPerformanceRoute
   '/app/radar': typeof AuthenticatedAppRadarRoute
@@ -833,6 +901,7 @@ export interface FileRoutesByTo {
   '/api/public/status/$slug': typeof ApiPublicStatusSlugRoute
   '/api/public/telegram/webhook': typeof ApiPublicTelegramWebhookRoute
   '/api/public/tmdb/catalog': typeof ApiPublicTmdbCatalogRoute
+  '/api/public/vitrine-exemplos/$slug': typeof ApiPublicVitrineExemplosSlugRoute
   '/api/public/webhooks/mercadopago': typeof ApiPublicWebhooksMercadopagoRoute
   '/app/diagnostico': typeof AuthenticatedAppDiagnosticoIndexRoute
   '/app/inteligencia': typeof AuthenticatedAppInteligenciaIndexRoute
@@ -861,6 +930,8 @@ export interface FileRoutesById {
   '/.mcp/list-tools': typeof Char91DotmcpChar93ListToolsRoute
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   '/_authenticated/app': typeof AuthenticatedAppRouteWithChildren
+  '/_authenticated/vitrine-ai': typeof AuthenticatedVitrineAiRoute
+  '/_authenticated/vitrine-banner': typeof AuthenticatedVitrineBannerRoute
   '/ajuda/$slug': typeof AjudaSlugRoute
   '/api/openapi.json': typeof ApiOpenapiDotjsonRoute
   '/api/openapi.yaml': typeof ApiOpenapiDotyamlRoute
@@ -879,10 +950,15 @@ export interface FileRoutesById {
   '/_authenticated/app/ajuda': typeof AuthenticatedAppAjudaRoute
   '/_authenticated/app/alerts': typeof AuthenticatedAppAlertsRoute
   '/_authenticated/app/api-integrations': typeof AuthenticatedAppApiIntegrationsRoute
+  '/_authenticated/app/auditoria': typeof AuthenticatedAppAuditoriaRoute
   '/_authenticated/app/central': typeof AuthenticatedAppCentralRoute
   '/_authenticated/app/central-clientes': typeof AuthenticatedAppCentralClientesRoute
   '/_authenticated/app/detector': typeof AuthenticatedAppDetectorRoute
+  '/_authenticated/app/divulgacao': typeof AuthenticatedAppDivulgacaoRoute
+  '/_authenticated/app/evidencias': typeof AuthenticatedAppEvidenciasRoute
+  '/_authenticated/app/falhas': typeof AuthenticatedAppFalhasRoute
   '/_authenticated/app/indique': typeof AuthenticatedAppIndiqueRoute
+  '/_authenticated/app/memoria': typeof AuthenticatedAppMemoriaRoute
   '/_authenticated/app/pagina': typeof AuthenticatedAppPaginaRoute
   '/_authenticated/app/performance': typeof AuthenticatedAppPerformanceRoute
   '/_authenticated/app/radar': typeof AuthenticatedAppRadarRoute
@@ -935,6 +1011,7 @@ export interface FileRoutesById {
   '/api/public/status/$slug': typeof ApiPublicStatusSlugRoute
   '/api/public/telegram/webhook': typeof ApiPublicTelegramWebhookRoute
   '/api/public/tmdb/catalog': typeof ApiPublicTmdbCatalogRoute
+  '/api/public/vitrine-exemplos/$slug': typeof ApiPublicVitrineExemplosSlugRoute
   '/api/public/webhooks/mercadopago': typeof ApiPublicWebhooksMercadopagoRoute
   '/_authenticated/app/diagnostico/': typeof AuthenticatedAppDiagnosticoIndexRoute
   '/_authenticated/app/inteligencia/': typeof AuthenticatedAppInteligenciaIndexRoute
@@ -963,6 +1040,8 @@ export interface FileRouteTypes {
     | '/.mcp/list-tools'
     | '/.well-known/oauth-protected-resource'
     | '/app'
+    | '/vitrine-ai'
+    | '/vitrine-banner'
     | '/ajuda/$slug'
     | '/api/openapi.json'
     | '/api/openapi.yaml'
@@ -981,10 +1060,15 @@ export interface FileRouteTypes {
     | '/app/ajuda'
     | '/app/alerts'
     | '/app/api-integrations'
+    | '/app/auditoria'
     | '/app/central'
     | '/app/central-clientes'
     | '/app/detector'
+    | '/app/divulgacao'
+    | '/app/evidencias'
+    | '/app/falhas'
     | '/app/indique'
+    | '/app/memoria'
     | '/app/pagina'
     | '/app/performance'
     | '/app/radar'
@@ -1037,6 +1121,7 @@ export interface FileRouteTypes {
     | '/api/public/status/$slug'
     | '/api/public/telegram/webhook'
     | '/api/public/tmdb/catalog'
+    | '/api/public/vitrine-exemplos/$slug'
     | '/api/public/webhooks/mercadopago'
     | '/app/diagnostico/'
     | '/app/inteligencia/'
@@ -1062,6 +1147,8 @@ export interface FileRouteTypes {
     | '/verify-email'
     | '/.mcp/list-tools'
     | '/.well-known/oauth-protected-resource'
+    | '/vitrine-ai'
+    | '/vitrine-banner'
     | '/ajuda/$slug'
     | '/api/openapi.json'
     | '/api/openapi.yaml'
@@ -1080,10 +1167,15 @@ export interface FileRouteTypes {
     | '/app/ajuda'
     | '/app/alerts'
     | '/app/api-integrations'
+    | '/app/auditoria'
     | '/app/central'
     | '/app/central-clientes'
     | '/app/detector'
+    | '/app/divulgacao'
+    | '/app/evidencias'
+    | '/app/falhas'
     | '/app/indique'
+    | '/app/memoria'
     | '/app/pagina'
     | '/app/performance'
     | '/app/radar'
@@ -1136,6 +1228,7 @@ export interface FileRouteTypes {
     | '/api/public/status/$slug'
     | '/api/public/telegram/webhook'
     | '/api/public/tmdb/catalog'
+    | '/api/public/vitrine-exemplos/$slug'
     | '/api/public/webhooks/mercadopago'
     | '/app/diagnostico'
     | '/app/inteligencia'
@@ -1163,6 +1256,8 @@ export interface FileRouteTypes {
     | '/.mcp/list-tools'
     | '/.well-known/oauth-protected-resource'
     | '/_authenticated/app'
+    | '/_authenticated/vitrine-ai'
+    | '/_authenticated/vitrine-banner'
     | '/ajuda/$slug'
     | '/api/openapi.json'
     | '/api/openapi.yaml'
@@ -1181,10 +1276,15 @@ export interface FileRouteTypes {
     | '/_authenticated/app/ajuda'
     | '/_authenticated/app/alerts'
     | '/_authenticated/app/api-integrations'
+    | '/_authenticated/app/auditoria'
     | '/_authenticated/app/central'
     | '/_authenticated/app/central-clientes'
     | '/_authenticated/app/detector'
+    | '/_authenticated/app/divulgacao'
+    | '/_authenticated/app/evidencias'
+    | '/_authenticated/app/falhas'
     | '/_authenticated/app/indique'
+    | '/_authenticated/app/memoria'
     | '/_authenticated/app/pagina'
     | '/_authenticated/app/performance'
     | '/_authenticated/app/radar'
@@ -1237,6 +1337,7 @@ export interface FileRouteTypes {
     | '/api/public/status/$slug'
     | '/api/public/telegram/webhook'
     | '/api/public/tmdb/catalog'
+    | '/api/public/vitrine-exemplos/$slug'
     | '/api/public/webhooks/mercadopago'
     | '/_authenticated/app/diagnostico/'
     | '/_authenticated/app/inteligencia/'
@@ -1308,6 +1409,7 @@ export interface RootRouteChildren {
   ApiPublicStatusSlugRoute: typeof ApiPublicStatusSlugRoute
   ApiPublicTelegramWebhookRoute: typeof ApiPublicTelegramWebhookRoute
   ApiPublicTmdbCatalogRoute: typeof ApiPublicTmdbCatalogRoute
+  ApiPublicVitrineExemplosSlugRoute: typeof ApiPublicVitrineExemplosSlugRoute
   ApiPublicWebhooksMercadopagoRoute: typeof ApiPublicWebhooksMercadopagoRoute
 }
 
@@ -1453,6 +1555,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAppRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/vitrine-ai': {
+      id: '/_authenticated/vitrine-ai'
+      path: '/vitrine-ai'
+      fullPath: '/vitrine-ai'
+      preLoaderRoute: typeof AuthenticatedVitrineAiRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/vitrine-banner': {
+      id: '/_authenticated/vitrine-banner'
+      path: '/vitrine-banner'
+      fullPath: '/vitrine-banner'
+      preLoaderRoute: typeof AuthenticatedVitrineBannerRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/ajuda/$slug': {
       id: '/ajuda/$slug'
       path: '/ajuda/$slug'
@@ -1586,6 +1702,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAppApiIntegrationsRouteImport
       parentRoute: typeof AuthenticatedAppRoute
     }
+    '/_authenticated/app/auditoria': {
+      id: '/_authenticated/app/auditoria'
+      path: '/auditoria'
+      fullPath: '/app/auditoria'
+      preLoaderRoute: typeof AuthenticatedAppAuditoriaRouteImport
+      parentRoute: typeof AuthenticatedAppRoute
+    }
     '/_authenticated/app/central': {
       id: '/_authenticated/app/central'
       path: '/central'
@@ -1607,11 +1730,39 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAppDetectorRouteImport
       parentRoute: typeof AuthenticatedAppRoute
     }
+    '/_authenticated/app/divulgacao': {
+      id: '/_authenticated/app/divulgacao'
+      path: '/divulgacao'
+      fullPath: '/app/divulgacao'
+      preLoaderRoute: typeof AuthenticatedAppDivulgacaoRouteImport
+      parentRoute: typeof AuthenticatedAppRoute
+    }
+    '/_authenticated/app/evidencias': {
+      id: '/_authenticated/app/evidencias'
+      path: '/evidencias'
+      fullPath: '/app/evidencias'
+      preLoaderRoute: typeof AuthenticatedAppEvidenciasRouteImport
+      parentRoute: typeof AuthenticatedAppRoute
+    }
+    '/_authenticated/app/falhas': {
+      id: '/_authenticated/app/falhas'
+      path: '/falhas'
+      fullPath: '/app/falhas'
+      preLoaderRoute: typeof AuthenticatedAppFalhasRouteImport
+      parentRoute: typeof AuthenticatedAppRoute
+    }
     '/_authenticated/app/indique': {
       id: '/_authenticated/app/indique'
       path: '/indique'
       fullPath: '/app/indique'
       preLoaderRoute: typeof AuthenticatedAppIndiqueRouteImport
+      parentRoute: typeof AuthenticatedAppRoute
+    }
+    '/_authenticated/app/memoria': {
+      id: '/_authenticated/app/memoria'
+      path: '/memoria'
+      fullPath: '/app/memoria'
+      preLoaderRoute: typeof AuthenticatedAppMemoriaRouteImport
       parentRoute: typeof AuthenticatedAppRoute
     }
     '/_authenticated/app/pagina': {
@@ -1992,6 +2143,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicTmdbCatalogRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/vitrine-exemplos/$slug': {
+      id: '/api/public/vitrine-exemplos/$slug'
+      path: '/api/public/vitrine-exemplos/$slug'
+      fullPath: '/api/public/vitrine-exemplos/$slug'
+      preLoaderRoute: typeof ApiPublicVitrineExemplosSlugRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/webhooks/mercadopago': {
       id: '/api/public/webhooks/mercadopago'
       path: '/api/public/webhooks/mercadopago'
@@ -2035,10 +2193,15 @@ interface AuthenticatedAppRouteChildren {
   AuthenticatedAppAjudaRoute: typeof AuthenticatedAppAjudaRoute
   AuthenticatedAppAlertsRoute: typeof AuthenticatedAppAlertsRoute
   AuthenticatedAppApiIntegrationsRoute: typeof AuthenticatedAppApiIntegrationsRoute
+  AuthenticatedAppAuditoriaRoute: typeof AuthenticatedAppAuditoriaRoute
   AuthenticatedAppCentralRoute: typeof AuthenticatedAppCentralRoute
   AuthenticatedAppCentralClientesRoute: typeof AuthenticatedAppCentralClientesRoute
   AuthenticatedAppDetectorRoute: typeof AuthenticatedAppDetectorRoute
+  AuthenticatedAppDivulgacaoRoute: typeof AuthenticatedAppDivulgacaoRoute
+  AuthenticatedAppEvidenciasRoute: typeof AuthenticatedAppEvidenciasRoute
+  AuthenticatedAppFalhasRoute: typeof AuthenticatedAppFalhasRoute
   AuthenticatedAppIndiqueRoute: typeof AuthenticatedAppIndiqueRoute
+  AuthenticatedAppMemoriaRoute: typeof AuthenticatedAppMemoriaRoute
   AuthenticatedAppPaginaRoute: typeof AuthenticatedAppPaginaRoute
   AuthenticatedAppPerformanceRoute: typeof AuthenticatedAppPerformanceRoute
   AuthenticatedAppRadarRoute: typeof AuthenticatedAppRadarRoute
@@ -2064,10 +2227,15 @@ const AuthenticatedAppRouteChildren: AuthenticatedAppRouteChildren = {
   AuthenticatedAppAjudaRoute: AuthenticatedAppAjudaRoute,
   AuthenticatedAppAlertsRoute: AuthenticatedAppAlertsRoute,
   AuthenticatedAppApiIntegrationsRoute: AuthenticatedAppApiIntegrationsRoute,
+  AuthenticatedAppAuditoriaRoute: AuthenticatedAppAuditoriaRoute,
   AuthenticatedAppCentralRoute: AuthenticatedAppCentralRoute,
   AuthenticatedAppCentralClientesRoute: AuthenticatedAppCentralClientesRoute,
   AuthenticatedAppDetectorRoute: AuthenticatedAppDetectorRoute,
+  AuthenticatedAppDivulgacaoRoute: AuthenticatedAppDivulgacaoRoute,
+  AuthenticatedAppEvidenciasRoute: AuthenticatedAppEvidenciasRoute,
+  AuthenticatedAppFalhasRoute: AuthenticatedAppFalhasRoute,
   AuthenticatedAppIndiqueRoute: AuthenticatedAppIndiqueRoute,
+  AuthenticatedAppMemoriaRoute: AuthenticatedAppMemoriaRoute,
   AuthenticatedAppPaginaRoute: AuthenticatedAppPaginaRoute,
   AuthenticatedAppPerformanceRoute: AuthenticatedAppPerformanceRoute,
   AuthenticatedAppRadarRoute: AuthenticatedAppRadarRoute,
@@ -2093,10 +2261,14 @@ const AuthenticatedAppRouteWithChildren =
 
 interface AuthenticatedRouteRouteChildren {
   AuthenticatedAppRoute: typeof AuthenticatedAppRouteWithChildren
+  AuthenticatedVitrineAiRoute: typeof AuthenticatedVitrineAiRoute
+  AuthenticatedVitrineBannerRoute: typeof AuthenticatedVitrineBannerRoute
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedAppRoute: AuthenticatedAppRouteWithChildren,
+  AuthenticatedVitrineAiRoute: AuthenticatedVitrineAiRoute,
+  AuthenticatedVitrineBannerRoute: AuthenticatedVitrineBannerRoute,
 }
 
 const AuthenticatedRouteRouteWithChildren =
@@ -2204,6 +2376,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPublicStatusSlugRoute: ApiPublicStatusSlugRoute,
   ApiPublicTelegramWebhookRoute: ApiPublicTelegramWebhookRoute,
   ApiPublicTmdbCatalogRoute: ApiPublicTmdbCatalogRoute,
+  ApiPublicVitrineExemplosSlugRoute: ApiPublicVitrineExemplosSlugRoute,
   ApiPublicWebhooksMercadopagoRoute: ApiPublicWebhooksMercadopagoRoute,
 }
 export const routeTree = rootRouteImport
