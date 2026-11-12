@@ -1839,6 +1839,65 @@ export type Database = {
         }
         Relationships: []
       }
+      diagnostic_case_memory: {
+        Row: {
+          anonymized: boolean
+          app_name: string | null
+          consented: boolean
+          created_at: string
+          device_kind: string | null
+          error_kind: string
+          id: string
+          observed_signals: Json
+          outcome: string
+          owner_id: string
+          region_code: string | null
+          resolved_at: string | null
+          server_id: string | null
+          solution: string | null
+        }
+        Insert: {
+          anonymized?: boolean
+          app_name?: string | null
+          consented?: boolean
+          created_at?: string
+          device_kind?: string | null
+          error_kind: string
+          id?: string
+          observed_signals?: Json
+          outcome?: string
+          owner_id: string
+          region_code?: string | null
+          resolved_at?: string | null
+          server_id?: string | null
+          solution?: string | null
+        }
+        Update: {
+          anonymized?: boolean
+          app_name?: string | null
+          consented?: boolean
+          created_at?: string
+          device_kind?: string | null
+          error_kind?: string
+          id?: string
+          observed_signals?: Json
+          outcome?: string
+          owner_id?: string
+          region_code?: string | null
+          resolved_at?: string | null
+          server_id?: string | null
+          solution?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "diagnostic_case_memory_server_id_fkey"
+            columns: ["server_id"]
+            isOneToOne: false
+            referencedRelation: "servers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       diagnostic_circuit_breakers: {
         Row: {
           failure_count: number | null
@@ -2226,6 +2285,60 @@ export type Database = {
           usage_day?: string
         }
         Relationships: []
+      }
+      evidence_documents: {
+        Row: {
+          content_type: string
+          created_at: string
+          expires_at: string | null
+          id: string
+          incident_id: string | null
+          owner_id: string
+          server_id: string | null
+          storage_path: string | null
+          storage_provider: string
+          title: string
+        }
+        Insert: {
+          content_type: string
+          created_at?: string
+          expires_at?: string | null
+          id?: string
+          incident_id?: string | null
+          owner_id: string
+          server_id?: string | null
+          storage_path?: string | null
+          storage_provider?: string
+          title: string
+        }
+        Update: {
+          content_type?: string
+          created_at?: string
+          expires_at?: string | null
+          id?: string
+          incident_id?: string | null
+          owner_id?: string
+          server_id?: string | null
+          storage_path?: string | null
+          storage_provider?: string
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "evidence_documents_incident_id_fkey"
+            columns: ["incident_id"]
+            isOneToOne: false
+            referencedRelation: "incidents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "evidence_documents_server_id_fkey"
+            columns: ["server_id"]
+            isOneToOne: false
+            referencedRelation: "servers"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       expiry_notices: {
         Row: {
@@ -4339,6 +4452,72 @@ export type Database = {
           },
         ]
       }
+      promo_brand_settings: {
+        Row: {
+          brand_name: string
+          logo_url: string | null
+          owner_id: string
+          primary_color: string
+          updated_at: string
+          whatsapp: string | null
+        }
+        Insert: {
+          brand_name?: string
+          logo_url?: string | null
+          owner_id: string
+          primary_color?: string
+          updated_at?: string
+          whatsapp?: string | null
+        }
+        Update: {
+          brand_name?: string
+          logo_url?: string | null
+          owner_id?: string
+          primary_color?: string
+          updated_at?: string
+          whatsapp?: string | null
+        }
+        Relationships: []
+      }
+      promo_generations: {
+        Row: {
+          caption: string | null
+          created_at: string
+          format: string
+          id: string
+          items: Json
+          media_type: string
+          owner_id: string
+          storage_path: string | null
+          template: string
+          title: string
+        }
+        Insert: {
+          caption?: string | null
+          created_at?: string
+          format: string
+          id?: string
+          items?: Json
+          media_type: string
+          owner_id: string
+          storage_path?: string | null
+          template: string
+          title: string
+        }
+        Update: {
+          caption?: string | null
+          created_at?: string
+          format?: string
+          id?: string
+          items?: Json
+          media_type?: string
+          owner_id?: string
+          storage_path?: string | null
+          template?: string
+          title?: string
+        }
+        Relationships: []
+      }
       ratings: {
         Row: {
           comment: string | null
@@ -5816,14 +5995,18 @@ export type Database = {
       }
       telegram_outbox: {
         Row: {
+          alert_event: string | null
           attempts: number
+          channel_id: string | null
           created_at: string
           delivered_at: string | null
           id: string
           idempotency_key: string
+          incident_id: string | null
           last_error: string | null
           max_attempts: number
           next_attempt_at: string
+          server_id: string | null
           source: string
           status: string
           target: string
@@ -5831,14 +6014,18 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          alert_event?: string | null
           attempts?: number
+          channel_id?: string | null
           created_at?: string
           delivered_at?: string | null
           id?: string
           idempotency_key: string
+          incident_id?: string | null
           last_error?: string | null
           max_attempts?: number
           next_attempt_at?: string
+          server_id?: string | null
           source?: string
           status?: string
           target: string
@@ -5846,14 +6033,18 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          alert_event?: string | null
           attempts?: number
+          channel_id?: string | null
           created_at?: string
           delivered_at?: string | null
           id?: string
           idempotency_key?: string
+          incident_id?: string | null
           last_error?: string | null
           max_attempts?: number
           next_attempt_at?: string
+          server_id?: string | null
           source?: string
           status?: string
           target?: string
@@ -6023,6 +6214,69 @@ export type Database = {
         }
         Relationships: []
       }
+      visual_audit_checks: {
+        Row: {
+          checked_at: string | null
+          created_at: string
+          duration_ms: number | null
+          http_status: number | null
+          id: string
+          label: string
+          owner_id: string
+          screenshot_storage_path: string | null
+          status: string
+          target_url: string
+        }
+        Insert: {
+          checked_at?: string | null
+          created_at?: string
+          duration_ms?: number | null
+          http_status?: number | null
+          id?: string
+          label: string
+          owner_id: string
+          screenshot_storage_path?: string | null
+          status?: string
+          target_url: string
+        }
+        Update: {
+          checked_at?: string | null
+          created_at?: string
+          duration_ms?: number | null
+          http_status?: number | null
+          id?: string
+          label?: string
+          owner_id?: string
+          screenshot_storage_path?: string | null
+          status?: string
+          target_url?: string
+        }
+        Relationships: []
+      }
+      vitrine_ai_daily_quota: {
+        Row: {
+          created_at: string
+          owner_id: string
+          quota_day: string
+          updated_at: string
+          used_count: number
+        }
+        Insert: {
+          created_at?: string
+          owner_id: string
+          quota_day: string
+          updated_at?: string
+          used_count?: number
+        }
+        Update: {
+          created_at?: string
+          owner_id?: string
+          quota_day?: string
+          updated_at?: string
+          used_count?: number
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
@@ -6121,6 +6375,35 @@ export type Database = {
         Returns: undefined
       }
       check_circuit_breaker: { Args: { p_server_id: string }; Returns: string }
+      claim_telegram_outbox: {
+        Args: { _limit?: number }
+        Returns: {
+          alert_event: string | null
+          attempts: number
+          channel_id: string | null
+          created_at: string
+          delivered_at: string | null
+          id: string
+          idempotency_key: string
+          incident_id: string | null
+          last_error: string | null
+          max_attempts: number
+          next_attempt_at: string
+          server_id: string | null
+          source: string
+          status: string
+          target: string
+          text: string
+          updated_at: string
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "telegram_outbox"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
+      claim_vitrine_ai_art: { Args: never; Returns: Json }
       cleanup_diagnostic_slots: { Args: never; Returns: undefined }
       content_health_overview: { Args: { _server_id?: string }; Returns: Json }
       conversation_participants_match: {
@@ -6317,6 +6600,10 @@ export type Database = {
           last_checked_at: string
           name: string
         }[]
+      }
+      get_public_help_resolutions: {
+        Args: { _error_kind: string; _server_id: string; _slug: string }
+        Returns: Json
       }
       get_public_region_checks: {
         Args: { _limit?: number; _minutes?: number; _slug: string }
