@@ -556,13 +556,14 @@ export async function runDnsCheck(serverId: string, opts: { quick?: boolean } = 
   // ESTADO DO DNS — independente do estado do servidor.
   const { data: dnsState } = await supabaseAdmin
     .from("servers")
-    .select("dns_status, dns_failure_count, dns_last_success_at, dns_last_failure_at")
+    .select("dns_status, dns_failure_count, dns_last_success_at, dns_last_failure_at, dns_recovery_success_streak")
     .eq("id", serverId)
     .maybeSingle<{
       dns_status: string | null;
       dns_failure_count: number | null;
       dns_last_success_at: string | null;
       dns_last_failure_at: string | null;
+      dns_recovery_success_streak: number | null;
     }>();
 
   // Não confiar em um único resolvedor positivo quando quatro falham.
@@ -575,10 +576,20 @@ export async function runDnsCheck(serverId: string, opts: { quick?: boolean } = 
     previousFailureCount: dnsState?.dns_failure_count ?? 0,
     previousStatus: dnsState?.dns_status,
   });
-  const { status: dnsStatus, failureCount: failures, severeFailure } = dnsDecision;
+  const { failureCount: failures, severeFailure } = dnsDecision;
   const resolved = report.resolved_ok >= 2;
-
   const prevStatus = dnsState?.dns_status ?? "unknown";
+  const previousRecoveryStreak = dnsState?.dns_recovery_success_streak ?? 0;
+  // After a confirmed outage, require TWO consecutive fully healthy,
+  // multi-resolver reports before sending the recovered notification.
+  // The first healthy sample is provisional; the incident stays open.
+  const fullHealthyProbe = dnsDecision.status === "online"
+    && report.resolver_count >= 3 && report.resolved_ok === report.resolver_count;
+  const recoveryInProgress = prevStatus === "offline" || previousRecoveryStreak > 0;
+  const awaitingRecoveryConfirmation = fullHealthyProbe && recoveryInProgress
+    && previousRecoveryStreak < 1;
+  const dnsStatus = awaitingRecoveryConfirmation ? "unstable" : dnsDecision.status;
+  const recoveryStreak = awaitingRecoveryConfirmation ? 1 : 0;
   const changed = prevStatus !== dnsStatus;
 
   // Apenas falhas confirmadas (duas verificações) geram alerta crítico.
@@ -590,7 +601,7 @@ export async function runDnsCheck(serverId: string, opts: { quick?: boolean } = 
   } else if (changed && dnsStatus === "online" && prevStatus !== "online") {
     alerts.push({ kind: "dns_recovered", severity: "info",
       title: "✅ DNS voltou a responder", detail: "Resolução confirmada em todas as fontes." });
-  } else if (changed && dnsStatus === "unstable") {
+  } else if (changed && dnsStatus === "unstable" && !awaitingRecoveryConfirmation) {
     alerts.push({ kind: "dns_unstable", severity: "warning",
       title: "⚠️ DNS instável — nova verificação necessária",
       detail: dnsDecision.reason });
@@ -602,9 +613,10 @@ export async function runDnsCheck(serverId: string, opts: { quick?: boolean } = 
       dns_health_score: report.health_score,
       dns_status: dnsStatus,
       dns_failure_count: failures,
+      dns_recovery_success_streak: recoveryStreak,
       dns_last_success_at: resolved ? report.checked_at : (dnsState?.dns_last_success_at ?? null),
       dns_last_failure_at: resolved ? (dnsState?.dns_last_failure_at ?? null) : report.checked_at,
-      dns_regions: { types: Object.keys(report.records ?? {}), resolved_ok: report.resolved_ok, total: report.resolver_count, reason: dnsDecision.reason },
+      dns_regions: { types: Object.keys(report.records ?? {}), resolved_ok: report.resolved_ok, total: report.resolver_count, reason: awaitingRecoveryConfirmation ? "Primeiro sinal de recuperação; aguardando segunda confirmação independente." : dnsDecision.reason },
       ...(changed ? { dns_state_changed_at: report.checked_at } : {}),
     } as any)
     .eq("id", serverId);
@@ -729,4 +741,64 @@ export async function runDueDnsChecks(limit = 40): Promise<{ checked: number; er
     }
   }
   return { checked, errors, paused };
+}
+
+/**
+ * Priority recovery queue. Offline DNS receives a fast, independent probe
+ * about every 30 seconds while normal domains remain on their regular cycle.
+ * No client-side polling is used: the authenticated cron drives the queue.
+ */
+export async function runDueDnsRecoveryChecks(limit = 16): Promise<{
+  checked: number; recovered: number; pending: number; errors: number; skipped: number;
+}> {
+  const { getActiveOwnerIds } = await import("./service-status.server");
+  const { runPool } = await import("./pool");
+  const now = Date.now();
+  const maxBatch = Math.max(1, Math.min(24, limit));
+  const { data: candidates, error } = await supabaseAdmin.from("servers")
+    .select("id,owner_id,dns_status,last_dns_check_at,dns_recovery_last_probe_at")
+    .eq("dns_enabled", true)
+    .eq("monitoring_paused", false)
+    .in("dns_status", ["offline", "unstable"])
+    .order("dns_recovery_last_probe_at", { ascending: true, nullsFirst: true })
+    .limit(200);
+  if (error) throw new Error("Não foi possível ler a fila DNS: " + error.message);
+  const due = (candidates ?? [])
+    .filter((item) => {
+      // Never compete with a DNS check that just completed in the normal cron.
+      const last = Math.max(
+        item.last_dns_check_at ? new Date(item.last_dns_check_at).getTime() : 0,
+        item.dns_recovery_last_probe_at ? new Date(item.dns_recovery_last_probe_at).getTime() : 0,
+      );
+      return !Number.isFinite(last) || now - last >= 25_000;
+    })
+    .sort((a, b) => {
+      // Offline always gets priority; within each status the oldest probe wins.
+      const priority = (a.dns_status === "offline" ? 0 : 1) - (b.dns_status === "offline" ? 0 : 1);
+      if (priority !== 0) return priority;
+      const age = (value: typeof a) => value.dns_recovery_last_probe_at
+        ? new Date(value.dns_recovery_last_probe_at).getTime() : 0;
+      return age(a) - age(b);
+    });
+  const activeOwners = await getActiveOwnerIds(due.map((item) => item.owner_id));
+  const eligible = due.filter((item) => activeOwners.has(item.owner_id));
+  const batch = eligible.slice(0, maxBatch);
+  const outcomes = await runPool(batch, async (item) => {
+    // Store the last attempt before probing so a failing resolver does not
+    // hot-loop on every cron invocation. Recovery still uses normal alert gating.
+    const { error: updateError } = await supabaseAdmin.from("servers")
+      .update({ dns_recovery_last_probe_at: new Date().toISOString() } as any)
+      .eq("id", item.id)
+      .eq("monitoring_paused", false)
+      .in("dns_status", ["offline", "unstable"]);
+    if (updateError) throw updateError;
+    return runDnsCheck(item.id, { quick: true });
+  }, { concurrency: 4, jitterMs: 120 });
+  return {
+    checked: outcomes.filter((item) => item.status === "fulfilled").length,
+    recovered: outcomes.filter((item) => item.status === "fulfilled" && item.value.dnsStatus === "online").length,
+    pending: Math.max(0, eligible.length - batch.length),
+    errors: outcomes.filter((item) => item.status === "rejected").length,
+    skipped: due.length - eligible.length,
+  };
 }
