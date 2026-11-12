@@ -332,7 +332,7 @@ export function VitrineStudio({ mode }: { mode: "ai" | "banner" }) {
   const shown = mode === "banner" ? (bannerReady ? chosen.slice(0, 1) : []) : chosen.slice(0, templates.find(x=>x.id===template)?.count ?? 4);
   const featuredDetail = useQuery({
     queryKey: ["vitrine-featured-details", shown[0]?.media_type, shown[0]?.tmdb_id],
-    enabled: shown.length === 1 && !!shown[0]?.tmdb_id && !shown[0]?.overview?.trim(),
+    enabled: shown.length === 1 && !!shown[0]?.tmdb_id && (mode === "ai" || !shown[0]?.overview?.trim()),
     queryFn: async () => runDetail({ data: { media: shown[0].media_type, id: shown[0].tmdb_id } }),
     staleTime: 600000,
     retry: 1,
@@ -813,7 +813,22 @@ export function VitrineStudio({ mode }: { mode: "ai" | "banner" }) {
                           const featured = shown.length===1;
                           const vertical = format==="story";
                           const cover = embeddedPosters[item.poster_path||""] || fallbackPoster(item.title);
-                          const synopsis = shortOverview(item.overview || (featuredDetail.data?.detail?.tmdb_id===item.tmdb_id ? featuredDetail.data.detail.overview : ""),vertical?320:format==="feed"?210:145);
+                          // On the AI art, use the complete official synopsis from
+                          // TMDB rather than the short teaser with "…".
+                          const fullSynopsis = String(
+                            (featuredDetail.data?.detail?.tmdb_id === item.tmdb_id
+                              ? featuredDetail.data.detail.overview : "") || item.overview || ""
+                          ).trim();
+                          const synopsis = mode === "ai" && featured && aiBackground
+                            ? fullSynopsis
+                            : shortOverview(fullSynopsis,vertical?320:format==="feed"?210:145);
+                          // Adapt only the description typography when needed:
+                          // never truncate its words or hide the last lines.
+                          const aiSynopsisFontSize = format === "story"
+                            ? (synopsis.length > 850 ? 17 : synopsis.length > 580 ? 20 : synopsis.length > 380 ? 23 : 25)
+                            : format === "feed"
+                              ? (synopsis.length > 900 ? 14 : synopsis.length > 650 ? 15 : synopsis.length > 450 ? 17 : 20)
+                              : (synopsis.length > 550 ? 10 : synopsis.length > 350 ? 11 : synopsis.length > 210 ? 12 : 14);
                           if (featured && aiBackground) {
                             return <div key={item.tmdb_id} style={{position:"relative",width:"100%",height:"100%",minWidth:0,minHeight:0,overflow:"hidden",borderRadius:28,border:"none",background:"transparent",boxShadow:"inset 0 0 50px #0008,0 16px 44px #0008"}}>
                               <div style={{position:"absolute",inset:0,background:"linear-gradient(0deg,#020714f5 0%,#04132bba 30%,#04142b4a 58%,transparent 86%)"}}/>
@@ -827,7 +842,7 @@ export function VitrineStudio({ mode }: { mode: "ai" | "banner" }) {
                                 <div style={{flex:1,minWidth:0,display:"flex",flexDirection:"column",gap:format==="story"?19:format==="feed"?13:6}}>
                                   <div style={{fontWeight:900,color:accentColor,letterSpacing:format==="story"?3:2,fontSize:format==="story"?20:format==="feed"?14:11,textShadow:"0 2px 8px #000"}}>DESTAQUE ESPECIAL</div>
                                   <div style={{fontWeight:900,lineHeight:1.08,fontSize:format==="story"?66:format==="feed"?49:33,overflowWrap:"anywhere",display:"-webkit-box",WebkitBoxOrient:"vertical",WebkitLineClamp:2,overflow:"hidden",textShadow:"0 4px 15px #000"}}>{item.title}</div>
-                                  <div style={{fontSize:format==="story"?25:format==="feed"?20:14,lineHeight:1.45,color:"#e2edff",display:"-webkit-box",WebkitBoxOrient:"vertical",WebkitLineClamp:format==="landscape"?2:format==="feed"?5:6,overflow:"hidden",textShadow:"0 2px 10px #000"}}>{synopsis || "Sinopse não informada pela TMDB."}</div>
+                                  <div style={{fontSize:aiSynopsisFontSize,lineHeight:1.38,color:"#e2edff",whiteSpace:"normal",overflowWrap:"break-word",textShadow:"0 2px 10px #000"}}>{synopsis || "Sinopse não informada pela TMDB."}</div>
                                   <div style={{height:3,width:"35%",borderRadius:5,background:accentColor,marginTop:format==="landscape"?1:6}}/>
                                 </div>
                               </div>
