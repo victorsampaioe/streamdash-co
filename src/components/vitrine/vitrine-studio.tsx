@@ -1,4 +1,4 @@
-import { Link } from "@tanstack/react-router";
+import { Link, useRouteContext } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { toPng } from "html-to-image";
@@ -87,6 +87,7 @@ function fallbackPoster(title: string): string {
 }
 
 export function VitrineStudio({ mode }: { mode: "ai" | "banner" }) {
+  const { user: authenticatedUser } = useRouteContext({ from: "/_authenticated" });
   const runFeed = useServerFn(getTmdbFeed);
   const runDetail = useServerFn(getTmdbDetail);
   const qc = useQueryClient();
@@ -130,9 +131,9 @@ export function VitrineStudio({ mode }: { mode: "ai" | "banner" }) {
 
 
   const settings = useQuery({
-    queryKey: ["vitrine-brand"], queryFn: async () => {
+    queryKey: ["vitrine-brand", authenticatedUser.id], queryFn: async () => {
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error("Faça login para usar a Vitrine IA.");
+      if (!user || user.id !== authenticatedUser.id) throw new Error("Sessão alterada. Atualize a página para consultar seus próprios créditos.");
       const { data: adminAccess, error: adminError } = await supabase.rpc("has_role", {
         _user_id: user.id, _role: "admin",
       });
