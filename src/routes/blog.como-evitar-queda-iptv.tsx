@@ -9,9 +9,23 @@ export const Route = createFileRoute("/blog/como-evitar-queda-iptv")({
       { property: "og:title", content: "Como reduzir o impacto de quedas IPTV | Stream Monitor" },
       { property: "og:description", content: "Aprenda a investigar instabilidade IPTV e configurar monitoramento e alertas." },
       { property: "og:type", content: "article" },
+      { name: "twitter:card", content: "summary" },
       { property: "og:url", content: "https://streammonitor.site/blog/como-evitar-queda-iptv" },
     ],
     links: [{ rel: "canonical", href: "https://streammonitor.site/blog/como-evitar-queda-iptv" }],
+    scripts: [{
+      type: "application/ld+json",
+      children: JSON.stringify({
+        "@context": "https://schema.org",
+        "@type": "Article",
+        headline: "Como reduzir o impacto de quedas IPTV com monitoramento",
+        datePublished: "2026-08-10",
+        author: { "@type": "Organization", name: "Equipe Stream Monitor" },
+        publisher: { "@type": "Organization", name: "Stream Monitor", url: "https://streammonitor.site" },
+        mainEntityOfPage: "https://streammonitor.site/blog/como-evitar-queda-iptv",
+        inLanguage: "pt-BR",
+      }),
+    }],
   }),
   component: BlogPost,
 });
