@@ -10,7 +10,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
-import { Download, Sparkles, Save, Film, Tv, LayoutTemplate, Share2 } from "lucide-react";
+import { Download, Sparkles, Save, Film, Tv, LayoutTemplate, Share2, RefreshCw } from "lucide-react";
 
 type MediaItem = { tmdb_id: number; media_type: "movie" | "tv"; title: string; poster_path: string | null; release_date: string | null; overview?: string | null; found_count?: number };
 type Brand = { brand_name: string; logo_url: string; whatsapp: string; primary_color: string };
@@ -86,6 +86,53 @@ function fallbackPoster(title: string): string {
   return "data:image/svg+xml;charset=utf-8," + encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" width="500" height="750" viewBox="0 0 500 750"><rect width="500" height="750" fill="#101f38"/><rect x="18" y="18" width="464" height="714" rx="22" fill="none" stroke="#60a5fa" stroke-width="4"/><text x="250" y="360" fill="white" font-size="30" font-family="Arial" text-anchor="middle">STREAM MONITOR</text><text x="250" y="410" fill="#93c5fd" font-size="20" font-family="Arial" text-anchor="middle">Imagem indisponível</text><title>${safe}</title></svg>`);
 }
 
+type CloudArtwork = {
+  image: Blob;
+  path: string;
+  ownerId: string;
+  mediaType: "movie" | "tv";
+  template: Template;
+  format: Format;
+  title: string;
+  items: { tmdb_id: number; media_type: "movie" | "tv"; title: string }[];
+  caption: string;
+};
+
+/** Keep large screenshots below the ~6 MB standard-upload comfort zone. */
+async function cloudOptimizedPng(original: Blob): Promise<Blob> {
+  if (original.size <= 5.5 * 1024 * 1024 || typeof createImageBitmap !== "function") return original;
+  let bitmap: ImageBitmap | null = null;
+  try {
+    bitmap = await createImageBitmap(original);
+    for (const factor of [0.9, 0.8, 0.7, 0.6]) {
+      const canvas = document.createElement("canvas");
+      canvas.width = Math.max(320, Math.round(bitmap.width * factor));
+      canvas.height = Math.max(320, Math.round(bitmap.height * factor));
+      const context = canvas.getContext("2d");
+      if (!context) break;
+      context.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+      const optimized = await new Promise<Blob | null>(resolve => canvas.toBlob(resolve, "image/png"));
+      canvas.width = 0;
+      canvas.height = 0;
+      if (optimized && optimized.size <= 5.5 * 1024 * 1024) return optimized;
+    }
+  } catch {
+    // If the browser lacks image transcoding support, upload the original.
+  } finally {
+    bitmap?.close();
+  }
+  return original;
+}
+function cloudSaveReason(error: unknown): string {
+  const value = error as {message?: string; statusCode?: number | string; code?: string} | null;
+  const message = String(value?.message || (error instanceof Error ? error.message : error));
+  const status = Number(value?.statusCode || 0);
+  if (status === 413 || /too large|entitytoolarge|tamanho|size limit/i.test(message)) return "Arquivo maior que o tamanho permitido pelo armazenamento.";
+  if (status === 401 || status === 403 || /row.level.security|accessdenied|jwt|permission/i.test(message)) return "Sua sessão não autorizou o salvamento. Entre novamente na conta.";
+  if (/fetch|network|offline|timeout/i.test(message)) return "Falha de conexão com o Cloud. Use o botão Tentar salvar novamente.";
+  return message.slice(0, 160) || "O serviço de armazenamento recusou a operação.";
+}
+
 export function VitrineStudio({ mode }: { mode: "ai" | "banner" }) {
   const { user: authenticatedUser } = useRouteContext({ from: "/_authenticated" });
   const runFeed = useServerFn(getTmdbFeed);
@@ -97,6 +144,9 @@ export function VitrineStudio({ mode }: { mode: "ai" | "banner" }) {
   const [brand, setBrand] = useState<Brand>(defaultBrand);
   const [saving, setSaving] = useState(false);
   const [exporting, setExporting] = useState(false);
+  const [pendingCloudArtwork, setPendingCloudArtwork] = useState<CloudArtwork | null>(null);
+  const [savingCloudArtwork, setSavingCloudArtwork] = useState(false);
+  const [cloudSaveError, setCloudSaveError] = useState("");
   const [format, setFormat] = useState<Format>("feed");
   const [template, setTemplate] = useState<Template>("featured");
   const [kind, setKind] = useState<"movie" | "tv">("movie");
@@ -400,33 +450,89 @@ export function VitrineStudio({ mode }: { mode: "ai" | "banner" }) {
     finally { setSaving(false); }
   }
 
+  async function storeCloudArtwork(art: CloudArtwork) {
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    if (authError || !user || user.id !== art.ownerId) throw new Error("Sua sessão mudou. Faça login novamente antes de salvar.");
+    if (art.image.size > 12 * 1024 * 1024) throw new Error("PNG maior que o limite do Cloud (12 MB).");
+    const bucket = supabase.storage.from("promo-arts");
+    let uploaded = false;
+    for (let attempt = 0; attempt < 2 && !uploaded; attempt++) {
+      const { error } = await bucket.upload(art.path, art.image, { contentType: "image/png", upsert: false });
+      if (!error) {
+        uploaded = true;
+        break;
+      }
+      // A dropped response can mean the first upload completed despite an error.
+      if (/already.exists|already exists|duplicate|resourcealreadyexists/i.test(error.message)) {
+        const { data } = await bucket.createSignedUrl(art.path, 30);
+        if (data?.signedUrl) { uploaded = true; break; }
+      }
+      const code = Number(error.statusCode || 0);
+      if (attempt === 1 || (code >= 400 && code < 500 && code !== 408 && code !== 429)) throw error;
+      await new Promise(resolve => setTimeout(resolve, 650));
+    }
+    if (!uploaded) throw new Error("O Storage não confirmou o upload.");
+    const { error: insertError } = await supabase.from("promo_generations" as any).insert({
+      owner_id: art.ownerId, media_type: art.mediaType,
+      template: art.template, format: art.format, title: art.title,
+      items: art.items, caption: art.caption, storage_path: art.path,
+    });
+    if (insertError) throw new Error("Arquivo enviado, mas o histórico recusou o registro: " + insertError.message);
+    await qc.invalidateQueries({ queryKey: ["vitrine-history", art.ownerId] });
+  }
+
+  async function retryCloudArtworkSave() {
+    if (!pendingCloudArtwork || savingCloudArtwork) return;
+    setSavingCloudArtwork(true);
+    try {
+      await storeCloudArtwork(pendingCloudArtwork);
+      setPendingCloudArtwork(null);
+      setCloudSaveError("");
+      toast.success("Arte salva no histórico do Cloud! Nenhum crédito adicional foi utilizado.");
+    } catch (error) {
+      const message = cloudSaveReason(error);
+      setCloudSaveError(message);
+      toast.error("Não foi possível salvar: " + message);
+    } finally {
+      setSavingCloudArtwork(false);
+    }
+  }
+
   async function download() {
     if (!artRef.current || !settings.data || shown.length === 0) return;
     setExporting(true);
     try {
       const src = await makePng();
-      const image = pngDataUrlToBlob(src);
+      const original = pngDataUrlToBlob(src);
       const filename = `vitrine-${format}-${Date.now()}.png`;
-      savePngLocally(image, filename);
-      toast.success("PNG gerado. Confira seus downloads ou arquivos.");
-
-      // A gravação no Cloud é complementar: não deve impedir o download.
+      const record: CloudArtwork = {
+        image: await cloudOptimizedPng(original),
+        ownerId: settings.data,
+        path: `${settings.data}/${crypto.randomUUID()}.png`,
+        mediaType: kind, template, format,
+        title: headline.trim().slice(0, 140),
+        items: shown.map(x => ({tmdb_id:x.tmdb_id,media_type:x.media_type,title:x.title})),
+        caption,
+      };
+      let cloudSaved = false;
       try {
-        if (image.size > 5 * 1024 * 1024) throw new Error("PNG acima do limite do histórico (5 MB).");
-        const path = `${settings.data}/${crypto.randomUUID()}.png`;
-        const { error: storageError } = await supabase.storage.from("promo-arts")
-          .upload(path, image, { contentType: "image/png", upsert: false });
-        if (storageError) throw storageError;
-        const { error } = await supabase.from("promo_generations" as any).insert({
-          owner_id: settings.data, media_type: kind, template, format,
-          title: headline.trim().slice(0, 140),
-          items: shown.map(x => ({ tmdb_id: x.tmdb_id, media_type: x.media_type, title: x.title })),
-          caption, storage_path: path,
-        });
-        if (error) throw error;
-        void qc.invalidateQueries({ queryKey: ["vitrine-history"] });
-      } catch {
-        toast.warning("O PNG foi gerado, mas não foi possível salvar no histórico do Cloud.");
+        // On iOS, initiating a download first can suspend background requests.
+        // Complete the Storage upload before triggering the file download.
+        await storeCloudArtwork(record);
+        cloudSaved = true;
+        setPendingCloudArtwork(null);
+        setCloudSaveError("");
+      } catch (error) {
+        const reason = cloudSaveReason(error);
+        console.warn("[vitrine-history] Falha ao salvar:", reason);
+        setCloudSaveError(reason);
+        setPendingCloudArtwork(record);
+      }
+      savePngLocally(original, filename);
+      if (cloudSaved) {
+        toast.success("PNG baixado e arte salva no histórico do Cloud.");
+      } else {
+        toast.warning("PNG gerado, mas o histórico ainda não foi salvo. Use Tentar salvar novamente abaixo.");
       }
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Falha ao exportar PNG.");
@@ -524,7 +630,16 @@ export function VitrineStudio({ mode }: { mode: "ai" | "banner" }) {
           {imagesLoading && <p className="text-xs text-muted-foreground">Preparando capas e logo para exportação...</p>}
           {imageError && <p className="text-xs text-destructive">Falha ao preparar imagem: {imageError}</p>}
           {assetWarning && <p className="text-xs text-amber-500">{assetWarning}</p>}
-          <Button className="w-full" disabled={exporting || generatingAi || !imagesReady || settings.isLoading || (mode === "ai" && (!aiBackground || false))} onClick={download}><Download size={17} className="mr-2"/>{exporting?"Preparando PNG...":"Baixar PNG"}</Button>
+          <Button className="w-full" disabled={exporting || savingCloudArtwork || generatingAi || !imagesReady || settings.isLoading || (mode === "ai" && (!aiBackground || false))} onClick={download}><Download size={17} className="mr-2"/>{exporting?"Salvando e preparando PNG...":"Baixar PNG"}</Button>
+          {pendingCloudArtwork && (
+            <div className="rounded-xl border border-amber-400/30 bg-amber-400/5 p-3 space-y-2" role="status">
+              <p className="text-xs text-amber-200">A imagem foi gerada, mas não entrou no histórico. {cloudSaveError}</p>
+              <Button type="button" variant="outline" className="w-full" disabled={savingCloudArtwork || exporting} onClick={retryCloudArtworkSave}>
+                <RefreshCw size={16} className="mr-2"/>{savingCloudArtwork?"Salvando no Cloud...":"Tentar salvar no Cloud novamente"}
+              </Button>
+              <p className="text-[11px] text-muted-foreground">Não gera nova arte nem consome créditos. Mantenha esta página aberta até salvar.</p>
+            </div>
+          )}
           <Button variant="outline" className="w-full" disabled={sharing || generatingAi || !imagesReady || (mode === "ai" && (!aiBackground || false))} onClick={shareTelegram}><Share2 size={17} className="mr-2"/>{sharing?"Preparando...":"Compartilhar PNG (Telegram)"}</Button>
           <Button variant="outline" className="w-full" onClick={()=>{navigator.clipboard.writeText(caption).then(()=>toast.success("Legenda copiada")).catch(()=>toast.error("Não foi possível copiar"));}}>Copiar legenda</Button>
         </Card>
