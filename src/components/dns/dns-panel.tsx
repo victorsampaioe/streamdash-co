@@ -45,8 +45,8 @@ export function DnsPanel({ serverId }: { serverId: string }) {
   const { data: dnsLive } = useQuery({
     queryKey: ["dns-live-status", serverId],
     queryFn: async () => {
-      const { data, error } = await supabase.from("servers")
-        .select("dns_status, dns_health_score, last_dns_check_at, dns_failure_count, dns_enabled")
+      const { data, error } = await (supabase as any).from("servers")
+        .select("dns_status, dns_health_score, last_dns_check_at, dns_failure_count, dns_enabled, monitoring_paused, dns_recovery_last_probe_at, dns_recovery_success_streak")
         .eq("id", serverId).maybeSingle();
       if (error) throw error;
       return data;
@@ -147,6 +147,30 @@ export function DnsPanel({ serverId }: { serverId: string }) {
             : "Ainda sem checagem"}
         </span>
       </div>
+      {dnsLive?.dns_enabled !== false && !dnsLive?.monitoring_paused &&
+        (dnsLive?.dns_status === "offline" || Number(dnsLive?.dns_recovery_success_streak ?? 0) > 0) && (
+        <Card className="border-blue-400/30 bg-blue-500/5 px-4 py-3" role="status">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <span className="flex items-center gap-2 text-sm font-bold text-blue-300">
+              <RefreshCw size={16} className="animate-spin" />
+              Fila de Recuperação Inteligente
+            </span>
+            <Badge variant="outline" className="border-blue-400/30 text-blue-300">
+              Prioridade alta · cerca de 30s
+            </Badge>
+          </div>
+          <p className="mt-2 text-xs text-muted-foreground">
+            {Number(dnsLive?.dns_recovery_success_streak ?? 0) > 0
+              ? "Primeira resposta saudável confirmada. Aguardando mais uma verificação independente antes do alerta de retorno."
+              : "DNS offline confirmado. Sondas prioritárias procuram a recuperação sem confundir DNS com disponibilidade do servidor."}
+          </p>
+          {dnsLive?.dns_recovery_last_probe_at && (
+            <p className="mt-1 text-xs text-muted-foreground">
+              Última verificação da fila: {new Date(dnsLive.dns_recovery_last_probe_at).toLocaleString("pt-BR")}
+            </p>
+          )}
+        </Card>
+      )}
       <div className="flex items-center justify-between flex-wrap gap-2">
         <div>
           <h3 className="font-medium">Inteligência de DNS</h3>
