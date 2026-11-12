@@ -87,6 +87,7 @@ function fallbackPoster(title: string): string {
 }
 
 type CloudArtwork = {
+  recordId: string;
   image: Blob;
   path: string;
   ownerId: string;
@@ -472,11 +473,11 @@ export function VitrineStudio({ mode }: { mode: "ai" | "banner" }) {
       await new Promise(resolve => setTimeout(resolve, 650));
     }
     if (!uploaded) throw new Error("O Storage não confirmou o upload.");
-    const { error: insertError } = await supabase.from("promo_generations" as any).insert({
-      owner_id: art.ownerId, media_type: art.mediaType,
+    const { error: insertError } = await supabase.from("promo_generations" as any).upsert({
+      id: art.recordId, owner_id: art.ownerId, media_type: art.mediaType,
       template: art.template, format: art.format, title: art.title,
       items: art.items, caption: art.caption, storage_path: art.path,
-    });
+    }, { onConflict: "id", ignoreDuplicates: true });
     if (insertError) throw new Error("Arquivo enviado, mas o histórico recusou o registro: " + insertError.message);
     await qc.invalidateQueries({ queryKey: ["vitrine-history", art.ownerId] });
   }
@@ -506,6 +507,7 @@ export function VitrineStudio({ mode }: { mode: "ai" | "banner" }) {
       const original = pngDataUrlToBlob(src);
       const filename = `vitrine-${format}-${Date.now()}.png`;
       const record: CloudArtwork = {
+        recordId: crypto.randomUUID(),
         image: await cloudOptimizedPng(original),
         ownerId: settings.data,
         path: `${settings.data}/${crypto.randomUUID()}.png`,
