@@ -206,7 +206,7 @@ export function VitrineStudio({ mode }: { mode: "ai" | "banner" }) {
     },
     staleTime:15000,
   });
-  const remainingArts = Math.max(0,5-(aiQuota.data ?? 0));
+  const remainingArts = isMainAdmin ? Infinity : Math.max(0, 5 - (aiQuota.data ?? 0));
 
   async function openSaved(path:string|null){
     if(!path)return toast.error("Imagem não armazenada para este registro.");
@@ -318,7 +318,7 @@ export function VitrineStudio({ mode }: { mode: "ai" | "banner" }) {
 
   async function claimCreditForPreview() {
     // Static TMDB banners do not consume scarce AI inference credits.
-    if (mode === "banner") return;
+    if (mode === "banner" || isMainAdmin) return;
     if (grantedArtRef.current === artSignature) return;
     if (creditInFlight.current) return creditInFlight.current;
     const job = (async () => {
@@ -523,7 +523,7 @@ export function VitrineStudio({ mode }: { mode: "ai" | "banner" }) {
             <div className="flex flex-wrap gap-2 items-center justify-between">
               <h3 className="text-sm font-bold text-blue-200 flex items-center gap-2"><Sparkles size={17}/> Gerador de banner com IA</h3>
               <span className="rounded-full bg-blue-500/15 border border-blue-400/30 px-3 py-1 text-xs font-semibold text-blue-200">
-                {aiQuota.isLoading?"Consultando créditos...":aiQuota.isError?"Cota indisponível":remainingArts+" de 5 artes restantes"}
+                {isMainAdmin ? "Administrador · artes ilimitadas" : aiQuota.isLoading?"Consultando créditos...":aiQuota.isError?"Cota indisponível":remainingArts+" de 5 artes restantes"}
               </span>
             </div>
             <p className="text-xs text-muted-foreground">A Cloudflare cria um cenário cinematográfico original com base na sinopse. A marca, a capa e o título são adicionados pelo Stream Monitor.</p>
@@ -533,12 +533,12 @@ export function VitrineStudio({ mode }: { mode: "ai" | "banner" }) {
               </select>
             </label>
             <Button type="button" onClick={generateAiBanner} className="w-full bg-blue-600 hover:bg-blue-500 text-white"
-              disabled={generatingAi || shown.length!==1 || !settings.data || remainingArts===0 || aiQuota.isError}>
+              disabled={generatingAi || shown.length!==1 || !settings.data || (!isMainAdmin && (remainingArts===0 || aiQuota.isError))}>
               <Sparkles size={17} className="mr-2"/>{generatingAi?"IA criando seu cenário...":"Gerar banner premium com IA"}
             </Button>
             {shown.length!==1 && <p className="text-xs text-amber-300">Para gerar com IA, escolha um modelo de 1 título em destaque.</p>}
             {aiBackground && <p className="text-xs text-blue-300">Cenário exclusivo aplicado à prévia. Ajuste os textos e exporte a arte.</p>}
-            <p className="text-xs text-muted-foreground">5 novas artes por conta a cada dia, no horário de Fortaleza. Uma nova geração com IA consome 1 crédito; repetir o download da mesma prévia não consome outro.</p>
+            <p className="text-xs text-muted-foreground">{isMainAdmin ? "Seu acesso administrativo não possui limite diário de geração." : "Revendedores podem gerar até 5 novas artes por dia, no horário de Fortaleza. Repetir o download da mesma prévia não consome outra geração."}</p>
           </div>}
           {mode === "banner" && <div className="space-y-2">
             <p className="text-xs text-muted-foreground">{feed.isLoading ? "Pesquisando filmes e séries..." : "Selecione a capa do título desejado:"}</p>
@@ -556,8 +556,8 @@ export function VitrineStudio({ mode }: { mode: "ai" | "banner" }) {
           {imagesLoading && <p className="text-xs text-muted-foreground">Preparando capas e logo para exportação...</p>}
           {imageError && <p className="text-xs text-destructive">Falha ao preparar imagem: {imageError}</p>}
           {assetWarning && <p className="text-xs text-amber-500">{assetWarning}</p>}
-          <Button className="w-full" disabled={exporting || generatingAi || !imagesReady || settings.isLoading || (mode === "ai" && (!aiBackground || (remainingArts===0 && !canReusePreview)))} onClick={download}><Download size={17} className="mr-2"/>{exporting?"Preparando PNG...":"Baixar PNG"}</Button>
-          <Button variant="outline" className="w-full" disabled={sharing || generatingAi || !imagesReady || (mode === "ai" && (!aiBackground || (remainingArts===0 && !canReusePreview)))} onClick={shareTelegram}><Share2 size={17} className="mr-2"/>{sharing?"Preparando...":"Compartilhar PNG (Telegram)"}</Button>
+          <Button className="w-full" disabled={exporting || generatingAi || !imagesReady || settings.isLoading || (mode === "ai" && (!aiBackground || (!isMainAdmin && remainingArts===0 && !canReusePreview)))} onClick={download}><Download size={17} className="mr-2"/>{exporting?"Preparando PNG...":"Baixar PNG"}</Button>
+          <Button variant="outline" className="w-full" disabled={sharing || generatingAi || !imagesReady || (mode === "ai" && (!aiBackground || (!isMainAdmin && remainingArts===0 && !canReusePreview)))} onClick={shareTelegram}><Share2 size={17} className="mr-2"/>{sharing?"Preparando...":"Compartilhar PNG (Telegram)"}</Button>
           <Button variant="outline" className="w-full" onClick={()=>{navigator.clipboard.writeText(caption).then(()=>toast.success("Legenda copiada")).catch(()=>toast.error("Não foi possível copiar"));}}>Copiar legenda</Button>
         </Card>
       </div>
