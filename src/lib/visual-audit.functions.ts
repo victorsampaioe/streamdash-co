@@ -67,7 +67,7 @@ async function auditUrl(target:AuditTarget,ownerId:string):Promise<AuditResult &
       const body=await response.text();
       const hasHtml=/<html\b/i.test(body)&&/<body\b/i.test(body);
       const isHealth=allowed.pathname==="/api/public/health";
-      const healthOk=isHealth && response.ok && /"ok"\s*:\s*true/.test(body);
+      const healthOk=isHealth && response.ok && /"status"\s*:\s*"ok"/.test(body);
       status=(response.ok && (hasHtml||healthOk))?"partial":"failed";
       diagnostic=status==="partial"?"http_only_no_browser_capture":`http_${response.status}_or_invalid_body`;
     }
