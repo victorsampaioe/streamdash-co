@@ -134,6 +134,64 @@ function cloudSaveReason(error: unknown): string {
   return message.slice(0, 160) || "O serviço de armazenamento recusou a operação.";
 }
 
+
+/**
+ * Safari/iOS WebKit sometimes drops data-url <img> elements when rasterizing
+ * SVG foreignObject content. Draw the real preview images onto a native canvas
+ * and composite an image-free html-to-image text/decorations layer above them.
+ * This exports exactly the selected art; it never calls the AI or claims quota.
+ */
+function loadCanvasImage(url: string): Promise<HTMLImageElement> {
+  return new Promise((resolve, reject) => {
+    const image = new Image();
+    image.onload = () => image.naturalWidth && image.naturalHeight
+      ? resolve(image) : reject(new Error("Imagem vazia na exportação."));
+    image.onerror = () => reject(new Error("Não foi possível incluir uma imagem no PNG."));
+    image.src = url;
+  });
+}
+function paintImageElement(
+  context: CanvasRenderingContext2D,
+  source: HTMLImageElement,
+  canvasRoot: DOMRect,
+  exportWidth: number,
+  exportHeight: number,
+) {
+  const box = source.getBoundingClientRect();
+  if (!source.complete || !source.naturalWidth || !source.naturalHeight || box.width === 0 || box.height === 0) {
+    throw new Error("Uma das imagens da prévia ainda não terminou de carregar.");
+  }
+  const scaleX = exportWidth / canvasRoot.width;
+  const scaleY = exportHeight / canvasRoot.height;
+  const x = (box.left - canvasRoot.left) * scaleX;
+  const y = (box.top - canvasRoot.top) * scaleY;
+  const width = box.width * scaleX;
+  const height = box.height * scaleY;
+  const style = getComputedStyle(source);
+  const fit = style.objectFit;
+  const sourceWidth = source.naturalWidth;
+  const sourceHeight = source.naturalHeight;
+  context.save();
+  if (style.filter && style.filter !== "none") context.filter = style.filter;
+  if (fit === "cover") {
+    const ratio = Math.max(width / sourceWidth, height / sourceHeight);
+    const croppedWidth = width / ratio;
+    const croppedHeight = height / ratio;
+    context.drawImage(source,
+      (sourceWidth - croppedWidth) / 2, (sourceHeight - croppedHeight) / 2,
+      croppedWidth, croppedHeight, x, y, width, height);
+  } else if (fit === "contain") {
+    const ratio = Math.min(width / sourceWidth, height / sourceHeight);
+    const displayedWidth = sourceWidth * ratio;
+    const displayedHeight = sourceHeight * ratio;
+    context.drawImage(source, x + (width - displayedWidth) / 2,
+      y + (height - displayedHeight) / 2, displayedWidth, displayedHeight);
+  } else {
+    context.drawImage(source, x, y, width, height);
+  }
+  context.restore();
+}
+
 export function VitrineStudio({ mode }: { mode: "ai" | "banner" }) {
   const { user: authenticatedUser } = useRouteContext({ from: "/_authenticated" });
   const runFeed = useServerFn(getTmdbFeed);
@@ -395,9 +453,49 @@ export function VitrineStudio({ mode }: { mode: "ai" | "banner" }) {
     if (mode === "ai" && !aiBackground) throw new Error("Gere primeiro o cenário da obra com IA.");
     if (!imagesReady) throw new Error(imageError || "As imagens ainda estão sendo preparadas.");
     try {
+      if (mode === "ai") {
+        const root = artRef.current;
+        const images = Array.from(root.querySelectorAll<HTMLImageElement>("img[data-vitrine-media]"));
+        const background = images.find(img => img.dataset.vitrineMedia === "background");
+        const cover = images.find(img => img.dataset.vitrineMedia === "poster");
+        const logo = images.find(img => img.dataset.vitrineMedia === "logo");
+        if (!background || !cover || (embeddedLogo && !logo)) {
+          throw new Error("Faltam imagens na prévia. Atualize o título e tente novamente.");
+        }
+        // Never save a blank art: all mandatory image layers must be loaded.
+        for (const image of images) {
+          if (!image.complete || !image.naturalWidth || !image.naturalHeight) {
+            await image.decode().catch(() => { throw new Error("Uma imagem não carregou. Tente novamente."); });
+          }
+        }
+        const nativeCanvas = document.createElement("canvas");
+        nativeCanvas.width = dimensions.w;
+        nativeCanvas.height = dimensions.h;
+        const context = nativeCanvas.getContext("2d");
+        if (!context) throw new Error("Este navegador não disponibilizou o Canvas para exportação.");
+        context.fillStyle = backgroundColor;
+        context.fillRect(0, 0, dimensions.w, dimensions.h);
+        const rect = root.getBoundingClientRect();
+        if (!rect.width || !rect.height) throw new Error("A prévia precisa estar visível para exportar.");
+        paintImageElement(context, background, rect, dimensions.w, dimensions.h);
+        // html-to-image handles the typography and gradients, while native Canvas
+        // handles images WebKit otherwise silently strips from foreignObject.
+        const overlayPng = await toPng(root, {
+          width: dimensions.w, height: dimensions.h, pixelRatio: 1,
+          cacheBust: false, skipFonts: true,
+          filter: node => !(node instanceof HTMLImageElement && node.hasAttribute("data-vitrine-media")),
+          style: { transform: "none", transformOrigin: "top left", backgroundColor: "transparent" },
+        });
+        const overlay = await loadCanvasImage(overlayPng);
+        context.drawImage(overlay, 0, 0, dimensions.w, dimensions.h);
+        // These elements occupy separate slots from the text in the AI layout,
+        // so drawing them last preserves fidelity without obscuring captions.
+        if (logo) paintImageElement(context, logo, rect, dimensions.w, dimensions.h);
+        paintImageElement(context, cover, rect, dimensions.w, dimensions.h);
+        return nativeCanvas.toDataURL("image/png");
+      }
       return await toPng(artRef.current, {
         width: dimensions.w, height: dimensions.h, pixelRatio: 1,
-        // Images are already inlined; avoid cross-origin font and cache-bust fetches.
         cacheBust: false, skipFonts: true,
         backgroundColor, style: { transform: "none", transformOrigin: "top left" },
       });
@@ -687,7 +785,7 @@ export function VitrineStudio({ mode }: { mode: "ai" | "banner" }) {
             <div className="relative mx-auto overflow-hidden rounded-lg" style={{width:dimensions.w*previewScale,height:dimensions.h*previewScale}}>
               <div style={{width:dimensions.w,height:dimensions.h,position:"absolute",top:0,left:0,transform:`scale(${previewScale})`,transformOrigin:"top left"}}>
                 <div ref={artRef} style={{width:dimensions.w,height:dimensions.h,overflow:"hidden",position:"relative",boxSizing:"border-box",fontFamily:"Arial,Helvetica,sans-serif",color:textColor,backgroundColor}}>
-                  {aiBackground && <img src={aiBackground} alt="" aria-hidden="true" style={{position:"absolute",inset:0,width:"100%",height:"100%",objectFit:"cover",objectPosition:"center",filter:"saturate(1.18) contrast(1.06) brightness(.85)"}}/>}
+                  {aiBackground && <img data-vitrine-media="background" src={aiBackground} alt="" aria-hidden="true" style={{position:"absolute",inset:0,width:"100%",height:"100%",objectFit:"cover",objectPosition:"center",filter:"saturate(1.18) contrast(1.06) brightness(.85)"}}/>}
                   <div style={{position:"absolute",inset:0,background:aiBackground ? "linear-gradient(105deg,#020817bf 0%,#03112344 54%,#07112b70 100%),linear-gradient(0deg,#020715c7,transparent 66%)" : `radial-gradient(ellipse at 97% 12%, ${brand.primary_color}b0 0%, transparent 54%), radial-gradient(ellipse at 0% 87%, ${brand.primary_color}80 0%, transparent 50%), linear-gradient(145deg, ${backgroundColor} 0%, #040205 63%, ${backgroundColor} 100%)`}}/>
                   <div style={{position:"absolute",inset:0,opacity:0.14,backgroundImage:"repeating-linear-gradient(128deg,transparent 0px,transparent 79px,#ffffff 80px,transparent 82px)"}}/>
                   <div style={{position:"absolute",top:format==="story"?80:format==="feed"?42:8,left:-46,right:-46,fontSize:format==="story"?115:format==="feed"?85:60,fontWeight:900,lineHeight:1,color:"transparent",WebkitTextStroke:"2px #ffffff1c",letterSpacing:2,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"clip",textTransform:"uppercase",textAlign:"center",pointerEvents:"none"}}>{serverNames.trim() || brand.brand_name || "STREAM MONITOR"}</div>
@@ -695,7 +793,7 @@ export function VitrineStudio({ mode }: { mode: "ai" | "banner" }) {
 
                   <div style={{position:"relative",zIndex:1,height:"100%",boxSizing:"border-box",padding:mode==="ai"?(format==="story"?"66px 100px 105px":format==="feed"?"42px 78px 58px":"25px 58px"):(format==="story"?"98px 100px 115px":format==="feed"?"54px 78px 68px":"30px 58px"),display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"space-between",gap:format==="landscape"?12:26}}>
                     <div style={{display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:10,minHeight:mode==="banner"?180:format==="story"?175:format==="feed"?160:80,maxWidth:"100%"}}>
-                      {embeddedLogo && <img src={embeddedLogo} alt="" style={{width:mode==="banner"?320:format==="story"?430:format==="feed"?410:240,height:mode==="banner"?126:format==="story"?175:format==="feed"?165:100,objectFit:"contain",objectPosition:"center",display:"block",maxWidth:"100%",flexShrink:0,filter:mode==="ai"?"drop-shadow(0 5px 15px #0009)":undefined}}/>}
+                      {embeddedLogo && <img data-vitrine-media="logo" src={embeddedLogo} alt="" style={{width:mode==="banner"?320:format==="story"?430:format==="feed"?410:240,height:mode==="banner"?126:format==="story"?175:format==="feed"?165:100,objectFit:"contain",objectPosition:"center",display:"block",maxWidth:"100%",flexShrink:0,filter:mode==="ai"?"drop-shadow(0 5px 15px #0009)":undefined}}/>}
                       {mode === "banner" && <div style={{fontSize:format==="story"?45:format==="feed"?35:24,fontWeight:800,maxWidth:"100%",textAlign:"center",overflowWrap:"anywhere",letterSpacing:-0.8,textShadow:"0 3px 18px #000c"}}>{brand.brand_name || "Minha Revenda"}</div>}
                       {!hideStudioMark && <div style={{fontSize:format==="story"?17:12,letterSpacing:5,color:accentColor}}>VITRINE IA</div>}
                     </div>
@@ -723,7 +821,7 @@ export function VitrineStudio({ mode }: { mode: "ai" | "banner" }) {
                                 <span style={{maxWidth:"62%",background:"linear-gradient(110deg,#0b214be8,#174379dc)",border:`1px solid ${accentColor}99`,borderRadius:30,padding:format==="story"?"10px 20px":"5px 12px",fontSize:format==="story"?19:format==="feed"?15:11,fontWeight:900,letterSpacing:1,textTransform:"uppercase",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",boxShadow:"0 4px 18px #0008"}}>{headline || "Destaque da semana"}</span>
                               </div>
                               <div style={{position:"absolute",left:format==="story"?30:format==="feed"?25:14,right:format==="story"?30:format==="feed"?25:14,bottom:format==="story"?38:format==="feed"?28:12,display:"flex",alignItems:"flex-end",gap:format==="story"?26:format==="feed"?22:15}}>
-                                <img src={cover} alt={item.title} style={{flexShrink:0,height:format==="story"?590:format==="feed"?405:230,maxWidth:"49%",objectFit:"contain",objectPosition:"bottom",borderRadius:14,filter:"drop-shadow(0 15px 23px #000c)"}}/>
+                                <img data-vitrine-media="poster" src={cover} alt={item.title} style={{flexShrink:0,height:format==="story"?590:format==="feed"?405:230,maxWidth:"49%",objectFit:"contain",objectPosition:"bottom",borderRadius:14,filter:"drop-shadow(0 15px 23px #000c)"}}/>
                                 <div style={{flex:1,minWidth:0,display:"flex",flexDirection:"column",gap:format==="story"?19:format==="feed"?13:6}}>
                                   <div style={{fontWeight:900,color:accentColor,letterSpacing:format==="story"?3:2,fontSize:format==="story"?20:format==="feed"?14:11,textShadow:"0 2px 8px #000"}}>DESTAQUE ESPECIAL</div>
                                   <div style={{fontWeight:900,lineHeight:1.08,fontSize:format==="story"?66:format==="feed"?49:33,overflowWrap:"anywhere",display:"-webkit-box",WebkitBoxOrient:"vertical",WebkitLineClamp:2,overflow:"hidden",textShadow:"0 4px 15px #000"}}>{item.title}</div>
