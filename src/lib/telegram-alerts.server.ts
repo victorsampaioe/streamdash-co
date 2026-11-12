@@ -11,6 +11,7 @@ export interface AlertData {
   reason?: string;
   confirmNote?: string;
   timeOffline?: string;
+  detectedAt?: string;
   regions?: string[];
 }
 
@@ -128,10 +129,11 @@ export async function processTelegramAlert(data: AlertData) {
 }
 
 function formatAlertMessage(server: any, data: AlertData): string {
-  const now = new Date();
-  // Exibir sempre no horário de Brasília, independentemente do fuso da VPS/Worker (normalmente UTC).
-  const timeStr = now.toLocaleTimeString("pt-BR", { timeZone: "America/Sao_Paulo", hour: "2-digit", minute: "2-digit", second: "2-digit" });
-  const dateStr = now.toLocaleDateString("pt-BR", { timeZone: "America/Sao_Paulo" });
+  const observedAt = data.detectedAt ? new Date(data.detectedAt) : new Date();
+  const now = Number.isFinite(observedAt.getTime()) ? observedAt : new Date();
+  // Show the confirmed DNS probe timestamp in the Fortaleza timezone.
+  const timeStr = now.toLocaleTimeString("pt-BR", { timeZone: "America/Fortaleza", hour: "2-digit", minute: "2-digit", second: "2-digit" });
+  const dateStr = now.toLocaleDateString("pt-BR", { timeZone: "America/Fortaleza" });
   
   const esc = (s: any) => String(s ?? "-").replace(/[<>&]/g, (c) => ({ "<": "&lt;", ">": "&gt;", "&": "&amp;" }[c]!));
 
@@ -154,7 +156,8 @@ function formatAlertMessage(server: any, data: AlertData): string {
         `<b>Domínio:</b> <code>${esc(server.host)}</code>\n` +
         `<b>Servidor:</b> ${esc(server.name)}\n` +
         `<b>Tempo de falha:</b> ${esc(data.timeOffline || "N/A")}\n` +
-        `<b>Horário:</b> ${timeStr} (${dateStr})`
+        `<b>Confirmação:</b> 2 verificações DNS saudáveis consecutivas\n` +
+        `<b>Recuperação detectada:</b> ${timeStr} (${dateStr})`
       );
     }
   }
