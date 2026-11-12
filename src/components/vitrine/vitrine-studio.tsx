@@ -165,7 +165,7 @@ export function VitrineStudio({ mode }: { mode: "ai" | "banner" }) {
         whatsapp: resolveValue(saved?.whatsapp,registered?.whatsapp,p?.whatsapp,p?.phone),
         primary_color: resolveValue(saved?.primary_color,registered?.primary_color,defaultBrand.primary_color),
       };
-      setBrand(admin ? { ...adminBrand, logo_url: mode === "banner" ? (resolveValue(saved?.logo_url,registered?.logo_url).replace(/^\/?favicon\.ico$/i, "") || officialLogoUrl) : resolveValue(saved?.logo_url, registered?.logo_url, adminBrand.logo_url) } : merged);
+      setBrand(admin ? { ...adminBrand, logo_url: resolveValue(saved?.logo_url,registered?.logo_url).replace(/^\/?favicon\.ico$/i, "") || officialLogoUrl } : merged);
       return user.id;
     }, retry:1,
     refetchOnWindowFocus: mode !== "banner",
@@ -270,7 +270,7 @@ export function VitrineStudio({ mode }: { mode: "ai" | "banner" }) {
           catch {
             logoFailed = true;
             if (isMainAdmin) {
-              try { logo = await toEmbeddedImage(mode === "banner" ? officialLogoUrl : "/favicon.ico"); } catch { /* Keep text branding */ }
+              try { logo = await toEmbeddedImage(officialLogoUrl); } catch { /* Keep text branding */ }
             }
           }
         }
@@ -574,21 +574,15 @@ export function VitrineStudio({ mode }: { mode: "ai" | "banner" }) {
                   <div style={{position:"absolute",top:format==="story"?80:format==="feed"?42:8,left:-46,right:-46,fontSize:format==="story"?115:format==="feed"?85:60,fontWeight:900,lineHeight:1,color:"transparent",WebkitTextStroke:"2px #ffffff1c",letterSpacing:2,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"clip",textTransform:"uppercase",textAlign:"center",pointerEvents:"none"}}>{serverNames.trim() || brand.brand_name || "STREAM MONITOR"}</div>
                   <div style={{position:"absolute",inset:0,boxShadow:"inset 0 0 130px #0009",pointerEvents:"none"}}/>
 
-                  <div style={{position:"relative",zIndex:1,height:"100%",boxSizing:"border-box",padding:format==="story"?"98px 100px 115px":format==="feed"?"54px 78px 68px":"30px 58px",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"space-between",gap:format==="landscape"?12:26}}>
-                    <div style={{display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:10,minHeight:mode==="banner"?180:format==="story"?185:format==="feed"?146:65,maxWidth:"100%"}}>
-                      {embeddedLogo && <img src={embeddedLogo} alt="" style={{width:mode==="banner"?320:format==="story"?320:format==="feed"?290:175,height:mode==="banner"?126:format==="story"?145:format==="feed"?122:75,objectFit:"contain",objectPosition:"center",display:"block",maxWidth:"100%",flexShrink:0,filter:mode==="ai"?"drop-shadow(0 5px 15px #0009)":undefined}}/>}
-                      <div style={{fontSize:format==="story"?45:format==="feed"?35:24,fontWeight:800,maxWidth:"100%",textAlign:"center",overflowWrap:"anywhere",letterSpacing:-0.8,textShadow:"0 3px 18px #000c"}}>{brand.brand_name || "Minha Revenda"}</div>
+                  <div style={{position:"relative",zIndex:1,height:"100%",boxSizing:"border-box",padding:mode==="ai"?(format==="story"?"66px 100px 105px":format==="feed"?"42px 78px 58px":"25px 58px"):(format==="story"?"98px 100px 115px":format==="feed"?"54px 78px 68px":"30px 58px"),display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"space-between",gap:format==="landscape"?12:26}}>
+                    <div style={{display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:10,minHeight:mode==="banner"?180:format==="story"?175:format==="feed"?160:80,maxWidth:"100%"}}>
+                      {embeddedLogo && <img src={embeddedLogo} alt="" style={{width:mode==="banner"?320:format==="story"?430:format==="feed"?410:240,height:mode==="banner"?126:format==="story"?175:format==="feed"?165:100,objectFit:"contain",objectPosition:"center",display:"block",maxWidth:"100%",flexShrink:0,filter:mode==="ai"?"drop-shadow(0 5px 15px #0009)":undefined}}/>}
+                      {mode === "banner" && <div style={{fontSize:format==="story"?45:format==="feed"?35:24,fontWeight:800,maxWidth:"100%",textAlign:"center",overflowWrap:"anywhere",letterSpacing:-0.8,textShadow:"0 3px 18px #000c"}}>{brand.brand_name || "Minha Revenda"}</div>}
                       {!hideStudioMark && <div style={{fontSize:format==="story"?17:12,letterSpacing:5,color:accentColor}}>VITRINE IA</div>}
                     </div>
 
                     <div style={{width:"100%",flex:1,minHeight:0,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:format==="story"?52:format==="feed"?26:12}}>
-                      {mode === "ai" ? (
-                        <div style={{width:"100%",minHeight:format==="story"?92:format==="feed"?82:54,flexShrink:0,position:"relative",display:"flex",alignItems:"center",justifyContent:"center",padding:"8px 34px",boxSizing:"border-box",overflow:"hidden",borderRadius:22,background:"linear-gradient(100deg,#081527e8 0%,#14305de8 48%,#081527ec 100%)",boxShadow:`0 12px 35px #0007, inset 0 0 0 1px ${accentColor}55`}}>
-                          <div style={{position:"absolute",left:0,top:0,bottom:0,width:8,background:accentColor,borderRadius:"22px 0 0 22px"}}/>
-                          <div style={{position:"absolute",right:0,top:0,bottom:0,width:8,background:accentColor,borderRadius:"0 22px 22px 0"}}/>
-                          <span style={{fontWeight:900,fontSize:format==="story"?32:format==="feed"?30:20,letterSpacing:1.4,textTransform:"uppercase",textAlign:"center",overflowWrap:"anywhere",lineHeight:1.15,color:textColor,textShadow:"0 3px 14px #000a"}}>{headline || "Destaque da semana"}</span>
-                        </div>
-                      ) : (
+                      {mode === "banner" && (
                         <div style={{width:"100%",height:format==="story"?90:format==="feed"?70:46,borderRadius:format==="landscape"?18:30,border:`3px solid ${accentColor}`,background:"linear-gradient(100deg,#090407ed,#41040be3)",boxSizing:"border-box",display:"flex",alignItems:"center",justifyContent:"space-between",padding:format==="landscape"?"0 22px":"0 28px",boxShadow:`0 0 32px ${brand.primary_color}55, inset 0 1px 12px #ffffff16`,fontSize:format==="story"?30:format==="feed"?26:19}}>
                         <span style={{color:accentColor,fontSize:format==="story"?42:format==="feed"?35:26}}>⌕</span>
                         <span style={{fontWeight:600,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis",padding:"0 12px"}}>{headline || "Agora disponível"}</span>
@@ -607,6 +601,7 @@ export function VitrineStudio({ mode }: { mode: "ai" | "banner" }) {
                               <div style={{position:"absolute",top:format==="story"?28:14,left:format==="story"?32:22,display:"flex",alignItems:"center",gap:12}}>
                                 <span style={{background:"#071a36d9",border:"1px solid "+accentColor+"aa",borderRadius:30,padding:format==="story"?"10px 18px":"5px 11px",fontSize:format==="story"?20:format==="feed"?15:11,fontWeight:900,letterSpacing:2}}>{item.media_type==="movie"?"FILME":"SÉRIE"}</span>
                                 {!!year(item.release_date) && <span style={{fontWeight:800,fontSize:format==="story"?21:format==="feed"?16:12,textShadow:"0 2px 10px #000"}}>{year(item.release_date)}</span>}
+                                <span style={{maxWidth:"62%",background:"linear-gradient(110deg,#0b214be8,#174379dc)",border:`1px solid ${accentColor}99`,borderRadius:30,padding:format==="story"?"10px 20px":"5px 12px",fontSize:format==="story"?19:format==="feed"?15:11,fontWeight:900,letterSpacing:1,textTransform:"uppercase",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",boxShadow:"0 4px 18px #0008"}}>{headline || "Destaque da semana"}</span>
                               </div>
                               <div style={{position:"absolute",left:format==="story"?30:format==="feed"?25:14,right:format==="story"?30:format==="feed"?25:14,bottom:format==="story"?38:format==="feed"?28:12,display:"flex",alignItems:"flex-end",gap:format==="story"?26:format==="feed"?22:15}}>
                                 <img src={cover} alt={item.title} style={{flexShrink:0,height:format==="story"?590:format==="feed"?405:230,maxWidth:"49%",objectFit:"contain",objectPosition:"bottom",borderRadius:14,filter:"drop-shadow(0 15px 23px #000c)"}}/>
