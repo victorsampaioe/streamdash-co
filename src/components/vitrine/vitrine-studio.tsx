@@ -101,7 +101,7 @@ type CloudArtwork = {
 
 /** Keep large screenshots below the ~6 MB standard-upload comfort zone. */
 async function cloudOptimizedPng(original: Blob): Promise<Blob> {
-  if (original.size <= 5.5 * 1024 * 1024 || typeof createImageBitmap !== "function") return original;
+  if (original.size <= 4.5 * 1024 * 1024 || typeof createImageBitmap !== "function") return original;
   let bitmap: ImageBitmap | null = null;
   try {
     bitmap = await createImageBitmap(original);
@@ -115,7 +115,7 @@ async function cloudOptimizedPng(original: Blob): Promise<Blob> {
       const optimized = await new Promise<Blob | null>(resolve => canvas.toBlob(resolve, "image/png"));
       canvas.width = 0;
       canvas.height = 0;
-      if (optimized && optimized.size <= 5.5 * 1024 * 1024) return optimized;
+      if (optimized && optimized.size <= 4.5 * 1024 * 1024) return optimized;
     }
   } catch {
     // If the browser lacks image transcoding support, upload the original.
