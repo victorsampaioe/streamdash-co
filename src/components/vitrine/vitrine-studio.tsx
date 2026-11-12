@@ -483,7 +483,8 @@ export function VitrineStudio({ mode }: { mode: "ai" | "banner" }) {
         const overlayPng = await toPng(root, {
           width: dimensions.w, height: dimensions.h, pixelRatio: 1,
           cacheBust: false, skipFonts: true,
-          filter: node => !(node instanceof HTMLImageElement && node.hasAttribute("data-vitrine-media")),
+          // Keep image DOM nodes in the cloned layout, even if Safari refuses
+          // to paint them. Filtering them out would shift the title position.
           style: { transform: "none", transformOrigin: "top left", backgroundColor: "transparent" },
         });
         const overlay = await loadCanvasImage(overlayPng);
