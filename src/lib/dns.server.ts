@@ -650,7 +650,8 @@ export async function runDnsCheck(serverId: string, opts: { quick?: boolean } = 
           await processTelegramAlert({
             serverId, incidentId: gate.incidentId, kind: "dns",
             event: "ONLINE", timeOffline: gate.downtimeLabel,
-            reason: "O DNS voltou a resolver.",
+            detectedAt: report.checked_at,
+            reason: "O DNS voltou a resolver após confirmação por múltiplos resolvedores.",
           });
         }
       }
