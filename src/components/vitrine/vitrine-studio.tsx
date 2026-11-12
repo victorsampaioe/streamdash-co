@@ -499,6 +499,40 @@ export function VitrineStudio({ mode }: { mode: "ai" | "banner" }) {
     }
   }
 
+  async function restoreDownloadedPng(file: File) {
+    if (!settings.data || savingCloudArtwork || exporting) return;
+    setSavingCloudArtwork(true);
+    let record: CloudArtwork | null = null;
+    try {
+      if (file.size === 0 || file.size > 12 * 1024 * 1024) throw new Error("Escolha um PNG de até 12 MB.");
+      const magic = new Uint8Array(await file.slice(0, 8).arrayBuffer());
+      if (magic.length !== 8 || [137,80,78,71,13,10,26,10].some((part,index)=>magic[index]!==part)) {
+        throw new Error("O arquivo escolhido não é uma imagem PNG válida.");
+      }
+      record = {
+        recordId: crypto.randomUUID(),
+        ownerId: settings.data,
+        image: await cloudOptimizedPng(file),
+        path: `${settings.data}/${crypto.randomUUID()}.png`,
+        mediaType: kind, template, format,
+        title: `Arte recuperada · ${new Date().toLocaleDateString("pt-BR")}`,
+        items: [],
+        caption: "Imagem recuperada do dispositivo para o histórico pessoal.",
+      };
+      await storeCloudArtwork(record);
+      setPendingCloudArtwork(null);
+      setCloudSaveError("");
+      toast.success("Imagem antiga recuperada no histórico! Nenhum crédito de IA foi consumido.");
+    } catch (error) {
+      const reason = cloudSaveReason(error);
+      setCloudSaveError(reason);
+      if (record) setPendingCloudArtwork(record);
+      toast.error("Não foi possível recuperar a imagem: " + reason);
+    } finally {
+      setSavingCloudArtwork(false);
+    }
+  }
+
   async function download() {
     if (!artRef.current || !settings.data || shown.length === 0) return;
     setExporting(true);
@@ -730,6 +764,14 @@ export function VitrineStudio({ mode }: { mode: "ai" | "banner" }) {
         <Card className="p-4 space-y-3">
           <h2 className="font-bold">Histórico de artes — Lovable Cloud</h2>
           <p className="text-xs text-muted-foreground">Arquivos privados por revendedor. Links temporários válidos por 2 minutos.</p>
+          <label className="block rounded-xl border border-blue-500/25 bg-blue-500/5 p-3 text-xs space-y-2">
+            <span className="block font-semibold text-blue-200">O PNG baixou, mas não apareceu no histórico?</span>
+            <span className="block text-muted-foreground">Escolha o PNG salvo no seu celular para recuperar a arte, sem gastar créditos de IA.</span>
+            <input type="file" accept="image/png,.png" disabled={savingCloudArtwork || exporting}
+              className="block w-full text-xs file:mr-3 file:rounded-lg file:border-0 file:bg-blue-600 file:px-3 file:py-2 file:font-semibold file:text-white"
+              onChange={event=>{const file=event.target.files?.[0];event.target.value="";if(file)void restoreDownloadedPng(file);}} />
+            {savingCloudArtwork&&<span className="block text-blue-300">Enviando imagem ao Cloud...</span>}
+          </label>
           {history.isLoading && <p className="text-sm">Buscando artes salvas...</p>}
           {history.isError && <p className="text-sm text-destructive">Não foi possível carregar o histórico.</p>}
           {!history.isLoading && history.data?.length===0 && <p className="text-sm text-muted-foreground">Nenhuma arte salva até agora.</p>}
