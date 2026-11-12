@@ -3,7 +3,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { toPng } from "html-to-image";
 import { useEffect, useRef, useState } from "react";
-import { getTmdbFeed, getTmdbDetail } from "@/lib/tmdb.functions";
+import { getVitrineTmdbFeed, getVitrineTmdbDetail } from "@/lib/vitrine-catalog.functions";
 import { prepareTransparentLogo } from "@/lib/vitrine-image";
 import { supabase } from "@/integrations/supabase/client";
 import { Card } from "@/components/ui/card";
@@ -194,8 +194,8 @@ function paintImageElement(
 
 export function VitrineStudio({ mode }: { mode: "ai" | "banner" }) {
   const { user: authenticatedUser } = useRouteContext({ from: "/_authenticated" });
-  const runFeed = useServerFn(getTmdbFeed);
-  const runDetail = useServerFn(getTmdbDetail);
+  const runFeed = useServerFn(getVitrineTmdbFeed);
+  const runDetail = useServerFn(getVitrineTmdbDetail);
   const qc = useQueryClient();
   const artRef = useRef<HTMLDivElement>(null);
   const previewRef = useRef<HTMLDivElement>(null);
@@ -281,7 +281,7 @@ export function VitrineStudio({ mode }: { mode: "ai" | "banner" }) {
     staleTime: mode === "banner" ? Infinity : 0,
   });
   const feed = useQuery({
-    queryKey: ["vitrine-feed",kind,debouncedSearch],
+    queryKey: ["vitrine-feed",authenticatedUser.id,kind,debouncedSearch],
     queryFn: async () => runFeed({ data: { feed: kind === "movie" ? "movie_recent" : "tv_recent", query: debouncedSearch || undefined } }),
     staleTime: mode === "banner" ? Infinity : 300000,
     refetchOnWindowFocus: mode !== "banner",
@@ -331,7 +331,7 @@ export function VitrineStudio({ mode }: { mode: "ai" | "banner" }) {
     : [];
   const shown = mode === "banner" ? (bannerReady ? chosen.slice(0, 1) : []) : chosen.slice(0, templates.find(x=>x.id===template)?.count ?? 4);
   const featuredDetail = useQuery({
-    queryKey: ["vitrine-featured-details", shown[0]?.media_type, shown[0]?.tmdb_id],
+    queryKey: ["vitrine-featured-details", authenticatedUser.id, shown[0]?.media_type, shown[0]?.tmdb_id],
     enabled: shown.length === 1 && !!shown[0]?.tmdb_id && (mode === "ai" || !shown[0]?.overview?.trim()),
     queryFn: async () => runDetail({ data: { media: shown[0].media_type, id: shown[0].tmdb_id } }),
     staleTime: 600000,
