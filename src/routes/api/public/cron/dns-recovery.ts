@@ -17,7 +17,8 @@ export const Route = createFileRoute("/api/public/cron/dns-recovery")({
         try {
           const { withCycleLock } = await import("@/lib/job-lock.server");
           const { runDueDnsRecoveryChecks } = await import("@/lib/dns.server");
-          const result = await withCycleLock("cron-dns-recovery", 55, () => runDueDnsRecoveryChecks(16));
+          // Share the DNS cycle lock with /cron/check to prevent concurrent checks and duplicate alerts.
+          const result = await withCycleLock("cron-dns", 180, () => runDueDnsRecoveryChecks(16));
           return Response.json({ ok: true, ...result }, { headers: { "Cache-Control": "no-store" } });
         } catch (error) {
           console.error("[dns-recovery] priority cycle failed", error instanceof Error ? error.name : "unknown");
