@@ -37,12 +37,16 @@ const respond = (value, status, origin) =>
 const clean = (input, max) => String(input || "")
   .replace(/[\u0000-\u001f\u007f]/g, " ").trim().slice(0, max);
 const cleanStory = (overview, title) => {
-  // Factual context is allowed, but the title itself NEVER reaches the model.
-  const escaped = String(title).replace(/[.*+?^${}()|[\]\\]/g, "\\const clean = (input, max) => String(input || "")
-  .replace(/[\u0000-\u001f\u007f]/g, " ").trim().slice(0, max);");
-  const withoutTitle = escaped
-    ? overview.replace(new RegExp(escaped, "gi"), "the story")
-    : overview;
+  // Work names are kept for catalog selection but never passed into image generation.
+  let withoutTitle = String(overview || "");
+  const token = String(title || "").trim().toLowerCase();
+  if (token) {
+    for (let i = 0; i < 20; i++) {
+      const index = withoutTitle.toLowerCase().indexOf(token);
+      if (index < 0) break;
+      withoutTitle = withoutTitle.slice(0, index) + "the story" + withoutTitle.slice(index + token.length);
+    }
+  }
   return withoutTitle
     .replace(/\b(?:19|20)\d{2}\b/g, "")
     .replace(/(?:write|print|draw|display|include|render|show)\s+(?:the\s+)?(?:title|text|words|letters|logo|name|caption|credits)[^.!?]{0,100}/gi, "")
