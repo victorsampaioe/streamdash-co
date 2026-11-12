@@ -5,8 +5,8 @@ import { Users, CreditCard, TrendingUp, DollarSign } from "lucide-react";
 export const Route = createFileRoute('/revendedor-stream-monitor')({
   head: () => ({
     meta: [
-      { title: "Sistema de Monitoramento para Revendedores IPTV | Stream Monitor" },
-      { name: "description", content: "Plataforma de monitoramento IPTV para revendedores: controle de servidores, alertas de instabilidade, DNS e gerenciamento de clientes. Conheça o Stream Monitor." },
+      { title: "Revenda IPTV: Monitoramento para Revendedores | Stream Monitor" },
+      { name: "description", content: "Revenda IPTV com monitoramento profissional: controle de servidores, alertas de instabilidade, DNS e gerenciamento de clientes. Conheça o Stream Monitor." },
       { property: "og:title", content: "Seja Revendedor Stream Monitor | Sistema de Monitoramento IPTV" },
       { property: "og:description", content: "Revenda uma plataforma profissional de monitoramento IPTV e ofereça tecnologia para seus clientes." },
       { property: "og:type", content: "website" },
@@ -24,9 +24,9 @@ function ResellerPage() {
     <main className="min-h-screen bg-background text-foreground py-16 px-4">
       <div className="max-w-4xl mx-auto">
         <Link to="/" className="text-primary hover:underline mb-8 inline-block">← Voltar para o início</Link>
-        <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold mb-6">Sistema de monitoramento IPTV para revendedores</h1>
+        <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold mb-6">Revenda IPTV com monitoramento Stream Monitor</h1>
         <p className="text-xl text-muted-foreground mb-12">
-          Ofereça monitoramento de servidores, DNS, histórico de incidentes e alertas para uma operação de revenda mais organizada.
+          Para quem trabalha com revenda IPTV: ofereça monitoramento de servidores, DNS, histórico de incidentes e alertas para uma operação de revenda mais organizada.
         </p>
 
         <div className="grid md:grid-cols-2 gap-8 mb-16">

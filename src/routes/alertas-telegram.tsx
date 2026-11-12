@@ -7,6 +7,11 @@ export const Route = createFileRoute('/alertas-telegram')({
     meta: [
       { title: "Alertas de Queda IPTV no Telegram | Stream Monitor" },
       { name: "description", content: "Receba alertas de quedas confirmadas e recuperação dos servidores IPTV no Telegram. Saiba como o monitoramento reduz alarmes falsos." },
+      { property: "og:title", content: "Alertas de queda IPTV no Telegram | Stream Monitor" },
+      { property: "og:description", content: "Avisos no Telegram quando uma queda é confirmada e quando o servidor IPTV volta ao ar." },
+      { property: "og:type", content: "website" },
+      { property: "og:url", content: "https://streammonitor.site/alertas-telegram" },
+      { name: "twitter:card", content: "summary" },
     ],
     links: [{ rel: "canonical", href: "https://streammonitor.site/alertas-telegram" }],
   }),
