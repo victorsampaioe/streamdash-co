@@ -25,7 +25,9 @@ const DIAGNOSTIC_LABEL:Record<string,string>={
   browser_invalid_response:"O conteúdo recebido não corresponde ao esperado.",
   http_only_no_browser_capture:"Resposta HTTP confirmada, mas sem captura visual.",
   screenshot_storage_failed:"O navegador verificou a página, mas não foi possível armazenar a captura.",
-  browser_render_response_invalid:"A ferramenta de captura retornou uma resposta inválida."
+  browser_render_response_invalid:"A ferramenta de captura retornou uma resposta inválida.",
+  browser_screenshot_unavailable:"Página renderizada, mas nenhuma captura pôde ser salva.",
+  legacy_audit_transport_failure:"A antiga auditoria falhou antes de obter HTTP; isso não era prova de site fora do ar."
 };
 function explainDiagnostic(code:string|null){if(!code)return "";if(DIAGNOSTIC_LABEL[code])return DIAGNOSTIC_LABEL[code];if(code.startsWith("browser_render_http_"))return "Cloudflare Browser Rendering retornou um erro de integração.";if(code.startsWith("http_"))return "A inspeção recebeu uma resposta HTTP inesperada.";return "Verificação inconclusiva. Tente novamente.";}
 async function browserProbe(url:string){
