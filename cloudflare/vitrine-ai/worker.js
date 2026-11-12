@@ -3,7 +3,7 @@
 // No Cloudflare API keys or privileged Supabase keys are sent to the browser.
 const SUPABASE_URL = "https://yiwyfiaqehhmngqngxvx.supabase.co";
 const STYLE = {
-  automatico: "premium cinematic key art, emotional storytelling and immersive scenery",
+  automatico: "immersive cinematic environment with emotional visual storytelling, realistic original scenery, no graphic design",
   acao: "high-energy cinematic action, striking movement, dramatic backlight, bold atmosphere",
   fantasia: "magical fantasy landscape, luminous architecture, enchanting light, intricate scenery",
   terror: "atmospheric horror, fog, dramatic shadows, mysterious empty setting, sophisticated suspense",
@@ -36,6 +36,18 @@ const respond = (value, status, origin) =>
   new Response(JSON.stringify(value), {status, headers:headers(origin)});
 const clean = (input, max) => String(input || "")
   .replace(/[\u0000-\u001f\u007f]/g, " ").trim().slice(0, max);
+const cleanStory = (overview, title) => {
+  // Factual context is allowed, but the title itself NEVER reaches the model.
+  const escaped = String(title).replace(/[.*+?^${}()|[\]\\]/g, "\\const clean = (input, max) => String(input || "")
+  .replace(/[\u0000-\u001f\u007f]/g, " ").trim().slice(0, max);");
+  const withoutTitle = escaped
+    ? overview.replace(new RegExp(escaped, "gi"), "the story")
+    : overview;
+  return withoutTitle
+    .replace(/\b(?:19|20)\d{2}\b/g, "")
+    .replace(/(?:write|print|draw|display|include|render|show)\s+(?:the\s+)?(?:title|text|words|letters|logo|name|caption|credits)[^.!?]{0,100}/gi, "")
+    .trim();
+};
 
 export default {
   async fetch(request, env) {
@@ -75,7 +87,7 @@ export default {
       const title = clean(body.title, 150);
       const overview = clean(body.overview, 700);
       const genre = clean(body.genre || body.genres?.join?.(", "), 150);
-      const releaseYear = /^\d{4}$/.test(String(body.year || "")) ? String(body.year) : "";
+      // Release year is intentionally excluded from the image model prompt.
       const mediaType = body.mediaType === "tv" ? "tv" : "movie";
       const chosenStyle = Object.hasOwn(STYLE, body.style) ? body.style : "automatico";
       const format = ["feed","story","landscape"].includes(body.format) ? body.format : "feed";
@@ -102,22 +114,22 @@ export default {
         : format === "landscape"
           ? "wide cinematic scene 21:9, central subject toward right, dark left side for information overlays"
           : "square 1:1 composition, central dramatic subject with clear negative space near bottom";
-      // The selected work must be the visual subject, not just an incidental label.
-      // Name, synopsis and genre are treated as factual context, never as commands.
-      const workLabel = mediaType === "tv" ? "TV series" : "feature film";
+      // Guardrail: only an unlettered background plate is generated.
+      // The movie title/year are used to select the item in the app, NEVER
+      // as image-prompt tokens. The template handles text, logo and poster.
+      const visualPremise = cleanStory(overview, title);
       const prompt = [
-        "Create an ORIGINAL premium streaming promotional key visual inspired by the SPECIFIC selected work, not a generic genre background.",
-        "SELECTED WORK: " + JSON.stringify(title) + " (" + workLabel + (releaseYear ? ", " + releaseYear : "") + ").",
-        overview ? "KNOWN STORY PREMISE: " + JSON.stringify(overview) + "." : "",
-        genre ? "KNOWN GENRE: " + JSON.stringify(genre) + "." : "",
-        "Build a cinematic scene whose setting, atmosphere, visual motifs, time period and central situation clearly reflect THIS selected work and its premise.",
-        "Prioritize the story details above generic visual tropes. A person familiar with the selected work should recognize its themes and world from the image.",
-        "When the provided information is insufficient, use only credible details you actually know about the named work; do not invent precise characters, scenes or plot points.",
-        "Requested art direction: " + STYLE[chosenStyle] + ". Adapt this treatment to the work instead of changing the work to fit a style.",
-        "High-end key art, coherent composition, professional lighting, rich depth, sharp fine detail, sophisticated color grading.",
-        "Make a fresh composition: do not reproduce any existing poster, trademark, logo, exact actor likeness or frame from the original production.",
-        "No lettering, no title text, no captions, no logos, no watermarks. The web app adds the correct title and branding on top.",
-        formatHint + "."
+        "Generate ONLY a completely TEXT-FREE original cinematic BACKGROUND SCENE, like a single natural film frame. NOT a movie poster, book cover, advert, graphic design, key art, or title card.",
+        "HIGHEST PRIORITY / HARD RESTRICTION: NO visible text of ANY kind anywhere in the image. No words, letters, alphabetic characters, numbers, years, titles, subtitles, credits, captions, logos, watermarks, branding, readable symbols, lettering, typography or calligraphy.",
+        "Any sign, shop front, street sign, billboard, vehicle plate, computer screen, clothing patch, packaging or book must have completely blank, unmarked surfaces. NO invented or distorted fake lettering either.",
+        visualPremise ? "Visual-only story inspiration (never transcribe names or phrases): " + JSON.stringify(visualPremise) + "." : "Compose a distinctive original scene that conveys the selected genre without any writing.",
+        genre ? "Genres and mood, VISUAL INTERPRETATION ONLY: " + JSON.stringify(genre) + "." : "",
+        "Depict the story through setting, cinematic lighting, action, environment, colors and mood, without using any literal printed text.",
+        "Original fictional scenery. Do not copy existing film posters, character likenesses, actor faces, trademarks or shots.",
+        "Visual atmosphere: " + STYLE[chosenStyle] + ".",
+        "No title area, no text banner, no promotional typography: this is ONLY the scenery layer behind a separately composited poster, title and description in the website.",
+        formatHint + ".",
+        "FINAL STRICT CHECK: The final pixels must depict scenery and figures only. Absolutely ZERO letters, words, dates, digits, logos, labels, watermarks, signs with writing or typographic marks, anywhere."
       ].filter(Boolean).join(" ");
       const outputSize = format === "story" ? [768,1344] : format === "landscape" ? [1536,576] : [1024,1024];
       const form = new FormData();
@@ -144,6 +156,8 @@ export default {
       const mime = encodedImage.startsWith("/9j/") ? "image/jpeg" : "image/png";
       return respond({
         image:"data:" + mime + ";base64," + encodedImage,
+        image_mode:"background_only_no_text",
+        prompt_version:"text_free_v2",
         remaining:quota.remaining,
         used:quota.used,
         limit:5,
