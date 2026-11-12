@@ -39,7 +39,7 @@ async function browserProbe(url:string){
     const response=await fetch(target.pathname,{method:"GET",cache:"no-store",credentials:"same-origin",signal:controller.signal,headers:{Accept:target.pathname==="/api/public/health"?"application/json":"text/html"}});
     const body=await response.text();
     const hasExpectedContent=target.pathname==="/api/public/health"
-      ?response.ok&&/"ok"\s*:\s*true/.test(body)
+      ?response.ok&&/"status"\s*:\s*"ok"/.test(body)
       :/<html\b/i.test(body)&&/<body\b/i.test(body);
     return {httpStatus:response.status,durationMs:Math.max(1,Math.round(performance.now()-start)),hasExpectedContent,errorCode:"none" as const};
   }catch(err){
