@@ -35,7 +35,7 @@ const todayFortaleza = () => new Intl.DateTimeFormat("sv-SE", {
 }).format(new Date());
 const defaultBrand: Brand = { brand_name: "Minha Revenda", logo_url: "", whatsapp: "", primary_color: "#2563eb" };
 const officialLogoUrl = "/__l5e/assets-v1/6c2c6658-faca-42c7-9e11-89b20a23a3dd/logo-official.png";
-const adminBrand: Brand = { brand_name: "Stream Monitor", logo_url: officialLogoUrl, whatsapp: "", primary_color: "#2563eb" };
+const adminBrand: Brand = { brand_name: "Stream Monitor", logo_url: "/favicon.ico", whatsapp: "", primary_color: "#2563eb" };
 const sizes: Record<Format, { w: number; h: number; label: string }> = {
   feed: { w: 1080, h: 1080, label: "Feed 1080×1080" },
   story: { w: 1080, h: 1920, label: "Story 1080×1920" },
