@@ -6218,11 +6218,13 @@ export type Database = {
         Row: {
           checked_at: string | null
           created_at: string
+          diagnostic: string | null
           duration_ms: number | null
           http_status: number | null
           id: string
           label: string
           owner_id: string
+          probe_mode: string
           screenshot_storage_path: string | null
           status: string
           target_url: string
@@ -6230,11 +6232,13 @@ export type Database = {
         Insert: {
           checked_at?: string | null
           created_at?: string
+          diagnostic?: string | null
           duration_ms?: number | null
           http_status?: number | null
           id?: string
           label: string
           owner_id: string
+          probe_mode?: string
           screenshot_storage_path?: string | null
           status?: string
           target_url: string
@@ -6242,11 +6246,13 @@ export type Database = {
         Update: {
           checked_at?: string | null
           created_at?: string
+          diagnostic?: string | null
           duration_ms?: number | null
           http_status?: number | null
           id?: string
           label?: string
           owner_id?: string
+          probe_mode?: string
           screenshot_storage_path?: string | null
           status?: string
           target_url?: string
