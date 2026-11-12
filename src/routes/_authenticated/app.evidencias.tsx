@@ -46,11 +46,11 @@ function EvidenceLibrary(){
     if(!user)throw new Error("Entre na sua conta.");
     const [ss,docs]=await Promise.all([
       supabase.from("servers").select("id,name").eq("owner_id",user.id).order("name").limit(1000),
-      supabase.from("evidence_documents" as any).select("id,title,content_type,storage_path,created_at,incident_id")
+      supabase.from("evidence_documents").select("id,title,content_type,storage_path,created_at,incident_id")
         .eq("owner_id",user.id).order("created_at",{ascending:false}).limit(100)
     ]);
     if(ss.error)throw ss.error;if(docs.error)throw docs.error;
-    return {owner:user.id,servers:ss.data??[],docs:(docs.data??[]) as Evidence[]};
+    return {owner:user.id,servers:ss.data??[],docs:docs.data??[]};
   },staleTime:30000});
   const incidents=useQuery({queryKey:["evidence-incidents",server],enabled:!!server,queryFn:async()=>{
     const {data,error}=await supabase.from("incidents")

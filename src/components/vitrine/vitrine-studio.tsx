@@ -292,11 +292,12 @@ export function VitrineStudio({ mode }: { mode: "ai" | "banner" }) {
     queryKey:["vitrine-history",settings.data],
     enabled:!!settings.data,
     queryFn:async()=>{
-      const {data,error}=await supabase.from("promo_generations" as any)
-        .select("id,title,format,storage_path,created_at").eq("owner_id",settings.data!)
+      if (!settings.data) throw new Error("Sessão indisponível.");
+      const {data,error}=await supabase.from("promo_generations")
+        .select("id,title,format,storage_path,created_at").eq("owner_id",settings.data)
         .order("created_at",{ascending:false}).limit(30);
       if(error)throw error;
-      return (data??[]) as {id:string;title:string;format:string;storage_path:string|null;created_at:string}[];
+      return data??[];
     },staleTime:mode === "banner" ? Infinity : 30000,
     refetchOnWindowFocus: mode !== "banner",
     refetchOnReconnect: mode !== "banner",
