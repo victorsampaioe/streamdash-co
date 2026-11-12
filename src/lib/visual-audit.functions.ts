@@ -77,6 +77,10 @@ async function auditUrl(target:AuditTarget,ownerId:string):Promise<AuditResult &
     diagnostic=error instanceof Error && (error.name==="TimeoutError"||error.name==="AbortError")
       ?"audit_request_timeout":"audit_network_unavailable";
   }
+  if(mode==="browser" && status==="ok" && !screenshotPath){
+    status="partial";
+    diagnostic=diagnostic||"browser_screenshot_unavailable";
+  }
   const durationMs=Math.max(1,Math.round(performance.now()-start));
   const {error:dbErr}=await supabaseAdmin.from("visual_audit_checks" as any).insert({
     id,owner_id:ownerId,label:target.label,target_url:target.url,status,
