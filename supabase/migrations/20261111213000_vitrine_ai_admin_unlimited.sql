@@ -17,7 +17,7 @@ BEGIN
   END IF;
 
   -- Trusted database role only: revendedores cannot claim to be administrators.
-  IF public.has_role(v_user, 'admin') THEN
+  IF public.has_role(v_user, 'admin'::public.app_role) THEN
     RETURN jsonb_build_object('allowed', true, 'unlimited', true, 'used', 0, 'remaining', null, 'limit', null);
   END IF;
 
