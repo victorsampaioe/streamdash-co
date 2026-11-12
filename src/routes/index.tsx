@@ -115,6 +115,57 @@ function Landing() {
         </div>
       </section>
 
+      <section id="novidades-vitrines" aria-labelledby="titulo-novas-vitrines" className="relative overflow-hidden border-y border-blue-400/20 bg-gradient-to-b from-[#07172d] via-[#0a1935] to-background py-14 sm:py-20">
+        <div aria-hidden="true" className="pointer-events-none absolute -top-36 right-0 h-96 w-96 rounded-full bg-blue-600/15 blur-3xl" />
+        <div className="relative mx-auto max-w-7xl px-4 sm:px-6">
+          <div className="mx-auto mb-9 max-w-3xl text-center">
+            <span className="inline-flex items-center gap-2 rounded-full border border-cyan-400/30 bg-cyan-400/10 px-4 py-1.5 text-xs font-extrabold uppercase tracking-[.16em] text-cyan-300">
+              <Zap size={14} /> Nova atualização disponível
+            </span>
+            <h2 id="titulo-novas-vitrines" className="mt-5 text-3xl font-black tracking-tight text-white sm:text-4xl lg:text-5xl">
+              Sua divulgação agora tem outra cara.
+            </h2>
+            <p className="mt-4 text-sm leading-relaxed text-slate-300 sm:text-base">
+              Conheça a <strong className="text-white">Vitrine IA</strong> e a <strong className="text-white">Vitrine Banner</strong>: duas formas de criar artes profissionais de filmes e séries com a identidade da sua revenda.
+            </p>
+          </div>
+
+          <div className="grid items-stretch gap-5 lg:grid-cols-2">
+            <article className="group overflow-hidden rounded-3xl border border-cyan-400/30 bg-[#071126]/95 shadow-[0_18px_70px_rgba(0,0,0,.3)]">
+              <div className="relative overflow-hidden bg-[#051022] p-3 sm:p-5">
+                <img src="/api/public/vitrine-exemplos/como-magica" alt="Exemplo real de Vitrine IA com arte cinematográfica de Como Mágica, capa e descrição da obra" width={1080} height={1080} loading="lazy" className="mx-auto aspect-square w-full max-w-[440px] rounded-2xl object-contain shadow-2xl transition-transform duration-500 group-hover:scale-[1.015]" />
+                <span className="absolute left-6 top-6 rounded-full border border-cyan-300/35 bg-[#07172f]/90 px-3 py-1.5 text-[11px] font-bold uppercase tracking-wider text-cyan-200">Criado com IA</span>
+              </div>
+              <div className="space-y-4 p-6 sm:p-7">
+                <div className="flex items-center gap-3 text-cyan-300"><Cpu size={24} /><h3 className="text-2xl font-black text-white">Vitrine IA</h3></div>
+                <p className="text-sm leading-relaxed text-slate-300">A inteligência artificial cria o cenário da arte conforme o filme ou série escolhido. Personalize com sua marca e produza uma divulgação única.</p>
+                <p className="text-sm font-semibold text-cyan-200">5 créditos de geração por dia para cada revendedor.</p>
+                <Link to="/vitrine-ai" className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-blue-500 px-5 py-3 text-sm font-bold text-white transition hover:bg-blue-400">
+                  Acessar Vitrine IA <ArrowRight size={17} />
+                </Link>
+              </div>
+            </article>
+
+            <article className="group overflow-hidden rounded-3xl border border-blue-400/25 bg-[#071126]/95 shadow-[0_18px_70px_rgba(0,0,0,.3)]">
+              <div className="relative overflow-hidden bg-[#051022] p-3 sm:p-5">
+                <img src="/api/public/vitrine-exemplos/codigo-vinganca" alt="Exemplo real de Vitrine Banner com a capa de Código: Vingança, título, sinopse e identidade visual da revenda" width={1080} height={1080} loading="lazy" className="mx-auto aspect-square w-full max-w-[440px] rounded-2xl object-contain shadow-2xl transition-transform duration-500 group-hover:scale-[1.015]" />
+                <span className="absolute left-6 top-6 rounded-full border border-blue-300/35 bg-[#07172f]/90 px-3 py-1.5 text-[11px] font-bold uppercase tracking-wider text-blue-200">Criações ilimitadas</span>
+              </div>
+              <div className="space-y-4 p-6 sm:p-7">
+                <div className="flex items-center gap-3 text-blue-300"><Film size={24} /><h3 className="text-2xl font-black text-white">Vitrine Banner</h3></div>
+                <p className="text-sm leading-relaxed text-slate-300">Escolha o filme ou série e gere seu banner com capa, informações da obra, sua logo e WhatsApp. Simples, rápido e profissional.</p>
+                <p className="text-sm font-semibold text-cyan-200">Quantas artes quiser, sem consumir créditos de IA.</p>
+                <Link to="/vitrine-banner" className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-blue-300/40 bg-blue-500/15 px-5 py-3 text-sm font-bold text-white transition hover:bg-blue-500/30">
+                  Acessar Vitrine Banner <ArrowRight size={17} />
+                </Link>
+              </div>
+            </article>
+          </div>
+
+          <p className="mt-9 text-center text-sm font-bold tracking-wide text-blue-200">STREAM MONITOR — SEMPRE INOVANDO.</p>
+        </div>
+      </section>
+
       <RadarShowcase />
 
       <section aria-labelledby="solucoes-monitoramento" className="mx-auto max-w-6xl px-4 py-14 sm:px-6 sm:py-20">
