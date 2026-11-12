@@ -575,18 +575,26 @@ export function VitrineStudio({ mode }: { mode: "ai" | "banner" }) {
                   <div style={{position:"absolute",inset:0,boxShadow:"inset 0 0 130px #0009",pointerEvents:"none"}}/>
 
                   <div style={{position:"relative",zIndex:1,height:"100%",boxSizing:"border-box",padding:format==="story"?"98px 100px 115px":format==="feed"?"54px 78px 68px":"30px 58px",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"space-between",gap:format==="landscape"?12:26}}>
-                    <div style={{display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:10,minHeight:mode==="banner"?180:format==="story"?150:format==="feed"?92:44,maxWidth:"100%"}}>
-                      {embeddedLogo && <img src={embeddedLogo} alt="" style={{width:mode==="banner"?320:format==="story"?245:format==="feed"?170:110,height:mode==="banner"?126:format==="story"?100:format==="feed"?62:36,objectFit:"contain",objectPosition:"center",display:"block",maxWidth:"100%",flexShrink:0}}/>}
+                    <div style={{display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:10,minHeight:mode==="banner"?180:format==="story"?185:format==="feed"?146:65,maxWidth:"100%"}}>
+                      {embeddedLogo && <img src={embeddedLogo} alt="" style={{width:mode==="banner"?320:format==="story"?320:format==="feed"?290:175,height:mode==="banner"?126:format==="story"?145:format==="feed"?122:75,objectFit:"contain",objectPosition:"center",display:"block",maxWidth:"100%",flexShrink:0,filter:mode==="ai"?"drop-shadow(0 5px 15px #0009)":undefined}}/>}
                       <div style={{fontSize:format==="story"?45:format==="feed"?35:24,fontWeight:800,maxWidth:"100%",textAlign:"center",overflowWrap:"anywhere",letterSpacing:-0.8,textShadow:"0 3px 18px #000c"}}>{brand.brand_name || "Minha Revenda"}</div>
                       {!hideStudioMark && <div style={{fontSize:format==="story"?17:12,letterSpacing:5,color:accentColor}}>VITRINE IA</div>}
                     </div>
 
                     <div style={{width:"100%",flex:1,minHeight:0,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:format==="story"?52:format==="feed"?26:12}}>
-                      <div style={{width:"100%",height:format==="story"?90:format==="feed"?70:46,borderRadius:format==="landscape"?18:30,border:`3px solid ${accentColor}`,background:"linear-gradient(100deg,#090407ed,#41040be3)",boxSizing:"border-box",display:"flex",alignItems:"center",justifyContent:"space-between",padding:format==="landscape"?"0 22px":"0 28px",boxShadow:`0 0 32px ${brand.primary_color}55, inset 0 1px 12px #ffffff16`,fontSize:format==="story"?30:format==="feed"?26:19}}>
+                      {mode === "ai" ? (
+                        <div style={{width:"100%",minHeight:format==="story"?92:format==="feed"?82:54,flexShrink:0,position:"relative",display:"flex",alignItems:"center",justifyContent:"center",padding:"8px 34px",boxSizing:"border-box",overflow:"hidden",borderRadius:22,background:"linear-gradient(100deg,#081527e8 0%,#14305de8 48%,#081527ec 100%)",boxShadow:`0 12px 35px #0007, inset 0 0 0 1px ${accentColor}55`}}>
+                          <div style={{position:"absolute",left:0,top:0,bottom:0,width:8,background:accentColor,borderRadius:"22px 0 0 22px"}}/>
+                          <div style={{position:"absolute",right:0,top:0,bottom:0,width:8,background:accentColor,borderRadius:"0 22px 22px 0"}}/>
+                          <span style={{fontWeight:900,fontSize:format==="story"?32:format==="feed"?30:20,letterSpacing:1.4,textTransform:"uppercase",textAlign:"center",overflowWrap:"anywhere",lineHeight:1.15,color:textColor,textShadow:"0 3px 14px #000a"}}>{headline || "Destaque da semana"}</span>
+                        </div>
+                      ) : (
+                        <div style={{width:"100%",height:format==="story"?90:format==="feed"?70:46,borderRadius:format==="landscape"?18:30,border:`3px solid ${accentColor}`,background:"linear-gradient(100deg,#090407ed,#41040be3)",boxSizing:"border-box",display:"flex",alignItems:"center",justifyContent:"space-between",padding:format==="landscape"?"0 22px":"0 28px",boxShadow:`0 0 32px ${brand.primary_color}55, inset 0 1px 12px #ffffff16`,fontSize:format==="story"?30:format==="feed"?26:19}}>
                         <span style={{color:accentColor,fontSize:format==="story"?42:format==="feed"?35:26}}>⌕</span>
                         <span style={{fontWeight:600,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis",padding:"0 12px"}}>{headline || "Agora disponível"}</span>
                         <span style={{color:accentColor,fontSize:format==="story"?37:format==="feed"?32:22}}>◉</span>
                       </div>
+                      )}
                       <div style={{width:"100%",flex:1,minHeight:0,display:"grid",gridTemplateColumns:shown.length===1?"1fr":"repeat(2,minmax(0,1fr))",gridTemplateRows:shown.length<=2?"minmax(0,1fr)":`repeat(${Math.ceil(shown.length/2)},minmax(0,1fr))`,gap:format==="story"?22:format==="feed"?16:8}}>
                         {shown.map(item=>{
                           const featured = shown.length===1;
@@ -594,18 +602,18 @@ export function VitrineStudio({ mode }: { mode: "ai" | "banner" }) {
                           const cover = embeddedPosters[item.poster_path||""] || fallbackPoster(item.title);
                           const synopsis = shortOverview(item.overview || (featuredDetail.data?.detail?.tmdb_id===item.tmdb_id ? featuredDetail.data.detail.overview : ""),vertical?320:format==="feed"?210:145);
                           if (featured && aiBackground) {
-                            return <div key={item.tmdb_id} style={{position:"relative",width:"100%",height:"100%",minWidth:0,minHeight:0,overflow:"hidden",borderRadius:28,border:"2px solid "+accentColor+"88",background:"transparent",boxShadow:"inset 0 0 50px #0008,0 16px 44px #0008"}}>
+                            return <div key={item.tmdb_id} style={{position:"relative",width:"100%",height:"100%",minWidth:0,minHeight:0,overflow:"hidden",borderRadius:28,border:"none",background:"transparent",boxShadow:"inset 0 0 50px #0008,0 16px 44px #0008"}}>
                               <div style={{position:"absolute",inset:0,background:"linear-gradient(0deg,#020714f5 0%,#04132bba 30%,#04142b4a 58%,transparent 86%)"}}/>
                               <div style={{position:"absolute",top:format==="story"?28:14,left:format==="story"?32:22,display:"flex",alignItems:"center",gap:12}}>
                                 <span style={{background:"#071a36d9",border:"1px solid "+accentColor+"aa",borderRadius:30,padding:format==="story"?"10px 18px":"5px 11px",fontSize:format==="story"?20:format==="feed"?15:11,fontWeight:900,letterSpacing:2}}>{item.media_type==="movie"?"FILME":"SÉRIE"}</span>
                                 {!!year(item.release_date) && <span style={{fontWeight:800,fontSize:format==="story"?21:format==="feed"?16:12,textShadow:"0 2px 10px #000"}}>{year(item.release_date)}</span>}
                               </div>
-                              <div style={{position:"absolute",left:format==="story"?30:format==="feed"?24:14,right:format==="story"?30:format==="feed"?24:14,bottom:format==="story"?36:format==="feed"?27:12,display:"flex",alignItems:"flex-end",gap:format==="story"?28:format==="feed"?22:15}}>
-                                <img src={cover} alt={item.title} style={{flexShrink:0,height:format==="story"?480:format==="feed"?320:200,maxWidth:"43%",objectFit:"contain",objectPosition:"bottom",borderRadius:12,filter:"drop-shadow(0 12px 18px #000b)"}}/>
-                                <div style={{flex:1,minWidth:0,display:"flex",flexDirection:"column",gap:format==="story"?18:format==="feed"?10:5}}>
+                              <div style={{position:"absolute",left:format==="story"?30:format==="feed"?25:14,right:format==="story"?30:format==="feed"?25:14,bottom:format==="story"?38:format==="feed"?28:12,display:"flex",alignItems:"flex-end",gap:format==="story"?26:format==="feed"?22:15}}>
+                                <img src={cover} alt={item.title} style={{flexShrink:0,height:format==="story"?590:format==="feed"?405:230,maxWidth:"49%",objectFit:"contain",objectPosition:"bottom",borderRadius:14,filter:"drop-shadow(0 15px 23px #000c)"}}/>
+                                <div style={{flex:1,minWidth:0,display:"flex",flexDirection:"column",gap:format==="story"?19:format==="feed"?13:6}}>
                                   <div style={{fontWeight:900,color:accentColor,letterSpacing:format==="story"?3:2,fontSize:format==="story"?20:format==="feed"?14:11,textShadow:"0 2px 8px #000"}}>DESTAQUE ESPECIAL</div>
-                                  <div style={{fontWeight:900,lineHeight:1.08,fontSize:format==="story"?58:format==="feed"?43:29,overflowWrap:"anywhere",display:"-webkit-box",WebkitBoxOrient:"vertical",WebkitLineClamp:2,overflow:"hidden",textShadow:"0 4px 15px #000"}}>{item.title}</div>
-                                  <div style={{fontSize:format==="story"?22:format==="feed"?17:12,lineHeight:1.42,color:"#e2edff",display:"-webkit-box",WebkitBoxOrient:"vertical",WebkitLineClamp:format==="landscape"?2:format==="feed"?4:5,overflow:"hidden",textShadow:"0 2px 10px #000"}}>{synopsis || "Sinopse não informada pela TMDB."}</div>
+                                  <div style={{fontWeight:900,lineHeight:1.08,fontSize:format==="story"?66:format==="feed"?49:33,overflowWrap:"anywhere",display:"-webkit-box",WebkitBoxOrient:"vertical",WebkitLineClamp:2,overflow:"hidden",textShadow:"0 4px 15px #000"}}>{item.title}</div>
+                                  <div style={{fontSize:format==="story"?25:format==="feed"?20:14,lineHeight:1.45,color:"#e2edff",display:"-webkit-box",WebkitBoxOrient:"vertical",WebkitLineClamp:format==="landscape"?2:format==="feed"?5:6,overflow:"hidden",textShadow:"0 2px 10px #000"}}>{synopsis || "Sinopse não informada pela TMDB."}</div>
                                   <div style={{height:3,width:"35%",borderRadius:5,background:accentColor,marginTop:format==="landscape"?1:6}}/>
                                 </div>
                               </div>
