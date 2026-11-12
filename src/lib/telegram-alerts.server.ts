@@ -203,7 +203,7 @@ async function sendToTelegram(
   const { rawTelegramSend,enqueueTelegramRetry }=await import("./telegram-outbox.server");
   // An already scheduled delivery must not be sent again by the old retry cycle.
   if(meta.idempotencyKey){
-    const {data:existing,error}=await supabaseAdmin.from("telegram_outbox" as any)
+    const {data:existing,error}=await supabaseAdmin.from("telegram_outbox")
       .select("status").eq("idempotency_key",meta.idempotencyKey).maybeSingle();
     if(error)throw new Error("telegram_queue_check_failed");
     if(existing?.status==="sent")return;

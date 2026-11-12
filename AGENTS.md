@@ -11,3 +11,4 @@
 
 - PIX confirmation must validate provider amount, internal reference and charge identity through the shared validator before activation; this prevents cross-account crediting.
 - Recover unlinked PIX charges through the provider's exact external-reference search and reuse the internal payment ID as the provider idempotency key; this makes retries recoverable without guessing ownership.
+- Use literal typed table names for generated database queries; casting relation names to any prevents correct select-result inference.

@@ -60,11 +60,11 @@ function VisualAudit(){
     if(!user)throw new Error("Entre na sua conta.");
     const {data:roles,error:roleErr}=await supabase.rpc("has_role",{_user_id:user.id,_role:"admin"});
     if(roleErr||roles!==true)throw new Error("Área exclusiva para administradores.");
-    const {data,error}=await supabase.from("visual_audit_checks" as any)
+    const {data,error}=await supabase.from("visual_audit_checks")
       .select("id,label,target_url,status,http_status,duration_ms,screenshot_storage_path,checked_at,diagnostic,probe_mode")
       .eq("owner_id",user.id).order("checked_at",{ascending:false}).limit(75);
     if(error)throw error;
-    return (data??[]) as RecordRow[];
+    return data??[];
   },staleTime:30000});
   async function execute(){
     setWorking(true);

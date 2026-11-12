@@ -34,11 +34,11 @@ function DiagnosticMemory(){
     const {data:{user}}=await supabase.auth.getUser();
     if(!user)throw new Error("Faça login.");
     const [cases,servers]=await Promise.all([
-      supabase.from("diagnostic_case_memory" as any).select("id,server_id,error_kind,device_kind,app_name,region_code,solution,outcome,consented,anonymized,created_at").eq("owner_id",user.id).order("created_at",{ascending:false}).limit(150),
+      supabase.from("diagnostic_case_memory").select("id,server_id,error_kind,device_kind,app_name,region_code,solution,outcome,consented,anonymized,created_at").eq("owner_id",user.id).order("created_at",{ascending:false}).limit(150),
       supabase.from("servers").select("id,name").eq("owner_id",user.id).order("name"),
     ]);
     if(cases.error)throw cases.error;if(servers.error)throw servers.error;
-    return {owner:user.id,cases:(cases.data??[]) as Case[],servers:servers.data??[]};
+    return {owner:user.id,cases:cases.data??[],servers:servers.data??[]};
   },staleTime:30000});
   const matches=(q.data?.cases??[]).filter(c=>([c.solution,c.app_name,c.error_kind,c.device_kind].join(" ").toLowerCase().includes(term.toLowerCase())));
   async function save(){

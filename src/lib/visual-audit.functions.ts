@@ -82,7 +82,7 @@ async function auditUrl(target:AuditTarget,ownerId:string):Promise<AuditResult &
     diagnostic=diagnostic||"browser_screenshot_unavailable";
   }
   const durationMs=Math.max(1,Math.round(performance.now()-start));
-  const {error:dbErr}=await supabaseAdmin.from("visual_audit_checks" as any).insert({
+  const {error:dbErr}=await supabaseAdmin.from("visual_audit_checks").insert({
     id,owner_id:ownerId,label:target.label,target_url:target.url,status,
     http_status:httpStatus,duration_ms:durationMs,diagnostic,probe_mode:mode,
     screenshot_storage_path:screenshotPath,checked_at:new Date().toISOString()
@@ -98,7 +98,7 @@ export const runVisualAudit=createServerFn({method:"POST"})
     });
     if(roleError||!isAdmin)throw new Error("Acesso somente para administrador.");
     const targets=[...STATIC_TARGETS];
-    const {data:help}=await supabaseAdmin.from("reseller_help_settings" as any)
+    const {data:help}=await supabaseAdmin.from("reseller_help_settings")
       .select("slug").eq("enabled",true).order("created_at",{ascending:true}).limit(1);
     if(help?.[0]?.slug&&/^[a-z0-9-]{2,40}$/.test(help[0].slug)){
       targets.push({label:"Central pública de Ajuda",url:`https://streammonitor.site/ajuda/${help[0].slug}`});
@@ -127,7 +127,7 @@ export const saveVisualAuditBrowserProbe=createServerFn({method:"POST"})
       _user_id:context.userId,_role:"admin"
     });
     if(roleErr||!isAdmin)throw new Error("Acesso somente para administrador.");
-    const {data:check,error:lookupError}=await supabaseAdmin.from("visual_audit_checks" as any)
+    const {data:check,error:lookupError}=await supabaseAdmin.from("visual_audit_checks")
       .select("id,target_url,http_status,checked_at").eq("id",data.checkId)
       .eq("owner_id",context.userId).maybeSingle();
     if(lookupError||!check)throw new Error("Auditoria não encontrada.");
@@ -141,7 +141,7 @@ export const saveVisualAuditBrowserProbe=createServerFn({method:"POST"})
     const status=success?"partial":data.httpStatus===null?"unavailable":"failed";
     const diagnostic=success?"client_http_only_no_screenshot":data.errorCode==="none"?
       "client_http_unexpected_content_or_status":data.errorCode;
-    const {error}=await supabaseAdmin.from("visual_audit_checks" as any).update({
+    const {error}=await supabaseAdmin.from("visual_audit_checks").update({
       status,http_status:data.httpStatus,duration_ms:data.durationMs,
       diagnostic,probe_mode:"client_http"
     }).eq("id",data.checkId).eq("owner_id",context.userId).is("http_status",null);
