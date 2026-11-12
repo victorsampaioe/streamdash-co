@@ -126,9 +126,6 @@ export function VitrineStudio({ mode }: { mode: "ai" | "banner" }) {
   const [aiStyle, setAiStyle] = useState<AiStyle>("automatico");
   const [generatingAi, setGeneratingAi] = useState(false);
   const [aiBackground, setAiBackground] = useState("");
-  const [grantedArtSignature, setGrantedArtSignature] = useState("");
-  const grantedArtRef = useRef("");
-  const creditInFlight = useRef<Promise<void> | null>(null);
   const today = todayFortaleza();
 
 
@@ -207,6 +204,7 @@ export function VitrineStudio({ mode }: { mode: "ai" | "banner" }) {
     staleTime:15000,
   });
   const remainingArts = isMainAdmin ? Infinity : Math.max(0, 5 - (aiQuota.data ?? 0));
+  const usedArts = isMainAdmin ? 0 : Math.min(5, aiQuota.data ?? 0);
 
   async function openSaved(path:string|null){
     if(!path)return toast.error("Imagem não armazenada para este registro.");
@@ -221,17 +219,6 @@ export function VitrineStudio({ mode }: { mode: "ai" | "banner" }) {
     ? selected.map(id => sourceItems.find(x => x.tmdb_id === id)).filter((x): x is MediaItem => !!x)
     : [];
   const shown = mode === "banner" ? (bannerReady ? chosen.slice(0, 1) : []) : chosen.slice(0, templates.find(x=>x.id===template)?.count ?? 4);
-  // A cota é cobrada por nova composição; baixar/compartilhar a mesma prévia
-  // novamente não consome outra criação dentro desta sessão.
-  const artSignature = JSON.stringify({
-    items:shown.map(x=>[x.tmdb_id,x.media_type]),
-    kind,template,format,headline,serverNames,mode,
-    brand:[brand.brand_name,brand.whatsapp,brand.logo_url,brand.primary_color],
-    localLogo:[logoUpload.length,logoUpload.slice(-32),removeBlackLogo],
-    backgroundColor,textColor,accentColor,hideStudioMark,
-  });
-  const canReusePreview = grantedArtSignature === artSignature;
-
   const featuredDetail = useQuery({
     queryKey: ["vitrine-featured-details", shown[0]?.media_type, shown[0]?.tmdb_id],
     enabled: shown.length === 1 && !!shown[0]?.tmdb_id && !shown[0]?.overview?.trim(),
@@ -316,24 +303,6 @@ export function VitrineStudio({ mode }: { mode: "ai" | "banner" }) {
     reader.readAsDataURL(file);
   }
 
-  async function claimCreditForPreview() {
-    // Static TMDB banners do not consume scarce AI inference credits.
-    if (mode === "banner" || isMainAdmin) return;
-    if (grantedArtRef.current === artSignature) return;
-    if (creditInFlight.current) return creditInFlight.current;
-    const job = (async () => {
-      const {data,error} = await supabase.rpc("claim_vitrine_ai_art" as any);
-      void qc.invalidateQueries({queryKey:["vitrine-ai-quota"]});
-      if (error) throw new Error("Não foi possível validar as artes de hoje. " + error.message);
-      const outcome = data as {allowed?:boolean}|null;
-      if (!outcome?.allowed) throw new Error("Limite de 5 artes por dia atingido. Volte amanhã.");
-      grantedArtRef.current = artSignature;
-      setGrantedArtSignature(artSignature);
-    })();
-    creditInFlight.current = job;
-    try { await job; } finally { creditInFlight.current = null; }
-  }
-
   async function generateAiBanner() {
     if (mode !== "ai" || !settings.data || generatingAi || shown.length !== 1) return;
     setGeneratingAi(true);
@@ -358,8 +327,8 @@ export function VitrineStudio({ mode }: { mode: "ai" | "banner" }) {
       if (!response.ok || !result.image) throw new Error(result.error || "Não foi possível gerar esta arte.");
       if (!/^data:image\/(png|jpeg);base64,/.test(result.image)) throw new Error("A IA retornou uma imagem inválida.");
       setAiBackground(result.image);
-      grantedArtRef.current = artSignature;
-      setGrantedArtSignature(artSignature);
+      // The Cloudflare Worker has already claimed the AI quota for this artwork.
+      // Downloads, sharing and re-downloads must never claim again.
       toast.success("Arte criada com IA! Veja a prévia e baixe o PNG.");
     } catch(error) {
       toast.error(error instanceof Error ? error.message : "Falha ao gerar a arte com IA.");
@@ -392,7 +361,6 @@ export function VitrineStudio({ mode }: { mode: "ai" | "banner" }) {
       const blob = pngDataUrlToBlob(src);
       const file = new File([blob], "vitrine-stream-monitor.png", { type: "image/png" });
       if (navigator.canShare?.({ files: [file] }) && navigator.share) {
-        await claimCreditForPreview();
         await navigator.share({ files: [file], title: headline });
       } else if (typeof ClipboardItem !== "undefined" && navigator.clipboard?.write) {
         try {
@@ -437,7 +405,6 @@ export function VitrineStudio({ mode }: { mode: "ai" | "banner" }) {
     try {
       const src = await makePng();
       const image = pngDataUrlToBlob(src);
-      await claimCreditForPreview();
       const filename = `vitrine-${format}-${Date.now()}.png`;
       savePngLocally(image, filename);
       toast.success("PNG gerado. Confira seus downloads ou arquivos.");
@@ -523,7 +490,7 @@ export function VitrineStudio({ mode }: { mode: "ai" | "banner" }) {
             <div className="flex flex-wrap gap-2 items-center justify-between">
               <h3 className="text-sm font-bold text-blue-200 flex items-center gap-2"><Sparkles size={17}/> Gerador de banner com IA</h3>
               <span className="rounded-full bg-blue-500/15 border border-blue-400/30 px-3 py-1 text-xs font-semibold text-blue-200">
-                {isMainAdmin ? "Administrador · artes ilimitadas" : aiQuota.isLoading?"Consultando créditos...":aiQuota.isError?"Cota indisponível":remainingArts+" de 5 artes restantes"}
+                {isMainAdmin ? "Administrador · artes ilimitadas" : aiQuota.isLoading?"Consultando créditos...":aiQuota.isError?"Cota indisponível":`${usedArts}/5 utilizadas · ${remainingArts} restantes`}
               </span>
             </div>
             <p className="text-xs text-muted-foreground">A Cloudflare cria um cenário cinematográfico original com base na sinopse. A marca, a capa e o título são adicionados pelo Stream Monitor.</p>
@@ -538,7 +505,7 @@ export function VitrineStudio({ mode }: { mode: "ai" | "banner" }) {
             </Button>
             {shown.length!==1 && <p className="text-xs text-amber-300">Para gerar com IA, escolha um modelo de 1 título em destaque.</p>}
             {aiBackground && <p className="text-xs text-blue-300">Cenário exclusivo aplicado à prévia. Ajuste os textos e exporte a arte.</p>}
-            <p className="text-xs text-muted-foreground">{isMainAdmin ? "Seu acesso administrativo não possui limite diário de geração." : "Revendedores podem gerar até 5 novas artes por dia, no horário de Fortaleza. Repetir o download da mesma prévia não consome outra geração."}</p>
+            <p className="text-xs text-muted-foreground">{isMainAdmin ? "Seu acesso administrativo não possui limite diário de geração." : "Cada revendedor possui seus próprios 5 créditos diários, no horário de Fortaleza. Apenas novas gerações de imagem por IA consomem créditos. Downloads e compartilhamentos são gratuitos."}</p>
           </div>}
           {mode === "banner" && <div className="space-y-2">
             <p className="text-xs text-muted-foreground">{feed.isLoading ? "Pesquisando filmes e séries..." : "Selecione a capa do título desejado:"}</p>
@@ -556,8 +523,8 @@ export function VitrineStudio({ mode }: { mode: "ai" | "banner" }) {
           {imagesLoading && <p className="text-xs text-muted-foreground">Preparando capas e logo para exportação...</p>}
           {imageError && <p className="text-xs text-destructive">Falha ao preparar imagem: {imageError}</p>}
           {assetWarning && <p className="text-xs text-amber-500">{assetWarning}</p>}
-          <Button className="w-full" disabled={exporting || generatingAi || !imagesReady || settings.isLoading || (mode === "ai" && (!aiBackground || (!isMainAdmin && remainingArts===0 && !canReusePreview)))} onClick={download}><Download size={17} className="mr-2"/>{exporting?"Preparando PNG...":"Baixar PNG"}</Button>
-          <Button variant="outline" className="w-full" disabled={sharing || generatingAi || !imagesReady || (mode === "ai" && (!aiBackground || (!isMainAdmin && remainingArts===0 && !canReusePreview)))} onClick={shareTelegram}><Share2 size={17} className="mr-2"/>{sharing?"Preparando...":"Compartilhar PNG (Telegram)"}</Button>
+          <Button className="w-full" disabled={exporting || generatingAi || !imagesReady || settings.isLoading || (mode === "ai" && (!aiBackground || false))} onClick={download}><Download size={17} className="mr-2"/>{exporting?"Preparando PNG...":"Baixar PNG"}</Button>
+          <Button variant="outline" className="w-full" disabled={sharing || generatingAi || !imagesReady || (mode === "ai" && (!aiBackground || false))} onClick={shareTelegram}><Share2 size={17} className="mr-2"/>{sharing?"Preparando...":"Compartilhar PNG (Telegram)"}</Button>
           <Button variant="outline" className="w-full" onClick={()=>{navigator.clipboard.writeText(caption).then(()=>toast.success("Legenda copiada")).catch(()=>toast.error("Não foi possível copiar"));}}>Copiar legenda</Button>
         </Card>
       </div>
