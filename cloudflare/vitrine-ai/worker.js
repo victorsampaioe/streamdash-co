@@ -136,32 +136,75 @@ export default {
         "FINAL STRICT CHECK: The final pixels must depict scenery and figures only. Absolutely ZERO letters, words, dates, digits, logos, labels, watermarks, signs with writing or typographic marks, anywhere."
       ].filter(Boolean).join(" ");
       const outputSize = format === "story" ? [768,1344] : format === "landscape" ? [1536,576] : [1024,1024];
-      const form = new FormData();
-      form.append("prompt",prompt);
-      form.append("width",String(outputSize[0]));
-      form.append("height",String(outputSize[1]));
-      const encoded = new Response(form);
-      let result;
-      try {
-        result = await env.AI.run("@cf/black-forest-labs/flux-2-klein-4b",{
-          multipart:{body:encoded.body,contentType:encoded.headers.get("content-type")}
-        });
-      } catch (primaryError) {
-        console.error("vitrine flux2 inference failed",String(primaryError).slice(0,120));
-        // A smaller model preserves availability on accounts without FLUX.2 entitlement.
-        result = await env.AI.run("@cf/black-forest-labs/flux-1-schnell",{
-          prompt:prompt,steps:8
-        });
+      let encodedImage = "";
+      let mime = "image/png";
+      let textGuard = "unchecked";
+      let autoRetries = 0;
+      // The quota is claimed ONCE before this loop: a visual retry never
+      // consumes a second reseller credit.
+      for (let attempt = 0; attempt < 2; attempt++) {
+        const instruction = attempt === 0 ? prompt : prompt +
+          " STRICT RETRY DUE TO DETECTED WRITING IN PRIOR OUTPUT: absolutely NO shop signs, logos, billboards, screen UI, posters, packaging, labels, letters, numbers or shapes resembling typography; use blank seamless surfaces and natural scenery only.";
+        const form = new FormData();
+        form.append("prompt", instruction);
+        form.append("width", String(outputSize[0]));
+        form.append("height", String(outputSize[1]));
+        const encoded = new Response(form);
+        let result;
+        try {
+          result = await env.AI.run("@cf/black-forest-labs/flux-2-klein-4b", {
+            multipart:{body:encoded.body,contentType:encoded.headers.get("content-type")}
+          });
+        } catch (primaryError) {
+          console.error("vitrine flux2 inference failed",String(primaryError).slice(0,120));
+          result = await env.AI.run("@cf/black-forest-labs/flux-1-schnell", {
+            prompt:instruction,steps:8
+          });
+        }
+        encodedImage = result && typeof result.image === "string" ? result.image : "";
+        if (!encodedImage || encodedImage.length < 256) {
+          return respond({error:"A IA não conseguiu gerar a imagem. Tente outro estilo.",remaining:quota.remaining,limit:5},502,origin);
+        }
+        mime = encodedImage.startsWith("/9j/") ? "image/jpeg" : "image/png";
+
+        // OCR-style safety check on the GENERATED BACKGROUND ONLY.
+        // It never examines the title/description added later by our template.
+        // Model errors do not count as text detections (and do not cause
+        // wasteful regeneration). A positive detection triggers ONE retry.
+        let containsText = null;
+        try {
+          const vision = await env.AI.run("@cf/moondream/moondream3.1-9B-A2B", {
+            task:"query",
+            image:"data:" + mime + ";base64," + encodedImage,
+            question:"Inspect the image carefully for ANY visible writing. Are there readable or fake letters, words, digits, years, film titles, labels, text on billboards, logos or watermarks anywhere in this image? Respond with exactly YES or NO. YES if any typography is visible. NO if this is only imagery without any written characters.",
+            reasoning:false,temperature:0,max_tokens:12,stream:false
+          });
+          const answer = String(vision?.answer || "").trim().toUpperCase();
+          if (/^YES\b/.test(answer)) containsText = true;
+          else if (/^NO\b/.test(answer)) containsText = false;
+        } catch (scanError) {
+          console.warn("vitrine background text check unavailable", String(scanError).slice(0,100));
+        }
+        if (containsText === true) {
+          autoRetries++;
+          if (attempt === 1) {
+            return respond({
+              error:"A IA adicionou texto ao cenário em duas tentativas. A imagem foi bloqueada para não divulgar uma arte com letras. Tente outro estilo.",
+              remaining:quota.remaining,
+              limit:5
+            },422,origin);
+          }
+          continue;
+        }
+        textGuard = containsText === false ? "passed" : "unavailable";
+        break;
       }
-      const encodedImage = result && typeof result.image === "string" ? result.image : "";
-      if (!encodedImage || encodedImage.length < 256) {
-        return respond({error:"A IA não conseguiu gerar a imagem. Tente outro estilo.",remaining:quota.remaining,limit:5},502,origin);
-      }
-      const mime = encodedImage.startsWith("/9j/") ? "image/jpeg" : "image/png";
       return respond({
         image:"data:" + mime + ";base64," + encodedImage,
         image_mode:"background_only_no_text",
-        prompt_version:"text_free_v2",
+        prompt_version:"text_free_v3",
+        text_guard:textGuard,
+        auto_retries:autoRetries,
         remaining:quota.remaining,
         used:quota.used,
         limit:5,
