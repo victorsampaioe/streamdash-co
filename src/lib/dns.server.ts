@@ -558,13 +558,7 @@ export async function runDnsCheck(serverId: string, opts: { quick?: boolean } = 
     .from("servers")
     .select("dns_status, dns_failure_count, dns_last_success_at, dns_last_failure_at, dns_recovery_success_streak")
     .eq("id", serverId)
-    .maybeSingle<{
-      dns_status: string | null;
-      dns_failure_count: number | null;
-      dns_last_success_at: string | null;
-      dns_last_failure_at: string | null;
-      dns_recovery_success_streak: number | null;
-    }>();
+    .maybeSingle();
 
   // Não confiar em um único resolvedor positivo quando quatro falham.
   // Duas verificações severas consecutivas confirmam DNS offline; o status
@@ -763,7 +757,14 @@ export async function runDueDnsRecoveryChecks(limit = 16): Promise<{
     .order("dns_recovery_last_probe_at", { ascending: true, nullsFirst: true })
     .limit(200);
   if (error) throw new Error("Não foi possível ler a fila DNS: " + error.message);
-  const due = (candidates ?? [])
+  type RecoveryQueueRow = {
+    id: string;
+    owner_id: string;
+    dns_status: "offline" | "unstable";
+    last_dns_check_at: string | null;
+    dns_recovery_last_probe_at: string | null;
+  };
+  const due = ((candidates ?? []) as RecoveryQueueRow[])
     .filter((item) => {
       // Never compete with a DNS check that just completed in the normal cron.
       const last = Math.max(
