@@ -20,7 +20,7 @@ function canonicalDns(raw: string): string {
   const port = parts[2] ? Number(parts[2]) : null;
   if (port !== null && (port < 1 || port > 65535)) throw new Error("A porta informada não é válida.");
   const domain = /^(?=.{1,253}$)[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?(?:\.[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?)+$/i;
-  const ipv4Like = /^\\d+(?:\\.\\d+){3}$/.test(hostname);
+  const ipv4Like = /^\d+(?:\.\d+){3}$/.test(hostname);
   const isValidIPv4 = ipv4Like && hostname.split(".").every(octet => octet.length <= 3 && Number(octet) <= 255);
   if ((ipv4Like && !isValidIPv4) || (!domain.test(hostname) && !isValidIPv4)) {
     throw new Error("Informe um domínio público ou IPv4 válido.");
