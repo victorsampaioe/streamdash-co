@@ -14,7 +14,7 @@ import { Card } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
 
-const searchSchema = z.object({ redirect: z.string().optional(), ref: z.string().regex(/^[A-Za-z0-9]{4,16}$/).optional() }).partial();
+const searchSchema = z.object({ redirect: z.string().optional(), ref: z.string().regex(/^[A-Za-z0-9]{4,16}$/).optional(), tab: z.enum(["signin","signup"]).optional() }).partial();
 
 export const Route = createFileRoute("/auth")({
   validateSearch: searchSchema,
@@ -41,9 +41,9 @@ function generatePassword() {
 
 function AuthPage() {
   const navigate = useNavigate();
-  const { redirect, ref } = useSearch({ from: "/auth" });
+  const { redirect, ref, tab: initialTab } = useSearch({ from: "/auth" });
   const safeRedirect = redirect && /^\/app(?:\/|$)/.test(redirect) ? redirect : "/app";
-  const [tab, setTab] = useState(ref ? "signup" : "signin");
+  const [tab, setTab] = useState(ref || initialTab === "signup" ? "signup" : "signin");
   const [loading, setLoading] = useState(false);
   const [identity, setIdentity] = useState("");
   const [email, setEmail] = useState("");
