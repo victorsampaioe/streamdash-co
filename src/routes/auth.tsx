@@ -148,7 +148,7 @@ function AuthPage() {
         throw new Error(result.error ?? "Não conseguimos criar sua conta agora. Tente novamente em alguns segundos.");
       }
       // Conta criada pelo servidor: único ponto que conta como cadastro concluído.
-      window.__lovableEvents?.track?.("project.signup_completed", { source: readAttributionSource(), needs_email_confirmation: Boolean(result.needsEmailConfirmation) });
+      window.__lovableEvents?.track?.("project.signup_completed", { source: readAttributionSource(), pending_activation: Boolean(result.needsEmailConfirmation) });
       void trackMetaCompleteRegistration(requestId);
       if (result.needsEmailConfirmation) {
         toast.success("Conta criada! Confira seu e-mail para confirmar o acesso.");
