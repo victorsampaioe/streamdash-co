@@ -4,6 +4,7 @@ import {
   Link,
   createRootRouteWithContext,
   useRouter,
+  useRouterState,
   HeadContent,
   Scripts,
   type ErrorComponentProps,
@@ -16,6 +17,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { Toaster } from "@/components/ui/sonner";
 import { ThemeProvider } from "@/components/theme-provider";
 import { installChunkRecovery } from "@/lib/chunk-recovery";
+import { trackMetaPageView, isPrivatePath } from "@/lib/meta-pixel";
+import { captureAttribution } from "@/lib/ad-attribution";
 
 
 function NotFoundComponent() {
@@ -181,6 +184,21 @@ function RootComponent() {
   }, []);
 
   useEffect(() => installChunkRecovery(), []);
+
+  const pathname = useRouterState({ select: (state) => state.location.pathname });
+  useEffect(() => {
+    const attribution = captureAttribution();
+    if (attribution && !isPrivatePath(window.location.pathname)) {
+      window.__lovableEvents?.track?.("project.ad_landing", {
+        source: attribution.source,
+        utm_campaign: attribution.utm_campaign ?? "",
+        landing_path: window.location.pathname,
+      });
+    }
+  }, []);
+  useEffect(() => {
+    void trackMetaPageView(pathname);
+  }, [pathname]);
 
   useEffect(() => {
     const { data: sub } = supabase.auth.onAuthStateChange((event) => {

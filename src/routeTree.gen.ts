@@ -21,6 +21,7 @@ import { Route as DnsRouteImport } from './routes/dns'
 import { Route as McpRouteImport } from './routes/mcp'
 import { Route as MonitoramentoDnsRouteImport } from './routes/monitoramento-dns'
 import { Route as MonitoramentoIptvRouteImport } from './routes/monitoramento-iptv'
+import { Route as PrivacidadeRouteImport } from './routes/privacidade'
 import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as RevendedorStreamMonitorRouteImport } from './routes/revendedor-stream-monitor'
 import { Route as RobotsDottxtRouteImport } from './routes/robots[.]txt'
@@ -175,6 +176,11 @@ const MonitoramentoDnsRoute = MonitoramentoDnsRouteImport.update({
 const MonitoramentoIptvRoute = MonitoramentoIptvRouteImport.update({
   id: '/monitoramento-iptv',
   path: '/monitoramento-iptv',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PrivacidadeRoute = PrivacidadeRouteImport.update({
+  id: '/privacidade',
+  path: '/privacidade',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ResetPasswordRoute = ResetPasswordRouteImport.update({
@@ -712,6 +718,7 @@ export interface FileRoutesByFullPath {
   '/mcp': typeof McpRoute
   '/monitoramento-dns': typeof MonitoramentoDnsRoute
   '/monitoramento-iptv': typeof MonitoramentoIptvRoute
+  '/privacidade': typeof PrivacidadeRoute
   '/reset-password': typeof ResetPasswordRoute
   '/revendedor-stream-monitor': typeof RevendedorStreamMonitorRoute
   '/robots.txt': typeof RobotsDottxtRoute
@@ -821,6 +828,7 @@ export interface FileRoutesByTo {
   '/mcp': typeof McpRoute
   '/monitoramento-dns': typeof MonitoramentoDnsRoute
   '/monitoramento-iptv': typeof MonitoramentoIptvRoute
+  '/privacidade': typeof PrivacidadeRoute
   '/reset-password': typeof ResetPasswordRoute
   '/revendedor-stream-monitor': typeof RevendedorStreamMonitorRoute
   '/robots.txt': typeof RobotsDottxtRoute
@@ -931,6 +939,7 @@ export interface FileRoutesById {
   '/mcp': typeof McpRoute
   '/monitoramento-dns': typeof MonitoramentoDnsRoute
   '/monitoramento-iptv': typeof MonitoramentoIptvRoute
+  '/privacidade': typeof PrivacidadeRoute
   '/reset-password': typeof ResetPasswordRoute
   '/revendedor-stream-monitor': typeof RevendedorStreamMonitorRoute
   '/robots.txt': typeof RobotsDottxtRoute
@@ -1042,6 +1051,7 @@ export interface FileRouteTypes {
     | '/mcp'
     | '/monitoramento-dns'
     | '/monitoramento-iptv'
+    | '/privacidade'
     | '/reset-password'
     | '/revendedor-stream-monitor'
     | '/robots.txt'
@@ -1151,6 +1161,7 @@ export interface FileRouteTypes {
     | '/mcp'
     | '/monitoramento-dns'
     | '/monitoramento-iptv'
+    | '/privacidade'
     | '/reset-password'
     | '/revendedor-stream-monitor'
     | '/robots.txt'
@@ -1260,6 +1271,7 @@ export interface FileRouteTypes {
     | '/mcp'
     | '/monitoramento-dns'
     | '/monitoramento-iptv'
+    | '/privacidade'
     | '/reset-password'
     | '/revendedor-stream-monitor'
     | '/robots.txt'
@@ -1371,6 +1383,7 @@ export interface RootRouteChildren {
   McpRoute: typeof McpRoute
   MonitoramentoDnsRoute: typeof MonitoramentoDnsRoute
   MonitoramentoIptvRoute: typeof MonitoramentoIptvRoute
+  PrivacidadeRoute: typeof PrivacidadeRoute
   ResetPasswordRoute: typeof ResetPasswordRoute
   RevendedorStreamMonitorRoute: typeof RevendedorStreamMonitorRoute
   RobotsDottxtRoute: typeof RobotsDottxtRoute
@@ -1511,6 +1524,13 @@ declare module '@tanstack/react-router' {
       path: '/monitoramento-iptv'
       fullPath: '/monitoramento-iptv'
       preLoaderRoute: typeof MonitoramentoIptvRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/privacidade': {
+      id: '/privacidade'
+      path: '/privacidade'
+      fullPath: '/privacidade'
+      preLoaderRoute: typeof PrivacidadeRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/reset-password': {
@@ -2344,6 +2364,7 @@ const rootRouteChildren: RootRouteChildren = {
   McpRoute: McpRoute,
   MonitoramentoDnsRoute: MonitoramentoDnsRoute,
   MonitoramentoIptvRoute: MonitoramentoIptvRoute,
+  PrivacidadeRoute: PrivacidadeRoute,
   ResetPasswordRoute: ResetPasswordRoute,
   RevendedorStreamMonitorRoute: RevendedorStreamMonitorRoute,
   RobotsDottxtRoute: RobotsDottxtRoute,

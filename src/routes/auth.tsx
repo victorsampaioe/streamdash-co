@@ -1,5 +1,5 @@
 import { createFileRoute, Link, useNavigate, useSearch } from "@tanstack/react-router";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { z } from "zod";
 import { Activity, Check, Copy, Eye, EyeOff, KeyRound, RefreshCw, Zap } from "lucide-react";
@@ -13,6 +13,8 @@ import { Label } from "@/components/ui/label";
 import { Card } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
+import { trackMetaCompleteRegistration } from "@/lib/meta-pixel";
+import { readAttributionSource } from "@/lib/ad-attribution";
 
 const searchSchema = z.object({ redirect: z.string().optional(), ref: z.string().regex(/^[A-Za-z0-9]{4,16}$/).optional(), tab: z.enum(["signin","signup"]).optional() }).partial();
 
@@ -114,6 +116,13 @@ function AuthPage() {
     finally { setLoading(false); }
   }
 
+  const signupStartedRef = useRef(false);
+  function markSignupStarted() {
+    if (signupStartedRef.current) return;
+    signupStartedRef.current = true;
+    window.__lovableEvents?.track?.("project.signup_started", { source: readAttributionSource() });
+  }
+
   async function handleSignUp(event: React.FormEvent) {
     event.preventDefault();
     const usernameCheck = validateUsername(username);
@@ -128,15 +137,19 @@ function AuthPage() {
     if (loading) return;
     setLoading(true);
     try {
+      const requestId = crypto.randomUUID();
       const response = await fetch("/api/public/signup", {
         method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ username: usernameCheck.value, email: emailCheck.value, password, referralCode: ref?.toUpperCase(), turnstileToken, company_website: honeypot, requestId: crypto.randomUUID() }),
+        body: JSON.stringify({ username: usernameCheck.value, email: emailCheck.value, password, referralCode: ref?.toUpperCase(), turnstileToken, company_website: honeypot, requestId }),
       });
       const result = await response.json() as { error?: string; code?: string; needsEmailConfirmation?: boolean };
       if (!response.ok) {
         if (result.code === "email_exists") setEmailExists(true);
         throw new Error(result.error ?? "Não conseguimos criar sua conta agora. Tente novamente em alguns segundos.");
       }
+      // Conta criada pelo servidor: único ponto que conta como cadastro concluído.
+      window.__lovableEvents?.track?.("project.signup_completed", { source: readAttributionSource(), pending_activation: Boolean(result.needsEmailConfirmation) });
+      void trackMetaCompleteRegistration(requestId);
       if (result.needsEmailConfirmation) {
         toast.success("Conta criada! Confira seu e-mail para confirmar o acesso.");
         if (quickMode) {
@@ -221,7 +234,7 @@ function AuthPage() {
         <Button type="button" variant="link" onClick={() => handleReset()} className="h-auto p-0 text-xs text-muted-foreground">Esqueci minha senha</Button>
         <Button type="submit" disabled={loading} className="w-full">{loading ? "Entrando..." : "Entrar"}</Button>
       </form></TabsContent>
-      <TabsContent value="signup"><form onSubmit={handleSignUp} className="space-y-4">
+      <TabsContent value="signup"><form onSubmit={handleSignUp} onFocusCapture={markSignupStarted} className="space-y-4">
         <div><h1 className="text-xl font-bold">Criar sua conta</h1><p className="mt-1 text-sm text-muted-foreground">Comece em poucos segundos.</p>{ref && <p className="mt-2 rounded-lg border border-blue-500/25 bg-blue-500/10 p-3 text-xs text-blue-500">🎁 Convite <strong>{ref.toUpperCase()}</strong> aplicado! Ganhe <strong>2 dias de teste grátis</strong> ao criar sua conta. Quem te indicou ganha 30% em créditos nas suas renovações pagas.</p>}</div>
         <Field label="Usuário"><Input required autoComplete="username" maxLength={24} value={username} onChange={(event) => setUsername(normalizeUsername(event.target.value))} placeholder="como quer ser chamado" /><AvailabilityLine state={availability} /></Field>
         <Field label="E-mail"><Input required type="email" autoComplete="email" value={email} onChange={(event) => setEmail(event.target.value)} placeholder="voce@empresa.com" />{emailExists && <div className="mt-2 text-xs text-destructive">Já encontramos uma conta com esse e-mail. <button type="button" className="underline" onClick={() => { setIdentity(email); setTab("signin"); }}>Entrar</button> ou <button type="button" className="underline" onClick={() => { setIdentity(email); handleReset(email); }}>recuperar senha</button>.</div>}</Field>
