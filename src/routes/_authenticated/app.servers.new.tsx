@@ -12,6 +12,7 @@ import { z } from "zod";
 import { toast } from "sonner";
 import { useServerFn } from "@tanstack/react-start";
 import { validateHostEligibility } from "@/lib/validation.functions";
+import { createMonitoredServer } from "@/lib/server-configuration.functions";
 import { PremiumGate } from "@/components/subscription/premium-gate";
 import { AlertCircle, CheckCircle2, XCircle, Clock, Info, Loader2 } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -37,8 +38,12 @@ function NewServer() {
   const navigate = useNavigate();
   const qc = useQueryClient();
   const runValidation = useServerFn(validateHostEligibility);
+  const saveServer = useServerFn(createMonitoredServer);
   const [name, setName] = useState("");
   const [host, setHost] = useState("");
+  const [iptvUsername, setIptvUsername] = useState("");
+  const [iptvPassword, setIptvPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [diagnosis, setDiagnosis] = useState<{ reason: string } | null>(null);
   const [isValidating, setIsValidating] = useState(false);
   
@@ -68,26 +73,30 @@ function NewServer() {
 
   const create = useMutation({
     mutationFn: async () => {
-      const parsed = schema.parse({ name, host: host.replace(/^https?:\/\//i, "").replace(/\/.*$/, ""), server_group: name, description, is_public: isPublic });
-      const { data: userRes } = await supabase.auth.getUser();
-      if (!userRes.user) throw new Error("Não autenticado");
-      const slug = isPublic ? `${slugify(parsed.name)}-${Math.random().toString(36).slice(2, 6)}` : null;
-      const { data, error } = await supabase.from("servers").insert({
-        owner_id: userRes.user.id,
-        name: parsed.name,
-        host: parsed.host,
-        server_group: parsed.server_group || null,
-        description: parsed.description ?? null,
-        is_public: parsed.is_public,
-        public_slug: slug,
-      }).select("id").single();
-
-      if (error) throw error;
-      return data.id as string;
+      if (Boolean(iptvUsername.trim()) !== Boolean(iptvPassword.trim())) {
+        throw new Error("Informe usuário e senha ativos juntos, ou deixe ambos em branco.");
+      }
+      const parsed = schema.parse({
+        name,
+        host: host.trim(), server_group: name, description, is_public: isPublic
+      });
+      const result = await saveServer({
+        data: {
+          name: parsed.name,
+          host: parsed.host,
+          description: parsed.description || "",
+          isPublic: parsed.is_public,
+          username: iptvUsername,
+          password: iptvPassword,
+        },
+      });
+      return result.id;
     },
     onSuccess: async (id) => {
       qc.invalidateQueries({ queryKey: ["servers"] });
-      toast.success("Servidor cadastrado! A primeira verificação DNS entrará na próxima rodada automática.");
+      setIptvUsername("");
+      setIptvPassword("");
+      toast.success("Servidor cadastrado! DNS entra na fila automática. Se você informou credenciais, a análise IPTV autenticada será iniciada nos próximos ciclos.");
       navigate({ to: "/app/servers/$id", params: { id } });
     },
     onError: (e: Error) => {
@@ -126,6 +135,29 @@ function NewServer() {
                 <AlertDescription className="text-xs">{diagnosis.reason}</AlertDescription>
               </Alert>
             )}
+          </div>
+
+          <div className="rounded-xl border border-blue-500/30 bg-blue-500/5 p-4 space-y-3">
+            <div>
+              <Label className="text-sm font-semibold">Acesso IPTV/Xtream (opcional)</Label>
+              <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
+                Com <strong>usuário e senha de uma conta ativa</strong>, o Stream Monitor pode verificar o login da API e obter um diagnóstico mais preciso do serviço e catálogo, além do teste DNS/HTTP.
+                Use somente credenciais autorizadas para esse servidor. Contas vencidas, bloqueadas ou inválidas podem falhar na verificação.
+                Sem esses dados o monitoramento DNS e HTTP continua normalmente.
+              </p>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="new-iptv-username">Usuário ativo (opcional)</Label>
+              <Input id="new-iptv-username" value={iptvUsername} onChange={e=>setIptvUsername(e.target.value)} placeholder="Usuário Xtream" autoComplete="off" maxLength={200}/>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="new-iptv-password">Senha ativa (opcional)</Label>
+              <div className="flex gap-2">
+                <Input id="new-iptv-password" type={showPassword?"text":"password"} value={iptvPassword} onChange={e=>setIptvPassword(e.target.value)} placeholder="Senha do usuário ativo" autoComplete="new-password" maxLength={200}/>
+                <Button type="button" variant="outline" onClick={()=>setShowPassword(v=>!v)} aria-label={showPassword?"Ocultar senha":"Mostrar senha"}>{showPassword?"Ocultar":"Mostrar"}</Button>
+              </div>
+            </div>
+            <p className="text-xs text-blue-200">Os dois campos são opcionais, mas, se usados, devem ser preenchidos juntos. São criptografados no servidor e nunca exibidos novamente.</p>
           </div>
 
           <div className="space-y-2">
