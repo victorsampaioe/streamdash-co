@@ -75,16 +75,16 @@ function Landing() {
               <Activity className="h-4 w-4 shrink-0" /> <span>Inteligência para sua operação</span>
             </div>
             <h1 className="sm-hero-heading max-w-[730px] text-[clamp(2.65rem,7.8vw,5rem)] font-black leading-[1.045] tracking-[-.065em] text-foreground">
-              Sua operação sob controle.
-              <span className="mt-2 block bg-gradient-to-r from-blue-400 via-blue-500 to-cyan-300 bg-clip-text text-transparent">Em tempo real.</span>
+              Seu servidor caiu?
+              <span className="mt-2 block bg-gradient-to-r from-blue-400 via-blue-500 to-cyan-300 bg-clip-text text-transparent">Descubra antes que seus clientes reclamem.</span>
             </h1>
             <p className="mt-6 max-w-xl text-[15px] leading-7 text-muted-foreground sm:text-lg sm:leading-8">
-              Monitore servidores IPTV, DNS e disponibilidade em um só lugar. Identifique falhas, acompanhe a performance e receba alertas no Telegram — tudo em um painel criado para revendedores.
+              Monitore DNS, disponibilidade e latência dos seus servidores. Receba alertas no Telegram quando uma falha for confirmada — tudo em um painel criado para revendedores, por R$ 25/mês.
             </p>
             <div className="sm-hero-actions mt-8 grid gap-3 sm:flex sm:flex-wrap">
               <Link to="/auth" search={{tab:"signup"}} className="block">
                 <Button size="lg" className="sm-primary-cta h-13 w-full rounded-xl bg-blue-600 px-7 text-sm font-bold text-white shadow-lg shadow-blue-600/20 hover:bg-blue-500 sm:w-auto sm:text-base">
-                  Cadastre-se agora · R$ 25/mês <ArrowRight className="ml-1 h-4 w-4" />
+                  Criar minha conta <ArrowRight className="ml-1 h-4 w-4" />
                 </Button>
               </Link>
               <Link to="/revendedor-stream-monitor" className="block">
@@ -340,7 +340,7 @@ function Landing() {
             Centralize o monitoramento, acompanhe seus servidores e tenha mais controle sobre a sua infraestrutura.
           </p>
           <div className="mx-auto mt-9 flex w-full max-w-md flex-col justify-center gap-3 sm:max-w-none sm:flex-row">
-            <Link to="/auth" className="w-full sm:w-auto">
+            <Link to="/auth" search={{tab:"signup"}} className="w-full sm:w-auto">
               <Button size="lg" className="h-12 w-full rounded-xl bg-blue-600 px-8 font-semibold text-white shadow-lg shadow-blue-600/20 hover:bg-blue-500 sm:w-auto">
                 Começar agora <ArrowRight className="ml-2 h-4 w-4" />
               </Button>
@@ -378,6 +378,7 @@ function Landing() {
               <Link to="/blog" className="w-fit hover:text-blue-400">Blog</Link>
               <Link to="/auth" className="w-fit hover:text-blue-400">Entrar na plataforma</Link>
               <a href="https://t.me/+RId642Ac4AFkOWFh" target="_blank" rel="noopener noreferrer" className="w-fit hover:text-blue-400">Telegram</a>
+              <Link to="/privacidade" className="w-fit hover:text-blue-400">Privacidade e anúncios</Link>
             </nav>
           </div>
         </div>
@@ -520,7 +521,7 @@ function PresentationVideo() {
         </div>
         <div className="space-y-3 border-t border-white/10 bg-[#0a1426] p-4 sm:p-5">
           <p className="text-center text-sm font-medium text-slate-200">Conheça a plataforma antes de escolher seu plano.</p>
-          <Link to="/auth" className="block">
+          <Link to="/auth" search={{tab:"signup"}} className="block">
             <Button className="h-12 w-full rounded-xl bg-blue-600 text-base font-bold text-white hover:bg-blue-500">
               Criar minha conta e assinar <ArrowRight className="ml-2 h-4 w-4" />
             </Button>
@@ -736,7 +737,7 @@ function RadarShowcase() {
         </div>
 
         <div className="mt-8">
-          <Link to="/auth">
+          <Link to="/auth" search={{tab:"signup"}}>
             <Button size="lg" className="glow-primary px-8 gap-2 h-12 text-base">
               <Search className="h-5 w-5" />
               Conhecer Inteligência de Conteúdo
