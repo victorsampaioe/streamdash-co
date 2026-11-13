@@ -60,7 +60,12 @@ export const createMonitoredServer = createServerFn({ method: "POST" })
       ? data.name.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "")
         .replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "").slice(0, 45) + "-" + crypto.randomUUID().slice(0, 8)
       : null;
-    const { data: created, error } = await context.supabase.from("servers")
+    // Existing INSERT RLS only recognizes subscription rows, while reseller
+    // access is based on an active credit wallet. requireActiveSubscription
+    // has already verified the same entitlement used by monitoring jobs.
+    // Only the authenticated caller's owner_id can be inserted here.
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: created, error } = await supabaseAdmin.from("servers")
       .insert({
         owner_id: context.userId,
         name: data.name.trim(),
