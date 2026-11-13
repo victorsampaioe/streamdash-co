@@ -100,6 +100,7 @@ import { Route as ApiPublicCronCheckRouteImport } from './routes/api/public/cron
 import { Route as ApiPublicCronCloudflareEdgeAnnouncementRouteImport } from './routes/api/public/cron/cloudflare-edge-announcement'
 import { Route as ApiPublicCronDigestRouteImport } from './routes/api/public/cron/digest'
 import { Route as ApiPublicCronDnsAlertsRouteImport } from './routes/api/public/cron/dns-alerts'
+import { Route as ApiPublicCronDnsRecoveryRouteImport } from './routes/api/public/cron/dns-recovery'
 import { Route as ApiPublicCronIptvNotificationsRouteImport } from './routes/api/public/cron/iptv-notifications'
 import { Route as ApiPublicCronMonitorRouteImport } from './routes/api/public/cron/monitor'
 import { Route as ApiPublicCronNotificationsRouteImport } from './routes/api/public/cron/notifications'
@@ -603,6 +604,12 @@ const ApiPublicCronDnsAlertsRoute = ApiPublicCronDnsAlertsRouteImport.update({
   path: '/api/public/cron/dns-alerts',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicCronDnsRecoveryRoute =
+  ApiPublicCronDnsRecoveryRouteImport.update({
+    id: '/api/public/cron/dns-recovery',
+    path: '/api/public/cron/dns-recovery',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiPublicCronIptvNotificationsRoute =
   ApiPublicCronIptvNotificationsRouteImport.update({
     id: '/api/public/cron/iptv-notifications',
@@ -781,6 +788,7 @@ export interface FileRoutesByFullPath {
   '/api/public/cron/cloudflare-edge-announcement': typeof ApiPublicCronCloudflareEdgeAnnouncementRoute
   '/api/public/cron/digest': typeof ApiPublicCronDigestRoute
   '/api/public/cron/dns-alerts': typeof ApiPublicCronDnsAlertsRoute
+  '/api/public/cron/dns-recovery': typeof ApiPublicCronDnsRecoveryRoute
   '/api/public/cron/iptv-notifications': typeof ApiPublicCronIptvNotificationsRoute
   '/api/public/cron/monitor': typeof ApiPublicCronMonitorRoute
   '/api/public/cron/notifications': typeof ApiPublicCronNotificationsRoute
@@ -888,6 +896,7 @@ export interface FileRoutesByTo {
   '/api/public/cron/cloudflare-edge-announcement': typeof ApiPublicCronCloudflareEdgeAnnouncementRoute
   '/api/public/cron/digest': typeof ApiPublicCronDigestRoute
   '/api/public/cron/dns-alerts': typeof ApiPublicCronDnsAlertsRoute
+  '/api/public/cron/dns-recovery': typeof ApiPublicCronDnsRecoveryRoute
   '/api/public/cron/iptv-notifications': typeof ApiPublicCronIptvNotificationsRoute
   '/api/public/cron/monitor': typeof ApiPublicCronMonitorRoute
   '/api/public/cron/notifications': typeof ApiPublicCronNotificationsRoute
@@ -998,6 +1007,7 @@ export interface FileRoutesById {
   '/api/public/cron/cloudflare-edge-announcement': typeof ApiPublicCronCloudflareEdgeAnnouncementRoute
   '/api/public/cron/digest': typeof ApiPublicCronDigestRoute
   '/api/public/cron/dns-alerts': typeof ApiPublicCronDnsAlertsRoute
+  '/api/public/cron/dns-recovery': typeof ApiPublicCronDnsRecoveryRoute
   '/api/public/cron/iptv-notifications': typeof ApiPublicCronIptvNotificationsRoute
   '/api/public/cron/monitor': typeof ApiPublicCronMonitorRoute
   '/api/public/cron/notifications': typeof ApiPublicCronNotificationsRoute
@@ -1108,6 +1118,7 @@ export interface FileRouteTypes {
     | '/api/public/cron/cloudflare-edge-announcement'
     | '/api/public/cron/digest'
     | '/api/public/cron/dns-alerts'
+    | '/api/public/cron/dns-recovery'
     | '/api/public/cron/iptv-notifications'
     | '/api/public/cron/monitor'
     | '/api/public/cron/notifications'
@@ -1215,6 +1226,7 @@ export interface FileRouteTypes {
     | '/api/public/cron/cloudflare-edge-announcement'
     | '/api/public/cron/digest'
     | '/api/public/cron/dns-alerts'
+    | '/api/public/cron/dns-recovery'
     | '/api/public/cron/iptv-notifications'
     | '/api/public/cron/monitor'
     | '/api/public/cron/notifications'
@@ -1324,6 +1336,7 @@ export interface FileRouteTypes {
     | '/api/public/cron/cloudflare-edge-announcement'
     | '/api/public/cron/digest'
     | '/api/public/cron/dns-alerts'
+    | '/api/public/cron/dns-recovery'
     | '/api/public/cron/iptv-notifications'
     | '/api/public/cron/monitor'
     | '/api/public/cron/notifications'
@@ -1396,6 +1409,7 @@ export interface RootRouteChildren {
   ApiPublicCronCloudflareEdgeAnnouncementRoute: typeof ApiPublicCronCloudflareEdgeAnnouncementRoute
   ApiPublicCronDigestRoute: typeof ApiPublicCronDigestRoute
   ApiPublicCronDnsAlertsRoute: typeof ApiPublicCronDnsAlertsRoute
+  ApiPublicCronDnsRecoveryRoute: typeof ApiPublicCronDnsRecoveryRoute
   ApiPublicCronIptvNotificationsRoute: typeof ApiPublicCronIptvNotificationsRoute
   ApiPublicCronMonitorRoute: typeof ApiPublicCronMonitorRoute
   ApiPublicCronNotificationsRoute: typeof ApiPublicCronNotificationsRoute
@@ -2052,6 +2066,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicCronDnsAlertsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/cron/dns-recovery': {
+      id: '/api/public/cron/dns-recovery'
+      path: '/api/public/cron/dns-recovery'
+      fullPath: '/api/public/cron/dns-recovery'
+      preLoaderRoute: typeof ApiPublicCronDnsRecoveryRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/cron/iptv-notifications': {
       id: '/api/public/cron/iptv-notifications'
       path: '/api/public/cron/iptv-notifications'
@@ -2363,6 +2384,7 @@ const rootRouteChildren: RootRouteChildren = {
     ApiPublicCronCloudflareEdgeAnnouncementRoute,
   ApiPublicCronDigestRoute: ApiPublicCronDigestRoute,
   ApiPublicCronDnsAlertsRoute: ApiPublicCronDnsAlertsRoute,
+  ApiPublicCronDnsRecoveryRoute: ApiPublicCronDnsRecoveryRoute,
   ApiPublicCronIptvNotificationsRoute: ApiPublicCronIptvNotificationsRoute,
   ApiPublicCronMonitorRoute: ApiPublicCronMonitorRoute,
   ApiPublicCronNotificationsRoute: ApiPublicCronNotificationsRoute,
