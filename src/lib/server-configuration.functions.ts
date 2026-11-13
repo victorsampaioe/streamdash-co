@@ -81,7 +81,7 @@ export const getMonitoredServerConfiguration = createServerFn({ method: "POST" }
   .middleware([requireSupabaseAuth])
   .inputValidator((data: z.input<typeof configSchema>) => configSchema.parse(data))
   .handler(async ({ data, context }) => {
-    const { data: server, error } = await context.supabase.from("servers")
+    const { data: server, error } = await (context.supabase as any).from("servers")
       .select("id,owner_id,host,iptv_username,iptv_password,iptv_mode,host_changed_at")
       .eq("id", data.serverId).eq("owner_id", context.userId).maybeSingle();
     if (error || !server) throw new Error("Servidor não encontrado ou sem permissão para alterar.");
@@ -162,6 +162,8 @@ export const updateMonitoredServerConnection = createServerFn({ method: "POST" }
         catalog_hash: null,
         catalog_sync_ms: null,
         ssl_days_remaining: null,
+        kuma_synced_at: null,
+        kuma_error: null,
       });
     }
     // RLS and explicit owner predicate BOTH apply. No admin cross-account editing.
