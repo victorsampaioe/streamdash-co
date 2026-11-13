@@ -214,7 +214,7 @@ function Landing() {
               </div>
               <div className="space-y-3">
                 <blockquote className="rounded-2xl rounded-tl-sm border border-white/10 bg-[#18283e] p-4 text-sm leading-7 text-slate-100 sm:p-5 sm:text-base">
-                  “Venho aqui a agradecer pelo sistema achei você no google .... e no youtube”
+                  “venho aqui a agradecer pelo sistema achei você no google .... e no youtube ..”
                 </blockquote>
                 <blockquote className="rounded-2xl rounded-tl-sm border border-blue-400/25 bg-blue-500/10 p-4 text-base font-semibold leading-7 text-white sm:p-5 sm:text-lg">
                   “sistema me avisa aqui que caiu eu imediatamente mudo a DNS”
@@ -223,7 +223,7 @@ function Landing() {
                   “meus clientes ZERO PROBLEMA”
                 </blockquote>
                 <blockquote className="rounded-2xl rounded-tl-sm border border-white/10 bg-[#18283e] p-4 text-sm leading-7 text-slate-100 sm:p-5 sm:text-base">
-                  “até mesmo eles me notificam tarde eu sei em primeira mão”
+                  “até mesmo eles la me notificam tarde eu sei em primeira mão”
                 </blockquote>
               </div>
               <p className="mt-5 text-xs leading-5 text-slate-400">
