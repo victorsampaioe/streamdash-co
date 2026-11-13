@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 
 import heroVideoAsset from "@/assets/hero-video.mp4.asset.json";
 import { telegramAlertExample, maintenanceNoticeExample } from "@/assets/alert-examples";
+import { clienteFeedbackWhatsapp } from "@/assets/cliente-feedback-whatsapp";
 import poster_duneAsset from "@/assets/radar/dune.jpg.asset.json";
 import poster_godzillaAsset from "@/assets/radar/godzilla.jpg.asset.json";
 import poster_madamewebAsset from "@/assets/radar/madameweb.jpg.asset.json";
@@ -212,6 +213,22 @@ function Landing() {
                   <CheckCircle2 size={13}/> Relato real
                 </span>
               </div>
+              <figure className="mb-6 rounded-2xl border border-blue-400/30 bg-[#090e17] p-2 sm:p-3">
+                <a href={clienteFeedbackWhatsapp} target="_blank" rel="noopener noreferrer" aria-label="Abrir imagem original do depoimento de cliente no WhatsApp">
+                  <img
+                    src={clienteFeedbackWhatsapp}
+                    width={732}
+                    height={218}
+                    loading="lazy"
+                    decoding="async"
+                    alt="Print real de feedback no WhatsApp: cliente agradece pelo Stream Monitor e relata que recebe aviso de DNS com problema, troca o endereço rapidamente e evita chamados no suporte."
+                    className="mx-auto h-auto w-full max-w-full rounded-xl object-contain transition hover:brightness-110"
+                  />
+                </a>
+                <figcaption className="px-1 pt-3 text-center text-xs text-slate-400">
+                  Print real enviado pelo cliente · toque para ampliar
+                </figcaption>
+              </figure>
               <div className="space-y-3">
                 <blockquote className="rounded-2xl rounded-tl-sm border border-white/10 bg-[#18283e] p-4 text-sm leading-7 text-slate-100 sm:p-5 sm:text-base">
                   “venho aqui a agradecer pelo sistema achei você no google .... e no youtube ..”
