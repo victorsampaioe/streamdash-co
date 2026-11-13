@@ -5608,6 +5608,8 @@ export type Database = {
           dns_interval_minutes: number
           dns_last_failure_at: string | null
           dns_last_success_at: string | null
+          dns_recovery_last_probe_at: string | null
+          dns_recovery_success_streak: number
           dns_regions: Json | null
           dns_state_changed_at: string | null
           dns_status: string
@@ -5673,6 +5675,8 @@ export type Database = {
           dns_interval_minutes?: number
           dns_last_failure_at?: string | null
           dns_last_success_at?: string | null
+          dns_recovery_last_probe_at?: string | null
+          dns_recovery_success_streak?: number
           dns_regions?: Json | null
           dns_state_changed_at?: string | null
           dns_status?: string
@@ -5738,6 +5742,8 @@ export type Database = {
           dns_interval_minutes?: number
           dns_last_failure_at?: string | null
           dns_last_success_at?: string | null
+          dns_recovery_last_probe_at?: string | null
+          dns_recovery_success_streak?: number
           dns_regions?: Json | null
           dns_state_changed_at?: string | null
           dns_status?: string
