@@ -423,8 +423,7 @@ type PrevSnapshot = {
 };
 
 export async function runDnsCheck(serverId: string, opts: { quick?: boolean } = {}): Promise<{ ok: boolean; score: number; status: string; dnsStatus: string; severeFailure: boolean; alerts: number }> {
-  const { data: srv } = await supabaseAdmin
-    (supabaseAdmin as any)
+  const { data: srv } = await (supabaseAdmin as any)
     .from("servers").select("id, host, owner_id, host_changed_at").eq("id", serverId).maybeSingle();
   if (!srv) throw new Error("Servidor não encontrado");
 
