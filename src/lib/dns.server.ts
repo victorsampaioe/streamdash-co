@@ -424,7 +424,8 @@ type PrevSnapshot = {
 
 export async function runDnsCheck(serverId: string, opts: { quick?: boolean } = {}): Promise<{ ok: boolean; score: number; status: string; dnsStatus: string; severeFailure: boolean; alerts: number }> {
   const { data: srv } = await supabaseAdmin
-    .from("servers").select("id, host, owner_id").eq("id", serverId).maybeSingle();
+    (supabaseAdmin as any)
+    .from("servers").select("id, host, owner_id, host_changed_at").eq("id", serverId).maybeSingle();
   if (!srv) throw new Error("Servidor não encontrado");
 
   const { getActiveOwnerIds, MONITORING_PAUSED_MESSAGE, syncServersPauseState } = await import("./service-status.server");
@@ -435,11 +436,13 @@ export async function runDnsCheck(serverId: string, opts: { quick?: boolean } = 
   }
 
   const since = new Date(Date.now() - 24 * 3600_000).toISOString();
+  const newHostBoundary = (srv as typeof srv & { host_changed_at?: string | null }).host_changed_at ?? null;
+  const historyBoundary = newHostBoundary && new Date(newHostBoundary) > new Date(since) ? newHostBoundary : since;
   const { count: recentChanges } = await supabaseAdmin
     .from("dns_ip_history")
     .select("id", { count: "exact", head: true })
     .eq("server_id", serverId)
-    .gte("changed_at", since);
+    .gte("changed_at", historyBoundary);
 
   const report = await analyzeDns(srv.host, recentChanges ?? 0, opts);
 
@@ -447,6 +450,7 @@ export async function runDnsCheck(serverId: string, opts: { quick?: boolean } = 
     .from("dns_snapshots")
     .select("primary_ip, ipv4, asn, ttl_seconds, cloudflare_proxy, status, checked_at, country, city, org, datacenter, domain_expires_at, registrar")
     .eq("server_id", serverId)
+    .gte("checked_at", newHostBoundary ?? "1970-01-01T00:00:00.000Z")
     .order("checked_at", { ascending: false })
     .limit(1)
     .maybeSingle<PrevSnapshot>();
