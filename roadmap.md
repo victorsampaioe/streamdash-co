@@ -39,10 +39,10 @@
 
 ## Otimização da campanha Meta (13/11/2026)
 - [x] Ler resultados atuais da campanha (público, posicionamento, horário, região)
-- [ ] Instalar Pixel 2289395685308884 com consentimento (PageView, CompleteRegistration só após conta criada, UTM, sem duplicar)
-- [ ] Medir funil: chegada pelo anúncio → início do cadastro → cadastro concluído
-- [ ] Página: caminho direto para criar conta (todos os botões), mensagem principal
-- [ ] Vídeo curto 15–30s sem capas de filmes, para aprovação
+- [x] Instalar Pixel 2289395685308884 com consentimento (PageView, CompleteRegistration só após conta criada, UTM, sem duplicar)
+- [x] Medir funil: chegada pelo anúncio → início do cadastro → cadastro concluído
+- [x] Página: caminho direto para criar conta (todos os botões), mensagem principal
+- [x] Vídeo curto 15–30s sem capas de filmes, para aprovação
 - [ ] Proposta de público (interesses reais) com cartão de aprovação
-- [ ] Proposta de campanha Leads/CompleteRegistration (sem criar) + Instagram
-- [ ] Relatório final
+- [x] Proposta de campanha Leads/CompleteRegistration (sem criar) + Instagram
+- [x] Relatório final
