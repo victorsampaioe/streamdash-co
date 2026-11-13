@@ -21,9 +21,11 @@ export const Route = createFileRoute("/privacidade")({
 function PrivacyPage() {
   const [allowed, setAllowed] = useState<boolean | null>(null);
   const [gpc, setGpc] = useState(false);
+  const [refused, setRefused] = useState(false);
 
   useEffect(() => {
     const refresh = () => {
+      setRefused(readChoice("advertising") === "denied");
       setGpc((navigator as unknown as { globalPrivacyControl?: boolean }).globalPrivacyControl === true);
       void canTrack("advertising").then(setAllowed);
     };
@@ -34,6 +36,7 @@ function PrivacyPage() {
   function toggle(value: boolean) {
     saveChoices({ advertising: value ? "granted" : "denied" });
     setAllowed(value);
+    setRefused(!value);
   }
 
   return (
@@ -63,7 +66,7 @@ function PrivacyPage() {
             <Switch id="ads-consent" checked={allowed === true && !gpc} disabled={allowed === null || gpc} onCheckedChange={toggle} />
           </div>
           {gpc && <p className="text-xs text-muted-foreground">O sinal de privacidade do seu navegador está ativo, por isso o compartilhamento fica desligado.</p>}
-          {readChoice("advertising") === "denied" && !gpc && <p className="text-xs text-muted-foreground">Você recusou. Nada novo é enviado ao Meta a partir deste navegador.</p>}
+          {refused && !gpc && <p className="text-xs text-muted-foreground">Você recusou. Nada novo é enviado ao Meta a partir deste navegador.</p>}
         </section>
         <p className="text-xs text-muted-foreground">Dúvidas sobre seus dados: fale com a gente pelo canal do Telegram informado no rodapé do site.</p>
       </article>
