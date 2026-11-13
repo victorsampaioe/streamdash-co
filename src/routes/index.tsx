@@ -4,6 +4,7 @@ import { Activity, ArrowRight, ServerIcon, Bell, Globe, Zap, ShieldCheck, LineCh
 import { Button } from "@/components/ui/button";
 
 import heroVideoAsset from "@/assets/hero-video.mp4.asset.json";
+import { telegramAlertExample, maintenanceNoticeExample } from "@/assets/alert-examples";
 import poster_duneAsset from "@/assets/radar/dune.jpg.asset.json";
 import poster_godzillaAsset from "@/assets/radar/godzilla.jpg.asset.json";
 import poster_madamewebAsset from "@/assets/radar/madameweb.jpg.asset.json";
@@ -59,7 +60,7 @@ function Landing() {
               </Button>
             </a>
             <Link to="/auth"><Button variant="ghost" size="sm" className="sm-public-login">Entrar</Button></Link>
-            <Link to="/auth"><Button size="sm" className="sm-public-start rounded-xl bg-blue-500 px-4 font-semibold text-white hover:bg-blue-400">Começar <ArrowRight className="hidden h-3.5 w-3.5 sm:inline" /></Button></Link>
+            <Link to="/auth" search={{tab:"signup"}}><Button size="sm" className="sm-public-start rounded-xl bg-blue-500 px-4 font-semibold text-white hover:bg-blue-400">Cadastrar <ArrowRight className="hidden h-3.5 w-3.5 sm:inline" /></Button></Link>
           </div>
 
         </div>
@@ -81,9 +82,9 @@ function Landing() {
               Monitore servidores IPTV, DNS e disponibilidade em um só lugar. Identifique falhas, acompanhe a performance e receba alertas no Telegram — tudo em um painel criado para revendedores.
             </p>
             <div className="sm-hero-actions mt-8 grid gap-3 sm:flex sm:flex-wrap">
-              <Link to="/auth" className="block">
+              <Link to="/auth" search={{tab:"signup"}} className="block">
                 <Button size="lg" className="sm-primary-cta h-13 w-full rounded-xl bg-blue-600 px-7 text-sm font-bold text-white shadow-lg shadow-blue-600/20 hover:bg-blue-500 sm:w-auto sm:text-base">
-                  Começar a monitorar <ArrowRight className="ml-1 h-4 w-4" />
+                  Cadastre-se agora · R$ 25/mês <ArrowRight className="ml-1 h-4 w-4" />
                 </Button>
               </Link>
               <Link to="/revendedor-stream-monitor" className="block">
@@ -111,6 +112,101 @@ function Landing() {
               <span className="text-[11px] text-muted-foreground">Vídeo demonstrativo</span>
             </div>
             <PresentationVideo />
+          </div>
+        </div>
+      </section>
+
+
+      {/* Real-world timing example supplied by a user. DNS status and platform
+          availability remain separate signals; never equate DNS failure with
+          an independently verified service outage. */}
+      <section id="alerta-antecipado" aria-labelledby="alerta-antecipado-title" className="relative overflow-hidden border-b border-blue-400/20 bg-[#061326] py-16 text-white sm:py-24">
+        <div aria-hidden="true" className="pointer-events-none absolute -right-28 top-24 h-96 w-96 rounded-full bg-blue-600/15 blur-3xl"/>
+        <div className="relative mx-auto max-w-7xl px-4 sm:px-6">
+          <div className="mx-auto max-w-4xl text-center">
+            <span className="inline-flex items-center gap-2 rounded-full border border-blue-400/35 bg-blue-500/10 px-4 py-2 text-xs font-bold uppercase tracking-[.13em] text-blue-200">
+              <Bell size={15}/> Veja o alerta antes de receber o comunicado
+            </span>
+            <h2 id="alerta-antecipado-title" className="mt-5 text-3xl font-black tracking-tight sm:text-4xl lg:text-5xl">
+              O problema aconteceu. <span className="text-blue-400">Você já sabia.</span>
+            </h2>
+            <p className="mx-auto mt-5 max-w-3xl text-sm leading-7 text-slate-300 sm:text-lg">
+              Em um exemplo real compartilhado com a gente, o Stream Monitor identificou uma falha de resolução DNS e enviou o alerta no Telegram às <strong className="text-white">06:02:07</strong>. O comunicado do serviço sobre manutenção apareceu às <strong className="text-white">08:38</strong>.
+            </p>
+          </div>
+
+          <div className="mx-auto my-9 flex max-w-4xl flex-col items-center justify-center gap-3 sm:flex-row sm:gap-6">
+            <div className="w-full rounded-2xl border border-blue-400/40 bg-blue-500/10 p-5 text-center sm:w-[38%]">
+              <p className="text-[11px] font-extrabold uppercase tracking-[.13em] text-blue-200">Alerta Stream Monitor</p>
+              <p className="mt-2 text-4xl font-black tabular-nums tracking-tight text-white sm:text-5xl">06:02<span className="ml-1 text-xl text-blue-200">:07</span></p>
+              <p className="mt-2 text-xs text-slate-300">12 de novembro de 2026 · Telegram</p>
+            </div>
+            <div className="flex shrink-0 flex-col items-center gap-1 text-center">
+              <span className="rounded-full border border-cyan-400/40 bg-cyan-400/10 px-4 py-2 text-xs font-extrabold uppercase tracking-wider text-cyan-200">2h35min53s de diferença</span>
+              <span className="hidden h-px w-10 bg-blue-400/50 sm:block"/>
+              <ArrowRight className="h-5 w-5 rotate-90 text-blue-400 sm:rotate-0"/>
+            </div>
+            <div className="w-full rounded-2xl border border-slate-600/50 bg-slate-800/30 p-5 text-center sm:w-[38%]">
+              <p className="text-[11px] font-extrabold uppercase tracking-[.13em] text-slate-300">Comunicado posterior do serviço</p>
+              <p className="mt-2 text-4xl font-black tabular-nums tracking-tight text-white sm:text-5xl">08:38</p>
+              <p className="mt-2 text-xs text-slate-300">Mensagem de manutenção no WhatsApp</p>
+            </div>
+          </div>
+
+          <div className="grid gap-5 lg:grid-cols-2">
+            <article className="rounded-3xl border border-blue-400/30 bg-[#0a1b34] p-4 shadow-2xl shadow-blue-950/30 sm:p-6">
+              <div className="mb-4 flex items-center justify-between gap-3">
+                <div><p className="text-xs font-bold uppercase tracking-widest text-blue-300">01 · Aviso antecipado</p><h3 className="mt-1 text-lg font-extrabold sm:text-xl">Telegram · Stream Monitor</h3></div>
+                <span className="shrink-0 rounded-lg border border-blue-400/40 bg-blue-400/10 px-3 py-1.5 text-sm font-extrabold tabular-nums text-blue-200">06:02:07</span>
+              </div>
+              {telegramAlertExample ? <img src={telegramAlertExample} alt="Captura real do alerta Stream Monitor no Telegram às 06:02:07 em 12/11/2026, apontando falha de resolução DNS confirmada em resolvedores diferentes" className="mx-auto max-h-[600px] w-auto max-w-full rounded-2xl border border-white/10 object-contain" loading="lazy"/> :
+                <div className="rounded-2xl border border-blue-400/20 bg-[#0b1426] p-6 text-sm leading-7 text-slate-100"><strong>🚨 STREAM MONITOR — DNS OFFLINE CONFIRMADO</strong><p className="mt-3">Status DNS: 🔴 Não resolve</p><p>Confirmação: falhas consecutivas em resolvedores independentes</p><p>Horário: 06:02:07 (12/11/2026)</p></div>}
+              <p className="mt-4 text-xs leading-5 text-slate-300">Exemplo de aviso enviado automaticamente com diagnóstico de DNS. O monitoramento DNS, por si só, não determina a disponibilidade do vídeo.</p>
+            </article>
+            <article className="rounded-3xl border border-slate-500/30 bg-[#0a1b34] p-4 shadow-2xl shadow-blue-950/30 sm:p-6">
+              <div className="mb-4 flex items-center justify-between gap-3">
+                <div><p className="text-xs font-bold uppercase tracking-widest text-slate-300">02 · Aviso posterior</p><h3 className="mt-1 text-lg font-extrabold sm:text-xl">Comunicado do serviço</h3></div>
+                <span className="shrink-0 rounded-lg border border-slate-400/40 bg-slate-400/10 px-3 py-1.5 text-sm font-extrabold tabular-nums text-slate-100">08:38</span>
+              </div>
+              {maintenanceNoticeExample ? <img src={maintenanceNoticeExample} alt="Captura de comunicado de manutenção do serviço no WhatsApp publicado às 08:38" className="mx-auto w-full max-w-[520px] rounded-2xl border border-white/10 object-contain" loading="lazy"/> :
+                <div className="rounded-2xl bg-white p-6 text-sm leading-7 text-slate-900"><strong>Olá, bom dia!</strong><p className="mt-3">Informamos que estamos realizando manutenção em nosso sistema.</p><p>Em breve, o sistema estará novamente disponível.</p><p className="mt-3 text-right font-semibold text-slate-600">08:38</p></div>}
+              <p className="mt-4 text-xs leading-5 text-slate-300">Mensagem posterior comunicando uma manutenção. As duas capturas mostram os horários informados neste caso, não um tempo garantido de antecipação para todas as ocorrências.</p>
+            </article>
+          </div>
+          <div className="mt-8 rounded-2xl border border-blue-400/20 bg-blue-400/[.05] p-5 text-center">
+            <p className="font-bold text-white">Receba alertas e se antecipe aos chamados dos clientes.</p>
+            <p className="mt-2 text-sm text-slate-300">Monitore DNS, HTTP, SSL e disponibilidade. Alertas são enviados após confirmação e dependem das condições e integrações de monitoramento.</p>
+          </div>
+        </div>
+      </section>
+
+      <section id="precos" aria-labelledby="plano-mensal-title" className="relative overflow-hidden border-b border-blue-500/15 bg-gradient-to-br from-[#091930] via-[#0b2042] to-[#081120] py-16 text-white sm:py-20">
+        <div className="mx-auto grid max-w-6xl items-center gap-8 px-4 sm:px-6 lg:grid-cols-[1fr_0.9fr]">
+          <div>
+            <span className="inline-flex rounded-full border border-cyan-400/30 bg-cyan-500/10 px-4 py-1.5 text-xs font-black uppercase tracking-wider text-cyan-200">Plano mensal Stream Monitor</span>
+            <h2 id="plano-mensal-title" className="mt-5 text-3xl font-black tracking-tight sm:text-4xl">Monitoramento profissional sem complicar seu orçamento.</h2>
+            <p className="mt-4 max-w-xl text-base leading-7 text-slate-300">Controle seus servidores e receba alertas de queda e recuperação em um único painel. Descubra falhas antes que a situação vire uma enxurrada de mensagens no suporte.</p>
+            <div className="mt-6 grid gap-3 text-sm text-slate-200 sm:grid-cols-2">
+              {["Monitoramento DNS e disponibilidade","Alertas automáticos no Telegram","Histórico de incidentes e diagnósticos","Painel leve para revendedores"].map(item=>
+                <p key={item} className="flex items-center gap-2"><CheckCircle2 size={17} className="shrink-0 text-cyan-400"/>{item}</p>
+              )}
+            </div>
+          </div>
+          <div className="rounded-[28px] border border-blue-400/40 bg-[#061225] p-6 shadow-[0_22px_65px_rgba(25,90,220,.26)] sm:p-8">
+            <p className="text-xs font-bold uppercase tracking-[.18em] text-blue-200">Acesso à plataforma · mensal</p>
+            <div className="mt-4 flex items-end gap-2">
+              <span className="text-xl font-semibold text-white">R$</span>
+              <span className="text-6xl font-black tabular-nums tracking-tight text-white sm:text-7xl">25</span>
+              <span className="mb-2 text-2xl font-bold text-white">,00</span>
+              <span className="mb-2 text-sm font-semibold text-slate-300">/mês</span>
+            </div>
+            <p className="mt-3 text-sm text-slate-300">Plano mensal de 30 dias. Contratação e pagamento pelo painel da conta.</p>
+            <Link to="/auth" search={{tab:"signup"}} className="mt-7 block">
+              <Button size="lg" className="min-h-14 w-full rounded-2xl bg-blue-500 px-4 text-sm font-extrabold text-white shadow-lg shadow-blue-500/25 hover:bg-blue-400 sm:text-lg">
+                Cadastre-se agora por R$ 25/mês <ArrowRight size={20} className="ml-2"/>
+              </Button>
+            </Link>
+            <p className="mt-3 text-center text-xs leading-5 text-slate-400">Crie sua conta gratuitamente e escolha o plano mensal dentro do painel. Não é um teste gratuito automático.</p>
           </div>
         </div>
       </section>
@@ -225,7 +321,8 @@ function Landing() {
           <FaqItem question="Como funciona o monitoramento IPTV?" answer="O sistema verifica a disponibilidade da API, status de fluxos e gera um Health Score exclusivo de 0 a 100%, alertando sobre qualquer instabilidade detectada." />
           <FaqItem question="Recebo alertas no Telegram?" answer="Sim! O Stream Monitor envia notificações em tempo real no Telegram, ajudando você a identificar problemas e organizar a resposta da sua operação." />
           <FaqItem question="Posso usar para revenda?" answer="Sim, oferecemos um sistema completo para revendedores gerenciarem suas próprias redes de monitoramento com autonomia e lucratividade." />
-          <FaqItem question="Como contratar?" answer="Basta criar uma conta, escolher seu plano ou adquirir créditos e começar a monitorar sua infraestrutura em segundos." />
+          <FaqItem question="Quanto custa o plano mensal?" answer="O plano mensal de acesso ao Stream Monitor custa R$ 25 por 30 dias. Cadastre-se e contrate no painel; planos e créditos de revenda podem ter preços diferentes." />
+          <FaqItem question="Como contratar?" answer="Crie sua conta gratuitamente, acesse Minha Assinatura e escolha o plano mensal de R$ 25 ou outra opção disponível no painel." />
         </div>
       </section>
 
