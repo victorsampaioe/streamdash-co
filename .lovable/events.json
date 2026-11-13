@@ -1,0 +1,55 @@
+{
+  "schema_version": 1,
+  "events": {
+    "project.ad_landing": {
+      "event_schema_version": 1,
+      "description": "A visit arrived from an ad campaign link (fbclid or utm_source present), once per landing.",
+      "privacy": {
+        "contains_pii": false,
+        "purpose": "advertising_measurement"
+      },
+      "properties_schema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "source"
+        ],
+        "properties": {
+          "source": {
+            "type": "string",
+            "enum": [
+              "meta_ads",
+              "other_campaign"
+            ]
+          },
+          "utm_campaign": {
+            "type": "string"
+          },
+          "landing_path": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "project.signup_started": {
+      "event_schema_version": 1,
+      "description": "A visitor first interacted with the signup form (once per page view).",
+      "privacy": {
+        "contains_pii": false,
+        "purpose": "product_analytics"
+      },
+      "properties_schema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "source"
+        ],
+        "properties": {
+          "source": {
+            "type": "string"
+          }
+        }
+      }
+    }
+  }
+}
