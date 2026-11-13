@@ -20,6 +20,7 @@ import { LineChart, Line, ResponsiveContainer, XAxis, YAxis, Tooltip, CartesianG
 import { ArrowLeft, Download, Play, Trash2, RefreshCw, ShieldCheck, Cloud, Globe, Server as ServerIcon, Zap, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { runCheckNow } from "@/lib/monitoring.functions";
+import { getMonitoredServerConfiguration, updateMonitoredServerConnection } from "@/lib/server-configuration.functions";
 import { analyzeServer } from "@/lib/analysis.functions";
 import { useServerFn } from "@tanstack/react-start";
 import { GlobalCheckMap } from "@/components/global-check-map";
@@ -43,6 +44,13 @@ function ServerDetail() {
   const [confirmDel, setConfirmDel] = useState(false);
   const runNow = useServerFn(runCheckNow);
   const runAnalyze = useServerFn(analyzeServer);
+  const loadConnection = useServerFn(getMonitoredServerConfiguration);
+  const saveConnection = useServerFn(updateMonitoredServerConnection);
+  const [editedDns, setEditedDns] = useState("");
+  const [editedUsername, setEditedUsername] = useState("");
+  const [editedPassword, setEditedPassword] = useState("");
+  const [removeXtreamCredentials, setRemoveXtreamCredentials] = useState(false);
+  const [showXtreamPassword, setShowXtreamPassword] = useState(false);
   const { data: subInfo } = useSubscription();
 
   const isAdmin = subInfo?.profile?.email === 'victorsampaio133@gmail.com' || subInfo?.profile?.role === 'admin';
@@ -64,6 +72,54 @@ function ServerDetail() {
       ]);
       return base ? { ...base, has_iptv_creds: !!creds } : base;
     },
+  });
+
+  const { data: connection, refetch: refetchConnection } = useQuery({
+    queryKey: ["server-connection", id],
+    queryFn: async () => await loadConnection({ data: { serverId: id } }),
+    retry: false,
+  });
+
+  useEffect(() => {
+    if (connection?.host) setEditedDns(connection.host);
+  }, [connection?.host]);
+
+  const updateConnection = useMutation({
+    mutationFn: async () => {
+      if (Boolean(editedUsername.trim()) !== Boolean(editedPassword.trim())) {
+        throw new Error("Informe usuário e senha ativos juntos ou deixe os campos vazios.");
+      }
+      return await saveConnection({
+        data: {
+          serverId: id,
+          host: editedDns.trim(),
+          username: editedUsername,
+          password: editedPassword,
+          removeCredentials: removeXtreamCredentials,
+        },
+      });
+    },
+    onSuccess: async (result) => {
+      setEditedUsername("");
+      setEditedPassword("");
+      setRemoveXtreamCredentials(false);
+      await Promise.all([
+        refetchConnection(),
+        refetch(),
+        qc.invalidateQueries({ queryKey: ["servers"] }),
+        qc.invalidateQueries({ queryKey: ["checks", id] }),
+        qc.invalidateQueries({ queryKey: ["dns-live", id] }),
+        qc.invalidateQueries({ queryKey: ["iptv-login-guard", id] }),
+      ]);
+      if (result.changedHost) {
+        toast.success("Nova DNS salva. Estados anteriores encerrados e nova verificação colocada na fila prioritária.");
+      } else if (result.changedCredentials) {
+        toast.success("Credenciais atualizadas com criptografia. A próxima análise IPTV fará um novo teste.");
+      } else {
+        toast.info("Nenhuma mudança para salvar.");
+      }
+    },
+    onError: (e: Error) => toast.error(e.message || "Falha ao salvar as configurações."),
   });
 
   const { data: checks = [], refetch: refetchChecks } = useQuery({
@@ -205,6 +261,65 @@ function ServerDetail() {
         </TabsList>
 
         <TabsContent value="dns" className="mt-6 space-y-5">
+          {connection && (
+            <Card className="space-y-4 border-blue-500/30 bg-blue-500/[0.035] p-5">
+              <div>
+                <h3 className="text-base font-bold flex items-center gap-2"><Globe className="h-4 w-4 text-blue-400"/> Editar DNS e acesso IPTV</h3>
+                <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
+                  Você pode trocar a DNS do seu servidor. A nova DNS entra na fila de monitoramento e as verificações DNS, HTTP e IPTV recomeçam para o endereço atualizado.
+                  O histórico anterior permanece registrado, mas não será usado como confirmação da nova DNS.
+                </p>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="server-dns-edit">DNS / domínio do servidor</Label>
+                <Input id="server-dns-edit" value={editedDns} onChange={e=>setEditedDns(e.target.value)}
+                  placeholder="exemplo.com ou exemplo.com:porta" autoComplete="off" className="font-mono" maxLength={255} />
+                <p className="text-xs text-muted-foreground">Digite somente um domínio público ou IPv4, com porta opcional. Não informe links com usuário/senha.</p>
+              </div>
+              <div className="rounded-xl border border-border/70 bg-background/60 p-4 space-y-3">
+                <div>
+                  <p className="text-sm font-semibold">Verificação IPTV autenticada (opcional)</p>
+                  <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
+                    Um <strong>usuário e senha ativos</strong> permitem conferir a autenticação Xtream/Player API e o conteúdo disponível, tornando o diagnóstico mais preciso que a verificação apenas de DNS e HTTP.
+                    Se a conta estiver vencida, bloqueada ou incorreta, a análise autenticada poderá falhar. Use somente credenciais autorizadas.
+                  </p>
+                  <p className="mt-1 text-xs text-blue-300">
+                    {connection.hasCredentials
+                      ? "Já existem credenciais protegidas para este servidor. Deixe os campos vazios para mantê-las."
+                      : "Nenhuma credencial cadastrada. Preencha os dois campos se quiser ativar o monitoramento autenticado."}
+                  </p>
+                </div>
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <div className="space-y-1.5">
+                    <Label htmlFor="server-iptv-username">Usuário ativo</Label>
+                    <Input id="server-iptv-username" autoComplete="off" maxLength={200} value={editedUsername}
+                      onChange={e=>setEditedUsername(e.target.value)} placeholder={connection.hasCredentials?"Novo usuário (opcional)":"Usuário Xtream"} disabled={removeXtreamCredentials}/>
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="server-iptv-password">Senha ativa</Label>
+                    <div className="flex gap-2">
+                      <Input id="server-iptv-password" type={showXtreamPassword?"text":"password"} autoComplete="new-password" maxLength={200}
+                        value={editedPassword} onChange={e=>setEditedPassword(e.target.value)}
+                        placeholder={connection.hasCredentials?"Nova senha (opcional)":"Senha Xtream"} disabled={removeXtreamCredentials}/>
+                      <Button type="button" variant="outline" size="sm" onClick={()=>setShowXtreamPassword(v=>!v)}>{showXtreamPassword?"Ocultar":"Mostrar"}</Button>
+                    </div>
+                  </div>
+                </div>
+                {connection.hasCredentials && (
+                  <label className="flex items-center gap-2 text-xs text-muted-foreground">
+                    <input type="checkbox" checked={removeXtreamCredentials} onChange={e=>{setRemoveXtreamCredentials(e.target.checked);if(e.target.checked){setEditedUsername("");setEditedPassword("");}}}/>
+                    Remover as credenciais armazenadas e manter apenas o monitoramento básico
+                  </label>
+                )}
+                <p className="text-xs text-muted-foreground">Suas credenciais são criptografadas no servidor e não aparecem novamente na tela. Ambos os campos são opcionais, mas devem ser preenchidos juntos.</p>
+              </div>
+              <Button onClick={()=>updateConnection.mutate()} disabled={updateConnection.isPending || !editedDns.trim()}>
+                <RefreshCw className={`h-4 w-4 mr-2 ${updateConnection.isPending?"animate-spin":""}`}/>
+                {updateConnection.isPending?"Salvando alterações...":"Salvar DNS e configurações"}
+              </Button>
+              {connection.hostChangedAt && <p className="text-xs text-muted-foreground">DNS atualizada em {new Date(connection.hostChangedAt).toLocaleString("pt-BR")}.</p>}
+            </Card>
+          )}
           <CorrelationPanel serverId={id} />
           <DnsPanel serverId={id} />
         </TabsContent>
