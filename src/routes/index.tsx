@@ -180,6 +180,88 @@ function Landing() {
         </div>
       </section>
 
+
+      {/* Relato recebido de cliente no WhatsApp. Trechos publicados sem nome,
+          telefone ou domínio para resguardar a identidade do cliente. */}
+      <section id="depoimento-cliente" aria-labelledby="depoimento-titulo" className="relative overflow-hidden border-b border-blue-400/20 bg-[#071120] py-16 text-white sm:py-24">
+        <div aria-hidden="true" className="pointer-events-none absolute -left-40 top-16 h-96 w-96 rounded-full bg-blue-600/10 blur-3xl"/>
+        <div className="relative mx-auto max-w-7xl px-4 sm:px-6">
+          <div className="mx-auto mb-10 max-w-3xl text-center">
+            <span className="inline-flex items-center gap-2 rounded-full border border-blue-400/30 bg-blue-500/10 px-4 py-2 text-xs font-extrabold uppercase tracking-widest text-blue-200">
+              <UserCheck className="h-4 w-4" /> Depoimento real de cliente
+            </span>
+            <h2 id="depoimento-titulo" className="mt-5 text-3xl font-black tracking-tight sm:text-4xl lg:text-5xl">
+              Enquanto alguns esperam o aviso, <span className="text-blue-400">nossos clientes já agem.</span>
+            </h2>
+            <p className="mt-4 text-sm leading-7 text-slate-300 sm:text-base">
+              Veja como um revendedor descreveu sua experiência com o Stream Monitor em uma mensagem espontânea recebida pelo WhatsApp.
+            </p>
+          </div>
+
+          <div className="grid items-center gap-7 lg:grid-cols-[1.1fr_.9fr] lg:gap-10">
+            <article className="relative rounded-[28px] border border-blue-300/25 bg-gradient-to-br from-[#0d203d] via-[#09172c] to-[#081120] p-5 shadow-[0_25px_70px_rgba(1,8,22,.5)] sm:p-8">
+              <div className="mb-6 flex items-center gap-3 border-b border-white/10 pb-5">
+                <div className="flex h-12 w-12 items-center justify-center rounded-2xl border border-blue-400/30 bg-blue-500/15">
+                  <UserCheck className="h-6 w-6 text-blue-300" />
+                </div>
+                <div>
+                  <h3 className="text-base font-extrabold">Cliente do Stream Monitor</h3>
+                  <p className="text-xs text-slate-400">Mensagem espontânea pelo WhatsApp · identidade preservada</p>
+                </div>
+                <span className="ml-auto inline-flex shrink-0 items-center gap-1 rounded-full border border-green-400/30 bg-green-400/10 px-2.5 py-1 text-[11px] font-bold text-green-200">
+                  <CheckCircle2 size={13}/> Relato real
+                </span>
+              </div>
+              <div className="space-y-3">
+                <blockquote className="rounded-2xl rounded-tl-sm border border-white/10 bg-[#18283e] p-4 text-sm leading-7 text-slate-100 sm:p-5 sm:text-base">
+                  “Venho aqui a agradecer pelo sistema achei você no google .... e no youtube”
+                </blockquote>
+                <blockquote className="rounded-2xl rounded-tl-sm border border-blue-400/25 bg-blue-500/10 p-4 text-base font-semibold leading-7 text-white sm:p-5 sm:text-lg">
+                  “sistema me avisa aqui que caiu eu imediatamente mudo a DNS”
+                </blockquote>
+                <blockquote className="rounded-2xl rounded-tl-sm border border-green-400/20 bg-green-500/[.08] p-4 text-sm leading-7 text-slate-100 sm:p-5 sm:text-base">
+                  “meus clientes ZERO PROBLEMA”
+                </blockquote>
+                <blockquote className="rounded-2xl rounded-tl-sm border border-white/10 bg-[#18283e] p-4 text-sm leading-7 text-slate-100 sm:p-5 sm:text-base">
+                  “até mesmo eles me notificam tarde eu sei em primeira mão”
+                </blockquote>
+              </div>
+              <p className="mt-5 text-xs leading-5 text-slate-400">
+                Trechos de uma mensagem de cliente, com redação original preservada e informações pessoais omitidas. É uma experiência individual, não uma garantia de ausência de falhas.
+              </p>
+            </article>
+
+            <div className="space-y-6">
+              <div className="rounded-[28px] border border-blue-400/30 bg-blue-500/[.07] p-6 sm:p-8">
+                <p className="text-xs font-extrabold uppercase tracking-[.16em] text-blue-200">O diferencial na prática</p>
+                <h3 className="mt-3 text-2xl font-black tracking-tight sm:text-3xl">
+                  Saber primeiro. Corrigir antes. Atender melhor.
+                </h3>
+                <p className="mt-4 text-sm leading-7 text-slate-300 sm:text-base">
+                  Ao receber o alerta de uma DNS com problema, o revendedor pode verificar a situação e, quando necessário, mudar para outro endereço antes de acumular chamados no suporte.
+                </p>
+                <div className="mt-6 space-y-3 text-sm font-semibold text-slate-100">
+                  <div className="flex items-center gap-3"><Bell className="h-5 w-5 shrink-0 text-blue-400"/> Alertas automáticos pelo Telegram</div>
+                  <div className="flex items-center gap-3"><Globe className="h-5 w-5 shrink-0 text-blue-400"/> Monitoramento contínuo de DNS e servidores</div>
+                  <div className="flex items-center gap-3"><CheckCircle2 className="h-5 w-5 shrink-0 text-blue-400"/> Mais tempo para agir antes do cliente reclamar</div>
+                </div>
+              </div>
+
+              <div className="rounded-[28px] border border-blue-400/30 bg-[#0c1d37] p-6 text-center sm:p-7">
+                <p className="text-sm font-medium text-slate-200">Comece a monitorar seus servidores por</p>
+                <div className="mt-1 text-4xl font-black tracking-tight sm:text-5xl">R$ 25<span className="ml-1 text-base font-semibold text-slate-400">/mês</span></div>
+                <Link to="/auth" search={{tab:"signup"}} className="mt-5 block">
+                  <Button size="lg" className="min-h-14 w-full rounded-2xl bg-blue-500 text-base font-extrabold text-white shadow-lg shadow-blue-500/20 hover:bg-blue-400">
+                    Cadastre-se agora mesmo <ArrowRight size={19} className="ml-2"/>
+                  </Button>
+                </Link>
+                <p className="mt-3 text-xs text-slate-400">Crie sua conta e contrate o plano dentro da plataforma.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
       <section id="precos" aria-labelledby="plano-mensal-title" className="relative overflow-hidden border-b border-blue-500/15 bg-gradient-to-br from-[#091930] via-[#0b2042] to-[#081120] py-16 text-white sm:py-20">
         <div className="mx-auto grid max-w-6xl items-center gap-8 px-4 sm:px-6 lg:grid-cols-[1fr_0.9fr]">
           <div>
