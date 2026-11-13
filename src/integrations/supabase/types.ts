@@ -5616,6 +5616,7 @@ export type Database = {
           failure_threshold: number
           health_score: number | null
           host: string
+          host_changed_at: string | null
           id: string
           interval_seconds: number
           iptv_detected: Database["public"]["Enums"]["iptv_kind"]
@@ -5683,6 +5684,7 @@ export type Database = {
           failure_threshold?: number
           health_score?: number | null
           host: string
+          host_changed_at?: string | null
           id?: string
           interval_seconds?: number
           iptv_detected?: Database["public"]["Enums"]["iptv_kind"]
@@ -5750,6 +5752,7 @@ export type Database = {
           failure_threshold?: number
           health_score?: number | null
           host?: string
+          host_changed_at?: string | null
           id?: string
           interval_seconds?: number
           iptv_detected?: Database["public"]["Enums"]["iptv_kind"]
