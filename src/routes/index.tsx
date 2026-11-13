@@ -142,7 +142,7 @@ function Landing() {
               <p className="mt-2 text-xs text-slate-300">12 de novembro de 2026 · Telegram</p>
             </div>
             <div className="flex shrink-0 flex-col items-center gap-1 text-center">
-              <span className="rounded-full border border-cyan-400/40 bg-cyan-400/10 px-4 py-2 text-xs font-extrabold uppercase tracking-wider text-cyan-200">2h35min53s de diferença</span>
+              <span className="rounded-full border border-cyan-400/40 bg-cyan-400/10 px-4 py-2 text-xs font-extrabold uppercase tracking-wider text-cyan-200">cerca de 2h36 de diferença</span>
               <span className="hidden h-px w-10 bg-blue-400/50 sm:block"/>
               <ArrowRight className="h-5 w-5 rotate-90 text-blue-400 sm:rotate-0"/>
             </div>
