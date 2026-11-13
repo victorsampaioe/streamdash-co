@@ -43,6 +43,6 @@
 - [x] Medir funil: chegada pelo anúncio → início do cadastro → cadastro concluído
 - [x] Página: caminho direto para criar conta (todos os botões), mensagem principal
 - [x] Vídeo curto 15–30s sem capas de filmes, para aprovação
-- [ ] Proposta de público (interesses reais) com cartão de aprovação
+- [x] Público 25–54 + interesses de servidores aplicado (aprovado)
 - [x] Proposta de campanha Leads/CompleteRegistration (sem criar) + Instagram
 - [x] Relatório final
