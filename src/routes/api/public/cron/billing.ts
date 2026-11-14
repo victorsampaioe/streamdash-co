@@ -96,6 +96,7 @@ export const Route=createFileRoute("/api/public/cron/billing")({
             return Response.json({
               ok:answer.ok && json.ok===true,
               webhookRegistered:registered,
+              webhookHost:registered?new URL(info.url).hostname:null,
               webhookPathValid:registered && new URL(info.url).pathname==="/api/public/telegram/webhook",
               callbackAllowed:allowed.length===0 || allowed.includes("callback_query"),
               allowedUpdates:allowed,
