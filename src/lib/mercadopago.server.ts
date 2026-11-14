@@ -148,6 +148,20 @@ export async function syncMpPayment(paymentId: string | number, expectedPaymentI
       _paid_at: paidAt,
     });
     if (error) throw new Error(error.message);
+    // Inform the customer only after the provider-approved payment has been
+    // applied to the subscription. Telegram failure must not roll back payment.
+    if(finalized?.[0]?.applied === true && row.payment_type === "subscription"){
+      try{
+        const {enqueueTelegramPaymentApproved}=await import("./telegram-billing.server");
+        await enqueueTelegramPaymentApproved({
+          userId:row.user_id,paymentId:row.id,plan:row.plan,
+          amountCents:row.amount_cents,expiresAt:finalized?.[0]?.expires_at??null,
+        });
+      }catch(notifyError){
+        console.error("[mercadopago] private Telegram confirmation deferred",
+          notifyError instanceof Error?notifyError.name:"unknown");
+      }
+    }
     return {
       paymentId: row.id,
       status,
