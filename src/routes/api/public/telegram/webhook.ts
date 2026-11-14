@@ -87,6 +87,15 @@ export const Route = createFileRoute("/api/public/telegram/webhook")({
 
         const text = String(msg?.text ?? "").trim().toLowerCase();
         const first = String(msg?.from?.first_name ?? "").trim();
+        // Personal payments and invoice details are never handled inside
+        // Telegram groups, supergroups or public channels.
+        if(msg?.chat?.type!=="private" && /^\/(?:pix|fatura)(?:\s|@|$)/.test(text)){
+          await send(token,chatId,
+            "🔒 <b>Fatura e Pix somente no privado.</b>\\n\\n"+
+            "Abra uma conversa direta com @MonitordeFluxoBot e envie /pix ou /fatura. "+
+            "Não compartilhe dados de pagamento neste grupo.");
+          return Response.json({ok:true,privateOnly:true});
+        }
 
         console.log("[telegram-webhook] update", { chat_id: chatId, text: text.slice(0, 32) });
 
