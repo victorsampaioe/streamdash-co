@@ -19,6 +19,8 @@ import { ThemeProvider } from "@/components/theme-provider";
 import { installChunkRecovery } from "@/lib/chunk-recovery";
 import { trackMetaPageView, isPrivatePath } from "@/lib/meta-pixel";
 import { captureAttribution } from "@/lib/ad-attribution";
+import { trackPosthogPage } from "@/lib/posthog-analytics";
+import { onConsentChange } from "@/lib/consent";
 
 
 function NotFoundComponent() {
@@ -198,6 +200,12 @@ function RootComponent() {
   }, []);
   useEffect(() => {
     void trackMetaPageView(pathname);
+  }, [pathname]);
+  // Privacy-respecting PostHog tracking, independently controlled by the
+  // existing analytics consent preference. The key is not yet configured.
+  useEffect(() => {
+    void trackPosthogPage(pathname);
+    return onConsentChange(() => { void trackPosthogPage(window.location.pathname); });
   }, [pathname]);
 
   useEffect(() => {
