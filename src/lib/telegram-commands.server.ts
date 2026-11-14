@@ -236,13 +236,13 @@ export async function handleTelegramCommand(
         const blocked = detail.includes("Mercado Pago indisponível");
         const recovery = detail.includes("Pix emitido, mas falhou ao vincular");
         return (
-          "⚠️ <b>Não foi possível gerar seu Pix agora.</b>\\n\\n" +
+          "⚠️ <b>Não foi possível gerar seu Pix agora.</b>\n\n" +
           (recovery
-            ? "Uma cobrança pode estar em processamento. Por segurança, confira o painel antes de pagar.\\n\\n"
+            ? "Uma cobrança pode estar em processamento. Por segurança, confira o painel antes de pagar.\n\n"
             : blocked
-              ? "A integração de pagamentos está temporariamente indisponível.\\n\\n"
-              : "Sua assinatura não foi alterada e nenhum pagamento foi confirmado.\\n\\n") +
-          "🔒 <a href=\"https://streammonitor.site/app/subscription\">Abrir Minha Assinatura</a>\\n" +
+              ? "A integração de pagamentos está temporariamente indisponível.\n\n"
+              : "Sua assinatura não foi alterada e nenhum pagamento foi confirmado.\n\n") +
+          "🔒 <a href=\"https://streammonitor.site/app/subscription\">Abrir Minha Assinatura</a>\n" +
           "Você também pode tentar /pix novamente após consultar o painel."
         );
       }
