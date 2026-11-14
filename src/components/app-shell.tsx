@@ -128,6 +128,7 @@ function useNavItems() {
   const items = [
     ...(navIsAdmin ? [{ to: "/app/admin", label: "Admin · Central de controle", icon: Users }, { to: "/app/admin/telegram-guard", label: "Admin · Entregas Telegram", icon: Bell }] : []),
     ...(navIsAdmin ? [{ to: "/app/auditoria", label: "Auditoria Visual", icon: ShieldAlert }] : []),
+    ...(navIsAdmin ? [{ to: "/app/admin/observabilidade", label: "Admin · PostHog / Grafana", icon: Gauge }] : []),
     { to: "/app", label: "Dashboard", icon: LayoutDashboard, exact: true },
     { to: "/app/servers", label: "Servidores", icon: ServerIcon },
     { to: "/app/central", label: "Central Inteligente", icon: ShieldAlert },
