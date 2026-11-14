@@ -20,7 +20,7 @@ async function buildPix(userId:string, requestedPackage?:string):Promise<PixOutc
   const hasPaidPlan=!!subscription && ["monthly","quarterly","yearly"].includes(subscription.plan);
   // Present package selection before creating any Mercado Pago charge.
   if(wallet!==null && !hasPaidPlan && !requestedPackage)return {type:"wallet"};
-  const packageId=requestedPackage && /^credits_(10|30|50|100|200|500)$/.test(requestedPackage)
+  const packageId=requestedPackage && /^credits_(10|30|50)$/.test(requestedPackage)
     ? requestedPackage : null;
   if(requestedPackage && (!packageId || wallet===null)){
     throw new Error("Pacote inválido para esta conta.");
@@ -114,7 +114,7 @@ export async function generateTelegramPix(userId:string, packageAmount?:number):
     return `🪙 <b>Escolha um pacote de créditos</b>\n\n`+
       `Sua revenda utiliza créditos sem vencimento mensal.\n`+
       `Escolha um pacote para gerar o Pix:\n\n${prices}\n\n`+
-      `Para outros pacotes, utilize /pix 100, /pix 200 ou /pix 500.\n`+
+      `Outras quantidades devem ser consultadas diretamente no painel.\n`+
       `Também é possível pagar em https://streammonitor.site/app/subscription`;
   }
   if(result.type==="credited")return "✅ <b>Renovação confirmada!</b>\n\nSeu saldo de indicações cobriu integralmente a assinatura. Consulte /fatura.";
