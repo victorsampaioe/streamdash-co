@@ -17,12 +17,16 @@ export async function resolveUserByChatId(chatId: string | number): Promise<stri
     .select("owner_id, target, enabled")
     .eq("kind", "telegram")
     .eq("enabled", true);
+  // No invoices, PIX or other account details in groups or chats shared by
+  // multiple owners. Telegram IDs are verified only from linked alert channels.
+  if (!/^[1-9][0-9]{4,15}$/.test(id)) return null;
+  const owners = new Set<string>();
   for (const c of data ?? []) {
     const raw = String(c.target ?? "").trim();
     const cid = raw.includes(":") ? raw.split(":").slice(-1)[0] : raw;
-    if (cid === id) return c.owner_id;
+    if (cid === id) owners.add(c.owner_id);
   }
-  return null;
+  return owners.size === 1 ? [...owners][0] : null;
 }
 
 async function myServers(userId: string) {
@@ -49,6 +53,10 @@ export const COMMAND_HELP =
   `/canais — últimos canais adicionados\n` +
   `/ranking — sua posição no ranking IPTV\n` +
   `/resumo — enviar agora o relatório inteligente completo\n` +
+  `/fatura — consultar vencimento, status e valores\n` +
+  `/pix — gerar PIX mensal com descontos aplicáveis\n` +
+  `/avisos_off — parar lembretes de cobrança\n` +
+  `/avisos_on — reativar os lembretes\n` +
   `/id — mostrar seu código de vinculação\n` +
   `/ajuda — esta lista`;
 
@@ -200,7 +208,7 @@ export async function handleTelegramCommand(
   if (cmd === "/id") return `Seu código de vinculação é:\n\n<code>${chatId}</code>`;
   if (cmd === "/ajuda" || cmd === "/help" || cmd === "/comandos") return COMMAND_HELP;
 
-  const known = ["/status", "/offline", "/health", "/saude", "/novidades", "/filmes", "/series", "/canais", "/ranking", "/resumo"];
+  const known = ["/status", "/offline", "/health", "/saude", "/novidades", "/filmes", "/series", "/canais", "/ranking", "/resumo", "/fatura", "/pix", "/avisos_off", "/avisos_on"];
   if (!known.includes(cmd)) return null;
 
   const userId = await resolveUserByChatId(chatId);
@@ -212,6 +220,23 @@ export async function handleTelegramCommand(
   }
 
   switch (cmd) {
+    case "/fatura": {
+      const { formatTelegramInvoice } = await import("./telegram-billing.server");
+      return await formatTelegramInvoice(userId);
+    }
+    case "/pix": {
+      const { generateTelegramPix } = await import("./telegram-billing-pix.server");
+      return await generateTelegramPix(userId);
+    }
+    case "/avisos_off":
+    case "/avisos_on": {
+      const { setBillingPreference } = await import("./telegram-billing.server");
+      const enabled = cmd === "/avisos_on";
+      await setBillingPreference(userId, enabled);
+      return enabled
+        ? "✅ Avisos de vencimento e renovação reativados. Consulte /fatura quando quiser."
+        : "🔕 Avisos automáticos de cobrança desativados. Comandos /fatura e /pix continuam disponíveis.";
+    }
     case "/status": return await cmdStatus(userId);
     case "/offline": return await cmdOffline(userId);
     case "/health":
