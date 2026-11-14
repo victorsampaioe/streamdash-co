@@ -189,6 +189,17 @@ export const getGlobalpingWorldDns = createServerFn({ method: "POST" })
     const { target } = await ownerServer(context, data.serverId);
     const row = await latest(context, data.serverId);
     if (!row || row.target_host !== target) return null;
+    // A network interruption must not keep a browser polling indefinitely.
+    const ageMs = Date.now() - new Date(row.created_at).getTime();
+    if ((row.status === "starting" && ageMs > 45_000) ||
+        (row.status === "in-progress" && ageMs > 100_000)) {
+      const { error } = await db.from("globalping_dns_runs").update({
+        status: "failed", error_code: "globalping_measurement_timeout",
+        updated_at: new Date().toISOString(),
+      }).eq("id", row.id).eq("user_id", context.userId);
+      if (error) throw new Error("Falha ao encerrar a consulta mundial.");
+      return normalizeRun({ ...row, status: "failed", error_code: "globalping_measurement_timeout" });
+    }
     if (row.status !== "in-progress" || !row.measurement_id) return normalizeRun(row);
     // Prevent excessive GET polling: 2 requests/sec is the Globalping ceiling.
     const token = await tokenServerOnly();
