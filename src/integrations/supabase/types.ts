@@ -4373,6 +4373,11 @@ export type Database = {
       }
       profiles: {
         Row: {
+          acquisition_campaign: string | null
+          acquisition_content: string | null
+          acquisition_placement: string | null
+          acquisition_platform: string | null
+          acquisition_source: string | null
           avatar_url: string | null
           created_at: string
           credits: number | null
@@ -4394,6 +4399,11 @@ export type Database = {
           whatsapp: string | null
         }
         Insert: {
+          acquisition_campaign?: string | null
+          acquisition_content?: string | null
+          acquisition_placement?: string | null
+          acquisition_platform?: string | null
+          acquisition_source?: string | null
           avatar_url?: string | null
           created_at?: string
           credits?: number | null
@@ -4415,6 +4425,11 @@ export type Database = {
           whatsapp?: string | null
         }
         Update: {
+          acquisition_campaign?: string | null
+          acquisition_content?: string | null
+          acquisition_placement?: string | null
+          acquisition_platform?: string | null
+          acquisition_source?: string | null
           avatar_url?: string | null
           created_at?: string
           credits?: number | null
