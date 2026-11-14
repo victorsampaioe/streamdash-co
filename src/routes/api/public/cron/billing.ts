@@ -26,6 +26,61 @@ export const Route=createFileRoute("/api/public/cron/billing")({
             callbackConfigured:Boolean(process.env.SITE_URL||"https://streammonitor.site"),
           },{headers:{"Cache-Control":"no-store"}});
         }
+        // One-time, authenticated repair: Telegram may register only
+        // "message" updates, which makes inline PIX buttons inert.
+        // Preserve the existing webhook URL and update types. Never drop updates.
+        if(new URL(request.url).searchParams.get("action")==="enable_callbacks"){
+          const token=process.env.TELEGRAM_BOT_TOKEN;
+          if(!token)return Response.json({ok:false,error:"bot_not_configured"},{status:503});
+          try{
+            const {createHash}=await import("node:crypto");
+            const res=await fetch(`https://api.telegram.org/bot${token}/getWebhookInfo`,{
+              signal:AbortSignal.timeout(10000),
+            });
+            if(!res.ok)return Response.json({ok:false,error:"get_webhook_failed"},{status:502});
+            const response=await res.json() as {ok:boolean;result?:{url?:string;allowed_updates?:string[];max_connections?:number}};
+            const info=response.result;
+            if(!response.ok||!info?.url)return Response.json({ok:false,error:"webhook_not_registered"},{status:409});
+            const url=new URL(info.url);
+            const allowedHosts=new Set([
+              "streammonitor.site",
+              "www.streammonitor.site",
+              "streamdash-co.lovable.app",
+              "project--53f0eb67-2e35-46bc-9ab5-dc7ffc20dcbd.lovable.app",
+            ]);
+            if(url.protocol!=="https:"||!allowedHosts.has(url.hostname)||url.pathname!=="/api/public/telegram/webhook"){
+              return Response.json({ok:false,error:"unexpected_webhook_target"},{status:409});
+            }
+            const prior=Array.isArray(info.allowed_updates)?info.allowed_updates:[];
+            if(prior.length===0||prior.includes("callback_query")){
+              return Response.json({ok:true,changed:false,callbackAllowed:true});
+            }
+            const next=[...new Set([...prior,"callback_query"])];
+            const secretToken=createHash("sha256")
+              .update(`telegram-webhook:${token}`).digest("base64url");
+            const update=await fetch(`https://api.telegram.org/bot${token}/setWebhook`,{
+              method:"POST",
+              headers:{"content-type":"application/json"},
+              body:JSON.stringify({
+                url:info.url,
+                allowed_updates:next,
+                secret_token:secretToken,
+                drop_pending_updates:false,
+                ...(info.max_connections?{max_connections:info.max_connections}:{}),
+              }),
+              signal:AbortSignal.timeout(11000),
+            });
+            const result=await update.json().catch(()=>({ok:false}));
+            if(!update.ok||!result.ok){
+              console.error("[telegram-webhook-setup] failed status",update.status);
+              return Response.json({ok:false,error:"set_webhook_failed"},{status:502});
+            }
+            return Response.json({ok:true,changed:true,callbackAllowed:true,allowedUpdates:next});
+          }catch(err){
+            console.error("[telegram-webhook-setup] unavailable",err instanceof Error?err.name:"unknown");
+            return Response.json({ok:false,error:"webhook_setup_unavailable"},{status:503});
+          }
+        }
         if(new URL(request.url).searchParams.get("health")==="telegram"){
           const token=process.env.TELEGRAM_BOT_TOKEN;
           if(!token) return Response.json({ok:false,error:"bot_not_configured"},{status:503});
