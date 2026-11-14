@@ -32,8 +32,8 @@
       }
     },
     "project.signup_completed": {
-      "event_schema_version": 1,
-      "description": "The server confirmed a new account was created.",
+      "event_schema_version": 2,
+      "description": "The server confirmed a new account was created; includes the ad platform (facebook/instagram) when the visit came from a Meta ad.",
       "privacy": {
         "contains_pii": false,
         "purpose": "product_analytics"
@@ -48,6 +48,17 @@
         "properties": {
           "source": {
             "type": "string"
+          },
+          "platform": {
+            "type": "string",
+            "enum": [
+              "facebook",
+              "instagram",
+              "messenger",
+              "audience_network",
+              "other",
+              "unknown"
+            ]
           },
           "pending_activation": {
             "type": "boolean"
