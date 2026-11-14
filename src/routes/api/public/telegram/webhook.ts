@@ -17,11 +17,17 @@ function safeEqual(a: string, b: string) {
   return x.length === y.length && timingSafeEqual(x, y);
 }
 
-async function send(token: string, chatId: number | string, text: string) {
+const billingKeyboard = {
+  inline_keyboard: [
+    [{text:"🧾 Minha fatura",callback_data:"billing:invoice"},{text:"💠 Gerar PIX",callback_data:"billing:pix"}],
+    [{text:"🔒 Pagar pelo site",url:"https://streammonitor.site/app/subscription"}],
+  ],
+};
+async function send(token: string, chatId: number | string, text: string, withBillingKeyboard=false) {
   const r = await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ chat_id: chatId, text, parse_mode: "HTML", disable_web_page_preview: true }),
+    body: JSON.stringify({ chat_id: chatId, text, parse_mode: "HTML", disable_web_page_preview: true, ...(withBillingKeyboard?{reply_markup:billingKeyboard}:{}) }),
   });
   if (!r.ok) console.error("[telegram-webhook] sendMessage falhou", r.status, await r.text());
 }
@@ -41,6 +47,28 @@ export const Route = createFileRoute("/api/public/telegram/webhook")({
         }
 
         const update: any = await request.json().catch(() => null);
+        // Telegram buttons are private and tied to the same registered chat
+        // verified by handleTelegramCommand. No payment is initiated for a group.
+        const callback=update?.callback_query;
+        if(callback){
+          const callbackChat=callback.message?.chat?.id;
+          const isPrivate=callback.message?.chat?.type==="private" && Number(callbackChat)>0;
+          const command=callback.data==="billing:pix"?"/pix":callback.data==="billing:invoice"?"/fatura":null;
+          await fetch(`https://api.telegram.org/bot${token}/answerCallbackQuery`,{
+            method:"POST",headers:{"Content-Type":"application/json"},
+            body:JSON.stringify({callback_query_id:callback.id}),
+          }).catch(()=>{});
+          if(isPrivate && command){
+            const {handleTelegramCommand}=await import("@/lib/telegram-commands.server");
+            try{
+              const reply=await handleTelegramCommand(callbackChat,command);
+              await send(token,callbackChat,reply || "Vincule este Telegram em https://streammonitor.site/app/alerts para consultar sua fatura.",true);
+            }catch{
+              await send(token,callbackChat,"⚠️ Não foi possível consultar sua cobrança. Tente /fatura ou /pix novamente.",true);
+            }
+          }
+          return Response.json({ok:true});
+        }
         const msg = update?.message ?? update?.edited_message;
         const chatId = msg?.chat?.id;
         if (!chatId) return Response.json({ ok: true, ignored: true });
@@ -62,6 +90,7 @@ export const Route = createFileRoute("/api/public/telegram/webhook")({
               `3️⃣ Cole o código e clique em <b>Conectar Telegram</b>.\n\n` +
               `Depois disso você recebe aqui os alertas, o resumo diário — e pode usar os comandos abaixo. ✅\n\n` +
               COMMAND_HELP,
+            true,
           );
           return Response.json({ ok: true });
         }
@@ -80,6 +109,7 @@ export const Route = createFileRoute("/api/public/telegram/webhook")({
           chatId,
           reply ??
             `Seu código de vinculação é:\n\n<code>${chatId}</code>\n\nCole ele em <b>streammonitor.site → Alertas</b>.\n\n${COMMAND_HELP}`,
+          true,
         );
 
 
