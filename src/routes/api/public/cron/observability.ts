@@ -13,8 +13,18 @@ export const Route=createFileRoute("/api/public/cron/observability")({
         return Response.json({ok:true,skipped:true,reason:"worker_only"});
       try{
         const {withCycleLock}=await import("@/lib/job-lock.server");
-        const {exportGrafanaMetrics}=await import("@/lib/grafana-metrics.server");
-        const result=await withCycleLock("grafana-observability-quarterhour",180,()=>exportGrafanaMetrics());
+        const result=await withCycleLock("grafana-observability-quarterhour",180,async()=>{
+          // Native observability continues working even without Grafana access.
+          const {supabaseAdmin}=await import("@/integrations/supabase/client.server");
+          const {data:snapshot,error:snapshotError}=await (supabaseAdmin as any)
+            .rpc("streammonitor_capture_health_snapshot");
+          if(snapshotError)throw new Error("platform_health_snapshot_failed");
+          const {exportGrafanaMetrics}=await import("@/lib/grafana-metrics.server");
+          let grafana;
+          try{grafana=await exportGrafanaMetrics();}
+          catch{grafana={status:"failed",code:"grafana_export_error"};}
+          return {snapshotAt:snapshot?.at??null,grafana};
+        });
         return Response.json({ok:true,...result},{headers:{"Cache-Control":"no-store"}});
       }catch(err){
         console.error("[grafana] export cycle failed",err instanceof Error?err.name:"unknown");
