@@ -4,7 +4,7 @@
  * Mercado Pago provider webhook/verification.
  */
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
-import { PLANS, effectivePriceCents, formatBRL } from "./payments";
+import { PLANS, CREDIT_PACKS, effectivePriceCents, formatBRL } from "./payments";
 import { getBillingState } from "./telegram-billing.server";
 import { createMpPixCharge, getMpToken } from "./mercadopago.server";
 import { withCycleLock } from "./job-lock.server";
@@ -15,22 +15,28 @@ type PixOutcome =
   | { type:"wallet" }
   | { type:"retry" };
 
-async function buildPix(userId:string):Promise<PixOutcome> {
+async function buildPix(userId:string, requestedPackage?:string):Promise<PixOutcome> {
   const { wallet,subscription } = await getBillingState(userId);
-  if(wallet!==null && (!subscription || !["monthly","quarterly","yearly"].includes(subscription.plan))){
-    // Credit-reseller prices can be customized by the parent.
-    // Never charge a fixed plan amount to credit-wallet resellers.
-    return {type:"wallet"};
+  const hasPaidPlan=!!subscription && ["monthly","quarterly","yearly"].includes(subscription.plan);
+  // Present package selection before creating any Mercado Pago charge.
+  if(wallet!==null && !hasPaidPlan && !requestedPackage)return {type:"wallet"};
+  const packageId=requestedPackage && /^credits_(10|30|50|100|200|500)$/.test(requestedPackage)
+    ? requestedPackage : null;
+  if(requestedPackage && (!packageId || wallet===null)){
+    throw new Error("Pacote inválido para esta conta.");
   }
   // Admins must be able to test a self-requested PIX checkout too.
   // This only prepares a Mercado Pago charge for the account that owns
   // the linked private Telegram chat; it never changes admin privileges.
   // The actual subscription remains activated only after provider approval.
-  const selectedPlan=subscription && ["monthly","quarterly","yearly"].includes(subscription.plan)
-    ? subscription.plan : "monthly";
-  const plan=PLANS.find(p=>p.id===selectedPlan);
-  if(!plan)throw new Error("Plano de assinatura não configurado.");
-  const amountCents=effectivePriceCents(plan);
+  const selectedPlan=packageId ?? (hasPaidPlan ? subscription!.plan : "monthly");
+  const plan=PLANS.find(p=>p.id===selectedPlan) || CREDIT_PACKS.find(p=>p.id===selectedPlan);
+  if(!plan)throw new Error("Plano ou pacote não configurado.");
+  // Match the existing website's published credit-pack calculation.
+  const amountCents=packageId
+    ? (plan.credits??0) * ((plan.credits??0)>=50 ? 500 : 600)
+    : effectivePriceCents(plan);
+  const discountEligible=!packageId;
   const expiresAt=new Date(Date.now()+30*60*1000).toISOString();
 
   let {data:pending,error:findError}=await supabaseAdmin.from("payments")
@@ -45,22 +51,29 @@ async function buildPix(userId:string):Promise<PixOutcome> {
     // The same table / webhook used by the website processes this payment.
     const {data:created,error:createError}=await supabaseAdmin.from("payments").insert({
       user_id:userId,provider:"mercadopago",method:"pix",status:"pending",
-      amount_cents:amountCents,gross_amount_cents:amountCents,referral_discount_cents:0,
+      amount_cents:amountCents,gross_amount_cents:discountEligible?amountCents:null,referral_discount_cents:0,
       currency:"BRL",plan:selectedPlan,payment_type:"subscription",expires_at:expiresAt
     } as never).select("id,amount_cents,referral_discount_cents,expires_at").single();
     if(createError||!created)throw new Error("Não foi possível abrir a cobrança Pix.");
-    const {data:reserved,error:discountError}=await (supabaseAdmin as any).rpc("reserve_referral_discount",{_payment_id:created.id});
-    if(discountError)throw new Error("Não foi possível calcular o desconto de indicação.");
-    const amount=Number(reserved?.[0]?.amount_to_pay_cents??amountCents);
-    if(amount===0){
-      const {data:finalized,error:finalizeError}=await (supabaseAdmin as any).rpc("finalize_referral_credit_payment",{_payment_id:created.id});
-      if(finalizeError||!finalized?.[0]?.applied)throw new Error("Falha na renovação com crédito.");
-      return {type:"credited"};
+    let payable=amountCents;
+    let discount=0;
+    if(discountEligible){
+      const {data:reserved,error:discountError}=await (supabaseAdmin as any)
+        .rpc("reserve_referral_discount",{_payment_id:created.id});
+      if(discountError)throw new Error("Não foi possível calcular o desconto de indicação.");
+      payable=Number(reserved?.[0]?.amount_to_pay_cents??amountCents);
+      discount=Number(reserved?.[0]?.discount_cents??0);
+      if(payable===0){
+        const {data:finalized,error:finalizeError}=await (supabaseAdmin as any)
+          .rpc("finalize_referral_credit_payment",{_payment_id:created.id});
+        if(finalizeError||!finalized?.[0]?.applied)throw new Error("Falha na renovação com crédito.");
+        return {type:"credited"};
+      }
     }
     pending={
       ...created,
-      amount_cents:amount,
-      referral_discount_cents:reserved?.[0]?.discount_cents??0,
+      amount_cents:payable,
+      referral_discount_cents:discount,
       pix_copy_paste:null,pix_qr_code:null,
     } as typeof pending;
   }
@@ -90,11 +103,20 @@ async function buildPix(userId:string):Promise<PixOutcome> {
     discountCents:pending.referral_discount_cents??0,expiresAt:String(pending.expires_at)};
 }
 
-export async function generateTelegramPix(userId:string):Promise<string> {
+export async function generateTelegramPix(userId:string, packageAmount?:number):Promise<string> {
   if(!/^[0-9a-f-]{36}$/i.test(userId))throw new Error("Usuário inválido.");
-  const result=await withCycleLock(`tg-pix-${userId}`,60,()=>buildPix(userId));
+  const pack = packageAmount == null ? undefined : "credits_" + packageAmount;
+  const result=await withCycleLock(`tg-pix-${userId}`,60,()=>buildPix(userId,pack));
   if("skipped" in result)return "⏳ Já estamos gerando seu Pix. Tente /pix novamente em alguns segundos.";
-  if(result.type==="wallet")return "🪙 <b>Conta de revenda por créditos</b>\n\nSeus créditos não têm vencimento mensal. Para recarregar com o preço correto da sua revenda, acesse: https://streammonitor.site/app/subscription\n\nNão gere Pix fora do painel.";
+  if(result.type==="wallet"){
+    const small=CREDIT_PACKS.filter(p=>[10,30,50].includes(p.credits??0));
+    const prices=small.map(p=>`• <b>${p.credits} créditos:</b> ${formatBRL((p.credits??0)*((p.credits??0)>=50?500:600))} — /pix ${p.credits}`).join("\n");
+    return `🪙 <b>Escolha um pacote de créditos</b>\n\n`+
+      `Sua revenda utiliza créditos sem vencimento mensal.\n`+
+      `Escolha um pacote para gerar o Pix:\n\n${prices}\n\n`+
+      `Para outros pacotes, utilize /pix 100, /pix 200 ou /pix 500.\n`+
+      `Também é possível pagar em https://streammonitor.site/app/subscription`;
+  }
   if(result.type==="credited")return "✅ <b>Renovação confirmada!</b>\n\nSeu saldo de indicações cobriu integralmente a assinatura. Consulte /fatura.";
   const esc=(s:string)=>s.replace(/[<>&]/g,c=>({"<":"&lt;",">":"&gt;","&":"&amp;"}[c]!));
   const expires=new Date(result.expiresAt).toLocaleTimeString("pt-BR",{timeZone:"America/Fortaleza",hour:"2-digit",minute:"2-digit"});
