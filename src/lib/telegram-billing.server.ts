@@ -209,6 +209,12 @@ export async function enqueueTelegramPaymentApproved(input:{
   if(!await getBillingPreference(input.userId))return {queued:0};
   const channels=(await registeredPrivateChannels()).filter(ch=>ch.owner_id===input.userId);
   if(!channels.length)return {queued:0};
+  // A payment may be confirmed while a delayed reminder is still queued.
+  // Cancel obsolete notices before sending the confirmation receipt.
+  const {error:obsoleteError}=await (supabaseAdmin as any).from("telegram_outbox")
+    .update({status:"dead",last_error:"superseded_by_approved_payment",updated_at:new Date().toISOString()})
+    .in("channel_id",channels.map(ch=>ch.id)).eq("source","billing_reminder").eq("status","pending");
+  if(obsoleteError)console.error("[billing] failed to supersede pending notices",obsoleteError.code);
   const title=input.plan==="monthly"?"mensal":input.plan==="quarterly"?"trimestral":input.plan==="yearly"?"anual":"Stream Monitor";
   const message=`✅ <b>Pagamento confirmado — Stream Monitor</b>\n\n`+
     `💰 Valor: <b>${formatBRL(input.amountCents)}</b>\n`+
