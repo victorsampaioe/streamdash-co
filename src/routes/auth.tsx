@@ -14,6 +14,7 @@ import { Card } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
 import { trackMetaCompleteRegistration } from "@/lib/meta-pixel";
+import { trackPosthogEvent } from "@/lib/posthog-analytics";
 import { readAttribution, readAttributionPlatform, readAttributionSource } from "@/lib/ad-attribution";
 
 const searchSchema = z.object({ redirect: z.string().optional(), ref: z.string().regex(/^[A-Za-z0-9]{4,16}$/).optional(), tab: z.enum(["signin","signup"]).optional() }).partial();
@@ -111,7 +112,7 @@ function AuthPage() {
 
   async function handleSignIn(event: React.FormEvent) {
     event.preventDefault(); setLoading(true);
-    try { await signIn(); toast.success("Bem-vindo de volta"); navigate({ to: safeRedirect, replace: true }); }
+    try { await signIn(); void trackPosthogEvent("sm_login_completed"); toast.success("Bem-vindo de volta"); navigate({ to: safeRedirect, replace: true }); }
     catch (error) { toast.error(error instanceof Error ? error.message : "Não conseguimos entrar agora."); }
     finally { setLoading(false); }
   }
@@ -121,6 +122,7 @@ function AuthPage() {
     if (signupStartedRef.current) return;
     signupStartedRef.current = true;
     window.__lovableEvents?.track?.("project.signup_started", { source: readAttributionSource() });
+    void trackPosthogEvent("sm_signup_started");
   }
 
   async function handleSignUp(event: React.FormEvent) {
@@ -150,6 +152,7 @@ function AuthPage() {
       // Conta criada pelo servidor: único ponto que conta como cadastro concluído.
       window.__lovableEvents?.track?.("project.signup_completed", { source: readAttributionSource(), platform: readAttributionPlatform(), pending_activation: Boolean(result.needsEmailConfirmation) });
       void trackMetaCompleteRegistration(requestId);
+      void trackPosthogEvent("sm_signup_completed");
       if (result.needsEmailConfirmation) {
         toast.success("Conta criada! Confira seu e-mail para confirmar o acesso.");
         if (quickMode) {
