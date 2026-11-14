@@ -3,6 +3,7 @@ import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import * as sec from "./signup-security.server";
 import * as v from "./signup-validation";
 import { notifyAdminSignup } from "./admin-telegram.server";
+import { sanitizeAttributionInput } from "./ad-attribution";
 
 export interface SignupInput {
   name?: unknown;
@@ -16,6 +17,8 @@ export interface SignupInput {
   company_website?: unknown;
   redirectTo?: unknown;
   requestId?: unknown;
+  /** origem do anúncio (utm), validada no servidor */
+  attribution?: unknown;
 }
 
 export interface SignupOutcome {
@@ -209,7 +212,7 @@ export async function handleSignup(input: SignupInput, headers: Headers): Promis
   }
 
   const userId = signUpData.user.id;
-  const { error: profileError } = await supabaseAdmin.from("profiles").update({ username }).eq("id", userId);
+  const { error: profileError } = await supabaseAdmin.from("profiles").update({ username, ...(sanitizeAttributionInput(input.attribution) ?? {}) }).eq("id", userId);
   if (profileError) {
     sec.log("username profile update failed", { userId, code: profileError.code });
   }
