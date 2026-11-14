@@ -79,7 +79,7 @@ async function send(token: string, chatId: number | string, text: string, withBi
     if(!code || code.length>4096)throw new Error("invalid_pix_code_length");
     const overview=text.replace(
       pixMatch[0],
-      "📋 <b>Pix copia e cola pronto!</b>\\n"+
+      "📋 <b>Pix copia e cola pronto!</b>\n"+
       (code.length<=256
         ? "Toque em <b>Copiar código Pix</b> na próxima mensagem para copiar com um toque."
         : "A próxima mensagem contém <b>somente o código Pix</b>. Segure a mensagem e selecione <b>Copiar</b> para copiar tudo.")
