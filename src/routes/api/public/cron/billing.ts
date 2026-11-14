@@ -47,22 +47,27 @@ export const Route=createFileRoute("/api/public/cron/billing")({
               "www.streammonitor.site",
               "streamdash-co.lovable.app",
               "project--53f0eb67-2e35-46bc-9ab5-dc7ffc20dcbd.lovable.app",
+              "project--53f0eb67-2e35-46bc-9ab5-dc7ffc20dcbd-dev.lovable.app",
             ]);
             if(url.protocol!=="https:"||!allowedHosts.has(url.hostname)||url.pathname!=="/api/public/telegram/webhook"){
               return Response.json({ok:false,error:"unexpected_webhook_target"},{status:409});
             }
+            // The legacy webhook points to an ephemeral Lovable -dev domain.
+            // Migrate to the verified production URL, preserving allowed types.
+            const targetUrl="https://streammonitor.site/api/public/telegram/webhook";
             const prior=Array.isArray(info.allowed_updates)?info.allowed_updates:[];
-            if(prior.length===0||prior.includes("callback_query")){
-              return Response.json({ok:true,changed:false,callbackAllowed:true});
+            const callbackAllowed=prior.length===0||prior.includes("callback_query");
+            if(callbackAllowed && info.url===targetUrl){
+              return Response.json({ok:true,changed:false,callbackAllowed:true,productionWebhook:true});
             }
-            const next=[...new Set([...prior,"callback_query"])];
+            const next=prior.length===0?[]:[...new Set([...prior,"callback_query"])];
             const secretToken=createHash("sha256")
               .update(`telegram-webhook:${token}`).digest("base64url");
             const update=await fetch(`https://api.telegram.org/bot${token}/setWebhook`,{
               method:"POST",
               headers:{"content-type":"application/json"},
               body:JSON.stringify({
-                url:info.url,
+                url:targetUrl,
                 allowed_updates:next,
                 secret_token:secretToken,
                 drop_pending_updates:false,
@@ -75,7 +80,21 @@ export const Route=createFileRoute("/api/public/cron/billing")({
               console.error("[telegram-webhook-setup] failed status",update.status);
               return Response.json({ok:false,error:"set_webhook_failed"},{status:502});
             }
-            return Response.json({ok:true,changed:true,callbackAllowed:true,allowedUpdates:next});
+            // Verify the update was accepted by Telegram, not just requested.
+            const confirm=await fetch(`https://api.telegram.org/bot${token}/getWebhookInfo`,{
+              signal:AbortSignal.timeout(9000),
+            });
+            const state=await confirm.json().catch(()=>({ok:false}));
+            const current=state?.result??{};
+            const types=Array.isArray(current.allowed_updates)?current.allowed_updates:[];
+            const verified=confirm.ok && state.ok===true
+              && current.url===targetUrl
+              && (types.length===0||types.includes("callback_query"));
+            return Response.json({
+              ok:verified,changed:true,callbackAllowed:verified,
+              productionWebhook:current.url===targetUrl,
+              allowedUpdates:types,
+            },{status:verified?200:502,headers:{"Cache-Control":"no-store"}});
           }catch(err){
             console.error("[telegram-webhook-setup] unavailable",err instanceof Error?err.name:"unknown");
             return Response.json({ok:false,error:"webhook_setup_unavailable"},{status:503});
