@@ -26,6 +26,33 @@ export const Route=createFileRoute("/api/public/cron/billing")({
             callbackConfigured:Boolean(process.env.SITE_URL||"https://streammonitor.site"),
           },{headers:{"Cache-Control":"no-store"}});
         }
+        if(new URL(request.url).searchParams.get("health")==="telegram"){
+          const token=process.env.TELEGRAM_BOT_TOKEN;
+          if(!token) return Response.json({ok:false,error:"bot_not_configured"},{status:503});
+          try{
+            const answer=await fetch(`https://api.telegram.org/bot${token}/getWebhookInfo`,{
+              signal:AbortSignal.timeout(9000),
+              headers:{"Accept":"application/json"},
+            });
+            const json=await answer.json();
+            const info=json?.result??{};
+            const registered=typeof info.url==="string" && info.url.length>0;
+            const allowed=Array.isArray(info.allowed_updates)?info.allowed_updates:[];
+            return Response.json({
+              ok:answer.ok && json.ok===true,
+              webhookRegistered:registered,
+              webhookPathValid:registered && new URL(info.url).pathname==="/api/public/telegram/webhook",
+              callbackAllowed:allowed.length===0 || allowed.includes("callback_query"),
+              allowedUpdates:allowed,
+              pendingUpdateCount:Number(info.pending_update_count??0),
+              lastErrorDate:info.last_error_date?new Date(info.last_error_date*1000).toISOString():null,
+              lastErrorType:info.last_error_message?/unauthorized|forbidden|timeout|not found|bad gateway|internal server error/i.exec(info.last_error_message)?.[0]??"telegram_webhook_error":null,
+            },{headers:{"Cache-Control":"no-store"}});
+          }catch(err){
+            console.error("[telegram-webhook-health] info unavailable",err instanceof Error?err.name:"unknown");
+            return Response.json({ok:false,error:"telegram_info_unavailable"},{status:503});
+          }
+        }
         try{
           const {withCycleLock}=await import("@/lib/job-lock.server");
           const {enqueueDailyTelegramBillingReminders}=await import("@/lib/telegram-billing.server");
