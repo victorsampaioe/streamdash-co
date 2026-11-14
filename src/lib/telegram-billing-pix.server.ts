@@ -22,10 +22,10 @@ async function buildPix(userId:string):Promise<PixOutcome> {
     // Never charge a fixed plan amount to credit-wallet resellers.
     return {type:"wallet"};
   }
-  const {data:admin,error:adminError}=await supabaseAdmin.rpc("has_role",{_user_id:userId,_role:"admin"});
-  if(adminError)throw new Error("Não foi possível verificar a permissão da conta.");
-  if(admin)return {type:"wallet"};
-
+  // Admins must be able to test a self-requested PIX checkout too.
+  // This only prepares a Mercado Pago charge for the account that owns
+  // the linked private Telegram chat; it never changes admin privileges.
+  // The actual subscription remains activated only after provider approval.
   const selectedPlan=subscription && ["monthly","quarterly","yearly"].includes(subscription.plan)
     ? subscription.plan : "monthly";
   const plan=PLANS.find(p=>p.id===selectedPlan);
