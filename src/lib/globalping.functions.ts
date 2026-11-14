@@ -39,10 +39,28 @@ function onlyDnsHostname(host: string): string {
 }
 
 async function ownerServer(context: { userId: string; supabase: any }, serverId: string) {
-  const { data, error } = await context.supabase.from("servers")
+  // Ordinary accounts can query only DNS belonging to them. A real admin
+  // may inspect monitored servers belonging to other revendedores; the
+  // admin role is checked server-side and can never be supplied by the client.
+  const { data: owned, error: ownerError } = await context.supabase.from("servers")
     .select("id,host").eq("id", serverId).eq("owner_id", context.userId).maybeSingle();
-  if (error || !data) throw new Error("Servidor não encontrado ou sem permissão.");
-  return { serverId: data.id as string, target: onlyDnsHostname(data.host as string) };
+  if (ownerError) throw new Error("Não foi possível verificar acesso ao servidor.");
+  if (owned) {
+    return { serverId: owned.id as string, target: onlyDnsHostname(owned.host as string) };
+  }
+  const { data: isAdmin, error: roleError } = await db.rpc("has_role", {
+    _user_id: context.userId, _role: "admin",
+  });
+  if (roleError || isAdmin !== true) {
+    throw new Error("Servidor não encontrado ou sem permissão.");
+  }
+  const { data: server, error: serverError } = await db.from("servers")
+    .select("id,host").eq("id", serverId).maybeSingle();
+  if (serverError || !server) {
+    throw new Error("Servidor não encontrado ou sem permissão.");
+  }
+  // Only public DNS metadata passes to Globalping, never IPTV credentials.
+  return { serverId: server.id as string, target: onlyDnsHostname(server.host as string) };
 }
 function normalizeRun(row: StoredRun) {
   return {
