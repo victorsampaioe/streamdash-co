@@ -64,7 +64,7 @@ export const Route = createFileRoute("/api/public/telegram/webhook")({
           const isPrivate=callback.message?.chat?.type==="private" && Number(callbackChat)>0;
           const command=callback.data==="billing:pix"?"/pix":
             callback.data==="billing:invoice"?"/fatura":
-            /^billing:pix:credits_(10|30|50|100|200|500)$/.test(String(callback.data||""))
+            /^billing:pix:credits_(10|30|50)$/.test(String(callback.data||""))
               ? "/pix " + String(callback.data).split("_").at(-1) : null;
           await fetch(`https://api.telegram.org/bot${token}/answerCallbackQuery`,{
             method:"POST",headers:{"Content-Type":"application/json"},
