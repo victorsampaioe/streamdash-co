@@ -38,31 +38,41 @@ function visitor(){
     return crypto.randomUUID();
   }
 }
+/**
+ * Send the same consented, anonymous event to both the local in-app
+ * dashboard and PostHog. Neither destination depends on the other.
+ */
 async function dispatch(event:string,properties:Record<string,string>){
   if(typeof window==="undefined" || !SAFE_HOSTS.has(location.hostname))return false;
   if(!(await canTrack("analytics")))return false;
-  const c=await config();
-  if(!c.enabled || !/^phc_[A-Za-z0-9_-]{12,150}$/.test(c.projectKey)
-    || !["https://us.i.posthog.com","https://eu.i.posthog.com"].includes(c.host))return false;
-  try {
-    const response=await fetch(`${c.host}/i/v0/e/`,{
-      method:"POST",headers:{"Content-Type":"application/json"},mode:"cors",
-      keepalive:true,
-      body:JSON.stringify({
-        api_key:c.projectKey,
-        event,
-        distinct_id:visitor(),
-        properties:{
-          ...properties,
-          $ip:null,
-          $process_person_profile:false,
-          app_name:"Stream Monitor",
-        },
-      }),
-      signal:AbortSignal.timeout(4000),
-    });
-    return response.ok;
-  }catch { return false; }
+  const sessionId=visitor();
+  const screen=properties.screen || "none";
+  const scope=properties.scope==="painel"?"painel":"publico";
+  const local=fetch("/api/public/analytics/event",{
+    method:"POST",mode:"same-origin",credentials:"omit",keepalive:true,
+    headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({sessionId,event,screen,scope}),
+    signal:AbortSignal.timeout(4500),
+  }).then(response=>response.ok).catch(()=>false);
+  const remote=(async()=>{
+    const c=await config();
+    if(!c.enabled || !/^phc_[A-Za-z0-9_-]{12,150}$/.test(c.projectKey)
+      || !["https://us.i.posthog.com","https://eu.i.posthog.com"].includes(c.host))return false;
+    try {
+      const response=await fetch(`${c.host}/i/v0/e/`,{
+        method:"POST",headers:{"Content-Type":"application/json"},mode:"cors",
+        keepalive:true,
+        body:JSON.stringify({
+          api_key:c.projectKey,event,distinct_id:sessionId,
+          properties:{...properties,$ip:null,$process_person_profile:false,app_name:"Stream Monitor"},
+        }),
+        signal:AbortSignal.timeout(4000),
+      });
+      return response.ok;
+    }catch{return false;}
+  })();
+  const [localOk,remoteOk]=await Promise.all([local,remote]);
+  return localOk||remoteOk;
 }
 function normalizeScreen(path:string):string|null {
   if(path==="/")return "home";
