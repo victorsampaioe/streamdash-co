@@ -10,7 +10,7 @@ import { createMpPixCharge, getMpToken } from "./mercadopago.server";
 import { withCycleLock } from "./job-lock.server";
 
 type PixOutcome =
-  | { type:"pix";code:string;expiresAt:string;amountCents:number;discountCents:number }
+  | { type:"pix";code:string;expiresAt:string;amountCents:number;discountCents:number;planName:string }
   | { type:"credited" }
   | { type:"wallet" }
   | { type:"retry" };
@@ -26,25 +26,27 @@ async function buildPix(userId:string):Promise<PixOutcome> {
   if(adminError)throw new Error("Não foi possível verificar a permissão da conta.");
   if(admin)return {type:"wallet"};
 
-  const plan=PLANS.find(p=>p.id==="monthly");
-  if(!plan)throw new Error("Plano mensal não configurado.");
+  const selectedPlan=subscription && ["monthly","quarterly","yearly"].includes(subscription.plan)
+    ? subscription.plan : "monthly";
+  const plan=PLANS.find(p=>p.id===selectedPlan);
+  if(!plan)throw new Error("Plano de assinatura não configurado.");
   const amountCents=effectivePriceCents(plan);
   const expiresAt=new Date(Date.now()+30*60*1000).toISOString();
 
   let {data:pending,error:findError}=await supabaseAdmin.from("payments")
     .select("id,amount_cents,gross_amount_cents,referral_discount_cents,expires_at,pix_copy_paste,pix_qr_code,status")
-    .eq("user_id",userId).eq("status","pending").eq("payment_type","subscription").eq("plan","monthly")
+    .eq("user_id",userId).eq("status","pending").eq("payment_type","subscription").eq("plan",selectedPlan)
     .gt("expires_at",new Date().toISOString()).order("created_at",{ascending:false}).limit(1).maybeSingle();
   if(findError)throw new Error("Não foi possível consultar cobranças pendentes.");
   if(pending?.pix_copy_paste||pending?.pix_qr_code){
-    return {type:"pix",code:String(pending.pix_copy_paste||pending.pix_qr_code),expiresAt:String(pending.expires_at),amountCents:pending.amount_cents,discountCents:pending.referral_discount_cents??0};
+    return {type:"pix",code:String(pending.pix_copy_paste||pending.pix_qr_code),expiresAt:String(pending.expires_at),amountCents:pending.amount_cents,discountCents:pending.referral_discount_cents??0,planName:plan.name};
   }
   if(!pending) {
     // The same table / webhook used by the website processes this payment.
     const {data:created,error:createError}=await supabaseAdmin.from("payments").insert({
       user_id:userId,provider:"mercadopago",method:"pix",status:"pending",
       amount_cents:amountCents,gross_amount_cents:amountCents,referral_discount_cents:0,
-      currency:"BRL",plan:"monthly",payment_type:"subscription",expires_at:expiresAt
+      currency:"BRL",plan:selectedPlan,payment_type:"subscription",expires_at:expiresAt
     } as never).select("id,amount_cents,referral_discount_cents,expires_at").single();
     if(createError||!created)throw new Error("Não foi possível abrir a cobrança Pix.");
     const {data:reserved,error:discountError}=await (supabaseAdmin as any).rpc("reserve_referral_discount",{_payment_id:created.id});
@@ -70,7 +72,7 @@ async function buildPix(userId:string):Promise<PixOutcome> {
   const email=profile?.email?.trim()||`conta-${userId}@streammonitor.site`;
   const payment=await createMpPixCharge({
     amountCents:pending.amount_cents,
-    description:"Stream Monitor — Plano Mensal" +
+    description:`Stream Monitor — Plano ${plan.name}` +
       (pending.referral_discount_cents?" (crédito de indicação aplicado)":""),
     payerEmail:email,
     externalReference:pending.id,
@@ -84,7 +86,7 @@ async function buildPix(userId:string):Promise<PixOutcome> {
     raw_payload:payment as any,
   }).eq("id",pending.id).eq("user_id",userId).eq("status","pending");
   if(saveError)throw new Error("Pix emitido, mas falhou ao vincular. Não pague até confirmar no painel.");
-  return {type:"pix",code,amountCents:pending.amount_cents,
+  return {type:"pix",code,amountCents:pending.amount_cents,planName:plan.name,
     discountCents:pending.referral_discount_cents??0,expiresAt:String(pending.expires_at)};
 }
 
@@ -96,7 +98,7 @@ export async function generateTelegramPix(userId:string):Promise<string> {
   if(result.type==="credited")return "✅ <b>Renovação confirmada!</b>\n\nSeu saldo de indicações cobriu integralmente a assinatura. Consulte /fatura.";
   const esc=(s:string)=>s.replace(/[<>&]/g,c=>({"<":"&lt;",">":"&gt;","&":"&amp;"}[c]!));
   const expires=new Date(result.expiresAt).toLocaleTimeString("pt-BR",{timeZone:"America/Fortaleza",hour:"2-digit",minute:"2-digit"});
-  return `💠 <b>Pix Stream Monitor — Mensal</b>\n\n`+
+  return `💠 <b>Pix Stream Monitor — ${esc(result.planName)}</b>\n\n`+
     `💰 Valor: <b>${formatBRL(result.amountCents)}</b>\n`+
     (result.discountCents?`🎁 Indicações: -${formatBRL(result.discountCents)}\n`:"")+
     `⏱️ Código válido até: ${expires} (Fortaleza).\n\n`+
