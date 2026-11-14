@@ -24,6 +24,8 @@ export async function notifyAdmin(text: string): Promise<{ ok: boolean; error?: 
 async function notifyUserTelegram(userId: string, text: string) {
   const token = process.env.TELEGRAM_BOT_TOKEN;
   if (!token) return;
+  const {getBillingPreference, privateTelegramChat}=await import("./telegram-billing.server");
+  if(!(await getBillingPreference(userId)))return;
   const { data: channels } = await supabaseAdmin
     .from("alert_channels")
     .select("target")
@@ -33,7 +35,7 @@ async function notifyUserTelegram(userId: string, text: string) {
   if (!channels?.length) return;
   for (const ch of channels) {
     const raw = String(ch.target ?? "").trim();
-    const chatId = raw.includes(":") ? raw.split(":").slice(-1)[0] : raw;
+    const chatId=privateTelegramChat(raw);
     if (!chatId) continue;
     try {
       await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
