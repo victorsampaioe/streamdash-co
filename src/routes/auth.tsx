@@ -14,7 +14,7 @@ import { Card } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
 import { trackMetaCompleteRegistration } from "@/lib/meta-pixel";
-import { readAttributionSource } from "@/lib/ad-attribution";
+import { readAttribution, readAttributionPlatform, readAttributionSource } from "@/lib/ad-attribution";
 
 const searchSchema = z.object({ redirect: z.string().optional(), ref: z.string().regex(/^[A-Za-z0-9]{4,16}$/).optional(), tab: z.enum(["signin","signup"]).optional() }).partial();
 
@@ -140,7 +140,7 @@ function AuthPage() {
       const requestId = crypto.randomUUID();
       const response = await fetch("/api/public/signup", {
         method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ username: usernameCheck.value, email: emailCheck.value, password, referralCode: ref?.toUpperCase(), turnstileToken, company_website: honeypot, requestId }),
+        body: JSON.stringify({ username: usernameCheck.value, email: emailCheck.value, password, referralCode: ref?.toUpperCase(), turnstileToken, company_website: honeypot, requestId, attribution: readAttribution() }),
       });
       const result = await response.json() as { error?: string; code?: string; needsEmailConfirmation?: boolean };
       if (!response.ok) {
@@ -148,7 +148,7 @@ function AuthPage() {
         throw new Error(result.error ?? "Não conseguimos criar sua conta agora. Tente novamente em alguns segundos.");
       }
       // Conta criada pelo servidor: único ponto que conta como cadastro concluído.
-      window.__lovableEvents?.track?.("project.signup_completed", { source: readAttributionSource(), pending_activation: Boolean(result.needsEmailConfirmation) });
+      window.__lovableEvents?.track?.("project.signup_completed", { source: readAttributionSource(), platform: readAttributionPlatform(), pending_activation: Boolean(result.needsEmailConfirmation) });
       void trackMetaCompleteRegistration(requestId);
       if (result.needsEmailConfirmation) {
         toast.success("Conta criada! Confira seu e-mail para confirmar o acesso.");
