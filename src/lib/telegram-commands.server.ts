@@ -54,7 +54,7 @@ export const COMMAND_HELP =
   `/ranking — sua posição no ranking IPTV\n` +
   `/resumo — enviar agora o relatório inteligente completo\n` +
   `/fatura — consultar vencimento, status e valores\n` +
-  `/pix — gerar PIX mensal com descontos aplicáveis\n` +
+  `/pix — gerar PIX ou escolher pacotes para revenda\n` +
   `/avisos_off — parar lembretes de cobrança\n` +
   `/avisos_on — reativar os lembretes\n` +
   `/id — mostrar seu código de vinculação\n` +
@@ -227,7 +227,12 @@ export async function handleTelegramCommand(
     case "/pix": {
       try {
         const { generateTelegramPix } = await import("./telegram-billing-pix.server");
-        return await generateTelegramPix(userId);
+        const tokens=rawText.trim().split(/\s+/);
+        const amountToken=tokens[1];
+        if(amountToken && !/^(10|30|50|100|200|500)$/.test(amountToken)){
+          return "⚠️ <b>Pacote inválido.</b> Use /pix para ver opções ou /pix 10 para solicitar 10 créditos.";
+        }
+        return await generateTelegramPix(userId,amountToken?Number(amountToken):undefined);
       } catch (error) {
         // User-facing errors must be actionable, but must not leak
         // payment-provider secrets, internal SQL errors or stack traces.
