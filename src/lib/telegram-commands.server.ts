@@ -229,7 +229,7 @@ export async function handleTelegramCommand(
         const { generateTelegramPix } = await import("./telegram-billing-pix.server");
         const tokens=rawText.trim().split(/\s+/);
         const amountToken=tokens[1];
-        if(amountToken && !/^(10|30|50|100|200|500)$/.test(amountToken)){
+        if(amountToken && !/^(10|30|50)$/.test(amountToken)){
           return "⚠️ <b>Pacote inválido.</b> Use /pix para ver opções ou /pix 10 para solicitar 10 créditos.";
         }
         return await generateTelegramPix(userId,amountToken?Number(amountToken):undefined);
