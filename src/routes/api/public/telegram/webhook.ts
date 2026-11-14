@@ -38,7 +38,21 @@ async function send(token: string, chatId: number | string, text: string, withBi
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ chat_id: chatId, text, parse_mode: "HTML", disable_web_page_preview: true, ...(withBillingKeyboard?{reply_markup:text.includes("Escolha um pacote de créditos")?creditKeyboard:billingKeyboard}:{}) }),
   });
-  if (!r.ok) console.error("[telegram-webhook] sendMessage falhou", r.status, await r.text());
+  if(!r.ok){
+    // A malformed Telegram HTML response must not swallow a valid PIX code.
+    // Retry once as plain text, without logging payment codes or API payloads.
+    console.error("[telegram-webhook] HTML sendMessage failed",r.status);
+    if(r.status===400){
+      const plain=text.replace(/<[^>]*>/g,"")
+        .replace(/&amp;/g,"&").replace(/&lt;/g,"<").replace(/&gt;/g,">")
+        .slice(0,4096);
+      const fallback=await fetch(`https://api.telegram.org/bot${token}/sendMessage`,{
+        method:"POST",headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({chat_id:chatId,text:plain,disable_web_page_preview:true}),
+      });
+      if(!fallback.ok)console.error("[telegram-webhook] plain fallback failed",fallback.status);
+    }
+  }
 }
 
 export const Route = createFileRoute("/api/public/telegram/webhook")({
