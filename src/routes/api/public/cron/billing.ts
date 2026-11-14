@@ -15,6 +15,17 @@ export const Route=createFileRoute("/api/public/cron/billing")({
         if(process.env.IS_CORE==="true"){
           return Response.json({ok:true,skipped:true,reason:"panel_only"});
         }
+        // Internal, secret-protected, read-only diagnostic used to validate
+        // the production checkout wiring WITHOUT creating a Pix charge.
+        if(new URL(request.url).searchParams.get("health")==="1"){
+          const {getMpToken}=await import("@/lib/mercadopago.server");
+          return Response.json({
+            ok:true,
+            checkoutConfigured:Boolean(getMpToken()),
+            telegramConfigured:Boolean(process.env.TELEGRAM_BOT_TOKEN),
+            callbackConfigured:Boolean(process.env.SITE_URL||"https://streammonitor.site"),
+          },{headers:{"Cache-Control":"no-store"}});
+        }
         try{
           const {withCycleLock}=await import("@/lib/job-lock.server");
           const {enqueueDailyTelegramBillingReminders}=await import("@/lib/telegram-billing.server");
