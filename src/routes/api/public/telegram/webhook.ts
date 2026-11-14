@@ -23,11 +23,20 @@ const billingKeyboard = {
     [{text:"🔒 Pagar pelo site",url:"https://streammonitor.site/app/subscription"}],
   ],
 };
+const creditKeyboard = {
+  inline_keyboard: [
+    [{text:"🪙 10 créditos",callback_data:"billing:pix:credits_10"},
+     {text:"🪙 30 créditos",callback_data:"billing:pix:credits_30"},
+     {text:"🪙 50 créditos",callback_data:"billing:pix:credits_50"}],
+    [{text:"🧾 Minha fatura",callback_data:"billing:invoice"},
+     {text:"🔒 Outros pacotes",url:"https://streammonitor.site/app/subscription"}],
+  ],
+};
 async function send(token: string, chatId: number | string, text: string, withBillingKeyboard=false) {
   const r = await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ chat_id: chatId, text, parse_mode: "HTML", disable_web_page_preview: true, ...(withBillingKeyboard?{reply_markup:billingKeyboard}:{}) }),
+    body: JSON.stringify({ chat_id: chatId, text, parse_mode: "HTML", disable_web_page_preview: true, ...(withBillingKeyboard?{reply_markup:text.includes("Escolha um pacote de créditos")?creditKeyboard:billingKeyboard}:{}) }),
   });
   if (!r.ok) console.error("[telegram-webhook] sendMessage falhou", r.status, await r.text());
 }
@@ -53,7 +62,10 @@ export const Route = createFileRoute("/api/public/telegram/webhook")({
         if(callback){
           const callbackChat=callback.message?.chat?.id;
           const isPrivate=callback.message?.chat?.type==="private" && Number(callbackChat)>0;
-          const command=callback.data==="billing:pix"?"/pix":callback.data==="billing:invoice"?"/fatura":null;
+          const command=callback.data==="billing:pix"?"/pix":
+            callback.data==="billing:invoice"?"/fatura":
+            /^billing:pix:credits_(10|30|50|100|200|500)$/.test(String(callback.data||""))
+              ? "/pix " + String(callback.data).split("_").at(-1) : null;
           await fetch(`https://api.telegram.org/bot${token}/answerCallbackQuery`,{
             method:"POST",headers:{"Content-Type":"application/json"},
             body:JSON.stringify({callback_query_id:callback.id}),
