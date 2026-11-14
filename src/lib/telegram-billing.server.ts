@@ -170,6 +170,19 @@ export async function enqueueDailyTelegramBillingReminders() {
       stage=reminderPhase(days);
       if(stage)message=remindText(sub,days);
       keyId=`sub:${sub.id}`;
+    } else if(sub && sub.plan==="trial" && sub.status!=="cancelled") {
+      const days=daysUntil(sub.expires_at,now);
+      // A free trial is NOT an unpaid invoice. Invite renewal on day of
+      // expiry, one day later, and once for historical inactive trials.
+      if(days===0 || days===-1 || days<=-7) {
+        stage=days===0?"trial-today":days===-1?"trial-ended":"trial-reactivation-once";
+        message=`💙 <b>Seu teste gratuito do Stream Monitor terminou</b>\n\n`+
+          `Você pode continuar recebendo alertas e acompanhando seus servidores com o plano mensal de ${formatBRL(effectivePriceCents(PLANS.find(p=>p.id==="monthly")!))}.\n\n`+
+          `Digite /fatura para consultar as opções ou /pix para gerar o código de pagamento.\n`+
+          `🔒 <a href="${BILLING_PANEL}">Assinar pelo painel</a>\n\n`+
+          `Isto é um convite para contratar, não uma dívida de teste. Para parar avisos: /avisos_off`;
+      }
+      keyId=`trial:${sub.id}`;
     } else {skipped++;continue;}
     if(!message||!stage){skipped++;continue;}
     const key=`billing:${keyId}:${stage}:${channel.id}`;
