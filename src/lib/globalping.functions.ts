@@ -33,7 +33,7 @@ function onlyDnsHostname(host: string): string {
   const hostname = cleaned.replace(/:\d{1,5}$/, "").replace(/\.$/, "").toLowerCase();
   if (hostname.length > 253 ||
     !/^(?=.{4,253}$)[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?(?:\.[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?)+$/.test(hostname)) {
-    throw new Error("Globalping verifica nomes de domínio públicos. Cadastre uma DNS válida.");
+    throw new Error("DNS cadastrada incompleta ou inválida. O proprietário precisa corrigir o endereço do servidor na opção Editar DNS para usar o Radar Mundial.");
   }
   return hostname;
 }
