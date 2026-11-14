@@ -43,13 +43,14 @@ export async function exportGrafanaMetrics():Promise<ExportResult> {
   let metrics:Record<string,number>;
   try{
     const [
-      servers,online,offline,paused,recent,
+      servers,online,degraded,offline,paused,recent,
       queuePending,queueDead,queueDelivered,
       paymentsApproved,activeSubscriptions
     ]=await Promise.all([
       count("servers"),
-      count("servers",q=>q.eq("current_status","online")),
-      count("servers",q=>q.eq("current_status","offline")),
+      count("servers",q=>q.eq("current_status","up")),
+      count("servers",q=>q.eq("current_status","degraded")),
+      count("servers",q=>q.eq("current_status","down")),
       count("servers",q=>q.eq("monitoring_paused",true)),
       count("incidents",q=>q.gte("started_at",since)),
       count("telegram_outbox",q=>q.in("status",["pending","processing"])),
@@ -61,6 +62,7 @@ export async function exportGrafanaMetrics():Promise<ExportResult> {
     metrics={
       streammonitor_servers_total:servers,
       streammonitor_servers_online:online,
+      streammonitor_servers_degraded:degraded,
       streammonitor_servers_offline:offline,
       streammonitor_servers_paused:paused,
       streammonitor_incidents_24h:recent,
