@@ -86,7 +86,9 @@ export function GlobalpingWorldPanel({ serverId }: { serverId: string }) {
         </Button>
       </div>
       {actionError && <p role="alert" className="mt-4 rounded-lg border border-red-500/30 bg-red-500/10 p-3 text-sm text-red-300">{actionError}</p>}
-      {latest.isError && <p role="alert" className="mt-4 text-sm text-red-300">Não foi possível consultar o Radar Mundial agora.</p>}
+      {latest.isError && <p role="alert" className="mt-4 rounded-lg border border-red-500/30 bg-red-500/10 p-3 text-sm text-red-300">
+        {latest.error instanceof Error ? latest.error.message : "Não foi possível consultar o Radar Mundial agora."}
+      </p>}
       {current && (
         <div className="mt-5 space-y-4">
           <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
