@@ -67,7 +67,7 @@ function friendly(error: string) {
   return known[error] || "Falha ao iniciar a verificação mundial. Tente mais tarde.";
 }
 function normalizeResults(raw: any): ProbeSummary[] {
-  return (Array.isArray(raw?.results) ? raw.results : []).slice(0, 5).map((item: any) => {
+  return (Array.isArray(raw?.results) ? raw.results : []).slice(0, 5).map((item: any): ProbeSummary => {
     const probe = item.probe ?? {};
     const result = item.result ?? {};
     const country = typeof probe.country === "string" ? probe.country : "";
