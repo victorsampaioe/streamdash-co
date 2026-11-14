@@ -225,8 +225,27 @@ export async function handleTelegramCommand(
       return await formatTelegramInvoice(userId);
     }
     case "/pix": {
-      const { generateTelegramPix } = await import("./telegram-billing-pix.server");
-      return await generateTelegramPix(userId);
+      try {
+        const { generateTelegramPix } = await import("./telegram-billing-pix.server");
+        return await generateTelegramPix(userId);
+      } catch (error) {
+        // User-facing errors must be actionable, but must not leak
+        // payment-provider secrets, internal SQL errors or stack traces.
+        console.error("[telegram-pix] checkout unavailable", error instanceof Error ? error.name : "unknown");
+        const detail = error instanceof Error ? error.message : "";
+        const blocked = detail.includes("Mercado Pago indisponível");
+        const recovery = detail.includes("Pix emitido, mas falhou ao vincular");
+        return (
+          "⚠️ <b>Não foi possível gerar seu Pix agora.</b>\\n\\n" +
+          (recovery
+            ? "Uma cobrança pode estar em processamento. Por segurança, confira o painel antes de pagar.\\n\\n"
+            : blocked
+              ? "A integração de pagamentos está temporariamente indisponível.\\n\\n"
+              : "Sua assinatura não foi alterada e nenhum pagamento foi confirmado.\\n\\n") +
+          "🔒 <a href=\"https://streammonitor.site/app/subscription\">Abrir Minha Assinatura</a>\\n" +
+          "Você também pode tentar /pix novamente após consultar o painel."
+        );
+      }
     }
     case "/avisos_off":
     case "/avisos_on": {
