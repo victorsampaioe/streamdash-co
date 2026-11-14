@@ -58,8 +58,9 @@ export async function setBillingPreference(userId:string,enabled:boolean) {
   if(error)throw new Error("billing_preference_update_failed");
 }
 
+const PLAN_NAMES:Record<string,string>={monthly:"Mensal",quarterly:"Trimestral",yearly:"Anual",trial:"Teste gratuito"};
 function planName(plan:string):string {
-  return ({monthly:"Mensal",quarterly:"Trimestral",yearly:"Anual",trial:"Teste gratuito"})[plan]??"Plano";
+  return PLAN_NAMES[plan]??"Plano";
 }
 
 export async function formatTelegramInvoice(userId:string):Promise<string> {
