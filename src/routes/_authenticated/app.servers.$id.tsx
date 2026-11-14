@@ -28,6 +28,7 @@ import { MonitorBadge } from "@/components/monitor-badge";
 import { IptvPanel } from "@/components/iptv/iptv-panel";
 import { KumaPanel } from "@/components/kuma/kuma-panel";
 import { DnsPanel } from "@/components/dns/dns-panel";
+import { GlobalpingWorldPanel } from "@/components/dns/globalping-world-panel";
 import { PerfPanel } from "@/components/performance/perf-panel";
 import { CorrelationPanel } from "@/components/dns/correlation-panel";
 
@@ -320,6 +321,7 @@ function ServerDetail() {
               {connection.hostChangedAt && <p className="text-xs text-muted-foreground">DNS atualizada em {new Date(connection.hostChangedAt).toLocaleString("pt-BR")}.</p>}
             </Card>
           )}
+          <GlobalpingWorldPanel serverId={id} />
           <CorrelationPanel serverId={id} />
           <DnsPanel serverId={id} />
         </TabsContent>
