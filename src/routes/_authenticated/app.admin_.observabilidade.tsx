@@ -12,6 +12,7 @@ import {Input} from "@/components/ui/input";
 import {Badge} from "@/components/ui/badge";
 import {BarChart3,Cloud,ExternalLink,ShieldCheck,RefreshCw,Activity} from "lucide-react";
 import {toast} from "sonner";
+import {UnifiedObservabilityDashboard} from "@/components/observability/unified-dashboard";
 
 export const Route=createFileRoute("/_authenticated/app/admin_/observabilidade")({
   beforeLoad:async()=>{
@@ -84,6 +85,17 @@ function ObservabilidadePage(){
         para acompanhar métricas da infraestrutura. Nenhuma integração externa
         fica ativa até você habilitar com suas credenciais.
       </p>
+    </div>
+    <UnifiedObservabilityDashboard />
+    <div className="flex items-center gap-3 border-t border-border/60 pt-6">
+      <ShieldCheck className="h-5 w-5 text-blue-400"/>
+      <div>
+        <h2 className="font-bold text-lg">Conexões de dados — configurações administrativas</h2>
+        <p className="text-xs text-muted-foreground">
+          Use o painel acima para acompanhar os resultados. As opções abaixo servem apenas para ativar
+          a sincronização com PostHog e Grafana Cloud, sem sair do Stream Monitor.
+        </p>
+      </div>
     </div>
     {query.isLoading&&<p className="text-muted-foreground">Carregando integrações…</p>}
     {query.isError&&<p role="alert" className="rounded-xl border border-red-500/30 p-4 text-red-400">
