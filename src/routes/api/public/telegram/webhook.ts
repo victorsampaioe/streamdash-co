@@ -32,7 +32,62 @@ const creditKeyboard = {
      {text:"🔒 Outros pacotes",url:"https://streammonitor.site/app/subscription"}],
   ],
 };
+const PIX_CODE_PATTERN = /<b>Pix copia e cola:<\/b>\s*<code>([\s\S]*?)<\/code>/i;
+
+// CopyTextButton is supported only for codes up to 256 characters.
+// For longer codes Telegram's "Copiar mensagem" copies the full
+// standalone message without any extra text or truncated characters.
+function decodePixCode(encoded:string):string {
+  return encoded.replace(/&amp;/g,"&").replace(/&lt;/g,"<").replace(/&gt;/g,">").trim();
+}
+
+async function sendPixCodeOnly(token:string,chatId:number|string,code:string) {
+  const copySupported=code.length>0 && code.length<=256;
+  const payload={
+    chat_id:chatId,
+    text:code, // Exact PIX payload: no caption, emoji, spaces or HTML entities
+    disable_web_page_preview:true,
+    ...(copySupported?{
+      reply_markup:{inline_keyboard:[[
+        {text:"📋 Copiar código Pix",copy_text:{text:code}},
+      ]]},
+    }:{}),
+  };
+  const endpoint=`https://api.telegram.org/bot${token}/sendMessage`;
+  let response=await fetch(endpoint,{
+    method:"POST",headers:{"Content-Type":"application/json"},
+    body:JSON.stringify(payload),
+  });
+  if(!response.ok && copySupported && response.status===400){
+    // Telegram can reject an unsupported copy_text keyboard. Resend the
+    // entire code as one plain message so copying still works everywhere.
+    response=await fetch(endpoint,{
+      method:"POST",headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({chat_id:chatId,text:code,disable_web_page_preview:true}),
+    });
+  }
+  if(!response.ok){
+    console.error("[telegram-pix] code-only delivery failed",response.status);
+    throw new Error("telegram_pix_code_delivery_failed");
+  }
+}
+
 async function send(token: string, chatId: number | string, text: string, withBillingKeyboard=false) {
+  const pixMatch=PIX_CODE_PATTERN.exec(text);
+  if(pixMatch){
+    const code=decodePixCode(pixMatch[1]);
+    if(!code || code.length>4096)throw new Error("invalid_pix_code_length");
+    const overview=text.replace(
+      pixMatch[0],
+      "📋 <b>Pix copia e cola pronto!</b>\\n"+
+      (code.length<=256
+        ? "Toque em <b>Copiar código Pix</b> na próxima mensagem para copiar com um toque."
+        : "A próxima mensagem contém <b>somente o código Pix</b>. Segure a mensagem e selecione <b>Copiar</b> para copiar tudo.")
+    );
+    await send(token,chatId,overview,withBillingKeyboard);
+    await sendPixCodeOnly(token,chatId,code);
+    return;
+  }
   const r = await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
