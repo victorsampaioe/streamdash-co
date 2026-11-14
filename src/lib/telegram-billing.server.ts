@@ -184,3 +184,35 @@ export async function enqueueDailyTelegramBillingReminders() {
   }
   return {candidates:channels.length,queued,skipped,errors};
 }
+
+/**
+ * Called only after Mercado Pago is verified and finalize_approved_payment
+ * commits. A duplicate webhook cannot produce a duplicate Telegram receipt.
+ */
+export async function enqueueTelegramPaymentApproved(input:{
+  userId:string;paymentId:string;plan:string|null;amountCents:number;expiresAt?:string|null
+}) {
+  if(!input.userId || !input.paymentId)return {queued:0};
+  if(!await getBillingPreference(input.userId))return {queued:0};
+  const channels=(await registeredPrivateChannels()).filter(ch=>ch.owner_id===input.userId);
+  if(!channels.length)return {queued:0};
+  const title=input.plan==="monthly"?"mensal":input.plan==="quarterly"?"trimestral":input.plan==="yearly"?"anual":"Stream Monitor";
+  const message=`✅ <b>Pagamento confirmado — Stream Monitor</b>\n\n`+
+    `💰 Valor: <b>${formatBRL(input.amountCents)}</b>\n`+
+    `📦 Plano: <b>${esc(title)}</b>\n`+
+    (input.expiresAt?`📅 Novo vencimento: <b>${validDate(input.expiresAt)}</b>\n`:"")+
+    `\nSeu pagamento foi confirmado automaticamente pelo Mercado Pago.\n`+
+    `Consulte /fatura para ver sua assinatura ou acesse <a href="${BILLING_PANEL}">Minha Assinatura</a>.`;
+  let queued=0;
+  for(const ch of channels){
+    const key=`billing-paid:${input.paymentId}:${ch.id}`;
+    const {data,error}=await (supabaseAdmin as any).from("telegram_outbox").upsert({
+      idempotency_key:key,target:ch.target,text:message,source:"billing_payment",
+      status:"pending",attempts:0,max_attempts:6,
+      next_attempt_at:new Date().toISOString(),channel_id:ch.id,alert_event:"paid",
+    },{onConflict:"idempotency_key",ignoreDuplicates:true}).select("id");
+    if(error)throw new Error("payment_confirmation_queue_failed");
+    if(data?.length)queued++;
+  }
+  return {queued};
+}
