@@ -125,14 +125,14 @@ export function renderCinematic(ctx:CanvasRenderingContext2D,opt:CinematicOption
   ctx.save();ctx.shadowColor=accent;ctx.shadowBlur=22;
   ctx.fillStyle=accent;roundRect(ctx,badgeX,72,badgeW,52,17);ctx.fill();ctx.restore();
   ctx.fillStyle="#fff";ctx.textAlign="center";ctx.fillText(badgeText,badgeX+badgeW/2,107);ctx.textAlign="left";
-  const titleFont=wide?82:h>=1900?74:64;
+  const titleFont=wide?82:h>=1900?74:opt.mode==="video"?58:64;
   ctx.font="900 "+titleFont+"px Arial, Helvetica, sans-serif";
   ctx.fillStyle="#fff";ctx.shadowColor="rgba(0,0,0,.74)";ctx.shadowBlur=26;
   let titleY:number;
-  if(opt.mode==="video")titleY=wide?250:h>=1900?388:325;
-  else titleY=wide?h*.56:h*.59;
+  if(opt.mode==="video")titleY=wide?250:h>=1900?355:255;
+  else titleY=wide?h*.53:h*.53;
   const titleLimit=opt.mode==="video"?2:3;
-  const titleWidth=wide?w*.67:w-margin*2;
+  const titleWidth=wide?w*.67:opt.mode==="banner"&&opt.posterVisible&&opt.poster?w-margin*2-245:w-margin*2;
   const lastTitle=wrap(ctx,opt.title,margin,titleY,titleWidth,titleFont*1.11,titleLimit);
   ctx.shadowBlur=0;
   const meta=[opt.year,opt.genre,opt.classification].filter(Boolean).join("  •  ");
@@ -142,7 +142,7 @@ export function renderCinematic(ctx:CanvasRenderingContext2D,opt:CinematicOption
   wrap(ctx,meta,margin,metadataY,wide?w*.72:w-margin*2,34,2);
   let textY:number;
   if(opt.mode==="video"){
-    const x=margin,y=wide?330:h>=1900?540:448;
+    const x=margin,y=Math.max(wide?330:h>=1900?560:408,metadataY+32);
     const vw=w-margin*2,vh=Math.round(vw*9/16);
     ctx.save();ctx.shadowColor=accent;ctx.shadowBlur=38;
     ctx.fillStyle="#030713";roundRect(ctx,x-8,y-8,vw+16,vh+16,25);ctx.fill();
@@ -164,7 +164,7 @@ export function renderCinematic(ctx:CanvasRenderingContext2D,opt:CinematicOption
     ctx.restore();
     textY=y+vh+72;
   }else{
-    textY=wide?h*.75:h*.77;
+    textY=Math.max(wide?h*.76:h*.76,metadataY+54);
     if(opt.posterVisible&&opt.poster){
       const pw=wide?235:225,ph=wide?330:322;
       const x=w-margin-pw,y=wide?280:h*.28;
