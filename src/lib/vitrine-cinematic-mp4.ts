@@ -125,6 +125,9 @@ export async function renderNativeMp4(
     progress({seconds,total:seconds,percent:100,stage:"MP4 validado"});
     return blob;
   }finally{
+    // If play() or encoding fails after MediaRecorder.start(), never leave a
+    // recorder running against a detached DOM element or a stopped track.
+    try{if(recording?.state==="recording")recording.stop();}catch{ /* already stopped */ }
     cleanup();
   }
 }
