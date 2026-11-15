@@ -1,16 +1,17 @@
 import {createFileRoute} from "@tanstack/react-router";
-import {VitrineStudio} from "@/components/vitrine/vitrine-studio";
+import {CinematicStudio} from "@/components/vitrine/cinematic-studio";
 
 /**
- * Vitrine Banner remains the ORIGINAL standalone banner studio.
- * The cinematic trailer editor is only on /vitrine-video.
- * Never mix video-specific options into the existing reseller banner models.
+ * Premium static cinematic Banner for any signed-in Stream Monitor account.
+ * This route is already inside /_authenticated, and the Banner-only server
+ * functions return the user's own reseller branding. No MP4 tools are shown.
+ * The separate /vitrine-video route keeps its ADMIN restriction.
  */
 export const Route=createFileRoute("/_authenticated/vitrine-banner")({
   ssr:false,
-  component:()=> <VitrineStudio mode="banner"/>,
+  component:()=> <CinematicStudio mode="banner"/>,
   head:()=>({meta:[
-    {title:"Vitrine Banner | Stream Monitor"},
+    {title:"Vitrine Banner Cinematográfica | Stream Monitor"},
     {name:"robots",content:"noindex,nofollow"},
   ]}),
 });
