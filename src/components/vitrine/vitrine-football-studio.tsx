@@ -22,7 +22,7 @@ const DEFAULT_LEAGUES = [
 ];
 const LEAGUES = [
   {id:"brazilian-serie-a",name:"🇧🇷 Série A"},{id:"brazilian-serie-b",name:"🇧🇷 Série B"},
-  {id:"brazil-copa-do-brasil",name:"🇧🇷 Copa do Brasil"},
+  {id:"brazilian-cup",name:"🇧🇷 Copa do Brasil"},
   {id:"conmebol-copa-libertadores",name:"🏆 Libertadores"},
   {id:"conmebol-copa-sudamericana",name:"🏆 Sul-Americana"},
   {id:"spanish-la-liga",name:"🇪🇸 La Liga"},
@@ -30,9 +30,9 @@ const LEAGUES = [
   {id:"uefa-champions-league",name:"⭐ Champions League"},
   {id:"uefa-europa-league",name:"🏆 Europa League"},
   {id:"italian-serie-a",name:"🇮🇹 Serie A"},
-  {id:"german-bundesliga",name:"🇩🇪 Bundesliga"},
+  {id:"bundesliga",name:"🇩🇪 Bundesliga"},
   {id:"french-ligue-1",name:"🇫🇷 Ligue 1"},
-  {id:"portuguese-primeira-liga",name:"🇵🇹 Liga Portugal"},
+  {id:"portuguese-primera-liga",name:"🇵🇹 Liga Portugal"},
   {id:"uefa-nations-league",name:"🌍 Nations League"},
   {id:"international-friendly",name:"🌍 Amistosos"},
   {id:"fifa-world-cup",name:"🌎 Copa do Mundo"},
