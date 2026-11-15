@@ -25,6 +25,32 @@ export async function rawTelegramSend(target:string,text:string){
       `telegram_http_${response.status}`);
   }
 }
+/**
+ * Single, approved institutional launch. The media URL is constant and
+ * same-site; subscribers are selected from their enabled Telegram channels.
+ * Do not allow arbitrary URLs supplied in a queue payload.
+ */
+const BANNER_RELEASE_EVENT="vitrine_banner_release_20261115";
+const BANNER_RELEASE_PHOTO="https://streammonitor.site/examples/vitrine-banner-lancamento-20261115.jpg";
+async function sendBannerReleasePhoto(target:string,caption:string){
+  const {token,chat}=resolveTarget(target);
+  if(!token||!chat)throw new TelegramSendError(400,null,"telegram_configuration_missing");
+  const response=await fetch(`https://api.telegram.org/bot${token}/sendPhoto`,{
+    method:"POST",
+    headers:{"content-type":"application/json"},
+    body:JSON.stringify({
+      chat_id:chat,photo:BANNER_RELEASE_PHOTO,
+      caption:caption.slice(0,900),parse_mode:"HTML",
+    }),
+    signal:AbortSignal.timeout(15000),
+  });
+  if(!response.ok){
+    const info=await response.json().catch(()=>null);
+    throw new TelegramSendError(response.status,
+      Number.isFinite(Number(info?.parameters?.retry_after))?Number(info.parameters.retry_after):null,
+      `telegram_photo_http_${response.status}`);
+  }
+}
 export type TelegramRetryMeta={
   idempotencyKey?:string; serverId?:string; incidentId?:string;
   channelId?:string; alertEvent?:string;
@@ -49,7 +75,7 @@ export async function enqueueTelegramRetry(
   return {queued:!dead};
 }
 type OutboxItem={
-  id:string;target:string;text:string;attempts:number;max_attempts:number;
+  id:string;source:string;target:string;text:string;attempts:number;max_attempts:number;
   server_id:string|null;incident_id:string|null;channel_id:string|null;alert_event:string|null;
 };
 /** Atomic claim avoids concurrent workers processing the same pending item. */
@@ -60,7 +86,11 @@ export async function processTelegramOutbox(limit=12){
   let sent=0,failed=0,dead=0;
   for(const item of messages){
     try{
-      await rawTelegramSend(item.target,item.text);
+      if(item.source===BANNER_RELEASE_EVENT){
+        await sendBannerReleasePhoto(item.target,item.text);
+      }else{
+        await rawTelegramSend(item.target,item.text);
+      }
       const {error:saveError}=await supabaseAdmin.from("telegram_outbox" as any).update({
         status:"sent",delivered_at:new Date().toISOString(),last_error:null,
         updated_at:new Date().toISOString()
