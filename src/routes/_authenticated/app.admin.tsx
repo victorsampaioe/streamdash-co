@@ -310,6 +310,23 @@ function AdminPage() {
         </div>
       </div>
 
+      <section className="rounded-2xl border border-blue-500/25 bg-gradient-to-r from-[#0c2444] to-[#081322] p-4 sm:p-5">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <p className="text-xs font-bold uppercase tracking-widest text-blue-300">Novidade · Vitrine Cinematográfica</p>
+            <h2 className="mt-1 text-lg font-black text-white">Crie posts de filmes e séries com a imagem oficial TMDB</h2>
+            <p className="mt-1 max-w-3xl text-xs leading-5 text-slate-300">
+              Banner PNG/JPG e Vitrine Vídeo com trailer na prévia e exportação MP4 autorizada.
+              Disponível somente para testes administrativos nesta fase.
+            </p>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <a href="/vitrine-video" className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-bold text-white hover:bg-blue-500">Vitrine Vídeo MP4</a>
+            <a href="/vitrine-banner" className="rounded-lg border border-blue-400/30 px-4 py-2 text-sm font-bold text-blue-100 hover:bg-blue-500/10">Vitrine Banner</a>
+          </div>
+        </div>
+      </section>
+
       <TelegramNoveltiesCampaign />
 
       <div className="sm-workspace-grid">
