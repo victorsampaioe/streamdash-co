@@ -2400,6 +2400,56 @@ export type Database = {
         }
         Relationships: []
       }
+      globalping_dns_runs: {
+        Row: {
+          created_at: string
+          error_code: string | null
+          id: string
+          measurement_id: string | null
+          probes_count: number
+          server_id: string
+          status: string
+          summary: Json
+          target_host: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          error_code?: string | null
+          id?: string
+          measurement_id?: string | null
+          probes_count?: number
+          server_id: string
+          status?: string
+          summary?: Json
+          target_host: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          error_code?: string | null
+          id?: string
+          measurement_id?: string | null
+          probes_count?: number
+          server_id?: string
+          status?: string
+          summary?: Json
+          target_host?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "globalping_dns_runs_server_id_fkey"
+            columns: ["server_id"]
+            isOneToOne: false
+            referencedRelation: "servers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       guardian_telegram_explanations: {
         Row: {
           alert_key: string
@@ -3996,6 +4046,45 @@ export type Database = {
           },
         ]
       }
+      observability_integrations: {
+        Row: {
+          grafana_enabled: boolean
+          grafana_endpoint: string
+          grafana_last_export_at: string | null
+          grafana_last_export_status: string
+          grafana_stack_id: string
+          id: number
+          posthog_enabled: boolean
+          posthog_host: string
+          posthog_project_key: string
+          updated_at: string
+        }
+        Insert: {
+          grafana_enabled?: boolean
+          grafana_endpoint?: string
+          grafana_last_export_at?: string | null
+          grafana_last_export_status?: string
+          grafana_stack_id?: string
+          id?: number
+          posthog_enabled?: boolean
+          posthog_host?: string
+          posthog_project_key?: string
+          updated_at?: string
+        }
+        Update: {
+          grafana_enabled?: boolean
+          grafana_endpoint?: string
+          grafana_last_export_at?: string | null
+          grafana_last_export_status?: string
+          grafana_stack_id?: string
+          id?: number
+          posthog_enabled?: boolean
+          posthog_host?: string
+          posthog_project_key?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       payments: {
         Row: {
           amount_cents: number
@@ -4147,6 +4236,78 @@ export type Database = {
           status?: string
           updated_at?: string
           user_id?: string
+        }
+        Relationships: []
+      }
+      platform_analytics_events: {
+        Row: {
+          created_at: string
+          event_name: string
+          id: number
+          scope: string
+          screen: string
+          session_id: string
+        }
+        Insert: {
+          created_at?: string
+          event_name: string
+          id?: never
+          scope: string
+          screen: string
+          session_id: string
+        }
+        Update: {
+          created_at?: string
+          event_name?: string
+          id?: never
+          scope?: string
+          screen?: string
+          session_id?: string
+        }
+        Relationships: []
+      }
+      platform_health_snapshots: {
+        Row: {
+          avg_latency_ms: number | null
+          captured_at: string
+          dns_unresolved: number
+          incidents_open: number
+          servers_degraded: number
+          servers_offline: number
+          servers_online: number
+          servers_paused: number
+          servers_total: number
+          subscriptions_active: number
+          telegram_failed_24h: number
+          telegram_pending: number
+        }
+        Insert: {
+          avg_latency_ms?: number | null
+          captured_at?: string
+          dns_unresolved: number
+          incidents_open: number
+          servers_degraded?: number
+          servers_offline: number
+          servers_online: number
+          servers_paused: number
+          servers_total: number
+          subscriptions_active: number
+          telegram_failed_24h: number
+          telegram_pending: number
+        }
+        Update: {
+          avg_latency_ms?: number | null
+          captured_at?: string
+          dns_unresolved?: number
+          incidents_open?: number
+          servers_degraded?: number
+          servers_offline?: number
+          servers_online?: number
+          servers_paused?: number
+          servers_total?: number
+          subscriptions_active?: number
+          telegram_failed_24h?: number
+          telegram_pending?: number
         }
         Relationships: []
       }
@@ -5984,6 +6145,24 @@ export type Database = {
         }
         Relationships: []
       }
+      telegram_billing_preferences: {
+        Row: {
+          enabled: boolean
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          enabled?: boolean
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          enabled?: boolean
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       telegram_digests: {
         Row: {
           had_news: boolean
@@ -6304,6 +6483,54 @@ export type Database = {
           quota_day?: string
           updated_at?: string
           used_count?: number
+        }
+        Relationships: []
+      }
+      vitrine_video_render_audit: {
+        Row: {
+          actor_id: string
+          audio_requested: boolean
+          brand_owner_id: string
+          bytes_out: number | null
+          created_at: string
+          error_code: string | null
+          id: string
+          media_type: string
+          output_format: string
+          request_id: string
+          seconds: number
+          status: string
+          tmdb_id: number
+        }
+        Insert: {
+          actor_id: string
+          audio_requested?: boolean
+          brand_owner_id: string
+          bytes_out?: number | null
+          created_at?: string
+          error_code?: string | null
+          id?: string
+          media_type: string
+          output_format: string
+          request_id?: string
+          seconds: number
+          status: string
+          tmdb_id: number
+        }
+        Update: {
+          actor_id?: string
+          audio_requested?: boolean
+          brand_owner_id?: string
+          bytes_out?: number | null
+          created_at?: string
+          error_code?: string | null
+          id?: string
+          media_type?: string
+          output_format?: string
+          request_id?: string
+          seconds?: number
+          status?: string
+          tmdb_id?: number
         }
         Relationships: []
       }
@@ -7001,6 +7228,38 @@ export type Database = {
       run_radar_batch_sync: { Args: never; Returns: Json }
       stream_monitor_account_active: {
         Args: { _account_id: string }
+        Returns: boolean
+      }
+      streammonitor_capture_health_snapshot: { Args: never; Returns: Json }
+      streammonitor_globalping_token_server_only: {
+        Args: never
+        Returns: string
+      }
+      streammonitor_grafana_token_service: { Args: never; Returns: string }
+      streammonitor_health_series: { Args: { p_days?: number }; Returns: Json }
+      streammonitor_observability_report: {
+        Args: { p_days?: number }
+        Returns: Json
+      }
+      streammonitor_prune_observability: { Args: never; Returns: number }
+      streammonitor_record_analytics_event: {
+        Args: {
+          p_event: string
+          p_scope: string
+          p_screen: string
+          p_session: string
+        }
+        Returns: boolean
+      }
+      streammonitor_reserve_globalping_run: {
+        Args: { p_server_id: string; p_target: string; p_user_id: string }
+        Returns: {
+          is_new: boolean
+          run_id: string
+        }[]
+      }
+      streammonitor_store_grafana_token_service: {
+        Args: { p_token: string }
         Returns: boolean
       }
       subscription_is_active: { Args: { _user_id: string }; Returns: boolean }
