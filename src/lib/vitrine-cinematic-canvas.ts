@@ -21,6 +21,8 @@ export type CinematicOptions={
   poster:CanvasImageSource|null;
   logo:CanvasImageSource|null;
   video:HTMLVideoElement|null;
+  /** Region captured from a user-shared browser tab, in source pixel coordinates. */
+  videoCrop?:{sx:number;sy:number;sw:number;sh:number}|null;
 };
 export const cinematicFormats={
   portrait:{width:1080,height:1350,label:"Feed · 1080 × 1350"},
@@ -222,8 +224,17 @@ export function renderCinematic(ctx:CanvasRenderingContext2D,opt:CinematicOption
     ctx.save();roundRect(ctx,x,y,vw,vh,18);ctx.clip();
     ctx.fillStyle="#020611";ctx.fillRect(x,y,vw,vh);
     if(opt.video&&opt.video.readyState>=2&&opt.video.videoWidth>0){
-      // Preserve the trailer's framing and proportions: letterbox, never stretch.
-      contain(ctx,opt.video,x,y,vw,vh);
+      // Explicit browser-granted tab capture may need to crop the source
+      // viewport to its video iframe. Preserve that region's aspect ratio.
+      const crop=opt.videoCrop;
+      if(crop&&crop.sw>0&&crop.sh>0){
+        const scale=Math.min(vw/crop.sw,vh/crop.sh);
+        const dw=crop.sw*scale,dh=crop.sh*scale;
+        ctx.drawImage(opt.video,crop.sx,crop.sy,crop.sw,crop.sh,
+          x+(vw-dw)/2,y+(vh-dh)/2,dw,dh);
+      }else{
+        contain(ctx,opt.video,x,y,vw,vh);
+      }
     }else{
       ctx.textAlign="center";ctx.fillStyle="#e2e8f0";
       ctx.font="700 27px Arial, sans-serif";
