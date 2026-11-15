@@ -180,8 +180,9 @@ export function VitrineFootballStudio() {
   });
   const fixtures = useMemo(() => games.data?.matches ?? [], [games.data]);
   const featured = fixtures.find((m) => m.id === featuredId) ?? fixtures[0] ?? null;
-  const included = fixtures.filter((m) => selectedIds.includes(m.id));
-  const visibleMatches = selectedIds.length ? included : fixtures.slice(0, 5);
+  const visibleMatches = useMemo(() =>
+    selectedIds.length ? fixtures.filter((m) => selectedIds.includes(m.id)) : fixtures.slice(0, 5),
+    [fixtures, selectedIds]);
   const teamId = featured ? (playerSide === "home" ? featured.homeId : featured.awayId) : "";
   const players = useQuery({
     queryKey: ["admin-football-players", teamId],
