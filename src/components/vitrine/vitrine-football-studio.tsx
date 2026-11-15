@@ -135,7 +135,7 @@ function FootballArt({
         <div className="text-[24px] font-[900] uppercase tracking-[0.11em]">{safeBrand}</div>
       </div>
       <span className="rounded-lg border border-sky-400/40 bg-sky-500/15 px-5 py-3 text-[16px] font-black uppercase tracking-[0.19em] text-sky-200">
-        FUTEBOL AO VIVO
+        AGENDA DE JOGOS
       </span>
     </div>
 
