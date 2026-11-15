@@ -172,25 +172,26 @@ function FootballArt({
         <div className="absolute bottom-[21%] left-[-20%] h-[720px] w-[720px] rounded-full border-[65px] border-sky-400/10" />
         <div className="absolute bottom-[20%] left-[7%] rotate-[-15deg] text-[340px] font-black leading-none text-white/[.06]">VS</div>
       </>}
-      <div className="absolute right-[60px] flex flex-col items-end gap-5" style={{ bottom: story ? 465 : landscape ? 110 : 325 }}>
-        <div className="flex items-center gap-5 rounded-3xl bg-[#061934]/80 px-8 py-5 backdrop-blur-xl">
-          <div className="max-w-[320px] text-right text-[35px] font-black uppercase tracking-[-0.035em]">{match?.home || "Mandante"}</div>
-          <TeamIdentity name={match?.home || "Mandante"} badge={match ? badgeImages[match.homeBadge] : undefined} size={117} />
+      <div className={`absolute right-[60px] flex ${landscape ? "flex-row items-center gap-3" : "flex-col items-end gap-5"}`}
+        style={{ bottom: story ? 465 : landscape ? 234 : 325 }}>
+        <div className={`flex items-center rounded-3xl bg-[#061934]/80 backdrop-blur-xl ${landscape ? "gap-3 px-4 py-3" : "gap-5 px-8 py-5"}`}>
+          <div className={`text-right font-black uppercase tracking-[-0.035em] ${landscape ? "max-w-[190px] text-[22px]" : "max-w-[320px] text-[35px]"}`}>{match?.home || "Mandante"}</div>
+          <TeamIdentity name={match?.home || "Mandante"} badge={match ? badgeImages[match.homeBadge] : undefined} size={landscape ? 72 : 117} />
         </div>
-        <div className="pr-12 text-[65px] font-black italic leading-none text-sky-300">VS</div>
-        <div className="flex items-center gap-5 rounded-3xl bg-[#061934]/80 px-8 py-5 backdrop-blur-xl">
-          <div className="max-w-[320px] text-right text-[35px] font-black uppercase tracking-[-0.035em]">{match?.away || "Visitante"}</div>
-          <TeamIdentity name={match?.away || "Visitante"} badge={match ? badgeImages[match.awayBadge] : undefined} size={117} />
+        <div className={`font-black italic leading-none text-sky-300 ${landscape ? "text-[42px]" : "pr-12 text-[65px]"}`}>VS</div>
+        <div className={`flex items-center rounded-3xl bg-[#061934]/80 backdrop-blur-xl ${landscape ? "gap-3 px-4 py-3" : "gap-5 px-8 py-5"}`}>
+          <div className={`text-right font-black uppercase tracking-[-0.035em] ${landscape ? "max-w-[190px] text-[22px]" : "max-w-[320px] text-[35px]"}`}>{match?.away || "Visitante"}</div>
+          <TeamIdentity name={match?.away || "Visitante"} badge={match ? badgeImages[match.awayBadge] : undefined} size={landscape ? 72 : 117} />
         </div>
       </div>
       <div className="absolute left-[60px] right-[60px] flex items-end justify-between border-t-2 border-white/20 pt-6"
-        style={{ bottom: story ? 150 : landscape ? 35 : 145 }}>
+        style={{ bottom: story ? 150 : landscape ? 92 : 145 }}>
         <div>
           <div className="text-[19px] font-black uppercase tracking-[.2em] text-sky-300">{dateDisplay(day)}</div>
           {playerName && photo && <div className="mt-3 max-w-[430px] text-[27px] font-black uppercase tracking-wide">{playerName}</div>}
         </div>
         <div className="text-right">
-          <div className="text-[70px] font-black leading-none tracking-tight text-white">{match?.time || "--:--"}</div>
+          <div className={`font-black leading-none tracking-tight text-white ${landscape ? "text-[55px]" : "text-[70px]"}`}>{match?.time || "--:--"}</div>
           <span className="text-[17px] font-bold tracking-[.2em] text-white/60">HORÁRIO DE BRASÍLIA</span>
         </div>
       </div>
