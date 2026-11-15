@@ -12,7 +12,7 @@ import {Input} from "@/components/ui/input";
 import {getVitrineTmdbFeed} from "@/lib/vitrine-catalog.functions";
 import {getCinematicTmdbDetail,getCinematicBrands,getCinematicRenderControls,saveCinematicRenderControls,recordCinematicRender,type CinematicBrand} from "@/lib/vitrine-cinematic.functions";
 import {
-  renderCinematic,formatCinematicWhatsApp,cinematicFormats,type CinematicOptions,
+  renderCinematic,formatCinematicWhatsApp,cinematicVideoFrameRect,cinematicFormats,type CinematicOptions,
   type CinematicFormat,type CinematicMode
 } from "@/lib/vitrine-cinematic-canvas";
 import {renderNativeMp4,supportedMp4Mime} from "@/lib/vitrine-cinematic-mp4";
@@ -92,6 +92,7 @@ export function CinematicStudio({mode}:{mode:CinematicMode}){
   const [videoLength,setVideoLength]=useState(0);
   const [clipSeconds,setClipSeconds]=useState<15|30|60>(15);
   const [clipStart,setClipStart]=useState(0);
+  const [youtubeStart,setYoutubeStart]=useState(0);
   const [audio,setAudio]=useState(true);
   const [licenseAccepted,setLicenseAccepted]=useState(false);
   const [rendering,setRendering]=useState(false);
@@ -350,6 +351,16 @@ export function CinematicStudio({mode}:{mode:CinematicMode}){
     .filter(x=>x.media_type===media&&x.poster_path)
     .slice(0,24);
   const youtubeKey=extra?.trailer?.key;
+  const previewFrame=useMemo(()=>{
+    if(mode!=="video"||typeof document==="undefined")return null;
+    const measure=document.createElement("canvas").getContext("2d");
+    return measure?cinematicVideoFrameRect(measure,options):null;
+  },[mode,options]);
+  const youtubeClipStart=Math.max(0,Math.min(3600,Math.floor(Number(youtubeStart)||0)));
+  const youtubeClipEnd=youtubeClipStart+clipSeconds;
+  const youtubeEmbed=typeof youtubeKey==="string"&&/^[a-zA-Z0-9_-]{11}$/.test(youtubeKey)
+    ?`https://www.youtube-nocookie.com/embed/${youtubeKey}?playsinline=1&controls=1&rel=0&start=${youtubeClipStart}&end=${youtubeClipEnd}`
+    :null;
   const mime=supportedMp4Mime(audio);
   return <div className="min-h-screen bg-[#050a14] px-3 py-6 text-white sm:px-6 lg:px-8">
     <div className="mx-auto max-w-[1550px] space-y-6">
@@ -479,12 +490,20 @@ export function CinematicStudio({mode}:{mode:CinematicMode}){
             <div className="flex items-center gap-2 text-sm font-bold text-blue-200"><Clapperboard size={18}/> 3. Trailer real e MP4 autorizado</div>
             {youtubeKey?<div className="space-y-2">
               <p className="text-xs text-slate-300">Trailer encontrado na TMDB · {extra?.trailer?.official?"oficial":"referenciado"} · idioma {extra?.trailer?.language||"não informado"}.</p>
-              <a href={"https://www.youtube.com/watch?v="+youtubeKey} target="_blank" rel="noopener noreferrer"
-                className="inline-flex items-center gap-2 rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-2.5 text-sm font-bold text-red-100 hover:bg-red-500/20">
-                <Play size={17}/> Assistir trailer oficial no YouTube
-              </a>
+              <div className="grid grid-cols-2 gap-2">
+                <label className="space-y-1 text-xs text-slate-300">Duração da prévia
+                  <select className={"w-full "+inputClass} value={clipSeconds}
+                    onChange={e=>setClipSeconds(Number(e.target.value) as 15|30|60)}>
+                    <option value={15}>15 segundos</option><option value={30}>30 segundos</option><option value={60}>60 segundos</option>
+                  </select>
+                </label>
+                <label className="space-y-1 text-xs text-slate-300">Começar em (segundos)
+                  <Input className={inputClass} type="number" min={0} max={3600} value={youtubeStart}
+                    onChange={e=>setYoutubeStart(Math.max(0,Math.min(3600,Math.floor(Number(e.target.value)||0))))}/>
+                </label>
+              </div>
               <p className="rounded-lg border border-blue-400/20 bg-blue-500/5 p-3 text-[11px] text-sky-100">
-                O YouTube é apenas uma referência, sem download automático. Para fazer o vídeo tocar dentro da arte, envie um MP4 que você tenha permissão para publicar.
+                Reproduza o trailer oficial <strong>dentro da arte</strong>, com áudio. Escolha 15, 30 ou 60 segundos para a prévia. Para baixar o vídeo incorporado ao MP4 final, envie um arquivo autorizado — a reprodução do YouTube não permite capturar ou exportar seus quadros.
               </p>
             </div>:<p className="text-xs text-amber-300">A TMDB não indicou trailer do YouTube para este título.</p>}
             <label className="block space-y-2 text-xs text-slate-300"><span className="flex items-center gap-2"><Upload size={15}/> Enviar MP4 que você pode publicar</span>
@@ -565,6 +584,21 @@ export function CinematicStudio({mode}:{mode:CinematicMode}){
             <div className="relative mx-auto max-w-[620px] overflow-hidden rounded-xl border border-white/15 bg-slate-950 shadow-2xl shadow-blue-950/50">
               <canvas ref={canvasRef} width={dims.width} height={dims.height}
                 className="block h-auto w-full" aria-label="Prévia cinematográfica com imagens oficiais da TMDB"/>
+              {mode==="video"&&!videoFile&&youtubeEmbed&&previewFrame&&isReady&&(
+                <div className="absolute overflow-hidden rounded-[9px] border border-blue-400/70 bg-black shadow-xl shadow-blue-500/40"
+                  style={{
+                    left:(previewFrame.x/dims.width*100)+"%",
+                    top:(previewFrame.y/dims.height*100)+"%",
+                    width:(previewFrame.width/dims.width*100)+"%",
+                    height:(previewFrame.height/dims.height*100)+"%",
+                  }}>
+                  <iframe key={youtubeEmbed} title={"Trailer dentro da Vitrine: "+(movie?.title||"")}
+                    src={youtubeEmbed} loading="lazy" allowFullScreen
+                    referrerPolicy="strict-origin-when-cross-origin"
+                    allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture; web-share"
+                    className="h-full w-full border-0"/>
+                </div>
+              )}
             </div>
             <video ref={previewVideoRef} src={videoUrl||undefined} preload="metadata" playsInline
               className="hidden"
@@ -574,7 +608,7 @@ export function CinematicStudio({mode}:{mode:CinematicMode}){
                 if(v&&v.currentTime>clipStart+clipSeconds)v.pause();
               }}/>
             {!movie&&<p className="text-center text-sm text-amber-200">Selecione um filme ou uma série para criar a prévia com o fundo oficial.</p>}
-            {mode==="video"&&!videoFile&&<p className="text-center text-xs text-amber-200">Para o vídeo tocar dentro da arte e aparecer no MP4 final, envie um arquivo autorizado. O YouTube é apenas uma referência externa.</p>}
+            {mode==="video"&&!videoFile&&<p className="text-center text-xs text-amber-200">O trailer oficial toca na moldura acima, quando o YouTube permite a incorporação. A exportação final em MP4 exige um arquivo autorizado do vídeo.</p>}
             <div className="grid gap-2 sm:grid-cols-2">
               <Button className="bg-blue-600 text-white hover:bg-blue-500" disabled={!isReady||exporting||rendering}
                 onClick={()=>void downloadStatic("png")}>
