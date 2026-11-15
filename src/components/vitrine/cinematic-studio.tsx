@@ -17,6 +17,7 @@ import {
 } from "@/lib/vitrine-cinematic-canvas";
 import {renderNativeMp4,supportedMp4Mime,renderDimensions,WHATSAPP_VIDEO_MAX_BYTES,type Mp4Preset} from "@/lib/vitrine-cinematic-mp4";
 import {normalizeCinematicLogoPng} from "@/lib/vitrine-cinematic-logo";
+import {finalizeCinematicMp4} from "@/lib/vitrine-cinematic-whatsapp";
 
 type SearchItem={
   tmdb_id:number;media_type:"movie"|"tv";title:string;
@@ -104,6 +105,7 @@ export function CinematicStudio({mode}:{mode:CinematicMode}){
   const [readyMp4,setReadyMp4]=useState("");
   const [readyMp4Blob,setReadyMp4Blob]=useState<Blob|null>(null);
   const [readyMp4Bytes,setReadyMp4Bytes]=useState(0);
+  const [fixingMp4,setFixingMp4]=useState(false);
   const [dailyLimit,setDailyLimit]=useState(5);
   const [brandDailyLimit,setBrandDailyLimit]=useState(5);
   const [maxUploadMb,setMaxUploadMb]=useState(350);
@@ -330,9 +332,12 @@ export function CinematicStudio({mode}:{mode:CinematicMode}){
       // Do not reuse the visible canvas: export draws to an offscreen,
       // full-resolution canvas and cannot disrupt the browser preview.
       const videoCanvas=exportCanvas;
-      const blob=await renderNativeMp4(
+      const recorded=await renderNativeMp4(
         videoCanvas,temp,options,clipSeconds,clipStart,audio,setRenderProgress,mp4Preset,
       );
+      setRenderProgress(v=>({...v,percent:99,stage:"Finalizando MP4 para WhatsApp..."}));
+      const blob=await finalizeCinematicMp4(recorded);
+      setRenderProgress(v=>({...v,percent:100,stage:"MP4 compatível finalizado"}));
       const output=renderDimensions(options,mp4Preset);
       const nextUrl=URL.createObjectURL(blob);
       setReadyMp4(nextUrl);setReadyMp4Blob(blob);setReadyMp4Bytes(blob.size);
@@ -349,6 +354,29 @@ export function CinematicStudio({mode}:{mode:CinematicMode}){
       temp.pause();temp.removeAttribute("src");temp.load();temp.remove();
       exportCanvas.width=0;exportCanvas.height=0;
       busyRef.current=false;setRendering(false);
+    }
+  }
+  async function fixExistingMp4(file:File|undefined){
+    if(!file)return;
+    if(file.size>150*1024*1024||file.size<1024){
+      toast.error("Escolha um MP4 de até 150 MB.");return;
+    }
+    if(fixingMp4||rendering)return;
+    setFixingMp4(true);
+    try{
+      const converted=await finalizeCinematicMp4(file);
+      const nextUrl=URL.createObjectURL(converted);
+      setReadyMp4(nextUrl);
+      setReadyMp4Blob(converted);
+      setReadyMp4Bytes(converted.size);
+      downloadFile(converted,slug(file.name.replace(/\.mp4$/i,""))+"-WhatsApp.mp4");
+      if(converted.size>WHATSAPP_VIDEO_MAX_BYTES)
+        toast.warning("Vídeo corrigido. Para usar pela API do WhatsApp, o arquivo deve ter até 16 MB.");
+      else toast.success("MP4 corrigido: pronto para testar o envio como vídeo no WhatsApp.");
+    }catch(error){
+      toast.error(error instanceof Error?error.message:"Não foi possível corrigir este MP4.");
+    }finally{
+      setFixingMp4(false);
     }
   }
   async function shareMp4(){
@@ -737,6 +765,14 @@ export function CinematicStudio({mode}:{mode:CinematicMode}){
                 <div className="h-full rounded-full bg-blue-500 transition-[width] duration-150" style={{width:renderProgress.percent+"%"}}/>
               </div>
               <span className="text-[11px] text-slate-400">{Math.round(renderProgress.seconds)} / {renderProgress.total} segundos de vídeo renderizados</span>
+            </div>}
+            {mode==="video"&&<div className="space-y-2 rounded-xl border border-sky-500/20 bg-sky-950/25 p-3">
+              <p className="text-sm font-bold text-sky-100">Corrigir MP4 que já foi baixado</p>
+              <p className="text-xs text-slate-300">Se o vídeo antigo toca no navegador mas não envia no WhatsApp, selecione o arquivo aqui. O sistema ajusta o formato sem recomprimir nem mudar a arte.</p>
+              <Input type="file" accept=".mp4,video/mp4" disabled={fixingMp4||rendering}
+                className="border-blue-500/20 bg-slate-950 text-xs file:text-blue-200"
+                onChange={e=>{void fixExistingMp4(e.target.files?.[0]);e.target.value="";}}/>
+              {fixingMp4&&<p className="text-xs text-sky-200"><RefreshCw size={14} className="mr-2 inline animate-spin"/>Finalizando para WhatsApp...</p>}
             </div>}
             {mode==="video"&&readyMp4&&<div className="space-y-2 rounded-xl border border-emerald-500/20 bg-emerald-500/10 p-3">
               <div className="flex items-center gap-2 text-sm font-semibold text-emerald-200"><CheckCircle2 size={17}/> MP4 criado · {(readyMp4Bytes/1024/1024).toFixed(1)} MB</div>
