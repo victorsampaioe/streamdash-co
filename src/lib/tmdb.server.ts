@@ -180,5 +180,14 @@ export async function fetchCinematicExtras(media: TmdbMediaType,id:number){
     poster_path:raw.poster_path??null,
     classification:certificate||null,
     trailer:trailer?{provider:"YouTube" as const,key:trailer.key!,official:trailer.official===true,language:trailer.iso_639_1??null,name:trailer.name??"Trailer"}:null,
+    // Alternative official TMDB-referenced trailers help when a publisher
+    // restricts embedding of one specific YouTube upload.
+    trailers:clips.slice(0,8).map(x=>({
+      provider:"YouTube" as const,
+      key:x.key!,
+      official:x.official===true,
+      language:x.iso_639_1??null,
+      name:x.name??"Trailer",
+    })),
   };
 }
