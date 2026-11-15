@@ -3,6 +3,7 @@
 -- Existing Lovable Cloud database remains production source until migration approved.
 CREATE TABLE IF NOT EXISTS public.vitrine_video_render_audit (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  request_id uuid NOT NULL DEFAULT gen_random_uuid(),
   actor_id uuid NOT NULL REFERENCES auth.users(id) ON DELETE RESTRICT,
   brand_owner_id uuid NOT NULL REFERENCES auth.users(id) ON DELETE RESTRICT,
   media_type text NOT NULL CHECK(media_type IN ('movie','tv')),
@@ -17,6 +18,8 @@ CREATE TABLE IF NOT EXISTS public.vitrine_video_render_audit (
   )),
   created_at timestamptz NOT NULL DEFAULT now()
 );
+CREATE UNIQUE INDEX IF NOT EXISTS vitrine_video_render_audit_request_idx
+ ON public.vitrine_video_render_audit(request_id);
 CREATE INDEX IF NOT EXISTS vitrine_video_render_audit_created_idx
  ON public.vitrine_video_render_audit(created_at DESC);
 CREATE INDEX IF NOT EXISTS vitrine_video_render_audit_owner_created_idx
