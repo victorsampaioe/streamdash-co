@@ -119,6 +119,108 @@ function wrap(ctx:CanvasRenderingContext2D,text:string,x:number,y:number,maxWidt
   for(let i=0;i<lines.length;i++)ctx.fillText(lines[i],x,y+i*lineHeight);
   return y+lines.length*lineHeight;
 }
+/**
+ * Summarize only the synopsis supplied by TMDB/editor. Favor complete
+ * sentences and natural clause boundaries; never draw a trailing "...".
+ * All variants use measured text rather than a fixed character count.
+ */
+function synopsisSentences(input:string):string[]{
+  const text=input
+    .replace(/\.{2,}|…/g,".")
+    .replace(/\s+/g," ")
+    .trim();
+  if(!text)return [];
+  // Protect initials in film-character names such as "Wile E. Coyote".
+  const protectedText=text.replace(/\b([A-Z])\.\s+(?=[A-Z])/g,"$1\uE000 ");
+  return protectedText
+    .split(/(?<=[.!?])\s+(?=[A-ZÀ-Ú])/)
+    .map(part=>part.replace(/\uE000/g,".").trim())
+    .filter(Boolean)
+    .map(part=>/[.!?]$/.test(part)?part:part+".");
+}
+function measureSynopsisLines(
+  ctx:CanvasRenderingContext2D,text:string,maxWidth:number,
+):string[]{
+  const words=text.trim().split(/\s+/).filter(Boolean);
+  const lines:string[]=[];
+  let current="";
+  for(const word of words){
+    const proposed=current?current+" "+word:word;
+    if(current&&ctx.measureText(proposed).width>maxWidth){
+      lines.push(current);
+      current=word;
+    }else current=proposed;
+  }
+  if(current)lines.push(current);
+  return lines;
+}
+function renderAdaptiveSynopsis(
+  ctx:CanvasRenderingContext2D,source:string,x:number,y:number,width:number,
+  availableHeight:number,preferredSize:number,minimumSize:number,maxLines:number,
+){
+  const original=synopsisSentences(source);
+  const fallback="Sinopse disponível em breve.";
+  const sentences=original.length?original:[fallback];
+  const full=sentences.join(" ");
+  const candidates:string[]=[full];
+  // Produce coherent summaries from the original TMDB prose.
+  for(let count=sentences.length-1;count>=1;count--){
+    candidates.push(sentences.slice(0,count).join(" "));
+  }
+  // A very long first sentence can have a shorter meaningful final clause.
+  const first=sentences[0];
+  const clauses=first.split(/,\s+/);
+  if(clauses.length>1){
+    for(let offset=1;offset<clauses.length;offset++){
+      const remainder=clauses.slice(offset).join(", ").trim();
+      if(remainder.length>=34&&remainder.length<first.length){
+        candidates.push(remainder[0].toUpperCase()+remainder.slice(1).replace(/[,.!?]+$/,"")+".");
+      }
+    }
+  }
+  let chosen:string[]|null=null;
+  let chosenSize=preferredSize;
+  const limit=Math.max(1,Math.floor(availableHeight/((minimumSize)*1.32)));
+  // Prefer a short, complete idea at a readable size over a tiny font.
+  for(let font=preferredSize;font>=minimumSize;font-=2){
+    const lineHeight=Math.ceil(font*1.38);
+    const linesAllowed=Math.min(maxLines,Math.floor(availableHeight/lineHeight));
+    if(linesAllowed<1)continue;
+    ctx.font=`500 ${font}px Arial, Helvetica, sans-serif`;
+    for(const candidate of candidates){
+      const lines=measureSynopsisLines(ctx,candidate,width);
+      if(lines.length<=linesAllowed&&lines.every(l=>ctx.measureText(l).width<=width)){
+        chosen=lines;
+        chosenSize=font;
+        break;
+      }
+    }
+    if(chosen)break;
+  }
+  if(!chosen){
+    // Last resort: preserve a short clause, ending with a full stop.
+    // There is never a single dangling word or an ellipsis.
+    chosenSize=minimumSize;
+    const lineHeight=Math.ceil(chosenSize*1.38);
+    const maxTextLines=Math.max(1,Math.min(maxLines,Math.floor(availableHeight/lineHeight),limit));
+    ctx.font=`500 ${chosenSize}px Arial, Helvetica, sans-serif`;
+    const words=first.split(/\s+/).filter(Boolean);
+    while(words.length>3){
+      const candidate=words.join(" ").replace(/[,;:.!?]+$/,"")+".";
+      const trial=measureSynopsisLines(ctx,candidate,width);
+      if(trial.length<=maxTextLines&&trial.every(l=>ctx.measureText(l).width<=width)){
+        chosen=trial;break;
+      }
+      words.pop();
+    }
+    chosen??=measureSynopsisLines(ctx,"Confira a história deste título.",width).slice(0,maxTextLines);
+  }
+  const lineHeight=Math.ceil(chosenSize*1.38);
+  ctx.font=`500 ${chosenSize}px Arial, Helvetica, sans-serif`;
+  for(let i=0;i<chosen.length;i++){
+    ctx.fillText(chosen[i],x,y+i*lineHeight);
+  }
+}
 export function cinematicVideoFrameRect(
   ctx:CanvasRenderingContext2D,opt:Omit<CinematicOptions,"video">
 ){
