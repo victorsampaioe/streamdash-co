@@ -17,6 +17,7 @@ export type CinematicOptions={
   lighting:"natural"|"blue"|"warm";
   posterVisible:boolean;
   background:CanvasImageSource|null;
+  backgroundIsPoster:boolean;
   poster:CanvasImageSource|null;
   logo:CanvasImageSource|null;
   video:HTMLVideoElement|null;
@@ -76,7 +77,10 @@ export function renderCinematic(ctx:CanvasRenderingContext2D,opt:CinematicOption
   ctx.clearRect(0,0,w,h);
   ctx.fillStyle="#070c18";ctx.fillRect(0,0,w,h);
   const bg=opt.background??opt.poster;
-  if(bg)cover(ctx,bg,0,0,w,h);
+  if(bg){
+    if(opt.backgroundIsPoster)contain(ctx,bg,0,0,w,h);
+    else cover(ctx,bg,0,0,w,h);
+  }
   // Original TMDB imagery is only cropped, not distorted or synthesized.
   const shade=ctx.createLinearGradient(0,0,0,h);
   shade.addColorStop(0,"rgba(3,9,23,0.52)");
