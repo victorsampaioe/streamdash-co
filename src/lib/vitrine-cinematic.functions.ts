@@ -81,3 +81,103 @@ export const getCinematicBrands=createServerFn({method:"GET"})
     return {currentOwner:context.userId,brands:[...byOwner.values()]
       .sort((a,b)=>a.owner_id===context.userId?-1:b.owner_id===context.userId?1:a.name.localeCompare(b.name,"pt-BR"))};
   });
+
+const policySchema=z.object({
+  defaultDailyLimit:z.number().int().min(1).max(50).default(5),
+  maxUploadMb:z.number().int().min(25).max(350).default(350),
+  overrides:z.record(z.string().uuid(),z.number().int().min(0).max(50)).default({}),
+  resellerEnabled:z.literal(false).default(false),
+});
+export type CinematicRenderPolicy=z.infer<typeof policySchema>;
+const fallbackPolicy:CinematicRenderPolicy={
+  defaultDailyLimit:5,maxUploadMb:350,overrides:{},resellerEnabled:false,
+};
+const auditInput=z.object({
+  request_id:z.string().uuid(),
+  brand_owner_id:z.string().uuid(),
+  media_type:z.enum(["movie","tv"]),
+  tmdb_id:z.number().int().positive(),
+  output_format:z.enum(["portrait","story"]),
+  seconds:z.union([z.literal(15),z.literal(30),z.literal(60)]),
+  audio_requested:z.boolean(),
+  status:z.enum(["completed","failed"]),
+  bytes_out:z.number().int().min(0).max(2_000_000_000).optional(),
+  error_code:z.enum(["ENCODING_UNSUPPORTED","INPUT_INVALID","EXPORT_ERROR","DECODE_ERROR","UNKNOWN_ERROR"]).nullable().optional(),
+});
+
+export const getCinematicRenderControls=createServerFn({method:"GET"})
+  .middleware([requireSupabaseAuth])
+  .handler(async ({context})=>{
+    await requireVitrineAdmin(context);
+    const {supabaseAdmin}=await import("@/integrations/supabase/client.server");
+    const db=supabaseAdmin as any;
+    const since=new Date(Date.now()-30*86400_000).toISOString();
+    const [settings,logs]=await Promise.all([
+      db.from("app_settings").select("value").eq("key","vitrine_video_render_policy").maybeSingle(),
+      db.from("vitrine_video_render_audit")
+        .select("created_at,brand_owner_id,status,bytes_out,error_code")
+        .gte("created_at",since).order("created_at",{ascending:false}).limit(400),
+    ]);
+    if(settings.error||logs.error)throw new Error("Não foi possível carregar os controles do gerador.");
+    const policy=policySchema.safeParse(settings.data?.value);
+    const rows=(logs.data??[]) as Array<{
+      created_at:string;brand_owner_id:string;status:"completed"|"failed";
+      bytes_out:number|null;error_code:string|null;
+    }>;
+    const today=new Intl.DateTimeFormat("sv-SE",{timeZone:"America/Fortaleza",year:"numeric",month:"2-digit",day:"2-digit"}).format(new Date());
+    return {
+      policy:policy.success?policy.data:fallbackPolicy,
+      summary:{
+        total:rows.length,
+        completed:rows.filter(x=>x.status==="completed").length,
+        errors:rows.filter(x=>x.status==="failed").length,
+        exportedBytes:rows.filter(x=>x.status==="completed").reduce((n,x)=>n+Number(x.bytes_out||0),0),
+        today:rows.filter(x=>new Intl.DateTimeFormat("sv-SE",{timeZone:"America/Fortaleza",year:"numeric",month:"2-digit",day:"2-digit"}).format(new Date(x.created_at))===today).length,
+      },
+      recentErrors:rows.filter(x=>x.status==="failed").slice(0,12)
+        .map(x=>({at:x.created_at,code:x.error_code||"UNKNOWN_ERROR"})),
+    };
+  });
+
+export const saveCinematicRenderControls=createServerFn({method:"POST"})
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input:{
+    defaultDailyLimit:number;maxUploadMb:number;overrides:Record<string,number>;
+  })=>policySchema.omit({resellerEnabled:true}).parse(input))
+  .handler(async ({context,data})=>{
+    await requireVitrineAdmin(context);
+    const {supabaseAdmin}=await import("@/integrations/supabase/client.server");
+    const value=policySchema.parse({...data,resellerEnabled:false});
+    const {error}=await supabaseAdmin.from("app_settings").upsert({
+      key:"vitrine_video_render_policy",value,
+      updated_at:new Date().toISOString(),
+    } as never,{onConflict:"key"});
+    if(error)throw new Error("Falha ao salvar limites administrativos.");
+    return {saved:true,policy:value};
+  });
+
+export const recordCinematicRender=createServerFn({method:"POST"})
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input:z.input<typeof auditInput>)=>auditInput.parse(input))
+  .handler(async ({context,data})=>{
+    await requireVitrineAdmin(context);
+    const {supabaseAdmin}=await import("@/integrations/supabase/client.server");
+    const payload={
+      request_id:data.request_id,
+      actor_id:context.userId,
+      brand_owner_id:data.brand_owner_id,
+      media_type:data.media_type,
+      tmdb_id:data.tmdb_id,
+      output_format:data.output_format,
+      seconds:data.seconds,
+      audio_requested:data.audio_requested,
+      status:data.status,
+      bytes_out:data.status==="completed"?data.bytes_out??0:null,
+      error_code:data.status==="failed"?data.error_code??"UNKNOWN_ERROR":null,
+    };
+    const {error}=await supabaseAdmin.from("vitrine_video_render_audit" as any)
+      .insert(payload as any);
+    if(error?.code==="23505")return {recorded:false,duplicate:true};
+    if(error)throw new Error("Não foi possível registrar o resultado da renderização.");
+    return {recorded:true,duplicate:false};
+  });
