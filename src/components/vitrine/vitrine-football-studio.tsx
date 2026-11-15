@@ -19,6 +19,7 @@ type TeamSide = "home" | "away";
 const DEFAULT_LEAGUES = [
   "brazilian-serie-a", "brazilian-serie-b", "conmebol-copa-libertadores",
   "spanish-la-liga", "english-premier-league", "uefa-champions-league",
+  "uefa-nations-league", "international-friendly",
 ];
 const LEAGUES = [
   {id:"brazilian-serie-a",name:"🇧🇷 Série A"},{id:"brazilian-serie-b",name:"🇧🇷 Série B"},
