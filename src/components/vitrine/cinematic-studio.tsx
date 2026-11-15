@@ -1,0 +1,526 @@
+import {useCallback,useEffect,useMemo,useRef,useState} from "react";
+import {Link,useRouteContext} from "@tanstack/react-router";
+import {useQuery} from "@tanstack/react-query";
+import {useServerFn} from "@tanstack/react-start";
+import {toast} from "sonner";
+import {
+  Film,Clapperboard,Search,Download,Upload,RefreshCw,Play,Pause,
+  ImageIcon,ShieldCheck,Clock3,AlertTriangle,CheckCircle2,Palette,Music2
+} from "lucide-react";
+import {Button} from "@/components/ui/button";
+import {Input} from "@/components/ui/input";
+import {getVitrineTmdbFeed} from "@/lib/vitrine-catalog.functions";
+import {getCinematicTmdbDetail,getCinematicBrands,type CinematicBrand} from "@/lib/vitrine-cinematic.functions";
+import {
+  renderCinematic,cinematicFormats,type CinematicOptions,
+  type CinematicFormat,type CinematicMode
+} from "@/lib/vitrine-cinematic-canvas";
+import {renderNativeMp4,supportedMp4Mime} from "@/lib/vitrine-cinematic-mp4";
+
+type SearchItem={
+  tmdb_id:number;media_type:"movie"|"tv";title:string;
+  poster_path:string|null;release_date:string|null;overview?:string|null;
+};
+type StudioAssets={
+  background:HTMLImageElement|null;poster:HTMLImageElement|null;
+  logo:HTMLImageElement|null;error:string;warning:string;
+};
+type CinematicDetail=Awaited<ReturnType<ReturnType<typeof useServerFn<typeof getCinematicTmdbDetail>>>>;
+const brandFallback:CinematicBrand={
+  owner_id:"",name:"Stream Monitor",logo_url:"",whatsapp:"",color:"#2563eb",
+};
+const defaultLogo="/__l5e/assets-v1/6c2c6658-faca-42c7-9e11-89b20a23a3dd/logo-official.png";
+const labels=["NOVIDADE","NOVO FILME","NOVA SÉRIE","EM ALTA"] as const;
+function tmdbPath(path:string|null|undefined,size:"original"|"w500"="original"){
+  if(!path||!/^\/[a-z0-9/_.-]+$/i.test(path))return "";
+  return "https://image.tmdb.org/t/p/"+size+path;
+}
+function loadImage(url:string):Promise<HTMLImageElement>{
+  return new Promise((resolve,reject)=>{
+    const image=new Image();
+    if(!url.startsWith("data:"))image.crossOrigin="anonymous";
+    image.onload=()=>image.naturalWidth>0?resolve(image):reject(new Error("Imagem inválida."));
+    image.onerror=()=>reject(new Error("Não foi possível carregar a imagem com autorização CORS."));
+    image.src=url;
+  });
+}
+function downloadFile(blob:Blob,name:string){
+  const url=URL.createObjectURL(blob),a=document.createElement("a");
+  a.href=url;a.download=name;a.rel="noopener";document.body.appendChild(a);
+  a.click();a.remove();window.setTimeout(()=>URL.revokeObjectURL(url),30_000);
+}
+function slug(value:string){
+  return value.normalize("NFD").replace(/[\u0300-\u036f]/g,"")
+    .replace(/[^a-zA-Z0-9_-]+/g,"-").replace(/^-|-$/g,"").slice(0,50)||"vitrine";
+}
+const inputClass="h-10 rounded-lg border border-blue-400/20 bg-slate-950/75 px-3 text-sm text-white focus:outline-none focus:ring-2 focus:ring-blue-500";
+const panelClass="rounded-2xl border border-blue-500/20 bg-[#081628]/90 p-4 sm:p-5";
+
+export function CinematicStudio({mode}:{mode:CinematicMode}){
+  const {user}=useRouteContext({from:"/_authenticated"});
+  const getFeed=useServerFn(getVitrineTmdbFeed);
+  const getDetail=useServerFn(getCinematicTmdbDetail);
+  const getBrands=useServerFn(getCinematicBrands);
+  const canvasRef=useRef<HTMLCanvasElement>(null);
+  const previewVideoRef=useRef<HTMLVideoElement>(null);
+  const busyRef=useRef(false);
+  const [media,setMedia]=useState<"movie"|"tv">("movie");
+  const [search,setSearch]=useState("");
+  const [query,setQuery]=useState("");
+  const [selectedId,setSelectedId]=useState<number|null>(null);
+  const [format,setFormat]=useState<CinematicFormat>("portrait");
+  const [brandId,setBrandId]=useState("");
+  const [brandOverrides,setBrandOverrides]=useState<Partial<CinematicBrand>>({});
+  const [label,setLabel]=useState<string>("NOVIDADE");
+  const [description,setDescription]=useState("");
+  const [color,setColor]=useState("#60a5fa");
+  const [lighting,setLighting]=useState<"natural"|"blue"|"warm">("blue");
+  const [logoPosition,setLogoPosition]=useState<"left"|"right">("left");
+  const [posterVisible,setPosterVisible]=useState(true);
+  const [backdropChoice,setBackdropChoice]=useState("");
+  const [localLogo,setLocalLogo]=useState("");
+  const [assets,setAssets]=useState<StudioAssets>({background:null,poster:null,logo:null,error:"",warning:""});
+  const [loadingAssets,setLoadingAssets]=useState(false);
+  const [videoFile,setVideoFile]=useState<File|null>(null);
+  const [videoUrl,setVideoUrl]=useState("");
+  const [videoLength,setVideoLength]=useState(0);
+  const [clipSeconds,setClipSeconds]=useState<15|30|60>(15);
+  const [clipStart,setClipStart]=useState(0);
+  const [audio,setAudio]=useState(true);
+  const [licenseAccepted,setLicenseAccepted]=useState(false);
+  const [rendering,setRendering]=useState(false);
+  const [exporting,setExporting]=useState(false);
+  const [renderProgress,setRenderProgress]=useState({percent:0,stage:"",seconds:0,total:15});
+  const [readyMp4,setReadyMp4]=useState("");
+  const [readyMp4Bytes,setReadyMp4Bytes]=useState(0);
+
+  useEffect(()=>{
+    const t=setTimeout(()=>setQuery(search.trim()),350);
+    return()=>clearTimeout(t);
+  },[search]);
+  const feed=useQuery({
+    queryKey:["cinematic-tmdb-search",user.id,media,query],
+    queryFn:()=>getFeed({data:{feed:media==="movie"?"movie_recent":"tv_recent",query:query||undefined}}),
+    staleTime:120_000,
+    retry:1,
+  });
+  const brands=useQuery({
+    queryKey:["cinematic-brand-list",user.id],queryFn:()=>getBrands(),staleTime:60_000,retry:1,
+  });
+  const brandList=brands.data?.brands??[];
+  const selectedBrand=brandList.find(x=>x.owner_id===brandId)
+    ??brandList.find(x=>x.owner_id===brands.data?.currentOwner)
+    ??brandFallback;
+  const brand={...selectedBrand,...brandOverrides};
+  const detail=useQuery({
+    queryKey:["cinematic-tmdb-detail",media,selectedId],
+    enabled:selectedId!==null,
+    queryFn:()=>getDetail({data:{media,id:selectedId!}}),
+    staleTime:600_000,retry:1,
+  });
+  const movie=detail.data?.detail;
+  const extra=detail.data?.extras;
+  const selectedBackground=backdropChoice||
+    extra?.backdrops?.[0]||movie?.backdrop_path||movie?.poster_path||"";
+  const selectedPoster=extra?.poster_path||movie?.poster_path||"";
+  const logoSource=localLogo||brand.logo_url||(brand.owner_id===brands.data?.currentOwner?defaultLogo:"");
+
+  useEffect(()=>{
+    if(movie){
+      setDescription(movie.overview||"");
+      setLabel(media==="movie"?"NOVO FILME":"NOVA SÉRIE");
+      setBackdropChoice("");
+      setPosterVisible(true);
+    }
+  },[movie?.tmdb_id,media]);
+  useEffect(()=>{
+    if(brand.color&&/^#[\da-f]{6}$/i.test(brand.color)&&!brandOverrides.color)
+      setColor(brand.color);
+  },[brand.color,brandOverrides.color]);
+
+  useEffect(()=>{
+    if(!movie)return;
+    let cancelled=false;
+    setLoadingAssets(true);
+    setAssets({background:null,poster:null,logo:null,error:"",warning:""});
+    void (async()=>{
+      try{
+        const bgUrl=tmdbPath(selectedBackground,"original");
+        if(!bgUrl)throw new Error("A TMDB não forneceu backdrop nem pôster oficial.");
+        const background=await loadImage(bgUrl);
+        const poster=selectedPoster?await loadImage(tmdbPath(selectedPoster,"w500")).catch(()=>null):null;
+        const logo=logoSource?await loadImage(logoSource).catch(()=>null):null;
+        if(!cancelled)setAssets({
+          background,poster,logo,error:"",
+          warning:logoSource&&!logo?"A logo configurada não pôde ser exportada. Envie um PNG com transparência pelo dispositivo.":"",
+        });
+      }catch(e){
+        if(!cancelled)setAssets({
+          background:null,poster:null,logo:null,
+          error:e instanceof Error?e.message:"Falha ao carregar imagens oficiais.",
+          warning:"",
+        });
+      }finally{if(!cancelled)setLoadingAssets(false);}
+    })();
+    return()=>{cancelled=true;};
+  },[movie?.tmdb_id,selectedBackground,selectedPoster,logoSource]);
+  useEffect(()=>{
+    if(!videoFile){setVideoUrl("");setVideoLength(0);return;}
+    const url=URL.createObjectURL(videoFile);
+    setVideoUrl(url);setVideoLength(0);setClipStart(0);setReadyMp4("");
+    return()=>URL.revokeObjectURL(url);
+  },[videoFile]);
+  useEffect(()=>{
+    setReadyMp4("");
+    setReadyMp4Bytes(0);
+  },[movie?.tmdb_id,format,clipSeconds,clipStart,audio,description,color,lighting,label,logoPosition,posterVisible,brand.name,brand.whatsapp,logoSource]);
+
+  const dims=cinematicFormats[format];
+  const options=useMemo<Omit<CinematicOptions,"video">>(()=>({
+    mode,width:dims.width,height:dims.height,
+    title:movie?.title||"Selecione um filme ou série",
+    overview:description,year:movie?.release_date?.slice(0,4)||"",
+    genre:movie?.genres?.slice(0,2)?.join(" · ")||"",
+    classification:extra?.classification||"",
+    label,brand:brand.name,whatsapp:brand.whatsapp,color,
+    logoPosition,lighting,posterVisible,
+    background:assets.background,poster:assets.poster,logo:assets.logo,
+  }),[mode,dims.width,dims.height,movie?.title,movie?.release_date,movie?.genres,description,extra?.classification,label,brand.name,brand.whatsapp,color,logoPosition,lighting,posterVisible,assets]);
+  useEffect(()=>{
+    if(!canvasRef.current)return;
+    const canvas=canvasRef.current,ctx=canvas.getContext("2d",{alpha:false});
+    if(!ctx)return;
+    canvas.width=dims.width;canvas.height=dims.height;
+    let id=0;
+    const draw=()=>{
+      const video=previewVideoRef.current;
+      renderCinematic(ctx,{...options,video:mode==="video"&&video&&video.readyState>=2?video:null});
+      if(mode==="video"&&video&&!video.paused&&!video.ended)
+        id=requestAnimationFrame(draw);
+    };
+    draw();
+    const onPlay=()=>{if(id)cancelAnimationFrame(id);id=requestAnimationFrame(draw);};
+    previewVideoRef.current?.addEventListener("play",onPlay);
+    const v=previewVideoRef.current;
+    return()=>{if(id)cancelAnimationFrame(id);v?.removeEventListener("play",onPlay);};
+  },[dims.width,dims.height,options,mode,videoUrl,videoLength]);
+  useEffect(()=>()=>{if(readyMp4)URL.revokeObjectURL(readyMp4);},[readyMp4]);
+
+  async function downloadStatic(as:"png"|"jpeg"){
+    if(exporting||!assets.background||!canvasRef.current){toast.error("Escolha uma obra e aguarde as imagens oficiais.");return;}
+    setExporting(true);
+    try{
+      const canvas=canvasRef.current;
+      const ctx=canvas.getContext("2d",{alpha:false});
+      if(!ctx)throw new Error("Não foi possível criar a imagem.");
+      renderCinematic(ctx,{...options,video:null});
+      const blob=await new Promise<Blob>((resolve,reject)=>canvas.toBlob(
+        value=>value?resolve(value):reject(new Error("A origem da imagem não permite exportação pelo navegador.")),
+        as==="png"?"image/png":"image/jpeg",as==="png"?undefined:.94,
+      ));
+      downloadFile(blob,slug(movie?.title||"cinematic")+"-"+dims.width+"x"+dims.height+"."+(as==="png"?"png":"jpg"));
+      toast.success("Arte estática salva!");
+    }catch(e){toast.error(e instanceof Error?e.message:"Falha ao exportar imagem.")}
+    finally{setExporting(false);}
+  }
+  async function downloadMp4(){
+    if(busyRef.current||rendering)return;
+    if(!videoFile||!videoUrl||!assets.background||!movie){
+      toast.error("Para exportar, selecione uma obra e envie um MP4 autorizado.");return;
+    }
+    if(!licenseAccepted){toast.error("Confirme que possui autorização para usar e exportar o vídeo.");return;}
+    if(!supportedMp4Mime(audio)){toast.error("Este navegador não oferece MP4 H.264/AAC nativo. A geração não foi iniciada.");return;}
+    if(videoLength<clipStart+clipSeconds-.15){
+      toast.error("O vídeo enviado não possui o trecho completo.");return;
+    }
+    busyRef.current=true;setRendering(true);
+    setRenderProgress({percent:0,seconds:0,total:clipSeconds,stage:"Preparando o vídeo autorizado"});
+    const temp=document.createElement("video");
+    temp.preload="auto";temp.playsInline=true;
+    temp.src=videoUrl;
+    try{
+      await new Promise<void>((resolve,reject)=>{
+        const onReady=()=>{clearTimeout(timeout);resolve();};
+        const onError=()=>{clearTimeout(timeout);reject(new Error("O MP4 autorizado não pôde ser decodificado."));};
+        const timeout=setTimeout(()=>reject(new Error("Tempo esgotado ao abrir MP4.")),10000);
+        temp.addEventListener("loadedmetadata",onReady,{once:true});
+        temp.addEventListener("error",onError,{once:true});
+        temp.load();
+      });
+      // Do not reuse the visible canvas: export draws to an offscreen,
+      // full-resolution canvas and cannot disrupt the browser preview.
+      const videoCanvas=document.createElement("canvas");
+      videoCanvas.width=dims.width;videoCanvas.height=dims.height;
+      const blob=await renderNativeMp4(
+        videoCanvas,temp,options,clipSeconds,clipStart,audio,setRenderProgress,
+      );
+      const nextUrl=URL.createObjectURL(blob);
+      setReadyMp4(nextUrl);setReadyMp4Bytes(blob.size);
+      downloadFile(blob,slug(movie.title)+"-trailer-"+clipSeconds+"s-"+dims.width+"x"+dims.height+".mp4");
+      toast.success("MP4 H.264 gerado com quadros reais! Arquivo disponível para visualizar.");
+      videoCanvas.width=0;videoCanvas.height=0;
+    }catch(e){
+      toast.error(e instanceof Error?e.message:"A exportação MP4 não foi concluída.");
+      setRenderProgress(v=>({...v,stage:"Falha de exportação"}));
+    }finally{
+      temp.pause();temp.removeAttribute("src");temp.load();
+      busyRef.current=false;setRendering(false);
+    }
+  }
+  function uploadLogo(file?:File){
+    if(!file)return;
+    if(!["image/png","image/webp","image/jpeg"].includes(file.type)||file.size>3*1024*1024){
+      toast.error("Use PNG, WEBP ou JPG até 3 MB.");return;
+    }
+    const reader=new FileReader();
+    reader.onload=()=>setLocalLogo(String(reader.result||""));
+    reader.onerror=()=>toast.error("Não foi possível ler sua logo.");
+    reader.readAsDataURL(file);
+  }
+  function uploadMp4(file?:File){
+    if(!file)return;
+    if(file.type!=="video/mp4"||file.size>350*1024*1024||file.size<1000){
+      toast.error("Envie um MP4 autorizado de até 350 MB.");return;
+    }
+    setVideoFile(file);setLicenseAccepted(false);
+  }
+  const isReady=!!movie&&!!assets.background&&!loadingAssets;
+  const itemList=((feed.data?.items??[]) as SearchItem[])
+    .filter(x=>x.media_type===media&&x.poster_path)
+    .slice(0,24);
+  const youtubeKey=extra?.trailer?.key;
+  const mime=supportedMp4Mime(audio);
+  return <div className="min-h-screen bg-[#050a14] px-3 py-6 text-white sm:px-6 lg:px-8">
+    <div className="mx-auto max-w-[1550px] space-y-6">
+      <header className="relative overflow-hidden rounded-3xl border border-blue-500/25 bg-gradient-to-r from-[#0b203b] via-[#071526] to-[#08101f] p-6 shadow-xl shadow-blue-950/40 sm:p-8">
+        <div className="absolute right-0 top-0 h-64 w-64 rounded-full bg-blue-500/10 blur-3xl"/>
+        <div className="relative flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <span className="inline-flex items-center gap-2 rounded-full border border-blue-500/30 bg-blue-400/10 px-3 py-1 text-xs font-bold tracking-wide text-blue-200">
+              <ShieldCheck className="h-4 w-4"/> ADMINISTRADOR · TESTE CONTROLADO
+            </span>
+            <h1 className="mt-3 flex items-center gap-3 text-3xl font-black sm:text-4xl">
+              {mode==="video"?<Clapperboard className="h-9 w-9 text-blue-400"/>:<Film className="h-9 w-9 text-blue-400"/>}
+              {mode==="video"?"Vitrine Vídeo MP4":"Banner Cinematográfico"}
+            </h1>
+            <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-300">
+              Artes cinematográficas com fotos oficiais da TMDB, identidade da revenda e conteúdo fiel à obra.
+              {mode==="video"?" Trailer YouTube somente na prévia; exportação com MP4 autorizado.":" Sem IA gerando fundos, sem players ou elementos de vídeo."}
+            </p>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <Link to="/vitrine-video" className="rounded-xl border border-blue-500/40 bg-blue-500/10 px-4 py-2 text-sm font-bold text-blue-200 hover:bg-blue-500/20">Vitrine Vídeo</Link>
+            <Link to="/vitrine-banner" className="rounded-xl border border-white/15 px-4 py-2 text-sm font-bold text-slate-200 hover:bg-white/10">Vitrine Banner</Link>
+          </div>
+        </div>
+      </header>
+      <div className="grid items-start gap-5 xl:grid-cols-[minmax(370px,510px)_minmax(0,1fr)]">
+        <div className="space-y-4">
+          <section className={panelClass+" space-y-4"}>
+            <div className="flex items-center gap-2 text-sm font-bold text-blue-200"><Search size={18}/> 1. Filme ou série oficial</div>
+            <div className="grid grid-cols-2 gap-2">
+              {(["movie","tv"] as const).map(x=><button type="button" key={x}
+                className={"rounded-xl border px-4 py-2 text-sm font-bold "+(media===x?"border-blue-400 bg-blue-600":"border-white/15 bg-white/5")}
+                onClick={()=>{setMedia(x);setSelectedId(null);setBackdropChoice("");}}>
+                {x==="movie"?"Filmes":"Séries"}
+              </button>)}
+            </div>
+            <Input value={search} onChange={e=>{setSearch(e.target.value);setSelectedId(null);}}
+              className="border-blue-400/25 bg-slate-950/80" maxLength={120}
+              placeholder="Pesquisar títulos na TMDB"/>
+            <p className="text-xs text-slate-400">{feed.isLoading?"Consultando TMDB...":"Selecione um título. As imagens serão somente desta obra."}</p>
+            {feed.isError&&<p className="text-sm text-amber-300">Não foi possível consultar a TMDB. Verifique a API.</p>}
+            <div className="grid max-h-[320px] grid-cols-3 gap-2 overflow-y-auto pr-1">
+              {itemList.map(item=><button type="button" key={item.media_type+"-"+item.tmdb_id}
+                onClick={()=>{setSelectedId(item.tmdb_id);setBackdropChoice("");}}
+                className={"overflow-hidden rounded-xl border-2 p-1 text-left transition "+(selectedId===item.tmdb_id?"border-blue-400 bg-blue-600/15":"border-white/10 hover:border-blue-400/50")}>
+                <img src={tmdbPath(item.poster_path,"w500")} alt={item.title}
+                  className="aspect-[2/3] w-full rounded-lg bg-slate-900 object-contain" loading="lazy"/>
+                <span className="mt-1 block truncate px-1 text-[11px]">{item.title}</span>
+              </button>)}
+            </div>
+            {detail.isLoading&&<p className="text-sm text-sky-300">Carregando sinopse, imagens e vídeos oficiais...</p>}
+            {detail.isError&&<p className="text-sm text-amber-300">Dados oficiais indisponíveis para este título.</p>}
+            {extra?.backdrops&&extra.backdrops.length>0&&<div className="space-y-2">
+              <p className="text-xs text-slate-300">Fundo oficial: escolha uma das imagens deste título</p>
+              <div className="grid grid-cols-3 gap-2">
+                {extra.backdrops.slice(0,6).map(path=><button type="button" key={path}
+                  onClick={()=>setBackdropChoice(path)}
+                  className={"overflow-hidden rounded-lg border-2 "+(selectedBackground===path?"border-blue-400":"border-white/10")}>
+                  <img src={tmdbPath(path,"w500")} alt="Backdrop oficial TMDB" loading="lazy" className="aspect-video w-full object-cover"/>
+                </button>)}
+              </div>
+            </div>}
+          </section>
+          <section className={panelClass+" space-y-3"}>
+            <div className="flex items-center gap-2 text-sm font-bold text-blue-200"><Palette size={18}/> 2. Identidade e composição</div>
+            <label className="block space-y-1 text-xs text-slate-300">Identidade cadastrada da revenda
+              <select className={"w-full "+inputClass} value={brandId||brands.data?.currentOwner||""}
+                onChange={e=>{setBrandId(e.target.value);setBrandOverrides({});setLocalLogo("");}}>
+                {brandList.map(x=><option key={x.owner_id} value={x.owner_id}>{x.name}</option>)}
+              </select>
+            </label>
+            {brands.isError&&<p className="text-xs text-amber-300">Identidades não disponíveis no momento.</p>}
+            <div className="grid grid-cols-2 gap-2">
+              <label className="space-y-1 text-xs text-slate-300">Nome da marca
+                <Input value={brand.name} maxLength={55} className={inputClass} onChange={e=>setBrandOverrides(v=>({...v,name:e.target.value}))}/>
+              </label>
+              <label className="space-y-1 text-xs text-slate-300">WhatsApp com DDD
+                <Input value={brand.whatsapp} maxLength={22} className={inputClass} onChange={e=>setBrandOverrides(v=>({...v,whatsapp:e.target.value}))}/>
+              </label>
+            </div>
+            <label className="block space-y-1 text-xs text-slate-300">Logo transparente (PNG recomendado)
+              <Input type="file" accept="image/png,image/webp,image/jpeg"
+                className="border-blue-500/20 bg-slate-950 text-xs file:text-blue-200"
+                onChange={e=>uploadLogo(e.target.files?.[0])}/>
+            </label>
+            <div className="grid grid-cols-2 gap-2">
+              <label className="space-y-1 text-xs text-slate-300">Etiqueta
+                <select className={"w-full "+inputClass} value={label} onChange={e=>setLabel(e.target.value)}>
+                  {labels.map(x=><option key={x}>{x}</option>)}
+                </select>
+              </label>
+              <label className="space-y-1 text-xs text-slate-300">Formato
+                <select className={"w-full "+inputClass} value={format} onChange={e=>setFormat(e.target.value as CinematicFormat)}>
+                  {Object.entries(cinematicFormats).filter(([key])=>mode==="banner"||key==="portrait"||key==="story")
+                    .map(([key,x])=><option key={key} value={key}>{x.label}</option>)}
+                </select>
+              </label>
+              <label className="space-y-1 text-xs text-slate-300">Cor de destaque
+                <Input type="color" value={color} onChange={e=>setColor(e.target.value)} className="h-10 w-full border border-blue-500/20 bg-slate-900 p-1"/>
+              </label>
+              <label className="space-y-1 text-xs text-slate-300">Iluminação
+                <select className={"w-full "+inputClass} value={lighting} onChange={e=>setLighting(e.target.value as "natural"|"blue"|"warm")}>
+                  <option value="natural">Original</option><option value="blue">Azul cinematográfico</option><option value="warm">Quente cinematográfico</option>
+                </select>
+              </label>
+              <label className="space-y-1 text-xs text-slate-300">Posição da logo
+                <select className={"w-full "+inputClass} value={logoPosition} onChange={e=>setLogoPosition(e.target.value as "left"|"right")}>
+                  <option value="left">Esquerda</option><option value="right">Direita</option>
+                </select>
+              </label>
+              {mode==="banner"&&<label className="flex items-center gap-2 self-end pb-3 text-xs text-slate-200">
+                <input type="checkbox" checked={posterVisible} onChange={e=>setPosterVisible(e.target.checked)}/>
+                Pôster oficial em destaque
+              </label>}
+            </div>
+            <label className="block space-y-1 text-xs text-slate-300">Sinopse em português (editável)
+              <textarea value={description} maxLength={480} rows={4}
+                className={"w-full resize-y py-3 "+inputClass+" h-auto min-h-[108px]"}
+                onChange={e=>setDescription(e.target.value)}/>
+            </label>
+            {loadingAssets&&<p className="flex items-center gap-2 text-xs text-blue-200"><RefreshCw size={15} className="animate-spin"/>Preparando imagens originais...</p>}
+            {assets.error&&<p className="text-xs text-amber-300">{assets.error}</p>}
+            {assets.warning&&<p className="text-xs text-amber-300">{assets.warning}</p>}
+          </section>
+          {mode==="video"&&<section className={panelClass+" space-y-3"}>
+            <div className="flex items-center gap-2 text-sm font-bold text-blue-200"><Clapperboard size={18}/> 3. Trailer real e MP4 autorizado</div>
+            {youtubeKey?<div className="space-y-2">
+              <p className="text-xs text-slate-300">Trailer encontrado na TMDB · {extra?.trailer?.official?"oficial":"referenciado"} · idioma {extra?.trailer?.language||"não informado"}.</p>
+              <iframe title={"Trailer da obra "+(movie?.title||"")} loading="lazy" allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture"
+                referrerPolicy="strict-origin-when-cross-origin" allowFullScreen
+                src={"https://www.youtube-nocookie.com/embed/"+youtubeKey}
+                className="aspect-video w-full rounded-xl border border-blue-500/20 bg-black"/>
+              <p className="text-[11px] text-slate-400">YouTube: apenas reprodução incorporada. Este vídeo não é extraído, gravado nem baixado automaticamente.</p>
+            </div>:<p className="text-xs text-amber-300">A TMDB não indicou trailer do YouTube para este título.</p>}
+            <label className="block space-y-2 text-xs text-slate-300"><span className="flex items-center gap-2"><Upload size={15}/> Enviar MP4 que você pode publicar</span>
+              <Input type="file" accept=".mp4,video/mp4"
+                className="border-blue-500/20 bg-slate-950 text-xs file:text-blue-200"
+                onChange={e=>uploadMp4(e.target.files?.[0])}/>
+            </label>
+            {videoUrl&&<div className="space-y-2">
+              <p className="text-xs text-sky-300">{videoFile?.name} · {videoLength?Math.floor(videoLength)+" s":"Lendo duração..."}</p>
+              <div className="grid grid-cols-2 gap-2">
+                <label className="space-y-1 text-xs text-slate-300">Trecho
+                  <select className={"w-full "+inputClass} value={clipSeconds} onChange={e=>setClipSeconds(Number(e.target.value) as 15|30|60)}>
+                    <option value={15}>15 segundos</option><option value={30}>30 segundos</option><option value={60}>60 segundos</option>
+                  </select>
+                </label>
+                <label className="space-y-1 text-xs text-slate-300">Início em segundos
+                  <Input className={inputClass} type="number" min={0} max={Math.max(0,videoLength-clipSeconds)}
+                    value={clipStart} onChange={e=>setClipStart(Math.max(0,Math.floor(Number(e.target.value)||0)))}/>
+                </label>
+              </div>
+              <div className="flex flex-wrap items-center gap-3">
+                <label className="flex items-center gap-2 text-xs text-slate-200"><input type="checkbox" checked={audio} onChange={e=>setAudio(e.target.checked)}/> <Music2 size={15}/> Áudio AAC</label>
+                <Button variant="outline" size="sm" onClick={()=>{
+                  const video=previewVideoRef.current;
+                  if(!video)return;
+                  if(video.paused){video.muted=!audio;void video.play().catch(()=>toast.error("Não foi possível reproduzir este arquivo."));}
+                  else video.pause();
+                }}><Play size={14} className="mr-2"/>Reproduzir/pausar na arte</Button>
+              </div>
+            </div>}
+            <label className="flex items-start gap-2 text-xs text-slate-300">
+              <input className="mt-0.5" type="checkbox" checked={licenseAccepted} onChange={e=>setLicenseAccepted(e.target.checked)}/>
+              Confirmo que tenho autorização para utilizar o MP4 e publicá-lo nas redes sociais.
+            </label>
+            <div className={"rounded-lg border p-3 text-xs "+(mime?"border-emerald-500/20 bg-emerald-500/10 text-emerald-200":"border-amber-500/30 bg-amber-500/10 text-amber-200")}>
+              {mime?"Navegador informa suporte nativo ao MP4 H.264"+(audio?"/AAC":"")+" a 30 FPS. A gravação só começa ao clicar Gerar.":"Este navegador não informa suporte à exportação nativa MP4 H.264"+(audio?"/AAC":"")+". Use um navegador compatível ou exporte o banner PNG."}
+            </div>
+            <p className="text-[11px] text-slate-400">Processamento local, sem enviar seu vídeo ao servidor. Renderização Cloudflare Containers + FFmpeg + R2 permanece desativada até aprovação de orçamento e habilitação dos serviços.</p>
+          </section>}
+        </div>
+        <div className="space-y-4 xl:sticky xl:top-4">
+          <section className={panelClass+" space-y-4"}>
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <h2 className="text-base font-black text-white">Prévia da arte final</h2>
+              <span className="rounded-full border border-blue-400/20 bg-blue-500/10 px-3 py-1 text-xs text-blue-200">{dims.width} × {dims.height}</span>
+            </div>
+            <div className="mx-auto max-w-[620px] overflow-hidden rounded-xl border border-white/15 bg-slate-950 shadow-2xl shadow-blue-950/50">
+              <canvas ref={canvasRef} width={dims.width} height={dims.height}
+                className="block h-auto w-full" aria-label="Prévia cinematográfica com imagens oficiais da TMDB"/>
+            </div>
+            <video ref={previewVideoRef} src={videoUrl||undefined} preload="metadata" playsInline
+              className="hidden"
+              onLoadedMetadata={e=>{const length=e.currentTarget.duration;setVideoLength(Number.isFinite(length)?length:0);}}
+              onTimeUpdate={()=>{
+                const v=previewVideoRef.current;
+                if(v&&v.currentTime>clipStart+clipSeconds)v.pause();
+              }}/>
+            {!movie&&<p className="text-center text-sm text-amber-200">Selecione um filme ou uma série para criar a prévia com o fundo oficial.</p>}
+            {mode==="video"&&!videoFile&&<p className="text-center text-xs text-amber-200">O espaço central receberá os quadros reais de seu MP4 autorizado. A referência do YouTube aparece no painel de edição, mas não é exportável.</p>}
+            <div className="grid gap-2 sm:grid-cols-2">
+              <Button className="bg-blue-600 text-white hover:bg-blue-500" disabled={!isReady||exporting||rendering}
+                onClick={()=>void downloadStatic("png")}>
+                <ImageIcon size={17} className="mr-2"/>{exporting?"Preparando...":"Baixar PNG"}
+              </Button>
+              {mode==="banner"?<Button className="border border-blue-400/25 bg-blue-900/40 text-white hover:bg-blue-700/40"
+                  disabled={!isReady||exporting}
+                  onClick={()=>void downloadStatic("jpeg")}>
+                  <Download size={17} className="mr-2"/>Baixar JPG
+                </Button>:
+                <Button className="bg-indigo-600 text-white hover:bg-indigo-500"
+                  disabled={!isReady||!videoFile||!licenseAccepted||!mime||rendering||videoLength<clipStart+clipSeconds-.15}
+                  onClick={()=>void downloadMp4()}>
+                  <Clapperboard size={17} className="mr-2"/>{rendering?"Renderizando...":"Gerar MP4 real"}
+                </Button>}
+            </div>
+            {mode==="video"&&renderProgress.stage&&<div className="space-y-2 rounded-xl border border-blue-400/20 bg-blue-500/5 p-3">
+              <div className="flex items-center justify-between text-xs text-blue-100">
+                <span>{renderProgress.stage}</span><span>{renderProgress.percent}%</span>
+              </div>
+              <div className="h-2 w-full overflow-hidden rounded-full bg-slate-800">
+                <div className="h-full rounded-full bg-blue-500 transition-[width] duration-150" style={{width:renderProgress.percent+"%"}}/>
+              </div>
+              <span className="text-[11px] text-slate-400">{Math.round(renderProgress.seconds)} / {renderProgress.total} segundos de vídeo renderizados</span>
+            </div>}
+            {mode==="video"&&readyMp4&&<div className="space-y-2 rounded-xl border border-emerald-500/20 bg-emerald-500/10 p-3">
+              <div className="flex items-center gap-2 text-sm font-semibold text-emerald-200"><CheckCircle2 size={17}/> MP4 criado · {(readyMp4Bytes/1024/1024).toFixed(1)} MB</div>
+              <video controls playsInline src={readyMp4} className="aspect-[4/5] max-h-[420px] w-full rounded-lg bg-black object-contain"/>
+              <a href={readyMp4} download={slug(movie?.title||"vitrine")+"-vitrine.mp4"}
+                className="inline-flex items-center gap-2 rounded-lg border border-emerald-400/20 px-4 py-2 text-sm text-white hover:bg-emerald-500/10">
+                <Download size={17}/> Baixar novamente
+              </a>
+            </div>}
+            <div className="flex flex-wrap items-center gap-2 text-[11px] text-slate-400">
+              <ShieldCheck size={14} className="text-sky-300"/> Imagens somente do título selecionado
+              <span>·</span><span>Fonte: TMDB</span>
+              {mode==="video"&&<><span>·</span><Clock3 size={14}/>15/30/60 segundos</>}
+            </div>
+          </section>
+        </div>
+      </div>
+    </div>
+  </div>;
+}
