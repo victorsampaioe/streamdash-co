@@ -314,6 +314,10 @@ export function CinematicStudio({mode}:{mode:CinematicMode}){
       const outputCanvas=document.createElement("canvas");
       outputCanvas.width=dims.width;outputCanvas.height=dims.height;
       try{
+        // Keep the approved source visible during this-tab screen sharing.
+        // This is synchronous; getDisplayMedia still runs under the user's
+        // original Generate MP4 click.
+        previewIframeRef.current?.scrollIntoView({behavior:"auto",block:"center"});
         const blob=await renderAuthorizedTabMp4(
           outputCanvas,options,clipSeconds,audio,previewIframeRef.current,setRenderProgress,
         );
