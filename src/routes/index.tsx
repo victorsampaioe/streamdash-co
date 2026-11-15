@@ -526,6 +526,10 @@ function Landing() {
         </div>
         <div className="border-t border-white/10 px-6 py-5 text-center text-xs text-slate-500">
           © {new Date().getFullYear()} Stream Monitor. Todos os direitos reservados.
+          <span className="mx-2" aria-hidden="true">·</span>
+          Dados esportivos: <a href="https://sportscore.com/" rel="dofollow" target="_blank"
+            className="text-slate-400 underline-offset-2 hover:text-blue-300 hover:underline"
+            title="Sports data by SportScore">Powered by SportScore</a>
         </div>
       </footer>
 
