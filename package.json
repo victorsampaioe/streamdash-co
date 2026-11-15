@@ -36,6 +36,7 @@
     "hls.js": "^1.7.0",
     "html-to-image": "^1.11.13",
     "lucide-react": "^0.575.0",
+    "mediabunny": "^1.66.0",
     "qrcode.react": "^4.2.0",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
