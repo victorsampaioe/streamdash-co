@@ -81,7 +81,7 @@ function FootballArt({
   const dims = DIMENSIONS[format];
   const story = format === "story";
   const landscape = format === "landscape";
-  const list = matches.slice(0, landscape ? 3 : story ? 7 : 5);
+  const list = matches.slice(0, landscape ? 2 : story ? 7 : 4);
   return <div className="relative isolate overflow-hidden bg-[#050d22] font-sans text-white"
     style={{ width: dims.width, height: dims.height }}>
     {stadium ? <img alt="" src={stadium} className="absolute inset-0 h-full w-full object-cover opacity-75" /> : <>
@@ -223,7 +223,7 @@ export function VitrineFootballStudio() {
   const scale = maxWidth / sizes.width;
 
   const usedBadges = useMemo(() => {
-    const matches = mode === "today" ? visibleMatches.slice(0, format === "landscape" ? 3 : format === "story" ? 7 : 5) : featured ? [featured] : [];
+    const matches = mode === "today" ? visibleMatches.slice(0, format === "landscape" ? 2 : format === "story" ? 7 : 4) : featured ? [featured] : [];
     return [...new Set(matches.flatMap((m) => [m.homeBadge, m.awayBadge]).filter(Boolean))];
   }, [mode, visibleMatches, featured, format]);
 
