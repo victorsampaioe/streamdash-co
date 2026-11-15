@@ -132,6 +132,7 @@ function useNavItems() {
     ...(navIsAdmin ? [{ to: "/app/auditoria", label: "Auditoria Visual", icon: ShieldAlert }] : []),
     ...(navIsAdmin ? [{ to: "/app/admin/observabilidade", label: "Admin · Central de Inteligência", icon: Gauge }] : []),
     ...(navIsAdmin ? [{ to: "/app/admin/vitrine-futebol", label: "Admin · Vitrine IA Futebol", icon: Trophy }] : []),
+    ...(navIsAdmin ? [{ to: "/vitrine-video", label: "Admin · Vitrine Vídeo MP4", icon: Sparkles }] : []),
     { to: "/app", label: "Dashboard", icon: LayoutDashboard, exact: true },
     { to: "/app/servers", label: "Servidores", icon: ServerIcon },
     { to: "/app/central", label: "Central Inteligente", icon: ShieldAlert },
