@@ -46,3 +46,23 @@ describe("plataforma do anúncio", () => {
     expect(ok?.acquisition_placement).toBe("instagram_stories");
   });
 });
+
+describe("atribuição resiliente em navegadores internos", () => {
+  it("conserva o primeiro anúncio em vez de sobrescrever com um segundo clique", () => {
+    setup("?utm_source=ig&utm_campaign=first_ad&utm_medium=paid_social");
+    captureAttribution();
+    (window as any).location.search = "?utm_source=fb&utm_campaign=second_ad";
+    captureAttribution();
+    expect(readAttributionPlatform()).toBe("instagram");
+  });
+
+  it("guarda a origem em memória quando o navegador bloqueia armazenamento", () => {
+    setup("?utm_source=fb&utm_campaign=ad_browser");
+    (globalThis as any).localStorage = {
+      getItem: () => { throw new Error("Private mode"); },
+      setItem: () => { throw new Error("Private mode"); },
+    };
+    captureAttribution();
+    expect(readAttributionPlatform()).toBe("facebook");
+  });
+});
