@@ -13,6 +13,8 @@ const leagues = [
   { id: "4335", name: "La Liga" },
   { id: "4332", name: "Serie A Italiana" },
   { id: "4331", name: "Bundesliga" },
+  { id: "4490", name: "UEFA Nations League" },
+  { id: "4562", name: "Amistosos Internacionais" },
 ] as const;
 const base = "https://www.thesportsdb.com/api/v1/json/123/";
 type RemoteEvent = Record<string, string | null | undefined>;
@@ -41,7 +43,7 @@ export type FootballPlayer = {
 };
 
 async function requireFootballAdmin(context: {
-  supabase: { rpc: (name: string, args: Record<string, unknown>) => PromiseLike<{ data: unknown; error: unknown }> };
+  supabase: any;
   userId: string;
   claims: Record<string, unknown>;
 }) {
@@ -183,6 +185,8 @@ export const getVitrineFootballImage = createServerFn({ method: "POST" })
     if (!response.ok) throw new Error("Imagem indisponível.");
     const type = response.headers.get("content-type")?.split(";")[0];
     if (!["image/png", "image/jpeg", "image/webp"].includes(type || "")) throw new Error("Formato de imagem não suportado.");
+    const reportedLength = Number(response.headers.get("content-length") || 0);
+    if (reportedLength > 2_500_000) throw new Error("Imagem excede o limite de 2,5 MB.");
     const buffer = await response.arrayBuffer();
     if (buffer.byteLength > 2_500_000) throw new Error("Imagem excede o limite de 2,5 MB.");
     return { dataUrl: `data:${type};base64,${Buffer.from(buffer).toString("base64")}` };
