@@ -233,7 +233,7 @@ export function CinematicStudio({mode}:{mode:CinematicMode}){
     const draw=()=>{
       const video=previewVideoRef.current;
       renderCinematic(ctx,{...options,video:mode==="video"&&video&&video.readyState>=2?video:null});
-      if(mode==="video"&&video&&!video.paused&&!video.ended)
+      if(mode==="video"&&!rendering&&video&&!video.paused&&!video.ended)
         id=requestAnimationFrame(draw);
     };
     draw();
@@ -241,7 +241,7 @@ export function CinematicStudio({mode}:{mode:CinematicMode}){
     previewVideoRef.current?.addEventListener("play",onPlay);
     const v=previewVideoRef.current;
     return()=>{if(id)cancelAnimationFrame(id);v?.removeEventListener("play",onPlay);};
-  },[dims.width,dims.height,options,mode,videoUrl,videoLength]);
+  },[dims.width,dims.height,options,mode,videoUrl,videoLength,rendering]);
   useEffect(()=>()=>{if(readyMp4)URL.revokeObjectURL(readyMp4);},[readyMp4]);
 
   async function downloadStatic(as:"png"|"jpeg"){
@@ -314,6 +314,8 @@ export function CinematicStudio({mode}:{mode:CinematicMode}){
     temp.style.cssText="position:fixed;left:0;top:0;width:1px;height:1px;opacity:0;pointer-events:none;z-index:-1";
     temp.src=videoUrl;
     document.body.appendChild(temp);
+    const exportCanvas=document.createElement("canvas");
+    previewVideoRef.current?.pause();
     try{
       await new Promise<void>((resolve,reject)=>{
         const onReady=()=>{clearTimeout(timeout);resolve();};
@@ -325,7 +327,7 @@ export function CinematicStudio({mode}:{mode:CinematicMode}){
       });
       // Do not reuse the visible canvas: export draws to an offscreen,
       // full-resolution canvas and cannot disrupt the browser preview.
-      const videoCanvas=document.createElement("canvas");
+      const videoCanvas=exportCanvas;
       const blob=await renderNativeMp4(
         videoCanvas,temp,options,clipSeconds,clipStart,audio,setRenderProgress,mp4Preset,
       );
@@ -337,13 +339,13 @@ export function CinematicStudio({mode}:{mode:CinematicMode}){
       if(mp4Preset==="whatsapp"&&blob.size>WHATSAPP_VIDEO_MAX_BYTES)
         toast.warning("MP4 criado, mas ultrapassou 16 MB. Envie como documento ou reduza a duração para WhatsApp.");
       else toast.success("MP4 H.264 gerado com a arte e o vídeo! Arquivo pronto para visualizar.");
-      videoCanvas.width=0;videoCanvas.height=0;
     }catch(e){
       toast.error(e instanceof Error?e.message:"A exportação MP4 não foi concluída.");
       void logVideoRender(requestId,"failed",0,"EXPORT_ERROR");
       setRenderProgress(v=>({...v,stage:"Falha de exportação"}));
     }finally{
       temp.pause();temp.removeAttribute("src");temp.load();temp.remove();
+      exportCanvas.width=0;exportCanvas.height=0;
       busyRef.current=false;setRendering(false);
     }
   }
@@ -668,7 +670,7 @@ export function CinematicStudio({mode}:{mode:CinematicMode}){
             <div className="relative mx-auto max-w-[620px] overflow-hidden rounded-xl border border-white/15 bg-slate-950 shadow-2xl shadow-blue-950/50">
               <canvas ref={canvasRef} width={dims.width} height={dims.height}
                 className="block h-auto w-full" aria-label="Prévia cinematográfica com imagens oficiais da TMDB"/>
-              {mode==="video"&&!videoFile&&youtubeEmbed&&previewFrame&&isReady&&(
+              {mode==="video"&&!videoUrl&&youtubeEmbed&&previewFrame&&isReady&&(
                 <div className="absolute overflow-hidden rounded-[9px] border border-blue-400/70 bg-black shadow-xl shadow-blue-500/40"
                   style={{
                     left:(previewFrame.x/dims.width*100)+"%",
@@ -693,7 +695,7 @@ export function CinematicStudio({mode}:{mode:CinematicMode}){
                 if(v&&v.currentTime>clipStart+clipSeconds)v.pause();
               }}/>
             {!movie&&<p className="text-center text-sm text-amber-200">Selecione um filme ou uma série para criar a prévia com o fundo oficial.</p>}
-            {mode==="video"&&!videoFile&&<p className="text-center text-xs text-amber-200">O trailer aparece na prévia. Para baixar o post com vídeo, escolha o MP4 ou use um link direto, sem gravar a tela.</p>}
+            {mode==="video"&&!videoUrl&&<p className="text-center text-xs text-amber-200">O trailer aparece na prévia. Para baixar o post com vídeo, escolha o MP4 ou use um link direto, sem gravar a tela.</p>}
             <div className="grid gap-2 sm:grid-cols-2">
               <Button className="bg-blue-600 text-white hover:bg-blue-500" disabled={!isReady||exporting||rendering}
                 onClick={()=>void downloadStatic("png")}>
