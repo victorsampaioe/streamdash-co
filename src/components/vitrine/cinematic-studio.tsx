@@ -10,7 +10,7 @@ import {
 import {Button} from "@/components/ui/button";
 import {Input} from "@/components/ui/input";
 import {getVitrineTmdbFeed} from "@/lib/vitrine-catalog.functions";
-import {getCinematicTmdbDetail,getCinematicBrands,getCinematicRenderControls,saveCinematicRenderControls,recordCinematicRender,type CinematicBrand} from "@/lib/vitrine-cinematic.functions";
+import {getCinematicTmdbDetail,getCinematicBrands,getCinematicBannerDetail,getCinematicBannerBrand,getCinematicRenderControls,saveCinematicRenderControls,recordCinematicRender,type CinematicBrand} from "@/lib/vitrine-cinematic.functions";
 import {
   renderCinematic,formatCinematicWhatsApp,cinematicVideoFrameRect,cinematicFormats,type CinematicOptions,
   type CinematicFormat,type CinematicMode
@@ -64,7 +64,9 @@ export function CinematicStudio({mode}:{mode:CinematicMode}){
   const {user}=useRouteContext({from:"/_authenticated"});
   const getFeed=useServerFn(getVitrineTmdbFeed);
   const getDetail=useServerFn(getCinematicTmdbDetail);
+  const getBannerDetail=useServerFn(getCinematicBannerDetail);
   const getBrands=useServerFn(getCinematicBrands);
+  const getBannerBrand=useServerFn(getCinematicBannerBrand);
   const getControls=useServerFn(getCinematicRenderControls);
   const saveControls=useServerFn(saveCinematicRenderControls);
   const recordRender=useServerFn(recordCinematicRender);
@@ -122,7 +124,9 @@ export function CinematicStudio({mode}:{mode:CinematicMode}){
     retry:1,
   });
   const brands=useQuery({
-    queryKey:["cinematic-brand-list",user.id],queryFn:()=>getBrands(),staleTime:60_000,retry:1,
+    queryKey:["cinematic-brand-list",mode,user.id],
+    queryFn:()=>mode==="video"?getBrands():getBannerBrand(),
+    staleTime:60_000,retry:1,
   });
   const usage=useQuery({
     queryKey:["admin-vitrine-video-audit"],
@@ -144,9 +148,11 @@ export function CinematicStudio({mode}:{mode:CinematicMode}){
     setBrandDailyLimit(usage.data.policy.overrides[ownerId]??usage.data.policy.defaultDailyLimit);
   },[usage.data,ownerId]);
   const detail=useQuery({
-    queryKey:["cinematic-tmdb-detail",media,selectedId],
+    queryKey:["cinematic-tmdb-detail",mode,media,selectedId],
     enabled:selectedId!==null,
-    queryFn:()=>getDetail({data:{media,id:selectedId!}}),
+    queryFn:()=>mode==="video"
+      ?getDetail({data:{media,id:selectedId!}})
+      :getBannerDetail({data:{media,id:selectedId!}}),
     staleTime:600_000,retry:1,
   });
   const movie=detail.data?.detail;
@@ -154,7 +160,9 @@ export function CinematicStudio({mode}:{mode:CinematicMode}){
   const selectedBackground=backdropChoice||
     extra?.backdrops?.[0]||movie?.backdrop_path||movie?.poster_path||"";
   const selectedPoster=extra?.poster_path||movie?.poster_path||"";
-  const logoSource=localLogo||brand.logo_url||(brand.owner_id===brands.data?.currentOwner?defaultLogo:"");
+  const logoSource=localLogo||brand.logo_url||(
+    mode==="video"&&brand.owner_id===brands.data?.currentOwner?defaultLogo:""
+  );
 
   useEffect(()=>{
     if(movie){
@@ -464,7 +472,7 @@ export function CinematicStudio({mode}:{mode:CinematicMode}){
             </p>
           </div>
           <div className="rounded-xl border border-blue-500/30 bg-blue-500/10 px-4 py-2 text-xs font-bold tracking-wide text-blue-100">
-            FERRAMENTA EXCLUSIVA · /vitrine-video
+            {mode==="video"?"APENAS ADMIN · /vitrine-video":"TODOS OS USUÁRIOS · /vitrine-banner"}
           </div>
         </div>
       </header>
