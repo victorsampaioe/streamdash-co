@@ -29,6 +29,28 @@ Another safe staging step was completed directly on Cloudflare. **Nothing below 
 
 **Do not interpret this as readiness for a full cutover.** Pending: isolated *PostgreSQL* restore of the user's private ~435 MB export; independent Storage backup; tenant-aware authorization and consistency tests; production credentials/Workers; auth and finance migration; written go-live approval. Production source remains the single source of truth.
 
+## First independent live technical module — 15 Nov 2026
+
+A **parallel** Cloudflare Worker `streammonitor-edge-heartbeat` now has
+`*/10 * * * *` Cron enabled, recording new public-homepage HTTP observations
+into a *separate* D1 database `streammonitor-edge-heartbeat`. One end-to-end
+manual test confirmed HTTP 200 and a successful D1 insert (1211 ms); normal
+production code disables the test trigger, and the Worker has neither a public
+subdomain nor a `streammonitor.site` route. It sends no Telegram alerts,
+does not copy production database rows, and does not switch existing monitoring.
+
+**Important:** First actual scheduled execution remains pending observation.
+This is a safe first module activation, NOT a cutover of Lovable Cloud:
+the PostgreSQL restore and independent Storage backup are unverified, and
+financial/auth migrations and final production transfer remain blocked.
+
+To stop the module without changing the original site, set schedules of
+`streammonitor-edge-heartbeat` to `[]` in Cloudflare's Workers API. Do not
+remove any of the 17 existing PostgreSQL cron jobs.
+
+See `cloudflare/edge-heartbeat/README.md` for source, data retention, checks,
+rollback and security scope.
+
 ## Critical migration gates (ALL must pass)
 1. Official Lovable Cloud export obtained and downloaded privately. **Still verify archive structure, scope (including `auth`, SQL objects, rows and policies) and restore integrity** in an isolated PostgreSQL environment.
 2. Export **Storage objects separately**, including bucket configuration and policies; don't assume database export includes files.
