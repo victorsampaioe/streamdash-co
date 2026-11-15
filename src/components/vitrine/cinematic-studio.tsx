@@ -561,7 +561,7 @@ export function CinematicStudio({mode}:{mode:CinematicMode}){
                 </label>
               </div>
               <p className="rounded-lg border border-blue-400/20 bg-blue-500/5 p-3 text-[11px] text-sky-100">
-                Reproduza o trailer oficial <strong>dentro da arte</strong>, com áudio. Escolha 15, 30 ou 60 segundos para a prévia. Para baixar o vídeo incorporado ao MP4 final, envie um arquivo autorizado — a reprodução do YouTube não permite capturar ou exportar seus quadros.
+                Para gerar um MP4 com vídeo autorizado no computador, clique em <strong>Gerar MP4</strong>, permita compartilhar <strong>esta aba</strong> quando o navegador solicitar e mantenha o vídeo reproduzindo. O arquivo é processado localmente. A incorporação bloqueada ou conteúdo protegido não pode ser contornado.
               </p>
             </div>:<p className="text-xs text-amber-300">A TMDB não indicou trailer do YouTube para este título.</p>}
             <label className="block space-y-2 text-xs text-slate-300"><span className="flex items-center gap-2"><Upload size={15}/> Enviar MP4 que você pode publicar</span>
@@ -594,10 +594,10 @@ export function CinematicStudio({mode}:{mode:CinematicMode}){
             </div>}
             <label className="flex items-start gap-2 text-xs text-slate-300">
               <input className="mt-0.5" type="checkbox" checked={licenseAccepted} onChange={e=>setLicenseAccepted(e.target.checked)}/>
-              Confirmo que tenho autorização para utilizar o MP4 e publicá-lo nas redes sociais.
+              Confirmo que tenho autorização para capturar, editar e publicar o vídeo selecionado.
             </label>
             <div className={"rounded-lg border p-3 text-xs "+(mime?"border-emerald-500/20 bg-emerald-500/10 text-emerald-200":"border-amber-500/30 bg-amber-500/10 text-amber-200")}>
-              {mime?"Navegador informa suporte nativo ao MP4 H.264"+(audio?"/AAC":"")+" a 30 FPS. A gravação só começa ao clicar Gerar.":"Este navegador não informa suporte à exportação nativa MP4 H.264"+(audio?"/AAC":"")+". Use um navegador compatível ou exporte o banner PNG."}
+              {mime?"Este navegador informa suporte ao MP4 H.264"+(audio?"/AAC":"")+". Sem upload, você precisará autorizar o compartilhamento da aba; nenhum vídeo será enviado ao servidor.":"Este navegador não informa suporte à geração nativa de MP4 H.264"+(audio?"/AAC":"")+". Teste pelo computador ou utilize um navegador compatível."}
             </div>
             <p className="text-[11px] text-slate-400">Processamento local, sem enviar seu vídeo ao servidor. Renderização Cloudflare Containers + FFmpeg + R2 permanece desativada até aprovação de orçamento e habilitação dos serviços.</p>
           </section>}
@@ -666,7 +666,7 @@ export function CinematicStudio({mode}:{mode:CinematicMode}){
                 if(v&&v.currentTime>clipStart+clipSeconds)v.pause();
               }}/>
             {!movie&&<p className="text-center text-sm text-amber-200">Selecione um filme ou uma série para criar a prévia com o fundo oficial.</p>}
-            {mode==="video"&&!videoFile&&<p className="text-center text-xs text-amber-200">O trailer oficial toca na moldura acima, quando o YouTube permite a incorporação. A exportação final em MP4 exige um arquivo autorizado do vídeo.</p>}
+            {mode==="video"&&!videoFile&&<p className="text-center text-xs text-amber-200">No computador, inicie a reprodução de um vídeo autorizado na moldura, clique em Gerar MP4 e escolha compartilhar esta aba na janela do navegador.</p>}
             <div className="grid gap-2 sm:grid-cols-2">
               <Button className="bg-blue-600 text-white hover:bg-blue-500" disabled={!isReady||exporting||rendering}
                 onClick={()=>void downloadStatic("png")}>
@@ -678,9 +678,9 @@ export function CinematicStudio({mode}:{mode:CinematicMode}){
                   <Download size={17} className="mr-2"/>Baixar JPG
                 </Button>:
                 <Button className="bg-indigo-600 text-white hover:bg-indigo-500"
-                  disabled={!isReady||!videoFile||!licenseAccepted||!mime||rendering||videoLength<clipStart+clipSeconds-.15}
+                  disabled={!isReady||!licenseAccepted||!mime||rendering||(!videoFile&&!youtubeEmbed)||(!videoFile&&!canGenerateTabMp4(audio))||(!!videoFile&&videoLength<clipStart+clipSeconds-.15)}
                   onClick={()=>void downloadMp4()}>
-                  <Clapperboard size={17} className="mr-2"/>{rendering?"Renderizando...":"Gerar MP4 real"}
+                  <Clapperboard size={17} className="mr-2"/>{rendering?"Gerando MP4...":"Gerar MP4"}
                 </Button>}
             </div>
             {mode==="video"&&renderProgress.stage&&<div className="space-y-2 rounded-xl border border-blue-400/20 bg-blue-500/5 p-3">
