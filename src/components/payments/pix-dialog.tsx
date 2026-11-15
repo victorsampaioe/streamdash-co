@@ -8,6 +8,7 @@ import { formatBRL, type PlanId } from "@/lib/payments";
 import { createPixPayment, getPaymentStatus } from "@/lib/mercadopago.functions";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { trackMetaPurchase } from "@/lib/meta-pixel";
 
 interface PixDialogProps {
   openPlan: string | null;
@@ -23,6 +24,22 @@ export function PixDialog({ openPlan, onClose, pix, loading, error, onPaid }: Pi
   const [remaining, setRemaining] = useState<number>(0);
   const [checking, setChecking] = useState(false);
   const pixCode = typeof pix?.copyPaste === "string" ? pix.copyPaste.trim() : "";
+
+  /** The status and payment amount come from an authenticated server lookup, never the URL. */
+  const reportApproved = useCallback(async (row: {
+    id: string;
+    status: string;
+    amount_cents?: number | null;
+    currency?: string | null;
+  } | null) => {
+    if (row?.status !== "approved") return false;
+    if (typeof row.amount_cents === "number" && row.currency === "BRL" && row.amount_cents > 0) {
+      // Do not hold up the success UI if analytics are blocked or slow.
+      void trackMetaPurchase(row.id, row.amount_cents, row.currency);
+    }
+    await onPaid();
+    return true;
+  }, [onPaid]);
 
   // Countdown
   useEffect(() => {
@@ -50,7 +67,7 @@ export function PixDialog({ openPlan, onClose, pix, loading, error, onPaid }: Pi
         if (row?.status === "approved" && !stop) {
           stop = true;
           clearInterval(id);
-          await onPaid();
+          await reportApproved(row);
         }
       } catch {
         // A temporary provider error is retried on the next poll.
@@ -61,7 +78,7 @@ export function PixDialog({ openPlan, onClose, pix, loading, error, onPaid }: Pi
     void poll();
     id = setInterval(poll, 3000);
     return () => { stop = true; clearInterval(id); };
-  }, [pix?.paymentId, pix?.integrationReady, getStatus, onPaid]);
+  }, [pix?.paymentId, pix?.integrationReady, getStatus, reportApproved]);
 
   const mm = String(Math.floor(remaining / 60)).padStart(2, "0");
   const ss = String(remaining % 60).padStart(2, "0");
@@ -71,7 +88,7 @@ export function PixDialog({ openPlan, onClose, pix, loading, error, onPaid }: Pi
     setChecking(true);
     try {
       const row = await getStatus({ data: { paymentId: pix.paymentId } });
-      if (row?.status === "approved") await onPaid();
+      if (row?.status === "approved") await reportApproved(row);
       else toast.info("Ainda não identificamos o pagamento. Aguarde alguns segundos após pagar.");
     } finally {
       setChecking(false);
