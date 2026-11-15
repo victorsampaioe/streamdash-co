@@ -396,7 +396,7 @@ export function CinematicStudio({mode}:{mode:CinematicMode}){
             </h1>
             <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-300">
               Artes cinematográficas com fotos oficiais da TMDB, identidade da revenda e conteúdo fiel à obra.
-              {mode==="video"?" Trailer YouTube somente na prévia; exportação com MP4 autorizado.":" Sem IA gerando fundos, sem players ou elementos de vídeo."}
+              {mode==="video"?" Trailer na prévia e exportação MP4 com o vídeo integrado.":" Sem IA gerando fundos, sem players ou elementos de vídeo."}
             </p>
           </div>
           <div className="flex flex-wrap gap-2">
@@ -506,7 +506,7 @@ export function CinematicStudio({mode}:{mode:CinematicMode}){
             {assets.warning&&<p className="text-xs text-amber-300">{assets.warning}</p>}
           </section>
           {mode==="video"&&<section className={panelClass+" space-y-3"}>
-            <div className="flex items-center gap-2 text-sm font-bold text-blue-200"><Clapperboard size={18}/> 3. Trailer real e MP4 autorizado</div>
+            <div className="flex items-center gap-2 text-sm font-bold text-blue-200"><Clapperboard size={18}/> 3. Trailer real e exportação MP4</div>
             {youtubeKey?<div className="space-y-2">
               <p className="text-xs text-slate-300">Trailer encontrado na TMDB · {selectedTrailer?.official?"oficial":"referenciado"} · idioma {selectedTrailer?.language||"não informado"}.</p>
               {(extra?.trailers?.length??0)>1&&(
@@ -532,10 +532,10 @@ export function CinematicStudio({mode}:{mode:CinematicMode}){
                 </label>
               </div>
               <p className="rounded-lg border border-blue-400/20 bg-blue-500/5 p-3 text-[11px] text-sky-100">
-                Assista ao trailer dentro da prévia. Para exportar a arte em MP4, envie um arquivo de vídeo autorizado. Nenhuma captura de aba será solicitada.
+                Assista ao trailer na prévia. Para baixar o post com vídeo, use um MP4 salvo no computador ou um link direto para o arquivo. Sem gravação de aba.
               </p>
             </div>:<p className="text-xs text-amber-300">A TMDB não indicou trailer do YouTube para este título.</p>}
-            <label className="block space-y-2 text-xs text-slate-300"><span className="flex items-center gap-2"><Upload size={15}/> Enviar MP4 que você pode publicar</span>
+            <label className="block space-y-2 text-xs text-slate-300"><span className="flex items-center gap-2"><Upload size={15}/> Escolher MP4 do computador</span>
               <Input type="file" accept=".mp4,video/mp4"
                 className="border-blue-500/20 bg-slate-950 text-xs file:text-blue-200"
                 onChange={e=>uploadMp4(e.target.files?.[0])}/>
@@ -563,14 +563,10 @@ export function CinematicStudio({mode}:{mode:CinematicMode}){
                 }}><Play size={14} className="mr-2"/>Reproduzir/pausar na arte</Button>
               </div>
             </div>}
-            <label className="flex items-start gap-2 text-xs text-slate-300">
-              <input className="mt-0.5" type="checkbox" checked={licenseAccepted} onChange={e=>setLicenseAccepted(e.target.checked)}/>
-              Confirmo que tenho autorização para utilizar e publicar o MP4 enviado.
-            </label>
             <div className={"rounded-lg border p-3 text-xs "+(mime?"border-emerald-500/20 bg-emerald-500/10 text-emerald-200":"border-amber-500/30 bg-amber-500/10 text-amber-200")}>
               {mime?"Este navegador informa suporte à exportação MP4 H.264"+(audio?"/AAC":"")+". O vídeo enviado é processado localmente, sem captura de aba.":"Este navegador não informa suporte à geração nativa de MP4 H.264"+(audio?"/AAC":"")+". Teste pelo computador ou utilize um navegador compatível."}
             </div>
-            <p className="text-[11px] text-slate-400">Processamento local, sem enviar seu vídeo ao servidor. Se o navegador não oferecer codec AAC, o MP4 será gerado sem áudio. FFmpeg na Cloudflare continua desativado até aprovação de orçamento.</p>
+            <p className="text-[11px] text-slate-400">Processamento local, sem gravar a aba ou enviar o vídeo ao servidor. O modo WhatsApp reduz o peso do arquivo. Caso o navegador não suporte AAC, a exportação fica sem áudio.</p>
           </section>}
           {mode==="video"&&<section className={panelClass+" space-y-3"}>
             <div className="flex items-center justify-between gap-2">
@@ -637,7 +633,7 @@ export function CinematicStudio({mode}:{mode:CinematicMode}){
                 if(v&&v.currentTime>clipStart+clipSeconds)v.pause();
               }}/>
             {!movie&&<p className="text-center text-sm text-amber-200">Selecione um filme ou uma série para criar a prévia com o fundo oficial.</p>}
-            {mode==="video"&&!videoFile&&<p className="text-center text-xs text-amber-200">A prévia mostra o trailer oficial. Para baixar o post animado, envie um MP4 autorizado; não é necessário compartilhar ou gravar a aba.</p>}
+            {mode==="video"&&!videoFile&&<p className="text-center text-xs text-amber-200">O trailer aparece na prévia. Para baixar o post com vídeo, escolha o MP4 ou use um link direto, sem gravar a tela.</p>}
             <div className="grid gap-2 sm:grid-cols-2">
               <Button className="bg-blue-600 text-white hover:bg-blue-500" disabled={!isReady||exporting||rendering}
                 onClick={()=>void downloadStatic("png")}>
@@ -649,7 +645,7 @@ export function CinematicStudio({mode}:{mode:CinematicMode}){
                   <Download size={17} className="mr-2"/>Baixar JPG
                 </Button>:
                 <Button className="bg-indigo-600 text-white hover:bg-indigo-500"
-                  disabled={!isReady||!videoFile||!licenseAccepted||!mime||rendering||videoLength<clipStart+clipSeconds-.15}
+                  disabled={!isReady||!videoUrl||!mime||rendering||videoLength<clipStart+clipSeconds-.15}
                   onClick={()=>void downloadMp4()}>
                   <Clapperboard size={17} className="mr-2"/>{rendering?"Gerando MP4...":"Gerar MP4"}
                 </Button>}
