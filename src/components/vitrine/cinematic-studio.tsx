@@ -10,7 +10,7 @@ import {
 import {Button} from "@/components/ui/button";
 import {Input} from "@/components/ui/input";
 import {getVitrineTmdbFeed} from "@/lib/vitrine-catalog.functions";
-import {getCinematicTmdbDetail,getCinematicBrands,type CinematicBrand} from "@/lib/vitrine-cinematic.functions";
+import {getCinematicTmdbDetail,getCinematicBrands,getCinematicRenderControls,saveCinematicRenderControls,recordCinematicRender,type CinematicBrand} from "@/lib/vitrine-cinematic.functions";
 import {
   renderCinematic,cinematicFormats,type CinematicOptions,
   type CinematicFormat,type CinematicMode
@@ -63,6 +63,9 @@ export function CinematicStudio({mode}:{mode:CinematicMode}){
   const getFeed=useServerFn(getVitrineTmdbFeed);
   const getDetail=useServerFn(getCinematicTmdbDetail);
   const getBrands=useServerFn(getCinematicBrands);
+  const getControls=useServerFn(getCinematicRenderControls);
+  const saveControls=useServerFn(saveCinematicRenderControls);
+  const recordRender=useServerFn(recordCinematicRender);
   const canvasRef=useRef<HTMLCanvasElement>(null);
   const previewVideoRef=useRef<HTMLVideoElement>(null);
   const busyRef=useRef(false);
@@ -95,6 +98,10 @@ export function CinematicStudio({mode}:{mode:CinematicMode}){
   const [renderProgress,setRenderProgress]=useState({percent:0,stage:"",seconds:0,total:15});
   const [readyMp4,setReadyMp4]=useState("");
   const [readyMp4Bytes,setReadyMp4Bytes]=useState(0);
+  const [dailyLimit,setDailyLimit]=useState(5);
+  const [brandDailyLimit,setBrandDailyLimit]=useState(5);
+  const [maxUploadMb,setMaxUploadMb]=useState(350);
+  const [savingControls,setSavingControls]=useState(false);
 
   useEffect(()=>{
     const t=setTimeout(()=>setQuery(search.trim()),350);
@@ -109,11 +116,25 @@ export function CinematicStudio({mode}:{mode:CinematicMode}){
   const brands=useQuery({
     queryKey:["cinematic-brand-list",user.id],queryFn:()=>getBrands(),staleTime:60_000,retry:1,
   });
+  const usage=useQuery({
+    queryKey:["admin-vitrine-video-audit"],
+    queryFn:()=>getControls(),enabled:mode==="video",staleTime:30_000,retry:1,
+  });
   const brandList=brands.data?.brands??[];
   const selectedBrand=brandList.find(x=>x.owner_id===brandId)
     ??brandList.find(x=>x.owner_id===brands.data?.currentOwner)
     ??brandFallback;
   const brand={...selectedBrand,...brandOverrides};
+  const ownerId=brand.owner_id||user.id;
+  useEffect(()=>{
+    if(!usage.data)return;
+    setDailyLimit(usage.data.policy.defaultDailyLimit);
+    setMaxUploadMb(usage.data.policy.maxUploadMb);
+  },[usage.data]);
+  useEffect(()=>{
+    if(!usage.data)return;
+    setBrandDailyLimit(usage.data.policy.overrides[ownerId]??usage.data.policy.defaultDailyLimit);
+  },[usage.data,ownerId]);
   const detail=useQuery({
     queryKey:["cinematic-tmdb-detail",media,selectedId],
     enabled:selectedId!==null,
@@ -231,6 +252,34 @@ export function CinematicStudio({mode}:{mode:CinematicMode}){
     }catch(e){toast.error(e instanceof Error?e.message:"Falha ao exportar imagem.")}
     finally{setExporting(false);}
   }
+  async function saveVideoPolicy(){
+    if(!usage.data||savingControls)return;
+    setSavingControls(true);
+    try{
+      const value={
+        defaultDailyLimit:dailyLimit,
+        maxUploadMb,
+        overrides:{...usage.data.policy.overrides,[ownerId]:brandDailyLimit},
+      };
+      await saveControls({data:value});
+      await usage.refetch();
+      toast.success("Limites administrativos salvos!");
+    }catch(e){toast.error(e instanceof Error?e.message:"Falha ao salvar limites.");}
+    finally{setSavingControls(false);}
+  }
+  async function logVideoRender(id:string,status:"completed"|"failed",bytes:number,errorCode:"EXPORT_ERROR"|"ENCODING_UNSUPPORTED"|"INPUT_INVALID"|"DECODE_ERROR"|"UNKNOWN_ERROR"|null){
+    if(!movie)return;
+    try{
+      await recordRender({data:{
+        request_id:id,brand_owner_id:ownerId,media_type:media,
+        tmdb_id:movie.tmdb_id,output_format:format as "portrait"|"story",
+        seconds:clipSeconds,audio_requested:audio,status,
+        bytes_out:status==="completed"?bytes:undefined,
+        error_code:status==="failed"?errorCode:null,
+      }});
+      void usage.refetch();
+    }catch{toast.warning("A arte foi processada, mas o registro administrativo não foi salvo.");}
+  }
   async function downloadMp4(){
     if(busyRef.current||rendering)return;
     if(!videoFile||!videoUrl||!assets.background||!movie){
@@ -242,6 +291,7 @@ export function CinematicStudio({mode}:{mode:CinematicMode}){
       toast.error("O vídeo enviado não possui o trecho completo.");return;
     }
     busyRef.current=true;setRendering(true);
+    const requestId=crypto.randomUUID();
     setRenderProgress({percent:0,seconds:0,total:clipSeconds,stage:"Preparando o vídeo autorizado"});
     const temp=document.createElement("video");
     temp.preload="auto";temp.playsInline=true;
@@ -265,10 +315,12 @@ export function CinematicStudio({mode}:{mode:CinematicMode}){
       const nextUrl=URL.createObjectURL(blob);
       setReadyMp4(nextUrl);setReadyMp4Bytes(blob.size);
       downloadFile(blob,slug(movie.title)+"-trailer-"+clipSeconds+"s-"+dims.width+"x"+dims.height+".mp4");
+      void logVideoRender(requestId,"completed",blob.size,null);
       toast.success("MP4 H.264 gerado com quadros reais! Arquivo disponível para visualizar.");
       videoCanvas.width=0;videoCanvas.height=0;
     }catch(e){
       toast.error(e instanceof Error?e.message:"A exportação MP4 não foi concluída.");
+      void logVideoRender(requestId,"failed",0,"EXPORT_ERROR");
       setRenderProgress(v=>({...v,stage:"Falha de exportação"}));
     }finally{
       temp.pause();temp.removeAttribute("src");temp.load();
@@ -287,8 +339,8 @@ export function CinematicStudio({mode}:{mode:CinematicMode}){
   }
   function uploadMp4(file?:File){
     if(!file)return;
-    if(file.type!=="video/mp4"||file.size>350*1024*1024||file.size<1000){
-      toast.error("Envie um MP4 autorizado de até 350 MB.");return;
+    if(file.type!=="video/mp4"||file.size>(usage.data?.policy.maxUploadMb??350)*1024*1024||file.size<1000){
+      toast.error("Envie um MP4 autorizado de até "+(usage.data?.policy.maxUploadMb??350)+" MB.");return;
     }
     setVideoFile(file);setLicenseAccepted(false);
   }
@@ -467,6 +519,37 @@ export function CinematicStudio({mode}:{mode:CinematicMode}){
               {mime?"Navegador informa suporte nativo ao MP4 H.264"+(audio?"/AAC":"")+" a 30 FPS. A gravação só começa ao clicar Gerar.":"Este navegador não informa suporte à exportação nativa MP4 H.264"+(audio?"/AAC":"")+". Use um navegador compatível ou exporte o banner PNG."}
             </div>
             <p className="text-[11px] text-slate-400">Processamento local, sem enviar seu vídeo ao servidor. Renderização Cloudflare Containers + FFmpeg + R2 permanece desativada até aprovação de orçamento e habilitação dos serviços.</p>
+          </section>}
+          {mode==="video"&&<section className={panelClass+" space-y-3"}>
+            <div className="flex items-center justify-between gap-2">
+              <h3 className="text-sm font-black text-blue-200">Administração · limites e histórico</h3>
+              <span className="rounded-full border border-blue-500/25 bg-blue-500/10 px-2 py-1 text-[11px] text-blue-200">Apenas admin</span>
+            </div>
+            <p className="text-xs text-slate-400">Administradores podem testar livremente. As cotas abaixo ficam salvas para quando o acesso dos revendedores for habilitado, mas não são aplicadas nesta fase.</p>
+            <div className="grid grid-cols-3 gap-2">
+              <div className="rounded-lg bg-white/5 p-3 text-center"><p className="text-xl font-bold">{usage.data?.summary.completed??"—"}</p><p className="text-[11px] text-slate-400">MP4 concluídos (30d)</p></div>
+              <div className="rounded-lg bg-white/5 p-3 text-center"><p className="text-xl font-bold">{usage.data?.summary.errors??"—"}</p><p className="text-[11px] text-slate-400">Falhas (30d)</p></div>
+              <div className="rounded-lg bg-white/5 p-3 text-center"><p className="text-xl font-bold">{usage.data?Math.round(usage.data.summary.exportedBytes/1024/1024)+" MB":"—"}</p><p className="text-[11px] text-slate-400">MP4 exportados (30d)</p></div>
+            </div>
+            <div className="grid grid-cols-3 gap-2">
+              <label className="space-y-1 text-[11px] text-slate-300">Cota padrão/dia
+                <Input className={inputClass} type="number" min={1} max={50} value={dailyLimit} onChange={e=>setDailyLimit(Number(e.target.value))}/>
+              </label>
+              <label className="space-y-1 text-[11px] text-slate-300">Cota desta revenda
+                <Input className={inputClass} type="number" min={0} max={50} value={brandDailyLimit} onChange={e=>setBrandDailyLimit(Number(e.target.value))}/>
+              </label>
+              <label className="space-y-1 text-[11px] text-slate-300">Upload máximo MB
+                <Input className={inputClass} type="number" min={25} max={350} value={maxUploadMb} onChange={e=>setMaxUploadMb(Number(e.target.value))}/>
+              </label>
+            </div>
+            <Button type="button" variant="outline" className="w-full border-blue-400/30 text-sky-100" disabled={!usage.data||savingControls}
+              onClick={()=>void saveVideoPolicy()}>{savingControls?"Salvando limites...":"Salvar configurações de geração"}</Button>
+            {usage.isError&&<p className="text-xs text-amber-300">Não foi possível carregar o histórico administrativo.</p>}
+            {usage.data?.recentErrors?.length? <div className="space-y-1 border-t border-white/10 pt-3 text-xs text-amber-200">
+              <p className="font-bold">Falhas recentes</p>
+              {usage.data.recentErrors.slice(0,5).map((x,i)=><p key={i}>{new Date(x.at).toLocaleString("pt-BR")} · {x.code}</p>)}
+            </div>:null}
+            <p className="text-[11px] text-slate-500">Registros incluem somente o resultado, formato e tamanho do MP4 exportado no navegador. Nenhum arquivo de vídeo é enviado ao banco.</p>
           </section>}
         </div>
         <div className="space-y-4 xl:sticky xl:top-4">
