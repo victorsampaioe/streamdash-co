@@ -526,7 +526,11 @@ export function CinematicStudio({mode}:{mode:CinematicMode}){
               <span>·</span><span>Fonte: TMDB</span>
               {mode==="video"&&<><span>·</span><Clock3 size={14}/>15/30/60 segundos</>}
             </div>
-            <p className="text-[11px] leading-5 text-slate-400">
+            <p className="flex flex-wrap items-center gap-2 text-[11px] leading-5 text-slate-400">
+              <a href="https://www.themoviedb.org" target="_blank" rel="noopener noreferrer" aria-label="TMDB">
+                <img src="https://www.themoviedb.org/assets/2/v4/logos/v2/blue_long_2-9665a76b1ae401a510ec1e0ca40ddcb3b0cfe45f1d51b77a308fea0845885648.svg"
+                  alt="Logo oficial TMDB" className="h-5 w-auto max-w-[106px]" loading="lazy"/>
+              </a>
               Este produto utiliza a API TMDB, mas não é endossado ou certificado pela TMDB.
               Consulte <a className="ml-1 underline" href="https://www.themoviedb.org/about/logos-attribution" target="_blank" rel="noopener noreferrer">créditos e atribuição da TMDB</a>.
               Uso comercial de dados e imagens requer licença e respeito aos direitos de seus titulares.
