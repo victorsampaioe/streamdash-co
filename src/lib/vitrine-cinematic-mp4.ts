@@ -1,7 +1,10 @@
 import type {CinematicOptions} from "./vitrine-cinematic-canvas";
-import {renderCinematic} from "./vitrine-cinematic-canvas";
+import {paintCinematicVideoFrame,renderCinematic} from "./vitrine-cinematic-canvas";
 
-export type ExportProgress={seconds:number,total:number,percent:number,stage:string};
+export type ExportProgress={seconds:number;total:number;percent:number;stage:string};
+export type Mp4Preset="whatsapp"|"full";
+
+/** Native recording is only enabled for real MP4 H.264, never WebM with .mp4 extension. */
 const preferredVideoCodecs=[
   'video/mp4;codecs="avc1.42E01E"',
   "video/mp4;codecs=avc1.42E01E",
@@ -10,18 +13,38 @@ const preferredAudioCodecs=[
   'video/mp4;codecs="avc1.42E01E,mp4a.40.2"',
   "video/mp4;codecs=avc1.42E01E,mp4a.40.2",
 ];
-
+export const WHATSAPP_VIDEO_MAX_BYTES=16*1024*1024;
 export function supportedMp4Mime(withAudio:boolean){
   if(typeof MediaRecorder==="undefined")return null;
   return (withAudio?preferredAudioCodecs:preferredVideoCodecs)
-    .find(x=>MediaRecorder.isTypeSupported(x))??null;
+    .find(type=>MediaRecorder.isTypeSupported(type))??null;
 }
 export function supportsCanvasMp4(withAudio:boolean){
   return !!supportedMp4Mime(withAudio)&&
     typeof HTMLCanvasElement!=="undefined"&&
     typeof HTMLCanvasElement.prototype.captureStream==="function";
 }
+export function renderDimensions(
+  artwork:Pick<CinematicOptions,"width"|"height">,preset:Mp4Preset,
+){
+  const scale=preset==="whatsapp"?2/3:1;
+  return {
+    width:Math.max(2,Math.floor(artwork.width*scale/2)*2),
+    height:Math.max(2,Math.floor(artwork.height*scale/2)*2),
+    scale,
+  };
+}
 
+/**
+ * Export a real MP4 with the cinema artwork AND the user's actual video frames.
+ * The large TMDB image, typography, lights and WhatsApp badge are drawn ONCE.
+ * Only the inner video region is repainted at new source video frames, greatly
+ * reducing dropped frames during real-time MediaRecorder encoding.
+ *
+ * WhatsApp preset is 720px wide, H.264 baseline + AAC when available,
+ * with bitrate targeting under the 16 MB WhatsApp Business media limit.
+ * Browser codecs determine the final container and may ignore bitrate hints.
+ */
 export async function renderNativeMp4(
   canvas:HTMLCanvasElement,
   source:HTMLVideoElement,
@@ -30,104 +53,162 @@ export async function renderNativeMp4(
   startingAt:number,
   includeAudio:boolean,
   progress:(value:ExportProgress)=>void,
+  preset:Mp4Preset="whatsapp",
 ):Promise<Blob>{
   const mime=supportedMp4Mime(includeAudio);
-  if(!mime||!supportsCanvasMp4(includeAudio)){
-    throw new Error("Este navegador não oferece exportação nativa H.264/AAC em MP4. Use outro navegador compatível ou gere o PNG, sem converter para WebM.");
-  }
+  if(!mime||!supportsCanvasMp4(includeAudio))
+    throw new Error("Este navegador não oferece exportação MP4 H.264"+(includeAudio?"/AAC":"")+". Experimente um navegador compatível.");
   if(!Number.isFinite(source.duration)||source.duration<startingAt+seconds-0.15)
-    throw new Error("O MP4 enviado não contém o trecho completo selecionado.");
+    throw new Error("O vídeo escolhido não contém todo o trecho selecionado.");
+
+  const output=renderDimensions(artwork,preset);
+  canvas.width=output.width;
+  canvas.height=output.height;
   const ctx=canvas.getContext("2d",{alpha:false});
-  if(!ctx)throw new Error("Canvas não disponível.");
-  const videoStream=canvas.captureStream(30);
+  if(!ctx)throw new Error("Não foi possível iniciar o compositor de vídeo.");
+
+  // Layout coordinates remain at the original 1080px design size.
+  ctx.setTransform(output.scale,0,0,output.scale,0,0);
+  let canvasStream:MediaStream|null=null;
   let audioContext:AudioContext|null=null;
   let audioSource:MediaElementAudioSourceNode|null=null;
-  let audioOutput:MediaStreamAudioDestinationNode|null=null;
-  let recording:MediaRecorder|null=null;
+  let recorder:MediaRecorder|null=null;
   let raf=0;
-  let timeoutId:ReturnType<typeof setTimeout>|null=null;
-  const cleanup=()=>{
+  let videoCallbackId=0;
+  let watchId:ReturnType<typeof setTimeout>|null=null;
+  let framesPainted=0;
+  let timedOut=false;
+  let stopped=false;
+
+  const close=()=>{
     if(raf)cancelAnimationFrame(raf);
-    if(timeoutId)clearTimeout(timeoutId);
+    if(videoCallbackId&&"cancelVideoFrameCallback" in source)
+      source.cancelVideoFrameCallback(videoCallbackId);
+    if(watchId)clearTimeout(watchId);
+    try{
+      if(recorder?.state!=="inactive")recorder?.stop();
+    }catch{/* recorder may have already stopped */}
     source.pause();
-    videoStream.getTracks().forEach(x=>x.stop());
+    canvasStream?.getTracks().forEach(track=>track.stop());
     audioSource?.disconnect();
     if(audioContext&&audioContext.state!=="closed")void audioContext.close().catch(()=>{});
   };
+
   try{
-    // A fresh media element is required for each export; the calling component
-    // must not reuse the same element with createMediaElementSource().
     source.pause();
-    if(Math.abs(source.currentTime-startingAt)>.05){
+    if(Math.abs(source.currentTime-startingAt)>.055){
       await new Promise<void>((resolve,reject)=>{
-        const timer=setTimeout(()=>reject(new Error("Tempo esgotado ao posicionar o vídeo.")),5000);
-        source.addEventListener("seeked",()=>{clearTimeout(timer);resolve()},{once:true});
+        const timeout=setTimeout(()=>reject(new Error("Não foi possível posicionar o início do vídeo.")),7000);
+        source.addEventListener("seeked",()=>{clearTimeout(timeout);resolve();},{once:true});
         source.currentTime=startingAt;
       });
     }
-    source.muted=!includeAudio;
+
+    // Decode the first frame before beginning to encode.
+    if(source.readyState<2){
+      await new Promise<void>((resolve,reject)=>{
+        const timeout=setTimeout(()=>reject(new Error("O MP4 não forneceu quadros para reprodução.")),7000);
+        source.addEventListener("loadeddata",()=>{clearTimeout(timeout);resolve();},{once:true});
+        source.addEventListener("error",()=>{clearTimeout(timeout);reject(new Error("Falha ao decodificar o vídeo."));},{once:true});
+      });
+    }
+
+    // IMPORTANT: do not redraw the full background and text at every frame.
+    renderCinematic(ctx,{...artwork,video:null});
+    paintCinematicVideoFrame(ctx,artwork,source);
+
+    canvasStream=canvas.captureStream(30);
     if(includeAudio){
       audioContext=new AudioContext();
       audioSource=audioContext.createMediaElementSource(source);
-      audioOutput=audioContext.createMediaStreamDestination();
+      const audioOutput=audioContext.createMediaStreamDestination();
       audioSource.connect(audioOutput);
-      // The source element has an audible output only during authorized export.
-      audioSource.connect(audioContext.destination);
+      // No extra speaker connection: prevents double playback/echo.
+      source.muted=false;
       await audioContext.resume();
-      for(const track of audioOutput.stream.getAudioTracks())videoStream.addTrack(track);
-      if(videoStream.getAudioTracks().length===0)
-        throw new Error("Não foi possível incluir áudio AAC no MP4.");
-    }
+      const audioTracks=audioOutput.stream.getAudioTracks();
+      if(!audioTracks.length)throw new Error("O navegador não disponibilizou áudio AAC.");
+      for(const track of audioTracks)canvasStream.addTrack(track);
+    }else source.muted=true;
+
+    // Allow enough headroom for browser encoder variance and MP4 headers.
+    const videoBitrate=preset==="whatsapp"
+      ?(seconds===60?1_400_000:seconds===30?1_700_000:2_000_000)
+      :5_000_000;
     const chunks:BlobPart[]=[];
-    recording=new MediaRecorder(videoStream,{mimeType:mime,videoBitsPerSecond:8_000_000,audioBitsPerSecond:128_000});
-    const recorder=recording;
-    const completed=new Promise<Blob>((resolve,reject)=>{
-      recorder.addEventListener("dataavailable",ev=>{if(ev.data.size>0)chunks.push(ev.data);});
-      recorder.addEventListener("error",()=>reject(new Error("O navegador interrompeu a gravação H.264.")));
-      recorder.addEventListener("stop",async()=>{
-        const blob=new Blob(chunks,{type:recorder.mimeType});
+    recorder=new MediaRecorder(canvasStream,{
+      mimeType:mime,
+      videoBitsPerSecond:videoBitrate,
+      ...(includeAudio?{audioBitsPerSecond:96_000}:{}),
+    });
+    const active=recorder;
+    const finished=new Promise<Blob>((resolve,reject)=>{
+      active.addEventListener("dataavailable",event=>{
+        if(event.data.size>0)chunks.push(event.data);
+      });
+      active.addEventListener("error",()=>reject(new Error("O navegador interrompeu a codificação MP4.")));
+      active.addEventListener("stop",async()=>{
         try{
-          const magic=new Uint8Array(await blob.slice(0,12).arrayBuffer());
-          const signature=String.fromCharCode(...magic.slice(4,8));
-          if(blob.size<50000||signature!=="ftyp")throw new Error("O navegador não gerou um arquivo MP4 válido.");
+          const blob=new Blob(chunks,{type:active.mimeType||"video/mp4"});
+          const header=new Uint8Array(await blob.slice(0,12).arrayBuffer());
+          if(blob.size<20_000||String.fromCharCode(...header.slice(4,8))!=="ftyp")
+            throw new Error("O navegador não gerou um arquivo MP4 válido.");
           resolve(blob);
-        }catch(e){reject(e);}
+        }catch(error){reject(error);}
       });
     });
-    let stopped=false;
-    let elapsed=0;
+
     const stop=()=>{
       if(stopped)return;
       stopped=true;
-      if(raf)cancelAnimationFrame(raf);
-      source.pause();
-      if(recorder.state!=="inactive")recorder.stop();
-    };
-    const draw=()=>{
-      elapsed=Math.max(0,source.currentTime-startingAt);
-      renderCinematic(ctx,{...artwork,video:source});
-      progress({
-        seconds:Math.min(seconds,elapsed),total:seconds,
-        percent:Math.min(99,Math.round(elapsed/seconds*100)),
-        stage:"Renderizando quadros reais e áudio",
-      });
-      if(elapsed>=seconds||source.ended){stop();return;}
-      raf=requestAnimationFrame(draw);
+      if(active.state!=="inactive")active.stop();
     };
     source.addEventListener("ended",stop,{once:true});
-    renderCinematic(ctx,{...artwork,video:source});
-    recorder.start(500);
+    let lastPaintAt=-Infinity,lastReportAt=-Infinity;
+    const paint=(now:number)=>{
+      if(stopped)return;
+      // Capture at most 30 FPS, never at the 60/120Hz screen refresh rate.
+      if(now-lastPaintAt>=1000/30-3 && source.readyState>=2){
+        paintCinematicVideoFrame(ctx,artwork,source);
+        framesPainted++;
+        lastPaintAt=now;
+      }
+      const elapsed=Math.max(0,source.currentTime-startingAt);
+      if(now-lastReportAt>=350){
+        progress({
+          seconds:Math.min(seconds,elapsed),
+          total:seconds,
+          percent:Math.min(99,Math.round(elapsed/seconds*100)),
+          stage:"Compondo vídeo e arte cinematográfica...",
+        });
+        lastReportAt=now;
+      }
+      if(elapsed>=seconds-0.03||source.ended)stop();
+    };
+
+    const onVideoFrame=(now:number)=>{
+      paint(now);
+      if(!stopped)videoCallbackId=source.requestVideoFrameCallback(onVideoFrame);
+    };
+    const onAnimationFrame=(now:number)=>{
+      paint(now);
+      if(!stopped)raf=requestAnimationFrame(onAnimationFrame);
+    };
+
+    active.start(1000);
     await source.play();
-    raf=requestAnimationFrame(draw);
-    // Watchdog prevents hanging MediaRecorder indefinitely.
-    timeoutId=setTimeout(stop,(seconds+10)*1000);
-    const blob=await completed;
+    if(typeof source.requestVideoFrameCallback==="function")
+      videoCallbackId=source.requestVideoFrameCallback(onVideoFrame);
+    else raf=requestAnimationFrame(onAnimationFrame);
+
+    watchId=setTimeout(()=>{timedOut=true;stop();},(seconds+12)*1000);
+    const blob=await finished;
+    const played=Math.max(0,source.currentTime-startingAt);
+    if(timedOut||played<seconds-0.35||framesPainted<seconds*9)
+      throw new Error("A codificação perdeu muitos quadros ou foi interrompida. Tente o formato WhatsApp, que exige menos processamento.");
     progress({seconds,total:seconds,percent:100,stage:"MP4 validado"});
     return blob;
   }finally{
-    // If play() or encoding fails after MediaRecorder.start(), never leave a
-    // recorder running against a detached DOM element or a stopped track.
-    try{if(recording?.state==="recording")recording.stop();}catch{ /* already stopped */ }
-    cleanup();
+    close();
   }
 }
