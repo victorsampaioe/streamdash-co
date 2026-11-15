@@ -70,6 +70,28 @@ function wrap(ctx:CanvasRenderingContext2D,text:string,x:number,y:number,maxWidt
   for(let i=0;i<lines.length;i++)ctx.fillText(lines[i],x,y+i*lineHeight);
   return y+lines.length*lineHeight;
 }
+export function cinematicVideoFrameRect(
+  ctx:CanvasRenderingContext2D,opt:Omit<CinematicOptions,"video">
+){
+  const w=opt.width,h=opt.height,wide=w>h;
+  const margin=wide?100:68;
+  const fontSize=wide?82:h>=1900?74:58;
+  const titleY=wide?250:h>=1900?355:255;
+  const maxWidth=wide?w*.67:w-margin*2;
+  ctx.save();ctx.font="900 "+fontSize+"px Arial, Helvetica, sans-serif";
+  let lines:string[]=[],line="";
+  for(const word of opt.title.replace(/\s+/g," ").trim().split(" ")){
+    const joined=line?line+" "+word:word;
+    if(ctx.measureText(joined).width>maxWidth&&line){lines.push(line);line=word;}else line=joined;
+  }
+  if(line)lines.push(line);
+  ctx.restore();
+  const count=Math.max(1,Math.min(2,lines.length));
+  const metadataY=titleY+count*fontSize*1.11+16;
+  const x=margin,y=Math.max(wide?330:h>=1900?560:408,metadataY+48);
+  const width=w-margin*2,height=Math.round(width*9/16);
+  return {x,y,width,height};
+}
 export function renderCinematic(ctx:CanvasRenderingContext2D,opt:CinematicOptions){
   const {width:w,height:h}=opt;
   const wide=w>h;
@@ -146,8 +168,7 @@ export function renderCinematic(ctx:CanvasRenderingContext2D,opt:CinematicOption
   wrap(ctx,meta,margin,metadataY,wide?w*.72:w-margin*2,34,2);
   let textY:number;
   if(opt.mode==="video"){
-    const x=margin,y=Math.max(wide?330:h>=1900?560:408,metadataY+32);
-    const vw=w-margin*2,vh=Math.round(vw*9/16);
+    const {x,y,width:vw,height:vh}=cinematicVideoFrameRect(ctx,opt);
     ctx.save();ctx.shadowColor=accent;ctx.shadowBlur=38;
     ctx.fillStyle="#030713";roundRect(ctx,x-8,y-8,vw+16,vh+16,25);ctx.fill();
     ctx.shadowBlur=0;ctx.strokeStyle=accent;ctx.lineWidth=4;ctx.stroke();ctx.restore();
