@@ -57,7 +57,9 @@ const SECURITY_HEADERS: Record<string, string> = {
     "object-src 'none'",
     "frame-ancestors 'self' https://*.lovable.app https://lovable.dev",
     // Turnstile (verificação anti-bot do cadastro) roda dentro de um iframe da Cloudflare.
-    "frame-src 'self' https://challenges.cloudflare.com",
+    // Official TMDB-linked YouTube trailers play only as embedded previews.
+    // This never grants script access to the iframe or permission to record it.
+    "frame-src 'self' https://challenges.cloudflare.com https://www.youtube-nocookie.com https://www.youtube.com",
     "img-src 'self' data: blob: https:",
     "font-src 'self' data: https:",
     "style-src 'self' 'unsafe-inline' https:",
