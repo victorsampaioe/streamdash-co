@@ -2,10 +2,7 @@ import {createServerFn} from "@tanstack/react-start";
 import {z} from "zod";
 import {requireSupabaseAuth} from "@/integrations/supabase/auth-middleware";
 
-async function requireVitrineAdmin(context:{
-  supabase:{rpc:(name:string,args:Record<string,unknown>)=>Promise<{data:unknown;error:unknown}>};
-  userId:string;
-}){
+async function requireVitrineAdmin(context:any){
   const {data,error}=await context.supabase.rpc("has_role",{
     _user_id:context.userId,_role:"admin",
   });
