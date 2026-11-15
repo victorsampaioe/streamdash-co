@@ -27,7 +27,7 @@ type StudioAssets={
   logo:HTMLImageElement|null;error:string;warning:string;
 };
 const brandFallback:CinematicBrand={
-  owner_id:"",name:"Stream Monitor",logo_url:"",whatsapp:"",color:"#2563eb",
+  owner_id:"",name:"Minha Revenda",logo_url:"",whatsapp:"",color:"#2563eb",
 };
 const defaultLogo="/__l5e/assets-v1/6c2c6658-faca-42c7-9e11-89b20a23a3dd/logo-official.png";
 const labels=["NOVIDADE","NOVO FILME","NOVA SÉRIE","EM ALTA"] as const;
@@ -521,6 +521,18 @@ export function CinematicStudio({mode}:{mode:CinematicMode}){
             {loadingAssets&&<p className="flex items-center gap-2 text-xs text-blue-200"><RefreshCw size={15} className="animate-spin"/>Preparando imagens originais...</p>}
             {assets.error&&<p className="text-xs text-amber-300">{assets.error}</p>}
             {assets.warning&&<p className="text-xs text-amber-300">{assets.warning}</p>}
+            <details className="rounded-lg border border-white/10 bg-slate-950/45 p-3 text-[11px] text-slate-400">
+              <summary className="cursor-pointer text-slate-300">Informações da fonte do catálogo</summary>
+              <div className="mt-2 space-y-2">
+                <a href="https://www.themoviedb.org" target="_blank" rel="noopener noreferrer">
+                  <img src="https://www.themoviedb.org/assets/2/v4/logos/v2/blue_long_2-9665a76b1ae401a510ec1e0ca40ddcb3b0cfe45f1d51b77a308fea0845885648.svg"
+                    alt="TMDB" className="h-5 w-auto max-w-[106px]" loading="lazy"/>
+                </a>
+                <p>Este produto utiliza a API TMDB, mas não é endossado ou certificado pela TMDB.</p>
+                <a href="https://www.themoviedb.org/about/logos-attribution" target="_blank" rel="noopener noreferrer"
+                   className="underline underline-offset-2">Atribuição e condições da fonte</a>
+              </div>
+            </details>
           </section>
           {mode==="video"&&<section className={panelClass+" space-y-3"}>
             <div className="flex items-center gap-2 text-sm font-bold text-blue-200"><Clapperboard size={18}/> 3. Trailer real e exportação MP4</div>
@@ -716,19 +728,9 @@ export function CinematicStudio({mode}:{mode:CinematicMode}){
               </a>
             </div>}
             <div className="flex flex-wrap items-center gap-2 text-[11px] text-slate-400">
-              <ShieldCheck size={14} className="text-sky-300"/> Imagens somente do título selecionado
-              <span>·</span><span>Fonte: TMDB</span>
+              <ShieldCheck size={14} className="text-sky-300"/> Imagens oficiais somente do título selecionado
               {mode==="video"&&<><span>·</span><Clock3 size={14}/>15/30/60 segundos</>}
             </div>
-            <p className="flex flex-wrap items-center gap-2 text-[11px] leading-5 text-slate-400">
-              <a href="https://www.themoviedb.org" target="_blank" rel="noopener noreferrer" aria-label="TMDB">
-                <img src="https://www.themoviedb.org/assets/2/v4/logos/v2/blue_long_2-9665a76b1ae401a510ec1e0ca40ddcb3b0cfe45f1d51b77a308fea0845885648.svg"
-                  alt="Logo oficial TMDB" className="h-5 w-auto max-w-[106px]" loading="lazy"/>
-              </a>
-              Este produto utiliza a API TMDB, mas não é endossado ou certificado pela TMDB.
-              Consulte <a className="ml-1 underline" href="https://www.themoviedb.org/about/logos-attribution" target="_blank" rel="noopener noreferrer">créditos e atribuição da TMDB</a>.
-              Uso comercial de dados e imagens requer licença e respeito aos direitos de seus titulares.
-            </p>
           </section>
         </div>
       </div>
