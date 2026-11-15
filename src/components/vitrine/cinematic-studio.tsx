@@ -1,5 +1,5 @@
 import {useCallback,useEffect,useMemo,useRef,useState} from "react";
-import {Link,useRouteContext} from "@tanstack/react-router";
+import {useRouteContext} from "@tanstack/react-router";
 import {useQuery} from "@tanstack/react-query";
 import {useServerFn} from "@tanstack/react-start";
 import {toast} from "sonner";
@@ -463,9 +463,8 @@ export function CinematicStudio({mode}:{mode:CinematicMode}){
               {mode==="video"?" Trailer na prévia e exportação MP4 com o vídeo integrado.":" Sem IA gerando fundos, sem players ou elementos de vídeo."}
             </p>
           </div>
-          <div className="flex flex-wrap gap-2">
-            <Link to="/vitrine-video" className="rounded-xl border border-blue-500/40 bg-blue-500/10 px-4 py-2 text-sm font-bold text-blue-200 hover:bg-blue-500/20">Vitrine Vídeo</Link>
-            <Link to="/vitrine-banner" className="rounded-xl border border-white/15 px-4 py-2 text-sm font-bold text-slate-200 hover:bg-white/10">Vitrine Banner</Link>
+          <div className="rounded-xl border border-blue-500/30 bg-blue-500/10 px-4 py-2 text-xs font-bold tracking-wide text-blue-100">
+            FERRAMENTA EXCLUSIVA · /vitrine-video
           </div>
         </div>
       </header>
@@ -517,7 +516,7 @@ export function CinematicStudio({mode}:{mode:CinematicMode}){
             </label>
             {brands.isError&&<p className="text-xs text-amber-300">Identidades não disponíveis no momento.</p>}
             <div className="grid grid-cols-2 gap-2">
-              <label className="space-y-1 text-xs text-slate-300">Nome da marca
+              <label className="space-y-1 text-xs text-slate-300">Nome da revenda (não aparece na arte)
                 <Input value={brand.name} maxLength={55} className={inputClass} onChange={e=>setBrandOverrides(v=>({...v,name:e.target.value}))}/>
               </label>
               <label className="space-y-1 text-xs text-slate-300">WhatsApp com DDD
@@ -565,6 +564,10 @@ export function CinematicStudio({mode}:{mode:CinematicMode}){
                 className={"w-full resize-y py-3 "+inputClass+" h-auto min-h-[108px]"}
                 onChange={e=>setDescription(e.target.value)}/>
             </label>
+            <p className="text-[11px] leading-5 text-blue-200/80">
+              O texto da arte é adaptado automaticamente ao formato Feed ou Stories, sem reticências
+              e sem cobrir o vídeo ou o contato. A sinopse original permanece editável aqui.
+            </p>
             {loadingAssets&&<p className="flex items-center gap-2 text-xs text-blue-200"><RefreshCw size={15} className="animate-spin"/>Preparando imagens originais...</p>}
             {assets.error&&<p className="text-xs text-amber-300">{assets.error}</p>}
             {assets.warning&&<p className="text-xs text-amber-300">{assets.warning}</p>}
