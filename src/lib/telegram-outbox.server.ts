@@ -31,7 +31,7 @@ export async function rawTelegramSend(target:string,text:string){
  * Do not allow arbitrary URLs supplied in a queue payload.
  */
 const BANNER_RELEASE_EVENT="vitrine_banner_release_20261115";
-const BANNER_RELEASE_PHOTO="https://streammonitor.site/examples/vitrine-banner-lancamento-20261115.jpg";
+const BANNER_RELEASE_PHOTO="https://streamdash-co.lovable.app/examples/vitrine-banner-lancamento-20261115.jpg";
 async function sendBannerReleasePhoto(target:string,caption:string){
   const {token,chat}=resolveTarget(target);
   if(!token||!chat)throw new TelegramSendError(400,null,"telegram_configuration_missing");
