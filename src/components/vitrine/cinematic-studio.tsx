@@ -96,7 +96,7 @@ export function CinematicStudio({mode}:{mode:CinematicMode}){
   const [clipStart,setClipStart]=useState(0);
   const [youtubeStart,setYoutubeStart]=useState(0);
   const [chosenTrailerKey,setChosenTrailerKey]=useState("");
-  const [audio,setAudio]=useState(true);
+  const [audio,setAudio]=useState(()=>typeof window!=="undefined"&&!!supportedMp4Mime(true));
   const [licenseAccepted,setLicenseAccepted]=useState(false);
   const [rendering,setRendering]=useState(false);
   const [exporting,setExporting]=useState(false);
@@ -583,7 +583,7 @@ export function CinematicStudio({mode}:{mode:CinematicMode}){
                 </label>
               </div>
               <div className="flex flex-wrap items-center gap-3">
-                <label className="flex items-center gap-2 text-xs text-slate-200"><input type="checkbox" checked={audio} onChange={e=>setAudio(e.target.checked)}/> <Music2 size={15}/> Áudio AAC</label>
+                <label className="flex items-center gap-2 text-xs text-slate-200"><input type="checkbox" checked={audio} disabled={!supportedMp4Mime(true)} onChange={e=>setAudio(e.target.checked)}/> <Music2 size={15}/> Áudio AAC {supportedMp4Mime(true)?"":"(não suportado neste navegador)"}</label>
                 <Button variant="outline" size="sm" onClick={()=>{
                   const video=previewVideoRef.current;
                   if(!video)return;
@@ -599,7 +599,7 @@ export function CinematicStudio({mode}:{mode:CinematicMode}){
             <div className={"rounded-lg border p-3 text-xs "+(mime?"border-emerald-500/20 bg-emerald-500/10 text-emerald-200":"border-amber-500/30 bg-amber-500/10 text-amber-200")}>
               {mime?"Este navegador informa suporte ao MP4 H.264"+(audio?"/AAC":"")+". Sem upload, você precisará autorizar o compartilhamento da aba; nenhum vídeo será enviado ao servidor.":"Este navegador não informa suporte à geração nativa de MP4 H.264"+(audio?"/AAC":"")+". Teste pelo computador ou utilize um navegador compatível."}
             </div>
-            <p className="text-[11px] text-slate-400">Processamento local, sem enviar seu vídeo ao servidor. Renderização Cloudflare Containers + FFmpeg + R2 permanece desativada até aprovação de orçamento e habilitação dos serviços.</p>
+            <p className="text-[11px] text-slate-400">Processamento local, sem enviar seu vídeo ao servidor. Se o navegador não oferecer codec AAC, o MP4 será gerado sem áudio. FFmpeg na Cloudflare continua desativado até aprovação de orçamento.</p>
           </section>}
           {mode==="video"&&<section className={panelClass+" space-y-3"}>
             <div className="flex items-center justify-between gap-2">
