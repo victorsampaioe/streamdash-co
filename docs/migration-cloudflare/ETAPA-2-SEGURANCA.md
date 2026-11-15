@@ -11,6 +11,24 @@ The pilot includes `migration_readiness` statuses. The local backup **byte count
 
 **Cloudflare staging Worker:** `streammonitor-migration-sandbox` binds only the pilot D1 database and reads exclusively synthetic monitoring data. Its `/health` and `/demo/status` endpoints passed real HTTP checks on the temporary workers.dev address. The public subdomain was disabled immediately after testing. The Worker has no cron trigger or route on `streammonitor.site`. Reproducible source: `cloudflare/migration-sandbox/`.
 
+
+## Technical D1 contract test — 15 Nov 2026
+
+Another safe staging step was completed directly on Cloudflare. **Nothing below transfers real records or connects production traffic.**
+
+- Matched PostgreSQL fields exactly by name against D1 pilot tables:
+  - `checks_hourly`: **12/12**
+  - `platform_health_snapshots`: **12/12**
+  - `region_checks_hourly`: **9/9**
+- Added synthetic-only `pilot_v2_platform_health_snapshots` and `pilot_v2_region_checks_hourly`, alongside the already-tested `pilot_checks_hourly`.
+- Confirmed uniqueness/idempotence and rejection of invalid test inputs.
+- Re-deployed the *isolated* `streammonitor-migration-sandbox` Worker with 5 read-only HTTP endpoints; all passed against D1. An unknown route returned `not_found`.
+- Immediately disabled the public `workers.dev` endpoint again. There are still no production routes or cron schedules on this Worker.
+- Saved reproducible schema under `cloudflare/migration-sandbox/migrations/0002_technical_pilot_schema.sql`.
+- Updated pilot `migration_readiness` gate `pilot_technical_contracts_v2` to `passed`.
+
+**Do not interpret this as readiness for a full cutover.** Pending: isolated *PostgreSQL* restore of the user's private ~435 MB export; independent Storage backup; tenant-aware authorization and consistency tests; production credentials/Workers; auth and finance migration; written go-live approval. Production source remains the single source of truth.
+
 ## Critical migration gates (ALL must pass)
 1. Official Lovable Cloud export obtained and downloaded privately. **Still verify archive structure, scope (including `auth`, SQL objects, rows and policies) and restore integrity** in an isolated PostgreSQL environment.
 2. Export **Storage objects separately**, including bucket configuration and policies; don't assume database export includes files.
