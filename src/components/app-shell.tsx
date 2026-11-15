@@ -15,6 +15,7 @@ import { useTheme } from "@/components/theme-provider";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useSubscription } from "@/hooks/use-subscription";
 import { cn } from "@/lib/utils";
+import { isAdminMaster } from "@/lib/permissions";
 
 // Routes that keep working even after the subscription expires,
 // so the user can always renew and see their status.
@@ -53,7 +54,7 @@ function GatedOutlet() {
       return data?.map((r) => r.role as string) || [];
     },
   });
-  const allowed = ALWAYS_OPEN_PATHS.some((p) => pathname === p || pathname.startsWith(p + "/"));
+  const allowed = ALWAYS_OPEN_PATHS.some((p) => pathname === p || pathname.startsWith(p + "/")) || pathname === "/app/admin/vitrine-futebol";
 
   // Admin e revendedores nunca dependem de assinatura.
   const privileged = !!userRoles?.some((r) => r === "admin" || r === "reseller" || r === "sub_reseller");
@@ -111,6 +112,7 @@ function useNavItems() {
     queryFn: async () => {
       const { data: { user }, error: authError } = await supabase.auth.getUser();
       if (authError || !user) return false;
+      if (isAdminMaster(user.email)) return true;
       const { data, error } = await supabase.rpc("has_role", {
         _user_id: user.id,
         _role: "admin",
