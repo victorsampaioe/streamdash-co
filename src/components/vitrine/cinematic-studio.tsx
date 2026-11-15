@@ -364,6 +364,23 @@ export function CinematicStudio({mode}:{mode:CinematicMode}){
     }
     setActiveVideoLink("");setVideoLinkDraft("");setVideoFile(file);
   }
+  function loadDirectMp4Link(){
+    try{
+      const raw=videoLinkDraft.trim();
+      if(!raw||raw.length>2048)throw new Error("Informe um link direto de arquivo MP4.");
+      const url=new URL(raw);
+      if(url.protocol!=="https:")throw new Error("O link do MP4 precisa usar HTTPS.");
+      if(/(^|\.)(youtube\.com|youtu\.be|youtube-nocookie\.com|vimeo\.com)$/i.test(url.hostname))
+        throw new Error("Esse é um link de página de vídeo, não um arquivo MP4. Use o arquivo baixado ou uma URL direta terminada em .mp4.");
+      if(["localhost","127.0.0.1","0.0.0.0","::1"].includes(url.hostname))
+        throw new Error("Endereços locais não são permitidos.");
+      setVideoFile(null);
+      setActiveVideoLink(url.href);
+      setClipStart(0);
+      setVideoLength(0);
+      toast.info("Carregando o MP4. O servidor do arquivo precisa permitir CORS.");
+    }catch(error){toast.error(error instanceof Error?error.message:"Link inválido.");}
+  }
   const isReady=!!movie&&!!assets.background&&!loadingAssets;
   const itemList=((feed.data?.items??[]) as SearchItem[])
     .filter(x=>x.media_type===media&&x.poster_path)
@@ -540,6 +557,24 @@ export function CinematicStudio({mode}:{mode:CinematicMode}){
                 className="border-blue-500/20 bg-slate-950 text-xs file:text-blue-200"
                 onChange={e=>uploadMp4(e.target.files?.[0])}/>
             </label>
+            <div className="space-y-2 rounded-xl border border-blue-500/20 bg-blue-950/15 p-3">
+              <label className="block space-y-1 text-xs text-slate-300">
+                Link direto de vídeo MP4 (opcional)
+                <Input className={inputClass} type="url" value={videoLinkDraft} maxLength={2048}
+                  onChange={e=>setVideoLinkDraft(e.target.value)}
+                  placeholder="https://meu-servidor.com/video.mp4"/>
+              </label>
+              <Button type="button" size="sm" variant="outline" className="border-blue-400/30 text-blue-100"
+                onClick={loadDirectMp4Link} disabled={!videoLinkDraft.trim()}>Carregar link MP4</Button>
+              <p className="text-[11px] leading-5 text-slate-400">
+                Links do YouTube funcionam apenas na prévia; para gerar o arquivo final, o endereço precisa fornecer o MP4 diretamente com CORS.
+                Se estiver usando o programa 4K Video Downloader Plus no computador, selecione o MP4 salvo pelo botão acima.
+              </p>
+              <a href="https://www.4kdownload.com/pt-br/products/videodownloader-8" target="_blank" rel="noopener noreferrer"
+                className="text-xs font-semibold text-sky-300 underline underline-offset-2">
+                4K Video Downloader Plus — site oficial (aplicativo externo)
+              </a>
+            </div>
             {videoUrl&&<div className="space-y-2">
               <p className="text-xs text-sky-300">{videoFile?.name} · {videoLength?Math.floor(videoLength)+" s":"Lendo duração..."}</p>
               <div className="grid grid-cols-2 gap-2">
@@ -563,6 +598,18 @@ export function CinematicStudio({mode}:{mode:CinematicMode}){
                 }}><Play size={14} className="mr-2"/>Reproduzir/pausar na arte</Button>
               </div>
             </div>}
+            <label className="block space-y-1 text-xs text-slate-300">
+              Qualidade do vídeo exportado
+              <select className={"w-full "+inputClass} value={mp4Preset}
+                onChange={e=>setMp4Preset(e.target.value as Mp4Preset)}>
+                <option value="whatsapp">WhatsApp · 720 px · MP4 leve (recomendado)</option>
+                <option value="full">Alta qualidade · 1080 px · MP4 maior</option>
+              </select>
+            </label>
+            <p className="text-[11px] text-slate-400">
+              Modo WhatsApp: 720 × {format==="story"?1280:900} px, H.264, áudio AAC quando suportado.
+              O arquivo é conferido após exportar; o limite para vídeos pela API do WhatsApp é 16 MB.
+            </p>
             <div className={"rounded-lg border p-3 text-xs "+(mime?"border-emerald-500/20 bg-emerald-500/10 text-emerald-200":"border-amber-500/30 bg-amber-500/10 text-amber-200")}>
               {mime?"Este navegador informa suporte à exportação MP4 H.264"+(audio?"/AAC":"")+". O vídeo enviado é processado localmente, sem captura de aba.":"Este navegador não informa suporte à geração nativa de MP4 H.264"+(audio?"/AAC":"")+". Teste pelo computador ou utilize um navegador compatível."}
             </div>
@@ -625,8 +672,9 @@ export function CinematicStudio({mode}:{mode:CinematicMode}){
                 </div>
               )}
             </div>
-            <video ref={previewVideoRef} src={videoUrl||undefined} preload="metadata" playsInline
+            <video ref={previewVideoRef} src={videoUrl||undefined} crossOrigin={activeVideoLink&&!videoFile?"anonymous":undefined} preload="metadata" playsInline
               className="hidden"
+              onError={()=>{if(videoUrl)toast.error("O arquivo não abriu. Links externos precisam ser MP4 direto e permitir CORS.");}}
               onLoadedMetadata={e=>{const length=e.currentTarget.duration;setVideoLength(Number.isFinite(length)?length:0);}}
               onTimeUpdate={()=>{
                 const v=previewVideoRef.current;
