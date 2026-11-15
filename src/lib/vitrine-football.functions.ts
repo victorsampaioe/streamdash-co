@@ -149,8 +149,15 @@ export const getVitrineFootballMatches = createServerFn({ method: "POST" })
       if (r.status !== "fulfilled") continue;
       for (const m of r.value) if (m.day === data.date && !matches.has(m.id)) matches.set(m.id, m);
     }
+    const featuredMatches = [...matches.values()].filter((m) =>
+      m.leagueId !== "international-friendly" ||
+      !/\\bU\\s?-?(?:1[5-9]|2[0-3])\\b|feminino|women|\\(w\\)/i.test(m.home + " " + m.away));
     return {
-      matches: [...matches.values()].sort((a, b) => a.iso.localeCompare(b.iso)).slice(0, 160),
+      matches: featuredMatches.sort((a, b) => {
+        const aLeague = leagues.findIndex((l) => l.id === a.leagueId);
+        const bLeague = leagues.findIndex((l) => l.id === b.leagueId);
+        return aLeague - bLeague || a.iso.localeCompare(b.iso);
+      }).slice(0, 160),
       leagues: footballLeagueOptions,
       source: "SportScore",
       partial: results.some((r) => r.status === "rejected"),
