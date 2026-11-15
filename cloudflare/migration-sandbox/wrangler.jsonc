@@ -1,0 +1,16 @@
+{
+  // STAGING ONLY. Never route this Worker to streammonitor.site.
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "streammonitor-migration-sandbox",
+  "main": "worker.mjs",
+  "compatibility_date": "2026-11-15",
+  "workers_dev": false,
+  "routes": [],
+  "d1_databases": [
+    {
+      "binding": "PILOT_DB",
+      "database_name": "streammonitor-migration-pilot",
+      "database_id": "40a495ac-89f0-44a7-bf29-050425dd2abe"
+    }
+  ]
+}
