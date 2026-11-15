@@ -36,6 +36,9 @@ function tmdbPath(path:string|null|undefined,size:"original"|"w500"="original"){
 }
 function loadImage(url:string):Promise<HTMLImageElement>{
   return new Promise((resolve,reject)=>{
+    if(!url.startsWith("data:image/")&&!url.startsWith("/")&&!/^https:\/\//.test(url)){
+      reject(new Error("Endereço de imagem não permitido."));return;
+    }
     const image=new Image();
     if(!url.startsWith("data:"))image.crossOrigin="anonymous";
     image.onload=()=>image.naturalWidth>0?resolve(image):reject(new Error("Imagem inválida."));
@@ -183,8 +186,9 @@ export function CinematicStudio({mode}:{mode:CinematicMode}){
     classification:extra?.classification||"",
     label,brand:brand.name,whatsapp:brand.whatsapp,color,
     logoPosition,lighting,posterVisible,
-    background:assets.background,poster:assets.poster,logo:assets.logo,
-  }),[mode,dims.width,dims.height,movie?.title,movie?.release_date,movie?.genres,description,extra?.classification,label,brand.name,brand.whatsapp,color,logoPosition,lighting,posterVisible,assets]);
+    background:assets.background,backgroundIsPoster:!!selectedPoster&&selectedBackground===selectedPoster,
+    poster:assets.poster,logo:assets.logo,
+  }),[mode,dims.width,dims.height,movie?.title,movie?.release_date,movie?.genres,description,extra?.classification,label,brand.name,brand.whatsapp,color,logoPosition,lighting,posterVisible,assets,selectedPoster,selectedBackground]);
   useEffect(()=>{
     if(!canvasRef.current)return;
     const canvas=canvasRef.current,ctx=canvas.getContext("2d",{alpha:false});
@@ -517,6 +521,11 @@ export function CinematicStudio({mode}:{mode:CinematicMode}){
               <span>·</span><span>Fonte: TMDB</span>
               {mode==="video"&&<><span>·</span><Clock3 size={14}/>15/30/60 segundos</>}
             </div>
+            <p className="text-[11px] leading-5 text-slate-400">
+              Este produto utiliza a API TMDB, mas não é endossado ou certificado pela TMDB.
+              Consulte <a className="ml-1 underline" href="https://www.themoviedb.org/about/logos-attribution" target="_blank" rel="noopener noreferrer">créditos e atribuição da TMDB</a>.
+              Uso comercial de dados e imagens requer licença e respeito aos direitos de seus titulares.
+            </p>
           </section>
         </div>
       </div>
