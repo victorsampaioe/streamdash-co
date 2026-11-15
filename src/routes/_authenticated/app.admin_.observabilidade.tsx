@@ -13,6 +13,7 @@ import {Badge} from "@/components/ui/badge";
 import {BarChart3,Cloud,ExternalLink,ShieldCheck,RefreshCw,Activity} from "lucide-react";
 import {toast} from "sonner";
 import {UnifiedObservabilityDashboard} from "@/components/observability/unified-dashboard";
+import {CloudflareHeartbeatPanel} from "@/components/observability/cloudflare-heartbeat-panel";
 
 export const Route=createFileRoute("/_authenticated/app/admin_/observabilidade")({
   beforeLoad:async()=>{
@@ -86,6 +87,7 @@ function ObservabilidadePage(){
         fica ativa até você habilitar com suas credenciais.
       </p>
     </div>
+    <CloudflareHeartbeatPanel />
     <UnifiedObservabilityDashboard />
     <div className="flex items-center gap-3 border-t border-border/60 pt-6">
       <ShieldCheck className="h-5 w-5 text-blue-400"/>
