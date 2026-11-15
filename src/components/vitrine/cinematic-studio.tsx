@@ -93,6 +93,7 @@ export function CinematicStudio({mode}:{mode:CinematicMode}){
   const [clipSeconds,setClipSeconds]=useState<15|30|60>(15);
   const [clipStart,setClipStart]=useState(0);
   const [youtubeStart,setYoutubeStart]=useState(0);
+  const [chosenTrailerKey,setChosenTrailerKey]=useState("");
   const [audio,setAudio]=useState(true);
   const [licenseAccepted,setLicenseAccepted]=useState(false);
   const [rendering,setRendering]=useState(false);
@@ -155,6 +156,8 @@ export function CinematicStudio({mode}:{mode:CinematicMode}){
       setDescription(movie.overview||"");
       setLabel(media==="movie"?"NOVO FILME":"NOVA SÉRIE");
       setBackdropChoice("");
+      setChosenTrailerKey("");
+      setYoutubeStart(0);
       setPosterVisible(true);
     }
   },[movie?.tmdb_id,media]);
@@ -350,7 +353,8 @@ export function CinematicStudio({mode}:{mode:CinematicMode}){
   const itemList=((feed.data?.items??[]) as SearchItem[])
     .filter(x=>x.media_type===media&&x.poster_path)
     .slice(0,24);
-  const youtubeKey=extra?.trailer?.key;
+  const selectedTrailer=extra?.trailers?.find(x=>x.key===chosenTrailerKey)??extra?.trailer;
+  const youtubeKey=selectedTrailer?.key;
   const previewFrame=useMemo(()=>{
     if(mode!=="video"||typeof document==="undefined")return null;
     const measure=document.createElement("canvas").getContext("2d");
@@ -489,7 +493,17 @@ export function CinematicStudio({mode}:{mode:CinematicMode}){
           {mode==="video"&&<section className={panelClass+" space-y-3"}>
             <div className="flex items-center gap-2 text-sm font-bold text-blue-200"><Clapperboard size={18}/> 3. Trailer real e MP4 autorizado</div>
             {youtubeKey?<div className="space-y-2">
-              <p className="text-xs text-slate-300">Trailer encontrado na TMDB · {extra?.trailer?.official?"oficial":"referenciado"} · idioma {extra?.trailer?.language||"não informado"}.</p>
+              <p className="text-xs text-slate-300">Trailer encontrado na TMDB · {selectedTrailer?.official?"oficial":"referenciado"} · idioma {selectedTrailer?.language||"não informado"}.</p>
+              {(extra?.trailers?.length??0)>1&&(
+                <label className="block space-y-1 text-xs text-slate-300">Escolher outro trailer desta obra
+                  <select className={"w-full "+inputClass} value={youtubeKey||""}
+                    onChange={e=>setChosenTrailerKey(e.target.value)}>
+                    {extra?.trailers?.map(t=><option key={t.key} value={t.key}>
+                      {t.name} · {t.language||"idioma não informado"}{t.official?" · oficial":""}
+                    </option>)}
+                  </select>
+                </label>
+              )}
               <div className="grid grid-cols-2 gap-2">
                 <label className="space-y-1 text-xs text-slate-300">Duração da prévia
                   <select className={"w-full "+inputClass} value={clipSeconds}
