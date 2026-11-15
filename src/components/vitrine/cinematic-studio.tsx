@@ -43,7 +43,7 @@ function loadImage(url:string):Promise<HTMLImageElement>{
     const image=new Image();
     if(!url.startsWith("data:"))image.crossOrigin="anonymous";
     image.onload=()=>image.naturalWidth>0?resolve(image):reject(new Error("Imagem inválida."));
-    image.onerror=()=>reject(new Error("Não foi possível carregar a imagem com autorização CORS."));
+    image.onerror=()=>reject(new Error("A imagem não carregou ou foi bloqueada pelo servidor."));
     image.src=url;
   });
 }
@@ -313,7 +313,7 @@ export function CinematicStudio({mode}:{mode:CinematicMode}){
     const temp=document.createElement("video");
     temp.preload="auto";temp.playsInline=true;
     if(activeVideoLink&&!videoFile)temp.crossOrigin="anonymous";
-    temp.style.cssText="position:fixed;left:0;top:0;width:1px;height:1px;opacity:0;pointer-events:none;z-index:-1";
+    temp.style.cssText="position:fixed;left:0;top:0;width:2px;height:2px;opacity:0.01;pointer-events:none;z-index:-1";
     temp.src=videoUrl;
     document.body.appendChild(temp);
     const exportCanvas=document.createElement("canvas");
@@ -644,7 +644,7 @@ export function CinematicStudio({mode}:{mode:CinematicMode}){
             <div className={"rounded-lg border p-3 text-xs "+(mime?"border-emerald-500/20 bg-emerald-500/10 text-emerald-200":"border-amber-500/30 bg-amber-500/10 text-amber-200")}>
               {mime?"Este navegador informa suporte à exportação MP4 H.264"+(audio?"/AAC":"")+". O vídeo enviado é processado localmente, sem captura de aba.":"Este navegador não informa suporte à geração nativa de MP4 H.264"+(audio?"/AAC":"")+". Teste pelo computador ou utilize um navegador compatível."}
             </div>
-            <p className="text-[11px] text-slate-400">Processamento local, sem gravar a aba ou enviar o vídeo ao servidor. O modo WhatsApp reduz o peso do arquivo. Caso o navegador não suporte AAC, a exportação fica sem áudio.</p>
+            <p className="text-[11px] text-slate-400">Processamento local, sem gravar a aba ou enviar o vídeo ao servidor. Mantenha esta página aberta enquanto gera o MP4. O modo WhatsApp reduz o peso do arquivo; sem suporte a AAC, a exportação fica sem áudio.</p>
           </section>}
           {mode==="video"&&<section className={panelClass+" space-y-3"}>
             <div className="flex items-center justify-between gap-2">
