@@ -141,6 +141,26 @@ export function cinematicVideoFrameRect(
   const width=w-margin*2,height=Math.round(width*9/16);
   return {x,y,width,height};
 }
+/** Paint only the changing MP4 region. Static backdrop, text, logo and footer
+ * are drawn once outside the recording loop to avoid dropped frames and stalls.
+ * Call with the same transform as the full artwork (e.g. 2/3 for WhatsApp).
+ */
+export function paintCinematicVideoFrame(
+  ctx:CanvasRenderingContext2D,
+  artwork:Omit<CinematicOptions,"video">,
+  video:HTMLVideoElement,
+){
+  if(video.readyState<2||!video.videoWidth||!video.videoHeight)return;
+  const {x,y,width,height}=cinematicVideoFrameRect(ctx,artwork);
+  ctx.save();
+  roundRect(ctx,x,y,width,height,18);
+  ctx.clip();
+  ctx.fillStyle="#020611";
+  ctx.fillRect(x,y,width,height);
+  // Letterbox rather than crop or distort the original video.
+  contain(ctx,video,x,y,width,height);
+  ctx.restore();
+}
 export function renderCinematic(ctx:CanvasRenderingContext2D,opt:CinematicOptions){
   const {width:w,height:h}=opt;
   const wide=w>h;
@@ -238,7 +258,7 @@ export function renderCinematic(ctx:CanvasRenderingContext2D,opt:CinematicOption
     }else{
       ctx.textAlign="center";ctx.fillStyle="#e2e8f0";
       ctx.font="700 27px Arial, sans-serif";
-      ctx.fillText("ÁREA DO MP4 AUTORIZADO",x+vw/2,y+vh/2);
+      ctx.fillText("PRÉVIA DO VÍDEO",x+vw/2,y+vh/2);
       ctx.font="23px Arial, sans-serif";
       ctx.fillStyle="#94a3b8";
       ctx.fillText("O trailer do YouTube não é exportado",x+vw/2,y+vh/2+43);
