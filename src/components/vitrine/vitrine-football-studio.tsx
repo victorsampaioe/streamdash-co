@@ -73,20 +73,26 @@ function TeamIdentity({ name, badge, size = 104 }: { name: string; badge?: strin
       <span className="font-black text-white/90" style={{ fontSize: size * 0.28 }}>{initials(name)}</span>}
   </div>;
 }
-function FixtureCard({ m, badges, dense }: { m: FootballMatch; badges: Record<string, string>; dense?: boolean }) {
-  return <div className="flex items-center gap-3 rounded-[24px] border border-white/15 bg-slate-950/60 px-5 py-4 backdrop-blur-md">
-    <div className="min-w-0 flex-1 flex items-center gap-4">
-      <TeamIdentity name={m.home} badge={badges[m.homeBadge]} size={dense ? 68 : 83} />
-      <div className="min-w-0">
-        <div className="truncate text-[25px] font-extrabold leading-tight text-white">{m.home}</div>
-        <div className="my-1 text-[18px] font-black text-sky-300">VS</div>
-        <div className="truncate text-[25px] font-extrabold leading-tight text-white">{m.away}</div>
-      </div>
+function FixtureCard({ m, badges, rowHeight }: {
+  m: FootballMatch; badges: Record<string, string>; rowHeight: number;
+}) {
+  return <div className="relative isolate flex items-center justify-between gap-4 overflow-hidden rounded-[23px] border border-white/15 bg-[#071831]/90 px-7 shadow-[0_16px_45px_rgba(0,0,0,.22)] backdrop-blur-xl"
+    style={{ height: rowHeight }}>
+    <div className="absolute inset-y-0 left-0 w-[7px] bg-gradient-to-b from-sky-300 to-blue-700" />
+    <div className="flex min-w-0 flex-1 items-center gap-5">
+      <TeamIdentity name={m.home} badge={badges[m.homeBadge]} size={82} />
+      <div className="min-w-0 text-left text-[23px] font-[900] uppercase leading-[1.05] tracking-[-0.03em] text-white"
+        style={{ textShadow: "0 2px 20px #0007" }}>{m.home}</div>
     </div>
-    <div className="shrink-0 text-right">
-      <TeamIdentity name={m.away} badge={badges[m.awayBadge]} size={dense ? 68 : 83} />
-      <div className="mt-3 text-[25px] font-black text-white">{m.time}</div>
-      <div className="max-w-[180px] text-[13px] font-bold uppercase leading-tight tracking-wider text-slate-300">{m.league}</div>
+    <div className="flex w-[180px] shrink-0 flex-col items-center justify-center gap-1 text-center">
+      <span className="text-[42px] font-black leading-none text-[#7ed8ff]">{m.time}</span>
+      <span className="max-w-full overflow-hidden text-ellipsis whitespace-nowrap text-[13px] font-extrabold uppercase tracking-[0.06em] text-slate-300">{m.league}</span>
+      <span className="text-[13px] font-black uppercase tracking-[0.2em] text-white/40">CONFRONTO</span>
+    </div>
+    <div className="flex min-w-0 flex-1 items-center justify-end gap-5">
+      <div className="min-w-0 text-right text-[23px] font-[900] uppercase leading-[1.05] tracking-[-0.03em] text-white"
+        style={{ textShadow: "0 2px 20px #0007" }}>{m.away}</div>
+      <TeamIdentity name={m.away} badge={badges[m.awayBadge]} size={82} />
     </div>
   </div>;
 }
@@ -102,69 +108,95 @@ function FootballArt({
   const dims = DIMENSIONS[format];
   const story = format === "story";
   const landscape = format === "landscape";
-  const list = matches.slice(0, landscape ? 2 : story ? 7 : 4);
-  return <div className="relative isolate overflow-hidden bg-[#050d22] font-sans text-white"
+  const maxGames = landscape ? 2 : story ? 7 : 4;
+  const list = matches.slice(0, maxGames);
+  const rowHeight = landscape ? 134 : story ? 175 : 148;
+  const listTop = landscape ? 275 : story ? 430 : 370;
+  const headlineSize = landscape ? 68 : story ? 111 : 96;
+  const heroTop = landscape ? 138 : story ? 221 : 184;
+  const safeBrand = brand || "STREAM MONITOR";
+  const firstWord = kind === "today" ? "JOGOS" : "HOJE TEM";
+  const secondWord = kind === "today" ? "DE HOJE" : "JOGAÇO";
+  return <div className="relative isolate overflow-hidden bg-[#030c20] font-sans text-white"
     style={{ width: dims.width, height: dims.height }}>
-    {stadium ? <img alt="" src={stadium} className="absolute inset-0 h-full w-full object-cover opacity-75" /> : <>
-      <div className="absolute inset-0" style={{ background: "radial-gradient(ellipse at 52% 75%, #164a73 0%, #0e254c 35%, #050b1d 75%)" }} />
-      <div className="absolute inset-x-[-200px] bottom-[-170px] h-[400px] rounded-[50%] border-[24px] border-sky-400/15 bg-emerald-700/10 blur-[4px]" />
-      <div className="absolute left-0 top-0 h-[65%] w-[40%] bg-blue-500/20 blur-[130px]" />
+    {stadium ? <img alt="" src={stadium} className="absolute inset-0 h-full w-full object-cover opacity-[.62]" /> : <>
+      <div className="absolute inset-0" style={{ background: "radial-gradient(circle at 70% 38%, #164c84 0%, #0b254d 38%, #030c20 78%)" }} />
+      <div className="absolute -right-[120px] -top-[200px] h-[750px] w-[750px] rounded-full border-[90px] border-[#3295fe]/[.12] blur-xl" />
+      <div className="absolute -bottom-32 left-20 h-[350px] w-[900px] rounded-[50%] bg-[#127be5]/[.15] blur-[95px]" />
     </>}
-    <div className="absolute inset-0 bg-gradient-to-b from-[#040d24]/85 via-[#061329]/30 to-[#030819]/95" />
-    <div className="absolute inset-x-0 top-0 h-[12px] bg-gradient-to-r from-blue-700 via-sky-300 to-blue-700" />
-    <div className="absolute left-14 top-12 flex items-center gap-5">
-      {logo ? <img src={logo} alt="" className="h-[75px] w-[75px] object-contain" /> :
-        <div className="flex h-[74px] w-[74px] items-center justify-center rounded-2xl border border-sky-300/50 bg-blue-500/25 text-3xl font-black">SM</div>}
-      <span className="text-[25px] font-black uppercase tracking-[0.13em]">{brand || "STREAM MONITOR"}</span>
+    <div className="absolute inset-0 bg-gradient-to-b from-[#020a1b]/90 via-[#04132b]/25 to-[#010a1c]/95" />
+    <div className="absolute inset-x-0 top-0 h-[11px] bg-gradient-to-r from-[#0043d6] via-[#71d7ff] to-[#0053cc]" />
+    <div className="absolute left-0 top-0 h-full w-2 bg-[#4cb5ff]/30" />
+    <div className="absolute left-[60px] right-[60px] top-[55px] flex h-[90px] items-center justify-between border-b border-white/20 pb-5">
+      <div className="flex min-w-0 items-center gap-5">
+        {logo ? <img src={logo} alt="" className="h-[70px] w-[70px] object-contain" /> :
+          <div className="flex h-[64px] w-[64px] items-center justify-center rounded-xl bg-gradient-to-br from-sky-500 to-blue-800 text-[24px] font-black">SM</div>}
+        <div className="text-[24px] font-[900] uppercase tracking-[0.11em]">{safeBrand}</div>
+      </div>
+      <span className="rounded-lg border border-sky-400/40 bg-sky-500/15 px-5 py-3 text-[16px] font-black uppercase tracking-[0.19em] text-sky-200">
+        FUTEBOL AO VIVO
+      </span>
     </div>
-    <div className="absolute right-12 top-14 rounded-full border border-white/20 bg-white/10 px-6 py-3 text-[17px] font-bold tracking-widest text-sky-200">VITRINE FUTEBOL</div>
 
     {kind === "today" ? <>
-      <div className="absolute left-14 right-14" style={{ top: story ? 230 : landscape ? 142 : 170 }}>
-        <div className="text-[23px] font-bold uppercase tracking-[0.25em] text-sky-300">{dateDisplay(day)}</div>
-        <div className="mt-1 font-black uppercase leading-[1]" style={{ fontSize: story ? 106 : landscape ? 65 : 81 }}>
-          {headline || "JOGOS DE HOJE"}
+      <div className="absolute left-[60px] right-[60px]" style={{ top: heroTop }}>
+        <p className="mb-2 text-[22px] font-black uppercase tracking-[0.25em] text-sky-300">A PROGRAMAÇÃO DO SEU DIA · {dateDisplay(day)}</p>
+        <div className="font-black uppercase tracking-[-0.06em] leading-[.91]"
+          style={{ fontSize: headlineSize, textShadow: "0 9px 35px #0008" }}>
+          {headline === "JOGOS DE HOJE" ? <><span className="block">JOGOS</span><span className="block text-[#6bcaff]">DE HOJE</span></> : headline}
         </div>
-        <div className="mt-4 h-2 w-36 rounded-full bg-sky-400" />
       </div>
-      <div className="absolute left-14 right-14 grid gap-[14px]"
-        style={{ top: story ? 480 : landscape ? 255 : 335 }}>
-        {list.length ? list.map((m) => <FixtureCard key={m.id} m={m} badges={badgeImages} dense={landscape} />) :
-          <div className="rounded-3xl border border-white/20 bg-white/10 p-12 text-center text-3xl font-bold">Selecione partidas reais para montar esta arte.</div>}
+      <div className="absolute left-[60px] right-[60px] flex flex-col" style={{ top: listTop, gap: story ? 20 : 13 }}>
+        {list.map((m) => <FixtureCard key={m.id} m={m} badges={badgeImages} rowHeight={rowHeight} />)}
+        {!list.length && <div className="rounded-3xl border border-white/20 bg-[#0b2041]/80 p-12 text-center text-[30px] font-black">ESCOLHA OS JOGOS PARA MONTAR A ARTE</div>}
       </div>
+      <div className="absolute bottom-[106px] left-[60px] right-[60px] h-[2px] bg-gradient-to-r from-blue-400/80 via-blue-300/30 to-transparent" />
     </> : <>
-      {photo && <img src={photo} alt="" className="absolute left-[-8%] bottom-0 h-[82%] w-[64%] object-contain object-bottom"
-        style={{ filter: "drop-shadow(8px 10px 60px rgba(0,0,0,.55))" }} />}
-      <div className="absolute left-14 right-14" style={{ top: story ? 290 : landscape ? 150 : 195 }}>
-        <p className="font-black uppercase tracking-[0.24em] text-sky-300" style={{ fontSize: story ? 37 : 28 }}>
+      <div className="absolute left-[60px] right-[60px]" style={{ top: heroTop }}>
+        <div className="mb-3 inline-flex rounded-lg border border-sky-300/40 bg-sky-400/15 px-4 py-3 text-[20px] font-black uppercase tracking-[.22em] text-sky-200">
           {match?.league || "JOGO EM DESTAQUE"}
-        </p>
-        <h2 className="mt-4 max-w-[950px] font-black uppercase leading-[0.93]"
-          style={{ fontSize: story ? 108 : landscape ? 79 : 89, textShadow: "0 8px 35px #0009" }}>
+        </div>
+        <h2 className="max-w-[960px] font-black uppercase tracking-[-.06em] leading-[.96]"
+          style={{ fontSize: landscape ? 85 : story ? 120 : 105, textShadow: "0 10px 35px #000a" }}>
           {headline || "HOJE TEM JOGAÇO"}
         </h2>
       </div>
-      <div className="absolute left-14 right-14 flex items-center justify-center gap-8 rounded-[34px] border border-white/20 bg-[#061328]/85 px-8 py-7 shadow-2xl backdrop-blur-md"
-        style={{ bottom: story ? 250 : landscape ? 85 : 150 }}>
-        <div className="flex min-w-0 flex-1 flex-col items-center gap-4">
-          <TeamIdentity name={match?.home || "Casa"} badge={match ? badgeImages[match.homeBadge] : undefined} size={story ? 140 : 108} />
-          <div className="text-center text-[29px] font-black uppercase leading-tight">{match?.home || "Time mandante"}</div>
+      {photo ? <div className="absolute inset-y-[18%] left-[-5%] w-[69%] overflow-hidden">
+        <img src={photo} alt="" className="h-full w-full object-contain object-bottom"
+          style={{
+            maskImage: "linear-gradient(to bottom,transparent 0%,black 18%,black 80%,transparent 99%)",
+            filter: "drop-shadow(10px 18px 55px rgba(0,0,0,.8))",
+          }} />
+      </div> : <>
+        <div className="absolute bottom-[21%] left-[-20%] h-[720px] w-[720px] rounded-full border-[65px] border-sky-400/10" />
+        <div className="absolute bottom-[20%] left-[7%] rotate-[-15deg] text-[340px] font-black leading-none text-white/[.06]">VS</div>
+      </>}
+      <div className="absolute right-[60px] flex flex-col items-end gap-5" style={{ bottom: story ? 465 : landscape ? 110 : 325 }}>
+        <div className="flex items-center gap-5 rounded-3xl bg-[#061934]/80 px-8 py-5 backdrop-blur-xl">
+          <div className="max-w-[320px] text-right text-[35px] font-black uppercase tracking-[-0.035em]">{match?.home || "Mandante"}</div>
+          <TeamIdentity name={match?.home || "Mandante"} badge={match ? badgeImages[match.homeBadge] : undefined} size={117} />
         </div>
-        <div className="shrink-0 text-center">
-          <div className="text-[58px] font-black italic text-sky-300">X</div>
-          <div className="rounded-2xl bg-sky-400 px-6 py-2 text-[29px] font-black text-[#061328]">{match?.time || "--:--"}</div>
-          <div className="mt-2 text-[17px] font-bold text-white/80">HORÁRIO DE FORTALEZA</div>
-        </div>
-        <div className="flex min-w-0 flex-1 flex-col items-center gap-4">
-          <TeamIdentity name={match?.away || "Visitante"} badge={match ? badgeImages[match.awayBadge] : undefined} size={story ? 140 : 108} />
-          <div className="text-center text-[29px] font-black uppercase leading-tight">{match?.away || "Time visitante"}</div>
+        <div className="pr-12 text-[65px] font-black italic leading-none text-sky-300">VS</div>
+        <div className="flex items-center gap-5 rounded-3xl bg-[#061934]/80 px-8 py-5 backdrop-blur-xl">
+          <div className="max-w-[320px] text-right text-[35px] font-black uppercase tracking-[-0.035em]">{match?.away || "Visitante"}</div>
+          <TeamIdentity name={match?.away || "Visitante"} badge={match ? badgeImages[match.awayBadge] : undefined} size={117} />
         </div>
       </div>
-      {photo && playerName && <div className="absolute bottom-14 left-14 max-w-[450px] rounded-xl bg-black/65 px-5 py-3 text-[24px] font-bold uppercase tracking-wide">{playerName}</div>}
+      <div className="absolute left-[60px] right-[60px] flex items-end justify-between border-t-2 border-white/20 pt-6"
+        style={{ bottom: story ? 150 : landscape ? 35 : 145 }}>
+        <div>
+          <div className="text-[19px] font-black uppercase tracking-[.2em] text-sky-300">{dateDisplay(day)}</div>
+          {playerName && photo && <div className="mt-3 max-w-[430px] text-[27px] font-black uppercase tracking-wide">{playerName}</div>}
+        </div>
+        <div className="text-right">
+          <div className="text-[70px] font-black leading-none tracking-tight text-white">{match?.time || "--:--"}</div>
+          <span className="text-[17px] font-bold tracking-[.2em] text-white/60">HORÁRIO DE BRASÍLIA</span>
+        </div>
+      </div>
     </>}
-    <div className="absolute inset-x-0 bottom-0 flex items-center justify-between border-t border-white/10 bg-[#03091b]/80 px-14 py-6 text-[17px] font-bold uppercase tracking-[0.16em] text-white/65">
-      <span>ARTE CRIADA NO STREAM MONITOR</span>
-      <span>{dateDisplay(day)} · BRT</span>
+    <div className="absolute inset-x-0 bottom-0 flex h-[77px] items-center justify-between border-t border-white/10 bg-[#020816]/90 px-[60px] text-[15px] font-bold uppercase tracking-[.13em] text-white/55">
+      <span>STREAM MONITOR · VITRINE FUTEBOL</span>
+      <span>DADOS: SPORTscore · {dateDisplay(day)}</span>
     </div>
   </div>;
 }
