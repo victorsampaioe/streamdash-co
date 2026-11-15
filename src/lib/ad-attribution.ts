@@ -2,6 +2,7 @@
 const KEY = "sm_ad_attribution";
 const MAX_AGE_MS = 30 * 86_400_000;
 let memoryAttribution: AdAttribution | null = null;
+let memoryWindow: Window | null = null;
 
 /** Local storage may be unavailable in private and in-app browsers. */
 function isFresh(saved: AdAttribution | null): saved is AdAttribution {
@@ -58,6 +59,7 @@ export function captureAttribution(): AdAttribution | null {
   const existing = readAttribution();
   if (existing?.source === "meta_ads") return existing;
   memoryAttribution = attribution;
+  memoryWindow = window;
   try { localStorage.setItem(KEY, JSON.stringify(attribution)); } catch { /* private browser */ }
   try { sessionStorage.setItem(KEY, JSON.stringify(attribution)); } catch { /* private browser */ }
   return attribution;
@@ -75,7 +77,7 @@ export function readAttribution(): AdAttribution | null {
     const saved = JSON.parse(sessionStorage.getItem(KEY) ?? "null") as AdAttribution | null;
     if (isFresh(saved)) return saved;
   } catch { /* private browser */ }
-  return isFresh(memoryAttribution) ? memoryAttribution : null;
+  return memoryWindow === window && isFresh(memoryAttribution) ? memoryAttribution : null;
 }
 
 export function readAttributionSource(): string {
