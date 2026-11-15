@@ -151,7 +151,7 @@ export const getVitrineFootballMatches = createServerFn({ method: "POST" })
     }
     const featuredMatches = [...matches.values()].filter((m) =>
       m.leagueId !== "international-friendly" ||
-      !/\\bU\\s?-?(?:1[5-9]|2[0-3])\\b|feminino|women|\\(w\\)/i.test(m.home + " " + m.away));
+      !/\bU\s?-?(?:1[5-9]|2[0-3])\b|feminino|women|\(w\)/i.test(m.home + " " + m.away));
     return {
       matches: featuredMatches.sort((a, b) => {
         const aLeague = leagues.findIndex((l) => l.id === a.leagueId);
