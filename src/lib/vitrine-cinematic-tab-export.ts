@@ -102,6 +102,9 @@ export async function renderAuthorizedTabMp4(
       source.addEventListener("error",()=>{clearTimeout(timer);reject(new Error("Erro ao acessar os quadros da aba."));},{once:true});
     });
     await source.play();
+    if(!frameElement||!getCropForIframe(source,frameElement)){
+      throw new Error("A prévia do vídeo precisa estar visível na aba compartilhada. Volte à Vitrine Vídeo e tente novamente.");
+    }
     const mime=supportedMp4Mime(includeAudio);
     if(!mime)throw new Error("MP4 não suportado neste navegador.");
 
@@ -132,6 +135,14 @@ export async function renderAuthorizedTabMp4(
       });
     });
 
+    // Detect a stalled or blocked preview rather than exporting a static
+    // YouTube thumbnail as if it were a working 60-second movie.
+    const motionCanvas=document.createElement("canvas");
+    motionCanvas.width=48;motionCanvas.height=27;
+    const motionCtx=motionCanvas.getContext("2d",{willReadFrequently:true});
+    let previousPixels:Uint8ClampedArray|null=null;
+    let motionSamples=0;
+    let lastMotionSample=-1;
     const started=performance.now();
     const end=()=>{
       if(stopped)return;
@@ -148,7 +159,31 @@ export async function renderAuthorizedTabMp4(
       // Screen permission captures a tab, not the iframe's pixel data. Read
       // only the browser-authorized MediaStream and crop its visible region.
       const crop=frameElement?getCropForIframe(source!,frameElement):null;
+      if(!crop){end();return;}
+      // Only the browser-authorized visible video rectangle is drawn.
       renderCinematic(ctx,{...artwork,video:source,videoCrop:crop});
+      const wholeSecond=Math.floor(elapsed);
+      if(motionCtx&&wholeSecond>lastMotionSample){
+        lastMotionSample=wholeSecond;
+        try{
+          motionCtx.drawImage(source!,crop.sx,crop.sy,crop.sw,crop.sh,0,0,48,27);
+          const current=motionCtx.getImageData(0,0,48,27).data;
+          if(previousPixels){
+            let difference=0;
+            for(let p=0;p<current.length;p+=4){
+              difference+=Math.abs(current[p]-previousPixels[p])+
+                Math.abs(current[p+1]-previousPixels[p+1])+
+                Math.abs(current[p+2]-previousPixels[p+2]);
+            }
+            if(difference/(48*27*3)>2.5)motionSamples++;
+          }
+          previousPixels=new Uint8ClampedArray(current);
+        }catch{
+          // Protected content may render a black frame; refuse to claim a
+          // usable export if it cannot even be inspected locally.
+          end();return;
+        }
+      }
       progress({
         seconds:Math.min(seconds,elapsed),
         total:seconds,
@@ -166,7 +201,9 @@ export async function renderAuthorizedTabMp4(
     const blob=await finished;
     const elapsed=(performance.now()-started)/1000;
     if(manuallyStopped||elapsed<seconds-1)
-      throw new Error("A captura terminou antes do trecho selecionado. Mantenha a aba compartilhada até terminar o processamento.");
+      throw new Error("A aba deixou de compartilhar o vídeo antes do término. Mantenha a prévia visível até o MP4 ficar pronto.");
+    if(motionSamples<2)
+      throw new Error("O vídeo não apresentou movimento suficiente: verifique se ele está reproduzindo e se permite incorporação antes de gerar MP4.");
     progress({seconds,total:seconds,percent:100,stage:"MP4 pronto"});
     return blob;
   }finally{
