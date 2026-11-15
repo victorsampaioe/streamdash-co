@@ -75,7 +75,7 @@ export const getCinematicBrands=createServerFn({method:"GET"})
       upsert(item.owner_id,{name:item.brand_name,logo_url:item.logo_url,whatsapp:item.whatsapp,color:item.primary_color});
     const me=profile.data as {full_name?:string;whatsapp?:string;phone?:string}|null;
     if(!byOwner.has(context.userId))upsert(context.userId,{
-      name:me?.full_name||"Stream Monitor",
+      name:me?.full_name||"Minha Revenda",
       whatsapp:me?.whatsapp||me?.phone||"",
     });
     return {currentOwner:context.userId,brands:[...byOwner.values()]
