@@ -266,7 +266,7 @@ export const getPaymentStatus = createServerFn({ method: "GET" })
   .handler(async ({ data, context }) => {
     const { data: row } = await context.supabase
       .from("payments")
-      .select("id, status, paid_at, plan, provider_payment_id")
+      .select("id, status, paid_at, plan, provider_payment_id, amount_cents, currency")
       .eq("id", data.paymentId)
       .maybeSingle();
     if (!row) return row;
