@@ -103,7 +103,8 @@ async function trackConversion(
   durable: boolean,
 ) {
   if (!hostAllowed() || conversionsInFlight.has(key)) return;
-  const store = durable ? window.localStorage : window.sessionStorage;
+  let store: Storage | null = null;
+  try { store = durable ? window.localStorage : window.sessionStorage; } catch { /* private browser */ }
   try {
     if (store?.getItem(key) === "1") return;
   } catch {
