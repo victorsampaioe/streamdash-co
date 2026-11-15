@@ -5,7 +5,7 @@ import {useServerFn} from "@tanstack/react-start";
 import {toast} from "sonner";
 import {
   Film,Clapperboard,Search,Download,Upload,RefreshCw,Play,Pause,
-  ImageIcon,ShieldCheck,Clock3,AlertTriangle,CheckCircle2,Palette,Music2
+  ImageIcon,ShieldCheck,Clock3,AlertTriangle,CheckCircle2,Palette,Music2,Share2
 } from "lucide-react";
 import {Button} from "@/components/ui/button";
 import {Input} from "@/components/ui/input";
@@ -102,6 +102,7 @@ export function CinematicStudio({mode}:{mode:CinematicMode}){
   const [exporting,setExporting]=useState(false);
   const [renderProgress,setRenderProgress]=useState({percent:0,stage:"",seconds:0,total:15});
   const [readyMp4,setReadyMp4]=useState("");
+  const [readyMp4Blob,setReadyMp4Blob]=useState<Blob|null>(null);
   const [readyMp4Bytes,setReadyMp4Bytes]=useState(0);
   const [dailyLimit,setDailyLimit]=useState(5);
   const [brandDailyLimit,setBrandDailyLimit]=useState(5);
@@ -209,6 +210,7 @@ export function CinematicStudio({mode}:{mode:CinematicMode}){
   },[videoFile,activeVideoLink]);
   useEffect(()=>{
     setReadyMp4("");
+    setReadyMp4Blob(null);
     setReadyMp4Bytes(0);
   },[movie?.tmdb_id,format,clipSeconds,clipStart,audio,mp4Preset,videoUrl,description,color,lighting,label,logoPosition,posterVisible,brand.name,brand.whatsapp,logoSource]);
 
@@ -333,7 +335,7 @@ export function CinematicStudio({mode}:{mode:CinematicMode}){
       );
       const output=renderDimensions(options,mp4Preset);
       const nextUrl=URL.createObjectURL(blob);
-      setReadyMp4(nextUrl);setReadyMp4Bytes(blob.size);
+      setReadyMp4(nextUrl);setReadyMp4Blob(blob);setReadyMp4Bytes(blob.size);
       downloadFile(blob,slug(movie.title)+"-"+(mp4Preset==="whatsapp"?"WhatsApp":"Alta") +"-"+clipSeconds+"s-"+output.width+"x"+output.height+".mp4");
       void logVideoRender(requestId,"completed",blob.size,null);
       if(mp4Preset==="whatsapp"&&blob.size>WHATSAPP_VIDEO_MAX_BYTES)
@@ -347,6 +349,21 @@ export function CinematicStudio({mode}:{mode:CinematicMode}){
       temp.pause();temp.removeAttribute("src");temp.load();temp.remove();
       exportCanvas.width=0;exportCanvas.height=0;
       busyRef.current=false;setRendering(false);
+    }
+  }
+  async function shareMp4(){
+    if(!readyMp4Blob){toast.error("Gere o vídeo antes de compartilhar.");return;}
+    const filename=slug(movie?.title||"vitrine")+"-Vitrine-WhatsApp.mp4";
+    const file=new File([readyMp4Blob],filename,{type:"video/mp4"});
+    if(!navigator.share||!navigator.canShare?.({files:[file]})){
+      toast.info("Este navegador não compartilha MP4 diretamente. Baixe o arquivo e envie no WhatsApp.");
+      return;
+    }
+    try{
+      await navigator.share({files:[file],title:movie?.title||"Vitrine Vídeo"});
+    }catch(error){
+      if(error instanceof DOMException&&error.name==="AbortError")return;
+      toast.error("Não foi possível abrir o compartilhamento. Use o botão Baixar novamente.");
     }
   }
   function uploadLogo(file?:File){
@@ -724,10 +741,22 @@ export function CinematicStudio({mode}:{mode:CinematicMode}){
             {mode==="video"&&readyMp4&&<div className="space-y-2 rounded-xl border border-emerald-500/20 bg-emerald-500/10 p-3">
               <div className="flex items-center gap-2 text-sm font-semibold text-emerald-200"><CheckCircle2 size={17}/> MP4 criado · {(readyMp4Bytes/1024/1024).toFixed(1)} MB</div>
               <video controls playsInline src={readyMp4} className="aspect-[4/5] max-h-[420px] w-full rounded-lg bg-black object-contain"/>
-              <a href={readyMp4} download={slug(movie?.title||"vitrine")+"-vitrine.mp4"}
-                className="inline-flex items-center gap-2 rounded-lg border border-emerald-400/20 px-4 py-2 text-sm text-white hover:bg-emerald-500/10">
-                <Download size={17}/> Baixar novamente
-              </a>
+              <div className="flex flex-wrap gap-2">
+                <a href={readyMp4} download={slug(movie?.title||"vitrine")+"-vitrine.mp4"}
+                  className="inline-flex items-center gap-2 rounded-lg border border-emerald-400/20 px-4 py-2 text-sm text-white hover:bg-emerald-500/10">
+                  <Download size={17}/> Baixar MP4
+                </a>
+                <Button type="button" variant="outline" className="border-green-500/40 bg-green-500/10 text-green-200"
+                  onClick={()=>void shareMp4()}>
+                  <Share2 size={17} className="mr-2"/> Compartilhar no celular
+                </Button>
+              </div>
+              {readyMp4Bytes>WHATSAPP_VIDEO_MAX_BYTES&&(
+                <p className="text-xs text-amber-200">
+                  Este arquivo ultrapassa 16 MB, o limite de vídeo da API WhatsApp Business.
+                  Tente o modo WhatsApp e reduza a duração.
+                </p>
+              )}
             </div>}
             <div className="flex flex-wrap items-center gap-2 text-[11px] text-slate-400">
               <ShieldCheck size={14} className="text-sky-300"/> Imagens oficiais somente do título selecionado
