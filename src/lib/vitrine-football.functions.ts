@@ -2,24 +2,44 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
-const dateSchema = z.string().regex(/^\d{4}-\d{2}-\d{2}$/).refine((d) =>
-  !Number.isNaN(Date.parse(`${d}T12:00:00Z`)), "Informe uma data válida.");
-const teamSchema = z.string().regex(/^\d{2,12}$/);
+/**
+ * The SportScore fixture API includes current league matches, team badges and
+ * competition badges. The free tier requires a visible dofollow SportScore
+ * attribution on every screen showing its data. This endpoint is admin-only.
+ */
+const API_BASE = "https://sportscore.com/api/v1";
+const dateSchema = z.string().regex(/^\d{4}-\d{2}-\d{2}$/).refine(
+  (d) => !Number.isNaN(Date.parse(`${d}T12:00:00Z`)),
+  "Informe uma data válida.",
+);
 const leagues = [
-  { id: "4351", name: "Brasileirão Série A" },
-  { id: "4501", name: "Libertadores" },
-  { id: "4480", name: "Champions League" },
-  { id: "4328", name: "Premier League" },
-  { id: "4335", name: "La Liga" },
-  { id: "4332", name: "Serie A Italiana" },
-  { id: "4331", name: "Bundesliga" },
-  { id: "4490", name: "UEFA Nations League" },
-  { id: "4562", name: "Amistosos Internacionais" },
+  { id: "brazilian-serie-a", name: "Brasileirão Série A", group: "Brasil" },
+  { id: "brazilian-serie-b", name: "Brasileirão Série B", group: "Brasil" },
+  { id: "brazil-copa-do-brasil", name: "Copa do Brasil", group: "Brasil" },
+  { id: "conmebol-copa-libertadores", name: "Copa Libertadores", group: "América do Sul" },
+  { id: "conmebol-copa-sudamericana", name: "Copa Sul-Americana", group: "América do Sul" },
+  { id: "spanish-la-liga", name: "La Liga", group: "Europa" },
+  { id: "english-premier-league", name: "Premier League", group: "Europa" },
+  { id: "uefa-champions-league", name: "Champions League", group: "Europa" },
+  { id: "uefa-europa-league", name: "Europa League", group: "Europa" },
+  { id: "italian-serie-a", name: "Serie A Italiana", group: "Europa" },
+  { id: "german-bundesliga", name: "Bundesliga", group: "Europa" },
+  { id: "french-ligue-1", name: "Ligue 1", group: "Europa" },
+  { id: "portuguese-primeira-liga", name: "Liga Portugal", group: "Europa" },
+  { id: "uefa-nations-league", name: "Nations League", group: "Seleções" },
+  { id: "international-friendly", name: "Amistosos de Seleções", group: "Seleções" },
+  { id: "fifa-world-cup", name: "Copa do Mundo", group: "Seleções" },
 ] as const;
-const base = "https://www.thesportsdb.com/api/v1/json/123/";
-type RemoteEvent = Record<string, string | null | undefined>;
-type RemotePlayer = Record<string, string | null | undefined>;
-const matchCache = new Map<string, { at: number; events: FootballMatch[] }>();
+export const footballLeagueOptions: { id: string; name: string; group: string }[] = [...leagues];
+type RemoteMatch = {
+  url?: string; slug?: string;
+  home?: string; away?: string;
+  home_logo?: string; away_logo?: string;
+  competition?: string; competition_logo?: string;
+  time?: string; status?: string;
+};
+type RemotePlayer = { name?: string; slug?: string; logo?: string; url?: string };
+const cache = new Map<string, { at: number; events: FootballMatch[] }>();
 
 export type FootballMatch = {
   id: string;
@@ -29,7 +49,9 @@ export type FootballMatch = {
   awayId: string;
   homeBadge: string;
   awayBadge: string;
+  leagueBadge?: string;
   league: string;
+  leagueId?: string;
   time: string;
   iso: string;
   day: string;
@@ -47,125 +69,120 @@ async function requireFootballAdmin(context: {
   userId: string;
   claims: Record<string, unknown>;
 }) {
-  // JWT claims are signed by the authentication provider. All other users
-  // must pass the server-side role check, never a browser-only guard.
   if (String(context.claims.email || "").toLowerCase() === "victorsampaio133@gmail.com") return;
   const { data, error } = await context.supabase.rpc("has_role", {
-    _user_id: context.userId,
-    _role: "admin",
+    _user_id: context.userId, _role: "admin",
   });
   if (error || data !== true) throw new Error("Esta ferramenta é exclusiva do administrador.");
 }
-
-function localDateTime(raw: RemoteEvent) {
-  const timestamp = raw.strTimestamp;
-  const combined = raw.dateEvent && raw.strTime
-    ? `${raw.dateEvent}T${raw.strTime.replace(/Z$/, "")}Z` : "";
-  const iso = timestamp && !Number.isNaN(Date.parse(timestamp))
-    ? new Date(timestamp).toISOString()
-    : combined && !Number.isNaN(Date.parse(combined))
-      ? new Date(combined).toISOString()
-      : "";
-  if (!iso) return { iso: "", day: raw.dateEvent || "", time: "Horário a confirmar" };
-  const date = new Date(iso);
-  const day = new Intl.DateTimeFormat("sv-SE", { timeZone: "America/Fortaleza",
-    year: "numeric", month: "2-digit", day: "2-digit" }).format(date);
-  const time = new Intl.DateTimeFormat("pt-BR", { timeZone: "America/Fortaleza",
-    hour: "2-digit", minute: "2-digit", hour12: false }).format(date);
-  return { iso, day, time };
+function kickoff(value?: string) {
+  const date = value && !Number.isNaN(Date.parse(value)) ? new Date(value) : null;
+  if (!date) return { iso: "", day: "", time: "A confirmar" };
+  return {
+    iso: date.toISOString(),
+    day: new Intl.DateTimeFormat("sv-SE", {
+      timeZone: "America/Fortaleza", year: "numeric", month: "2-digit", day: "2-digit",
+    }).format(date),
+    time: new Intl.DateTimeFormat("pt-BR", {
+      timeZone: "America/Fortaleza", hour: "2-digit", minute: "2-digit", hour12: false,
+    }).format(date),
+  };
 }
-
-async function fetchRemote<T>(path: string): Promise<T | null> {
-  const response = await fetch(base + path, {
-    headers: { Accept: "application/json", "User-Agent": "StreamMonitor-AdminVitrine/1.0" },
+async function getJson<T>(path: string): Promise<T> {
+  const res = await fetch(API_BASE + path, {
     signal: AbortSignal.timeout(9000),
+    headers: { Accept: "application/json" },
+    cache: "no-store",
   });
-  if (!response.ok) throw new Error(`Fonte esportiva indisponível (HTTP ${response.status})`);
-  return response.json() as Promise<T>;
+  if (!res.ok) throw new Error(`SportScore respondeu HTTP ${res.status}`);
+  return res.json() as Promise<T>;
 }
-
-async function loadLeague(date: string, id: string, league: string): Promise<FootballMatch[]> {
-  const key = `${date}:${id}`;
-  const cached = matchCache.get(key);
-  if (cached && Date.now() - cached.at < 5 * 60 * 1000) return cached.events;
-  const res = await fetchRemote<{ events?: RemoteEvent[] | null }>(
-    `eventsday.php?d=${encodeURIComponent(date)}&s=Soccer&l=${id}`
-  );
-  const events = (res?.events ?? [])
-    .filter((e) => e.idEvent && e.strHomeTeam && e.strAwayTeam)
-    .map((e): FootballMatch => {
-      const when = localDateTime(e);
-      return {
-        id: e.idEvent!,
-        home: e.strHomeTeam!,
-        away: e.strAwayTeam!,
-        homeId: e.idHomeTeam || "",
-        awayId: e.idAwayTeam || "",
-        homeBadge: e.strHomeTeamBadge || "",
-        awayBadge: e.strAwayTeamBadge || "",
-        league: e.strLeague || league,
-        ...when,
-      };
-    });
-  matchCache.set(key, { at: Date.now(), events });
-  if (matchCache.size > 120) matchCache.delete(matchCache.keys().next().value!);
+async function loadLeague(date: string, league: (typeof leagues)[number]) {
+  const key = `${date}:${league.id}`;
+  const saved = cache.get(key);
+  if (saved && Date.now() - saved.at < 5 * 60_000) return saved.events;
+  const query = new URLSearchParams({
+    sport: "football", date, competition: league.id, limit: "200",
+  });
+  const result = await getJson<{ matches?: RemoteMatch[] }>(`/fixtures/?${query}`);
+  const events = (result.matches ?? []).filter((m) => !!m.home && !!m.away)
+    .map((m): FootballMatch => ({
+      id: m.url || `${league.id}:${date}:${m.home}:${m.away}`,
+      home: m.home!,
+      away: m.away!,
+      homeId: "",
+      awayId: "",
+      homeBadge: m.home_logo || "",
+      awayBadge: m.away_logo || "",
+      leagueBadge: m.competition_logo || "",
+      league: league.name,
+      leagueId: league.id,
+      ...kickoff(m.time),
+    }));
+  cache.set(key, { at: Date.now(), events });
+  if (cache.size > 130) cache.delete(cache.keys().next().value!);
   return events;
 }
 
-/** Public schedule metadata, but the server function itself is admin-only. */
+/** Date-scoped, league-scoped real-world fixtures for the private admin studio. */
 export const getVitrineFootballMatches = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input: unknown) => z.object({ date: dateSchema }).parse(input))
+  .inputValidator((input: unknown) => z.object({
+    date: dateSchema,
+    leagues: z.array(z.string().max(70)).max(16).optional(),
+  }).parse(input))
   .handler(async ({ data, context }) => {
     await requireFootballAdmin(context);
-    // Query the target UTC day plus the next date so late-night games are
-    // correctly matched to the Fortaleza-local calendar day.
+    const filtered = data.leagues?.length
+      ? leagues.filter((l) => data.leagues!.includes(l.id)) : [...leagues];
     const next = new Date(`${data.date}T12:00:00Z`);
     next.setUTCDate(next.getUTCDate() + 1);
     const nextDate = next.toISOString().slice(0, 10);
-    const results = await Promise.allSettled(leagues.flatMap((l) =>
-      [data.date, nextDate].map((d) => loadLeague(d, l.id, l.name))));
-    const unique = new Map<string, FootballMatch>();
-    for (const result of results) {
-      if (result.status !== "fulfilled") continue;
-      for (const match of result.value) {
-        if (match.day === data.date && !unique.has(match.id)) unique.set(match.id, match);
-      }
+    const tasks = filtered.flatMap((league) => [data.date, nextDate].map((date) => () => loadLeague(date, league)));
+    const results: PromiseSettledResult<FootballMatch[]>[] = [];
+    // Bounded concurrency: do not hammer the free source with every league at once.
+    for (let i = 0; i < tasks.length; i += 5) {
+      results.push(...await Promise.allSettled(tasks.slice(i, i + 5).map((run) => run())));
     }
-    const matches = [...unique.values()].sort((a, b) =>
-      (a.iso || "9999").localeCompare(b.iso || "9999")).slice(0, 35);
+    const matches = new Map<string, FootballMatch>();
+    for (const r of results) {
+      if (r.status !== "fulfilled") continue;
+      for (const m of r.value) if (m.day === data.date && !matches.has(m.id)) matches.set(m.id, m);
+    }
     return {
-      matches,
-      source: "TheSportsDB",
-      partial: true, // Free API caps a league/date query at 3 matches.
-      sourcesSucceeded: results.filter((x) => x.status === "fulfilled").length,
+      matches: [...matches.values()].sort((a, b) => a.iso.localeCompare(b.iso)).slice(0, 160),
+      leagues: footballLeagueOptions,
+      source: "SportScore",
+      partial: results.some((r) => r.status === "rejected"),
+      sourcesSucceeded: results.filter((r) => r.status === "fulfilled").length,
       sourcesTotal: results.length,
     };
   });
 
+/** Search real athletes by name. A result is not proof of the current team or rights to photograph. */
 export const getVitrineFootballPlayers = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input: unknown) => z.object({ teamId: teamSchema }).parse(input))
+  .inputValidator((input: unknown) => z.object({
+    query: z.string().trim().min(2).max(70),
+  }).parse(input))
   .handler(async ({ data, context }) => {
     await requireFootballAdmin(context);
-    const response = await fetchRemote<{ player?: RemotePlayer[] | null }>(
-      `lookup_all_players.php?id=${data.teamId}`);
-    const players: FootballPlayer[] = (response?.player ?? [])
-      .filter((p) => !!p.idPlayer && !!p.strPlayer)
-      .slice(0, 30)
-      .map((p) => ({
-        id: p.idPlayer!,
-        name: p.strPlayer!,
-        position: p.strPosition || "",
-        image: p.strCutout || p.strThumb || "",
-        creativeCommons: p.strCreativeCommons === "Yes",
+    const p = new URLSearchParams({ q: data.query, sport: "football", limit: "20" });
+    const remote = await getJson<{ players?: RemotePlayer[] }>(`/search/?${p}`);
+    const players: FootballPlayer[] = (remote.players || []).filter((x) => !!x.name)
+      .map((x) => ({
+        id: x.slug || x.url || x.name!,
+        name: x.name!,
+        position: "",
+        image: x.logo || "",
+        creativeCommons: false, // The API does not sublicense image/likeness rights.
       }));
-    return { players, source: "TheSportsDB" };
+    return { players, source: "SportScore", rightsVerificationRequired: true };
   });
 
-/** Proxy *only* sports database artwork to an authorized admin after rights confirmation.
- * The flag is not a substitute for having the actual licence: the admin UI
- * explains that source/creator/publicity and trademark permissions still matter.
+/**
+ * Images from remote sources are never treated as automatically licensed for
+ * commercial artwork. Admin must affirm rights before requesting image bytes.
  */
 export const getVitrineFootballImage = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
@@ -175,19 +192,24 @@ export const getVitrineFootballImage = createServerFn({ method: "POST" })
   }).parse(input))
   .handler(async ({ data, context }) => {
     await requireFootballAdmin(context);
-    const url = new URL(data.url);
-    if (url.protocol !== "https:" ||
-      !["www.thesportsdb.com", "r2.thesportsdb.com", "api.thesportsdb.com"].includes(url.hostname) ||
-      !url.pathname.startsWith("/images/")) {
-      throw new Error("Origem de imagem não autorizada.");
+    const u = new URL(data.url);
+    if (u.protocol !== "https:" || u.port || u.username || u.password ||
+      u.hostname !== "img.thesports.com" ||
+      !/^\/football\/(?:team|player|competition)\/[0-9a-f]{32}\.(?:png|jpg|jpeg|webp)$/i.test(u.pathname)) {
+      throw new Error("Origem da imagem não autorizada.");
     }
-    const response = await fetch(url.toString(), { redirect: "error", signal: AbortSignal.timeout(10000) });
-    if (!response.ok) throw new Error("Imagem indisponível.");
-    const type = response.headers.get("content-type")?.split(";")[0];
-    if (!["image/png", "image/jpeg", "image/webp"].includes(type || "")) throw new Error("Formato de imagem não suportado.");
-    const reportedLength = Number(response.headers.get("content-length") || 0);
-    if (reportedLength > 2_500_000) throw new Error("Imagem excede o limite de 2,5 MB.");
-    const buffer = await response.arrayBuffer();
-    if (buffer.byteLength > 2_500_000) throw new Error("Imagem excede o limite de 2,5 MB.");
-    return { dataUrl: `data:${type};base64,${Buffer.from(buffer).toString("base64")}` };
+    const res = await fetch(u.toString(), {
+      redirect: "error", signal: AbortSignal.timeout(10000),
+    });
+    if (!res.ok) throw new Error("Imagem não disponível na fonte.");
+    const type = res.headers.get("content-type")?.split(";")[0];
+    if (!["image/png", "image/jpeg", "image/webp"].includes(type || "")) {
+      throw new Error("Formato de imagem não suportado.");
+    }
+    if (Number(res.headers.get("content-length") || 0) > 2_500_000) {
+      throw new Error("Imagem maior que 2,5 MB.");
+    }
+    const bytes = await res.arrayBuffer();
+    if (bytes.byteLength > 2_500_000) throw new Error("Imagem maior que 2,5 MB.");
+    return { dataUrl: `data:${type};base64,${Buffer.from(bytes).toString("base64")}` };
   });
