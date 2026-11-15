@@ -303,12 +303,12 @@ export function renderCinematic(ctx:CanvasRenderingContext2D,opt:CinematicOption
   ctx.strokeRect(20,20,w-40,h-40);
   const margin=wide?100:68;
   ctx.textBaseline="alphabetic";
-  // Video-post branding uses the ORIGINAL transparent PNG, prominently
-  // displayed by itself. Never print the reseller's "Minha Revenda" label.
-  const videoPost=opt.mode==="video";
-  const story=videoPost&&h>=1800&&!wide;
-  const logoW=videoPost?(story?322:278):(wide?240:180);
-  const logoH=videoPost?(story?190:146):(wide?104:100);
+  // Logo-only branding for both static Banner and Video: no printed
+  // "Minha Revenda", no Stream Monitor default watermark or name.
+  // Preserve PNG transparency and original proportions in every format.
+  const story=h>=1800&&!wide;
+  const logoW=wide?286:story?322:278;
+  const logoH=wide?128:story?190:146;
   const logoY=story?68:49;
   const logoX=opt.logoPosition==="left"?margin:w-margin-logoW;
   if(opt.logo){
@@ -317,17 +317,6 @@ export function renderCinematic(ctx:CanvasRenderingContext2D,opt:CinematicOption
     ctx.shadowBlur=20;
     contain(ctx,opt.logo,logoX,logoY,logoW,logoH);
     ctx.restore();
-  }else if(!videoPost){
-    ctx.font="800 34px Arial, sans-serif";
-    ctx.fillStyle="#fff";
-    wrap(ctx,opt.brand||"Minha Revenda",logoX,104,wide?370:480,40,2);
-  }
-  if(!videoPost&&opt.logo&&opt.brand){
-    ctx.fillStyle="rgba(255,255,255,.95)";
-    ctx.font="700 26px Arial, sans-serif";
-    ctx.textAlign=opt.logoPosition==="left"?"left":"right";
-    ctx.fillText(opt.brand,opt.logoPosition==="left"?margin:w-margin,184);
-    ctx.textAlign="left";
   }
   const badgeText=opt.label.toUpperCase().slice(0,30);
   ctx.font="900 25px Arial, sans-serif";
@@ -341,7 +330,7 @@ export function renderCinematic(ctx:CanvasRenderingContext2D,opt:CinematicOption
   ctx.fillStyle="#fff";ctx.shadowColor="rgba(0,0,0,.74)";ctx.shadowBlur=26;
   let titleY:number;
   if(opt.mode==="video")titleY=wide?250:h>=1900?420:275;
-  else titleY=wide?h*.53:h*.53;
+  else titleY=wide?h*.53:story?h*.51:h*.53;
   const titleLimit=opt.mode==="video"?2:3;
   const titleWidth=wide?w*.67:opt.mode==="banner"&&opt.posterVisible&&opt.poster?w-margin*2-245:w-margin*2;
   const lastTitle=wrap(ctx,opt.title,margin,titleY,titleWidth,titleFont*1.11,titleLimit);
@@ -383,7 +372,7 @@ export function renderCinematic(ctx:CanvasRenderingContext2D,opt:CinematicOption
     ctx.restore();
     textY=y+vh+(h>=1800?83:62);
   }else{
-    textY=Math.max(wide?h*.76:h*.76,metadataY+54);
+    textY=Math.max(wide?h*.76:story?h*.69:h*.76,metadataY+54);
     if(opt.posterVisible&&opt.poster){
       const pw=wide?235:225,ph=wide?330:322;
       const x=w-margin-pw,y=wide?280:h*.28;
@@ -395,7 +384,7 @@ export function renderCinematic(ctx:CanvasRenderingContext2D,opt:CinematicOption
       ctx.strokeStyle="rgba(255,255,255,.55)";ctx.lineWidth=2;roundRect(ctx,x,y,pw,ph,11);ctx.stroke();
     }
   }
-  const storyPost=opt.mode==="video"&&h>=1800&&!wide;
+  const storyPost=story;
   const footerTop=storyPost?h-325:h-145;
   const contactTop=storyPost?h-292:h-121;
   const preferredFont=storyPost?38:wide?30:28;
