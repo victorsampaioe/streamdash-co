@@ -32,6 +32,7 @@ import { Route as Char91DotwellKnownChar93OauthProtectedResourceRouteImport } fr
 import { Route as AuthenticatedAppRouteImport } from './routes/_authenticated/app'
 import { Route as AuthenticatedVitrineAiRouteImport } from './routes/_authenticated/vitrine-ai'
 import { Route as AuthenticatedVitrineBannerRouteImport } from './routes/_authenticated/vitrine-banner'
+import { Route as AuthenticatedVitrineVideoRouteImport } from './routes/_authenticated/vitrine-video'
 import { Route as AjudaSlugRouteImport } from './routes/ajuda.$slug'
 import { Route as ApiOpenapiDotjsonRouteImport } from './routes/api/openapi[.]json'
 import { Route as ApiOpenapiDotyamlRouteImport } from './routes/api/openapi[.]yaml'
@@ -235,6 +236,12 @@ const AuthenticatedVitrineBannerRoute =
   AuthenticatedVitrineBannerRouteImport.update({
     id: '/vitrine-banner',
     path: '/vitrine-banner',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedVitrineVideoRoute =
+  AuthenticatedVitrineVideoRouteImport.update({
+    id: '/vitrine-video',
+    path: '/vitrine-video',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
 const AjudaSlugRoute = AjudaSlugRouteImport.update({
@@ -736,6 +743,7 @@ export interface FileRoutesByFullPath {
   '/app': typeof AuthenticatedAppRouteWithChildren
   '/vitrine-ai': typeof AuthenticatedVitrineAiRoute
   '/vitrine-banner': typeof AuthenticatedVitrineBannerRoute
+  '/vitrine-video': typeof AuthenticatedVitrineVideoRoute
   '/ajuda/$slug': typeof AjudaSlugRoute
   '/api/openapi.json': typeof ApiOpenapiDotjsonRoute
   '/api/openapi.yaml': typeof ApiOpenapiDotyamlRoute
@@ -846,6 +854,7 @@ export interface FileRoutesByTo {
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   '/vitrine-ai': typeof AuthenticatedVitrineAiRoute
   '/vitrine-banner': typeof AuthenticatedVitrineBannerRoute
+  '/vitrine-video': typeof AuthenticatedVitrineVideoRoute
   '/ajuda/$slug': typeof AjudaSlugRoute
   '/api/openapi.json': typeof ApiOpenapiDotjsonRoute
   '/api/openapi.yaml': typeof ApiOpenapiDotyamlRoute
@@ -959,6 +968,7 @@ export interface FileRoutesById {
   '/_authenticated/app': typeof AuthenticatedAppRouteWithChildren
   '/_authenticated/vitrine-ai': typeof AuthenticatedVitrineAiRoute
   '/_authenticated/vitrine-banner': typeof AuthenticatedVitrineBannerRoute
+  '/_authenticated/vitrine-video': typeof AuthenticatedVitrineVideoRoute
   '/ajuda/$slug': typeof AjudaSlugRoute
   '/api/openapi.json': typeof ApiOpenapiDotjsonRoute
   '/api/openapi.yaml': typeof ApiOpenapiDotyamlRoute
@@ -1072,6 +1082,7 @@ export interface FileRouteTypes {
     | '/app'
     | '/vitrine-ai'
     | '/vitrine-banner'
+    | '/vitrine-video'
     | '/ajuda/$slug'
     | '/api/openapi.json'
     | '/api/openapi.yaml'
@@ -1182,6 +1193,7 @@ export interface FileRouteTypes {
     | '/.well-known/oauth-protected-resource'
     | '/vitrine-ai'
     | '/vitrine-banner'
+    | '/vitrine-video'
     | '/ajuda/$slug'
     | '/api/openapi.json'
     | '/api/openapi.yaml'
@@ -1294,6 +1306,7 @@ export interface FileRouteTypes {
     | '/_authenticated/app'
     | '/_authenticated/vitrine-ai'
     | '/_authenticated/vitrine-banner'
+    | '/_authenticated/vitrine-video'
     | '/ajuda/$slug'
     | '/api/openapi.json'
     | '/api/openapi.yaml'
@@ -1614,6 +1627,13 @@ declare module '@tanstack/react-router' {
       path: '/vitrine-banner'
       fullPath: '/vitrine-banner'
       preLoaderRoute: typeof AuthenticatedVitrineBannerRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/vitrine-video': {
+      id: '/_authenticated/vitrine-video'
+      path: '/vitrine-video'
+      fullPath: '/vitrine-video'
+      preLoaderRoute: typeof AuthenticatedVitrineVideoRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/ajuda/$slug': {
@@ -2328,12 +2348,14 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedAppRoute: typeof AuthenticatedAppRouteWithChildren
   AuthenticatedVitrineAiRoute: typeof AuthenticatedVitrineAiRoute
   AuthenticatedVitrineBannerRoute: typeof AuthenticatedVitrineBannerRoute
+  AuthenticatedVitrineVideoRoute: typeof AuthenticatedVitrineVideoRoute
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedAppRoute: AuthenticatedAppRouteWithChildren,
   AuthenticatedVitrineAiRoute: AuthenticatedVitrineAiRoute,
   AuthenticatedVitrineBannerRoute: AuthenticatedVitrineBannerRoute,
+  AuthenticatedVitrineVideoRoute: AuthenticatedVitrineVideoRoute,
 }
 
 const AuthenticatedRouteRouteWithChildren =
