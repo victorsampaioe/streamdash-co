@@ -125,6 +125,7 @@ function wrap(ctx:CanvasRenderingContext2D,text:string,x:number,y:number,maxWidt
  * All variants use measured text rather than a fixed character count.
  */
 function synopsisSentences(input:string):string[]{
+  const trailingIncomplete=/(?:\.{3,}|…)\s*$/.test(input.trim());
   const text=input
     .replace(/\.{2,}|…/g,".")
     .replace(/\s+/g," ")
@@ -132,11 +133,15 @@ function synopsisSentences(input:string):string[]{
   if(!text)return [];
   // Protect initials in film-character names such as "Wile E. Coyote".
   const protectedText=text.replace(/\b([A-Z])\.\s+(?=[A-Z])/g,"$1\uE000 ");
-  return protectedText
+  const sentences=protectedText
     .split(/(?<=[.!?])\s+(?=[A-ZÀ-Ú])/)
     .map(part=>part.replace(/\uE000/g,".").trim())
     .filter(Boolean)
     .map(part=>/[.!?]$/.test(part)?part:part+".");
+  // The TMDB description may end with a syntactically incomplete "...,"
+  // segment. Prefer the complete preceding sentences, never invent an end.
+  if(trailingIncomplete&&sentences.length>1)sentences.pop();
+  return sentences;
 }
 function measureSynopsisLines(
   ctx:CanvasRenderingContext2D,text:string,maxWidth:number,
