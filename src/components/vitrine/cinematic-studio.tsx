@@ -12,7 +12,7 @@ import {Input} from "@/components/ui/input";
 import {getVitrineTmdbFeed} from "@/lib/vitrine-catalog.functions";
 import {getCinematicTmdbDetail,getCinematicBrands,getCinematicRenderControls,saveCinematicRenderControls,recordCinematicRender,type CinematicBrand} from "@/lib/vitrine-cinematic.functions";
 import {
-  renderCinematic,cinematicFormats,type CinematicOptions,
+  renderCinematic,formatCinematicWhatsApp,cinematicFormats,type CinematicOptions,
   type CinematicFormat,type CinematicMode
 } from "@/lib/vitrine-cinematic-canvas";
 import {renderNativeMp4,supportedMp4Mime} from "@/lib/vitrine-cinematic-mp4";
@@ -427,7 +427,8 @@ export function CinematicStudio({mode}:{mode:CinematicMode}){
                 <Input value={brand.name} maxLength={55} className={inputClass} onChange={e=>setBrandOverrides(v=>({...v,name:e.target.value}))}/>
               </label>
               <label className="space-y-1 text-xs text-slate-300">WhatsApp com DDD
-                <Input value={brand.whatsapp} maxLength={22} className={inputClass} onChange={e=>setBrandOverrides(v=>({...v,whatsapp:e.target.value}))}/>
+                <Input value={formatCinematicWhatsApp(brand.whatsapp)} maxLength={22} className={inputClass} inputMode="tel"
+                  onChange={e=>setBrandOverrides(v=>({...v,whatsapp:e.target.value.replace(/\D/g,"").slice(0,13)}))}/>
               </label>
             </div>
             <label className="block space-y-1 text-xs text-slate-300">Logo em PNG transparente (JPG/WEBP convertidos na prévia)
