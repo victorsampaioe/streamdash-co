@@ -53,6 +53,53 @@ function roundRect(ctx:CanvasRenderingContext2D,x:number,y:number,w:number,h:num
   ctx.beginPath();
   ctx.roundRect(x,y,w,h,Math.min(r,w/2,h/2));
 }
+
+/** Format Brazilian WhatsApp numbers without inventing a country code. */
+export function formatCinematicWhatsApp(raw:string){
+  const input=raw.replace(/\D/g,"");
+  const digits=input.startsWith("55")&&(input.length===12||input.length===13)
+    ?input.slice(2):input;
+  if(digits.length===11)return `(${digits.slice(0,2)}) ${digits.slice(2,7)}-${digits.slice(7)}`;
+  if(digits.length===10)return `(${digits.slice(0,2)}) ${digits.slice(2,6)}-${digits.slice(6)}`;
+  return digits.slice(0,15);
+}
+/** WhatsApp-inspired contact badge, vector rendered directly in PNG and MP4. */
+function drawContactBadge(ctx:CanvasRenderingContext2D,x:number,y:number,text:string,maxW:number,wide:boolean){
+  ctx.save();
+  const size=wide?32:29;
+  ctx.font="800 "+size+"px Arial, Helvetica, sans-serif";
+  let label=text;
+  const padding=27,iconSize=56,gap=15,minimum=210;
+  const allowed=Math.max(minimum,maxW);
+  while(label.length>1&&ctx.measureText(label).width+padding*2+iconSize+gap>allowed){
+    label=label.slice(0,-2).trimEnd()+"…";
+  }
+  const badgeW=Math.min(allowed,Math.max(minimum,ctx.measureText(label).width+padding*2+iconSize+gap));
+  const h=76;
+  ctx.fillStyle="rgba(7,22,28,0.91)";
+  roundRect(ctx,x,y,badgeW,h,24);ctx.fill();
+  ctx.strokeStyle="rgba(57,220,139,0.45)";ctx.lineWidth=2;
+  roundRect(ctx,x+1,y+1,badgeW-2,h-2,23);ctx.stroke();
+  const cx=x+padding+26,cy=y+h/2;
+  // Green speech bubble, with a compact white handset symbol.
+  ctx.fillStyle="#25D366";
+  ctx.beginPath();ctx.arc(cx,cy,25,0,Math.PI*2);ctx.fill();
+  ctx.beginPath();
+  ctx.moveTo(cx-13,cy+17);ctx.lineTo(cx-18,cy+26);ctx.lineTo(cx-4,cy+19);
+  ctx.fill();
+  ctx.fillStyle="#fff";
+  ctx.beginPath();
+  ctx.moveTo(cx-10,cy-13);
+  ctx.bezierCurveTo(cx-16,cy-12,cx-16,cy-1,cx-10,cy+8);
+  ctx.bezierCurveTo(cx-4,cy+17,cx+7,cy+19,cx+12,cy+12);
+  ctx.lineTo(cx+7,cy+5);ctx.lineTo(cx+2,cy+8);
+  ctx.bezierCurveTo(cx-3,cy+5,cx-7,cy+1,cx-8,cy-4);
+  ctx.lineTo(cx-4,cy-8);ctx.closePath();ctx.fill();
+  ctx.textAlign="left";ctx.textBaseline="middle";
+  ctx.fillStyle="#f5fff9";
+  ctx.fillText(label,x+padding+iconSize+gap,y+h/2+1);
+  ctx.restore();
+}
 function wrap(ctx:CanvasRenderingContext2D,text:string,x:number,y:number,maxWidth:number,lineHeight:number,maxLines:number){
   const words=text.replace(/\s+/g," ").trim().split(" ");
   let lines:string[]=[],line="";
@@ -208,15 +255,12 @@ export function renderCinematic(ctx:CanvasRenderingContext2D,opt:CinematicOption
   const available=Math.max(0,h-reserveBottom-textY);
   const lines=Math.max(0,Math.min(4,Math.floor(available/44)));
   if(lines)wrap(ctx,opt.overview||"Sinopse não disponível na TMDB.",margin,textY,w-margin*2,44,lines);
-  const footY=h-78;
-  ctx.fillStyle="rgba(255,255,255,.22)";ctx.fillRect(margin,footY-35,w-margin*2,1);
-  ctx.font="800 "+(wide?31:28)+"px Arial, sans-serif";
-  ctx.fillStyle="#f6f9ff";
-  const whats=opt.whatsapp.replace(/\D/g,"").slice(0,15);
-  const contact=whats?"WhatsApp  "+whats:opt.brand;
-  ctx.fillText(contact,margin,footY);
-  ctx.textAlign="right";ctx.fillStyle="rgba(198,217,244,.78)";
-  ctx.font="700 23px Arial, sans-serif";ctx.fillText("STREAM MONITOR",w-margin,footY);
-  ctx.font="16px Arial, sans-serif";ctx.fillText("Dados e imagens: TMDB",w-margin,footY+30);
-  ctx.textAlign="left";
+  // Clean reseller-only footer: no Stream Monitor or TMDB watermark in
+  // the exported artwork. TMDB attribution remains visible in the editor.
+  const footerTop=h-145;
+  ctx.fillStyle="rgba(255,255,255,.21)";
+  ctx.fillRect(margin,footerTop,w-margin*2,1);
+  const formattedPhone=formatCinematicWhatsApp(opt.whatsapp);
+  const contact=formattedPhone||opt.brand||"Contato da revenda";
+  drawContactBadge(ctx,margin,h-121,contact,w-margin*2,wide);
 }
