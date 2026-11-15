@@ -132,7 +132,7 @@ export const Route=createFileRoute("/api/public/cron/billing")({
           const {withCycleLock}=await import("@/lib/job-lock.server");
           const {enqueueDailyTelegramBillingReminders}=await import("@/lib/telegram-billing.server");
           const result=await withCycleLock("cron-billing-notices",180,()=>enqueueDailyTelegramBillingReminders());
-          if("skipped" in result)return Response.json({ok:true,...result});
+          if("lock" in result)return Response.json({ok:true,...result});
           // The standard monitor cron also drains this durable outbox. Run a
           // small batch here so initial delivery does not depend on its health.
           let delivery:unknown=null;
