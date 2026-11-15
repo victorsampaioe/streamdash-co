@@ -81,6 +81,7 @@ import { Route as AuthenticatedAppAdminAndroidPlayRouteImport } from './routes/_
 import { Route as AuthenticatedAppAdminStreamPlayVersionsRouteImport } from './routes/_authenticated/app.admin.stream-play-versions'
 import { Route as AuthenticatedAppAdminTelegramGuardRouteImport } from './routes/_authenticated/app.admin.telegram-guard'
 import { Route as AuthenticatedAppAdminCoreLogsRouteImport } from './routes/_authenticated/app.admin_.core-logs'
+import { Route as AuthenticatedAppAdminVitrineFutebolRouteImport } from './routes/_authenticated/app.admin_.vitrine-futebol'
 import { Route as AuthenticatedAppDiagnosticoIndexRouteImport } from './routes/_authenticated/app.diagnostico.index'
 import { Route as AuthenticatedAppInteligenciaIndexRouteImport } from './routes/_authenticated/app.inteligencia.index'
 import { Route as AuthenticatedAppServersIndexRouteImport } from './routes/_authenticated/app.servers.index'
@@ -502,6 +503,12 @@ const AuthenticatedAppAdminCoreLogsRoute =
     path: '/admin/core-logs',
     getParentRoute: () => AuthenticatedAppRoute,
   } as any)
+const AuthenticatedAppAdminVitrineFutebolRoute =
+  AuthenticatedAppAdminVitrineFutebolRouteImport.update({
+    id: '/admin_/vitrine-futebol',
+    path: '/admin/vitrine-futebol',
+    getParentRoute: () => AuthenticatedAppRoute,
+  } as any)
 const AuthenticatedAppDiagnosticoIndexRoute =
   AuthenticatedAppDiagnosticoIndexRouteImport.update({
     id: '/diagnostico/',
@@ -778,6 +785,7 @@ export interface FileRoutesByFullPath {
   '/app/admin/stream-play-versions': typeof AuthenticatedAppAdminStreamPlayVersionsRoute
   '/app/admin/telegram-guard': typeof AuthenticatedAppAdminTelegramGuardRoute
   '/app/admin/core-logs': typeof AuthenticatedAppAdminCoreLogsRoute
+  '/app/admin/vitrine-futebol': typeof AuthenticatedAppAdminVitrineFutebolRoute
   '/app/servers/$id': typeof AuthenticatedAppServersIdRoute
   '/app/servers/new': typeof AuthenticatedAppServersNewRoute
   '/api/public/android/associate': typeof ApiPublicAndroidAssociateRoute
@@ -887,6 +895,7 @@ export interface FileRoutesByTo {
   '/app/admin/stream-play-versions': typeof AuthenticatedAppAdminStreamPlayVersionsRoute
   '/app/admin/telegram-guard': typeof AuthenticatedAppAdminTelegramGuardRoute
   '/app/admin/core-logs': typeof AuthenticatedAppAdminCoreLogsRoute
+  '/app/admin/vitrine-futebol': typeof AuthenticatedAppAdminVitrineFutebolRoute
   '/app/servers/$id': typeof AuthenticatedAppServersIdRoute
   '/app/servers/new': typeof AuthenticatedAppServersNewRoute
   '/api/public/android/associate': typeof ApiPublicAndroidAssociateRoute
@@ -999,6 +1008,7 @@ export interface FileRoutesById {
   '/_authenticated/app/admin/stream-play-versions': typeof AuthenticatedAppAdminStreamPlayVersionsRoute
   '/_authenticated/app/admin/telegram-guard': typeof AuthenticatedAppAdminTelegramGuardRoute
   '/_authenticated/app/admin_/core-logs': typeof AuthenticatedAppAdminCoreLogsRoute
+  '/_authenticated/app/admin_/vitrine-futebol': typeof AuthenticatedAppAdminVitrineFutebolRoute
   '/_authenticated/app/servers/$id': typeof AuthenticatedAppServersIdRoute
   '/_authenticated/app/servers/new': typeof AuthenticatedAppServersNewRoute
   '/api/public/android/associate': typeof ApiPublicAndroidAssociateRoute
@@ -1111,6 +1121,7 @@ export interface FileRouteTypes {
     | '/app/admin/stream-play-versions'
     | '/app/admin/telegram-guard'
     | '/app/admin/core-logs'
+ '/app/admin/vitrine-futebol'
     | '/app/servers/$id'
     | '/app/servers/new'
     | '/api/public/android/associate'
@@ -1220,6 +1231,7 @@ export interface FileRouteTypes {
     | '/app/admin/stream-play-versions'
     | '/app/admin/telegram-guard'
     | '/app/admin/core-logs'
+ '/app/admin/vitrine-futebol'
     | '/app/servers/$id'
     | '/app/servers/new'
     | '/api/public/android/associate'
@@ -1331,6 +1343,7 @@ export interface FileRouteTypes {
     | '/_authenticated/app/admin/stream-play-versions'
     | '/_authenticated/app/admin/telegram-guard'
     | '/_authenticated/app/admin_/core-logs'
+ '/_authenticated/app/admin_/vitrine-futebol'
     | '/_authenticated/app/servers/$id'
     | '/_authenticated/app/servers/new'
     | '/api/public/android/associate'
@@ -1941,9 +1954,18 @@ declare module '@tanstack/react-router' {
     }
     '/_authenticated/app/admin_/core-logs': {
       id: '/_authenticated/app/admin_/core-logs'
+ '/_authenticated/app/admin_/vitrine-futebol'
       path: '/admin/core-logs'
       fullPath: '/app/admin/core-logs'
+ '/app/admin/vitrine-futebol'
       preLoaderRoute: typeof AuthenticatedAppAdminCoreLogsRouteImport
+      parentRoute: typeof AuthenticatedAppRoute
+    }
+    '/_authenticated/app/admin_/vitrine-futebol': {
+      id: '/_authenticated/app/admin_/vitrine-futebol'
+      path: '/admin/vitrine-futebol'
+      fullPath: '/app/admin/vitrine-futebol'
+      preLoaderRoute: typeof AuthenticatedAppAdminVitrineFutebolRouteImport
       parentRoute: typeof AuthenticatedAppRoute
     }
     '/_authenticated/app/diagnostico/': {
@@ -2253,6 +2275,7 @@ interface AuthenticatedAppRouteChildren {
   AuthenticatedAppSubscriptionRoute: typeof AuthenticatedAppSubscriptionRoute
   AuthenticatedAppIndexRoute: typeof AuthenticatedAppIndexRoute
   AuthenticatedAppAdminCoreLogsRoute: typeof AuthenticatedAppAdminCoreLogsRoute
+  AuthenticatedAppAdminVitrineFutebolRoute: typeof AuthenticatedAppAdminVitrineFutebolRoute
   AuthenticatedAppServersIdRoute: typeof AuthenticatedAppServersIdRoute
   AuthenticatedAppServersNewRoute: typeof AuthenticatedAppServersNewRoute
   AuthenticatedAppDiagnosticoIndexRoute: typeof AuthenticatedAppDiagnosticoIndexRoute
@@ -2287,6 +2310,7 @@ const AuthenticatedAppRouteChildren: AuthenticatedAppRouteChildren = {
   AuthenticatedAppSubscriptionRoute: AuthenticatedAppSubscriptionRoute,
   AuthenticatedAppIndexRoute: AuthenticatedAppIndexRoute,
   AuthenticatedAppAdminCoreLogsRoute: AuthenticatedAppAdminCoreLogsRoute,
+  AuthenticatedAppAdminVitrineFutebolRoute: AuthenticatedAppAdminVitrineFutebolRoute,
   AuthenticatedAppServersIdRoute: AuthenticatedAppServersIdRoute,
   AuthenticatedAppServersNewRoute: AuthenticatedAppServersNewRoute,
   AuthenticatedAppDiagnosticoIndexRoute: AuthenticatedAppDiagnosticoIndexRoute,
