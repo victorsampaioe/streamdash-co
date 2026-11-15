@@ -124,8 +124,8 @@ export function cinematicVideoFrameRect(
 ){
   const w=opt.width,h=opt.height,wide=w>h;
   const margin=wide?100:68;
-  const fontSize=wide?82:h>=1900?74:58;
-  const titleY=wide?250:h>=1900?355:255;
+  const fontSize=wide?82:h>=1900?78:60;
+  const titleY=wide?250:h>=1900?420:275;
   const maxWidth=wide?w*.67:w-margin*2;
   ctx.save();ctx.font="900 "+fontSize+"px Arial, Helvetica, sans-serif";
   let lines:string[]=[],line="";
@@ -137,7 +137,7 @@ export function cinematicVideoFrameRect(
   ctx.restore();
   const count=Math.max(1,Math.min(2,lines.length));
   const metadataY=titleY+count*fontSize*1.11+16;
-  const x=margin,y=Math.max(wide?330:h>=1900?560:408,metadataY+48);
+  const x=margin,y=Math.max(wide?330:h>=1900?720:430,metadataY+(h>=1900?70:45));
   const width=w-margin*2,height=Math.round(width*9/16);
   return {x,y,width,height};
 }
@@ -196,21 +196,30 @@ export function renderCinematic(ctx:CanvasRenderingContext2D,opt:CinematicOption
   ctx.strokeRect(20,20,w-40,h-40);
   const margin=wide?100:68;
   ctx.textBaseline="alphabetic";
-  const logoW=wide?240:180,logoH=wide?104:100;
+  // Video-post branding uses the ORIGINAL transparent PNG, prominently
+  // displayed by itself. Never print the reseller's "Minha Revenda" label.
+  const videoPost=opt.mode==="video";
+  const story=videoPost&&h>=1800&&!wide;
+  const logoW=videoPost?(story?322:278):(wide?240:180);
+  const logoH=videoPost?(story?190:146):(wide?104:100);
+  const logoY=story?68:49;
   const logoX=opt.logoPosition==="left"?margin:w-margin-logoW;
-  const brandTextX=opt.logoPosition==="left"?logoX:margin;
   if(opt.logo){
-    ctx.save();ctx.shadowColor="rgba(0,0,0,.55)";ctx.shadowBlur=18;
-    contain(ctx,opt.logo,logoX,55,logoW,logoH);ctx.restore();
-  }else{
-    ctx.font="800 34px Arial, sans-serif";ctx.fillStyle="#fff";
-    wrap(ctx,opt.brand||"Minha Revenda",brandTextX,104,wide?370:480,40,2);
+    ctx.save();
+    ctx.shadowColor="rgba(0,0,0,.45)";
+    ctx.shadowBlur=20;
+    contain(ctx,opt.logo,logoX,logoY,logoW,logoH);
+    ctx.restore();
+  }else if(!videoPost){
+    ctx.font="800 34px Arial, sans-serif";
+    ctx.fillStyle="#fff";
+    wrap(ctx,opt.brand||"Minha Revenda",logoX,104,wide?370:480,40,2);
   }
-  if(opt.logo&&opt.brand){
+  if(!videoPost&&opt.logo&&opt.brand){
     ctx.fillStyle="rgba(255,255,255,.95)";
     ctx.font="700 26px Arial, sans-serif";
     ctx.textAlign=opt.logoPosition==="left"?"left":"right";
-    ctx.fillText(opt.brand, opt.logoPosition==="left"?margin:w-margin,184);
+    ctx.fillText(opt.brand,opt.logoPosition==="left"?margin:w-margin,184);
     ctx.textAlign="left";
   }
   const badgeText=opt.label.toUpperCase().slice(0,30);
@@ -220,11 +229,11 @@ export function renderCinematic(ctx:CanvasRenderingContext2D,opt:CinematicOption
   ctx.save();ctx.shadowColor=accent;ctx.shadowBlur=22;
   ctx.fillStyle=accent;roundRect(ctx,badgeX,72,badgeW,52,17);ctx.fill();ctx.restore();
   ctx.fillStyle="#fff";ctx.textAlign="center";ctx.fillText(badgeText,badgeX+badgeW/2,107);ctx.textAlign="left";
-  const titleFont=wide?82:h>=1900?74:opt.mode==="video"?58:64;
+  const titleFont=wide?82:h>=1900?78:opt.mode==="video"?60:64;
   ctx.font="900 "+titleFont+"px Arial, Helvetica, sans-serif";
   ctx.fillStyle="#fff";ctx.shadowColor="rgba(0,0,0,.74)";ctx.shadowBlur=26;
   let titleY:number;
-  if(opt.mode==="video")titleY=wide?250:h>=1900?355:255;
+  if(opt.mode==="video")titleY=wide?250:h>=1900?420:275;
   else titleY=wide?h*.53:h*.53;
   const titleLimit=opt.mode==="video"?2:3;
   const titleWidth=wide?w*.67:opt.mode==="banner"&&opt.posterVisible&&opt.poster?w-margin*2-245:w-margin*2;
@@ -265,7 +274,7 @@ export function renderCinematic(ctx:CanvasRenderingContext2D,opt:CinematicOption
       ctx.textAlign="left";
     }
     ctx.restore();
-    textY=y+vh+72;
+    textY=y+vh+(h>=1800?83:62);
   }else{
     textY=Math.max(wide?h*.76:h*.76,metadataY+54);
     if(opt.posterVisible&&opt.poster){
@@ -279,19 +288,26 @@ export function renderCinematic(ctx:CanvasRenderingContext2D,opt:CinematicOption
       ctx.strokeStyle="rgba(255,255,255,.55)";ctx.lineWidth=2;roundRect(ctx,x,y,pw,ph,11);ctx.stroke();
     }
   }
-  ctx.fillStyle=accent;ctx.fillRect(margin,textY-34,104,5);
-  ctx.fillStyle="rgba(247,250,255,.93)";
-  ctx.font="500 "+(wide?30:29)+"px Arial, sans-serif";
-  const reserveBottom=wide?146:164;
-  const available=Math.max(0,h-reserveBottom-textY);
-  const lines=Math.max(0,Math.min(4,Math.floor(available/44)));
-  if(lines)wrap(ctx,opt.overview||"Sinopse não disponível na TMDB.",margin,textY,w-margin*2,44,lines);
-  // Clean reseller-only footer: no Stream Monitor or TMDB watermark in
-  // the exported artwork. TMDB attribution remains visible in the editor.
-  const footerTop=h-145;
+  const storyPost=opt.mode==="video"&&h>=1800&&!wide;
+  const footerTop=storyPost?h-325:h-145;
+  const contactTop=storyPost?h-292:h-121;
+  const preferredFont=storyPost?38:wide?30:28;
+  const minFont=storyPost?26:22;
+  const textRoom=Math.max(0,footerTop-textY-37);
+  // Adapt the synopsis to actual available space instead of silently
+  // chopping words or appending ellipses in any export format.
+  if(textRoom>=32){
+    ctx.fillStyle=accent;
+    ctx.fillRect(margin,textY-34,104,5);
+    ctx.fillStyle="rgba(247,250,255,.93)";
+    renderAdaptiveSynopsis(ctx,opt.overview||"Sinopse não disponível na TMDB.",
+      margin,textY,w-margin*2,textRoom,preferredFont,minFont,
+      storyPost?6:wide?3:4);
+  }
+  // Original reseller-only footer. Story placement respects app UI overlays.
   ctx.fillStyle="rgba(255,255,255,.21)";
   ctx.fillRect(margin,footerTop,w-margin*2,1);
   const formattedPhone=formatCinematicWhatsApp(opt.whatsapp);
-  const contact=formattedPhone||opt.brand||"Contato da revenda";
-  drawContactBadge(ctx,margin,h-121,contact,w-margin*2,wide);
+  const contact=formattedPhone||"WhatsApp";
+  drawContactBadge(ctx,margin,contactTop,contact,w-margin*2,wide);
 }
