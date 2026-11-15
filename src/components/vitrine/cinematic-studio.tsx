@@ -15,7 +15,7 @@ import {
   renderCinematic,formatCinematicWhatsApp,cinematicVideoFrameRect,cinematicFormats,type CinematicOptions,
   type CinematicFormat,type CinematicMode
 } from "@/lib/vitrine-cinematic-canvas";
-import {renderNativeMp4,supportedMp4Mime} from "@/lib/vitrine-cinematic-mp4";
+import {renderNativeMp4,supportedMp4Mime,renderDimensions,WHATSAPP_VIDEO_MAX_BYTES,type Mp4Preset} from "@/lib/vitrine-cinematic-mp4";
 import {normalizeCinematicLogoPng} from "@/lib/vitrine-cinematic-logo";
 
 type SearchItem={
@@ -88,6 +88,9 @@ export function CinematicStudio({mode}:{mode:CinematicMode}){
   const [assets,setAssets]=useState<StudioAssets>({background:null,poster:null,logo:null,error:"",warning:""});
   const [loadingAssets,setLoadingAssets]=useState(false);
   const [videoFile,setVideoFile]=useState<File|null>(null);
+  const [videoLinkDraft,setVideoLinkDraft]=useState("");
+  const [activeVideoLink,setActiveVideoLink]=useState("");
+  const [mp4Preset,setMp4Preset]=useState<Mp4Preset>("whatsapp");
   const [videoUrl,setVideoUrl]=useState("");
   const [videoLength,setVideoLength]=useState(0);
   const [clipSeconds,setClipSeconds]=useState<15|30|60>(15);
@@ -95,7 +98,6 @@ export function CinematicStudio({mode}:{mode:CinematicMode}){
   const [youtubeStart,setYoutubeStart]=useState(0);
   const [chosenTrailerKey,setChosenTrailerKey]=useState("");
   const [audio,setAudio]=useState(()=>typeof window!=="undefined"&&!!supportedMp4Mime(true));
-  const [licenseAccepted,setLicenseAccepted]=useState(false);
   const [rendering,setRendering]=useState(false);
   const [exporting,setExporting]=useState(false);
   const [renderProgress,setRenderProgress]=useState({percent:0,stage:"",seconds:0,total:15});
@@ -193,15 +195,22 @@ export function CinematicStudio({mode}:{mode:CinematicMode}){
     return()=>{cancelled=true;};
   },[movie?.tmdb_id,selectedBackground,selectedPoster,logoSource]);
   useEffect(()=>{
-    if(!videoFile){setVideoUrl("");setVideoLength(0);return;}
+    if(!videoFile){
+      setVideoUrl(activeVideoLink);
+      setVideoLength(0);
+      return;
+    }
     const url=URL.createObjectURL(videoFile);
-    setVideoUrl(url);setVideoLength(0);setClipStart(0);setReadyMp4("");
+    setVideoUrl(url);
+    setVideoLength(0);
+    setClipStart(0);
+    setReadyMp4("");
     return()=>URL.revokeObjectURL(url);
-  },[videoFile]);
+  },[videoFile,activeVideoLink]);
   useEffect(()=>{
     setReadyMp4("");
     setReadyMp4Bytes(0);
-  },[movie?.tmdb_id,format,clipSeconds,clipStart,audio,description,color,lighting,label,logoPosition,posterVisible,brand.name,brand.whatsapp,logoSource]);
+  },[movie?.tmdb_id,format,clipSeconds,clipStart,audio,mp4Preset,videoUrl,description,color,lighting,label,logoPosition,posterVisible,brand.name,brand.whatsapp,logoSource]);
 
   const dims=cinematicFormats[format];
   const options=useMemo<Omit<CinematicOptions,"video">>(()=>({
@@ -287,11 +296,8 @@ export function CinematicStudio({mode}:{mode:CinematicMode}){
   }
   async function downloadMp4(){
     if(busyRef.current||rendering)return;
-    if(!videoFile||!videoUrl||!assets.background||!movie){
-      toast.error("Selecione um filme ou série e envie um MP4 autorizado para exportar.");return;
-    }
-    if(!licenseAccepted){
-      toast.error("Confirme que você tem autorização para usar e publicar o vídeo.");return;
+    if(!videoUrl||!assets.background||!movie){
+      toast.error("Selecione um filme ou série e carregue um MP4 por arquivo ou link direto.");return;
     }
     if(!supportedMp4Mime(audio)){
       toast.error("Este navegador não oferece exportação nativa MP4 H.264/AAC.");return;
@@ -301,14 +307,17 @@ export function CinematicStudio({mode}:{mode:CinematicMode}){
     }
     busyRef.current=true;setRendering(true);
     const requestId=crypto.randomUUID();
-    setRenderProgress({percent:0,seconds:0,total:clipSeconds,stage:"Preparando o vídeo autorizado"});
+    setRenderProgress({percent:0,seconds:0,total:clipSeconds,stage:"Preparando os quadros do vídeo"});
     const temp=document.createElement("video");
     temp.preload="auto";temp.playsInline=true;
+    if(activeVideoLink&&!videoFile)temp.crossOrigin="anonymous";
+    temp.style.cssText="position:fixed;left:0;top:0;width:1px;height:1px;opacity:0;pointer-events:none;z-index:-1";
     temp.src=videoUrl;
+    document.body.appendChild(temp);
     try{
       await new Promise<void>((resolve,reject)=>{
         const onReady=()=>{clearTimeout(timeout);resolve();};
-        const onError=()=>{clearTimeout(timeout);reject(new Error("O MP4 autorizado não pôde ser decodificado."));};
+        const onError=()=>{clearTimeout(timeout);reject(new Error("O MP4 não pôde ser decodificado. Links externos precisam permitir CORS e apontar diretamente para um arquivo MP4."));};
         const timeout=setTimeout(()=>reject(new Error("Tempo esgotado ao abrir MP4.")),10000);
         temp.addEventListener("loadedmetadata",onReady,{once:true});
         temp.addEventListener("error",onError,{once:true});
@@ -317,22 +326,24 @@ export function CinematicStudio({mode}:{mode:CinematicMode}){
       // Do not reuse the visible canvas: export draws to an offscreen,
       // full-resolution canvas and cannot disrupt the browser preview.
       const videoCanvas=document.createElement("canvas");
-      videoCanvas.width=dims.width;videoCanvas.height=dims.height;
       const blob=await renderNativeMp4(
-        videoCanvas,temp,options,clipSeconds,clipStart,audio,setRenderProgress,
+        videoCanvas,temp,options,clipSeconds,clipStart,audio,setRenderProgress,mp4Preset,
       );
+      const output=renderDimensions(options,mp4Preset);
       const nextUrl=URL.createObjectURL(blob);
       setReadyMp4(nextUrl);setReadyMp4Bytes(blob.size);
-      downloadFile(blob,slug(movie.title)+"-trailer-"+clipSeconds+"s-"+dims.width+"x"+dims.height+".mp4");
+      downloadFile(blob,slug(movie.title)+"-"+(mp4Preset==="whatsapp"?"WhatsApp":"Alta") +"-"+clipSeconds+"s-"+output.width+"x"+output.height+".mp4");
       void logVideoRender(requestId,"completed",blob.size,null);
-      toast.success("MP4 H.264 gerado com quadros reais! Arquivo disponível para visualizar.");
+      if(mp4Preset==="whatsapp"&&blob.size>WHATSAPP_VIDEO_MAX_BYTES)
+        toast.warning("MP4 criado, mas ultrapassou 16 MB. Envie como documento ou reduza a duração para WhatsApp.");
+      else toast.success("MP4 H.264 gerado com a arte e o vídeo! Arquivo pronto para visualizar.");
       videoCanvas.width=0;videoCanvas.height=0;
     }catch(e){
       toast.error(e instanceof Error?e.message:"A exportação MP4 não foi concluída.");
       void logVideoRender(requestId,"failed",0,"EXPORT_ERROR");
       setRenderProgress(v=>({...v,stage:"Falha de exportação"}));
     }finally{
-      temp.pause();temp.removeAttribute("src");temp.load();
+      temp.pause();temp.removeAttribute("src");temp.load();temp.remove();
       busyRef.current=false;setRendering(false);
     }
   }
@@ -349,9 +360,9 @@ export function CinematicStudio({mode}:{mode:CinematicMode}){
   function uploadMp4(file?:File){
     if(!file)return;
     if(file.type!=="video/mp4"||file.size>(usage.data?.policy.maxUploadMb??350)*1024*1024||file.size<1000){
-      toast.error("Envie um MP4 autorizado de até "+(usage.data?.policy.maxUploadMb??350)+" MB.");return;
+      toast.error("Escolha um MP4 de até "+(usage.data?.policy.maxUploadMb??350)+" MB.");return;
     }
-    setVideoFile(file);setLicenseAccepted(false);
+    setActiveVideoLink("");setVideoLinkDraft("");setVideoFile(file);
   }
   const isReady=!!movie&&!!assets.background&&!loadingAssets;
   const itemList=((feed.data?.items??[]) as SearchItem[])
