@@ -16,6 +16,27 @@ import {
 type Kind = "today" | "featured";
 type Format = "feed" | "story" | "landscape";
 type TeamSide = "home" | "away";
+const DEFAULT_LEAGUES = [
+  "brazilian-serie-a", "brazilian-serie-b", "conmebol-copa-libertadores",
+  "spanish-la-liga", "english-premier-league", "uefa-champions-league",
+];
+const LEAGUES = [
+  {id:"brazilian-serie-a",name:"🇧🇷 Série A"},{id:"brazilian-serie-b",name:"🇧🇷 Série B"},
+  {id:"brazil-copa-do-brasil",name:"🇧🇷 Copa do Brasil"},
+  {id:"conmebol-copa-libertadores",name:"🏆 Libertadores"},
+  {id:"conmebol-copa-sudamericana",name:"🏆 Sul-Americana"},
+  {id:"spanish-la-liga",name:"🇪🇸 La Liga"},
+  {id:"english-premier-league",name:"🏴 Premier League"},
+  {id:"uefa-champions-league",name:"⭐ Champions League"},
+  {id:"uefa-europa-league",name:"🏆 Europa League"},
+  {id:"italian-serie-a",name:"🇮🇹 Serie A"},
+  {id:"german-bundesliga",name:"🇩🇪 Bundesliga"},
+  {id:"french-ligue-1",name:"🇫🇷 Ligue 1"},
+  {id:"portuguese-primeira-liga",name:"🇵🇹 Liga Portugal"},
+  {id:"uefa-nations-league",name:"🌍 Nations League"},
+  {id:"international-friendly",name:"🌍 Amistosos"},
+  {id:"fifa-world-cup",name:"🌎 Copa do Mundo"},
+];
 const DIMENSIONS: Record<Format, { width: number; height: number; title: string }> = {
   feed: { width: 1080, height: 1080, title: "Feed 1080 × 1080" },
   story: { width: 1080, height: 1920, title: "Story 1080 × 1920" },
@@ -155,6 +176,9 @@ export function VitrineFootballStudio() {
   const [date, setDate] = useState(getToday);
   const [mode, setMode] = useState<Kind>("today");
   const [format, setFormat] = useState<Format>("feed");
+  const [selectedLeagues, setSelectedLeagues] = useState<string[]>(DEFAULT_LEAGUES);
+  const [playerSearch, setPlayerSearch] = useState("");
+  const [debouncedPlayerSearch, setDebouncedPlayerSearch] = useState("");
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [featuredId, setFeaturedId] = useState("");
   const [playerSide, setPlayerSide] = useState<TeamSide>("home");
@@ -173,8 +197,9 @@ export function VitrineFootballStudio() {
   const artRef = useRef<HTMLDivElement>(null);
   const measureRef = useRef<HTMLDivElement>(null);
   const games = useQuery({
-    queryKey: ["admin-football-games", date],
-    queryFn: () => fetchGames({ data: { date } }),
+    queryKey: ["admin-football-games", date, selectedLeagues],
+    enabled: selectedLeagues.length > 0,
+    queryFn: () => fetchGames({ data: { date, leagues: selectedLeagues } }),
     staleTime: 5 * 60_000,
     retry: 1,
   });
@@ -183,12 +208,15 @@ export function VitrineFootballStudio() {
   const visibleMatches = useMemo(() =>
     selectedIds.length ? fixtures.filter((m) => selectedIds.includes(m.id)) : fixtures.slice(0, 5),
     [fixtures, selectedIds]);
-  const teamId = featured ? (playerSide === "home" ? featured.homeId : featured.awayId) : "";
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedPlayerSearch(playerSearch.trim()), 400);
+    return () => clearTimeout(timer);
+  }, [playerSearch]);
   const players = useQuery({
-    queryKey: ["admin-football-players", teamId],
-    enabled: mode === "featured" && /^\d+$/.test(teamId),
-    queryFn: () => fetchPlayers({ data: { teamId } }),
-    staleTime: 60 * 60_000,
+    queryKey: ["admin-football-players", debouncedPlayerSearch],
+    enabled: mode === "featured" && debouncedPlayerSearch.length >= 2,
+    queryFn: () => fetchPlayers({ data: { query: debouncedPlayerSearch } }),
+    staleTime: 10 * 60_000,
     retry: 0,
   });
   const athleteList = players.data?.players ?? [];
@@ -198,16 +226,17 @@ export function VitrineFootballStudio() {
     setFeaturedId("");
     setSelectedIds([]);
     setAiBackground("");
-  }, [date]);
+  }, [date, selectedLeagues]);
   useEffect(() => {
     setPlayerId("");
     setPlayerUpload("");
     setPlayerRemote("");
+    setPlayerSearch("");
   }, [featured?.id, playerSide]);
   useEffect(() => {
     if (playerId || !athleteList.length) return;
     // The first API result is a suggestion, NOT a verified starting player or star.
-    const preferred = athleteList.find((p) => p.image && p.creativeCommons) ?? athleteList[0];
+    const preferred = athleteList.find((p) => p.image) ?? athleteList[0];
     if (preferred) setPlayerId(preferred.id);
   }, [athleteList, playerId]);
   useEffect(() => {
@@ -244,13 +273,13 @@ export function VitrineFootballStudio() {
 
   useEffect(() => {
     setPlayerRemote("");
-    if (!rightsConfirmed || !athlete?.image || !athlete.creativeCommons || mode !== "featured" || playerUpload) return;
+    if (!rightsConfirmed || !athlete?.image || mode !== "featured" || playerUpload) return;
     let disposed = false;
     void fetchImage({ data: { url: athlete.image, rightsConfirmed: true } })
       .then((v) => { if (!disposed) setPlayerRemote(v.dataUrl); })
       .catch(() => { if (!disposed) setPlayerRemote(""); });
     return () => { disposed = true; };
-  }, [rightsConfirmed, athlete?.image, athlete?.creativeCommons, playerUpload, mode, fetchImage]);
+  }, [rightsConfirmed, athlete?.image, playerUpload, mode, fetchImage]);
 
   const playerPhoto = rightsConfirmed ? playerUpload || playerRemote : "";
   const effectiveHeadline = headline.trim() || (mode === "today" ? "JOGOS DE HOJE" : "HOJE TEM JOGAÇO");
@@ -329,7 +358,7 @@ export function VitrineFootballStudio() {
           <h1 className="flex items-center gap-3 text-3xl font-black sm:text-4xl"><Trophy className="h-9 w-9 text-sky-300" /> Vitrine IA Futebol</h1>
           <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-300">Programação real do dia e arte de destaque com cenário da Cloudflare IA, escudos e foto autorizada do jogador. Nada é divulgado automaticamente.</p>
         </div>
-        <div className="rounded-2xl border border-white/20 bg-white/10 px-5 py-4 text-sm text-slate-200">Fuso dos jogos: <strong>Fortaleza / Brasília</strong><br />Fonte: <strong>TheSportsDB</strong></div>
+        <div className="rounded-2xl border border-white/20 bg-white/10 px-5 py-4 text-sm text-slate-200">Fuso dos jogos: <strong>Fortaleza / Brasília</strong><br />Fonte: <strong>SportScore</strong></div>
       </div>
     </div>
 
@@ -344,6 +373,21 @@ export function VitrineFootballStudio() {
           <label className="block text-sm font-semibold">Data dos jogos
             <Input type="date" className="mt-2" value={date} onChange={(e) => setDate(e.target.value || getToday())} />
           </label>
+          <div className="space-y-3 rounded-xl border border-blue-500/15 bg-blue-500/5 p-3">
+            <div className="flex items-center justify-between">
+              <strong className="text-sm">Campeonatos</strong>
+              <Button variant="ghost" size="sm" onClick={() => setSelectedLeagues(LEAGUES.map((l) => l.id))}>Todos</Button>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {LEAGUES.map((league) => <button key={league.id} type="button"
+                aria-pressed={selectedLeagues.includes(league.id)}
+                onClick={() => setSelectedLeagues((old) => old.includes(league.id) ? old.filter((id) => id !== league.id) : [...old, league.id])}
+                className={`rounded-full border px-3 py-2 text-xs font-bold transition-colors ${selectedLeagues.includes(league.id) ? "border-sky-500 bg-blue-600 text-white" : "border-border bg-background text-muted-foreground hover:border-blue-500/60"}`}>
+                {league.name}
+              </button>)}
+            </div>
+            {!selectedLeagues.length && <p className="text-xs text-amber-400">Selecione pelo menos um campeonato.</p>}
+          </div>
           <div className="flex items-center justify-between">
             <span className="text-sm font-bold">Partidas encontradas: {fixtures.length}</span>
             <Button variant="outline" size="sm" onClick={() => void games.refetch()} disabled={games.isFetching}>
@@ -352,11 +396,11 @@ export function VitrineFootballStudio() {
           </div>
           {games.isLoading && <p className="text-sm text-muted-foreground">Consultando a programação esportiva…</p>}
           {games.isError && <p role="alert" className="rounded-lg border border-red-500/30 bg-red-500/5 p-3 text-sm text-red-400">Não foi possível consultar os jogos. Verifique a conexão e tente novamente.</p>}
-          {!!games.data && <p className="rounded-lg bg-amber-500/10 p-3 text-xs leading-5 text-amber-200">
-            Fonte gratuita: até 3 partidas por liga e data; a programação pode estar incompleta.
-            Consulta de {games.data.sourcesSucceeded}/{games.data.sourcesTotal} grupos concluída.
-            Confira horários antes de divulgar. Dados: TheSportsDB.
-          </p>}
+          {!!games.data && <p className="rounded-lg border border-blue-500/15 bg-blue-500/5 p-3 text-xs leading-5 text-muted-foreground">
+            Agenda: {games.data.sourcesSucceeded}/{games.data.sourcesTotal} consultas concluídas.
+            {games.data.partial ? " Algumas consultas falharam; tente atualizar. " : " "}
+            Confira horários antes de publicar. Dados de <a href="https://sportscore.com/" rel="dofollow" target="_blank" className="font-semibold text-sky-500 underline">SportScore</a>.
+          </p>
           <div className="max-h-[360px] space-y-2 overflow-y-auto pr-1">
             {fixtures.map((m) => {
               const checked = mode === "featured" ? featured?.id === m.id : (selectedIds.length ? selectedIds.includes(m.id) : fixtures.slice(0, 5).some((v) => v.id === m.id));
@@ -390,16 +434,17 @@ export function VitrineFootballStudio() {
             <Button variant={playerSide === "home" ? "default" : "outline"} className="flex-1" onClick={() => setPlayerSide("home")}>{featured?.home || "Mandante"}</Button>
             <Button variant={playerSide === "away" ? "default" : "outline"} className="flex-1" onClick={() => setPlayerSide("away")}>{featured?.away || "Visitante"}</Button>
           </div>
-          <p className="text-xs text-muted-foreground">Jogadores abaixo são sugestões do cadastro da fonte; a ferramenta não afirma quem será titular ou o principal atleta da partida.</p>
+          <p className="text-xs text-muted-foreground">Pesquise o jogador principal pelo nome. O resultado pode incluir atletas de outros clubes; confirme identidade, time e direitos da foto antes de publicar.</p>
+          <Input value={playerSearch} onChange={(e) => setPlayerSearch(e.target.value)} placeholder="Ex.: Vini Jr, Arrascaeta, Neymar" maxLength={70} />
           <select value={playerId} onChange={(e) => setPlayerId(e.target.value)}
             className="h-11 w-full rounded-lg border border-input bg-background px-3 text-sm">
             <option value="">Escolha o jogador</option>
             {athleteList.map((p: FootballPlayer) => <option value={p.id} key={p.id}>
-              {p.name}{p.position ? ` · ${p.position}` : ""}{p.image && p.creativeCommons ? " · foto disponível" : ""}
+              {p.name}{p.position ? ` · ${p.position}` : ""}{p.image ? " · possui imagem" : ""}
             </option>)}
           </select>
-          {players.isLoading && <p className="text-xs text-muted-foreground">Buscando elenco…</p>}
-          {athlete && !athlete.creativeCommons && <p className="text-xs text-amber-500">A licença da foto deste atleta não está verificada pela fonte. Utilize uma fotografia autorizada.</p>}
+          {players.isLoading && <p className="text-xs text-muted-foreground">Buscando jogadores…</p>}
+          {athlete?.image && <p className="text-xs text-amber-500">Há foto na fonte, mas a licença comercial e o direito de imagem não são garantidos. Confirme os direitos antes de usar.</p>}
           <label className="flex cursor-pointer items-center gap-3 rounded-xl border border-dashed p-4 text-sm hover:bg-muted/40">
             <ImagePlus className="h-5 w-5 text-blue-400" />
             Enviar foto autorizada do jogador (PNG/JPG/WEBP)
@@ -428,7 +473,7 @@ export function VitrineFootballStudio() {
           </label>
           <label className="flex items-start gap-3 rounded-lg bg-muted/50 p-4 text-sm leading-6">
             <input type="checkbox" checked={rightsConfirmed} onChange={(e) => setRightsConfirmed(e.target.checked)} className="mt-1 h-4 w-4 accent-blue-500" />
-            <span>Confirmo ter autorização para usar as fotos e escudos selecionados. Sei que uma marcação Creative Commons na API não comprova sozinha todos os direitos de imagem, publicidade ou marca. Sem essa confirmação, a arte usa apenas nomes dos times e cenário original.</span>
+            <span>Confirmo ter autorização para usar as fotos e escudos selecionados, inclusive para divulgação comercial. Dados de SportScore não concedem direitos sobre fotos de jogadores ou marcas dos clubes. Sem esta confirmação, o estúdio usa nomes e cenário original.</span>
           </label>
           <Button onClick={() => void generateStadium()} disabled={generating} className="h-12 w-full bg-blue-600 text-white hover:bg-blue-700">
             <Sparkles className={`mr-2 h-5 w-5 ${generating ? "animate-pulse" : ""}`} />{generating ? "Gerando cenário..." : "Gerar cenário com Cloudflare IA"}
@@ -466,7 +511,7 @@ export function VitrineFootballStudio() {
           </div>
           <p className="mt-4 flex items-start gap-2 text-xs leading-5 text-muted-foreground">
             <CalendarDays className="mt-0.5 h-4 w-4 shrink-0" />
-            Datas e horários devem ser verificados na programação oficial antes de divulgação. O limite gratuito pode omitir confrontos. Os jogos exibidos vêm da API, não de exemplos fictícios.
+            Confira horários oficiais antes de divulgar. Jogos, times e escudos são carregados da fonte, sem partidas inventadas. <a href="https://sportscore.com/" rel="dofollow" target="_blank" className="underline text-sky-500">Powered by SportScore</a>.
           </p>
         </Card>
         <div className="flex items-center gap-3 rounded-xl border border-blue-500/20 bg-blue-500/5 p-4 text-sm text-muted-foreground">
