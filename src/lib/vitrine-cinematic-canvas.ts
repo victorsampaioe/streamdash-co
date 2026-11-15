@@ -204,7 +204,7 @@ export function renderCinematic(ctx:CanvasRenderingContext2D,opt:CinematicOption
     contain(ctx,opt.logo,logoX,55,logoW,logoH);ctx.restore();
   }else{
     ctx.font="800 34px Arial, sans-serif";ctx.fillStyle="#fff";
-    wrap(ctx,opt.brand||"Stream Monitor",brandTextX,104,wide?370:480,40,2);
+    wrap(ctx,opt.brand||"Minha Revenda",brandTextX,104,wide?370:480,40,2);
   }
   if(opt.logo&&opt.brand){
     ctx.fillStyle="rgba(255,255,255,.95)";
