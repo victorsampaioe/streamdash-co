@@ -25,7 +25,6 @@ type StudioAssets={
   background:HTMLImageElement|null;poster:HTMLImageElement|null;
   logo:HTMLImageElement|null;error:string;warning:string;
 };
-type CinematicDetail=Awaited<ReturnType<ReturnType<typeof useServerFn<typeof getCinematicTmdbDetail>>>>;
 const brandFallback:CinematicBrand={
   owner_id:"",name:"Stream Monitor",logo_url:"",whatsapp:"",color:"#2563eb",
 };
@@ -213,7 +212,7 @@ export function CinematicStudio({mode}:{mode:CinematicMode}){
       const canvas=canvasRef.current;
       const ctx=canvas.getContext("2d",{alpha:false});
       if(!ctx)throw new Error("Não foi possível criar a imagem.");
-      renderCinematic(ctx,{...options,video:null});
+      renderCinematic(ctx,{...options,mode:"banner",video:null});
       const blob=await new Promise<Blob>((resolve,reject)=>canvas.toBlob(
         value=>value?resolve(value):reject(new Error("A origem da imagem não permite exportação pelo navegador.")),
         as==="png"?"image/png":"image/jpeg",as==="png"?undefined:.94,
@@ -483,7 +482,7 @@ export function CinematicStudio({mode}:{mode:CinematicMode}){
             <div className="grid gap-2 sm:grid-cols-2">
               <Button className="bg-blue-600 text-white hover:bg-blue-500" disabled={!isReady||exporting||rendering}
                 onClick={()=>void downloadStatic("png")}>
-                <ImageIcon size={17} className="mr-2"/>{exporting?"Preparando...":"Baixar PNG"}
+                <ImageIcon size={17} className="mr-2"/>{exporting?"Preparando...":mode==="video"?"Banner PNG sem vídeo":"Baixar PNG"}
               </Button>
               {mode==="banner"?<Button className="border border-blue-400/25 bg-blue-900/40 text-white hover:bg-blue-700/40"
                   disabled={!isReady||exporting}
