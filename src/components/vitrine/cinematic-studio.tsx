@@ -12,10 +12,11 @@ import {Input} from "@/components/ui/input";
 import {getVitrineTmdbFeed} from "@/lib/vitrine-catalog.functions";
 import {getCinematicTmdbDetail,getCinematicBrands,getCinematicRenderControls,saveCinematicRenderControls,recordCinematicRender,type CinematicBrand} from "@/lib/vitrine-cinematic.functions";
 import {
-  renderCinematic,cinematicVideoFrameRect,cinematicFormats,type CinematicOptions,
+  renderCinematic,cinematicFormats,type CinematicOptions,
   type CinematicFormat,type CinematicMode
 } from "@/lib/vitrine-cinematic-canvas";
 import {renderNativeMp4,supportedMp4Mime} from "@/lib/vitrine-cinematic-mp4";
+import {normalizeCinematicLogoPng} from "@/lib/vitrine-cinematic-logo";
 
 type SearchItem={
   tmdb_id:number;media_type:"movie"|"tv";title:string;
@@ -172,10 +173,10 @@ export function CinematicStudio({mode}:{mode:CinematicMode}){
         if(!bgUrl)throw new Error("A TMDB não forneceu backdrop nem pôster oficial.");
         const background=await loadImage(bgUrl);
         const poster=selectedPoster?await loadImage(tmdbPath(selectedPoster,"w500")).catch(()=>null):null;
-        const logo=logoSource?await loadImage(logoSource).catch(()=>null):null;
+        const logo=logoSource?await loadImage(logoSource).then(normalizeCinematicLogoPng).catch(()=>null):null;
         if(!cancelled)setAssets({
           background,poster,logo,error:"",
-          warning:logoSource&&!logo?"A logo configurada não pôde ser exportada. Envie um PNG com transparência pelo dispositivo.":"",
+          warning:logoSource&&!logo?"Não foi possível preparar a logo em PNG. Envie um PNG transparente pelo dispositivo.":"",
         });
       }catch(e){
         if(!cancelled)setAssets({
@@ -210,11 +211,6 @@ export function CinematicStudio({mode}:{mode:CinematicMode}){
     background:assets.background,backgroundIsPoster:!!selectedPoster&&selectedBackground===selectedPoster,
     poster:assets.poster,logo:assets.logo,
   }),[mode,dims.width,dims.height,movie?.title,movie?.release_date,movie?.genres,description,extra?.classification,label,brand.name,brand.whatsapp,color,logoPosition,lighting,posterVisible,assets,selectedPoster,selectedBackground]);
-  const iframeFrame=useMemo(()=>{
-    if(mode!=="video"||typeof document==="undefined")return null;
-    const measure=document.createElement("canvas").getContext("2d");
-    return measure?cinematicVideoFrameRect(measure,options):null;
-  },[mode,options]);
   useEffect(()=>{
     if(!canvasRef.current)return;
     const canvas=canvasRef.current,ctx=canvas.getContext("2d",{alpha:false});
@@ -434,7 +430,7 @@ export function CinematicStudio({mode}:{mode:CinematicMode}){
                 <Input value={brand.whatsapp} maxLength={22} className={inputClass} onChange={e=>setBrandOverrides(v=>({...v,whatsapp:e.target.value}))}/>
               </label>
             </div>
-            <label className="block space-y-1 text-xs text-slate-300">Logo transparente (PNG recomendado)
+            <label className="block space-y-1 text-xs text-slate-300">Logo em PNG transparente (JPG/WEBP convertidos na prévia)
               <Input type="file" accept="image/png,image/webp,image/jpeg"
                 className="border-blue-500/20 bg-slate-950 text-xs file:text-blue-200"
                 onChange={e=>uploadLogo(e.target.files?.[0])}/>
@@ -482,8 +478,12 @@ export function CinematicStudio({mode}:{mode:CinematicMode}){
             <div className="flex items-center gap-2 text-sm font-bold text-blue-200"><Clapperboard size={18}/> 3. Trailer real e MP4 autorizado</div>
             {youtubeKey?<div className="space-y-2">
               <p className="text-xs text-slate-300">Trailer encontrado na TMDB · {extra?.trailer?.official?"oficial":"referenciado"} · idioma {extra?.trailer?.language||"não informado"}.</p>
+              <a href={"https://www.youtube.com/watch?v="+youtubeKey} target="_blank" rel="noopener noreferrer"
+                className="inline-flex items-center gap-2 rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-2.5 text-sm font-bold text-red-100 hover:bg-red-500/20">
+                <Play size={17}/> Assistir trailer oficial no YouTube
+              </a>
               <p className="rounded-lg border border-blue-400/20 bg-blue-500/5 p-3 text-[11px] text-sky-100">
-                O trailer está incorporado dentro da própria prévia da arte, à direita. Use o player oficial do YouTube para assistir. Ele não é extraído, gravado nem exportado.
+                O YouTube é apenas uma referência, sem download automático. Para fazer o vídeo tocar dentro da arte, envie um MP4 que você tenha permissão para publicar.
               </p>
             </div>:<p className="text-xs text-amber-300">A TMDB não indicou trailer do YouTube para este título.</p>}
             <label className="block space-y-2 text-xs text-slate-300"><span className="flex items-center gap-2"><Upload size={15}/> Enviar MP4 que você pode publicar</span>
@@ -564,20 +564,6 @@ export function CinematicStudio({mode}:{mode:CinematicMode}){
             <div className="relative mx-auto max-w-[620px] overflow-hidden rounded-xl border border-white/15 bg-slate-950 shadow-2xl shadow-blue-950/50">
               <canvas ref={canvasRef} width={dims.width} height={dims.height}
                 className="block h-auto w-full" aria-label="Prévia cinematográfica com imagens oficiais da TMDB"/>
-              {mode==="video"&&!videoFile&&youtubeKey&&iframeFrame&&
-                <div className="absolute overflow-hidden rounded-md border border-blue-400/60 bg-black shadow-2xl shadow-blue-500/30"
-                  style={{
-                    left:(iframeFrame.x/dims.width*100)+"%",
-                    top:(iframeFrame.y/dims.height*100)+"%",
-                    width:(iframeFrame.width/dims.width*100)+"%",
-                    height:(iframeFrame.height/dims.height*100)+"%",
-                  }}>
-                  <iframe title={"Trailer oficial: "+(movie?.title||"")}
-                    src={"https://www.youtube-nocookie.com/embed/"+youtubeKey}
-                    loading="lazy" referrerPolicy="strict-origin-when-cross-origin"
-                    allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture"
-                    allowFullScreen className="h-full w-full border-0"/>
-                </div>}
             </div>
             <video ref={previewVideoRef} src={videoUrl||undefined} preload="metadata" playsInline
               className="hidden"
@@ -587,7 +573,7 @@ export function CinematicStudio({mode}:{mode:CinematicMode}){
                 if(v&&v.currentTime>clipStart+clipSeconds)v.pause();
               }}/>
             {!movie&&<p className="text-center text-sm text-amber-200">Selecione um filme ou uma série para criar a prévia com o fundo oficial.</p>}
-            {mode==="video"&&!videoFile&&<p className="text-center text-xs text-amber-200">O espaço central receberá os quadros reais de seu MP4 autorizado. A referência do YouTube aparece no painel de edição, mas não é exportável.</p>}
+            {mode==="video"&&!videoFile&&<p className="text-center text-xs text-amber-200">Para o vídeo tocar dentro da arte e aparecer no MP4 final, envie um arquivo autorizado. O YouTube é apenas uma referência externa.</p>}
             <div className="grid gap-2 sm:grid-cols-2">
               <Button className="bg-blue-600 text-white hover:bg-blue-500" disabled={!isReady||exporting||rendering}
                 onClick={()=>void downloadStatic("png")}>
