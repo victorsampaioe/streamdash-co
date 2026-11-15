@@ -16,6 +16,7 @@ import {
   type CinematicFormat,type CinematicMode
 } from "@/lib/vitrine-cinematic-canvas";
 import {renderNativeMp4,supportedMp4Mime} from "@/lib/vitrine-cinematic-mp4";
+import {canGenerateTabMp4,renderAuthorizedTabMp4} from "@/lib/vitrine-cinematic-tab-export";
 import {normalizeCinematicLogoPng} from "@/lib/vitrine-cinematic-logo";
 
 type SearchItem={
@@ -69,6 +70,7 @@ export function CinematicStudio({mode}:{mode:CinematicMode}){
   const recordRender=useServerFn(recordCinematicRender);
   const canvasRef=useRef<HTMLCanvasElement>(null);
   const previewVideoRef=useRef<HTMLVideoElement>(null);
+  const previewIframeRef=useRef<HTMLIFrameElement>(null);
   const busyRef=useRef(false);
   const [media,setMedia]=useState<"movie"|"tv">("movie");
   const [search,setSearch]=useState("");
@@ -287,11 +289,53 @@ export function CinematicStudio({mode}:{mode:CinematicMode}){
   }
   async function downloadMp4(){
     if(busyRef.current||rendering)return;
-    if(!videoFile||!videoUrl||!assets.background||!movie){
-      toast.error("Para exportar, selecione uma obra e envie um MP4 autorizado.");return;
+    if(!assets.background||!movie){
+      toast.error("Selecione um filme ou série e aguarde a imagem oficial.");return;
     }
-    if(!licenseAccepted){toast.error("Confirme que possui autorização para usar e exportar o vídeo.");return;}
-    if(!supportedMp4Mime(audio)){toast.error("Este navegador não oferece MP4 H.264/AAC nativo. A geração não foi iniciada.");return;}
+    if(!licenseAccepted){
+      toast.error("Confirme que possui autorização para capturar e publicar o vídeo.");return;
+    }
+    if(!supportedMp4Mime(audio)){
+      toast.error("Este navegador não oferece MP4 H.264/AAC nativo. Nenhuma captura foi iniciada.");return;
+    }
+    if(!videoFile){
+      if(!youtubeEmbed){
+        toast.error("Nenhum trailer selecionado. Envie um MP4 autorizado ou selecione outra obra.");return;
+      }
+      if(!canGenerateTabMp4(audio)){
+        toast.error("Este navegador não permite compartilhar uma aba para gerar MP4. No iPhone, use um computador compatível ou envie um MP4 autorizado.");return;
+      }
+      // No awaits before renderAuthorizedTabMp4: getDisplayMedia MUST run
+      // synchronously under the actual button click to request browser consent.
+      const requestId=crypto.randomUUID();
+      busyRef.current=true;
+      setRendering(true);
+      setRenderProgress({percent:0,seconds:0,total:clipSeconds,stage:"Preparando MP4..."});
+      const outputCanvas=document.createElement("canvas");
+      outputCanvas.width=dims.width;outputCanvas.height=dims.height;
+      try{
+        const blob=await renderAuthorizedTabMp4(
+          outputCanvas,options,clipSeconds,audio,previewIframeRef.current,setRenderProgress,
+        );
+        const url=URL.createObjectURL(blob);
+        setReadyMp4(url);setReadyMp4Bytes(blob.size);
+        downloadFile(blob,slug(movie.title)+"-"+clipSeconds+"s-"+dims.width+"x"+dims.height+".mp4");
+        void logVideoRender(requestId,"completed",blob.size,null);
+        toast.success("MP4 gerado com sucesso e pronto para publicação!");
+      }catch(e){
+        const message=e instanceof Error?e.message:"Não foi possível gerar MP4 a partir da aba.";
+        toast.error(message);
+        setRenderProgress(v=>({...v,stage:"Não foi possível gerar o MP4"}));
+        void logVideoRender(requestId,"failed",0,"EXPORT_ERROR");
+      }finally{
+        outputCanvas.width=0;outputCanvas.height=0;
+        busyRef.current=false;setRendering(false);
+      }
+      return;
+    }
+    if(!videoUrl){
+      toast.error("O arquivo MP4 ainda não está pronto.");return;
+    }
     if(videoLength<clipStart+clipSeconds-.15){
       toast.error("O vídeo enviado não possui o trecho completo.");return;
     }
@@ -606,7 +650,7 @@ export function CinematicStudio({mode}:{mode:CinematicMode}){
                     width:(previewFrame.width/dims.width*100)+"%",
                     height:(previewFrame.height/dims.height*100)+"%",
                   }}>
-                  <iframe key={youtubeEmbed} title={"Trailer dentro da Vitrine: "+(movie?.title||"")}
+                  <iframe ref={previewIframeRef} key={youtubeEmbed} title={"Trailer dentro da Vitrine: "+(movie?.title||"")}
                     src={youtubeEmbed} loading="lazy" allowFullScreen
                     referrerPolicy="strict-origin-when-cross-origin"
                     allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture; web-share"
