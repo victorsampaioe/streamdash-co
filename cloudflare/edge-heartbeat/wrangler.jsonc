@@ -1,0 +1,18 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "streammonitor-edge-heartbeat",
+  "main": "worker.mjs",
+  "compatibility_date": "2026-11-15",
+  "workers_dev": false,
+  "routes": [],
+  "triggers": {
+    "crons": ["*/10 * * * *"]
+  },
+  "d1_databases": [
+    {
+      "binding": "OBS_DB",
+      "database_name": "streammonitor-edge-heartbeat",
+      "database_id": "27d1ce4e-7628-4877-88c8-ec1f043664d8"
+    }
+  ]
+}
