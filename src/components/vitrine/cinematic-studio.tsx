@@ -213,15 +213,20 @@ export function CinematicStudio({mode}:{mode:CinematicMode}){
     if(exporting||!assets.background||!canvasRef.current){toast.error("Escolha uma obra e aguarde as imagens oficiais.");return;}
     setExporting(true);
     try{
-      const canvas=canvasRef.current;
-      const ctx=canvas.getContext("2d",{alpha:false});
-      if(!ctx)throw new Error("Não foi possível criar a imagem.");
-      renderCinematic(ctx,{...options,mode:"banner",video:null});
-      const blob=await new Promise<Blob>((resolve,reject)=>canvas.toBlob(
-        value=>value?resolve(value):reject(new Error("A origem da imagem não permite exportação pelo navegador.")),
-        as==="png"?"image/png":"image/jpeg",as==="png"?undefined:.94,
-      ));
-      downloadFile(blob,slug(movie?.title||"cinematic")+"-"+dims.width+"x"+dims.height+"."+(as==="png"?"png":"jpg"));
+      // A dedicated canvas prevents live video playback from modifying the
+      // PNG/JPG while the asynchronous browser encoder is reading pixels.
+      const canvas=document.createElement("canvas");
+      canvas.width=dims.width;canvas.height=dims.height;
+      try{
+        const ctx=canvas.getContext("2d",{alpha:false});
+        if(!ctx)throw new Error("Não foi possível criar a imagem.");
+        renderCinematic(ctx,{...options,mode:"banner",video:null});
+        const blob=await new Promise<Blob>((resolve,reject)=>canvas.toBlob(
+          value=>value?resolve(value):reject(new Error("A origem da imagem não permite exportação pelo navegador.")),
+          as==="png"?"image/png":"image/jpeg",as==="png"?undefined:.94,
+        ));
+        downloadFile(blob,slug(movie?.title||"cinematic")+"-"+dims.width+"x"+dims.height+"."+(as==="png"?"png":"jpg"));
+      }finally{canvas.width=0;canvas.height=0;}
       toast.success("Arte estática salva!");
     }catch(e){toast.error(e instanceof Error?e.message:"Falha ao exportar imagem.")}
     finally{setExporting(false);}
