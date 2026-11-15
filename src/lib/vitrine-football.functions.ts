@@ -178,7 +178,7 @@ export const getVitrineFootballPlayers = createServerFn({ method: "POST" })
     const remote = await getJson<{ players?: RemotePlayer[] }>(`/search/?${p}`);
     const players: FootballPlayer[] = (remote.players || []).filter((x) => !!x.name)
       .map((x) => ({
-        id: x.slug || x.url || x.name!,
+        id: x.url || x.logo || x.slug || x.name!,
         name: x.name!,
         position: "",
         image: x.logo || "",
