@@ -16,7 +16,6 @@ import {
   type CinematicFormat,type CinematicMode
 } from "@/lib/vitrine-cinematic-canvas";
 import {renderNativeMp4,supportedMp4Mime} from "@/lib/vitrine-cinematic-mp4";
-import {canGenerateTabMp4,renderAuthorizedTabMp4} from "@/lib/vitrine-cinematic-tab-export";
 import {normalizeCinematicLogoPng} from "@/lib/vitrine-cinematic-logo";
 
 type SearchItem={
@@ -70,7 +69,6 @@ export function CinematicStudio({mode}:{mode:CinematicMode}){
   const recordRender=useServerFn(recordCinematicRender);
   const canvasRef=useRef<HTMLCanvasElement>(null);
   const previewVideoRef=useRef<HTMLVideoElement>(null);
-  const previewIframeRef=useRef<HTMLIFrameElement>(null);
   const busyRef=useRef(false);
   const [media,setMedia]=useState<"movie"|"tv">("movie");
   const [search,setSearch]=useState("");
@@ -289,65 +287,14 @@ export function CinematicStudio({mode}:{mode:CinematicMode}){
   }
   async function downloadMp4(){
     if(busyRef.current||rendering)return;
-    if(!assets.background||!movie){
-      toast.error("Selecione um filme ou série e aguarde a imagem oficial.");return;
+    if(!videoFile||!videoUrl||!assets.background||!movie){
+      toast.error("Selecione um filme ou série e envie um MP4 autorizado para exportar.");return;
     }
     if(!licenseAccepted){
-      toast.error("Confirme que possui autorização para capturar e publicar o vídeo.");return;
+      toast.error("Confirme que você tem autorização para usar e publicar o vídeo.");return;
     }
     if(!supportedMp4Mime(audio)){
-      toast.error("Este navegador não oferece MP4 H.264/AAC nativo. Nenhuma captura foi iniciada.");return;
-    }
-    if(!videoFile){
-      if(!youtubeEmbed){
-        toast.error("Nenhum trailer selecionado. Envie um MP4 autorizado ou selecione outra obra.");return;
-      }
-      if(!canGenerateTabMp4(audio)){
-        toast.error("Este navegador não permite compartilhar uma aba para gerar MP4. No iPhone, use um computador compatível ou envie um MP4 autorizado.");return;
-      }
-      // No awaits before renderAuthorizedTabMp4: getDisplayMedia MUST run
-      // synchronously under the actual button click to request browser consent.
-      const requestId=crypto.randomUUID();
-      busyRef.current=true;
-      setRendering(true);
-      setRenderProgress({percent:0,seconds:0,total:clipSeconds,stage:"Preparando MP4..."});
-      const outputCanvas=document.createElement("canvas");
-      outputCanvas.width=dims.width;outputCanvas.height=dims.height;
-      try{
-        // Keep the approved source visible during this-tab screen sharing.
-        // This is synchronous; getDisplayMedia still runs under the user's
-        // original Generate MP4 click.
-        previewIframeRef.current?.scrollIntoView({behavior:"auto",block:"center"});
-        const blob=await renderAuthorizedTabMp4(
-          outputCanvas,options,clipSeconds,audio,previewIframeRef.current,setRenderProgress,
-          ()=>{
-            // Supported YouTube player API only; cannot force an uploader's
-            // playback permissions or evade browser autoplay restrictions.
-            const player=previewIframeRef.current?.contentWindow;
-            if(!player)return;
-            const target="https://www.youtube-nocookie.com";
-            player.postMessage(JSON.stringify({event:"command",func:"seekTo",args:[youtubeClipStart,true]}),target);
-            player.postMessage(JSON.stringify({event:"command",func:"playVideo",args:[]}),target);
-          },
-        );
-        const url=URL.createObjectURL(blob);
-        setReadyMp4(url);setReadyMp4Bytes(blob.size);
-        downloadFile(blob,slug(movie.title)+"-"+clipSeconds+"s-"+dims.width+"x"+dims.height+".mp4");
-        void logVideoRender(requestId,"completed",blob.size,null);
-        toast.success("MP4 gerado com sucesso e pronto para publicação!");
-      }catch(e){
-        const message=e instanceof Error?e.message:"Não foi possível gerar MP4 a partir da aba.";
-        toast.error(message);
-        setRenderProgress(v=>({...v,stage:"Não foi possível gerar o MP4"}));
-        void logVideoRender(requestId,"failed",0,"EXPORT_ERROR");
-      }finally{
-        outputCanvas.width=0;outputCanvas.height=0;
-        busyRef.current=false;setRendering(false);
-      }
-      return;
-    }
-    if(!videoUrl){
-      toast.error("O arquivo MP4 ainda não está pronto.");return;
+      toast.error("Este navegador não oferece exportação nativa MP4 H.264/AAC.");return;
     }
     if(videoLength<clipStart+clipSeconds-.15){
       toast.error("O vídeo enviado não possui o trecho completo.");return;
@@ -574,7 +521,7 @@ export function CinematicStudio({mode}:{mode:CinematicMode}){
                 </label>
               </div>
               <p className="rounded-lg border border-blue-400/20 bg-blue-500/5 p-3 text-[11px] text-sky-100">
-                Para gerar um MP4 com vídeo autorizado no computador, clique em <strong>Gerar MP4</strong>, permita compartilhar <strong>esta aba</strong> quando o navegador solicitar e mantenha o vídeo reproduzindo. O arquivo é processado localmente. A incorporação bloqueada ou conteúdo protegido não pode ser contornado.
+                Assista ao trailer dentro da prévia. Para exportar a arte em MP4, envie um arquivo de vídeo autorizado. Nenhuma captura de aba será solicitada.
               </p>
             </div>:<p className="text-xs text-amber-300">A TMDB não indicou trailer do YouTube para este título.</p>}
             <label className="block space-y-2 text-xs text-slate-300"><span className="flex items-center gap-2"><Upload size={15}/> Enviar MP4 que você pode publicar</span>
@@ -607,10 +554,10 @@ export function CinematicStudio({mode}:{mode:CinematicMode}){
             </div>}
             <label className="flex items-start gap-2 text-xs text-slate-300">
               <input className="mt-0.5" type="checkbox" checked={licenseAccepted} onChange={e=>setLicenseAccepted(e.target.checked)}/>
-              Confirmo que tenho autorização para capturar, editar e publicar o vídeo selecionado.
+              Confirmo que tenho autorização para utilizar e publicar o MP4 enviado.
             </label>
             <div className={"rounded-lg border p-3 text-xs "+(mime?"border-emerald-500/20 bg-emerald-500/10 text-emerald-200":"border-amber-500/30 bg-amber-500/10 text-amber-200")}>
-              {mime?"Este navegador informa suporte ao MP4 H.264"+(audio?"/AAC":"")+". Sem upload, você precisará autorizar o compartilhamento da aba; nenhum vídeo será enviado ao servidor.":"Este navegador não informa suporte à geração nativa de MP4 H.264"+(audio?"/AAC":"")+". Teste pelo computador ou utilize um navegador compatível."}
+              {mime?"Este navegador informa suporte à exportação MP4 H.264"+(audio?"/AAC":"")+". O vídeo enviado é processado localmente, sem captura de aba.":"Este navegador não informa suporte à geração nativa de MP4 H.264"+(audio?"/AAC":"")+". Teste pelo computador ou utilize um navegador compatível."}
             </div>
             <p className="text-[11px] text-slate-400">Processamento local, sem enviar seu vídeo ao servidor. Se o navegador não oferecer codec AAC, o MP4 será gerado sem áudio. FFmpeg na Cloudflare continua desativado até aprovação de orçamento.</p>
           </section>}
@@ -663,7 +610,7 @@ export function CinematicStudio({mode}:{mode:CinematicMode}){
                     width:(previewFrame.width/dims.width*100)+"%",
                     height:(previewFrame.height/dims.height*100)+"%",
                   }}>
-                  <iframe ref={previewIframeRef} key={youtubeEmbed} title={"Trailer dentro da Vitrine: "+(movie?.title||"")}
+                  <iframe key={youtubeEmbed} title={"Trailer dentro da Vitrine: "+(movie?.title||"")}
                     src={youtubeEmbed} loading="lazy" allowFullScreen
                     referrerPolicy="strict-origin-when-cross-origin"
                     allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture; web-share"
@@ -679,7 +626,7 @@ export function CinematicStudio({mode}:{mode:CinematicMode}){
                 if(v&&v.currentTime>clipStart+clipSeconds)v.pause();
               }}/>
             {!movie&&<p className="text-center text-sm text-amber-200">Selecione um filme ou uma série para criar a prévia com o fundo oficial.</p>}
-            {mode==="video"&&!videoFile&&<p className="text-center text-xs text-amber-200">No computador, inicie a reprodução de um vídeo autorizado na moldura, clique em Gerar MP4 e escolha compartilhar esta aba na janela do navegador.</p>}
+            {mode==="video"&&!videoFile&&<p className="text-center text-xs text-amber-200">A prévia mostra o trailer oficial. Para baixar o post animado, envie um MP4 autorizado; não é necessário compartilhar ou gravar a aba.</p>}
             <div className="grid gap-2 sm:grid-cols-2">
               <Button className="bg-blue-600 text-white hover:bg-blue-500" disabled={!isReady||exporting||rendering}
                 onClick={()=>void downloadStatic("png")}>
@@ -691,7 +638,7 @@ export function CinematicStudio({mode}:{mode:CinematicMode}){
                   <Download size={17} className="mr-2"/>Baixar JPG
                 </Button>:
                 <Button className="bg-indigo-600 text-white hover:bg-indigo-500"
-                  disabled={!isReady||!licenseAccepted||!mime||rendering||(!videoFile&&!youtubeEmbed)||(!videoFile&&!canGenerateTabMp4(audio))||(!!videoFile&&videoLength<clipStart+clipSeconds-.15)}
+                  disabled={!isReady||!videoFile||!licenseAccepted||!mime||rendering||videoLength<clipStart+clipSeconds-.15}
                   onClick={()=>void downloadMp4()}>
                   <Clapperboard size={17} className="mr-2"/>{rendering?"Gerando MP4...":"Gerar MP4"}
                 </Button>}
