@@ -44,6 +44,7 @@ export async function renderAuthorizedTabMp4(
   includeAudio:boolean,
   frameElement:HTMLIFrameElement|null,
   progress:(value:ExportProgress)=>void,
+  startPlayback?:()=>void,
 ):Promise<Blob>{
   // This call must happen on the direct user click path, before any awaits.
   // Never request desktop/window capture: only tab (browser surface) may pass.
@@ -102,6 +103,9 @@ export async function renderAuthorizedTabMp4(
       source.addEventListener("error",()=>{clearTimeout(timer);reject(new Error("Erro ao acessar os quadros da aba."));},{once:true});
     });
     await source.play();
+    // Best-effort playback through a provider's documented iframe API.
+    // Does not bypass autoplay, embed restrictions, DRM or permissions.
+    try{startPlayback?.();}catch{/* Provider may refuse playback. */}
     if(!frameElement||!getCropForIframe(source,frameElement)){
       throw new Error("A prévia do vídeo precisa estar visível na aba compartilhada. Volte à Vitrine Vídeo e tente novamente.");
     }
