@@ -1,6 +1,12 @@
 /** Origem da visita (primeiro toque, 30 dias). Guarda só parâmetros de campanha, nenhum dado pessoal. */
 const KEY = "sm_ad_attribution";
 const MAX_AGE_MS = 30 * 86_400_000;
+let memoryAttribution: AdAttribution | null = null;
+
+/** Local storage may be unavailable in private and in-app browsers. */
+function isFresh(saved: AdAttribution | null): saved is AdAttribution {
+  return !!saved && Number.isFinite(saved.at) && saved.at <= Date.now() && Date.now() - saved.at < MAX_AGE_MS;
+}
 
 export type AdPlatform = "facebook" | "instagram" | "messenger" | "audience_network" | "other";
 
@@ -47,24 +53,29 @@ export function captureAttribution(): AdAttribution | null {
     utm_term: clean(params.get("utm_term")),
     at: Date.now(),
   };
-  try {
-    localStorage.setItem(KEY, JSON.stringify(attribution));
-  } catch {
-    /* ignore */
-  }
+  // Preserve first-touch campaign attribution across the 30-day measurement window.
+  // A later organic visit or an additional ad click must not erase the original source.
+  const existing = readAttribution();
+  if (existing?.source === "meta_ads") return existing;
+  memoryAttribution = attribution;
+  try { localStorage.setItem(KEY, JSON.stringify(attribution)); } catch { /* private browser */ }
+  try { sessionStorage.setItem(KEY, JSON.stringify(attribution)); } catch { /* private browser */ }
   return attribution;
 }
 
 /** Atribuição salva e ainda válida (30 dias), ou null. */
 export function readAttribution(): AdAttribution | null {
   if (typeof window === "undefined") return null;
+  // A previous ad click must survive redirects, sign-up navigation and storage restrictions.
   try {
     const saved = JSON.parse(localStorage.getItem(KEY) ?? "null") as AdAttribution | null;
-    if (saved && Date.now() - saved.at < MAX_AGE_MS) return saved;
-  } catch {
-    /* ignore */
-  }
-  return null;
+    if (isFresh(saved)) return saved;
+  } catch { /* private browser */ }
+  try {
+    const saved = JSON.parse(sessionStorage.getItem(KEY) ?? "null") as AdAttribution | null;
+    if (isFresh(saved)) return saved;
+  } catch { /* private browser */ }
+  return isFresh(memoryAttribution) ? memoryAttribution : null;
 }
 
 export function readAttributionSource(): string {
