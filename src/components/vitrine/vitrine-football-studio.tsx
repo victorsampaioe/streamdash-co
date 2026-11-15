@@ -434,7 +434,7 @@ export function VitrineFootballStudio() {
             Agenda: {games.data.sourcesSucceeded}/{games.data.sourcesTotal} consultas concluídas.
             {games.data.partial ? " Algumas consultas falharam; tente atualizar. " : " "}
             Confira horários antes de publicar. Dados de <a href="https://sportscore.com/" rel="dofollow" target="_blank" className="font-semibold text-sky-500 underline">SportScore</a>.
-          </p>
+          </p>}
           <div className="max-h-[360px] space-y-2 overflow-y-auto pr-1">
             {fixtures.map((m) => {
               const checked = mode === "featured" ? featured?.id === m.id : (selectedIds.length ? selectedIds.includes(m.id) : fixtures.slice(0, 5).some((v) => v.id === m.id));
