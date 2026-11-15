@@ -320,6 +320,15 @@ export function CinematicStudio({mode}:{mode:CinematicMode}){
         previewIframeRef.current?.scrollIntoView({behavior:"auto",block:"center"});
         const blob=await renderAuthorizedTabMp4(
           outputCanvas,options,clipSeconds,audio,previewIframeRef.current,setRenderProgress,
+          ()=>{
+            // Supported YouTube player API only; cannot force an uploader's
+            // playback permissions or evade browser autoplay restrictions.
+            const player=previewIframeRef.current?.contentWindow;
+            if(!player)return;
+            const target="https://www.youtube-nocookie.com";
+            player.postMessage(JSON.stringify({event:"command",func:"seekTo",args:[youtubeClipStart,true]}),target);
+            player.postMessage(JSON.stringify({event:"command",func:"playVideo",args:[]}),target);
+          },
         );
         const url=URL.createObjectURL(blob);
         setReadyMp4(url);setReadyMp4Bytes(blob.size);
@@ -411,7 +420,7 @@ export function CinematicStudio({mode}:{mode:CinematicMode}){
   const youtubeClipStart=Math.max(0,Math.min(3600,Math.floor(Number(youtubeStart)||0)));
   const youtubeClipEnd=youtubeClipStart+clipSeconds;
   const youtubeEmbed=typeof youtubeKey==="string"&&/^[a-zA-Z0-9_-]{11}$/.test(youtubeKey)
-    ?`https://www.youtube-nocookie.com/embed/${youtubeKey}?playsinline=1&controls=1&rel=0&start=${youtubeClipStart}&end=${youtubeClipEnd}`
+    ?`https://www.youtube-nocookie.com/embed/${youtubeKey}?playsinline=1&controls=1&rel=0&enablejsapi=1&origin=${encodeURIComponent(typeof window!=="undefined"?window.location.origin:"https://streammonitor.site")}&start=${youtubeClipStart}&end=${youtubeClipEnd}`
     :null;
   const mime=supportedMp4Mime(audio);
   return <div className="min-h-screen bg-[#050a14] px-3 py-6 text-white sm:px-6 lg:px-8">
