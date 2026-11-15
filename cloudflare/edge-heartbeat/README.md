@@ -16,6 +16,22 @@ Normal deployment has `MANUAL_TEST_ENABLED=false`; the one-time test
 temporary endpoint is disabled. `workers.dev` stays **disabled** and there
 are **no custom-domain routes**. The only trigger is `*/10 * * * *` (UTC).
 
+## Activation verification — 15 Nov 2026
+
+- Created new D1 `streammonitor-edge-heartbeat`.
+- Deployed Worker `streammonitor-edge-heartbeat` with the `OBS_DB` binding.
+- A temporary manual-only endpoint produced **one new, independent** check of the
+  public Stream Monitor homepage: **HTTP 200**, **1,211 ms** edge-to-origin,
+  and stored the result in `heartbeat_samples` as `manual_test`.
+- Redeployed the safe normal code with `MANUAL_TEST_ENABLED = false`.
+- Confirmed the temporary test endpoint now returns `not_found`.
+- Enabled `*/10 * * * *` Cron and read back the configured schedule.
+- Confirmed `workers.dev` is disabled, zone routes are empty, and there are
+  no modifications to existing PostgreSQL, Telegram jobs, DNS, or customers.
+- **First Cron execution was not observed in the current verification**; check
+  `sample_type='scheduled'` separately to confirm actual schedule delivery.
+- Production Postgres restoration and Storage backup gates are STILL BLOCKED.
+
 ## Data
 
 `heartbeat_samples` saves time bucket, status, reachability, response
