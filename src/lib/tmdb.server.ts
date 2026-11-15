@@ -143,3 +143,42 @@ export async function fetchDetail(media: TmdbMediaType, id: number): Promise<Tmd
     seasons: raw.number_of_seasons ?? null,
   };
 }
+
+/** Extra official TMDB media assets, Brazilian age rating and legitimate
+ * YouTube trailer REFERENCES (no YouTube download or stream extraction). */
+export async function fetchCinematicExtras(media: TmdbMediaType,id:number){
+  if(!Number.isInteger(id)||id<=0)throw new Error("ID TMDB inválido.");
+  type Video={key?:string;site?:string;type?:string;official?:boolean;iso_639_1?:string;iso_3166_1?:string;name?:string};
+  type ExtraRaw={
+    backdrop_path?:string|null;poster_path?:string|null;
+    images?:{backdrops?:{file_path:string;vote_average?:number;width?:number;height?:number}[]};
+    videos?:{results?:Video[]};
+    release_dates?:{results?:{iso_3166_1:string;release_dates?:{certification?:string}[]}[]};
+    content_ratings?:{results?:{iso_3166_1:string;rating?:string}[]};
+  };
+  const raw=await tmdb<ExtraRaw>(`/${media}/${id}`,{
+    append_to_response:"images,videos,release_dates,content_ratings",
+    include_image_language:"pt,null,en",
+  });
+  const paths=[raw.backdrop_path,...(raw.images?.backdrops??[])
+    .filter(x=>typeof x.file_path==="string"&&x.file_path.startsWith("/"))
+    .sort((a,b)=>(b.vote_average??0)-(a.vote_average??0))
+    .map(x=>x.file_path)].filter((x):x is string=>!!x);
+  const backdrops=[...new Set(paths)].slice(0,8);
+  const clips=(raw.videos?.results??[])
+    .filter(x=>x.site==="YouTube"&&x.type==="Trailer"&&/^[a-zA-Z0-9_-]{11}$/.test(x.key??""))
+    .sort((a,b)=>{
+      const rank=(x:Video)=>(x.iso_639_1==="pt"?10:0)+(x.iso_3166_1==="BR"?5:0)+(x.official?3:0);
+      return rank(b)-rank(a);
+    });
+  const trailer=clips[0]??null;
+  const certificate=media==="movie"
+   ?(raw.release_dates?.results??[]).find(x=>x.iso_3166_1==="BR")?.release_dates?.find(x=>x.certification)?.certification
+   :(raw.content_ratings?.results??[]).find(x=>x.iso_3166_1==="BR")?.rating;
+  return {
+    backdrops,
+    poster_path:raw.poster_path??null,
+    classification:certificate||null,
+    trailer:trailer?{provider:"YouTube" as const,key:trailer.key!,official:trailer.official===true,language:trailer.iso_639_1??null,name:trailer.name??"Trailer"}:null,
+  };
+}
