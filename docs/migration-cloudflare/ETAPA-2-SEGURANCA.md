@@ -51,6 +51,16 @@ remove any of the 17 existing PostgreSQL cron jobs.
 See `cloudflare/edge-heartbeat/README.md` for source, data retention, checks,
 rollback and security scope.
 
+## Admin edge-monitor dashboard — 15 Nov 2026
+
+- **Cron confirmed:** automatic heartbeat at `2026-11-15T19:50:14Z`, site responded HTTP 200 in 1,326 ms; first scheduled sample stored in the dedicated `streammonitor-edge-heartbeat` D1.
+- A separate `streammonitor-edge-status-read` Worker was deployed, with only a **sanitized public-homepage availability summary** at `GET /summary`. It has no schedules, route on `streammonitor.site`, credentials, customer information, or write API. The summary **is publicly readable**, since it contains only public site availability metrics.
+- Server-side function `src/lib/cloudflare-heartbeat.functions.ts` fetches that summary only after verifying the existing user session and `admin` role. The credentials of Cloudflare are not shipped in site JavaScript.
+- Admin panel `src/components/observability/cloudflare-heartbeat-panel.tsx` is included in `/app/admin/observabilidade` and displays the last sample, latency, 24-hour count and a stale-data warning.
+- GitHub code has been synchronized with Lovable and a deployment was **requested**. **The pending deployment does not prove it has completed**, and authenticated visual confirmation is still required.
+- Source PostgreSQL, existing cron schedules, DNS, billing, customer/auth data and Telegram alerts were not switched.
+- The **full migration remains blocked** by isolated PostgreSQL restore, Storage backup, multi-service regression and explicit final authorization.
+
 ## Critical migration gates (ALL must pass)
 1. Official Lovable Cloud export obtained and downloaded privately. **Still verify archive structure, scope (including `auth`, SQL objects, rows and policies) and restore integrity** in an isolated PostgreSQL environment.
 2. Export **Storage objects separately**, including bucket configuration and policies; don't assume database export includes files.
