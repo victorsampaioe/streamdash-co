@@ -181,3 +181,80 @@ export const recordCinematicRender=createServerFn({method:"POST"})
     if(error)throw new Error("Não foi possível registrar o resultado da renderização.");
     return {recorded:true,duplicate:false};
   });
+
+
+/**
+ * Static cinematic Banner is available to every signed-in Stream Monitor user.
+ * Do not reuse the admin Video functions: they intentionally expose additional
+ * reseller identities and private generation controls.
+ * This function returns only public TMDB metadata of the selected title.
+ */
+export const getCinematicBannerDetail=createServerFn({method:"POST"})
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input:{media:"movie"|"tv";id:number})=>z.object({
+    media:z.enum(["movie","tv"]),
+    id:z.number().int().positive(),
+  }).parse(input))
+  .handler(async ({data})=>{
+    const {fetchDetail,fetchCinematicExtras}=await import("./tmdb.server");
+    const [detail,extras]=await Promise.all([
+      fetchDetail(data.media,data.id),fetchCinematicExtras(data.media,data.id),
+    ]);
+    return {
+      detail:{
+        tmdb_id:detail.tmdb_id,media_type:detail.media_type,title:detail.title,
+        overview:detail.overview,release_date:detail.release_date,
+        poster_path:detail.poster_path,backdrop_path:detail.backdrop_path,
+        genres:detail.genres,
+      },
+      extras,
+    };
+  });
+
+/**
+ * Never return other users' branding to a public Banner user.
+ * The service client runs only server-side, with an explicit owner_id
+ * predicate on EVERY read, regardless of RLS availability.
+ */
+export const getCinematicBannerBrand=createServerFn({method:"GET"})
+  .middleware([requireSupabaseAuth])
+  .handler(async ({context})=>{
+    const ownerId=context.userId;
+    const {supabaseAdmin}=await import("@/integrations/supabase/client.server");
+    const db=supabaseAdmin as any;
+    const [promo,page,profile]=await Promise.all([
+      db.from("promo_brand_settings")
+        .select("brand_name,logo_url,whatsapp,primary_color")
+        .eq("owner_id",ownerId).maybeSingle(),
+      db.from("reseller_pages")
+        .select("display_name,logo_url,whatsapp,primary_color")
+        .eq("owner_id",ownerId).maybeSingle(),
+      db.from("profiles")
+        .select("full_name,phone,whatsapp")
+        .eq("id",ownerId).maybeSingle(),
+    ]);
+    if(promo.error||page.error||profile.error)
+      throw new Error("Não foi possível carregar sua identidade de revenda.");
+    const saved=promo.data as {
+      brand_name?:string|null;logo_url?:string|null;
+      whatsapp?:string|null;primary_color?:string|null;
+    }|null;
+    const registered=page.data as {
+      display_name?:string|null;logo_url?:string|null;
+      whatsapp?:string|null;primary_color?:string|null;
+    }|null;
+    const me=profile.data as {
+      full_name?:string|null;whatsapp?:string|null;phone?:string|null;
+    }|null;
+    const first=(...values:(string|null|undefined)[])=>
+      values.map(x=>String(x??"").trim()).find(Boolean)||"";
+    const resolvedColor=first(saved?.primary_color,registered?.primary_color);
+    const brand:CinematicBrand={
+      owner_id:ownerId,
+      name:first(saved?.brand_name,registered?.display_name,me?.full_name)||"Minha Revenda",
+      logo_url:first(saved?.logo_url,registered?.logo_url),
+      whatsapp:first(saved?.whatsapp,registered?.whatsapp,me?.whatsapp,me?.phone),
+      color:colorPattern.test(resolvedColor)?resolvedColor:"#2563eb",
+    };
+    return {currentOwner:ownerId,brands:[brand]};
+  });
