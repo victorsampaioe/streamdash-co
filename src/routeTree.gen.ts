@@ -82,12 +82,14 @@ import { Route as AuthenticatedAppAdminAndroidPlayRouteImport } from './routes/_
 import { Route as AuthenticatedAppAdminStreamPlayVersionsRouteImport } from './routes/_authenticated/app.admin.stream-play-versions'
 import { Route as AuthenticatedAppAdminTelegramGuardRouteImport } from './routes/_authenticated/app.admin.telegram-guard'
 import { Route as AuthenticatedAppAdminCoreLogsRouteImport } from './routes/_authenticated/app.admin_.core-logs'
+import { Route as AuthenticatedAppAdminObservabilidadeRouteImport } from './routes/_authenticated/app.admin_.observabilidade'
 import { Route as AuthenticatedAppAdminVitrineFutebolRouteImport } from './routes/_authenticated/app.admin_.vitrine-futebol'
 import { Route as AuthenticatedAppDiagnosticoIndexRouteImport } from './routes/_authenticated/app.diagnostico.index'
 import { Route as AuthenticatedAppInteligenciaIndexRouteImport } from './routes/_authenticated/app.inteligencia.index'
 import { Route as AuthenticatedAppServersIndexRouteImport } from './routes/_authenticated/app.servers.index'
 import { Route as AuthenticatedAppServersIdRouteImport } from './routes/_authenticated/app.servers.$id'
 import { Route as AuthenticatedAppServersNewRouteImport } from './routes/_authenticated/app.servers.new'
+import { Route as ApiPublicAnalyticsEventRouteImport } from './routes/api/public/analytics/event'
 import { Route as ApiPublicAndroidAssociateRouteImport } from './routes/api/public/android/associate'
 import { Route as ApiPublicAndroidConfigRouteImport } from './routes/api/public/android/config'
 import { Route as ApiPublicAndroidLoginRouteImport } from './routes/api/public/android/login'
@@ -99,6 +101,7 @@ import { Route as ApiPublicCoreReportRouteImport } from './routes/api/public/cor
 import { Route as ApiPublicCoreStreamRouteImport } from './routes/api/public/core/stream'
 import { Route as ApiPublicCoreTaskRouteImport } from './routes/api/public/core/task'
 import { Route as ApiPublicCronApiWebhooksRouteImport } from './routes/api/public/cron/api-webhooks'
+import { Route as ApiPublicCronBillingRouteImport } from './routes/api/public/cron/billing'
 import { Route as ApiPublicCronCheckRouteImport } from './routes/api/public/cron/check'
 import { Route as ApiPublicCronCloudflareEdgeAnnouncementRouteImport } from './routes/api/public/cron/cloudflare-edge-announcement'
 import { Route as ApiPublicCronDigestRouteImport } from './routes/api/public/cron/digest'
@@ -107,6 +110,7 @@ import { Route as ApiPublicCronDnsRecoveryRouteImport } from './routes/api/publi
 import { Route as ApiPublicCronIptvNotificationsRouteImport } from './routes/api/public/cron/iptv-notifications'
 import { Route as ApiPublicCronMonitorRouteImport } from './routes/api/public/cron/monitor'
 import { Route as ApiPublicCronNotificationsRouteImport } from './routes/api/public/cron/notifications'
+import { Route as ApiPublicCronObservabilityRouteImport } from './routes/api/public/cron/observability'
 import { Route as ApiPublicCronPerfRouteImport } from './routes/api/public/cron/perf'
 import { Route as ApiPublicCronRadarRouteImport } from './routes/api/public/cron/radar'
 import { Route as ApiPublicCronReferralLaunchRouteImport } from './routes/api/public/cron/referral-launch'
@@ -510,6 +514,12 @@ const AuthenticatedAppAdminCoreLogsRoute =
     path: '/admin/core-logs',
     getParentRoute: () => AuthenticatedAppRoute,
   } as any)
+const AuthenticatedAppAdminObservabilidadeRoute =
+  AuthenticatedAppAdminObservabilidadeRouteImport.update({
+    id: '/admin_/observabilidade',
+    path: '/admin/observabilidade',
+    getParentRoute: () => AuthenticatedAppRoute,
+  } as any)
 const AuthenticatedAppAdminVitrineFutebolRoute =
   AuthenticatedAppAdminVitrineFutebolRouteImport.update({
     id: '/admin_/vitrine-futebol',
@@ -546,6 +556,11 @@ const AuthenticatedAppServersNewRoute =
     path: '/servers/new',
     getParentRoute: () => AuthenticatedAppRoute,
   } as any)
+const ApiPublicAnalyticsEventRoute = ApiPublicAnalyticsEventRouteImport.update({
+  id: '/api/public/analytics/event',
+  path: '/api/public/analytics/event',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiPublicAndroidAssociateRoute =
   ApiPublicAndroidAssociateRouteImport.update({
     id: '/api/public/android/associate',
@@ -603,6 +618,11 @@ const ApiPublicCronApiWebhooksRoute =
     path: '/api/public/cron/api-webhooks',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiPublicCronBillingRoute = ApiPublicCronBillingRouteImport.update({
+  id: '/api/public/cron/billing',
+  path: '/api/public/cron/billing',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiPublicCronCheckRoute = ApiPublicCronCheckRouteImport.update({
   id: '/api/public/cron/check',
   path: '/api/public/cron/check',
@@ -645,6 +665,12 @@ const ApiPublicCronNotificationsRoute =
   ApiPublicCronNotificationsRouteImport.update({
     id: '/api/public/cron/notifications',
     path: '/api/public/cron/notifications',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const ApiPublicCronObservabilityRoute =
+  ApiPublicCronObservabilityRouteImport.update({
+    id: '/api/public/cron/observability',
+    path: '/api/public/cron/observability',
     getParentRoute: () => rootRouteImport,
   } as any)
 const ApiPublicCronPerfRoute = ApiPublicCronPerfRouteImport.update({
@@ -793,9 +819,11 @@ export interface FileRoutesByFullPath {
   '/app/admin/stream-play-versions': typeof AuthenticatedAppAdminStreamPlayVersionsRoute
   '/app/admin/telegram-guard': typeof AuthenticatedAppAdminTelegramGuardRoute
   '/app/admin/core-logs': typeof AuthenticatedAppAdminCoreLogsRoute
+  '/app/admin/observabilidade': typeof AuthenticatedAppAdminObservabilidadeRoute
   '/app/admin/vitrine-futebol': typeof AuthenticatedAppAdminVitrineFutebolRoute
   '/app/servers/$id': typeof AuthenticatedAppServersIdRoute
   '/app/servers/new': typeof AuthenticatedAppServersNewRoute
+  '/api/public/analytics/event': typeof ApiPublicAnalyticsEventRoute
   '/api/public/android/associate': typeof ApiPublicAndroidAssociateRoute
   '/api/public/android/config': typeof ApiPublicAndroidConfigRoute
   '/api/public/android/login': typeof ApiPublicAndroidLoginRoute
@@ -807,6 +835,7 @@ export interface FileRoutesByFullPath {
   '/api/public/core/stream': typeof ApiPublicCoreStreamRoute
   '/api/public/core/task': typeof ApiPublicCoreTaskRoute
   '/api/public/cron/api-webhooks': typeof ApiPublicCronApiWebhooksRoute
+  '/api/public/cron/billing': typeof ApiPublicCronBillingRoute
   '/api/public/cron/check': typeof ApiPublicCronCheckRoute
   '/api/public/cron/cloudflare-edge-announcement': typeof ApiPublicCronCloudflareEdgeAnnouncementRoute
   '/api/public/cron/digest': typeof ApiPublicCronDigestRoute
@@ -815,6 +844,7 @@ export interface FileRoutesByFullPath {
   '/api/public/cron/iptv-notifications': typeof ApiPublicCronIptvNotificationsRoute
   '/api/public/cron/monitor': typeof ApiPublicCronMonitorRoute
   '/api/public/cron/notifications': typeof ApiPublicCronNotificationsRoute
+  '/api/public/cron/observability': typeof ApiPublicCronObservabilityRoute
   '/api/public/cron/perf': typeof ApiPublicCronPerfRoute
   '/api/public/cron/radar': typeof ApiPublicCronRadarRoute
   '/api/public/cron/referral-launch': typeof ApiPublicCronReferralLaunchRoute
@@ -904,9 +934,11 @@ export interface FileRoutesByTo {
   '/app/admin/stream-play-versions': typeof AuthenticatedAppAdminStreamPlayVersionsRoute
   '/app/admin/telegram-guard': typeof AuthenticatedAppAdminTelegramGuardRoute
   '/app/admin/core-logs': typeof AuthenticatedAppAdminCoreLogsRoute
+  '/app/admin/observabilidade': typeof AuthenticatedAppAdminObservabilidadeRoute
   '/app/admin/vitrine-futebol': typeof AuthenticatedAppAdminVitrineFutebolRoute
   '/app/servers/$id': typeof AuthenticatedAppServersIdRoute
   '/app/servers/new': typeof AuthenticatedAppServersNewRoute
+  '/api/public/analytics/event': typeof ApiPublicAnalyticsEventRoute
   '/api/public/android/associate': typeof ApiPublicAndroidAssociateRoute
   '/api/public/android/config': typeof ApiPublicAndroidConfigRoute
   '/api/public/android/login': typeof ApiPublicAndroidLoginRoute
@@ -918,6 +950,7 @@ export interface FileRoutesByTo {
   '/api/public/core/stream': typeof ApiPublicCoreStreamRoute
   '/api/public/core/task': typeof ApiPublicCoreTaskRoute
   '/api/public/cron/api-webhooks': typeof ApiPublicCronApiWebhooksRoute
+  '/api/public/cron/billing': typeof ApiPublicCronBillingRoute
   '/api/public/cron/check': typeof ApiPublicCronCheckRoute
   '/api/public/cron/cloudflare-edge-announcement': typeof ApiPublicCronCloudflareEdgeAnnouncementRoute
   '/api/public/cron/digest': typeof ApiPublicCronDigestRoute
@@ -926,6 +959,7 @@ export interface FileRoutesByTo {
   '/api/public/cron/iptv-notifications': typeof ApiPublicCronIptvNotificationsRoute
   '/api/public/cron/monitor': typeof ApiPublicCronMonitorRoute
   '/api/public/cron/notifications': typeof ApiPublicCronNotificationsRoute
+  '/api/public/cron/observability': typeof ApiPublicCronObservabilityRoute
   '/api/public/cron/perf': typeof ApiPublicCronPerfRoute
   '/api/public/cron/radar': typeof ApiPublicCronRadarRoute
   '/api/public/cron/referral-launch': typeof ApiPublicCronReferralLaunchRoute
@@ -1018,9 +1052,11 @@ export interface FileRoutesById {
   '/_authenticated/app/admin/stream-play-versions': typeof AuthenticatedAppAdminStreamPlayVersionsRoute
   '/_authenticated/app/admin/telegram-guard': typeof AuthenticatedAppAdminTelegramGuardRoute
   '/_authenticated/app/admin_/core-logs': typeof AuthenticatedAppAdminCoreLogsRoute
+  '/_authenticated/app/admin_/observabilidade': typeof AuthenticatedAppAdminObservabilidadeRoute
   '/_authenticated/app/admin_/vitrine-futebol': typeof AuthenticatedAppAdminVitrineFutebolRoute
   '/_authenticated/app/servers/$id': typeof AuthenticatedAppServersIdRoute
   '/_authenticated/app/servers/new': typeof AuthenticatedAppServersNewRoute
+  '/api/public/analytics/event': typeof ApiPublicAnalyticsEventRoute
   '/api/public/android/associate': typeof ApiPublicAndroidAssociateRoute
   '/api/public/android/config': typeof ApiPublicAndroidConfigRoute
   '/api/public/android/login': typeof ApiPublicAndroidLoginRoute
@@ -1032,6 +1068,7 @@ export interface FileRoutesById {
   '/api/public/core/stream': typeof ApiPublicCoreStreamRoute
   '/api/public/core/task': typeof ApiPublicCoreTaskRoute
   '/api/public/cron/api-webhooks': typeof ApiPublicCronApiWebhooksRoute
+  '/api/public/cron/billing': typeof ApiPublicCronBillingRoute
   '/api/public/cron/check': typeof ApiPublicCronCheckRoute
   '/api/public/cron/cloudflare-edge-announcement': typeof ApiPublicCronCloudflareEdgeAnnouncementRoute
   '/api/public/cron/digest': typeof ApiPublicCronDigestRoute
@@ -1040,6 +1077,7 @@ export interface FileRoutesById {
   '/api/public/cron/iptv-notifications': typeof ApiPublicCronIptvNotificationsRoute
   '/api/public/cron/monitor': typeof ApiPublicCronMonitorRoute
   '/api/public/cron/notifications': typeof ApiPublicCronNotificationsRoute
+  '/api/public/cron/observability': typeof ApiPublicCronObservabilityRoute
   '/api/public/cron/perf': typeof ApiPublicCronPerfRoute
   '/api/public/cron/radar': typeof ApiPublicCronRadarRoute
   '/api/public/cron/referral-launch': typeof ApiPublicCronReferralLaunchRoute
@@ -1132,9 +1170,11 @@ export interface FileRouteTypes {
     | '/app/admin/stream-play-versions'
     | '/app/admin/telegram-guard'
     | '/app/admin/core-logs'
- '/app/admin/vitrine-futebol'
+    | '/app/admin/observabilidade'
+    | '/app/admin/vitrine-futebol'
     | '/app/servers/$id'
     | '/app/servers/new'
+    | '/api/public/analytics/event'
     | '/api/public/android/associate'
     | '/api/public/android/config'
     | '/api/public/android/login'
@@ -1146,6 +1186,7 @@ export interface FileRouteTypes {
     | '/api/public/core/stream'
     | '/api/public/core/task'
     | '/api/public/cron/api-webhooks'
+    | '/api/public/cron/billing'
     | '/api/public/cron/check'
     | '/api/public/cron/cloudflare-edge-announcement'
     | '/api/public/cron/digest'
@@ -1154,6 +1195,7 @@ export interface FileRouteTypes {
     | '/api/public/cron/iptv-notifications'
     | '/api/public/cron/monitor'
     | '/api/public/cron/notifications'
+    | '/api/public/cron/observability'
     | '/api/public/cron/perf'
     | '/api/public/cron/radar'
     | '/api/public/cron/referral-launch'
@@ -1243,9 +1285,11 @@ export interface FileRouteTypes {
     | '/app/admin/stream-play-versions'
     | '/app/admin/telegram-guard'
     | '/app/admin/core-logs'
- '/app/admin/vitrine-futebol'
+    | '/app/admin/observabilidade'
+    | '/app/admin/vitrine-futebol'
     | '/app/servers/$id'
     | '/app/servers/new'
+    | '/api/public/analytics/event'
     | '/api/public/android/associate'
     | '/api/public/android/config'
     | '/api/public/android/login'
@@ -1257,6 +1301,7 @@ export interface FileRouteTypes {
     | '/api/public/core/stream'
     | '/api/public/core/task'
     | '/api/public/cron/api-webhooks'
+    | '/api/public/cron/billing'
     | '/api/public/cron/check'
     | '/api/public/cron/cloudflare-edge-announcement'
     | '/api/public/cron/digest'
@@ -1265,6 +1310,7 @@ export interface FileRouteTypes {
     | '/api/public/cron/iptv-notifications'
     | '/api/public/cron/monitor'
     | '/api/public/cron/notifications'
+    | '/api/public/cron/observability'
     | '/api/public/cron/perf'
     | '/api/public/cron/radar'
     | '/api/public/cron/referral-launch'
@@ -1356,9 +1402,11 @@ export interface FileRouteTypes {
     | '/_authenticated/app/admin/stream-play-versions'
     | '/_authenticated/app/admin/telegram-guard'
     | '/_authenticated/app/admin_/core-logs'
- '/_authenticated/app/admin_/vitrine-futebol'
+    | '/_authenticated/app/admin_/observabilidade'
+    | '/_authenticated/app/admin_/vitrine-futebol'
     | '/_authenticated/app/servers/$id'
     | '/_authenticated/app/servers/new'
+    | '/api/public/analytics/event'
     | '/api/public/android/associate'
     | '/api/public/android/config'
     | '/api/public/android/login'
@@ -1370,6 +1418,7 @@ export interface FileRouteTypes {
     | '/api/public/core/stream'
     | '/api/public/core/task'
     | '/api/public/cron/api-webhooks'
+    | '/api/public/cron/billing'
     | '/api/public/cron/check'
     | '/api/public/cron/cloudflare-edge-announcement'
     | '/api/public/cron/digest'
@@ -1378,6 +1427,7 @@ export interface FileRouteTypes {
     | '/api/public/cron/iptv-notifications'
     | '/api/public/cron/monitor'
     | '/api/public/cron/notifications'
+    | '/api/public/cron/observability'
     | '/api/public/cron/perf'
     | '/api/public/cron/radar'
     | '/api/public/cron/referral-launch'
@@ -1433,6 +1483,7 @@ export interface RootRouteChildren {
   ApiPublicStreamDoctorVerifyRoute: typeof ApiPublicStreamDoctorVerifyRoute
   ApiPublicTelegramAiVerifyRoute: typeof ApiPublicTelegramAiVerifyRoute
   StatusRevendaSlugRoute: typeof StatusRevendaSlugRoute
+  ApiPublicAnalyticsEventRoute: typeof ApiPublicAnalyticsEventRoute
   ApiPublicAndroidAssociateRoute: typeof ApiPublicAndroidAssociateRoute
   ApiPublicAndroidConfigRoute: typeof ApiPublicAndroidConfigRoute
   ApiPublicAndroidLoginRoute: typeof ApiPublicAndroidLoginRoute
@@ -1444,6 +1495,7 @@ export interface RootRouteChildren {
   ApiPublicCoreStreamRoute: typeof ApiPublicCoreStreamRoute
   ApiPublicCoreTaskRoute: typeof ApiPublicCoreTaskRoute
   ApiPublicCronApiWebhooksRoute: typeof ApiPublicCronApiWebhooksRoute
+  ApiPublicCronBillingRoute: typeof ApiPublicCronBillingRoute
   ApiPublicCronCheckRoute: typeof ApiPublicCronCheckRoute
   ApiPublicCronCloudflareEdgeAnnouncementRoute: typeof ApiPublicCronCloudflareEdgeAnnouncementRoute
   ApiPublicCronDigestRoute: typeof ApiPublicCronDigestRoute
@@ -1452,6 +1504,7 @@ export interface RootRouteChildren {
   ApiPublicCronIptvNotificationsRoute: typeof ApiPublicCronIptvNotificationsRoute
   ApiPublicCronMonitorRoute: typeof ApiPublicCronMonitorRoute
   ApiPublicCronNotificationsRoute: typeof ApiPublicCronNotificationsRoute
+  ApiPublicCronObservabilityRoute: typeof ApiPublicCronObservabilityRoute
   ApiPublicCronPerfRoute: typeof ApiPublicCronPerfRoute
   ApiPublicCronRadarRoute: typeof ApiPublicCronRadarRoute
   ApiPublicCronReferralLaunchRoute: typeof ApiPublicCronReferralLaunchRoute
@@ -1974,11 +2027,16 @@ declare module '@tanstack/react-router' {
     }
     '/_authenticated/app/admin_/core-logs': {
       id: '/_authenticated/app/admin_/core-logs'
- '/_authenticated/app/admin_/vitrine-futebol'
       path: '/admin/core-logs'
       fullPath: '/app/admin/core-logs'
- '/app/admin/vitrine-futebol'
       preLoaderRoute: typeof AuthenticatedAppAdminCoreLogsRouteImport
+      parentRoute: typeof AuthenticatedAppRoute
+    }
+    '/_authenticated/app/admin_/observabilidade': {
+      id: '/_authenticated/app/admin_/observabilidade'
+      path: '/admin/observabilidade'
+      fullPath: '/app/admin/observabilidade'
+      preLoaderRoute: typeof AuthenticatedAppAdminObservabilidadeRouteImport
       parentRoute: typeof AuthenticatedAppRoute
     }
     '/_authenticated/app/admin_/vitrine-futebol': {
@@ -2022,6 +2080,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/app/servers/new'
       preLoaderRoute: typeof AuthenticatedAppServersNewRouteImport
       parentRoute: typeof AuthenticatedAppRoute
+    }
+    '/api/public/analytics/event': {
+      id: '/api/public/analytics/event'
+      path: '/api/public/analytics/event'
+      fullPath: '/api/public/analytics/event'
+      preLoaderRoute: typeof ApiPublicAnalyticsEventRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/api/public/android/associate': {
       id: '/api/public/android/associate'
@@ -2100,6 +2165,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicCronApiWebhooksRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/cron/billing': {
+      id: '/api/public/cron/billing'
+      path: '/api/public/cron/billing'
+      fullPath: '/api/public/cron/billing'
+      preLoaderRoute: typeof ApiPublicCronBillingRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/cron/check': {
       id: '/api/public/cron/check'
       path: '/api/public/cron/check'
@@ -2154,6 +2226,13 @@ declare module '@tanstack/react-router' {
       path: '/api/public/cron/notifications'
       fullPath: '/api/public/cron/notifications'
       preLoaderRoute: typeof ApiPublicCronNotificationsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/cron/observability': {
+      id: '/api/public/cron/observability'
+      path: '/api/public/cron/observability'
+      fullPath: '/api/public/cron/observability'
+      preLoaderRoute: typeof ApiPublicCronObservabilityRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/public/cron/perf': {
@@ -2295,6 +2374,7 @@ interface AuthenticatedAppRouteChildren {
   AuthenticatedAppSubscriptionRoute: typeof AuthenticatedAppSubscriptionRoute
   AuthenticatedAppIndexRoute: typeof AuthenticatedAppIndexRoute
   AuthenticatedAppAdminCoreLogsRoute: typeof AuthenticatedAppAdminCoreLogsRoute
+  AuthenticatedAppAdminObservabilidadeRoute: typeof AuthenticatedAppAdminObservabilidadeRoute
   AuthenticatedAppAdminVitrineFutebolRoute: typeof AuthenticatedAppAdminVitrineFutebolRoute
   AuthenticatedAppServersIdRoute: typeof AuthenticatedAppServersIdRoute
   AuthenticatedAppServersNewRoute: typeof AuthenticatedAppServersNewRoute
@@ -2330,7 +2410,10 @@ const AuthenticatedAppRouteChildren: AuthenticatedAppRouteChildren = {
   AuthenticatedAppSubscriptionRoute: AuthenticatedAppSubscriptionRoute,
   AuthenticatedAppIndexRoute: AuthenticatedAppIndexRoute,
   AuthenticatedAppAdminCoreLogsRoute: AuthenticatedAppAdminCoreLogsRoute,
-  AuthenticatedAppAdminVitrineFutebolRoute: AuthenticatedAppAdminVitrineFutebolRoute,
+  AuthenticatedAppAdminObservabilidadeRoute:
+    AuthenticatedAppAdminObservabilidadeRoute,
+  AuthenticatedAppAdminVitrineFutebolRoute:
+    AuthenticatedAppAdminVitrineFutebolRoute,
   AuthenticatedAppServersIdRoute: AuthenticatedAppServersIdRoute,
   AuthenticatedAppServersNewRoute: AuthenticatedAppServersNewRoute,
   AuthenticatedAppDiagnosticoIndexRoute: AuthenticatedAppDiagnosticoIndexRoute,
@@ -2435,6 +2518,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPublicStreamDoctorVerifyRoute: ApiPublicStreamDoctorVerifyRoute,
   ApiPublicTelegramAiVerifyRoute: ApiPublicTelegramAiVerifyRoute,
   StatusRevendaSlugRoute: StatusRevendaSlugRoute,
+  ApiPublicAnalyticsEventRoute: ApiPublicAnalyticsEventRoute,
   ApiPublicAndroidAssociateRoute: ApiPublicAndroidAssociateRoute,
   ApiPublicAndroidConfigRoute: ApiPublicAndroidConfigRoute,
   ApiPublicAndroidLoginRoute: ApiPublicAndroidLoginRoute,
@@ -2446,6 +2530,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPublicCoreStreamRoute: ApiPublicCoreStreamRoute,
   ApiPublicCoreTaskRoute: ApiPublicCoreTaskRoute,
   ApiPublicCronApiWebhooksRoute: ApiPublicCronApiWebhooksRoute,
+  ApiPublicCronBillingRoute: ApiPublicCronBillingRoute,
   ApiPublicCronCheckRoute: ApiPublicCronCheckRoute,
   ApiPublicCronCloudflareEdgeAnnouncementRoute:
     ApiPublicCronCloudflareEdgeAnnouncementRoute,
@@ -2455,6 +2540,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPublicCronIptvNotificationsRoute: ApiPublicCronIptvNotificationsRoute,
   ApiPublicCronMonitorRoute: ApiPublicCronMonitorRoute,
   ApiPublicCronNotificationsRoute: ApiPublicCronNotificationsRoute,
+  ApiPublicCronObservabilityRoute: ApiPublicCronObservabilityRoute,
   ApiPublicCronPerfRoute: ApiPublicCronPerfRoute,
   ApiPublicCronRadarRoute: ApiPublicCronRadarRoute,
   ApiPublicCronReferralLaunchRoute: ApiPublicCronReferralLaunchRoute,

@@ -29,7 +29,7 @@ async function buildPix(userId:string, requestedPackage?:string):Promise<PixOutc
   // This only prepares a Mercado Pago charge for the account that owns
   // the linked private Telegram chat; it never changes admin privileges.
   // The actual subscription remains activated only after provider approval.
-  const selectedPlan=packageId ?? (hasPaidPlan ? subscription!.plan : "monthly");
+  const selectedPlan=packageId ?? (hasPaidPlan && subscription ? subscription.plan : "monthly");
   const plan=PLANS.find(p=>p.id===selectedPlan) || CREDIT_PACKS.find(p=>p.id===selectedPlan);
   if(!plan)throw new Error("Plano ou pacote não configurado.");
   // Match the existing website's published credit-pack calculation.
@@ -73,9 +73,11 @@ async function buildPix(userId:string, requestedPackage?:string):Promise<PixOutc
     pending={
       ...created,
       amount_cents:payable,
+      gross_amount_cents:discountEligible?amountCents:null,
       referral_discount_cents:discount,
       pix_copy_paste:null,pix_qr_code:null,
-    } as typeof pending;
+      status:"pending",
+    };
   }
   // Explicit MP token check before any provider charge. The pending record
   // remains safe to retry with the SAME external reference/idempotency key.
@@ -118,7 +120,8 @@ export async function generateTelegramPix(userId:string, packageAmount?:number):
       `Também é possível pagar em https://streammonitor.site/app/subscription`;
   }
   if(result.type==="credited")return "✅ <b>Renovação confirmada!</b>\n\nSeu saldo de indicações cobriu integralmente a assinatura. Consulte /fatura.";
-  const esc=(s:string)=>s.replace(/[<>&]/g,c=>({"<":"&lt;",">":"&gt;","&":"&amp;"}[c]!));
+  if(result.type==="retry")return "⏳ Tente /pix novamente em alguns segundos.";
+  const esc=(s:string)=>s.replace(/[<>&]/g,c=>({"<":"&lt;",">":"&gt;","&":"&amp;"}[c]??c));
   const expires=new Date(result.expiresAt).toLocaleTimeString("pt-BR",{timeZone:"America/Fortaleza",hour:"2-digit",minute:"2-digit"});
   return `💠 <b>Pix Stream Monitor — ${esc(result.planName)}</b>\n\n`+
     `💰 Valor: <b>${formatBRL(result.amountCents)}</b>\n`+
