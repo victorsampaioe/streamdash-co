@@ -383,10 +383,82 @@ const dnsWorker = {
   },
 };
 
+
+/**
+ * Cloudflare Queue is the durable orchestrator for Telegram incident retries.
+ * No Telegram chat ID, bot token, user message or personal data is stored in
+ * Queue or D1. The existing server resolves recipients and performs sending
+ * until credentials and sender are safely migrated independently.
+ */
+const TELEGRAM_DISPATCH_PATH="/api/public/edge-telegram/dispatch";
+async function deliverTelegramTick(env,job){
+  const payload=JSON.stringify({action:job.action,id:job.id,ts:Date.now()});
+  const signed=await signatureHeaders(env,payload);
+  const res=await fetch(ORIGIN+TELEGRAM_DISPATCH_PATH,{
+    method:"POST",headers:{"content-type":"application/json",...signed},
+    body:payload,cache:"no-store",signal:AbortSignal.timeout(45000)
+  });
+  if(!res.ok)throw new Error("telegram_bridge_http_"+res.status);
+  const result=await res.json();
+  if(!result||result.ok!==true)throw new Error("telegram_bridge_invalid_result");
+  return result;
+}
+const telegramQueueWorker={
+  scheduled(_event,env,ctx){
+    if(!env.TELEGRAM_DB||!env.TELEGRAM_DELIVERY_QUEUE){
+      console.warn("telegram_queue_not_configured");
+      return;
+    }
+    ctx.waitUntil((async()=>{
+      const flag=await env.TELEGRAM_DB.prepare("SELECT value FROM service_meta WHERE key='dispatch_enabled'").first();
+      if(flag?.value!=="true")return;
+      await env.TELEGRAM_DELIVERY_QUEUE.send({
+        action:"run",id:crypto.randomUUID(),ts:Date.now()
+      });
+      console.log("telegram_queue_tick_enqueued");
+    })().catch(err=>console.error("telegram_queue_enqueue_failed",String(err?.message||err).slice(0,130))));
+  },
+  async queue(batch,env){
+    for(const msg of batch.messages){
+      const task=msg.body;
+      try{
+        if(!task||!["health","run"].includes(task.action)
+          ||typeof task.id!=="string"||!/^[-a-f0-9]{36}$/i.test(task.id))
+          throw new Error("telegram_queue_invalid_task");
+        const result=await deliverTelegramTick(env,task);
+        if(task.action==="run"&&result.skipped){
+          msg.retry({delaySeconds:20});
+          continue;
+        }
+        const completed=Date.now();
+        await env.TELEGRAM_DB.prepare(
+          "INSERT OR REPLACE INTO delivery_cycles(id,kind,scheduled_at_ms,completed_at_ms,status,attempted,delivered,delivery_errors,last_error) VALUES (?,?,?,?,?,?,?,?,?)"
+        ).bind(task.id,task.action,Number(task.ts)||completed,completed,"completed",
+          (result.attempted?.dns_offline||0)+(result.attempted?.dns_recovered||0)+(result.attempted?.server||0)+(result.attempted?.outbox||0),
+          result.delivered||0,result.deliveryErrors||0,null).run();
+        console.log("telegram_queue_dispatch_ok",JSON.stringify({
+          mode:result.provider||result.mode,
+          action:task.action,deliveryErrors:result.deliveryErrors||0,
+          delivered:result.delivered||0
+        }));
+        msg.ack();
+      }catch(err){
+        const code=String(err?.message||"unknown").slice(0,100);
+        console.error("telegram_queue_dispatch_failed",code);
+        msg.retry({delaySeconds:30});
+      }
+    }
+  }
+};
+
 export default {
   scheduled(event,env,ctx){
     regionalWorker.scheduled(event,env,ctx);
     dnsWorker.scheduled(event,env,ctx);
+    telegramQueueWorker.scheduled(event,env,ctx);
+  },
+  queue(batch,env,ctx){
+    return telegramQueueWorker.queue(batch,env,ctx);
   },
   fetch(request,env,ctx){
     const path=new URL(request.url).pathname;
