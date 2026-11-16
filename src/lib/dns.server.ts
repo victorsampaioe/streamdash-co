@@ -422,7 +422,7 @@ type PrevSnapshot = {
   registrar?: string | null;
 };
 
-export async function runDnsCheck(serverId: string, opts: { quick?: boolean } = {}): Promise<{ ok: boolean; score: number; status: string; dnsStatus: string; severeFailure: boolean; alerts: number }> {
+export async function runDnsCheck(serverId: string, opts: { quick?: boolean; edgeReport?: DnsReport } = {}): Promise<{ ok: boolean; score: number; status: string; dnsStatus: string; severeFailure: boolean; alerts: number }> {
   const { data: srv } = await (supabaseAdmin as any)
     .from("servers").select("id, host, owner_id, host_changed_at").eq("id", serverId).maybeSingle();
   if (!srv) throw new Error("Servidor não encontrado");
@@ -443,7 +443,7 @@ export async function runDnsCheck(serverId: string, opts: { quick?: boolean } = 
     .eq("server_id", serverId)
     .gte("changed_at", historyBoundary);
 
-  const report = await analyzeDns(srv.host, recentChanges ?? 0, opts);
+  // A Cloudflare consulta os resolvedores. A rotina original conserva snapshots,\n  // confirmação dupla, incidentes e Telegram sem refazer sondagens no Lovable.\n  const report = opts.edgeReport ?? await analyzeDns(srv.host, recentChanges ?? 0, opts);
 
   const { data: prev } = await supabaseAdmin
     .from("dns_snapshots")
