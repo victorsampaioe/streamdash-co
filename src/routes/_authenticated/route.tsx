@@ -1,4 +1,5 @@
 import {PremiumVitrineGate} from "@/components/vitrine/premium-vitrine-gate";
+import {VerifiedPurchasePixel} from "@/components/verified-purchase-pixel";
 import { createFileRoute, Outlet, redirect, isRedirect, useRouter, useRouterState, type ErrorComponentProps } from "@tanstack/react-router";
 import { useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
@@ -37,8 +38,8 @@ function AuthenticatedOutlet(){
   // Account management and reseller top-up must remain available to restore access.
   const accountManagement=pathname==="/app/settings"||pathname.startsWith("/app/settings/")
     ||pathname==="/app/reseller"||pathname.startsWith("/app/reseller/");
-  if(checkout||accountManagement)return <Outlet/>;
-  return <PremiumVitrineGate><Outlet/></PremiumVitrineGate>;
+  if(checkout||accountManagement)return <><VerifiedPurchasePixel/><Outlet/></>;
+  return <><VerifiedPurchasePixel/><PremiumVitrineGate><Outlet/></PremiumVitrineGate></>;
 }
 
 function AuthedError({ error: unknownError, reset }: ErrorComponentProps) {
