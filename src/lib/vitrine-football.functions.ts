@@ -1,6 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { requirePaidFeature } from "@/lib/premium-feature-access";
 
 /**
  * The SportScore fixture API includes current league matches, team badges and
@@ -56,6 +57,8 @@ export type FootballMatch = {
   iso: string;
   day: string;
   broadcasts?: string[];
+  playerPhoto?: string;
+  playerName?: string;
 };
 export type FootballPlayer = {
   id: string;
@@ -162,8 +165,11 @@ function apiFixture(record: unknown, index: number, date: string): FootballMatch
   const when = /^\d{4}-\d{2}-\d{2}T/.test(inputTime) && !Number.isNaN(Date.parse(inputTime)) ? kickoff(inputTime) :
     {iso:"",day:date,time: /^\d{2}:\d{2}$/.test(inputTime)?inputTime:"A confirmar"};
   const id = String(pick(record,"id","jogo_id","match_id")||[date,home,away,index].join(":"));
+  const player = pick(record,"jogador_destaque","jogador","featured_player");
+  const playerPhoto = teamLogo({image:pick(player,"foto","imagem","image","photo")});
   return {id,home,away,homeId:"",awayId:"",homeBadge:teamLogo(homeObj),awayBadge:teamLogo(awayObj),
-    league,leagueId:simplify(league),...when,broadcasts:getBroadcasts(record)};
+    league,leagueId:simplify(league),...when,broadcasts:getBroadcasts(record),
+    playerPhoto,playerName:playerPhoto ? teamName(player) : ""};
 }
 /** Server-side: the FTWB key never reaches the browser or git. */
 export const getVitrineFootballMatches = createServerFn({ method: "POST" })
@@ -173,7 +179,7 @@ export const getVitrineFootballMatches = createServerFn({ method: "POST" })
     leagues: z.array(z.string().max(70)).max(16).optional(),
   }).parse(input))
   .handler(async ({data, context}) => {
-    await requireFootballAdmin(context);
+    await requirePaidFeature(context);
     const key = process.env.FTWB_API_KEY;
     if (!key) throw new Error("FTWB_API_KEY não configurada no ambiente do servidor.");
     const url = new URL(FOOTBALL_API_URL);
