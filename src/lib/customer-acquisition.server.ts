@@ -9,7 +9,7 @@ export async function recordRegistrationAttribution(input:{
   userId:string;profileCreatedAt:string;attribution:unknown;referralApplied:boolean;
 }):Promise<boolean>{
   const x=sanitizeAcquisitionInput(input.attribution);
-  const source=input.referralApplied?"referral":x?.source??"direct";
+  const source=input.referralApplied?"referral":x?.source??"unattributed";
   const evidence=input.referralApplied?"validated_referral_code":x?.evidence??"no_ad_consent";
   const row={
     user_id:input.userId,source,evidence,platform:input.referralApplied?null:x?.platform??null,
