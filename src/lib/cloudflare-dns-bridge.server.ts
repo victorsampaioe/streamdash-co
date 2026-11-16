@@ -24,3 +24,25 @@ export async function getCloudflareDnsPrimary():Promise<boolean>{
   if(error)return false; // Fail safe: legacy checker stays responsible for alerts.
   return (data?.value as {mode?:string}|null)?.mode==="cloudflare";
 }
+
+/** Same fail-safe is used by both the cron and the report receiver.
+ * A configured migration is not a cutover until recent, signed Cloudflare
+ * probes cover at least 90% of active DNS targets.
+ */
+export async function cloudflareDnsReady():Promise<boolean>{
+  if(!await getCloudflareDnsPrimary())return false;
+  const threshold=new Date(Date.now()-15*60_000).toISOString();
+  const [samples,active]=await Promise.all([
+    (supabaseAdmin as any).from("cloudflare_dns_probes")
+      .select("server_id,checked_at").gte("checked_at",threshold)
+      .order("checked_at",{ascending:false}).limit(2000),
+    supabaseAdmin.from("servers")
+      .select("id",{head:true,count:"exact"})
+      .eq("dns_enabled",true).eq("monitoring_paused",false),
+  ]);
+  if(samples.error||active.error||!samples.data?.length)return false;
+  const newest=Date.parse(samples.data[0].checked_at);
+  if(!Number.isFinite(newest)||Date.now()-newest>3*60_000)return false;
+  const unique=new Set(samples.data.map((r:{server_id:string})=>r.server_id)).size;
+  return unique>=Math.ceil(Math.max(1,active.count??0)*0.9);
+}
