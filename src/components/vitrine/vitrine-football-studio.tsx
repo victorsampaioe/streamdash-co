@@ -49,13 +49,25 @@ const getToday = () => new Intl.DateTimeFormat("sv-SE", {
   timeZone: "America/Fortaleza", year: "numeric", month: "2-digit", day: "2-digit",
 }).format(new Date());
 async function uploadedDataUrl(file: File) {
-  if (!["image/png", "image/jpeg", "image/webp"].includes(file.type) || file.size > 5 * 1024 * 1024) {
-    throw new Error("Envie imagem PNG, JPG ou WEBP com até 5 MB.");
+  if (!["image/png", "image/jpeg", "image/webp"].includes(file.type) || file.size > 5 * 1024 * 1024 || file.size === 0) {
+    throw new Error("Envie imagem PNG, JPG ou WEBP de até 5 MB.");
   }
   return new Promise<string>((resolve, reject) => {
     const reader = new FileReader();
-    reader.onload = () => resolve(String(reader.result));
-    reader.onerror = () => reject(new Error("Não foi possível abrir a imagem."));
+    reader.onerror = () => reject(new Error("Não foi possível ler o arquivo enviado."));
+    reader.onload = () => {
+      const result = String(reader.result || "");
+      if (!result.startsWith("data:image/")) {
+        reject(new Error("Formato de arquivo inválido.")); return;
+      }
+      const image = new Image();
+      image.onload = () => {
+        if (image.naturalWidth < 1 || image.naturalHeight < 1) reject(new Error("Imagem sem dimensões válidas."));
+        else resolve(result);
+      };
+      image.onerror = () => reject(new Error("Arquivo de imagem corrompido ou incompatível."));
+      image.src = result;
+    };
     reader.readAsDataURL(file);
   });
 }
@@ -74,6 +86,11 @@ export function VitrineFootballStudio() {
   const [playerSide, setPlayerSide] = useState<TeamSide>("home");
   const [playerId, setPlayerId] = useState("");
   const [playerUpload, setPlayerUpload] = useState("");
+  const [playerUploadName, setPlayerUploadName] = useState("");
+  const [manualBadgeImages, setManualBadgeImages] = useState<Record<string, string>>({});
+  const [badgeFailures, setBadgeFailures] = useState<Record<string, string>>({});
+  const [badgeLoading, setBadgeLoading] = useState(false);
+  const [remotePlayerError, setRemotePlayerError] = useState("");
   const [logo, setLogo] = useState("");
   const [brand, setBrand] = useState("Stream Monitor");
   const [whatsapp, setWhatsapp] = useState("");
@@ -121,10 +138,11 @@ export function VitrineFootballStudio() {
     setAiBackground("");
   }, [date, selectedLeagues]);
   useEffect(() => {
+    // Changing fixtures does not erase a manually uploaded player photo.
+    // Only the remote player suggestion depends on the selected match.
     setPlayerId("");
-    setPlayerUpload("");
     setPlayerRemote("");
-    setPlayerSearch("");
+    setRemotePlayerError("");
   }, [featured?.id, playerSide]);
   useEffect(() => {
     if (playerId || !athleteList.length) return;
@@ -150,40 +168,80 @@ export function VitrineFootballStudio() {
   }, [mode, visibleMatches, featured, format]);
 
   useEffect(() => {
-    if (!rightsConfirmed || !usedBadges.length) { setBadgeImages({}); return; }
+    if (!rightsConfirmed || !usedBadges.length) {
+      setBadgeImages({});
+      setBadgeFailures({});
+      setBadgeLoading(false);
+      return;
+    }
     let disposed = false;
+    setBadgeLoading(true);
     void (async () => {
       const results = await Promise.all(usedBadges.map(async (url) => {
         try {
           const response = await fetchImage({ data: { url, rightsConfirmed: true } });
-          return [url, response.dataUrl] as const;
-        } catch { return [url, ""] as const; }
+          return { url, src: response.dataUrl, error: "" };
+        } catch (error) {
+          return { url, src: "", error: error instanceof Error ? error.message : "Imagem indisponível" };
+        }
       }));
-      if (!disposed) setBadgeImages(Object.fromEntries(results));
+      if (!disposed) {
+        setBadgeImages(Object.fromEntries(results.map((x) => [x.url, x.src])));
+        setBadgeFailures(Object.fromEntries(results.filter((x) => x.error).map((x) => [x.url, x.error])));
+        setBadgeLoading(false);
+      }
     })();
     return () => { disposed = true; };
   }, [rightsConfirmed, usedBadges, fetchImage]);
 
   useEffect(() => {
     setPlayerRemote("");
+    setRemotePlayerError("");
     if (!rightsConfirmed || !athlete?.image || playerUpload) return;
     let disposed = false;
     void fetchImage({ data: { url: athlete.image, rightsConfirmed: true } })
       .then((v) => { if (!disposed) setPlayerRemote(v.dataUrl); })
-      .catch(() => { if (!disposed) setPlayerRemote(""); });
+      .catch((error) => {
+        if (!disposed) {
+          setPlayerRemote("");
+          setRemotePlayerError(error instanceof Error ? error.message : "Foto remota indisponível.");
+        }
+      });
     return () => { disposed = true; };
   }, [rightsConfirmed, athlete?.image, playerUpload, fetchImage]);
 
-  const playerPhoto = rightsConfirmed ? playerUpload || playerRemote : "";
+  // Manually supplied artwork must be previewed immediately; rights consent
+  // only gates third-party images fetched automatically from the provider.
+  const playerPhoto = playerUpload || (rightsConfirmed ? playerRemote : "");
+  const appliedBadges = { ...badgeImages, ...manualBadgeImages };
+  const badgeUrlCount = usedBadges.length;
+  const badgeOkCount = usedBadges.filter((url) => !!badgeImages[url]).length;
   const effectiveHeadline = headline.trim() || (mode === "today" ? "JOGOS DO DIA" : "JOGAÇO DO DIA");
 
   async function onFile(file: File | undefined, type: "logo" | "player") {
     if (!file) return;
     try {
       const dataUrl = await uploadedDataUrl(file);
-      if (type === "logo") setLogo(dataUrl);
-      else setPlayerUpload(dataUrl);
+      if (type === "logo") {
+        setLogo(dataUrl);
+        toast.success("Logo aplicada à prévia.");
+      } else {
+        setPlayerUpload(dataUrl);
+        setPlayerUploadName(file.name);
+        toast.success("Foto do jogador aplicada à prévia.");
+      }
     } catch (error) { toast.error(error instanceof Error ? error.message : "Imagem inválida."); }
+  }
+
+  async function onTeamBadge(file: File | undefined, key: string, teamName: string) {
+    if (!file) return;
+    try {
+      const dataUrl = await uploadedDataUrl(file);
+      setManualBadgeImages((current) => ({ ...current, [key]: dataUrl }));
+      toast.success(`Escudo de ${teamName} aplicado.`);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Não foi possível abrir o escudo.");
+    }
   }
 
   async function generateStadium() {
@@ -440,7 +498,7 @@ export function VitrineFootballStudio() {
                     brand={brand} logo={logo} contact={whatsapp}
                     stadium={aiBackground} accent={accent}
                     broadcastByMatch={channels}
-                    badgeImages={rightsConfirmed ? badgeImages : {}}
+                    badgeImages={appliedBadges}
                     playerPhoto={playerPhoto} playerName={athlete?.name || ""}
                   />
                 </div>
