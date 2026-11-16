@@ -10,7 +10,7 @@ export type AdPlatform="facebook"|"instagram"|"messenger"|"audience_network"|"ot
 export type AttributionSource="meta_ads"|"other_campaign"|"social_unverified"|"organic"|"direct"|"referral";
 export type AdAttribution={
   source:AttributionSource;
-  evidence:"paid_utm"|"other_utm"|"unverified_social"|"organic_referrer";
+  evidence:"paid_utm"|"other_utm"|"unverified_social"|"organic_referrer"|"direct";
   advertising_consent:true;
   utm_source?:string;utm_medium?:string;utm_campaign?:string;
   utm_content?:string;utm_term?:string;
@@ -45,7 +45,7 @@ export function classifyCampaign(source:string|null|undefined,medium:string|null
   if(META_SOURCES.test(source||"")||fbclid)
     return {source:"social_unverified",evidence:"unverified_social"};
   if(source)return {source:"other_campaign",evidence:"other_utm"};
-  return {source:"direct",evidence:"organic_referrer"};
+  return {source:"direct",evidence:"direct"};
 }
 
 export function captureAttribution():AdAttribution|null{
@@ -58,18 +58,23 @@ export function captureAttribution():AdAttribution|null{
   const medium=params.get("utm_medium");
   const classification=classifyCampaign(utmSource,medium,fbclid);
   if(classification.source==="direct"){
+    const existing=readAttribution();
+    if(existing)return existing;
     const ref=typeof document!=="undefined"?document.referrer:"";
-    if(!ref)return null;
-    try{
-      const url=new URL(ref);
-      if(url.origin===window.location.origin)return null;
-      const source=/google|bing|duckduckgo/i.test(url.hostname)?"organic":"social_unverified";
-      const attribution:AdAttribution={
-        source,evidence:source==="organic"?"organic_referrer":"unverified_social",
-        advertising_consent:true,at:Date.now()
-      };
-      return remember(attribution);
-    }catch{return null;}
+    if(ref){
+      try{
+        const url=new URL(ref);
+        if(url.origin!==window.location.origin){
+          const organic=/google|bing|duckduckgo/i.test(url.hostname);
+          return remember({
+            source:organic?"organic":"social_unverified",
+            evidence:organic?"organic_referrer":"unverified_social",
+            advertising_consent:true,at:Date.now()
+          });
+        }
+      }catch{}
+    }
+    return remember({source:"direct",evidence:"direct",advertising_consent:true,at:Date.now()});
   }
   const existing=readAttribution();
   if(existing)return existing; // Immutable first campaign touch.
