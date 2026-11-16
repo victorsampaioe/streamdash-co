@@ -156,9 +156,9 @@ export function FootballSchedulePoster({
     color: "white",
   }}>
     {!hasPlayer && watermarkBadges.length > 0 && <div className="absolute pointer-events-none flex items-center justify-center gap-6"
-      style={{top:530,left:60,right:60,height:230,opacity:.09,zIndex:0}}>
+      style={{top:235,left:575,right:40,height:145,opacity:.11,zIndex:2}}>
       {watermarkBadges.map((badge,i)=><img key={i} src={badge} alt="" crossOrigin="anonymous"
-        style={{height:150,width:150,objectFit:"contain"}}/>)}
+        style={{height:115,width:115,objectFit:"contain"}}/>)}
     </div>}
     {/* Animated-looking stadium lighting is static for reliable PNG output. */}
     {stadium && <img src={stadium} alt="" className="absolute inset-0 h-full w-full object-cover"
