@@ -4,9 +4,9 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { requirePaidFeature } from "@/lib/premium-feature-access";
 
 /**
- * The SportScore fixture API includes current league matches, team badges and
- * competition badges. The free tier requires a visible dofollow SportScore
- * attribution on every screen showing its data. This endpoint is admin-only.
+ * FTWB is the primary fixture provider for subscribed users.
+ * The API key stays server-side; SportScore is retained only for the
+ * separate admin player lookup and licensed-image workflow.
  */
 const API_BASE = "https://sportscore.com/api/v1";
 const dateSchema = z.string().regex(/^\d{4}-\d{2}-\d{2}$/).refine(
