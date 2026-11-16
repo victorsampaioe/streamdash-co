@@ -83,6 +83,12 @@ export function CinematicStudio({mode}:{mode:CinematicMode}){
   const [label,setLabel]=useState<string>("NOVIDADE");
   const [description,setDescription]=useState("");
   const [color,setColor]=useState("#60a5fa");
+  const [deviceEnabled,setDeviceEnabled]=useState(true);
+  const [deviceTitle,setDeviceTitle]=useState("DISPONÍVEL EM TODOS OS SEUS DISPOSITIVOS");
+  const [deviceBackground,setDeviceBackground]=useState("#150b2e");
+  const [deviceAccent,setDeviceAccent]=useState("#a855f7");
+  const [deviceText,setDeviceText]=useState("#ffffff");
+  const [deviceIcons,setDeviceIcons]=useState("#e9d5ff");
   const [lighting,setLighting]=useState<"natural"|"blue"|"warm">("blue");
   const [logoPosition,setLogoPosition]=useState<"left"|"right">("left");
   const [posterVisible,setPosterVisible]=useState(true);
@@ -233,9 +239,10 @@ export function CinematicStudio({mode}:{mode:CinematicMode}){
     classification:extra?.classification||"",
     label,brand:brand.name,whatsapp:brand.whatsapp,color,
     logoPosition,lighting,posterVisible,
+    deviceBanner:mode==="banner"?{enabled:deviceEnabled,title:deviceTitle,background:deviceBackground,accent:deviceAccent,text:deviceText,icons:deviceIcons}:undefined,
     background:assets.background,backgroundIsPoster:!!selectedPoster&&selectedBackground===selectedPoster,
     poster:assets.poster,logo:assets.logo,
-  }),[mode,dims.width,dims.height,movie?.title,movie?.release_date,movie?.genres,description,extra?.classification,label,brand.name,brand.whatsapp,color,logoPosition,lighting,posterVisible,assets,selectedPoster,selectedBackground]);
+  }),[mode,dims.width,dims.height,movie?.title,movie?.release_date,movie?.genres,description,extra?.classification,label,brand.name,brand.whatsapp,color,deviceEnabled,deviceTitle,deviceBackground,deviceAccent,deviceText,deviceIcons,logoPosition,lighting,posterVisible,assets,selectedPoster,selectedBackground]);
   useEffect(()=>{
     if(!canvasRef.current)return;
     const canvas=canvasRef.current,ctx=canvas.getContext("2d",{alpha:false});
@@ -567,6 +574,33 @@ export function CinematicStudio({mode}:{mode:CinematicMode}){
                 Pôster oficial em destaque
               </label>}
             </div>
+            {mode==="banner"&&<section className="col-span-full space-y-3 rounded-xl border border-purple-500/30 bg-slate-950/60 p-4">
+              <label className="flex items-center gap-2 text-sm font-semibold text-white">
+                <input type="checkbox" checked={deviceEnabled} onChange={e=>setDeviceEnabled(e.target.checked)}/>
+                Mostrar faixa de dispositivos
+              </label>
+              {deviceEnabled&&<>
+                <label className="block space-y-1 text-xs text-slate-300">Texto da faixa
+                  <Input maxLength={90} value={deviceTitle} onChange={e=>setDeviceTitle(e.target.value)}
+                    className={inputClass}/>
+                </label>
+                <div className="grid grid-cols-2 gap-3">
+                  {([
+                    ["Fundo",deviceBackground,setDeviceBackground],
+                    ["Borda e brilho",deviceAccent,setDeviceAccent],
+                    ["Texto",deviceText,setDeviceText],
+                    ["Ícones",deviceIcons,setDeviceIcons],
+                  ] as const).map(([name,value,setValue])=><label key={name} className="space-y-1 text-xs text-slate-300">
+                    {name}
+                    <Input type="color" value={value} onChange={e=>setValue(e.target.value)}
+                      className="h-10 w-full border border-purple-500/25 bg-slate-900 p-1"/>
+                  </label>)}
+                </div>
+                <p className="text-[11px] text-slate-400">
+                  Smart TV, TV Box, Celular e PC aparecem com ícones na prévia e nos arquivos PNG/JPG.
+                </p>
+              </>}
+            </section>}
             <label className="block space-y-1 text-xs text-slate-300">Sinopse em português (editável)
               <textarea value={description} maxLength={480} rows={4}
                 className={"w-full resize-y py-3 "+inputClass+" h-auto min-h-[108px]"}
