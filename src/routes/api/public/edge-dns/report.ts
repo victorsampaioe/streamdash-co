@@ -27,7 +27,7 @@ export const Route=createFileRoute("/api/public/edge-dns/report")({
   server:{handlers:{POST:async({request})=>{
     const size=Number(request.headers.get("content-length")||0);
     if(size>55000)return Response.json({error:"too_large"},{status:413});
-    const {authorizeCloudflareDnsBridge,cloudflareDnsReady}
+    const {authorizeCloudflareDnsBridge,cloudflareDnsCanApply,getCloudflareDnsMode}
       =await import("@/lib/cloudflare-dns-bridge.server");
     const raw=await request.text();
     const {verifyRegionSignature}=await import("@/lib/region-auth.server");
@@ -90,7 +90,8 @@ export const Route=createFileRoute("/api/public/edge-dns/report")({
       .select("server_id,checked_at");
     if(saveError)return Response.json({error:"probe_store_failed"},{status:503});
 
-    const primary=await cloudflareDnsReady();
+    const primary=await cloudflareDnsCanApply();
+    const pilot=(await getCloudflareDnsMode())==="pilot";
     let applied=0,failed=0;
     if(primary){
       // Include previously stored but unapplied reports, so a partial server
@@ -103,8 +104,9 @@ export const Route=createFileRoute("/api/public/edge-dns/report")({
       const key=(id:string,ts:string)=>id+"|"+Date.parse(ts);
       const pendingKeys=new Set((waiting??[]).map((x:{server_id:string;checked_at:string})=>key(x.server_id,x.checked_at)));
       // Read-only/unknown probes must not rewrite confirmed customer status.
-      const pending=rows.filter(r=>r.status!=="unknown"
+      const matching=rows.filter(r=>r.status!=="unknown"
         &&pendingKeys.has(key(r.check.server_id,r.check.checked_at)));
+      const pending=pilot?matching.slice(0,1):matching;
       const {runPool}=await import("@/lib/pool");
       const outcome=await runPool(pending,async r=>{
         const clean=r.resolvers.filter(x=>x.ok||x.error!=="transport_error");
@@ -134,9 +136,15 @@ export const Route=createFileRoute("/api/public/edge-dns/report")({
       },{concurrency:3});
       applied=outcome.filter(x=>x.status==="fulfilled").length;
       failed=outcome.filter(x=>x.status==="rejected").length;
+      for(const entry of outcome){
+        if(entry.status==="rejected"){
+          const explanation=entry.reason instanceof Error?entry.reason.message:String(entry.reason);
+          console.error("[edge-dns/report] apply-failed",explanation.slice(0,180));
+        }
+      }
       if(failed)console.error("[edge-dns/report] state_apply_failed",outcome.filter(x=>x.status==="rejected").map(x=>x.reason instanceof Error?x.reason.message.slice(0,180):"unknown").slice(0,4));
     }
-    return Response.json({ok:true,mode:primary?"cloudflare":"shadow",
+    return Response.json({ok:true,mode:primary?(pilot?"pilot":"cloudflare"):"shadow",
       accepted:saved?.length??0,applied,failed,skipped:parsed.data.checks.length-good.length
     },{headers:{"cache-control":"no-store"}});
   }}}
