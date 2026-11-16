@@ -61,6 +61,10 @@ function AuthPage() {
   const [emailExists, setEmailExists] = useState(false);
   const [honeypot, setHoneypot] = useState("");
   const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
+  const [inAppBrowser, setInAppBrowser] = useState(false);
+  useEffect(() => {
+    setInAppBrowser(/Instagram|FBAN|FBAV|FB_IAB|Messenger/i.test(navigator.userAgent));
+  }, []);
 
   const { data: signupConfig } = useQuery({ queryKey: ["signup-config"], queryFn: () => getSignupConfig(), staleTime: 30 * 60 * 1000 });
   const siteKey = signupConfig?.turnstileSiteKey ?? null;
@@ -135,7 +139,7 @@ function AuthPage() {
     if (password !== confirmPassword) return toast.error("As senhas digitadas são diferentes.");
     if (availability === "taken") return toast.error("Este usuário já está cadastrado.");
     if (signupConfig?.captchaSetupIssue) return toast.error("O cadastro está temporariamente indisponível. Entre em contato com o suporte.");
-    if (siteKey && !turnstileToken) return toast.error("Conclua a verificação de segurança antes de continuar.");
+    if (siteKey && !turnstileToken) return toast.error(inAppBrowser ? "Confirme o desafio de segurança. Se ele não abrir, use o menu do Instagram ou Facebook e escolha Abrir no navegador." : "Conclua a verificação de segurança antes de continuar.");
     if (loading) return;
     setLoading(true);
     try {
@@ -144,14 +148,15 @@ function AuthPage() {
         method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ username: usernameCheck.value, email: emailCheck.value, password, referralCode: ref?.toUpperCase(), turnstileToken, company_website: honeypot, requestId, attribution: readAttribution() }),
       });
-      const result = await response.json() as { error?: string; code?: string; needsEmailConfirmation?: boolean };
+      const result = await response.json() as { ok?: boolean; error?: string; code?: string; registrationEventId?: string; needsEmailConfirmation?: boolean };
       if (!response.ok) {
         if (result.code === "email_exists") setEmailExists(true);
+        if (result.code === "password_weak") setShowPassword(true);
         throw new Error(result.error ?? "Não conseguimos criar sua conta agora. Tente novamente em alguns segundos.");
       }
       // Conta criada pelo servidor: único ponto que conta como cadastro concluído.
       window.__lovableEvents?.track?.("project.signup_completed", { source: readAttributionSource(), platform: readAttributionPlatform(), pending_activation: Boolean(result.needsEmailConfirmation) });
-      void trackMetaCompleteRegistration(requestId);
+      if (result.ok && result.registrationEventId) void trackMetaCompleteRegistration(result.registrationEventId);
       void trackPosthogEvent("sm_signup_completed");
       if (result.needsEmailConfirmation) {
         toast.success("Conta criada! Confira seu e-mail para confirmar o acesso.");
@@ -245,6 +250,9 @@ function AuthPage() {
         <Field label="Confirmar senha"><Input required type={showPassword ? "text" : "password"} autoComplete="new-password" value={confirmPassword} onChange={(event) => setConfirmPassword(event.target.value)} />{confirmPassword && <StatusLine ok={passwordsMatch} good="As senhas conferem" bad="As senhas não conferem" />}</Field>
         {password && <StatusLine ok={passwordCheck.ok} good="Senha válida" bad={passwordCheck.ok ? "" : passwordCheck.error} />}
         <div aria-hidden="true" className="absolute left-[-9999px] h-0 w-0 overflow-hidden"><label htmlFor="company_website">Company website</label><input id="company_website" tabIndex={-1} autoComplete="off" value={honeypot} onChange={(event) => setHoneypot(event.target.value)} /></div>
+        {inAppBrowser && <p className="rounded-lg border border-blue-500/25 bg-blue-500/10 p-3 text-xs text-blue-200">
+          Você está no navegador interno do Instagram/Facebook. O cadastro funciona normalmente aqui. Se a verificação de segurança não carregar, abra esta mesma página no Safari ou Chrome pelo menu do aplicativo. Não é preciso aceitar cookies de publicidade.
+        </p>}
         {signupConfig?.captchaSetupIssue && <p role="alert" className="rounded-md border border-destructive/30 p-3 text-xs text-destructive">A verificação de segurança está em manutenção. O suporte precisa concluir a configuração.</p>}
         {siteKey && <TurnstileWidget siteKey={siteKey} onToken={setTurnstileToken} />}
         <Button type="submit" disabled={loading || availability === "taken" || !passwordsMatch} className="w-full">{loading ? "Criando..." : "CRIAR MINHA CONTA"}</Button>
