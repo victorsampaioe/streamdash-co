@@ -38,7 +38,7 @@ function darken(hex: string, amount: number) {
   return "#" + channels.map((x) => x.toString(16).padStart(2, "0")).join("");
 }
 const dimensions = {
-  feed: { width: 1080, height: 1080, left: 53, rowWidth: 782, top: 322, rowHeight: 139, gap: 13, count: 4 },
+  feed: { width: 1080, height: 1080, left: 53, rowWidth: 782, top: 322, rowHeight: 139, gap: 13, count: 3 },
   story: { width: 1080, height: 1920, left: 52, rowWidth: 812, top: 498, rowHeight: 188, gap: 18, count: 6 },
   landscape: { width: 1200, height: 675, left: 48, rowWidth: 830, top: 204, rowHeight: 138, gap: 15, count: 2 },
 } as const;
@@ -114,7 +114,7 @@ function FixtureRibbon({ match, badgeImages, broadcast, accent, width, height }:
         display: "block", width: "96%", color: "#222734", textAlign: "center",
         fontSize: compact ? 13 : 16, lineHeight: 1,
         fontWeight: 900, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
-      }}>{broadcast.trim() || "HORÁRIO DE BRASÍLIA"}</span>
+      }}>{broadcast.trim() || "TRANSMISSÃO NÃO CONFIRMADA"}</span>
     </div>
     <div className="absolute flex items-center justify-center text-white" style={{
       bottom: compact ? 3 : 4, right: 0, width: "46%", height: compact ? 46 : 59,
@@ -184,17 +184,15 @@ export function FootballSchedulePoster({
         filter: "drop-shadow(-20px 11px 28px rgba(0,0,0,.72))",
         maskImage: "linear-gradient(180deg,transparent 0%,black 9%,black 83%,transparent 99%)",
       }} />}
-    <div className="absolute" style={{
+    <div className="absolute z-[5] flex items-center justify-center overflow-hidden" style={{
       left: landscape ? 47 : 55, top: landscape ? 48 : story ? 74 : 65,
-      width: landscape ? 155 : 143, height: landscape ? 115 : 136,
-      border: "5px solid white", borderRadius: 22,
-      background: `linear-gradient(145deg,#141619,${dark2},#070808)`,
-      boxShadow: `0 0 0 5px ${accent},0 14px 18px rgba(0,0,0,.44)`,
-      display: "flex", alignItems: "center", flexDirection: "column", justifyContent: "center",
+      width: landscape ? 165 : 180, height: landscape ? 115 : 136,
+      border: "3px solid rgba(255,255,255,.8)", borderRadius: 22,
+      background: "rgba(3,15,34,.68)", padding: 12,
+      boxShadow: "0 0 0 4px "+accent+",0 14px 18px rgba(0,0,0,.35)",
     }}>
-      <span style={{ fontSize: landscape ? 38 : 42, lineHeight: 1 }}>⚽</span>
-      <span style={{ fontSize: 17, fontWeight: 1000, marginTop: 3, lineHeight: 1.1 }}>VITRINE IA</span>
-      <span style={{ fontSize: 23, fontWeight: 1000, lineHeight: 1.1, color: "#ffd85a" }}>FUTEBOL</span>
+      {logo ? <img src={logo} alt={branding} style={{width:"100%",height:"100%",objectFit:"contain"}} />
+        : <span style={{fontSize:24,fontWeight:1000,textAlign:"center"}}>{branding.slice(0,18)}</span>}
     </div>
     <div className="absolute" style={{
       left: landscape ? 238 : 237, top: landscape ? 42 : story ? 65 : 65,
@@ -289,6 +287,6 @@ export function FootballSchedulePoster({
     <div className="absolute z-[5] inset-x-0 text-center" style={{
       bottom: story ? 22 : 13, color: "#1d2027", fontSize: story ? 13 : 10,
       fontWeight: 900, letterSpacing: ".16em",
-    }}>STREAM MONITOR · VITRINE IA FUTEBOL · DADOS: SPORTScore</div>
+    }}>HORÁRIOS E TRANSMISSÕES SUJEITOS A CONFIRMAÇÃO</div>
   </div>;
 }
