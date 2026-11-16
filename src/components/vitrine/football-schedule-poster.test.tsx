@@ -67,7 +67,7 @@ describe("Vitrine Futebol — imagens e exportação", () => {
     const html=renderToStaticMarkup(<FootballSchedulePoster {...base} />);
     expect(html).not.toContain('src=""');
     expect(html).not.toContain("HORÁRIOS E TRANSMISSÕES SUJEITOS A CONFIRMAÇÃO");
-    expect(html).toContain("height:135px");
+    expect(html).toContain("height:210px");
   });
   it("mantém quatro confrontos completos no mesmo banner",()=>{
     const second={...sample,id:"match-second",home:"Athletico-PR",away:"Paraná Clube"};
