@@ -31,6 +31,7 @@ import { Route as Char91DotmcpChar93ListToolsRouteImport } from './routes/[.mcp]
 import { Route as Char91DotwellKnownChar93OauthProtectedResourceRouteImport } from './routes/[.well-known]/oauth-protected-resource'
 import { Route as AuthenticatedAppRouteImport } from './routes/_authenticated/app'
 import { Route as AuthenticatedVitrineAiRouteImport } from './routes/_authenticated/vitrine-ai'
+import { Route as AuthenticatedVitrineFutebolRouteImport } from './routes/_authenticated/vitrine-futebol'
 import { Route as AuthenticatedVitrineBannerRouteImport } from './routes/_authenticated/vitrine-banner'
 import { Route as AuthenticatedVitrineVideoRouteImport } from './routes/_authenticated/vitrine-video'
 import { Route as AjudaSlugRouteImport } from './routes/ajuda.$slug'
@@ -233,7 +234,14 @@ const AuthenticatedAppRoute = AuthenticatedAppRouteImport.update({
 } as any)
 const AuthenticatedVitrineAiRoute = AuthenticatedVitrineAiRouteImport.update({
   id: '/vitrine-ai',
+  id: '/vitrine-futebol',
   path: '/vitrine-ai',
+  path: '/vitrine-futebol',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedVitrineFutebolRoute = AuthenticatedVitrineFutebolRouteImport.update({
+  id: '/vitrine-futebol',
+  path: '/vitrine-futebol',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const AuthenticatedVitrineBannerRoute =
@@ -768,6 +776,7 @@ export interface FileRoutesByFullPath {
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   '/app': typeof AuthenticatedAppRouteWithChildren
   '/vitrine-ai': typeof AuthenticatedVitrineAiRoute
+  '/vitrine-futebol': typeof AuthenticatedVitrineFutebolRoute
   '/vitrine-banner': typeof AuthenticatedVitrineBannerRoute
   '/vitrine-video': typeof AuthenticatedVitrineVideoRoute
   '/ajuda/$slug': typeof AjudaSlugRoute
@@ -883,6 +892,7 @@ export interface FileRoutesByTo {
   '/.mcp/list-tools': typeof Char91DotmcpChar93ListToolsRoute
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   '/vitrine-ai': typeof AuthenticatedVitrineAiRoute
+  '/vitrine-futebol': typeof AuthenticatedVitrineFutebolRoute
   '/vitrine-banner': typeof AuthenticatedVitrineBannerRoute
   '/vitrine-video': typeof AuthenticatedVitrineVideoRoute
   '/ajuda/$slug': typeof AjudaSlugRoute
@@ -1001,6 +1011,7 @@ export interface FileRoutesById {
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   '/_authenticated/app': typeof AuthenticatedAppRouteWithChildren
   '/_authenticated/vitrine-ai': typeof AuthenticatedVitrineAiRoute
+  '/_authenticated/vitrine-futebol': typeof AuthenticatedVitrineFutebolRoute
   '/_authenticated/vitrine-banner': typeof AuthenticatedVitrineBannerRoute
   '/_authenticated/vitrine-video': typeof AuthenticatedVitrineVideoRoute
   '/ajuda/$slug': typeof AjudaSlugRoute
@@ -1119,6 +1130,7 @@ export interface FileRouteTypes {
     | '/.well-known/oauth-protected-resource'
     | '/app'
     | '/vitrine-ai'
+    | '/vitrine-futebol'
     | '/vitrine-banner'
     | '/vitrine-video'
     | '/ajuda/$slug'
@@ -1234,6 +1246,7 @@ export interface FileRouteTypes {
     | '/.mcp/list-tools'
     | '/.well-known/oauth-protected-resource'
     | '/vitrine-ai'
+    | '/vitrine-futebol'
     | '/vitrine-banner'
     | '/vitrine-video'
     | '/ajuda/$slug'
@@ -1351,6 +1364,7 @@ export interface FileRouteTypes {
     | '/.well-known/oauth-protected-resource'
     | '/_authenticated/app'
     | '/_authenticated/vitrine-ai'
+    | '/_authenticated/vitrine-futebol'
     | '/_authenticated/vitrine-banner'
     | '/_authenticated/vitrine-video'
     | '/ajuda/$slug'
@@ -1673,6 +1687,13 @@ declare module '@tanstack/react-router' {
       path: '/vitrine-ai'
       fullPath: '/vitrine-ai'
       preLoaderRoute: typeof AuthenticatedVitrineAiRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/vitrine-futebol': {
+      id: '/_authenticated/vitrine-futebol'
+      path: '/vitrine-futebol'
+      fullPath: '/vitrine-futebol'
+      preLoaderRoute: typeof AuthenticatedVitrineFutebolRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/vitrine-banner': {
@@ -2430,6 +2451,7 @@ const AuthenticatedAppRouteWithChildren =
 interface AuthenticatedRouteRouteChildren {
   AuthenticatedAppRoute: typeof AuthenticatedAppRouteWithChildren
   AuthenticatedVitrineAiRoute: typeof AuthenticatedVitrineAiRoute
+  AuthenticatedVitrineFutebolRoute: typeof AuthenticatedVitrineFutebolRoute
   AuthenticatedVitrineBannerRoute: typeof AuthenticatedVitrineBannerRoute
   AuthenticatedVitrineVideoRoute: typeof AuthenticatedVitrineVideoRoute
 }
@@ -2437,6 +2459,7 @@ interface AuthenticatedRouteRouteChildren {
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedAppRoute: AuthenticatedAppRouteWithChildren,
   AuthenticatedVitrineAiRoute: AuthenticatedVitrineAiRoute,
+  AuthenticatedVitrineFutebolRoute: AuthenticatedVitrineFutebolRoute,
   AuthenticatedVitrineBannerRoute: AuthenticatedVitrineBannerRoute,
   AuthenticatedVitrineVideoRoute: AuthenticatedVitrineVideoRoute,
 }
