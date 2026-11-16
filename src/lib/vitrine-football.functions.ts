@@ -141,12 +141,30 @@ function pick(record: unknown, ...fields: string[]): unknown {
   return fields.map((key) => data[key]).find((value) => value !== null && value !== undefined && value !== "");
 }
 function teamName(source: unknown): string {
-  return typeof source === "string" ? source : String(pick(source,"nome","name","short_name") || "");
+  return typeof source === "string" ? source : String(pick(source,"nome","name","short_name","shortName","team_name","teamName","title") || "");
 }
+/** A FTWB fixture can supply team images inside the team or in separate match fields. */
 function teamLogo(source: unknown): string {
-  const url = String(pick(source,"escudo","logo","image","badge") || "");
-  try { const parsed = new URL(url); return parsed.protocol === "https:" ? url : ""; }
-  catch { return ""; }
+  const candidate = typeof source === "string" ? source :
+    pick(source,"escudo","logo","image","badge","crest","shield","escudo_url","logo_url","url_escudo","logoUrl","badge_url","image_url","imageUrl","foto");
+  const value=typeof candidate==="string"?candidate:String(pick(candidate,"url","src","href","original")||"");
+  if(!value.trim())return "";
+  try {
+    const parsed=new URL(value.trim().startsWith("//")?"https:"+value.trim():value.trim(),"https://ftwb.notiffly.com.br");
+    if(!["http:","https:"].includes(parsed.protocol))return "";
+    // Browsers refuse mixed-content images; try secure transport for HTTP image URLs.
+    if(parsed.protocol==="http:")parsed.protocol="https:";
+    return parsed.toString();
+  }catch{return "";}
+}
+function matchBadge(record:unknown,team:unknown,side:"home"|"away"):string{
+  const embedded=teamLogo(typeof team==="object"?team:undefined);
+  if(embedded)return embedded;
+  const fields=side==="home"
+    ?["escudo_mandante","escudo_casa","logo_mandante","logo_casa","mandante_escudo","mandante_logo","time_casa_escudo","time_casa_logo","home_logo","homeBadge","homeTeamLogo","teamHomeBadge","escudoMandante","logoMandante","mandanteLogo","home_team_badge","home_team_logo"]
+    :["escudo_visitante","escudo_fora","logo_visitante","logo_fora","visitante_escudo","visitante_logo","time_fora_escudo","time_fora_logo","away_logo","awayBadge","awayTeamLogo","teamAwayBadge","escudoVisitante","logoVisitante","visitanteLogo","away_team_badge","away_team_logo"];
+  const first=pick(record,...fields);
+  return first?teamLogo(typeof first==="string"?first:{image:first}):"";
 }
 function getBroadcasts(record: unknown): string[] {
   let raw = pick(record,"canais","transmissoes","transmissao","onde_assistir","broadcast","tv","tvNetworks","ondeAssistir","broadcasts","streaming","transmission");
@@ -171,8 +189,8 @@ function verifiedBroadcasts(match:FootballMatch, date:string):string[]{
   return [];
 }
 function apiFixture(record: unknown, index: number, date: string): FootballMatch | null {
-  const homeObj = pick(record,"mandante","time_casa","home_team","casa","home");
-  const awayObj = pick(record,"visitante","time_fora","away_team","fora","away");
+  const homeObj = pick(record,"mandante","time_casa","home_team","casa","home","teamHome","team_home","equipe_mandante");
+  const awayObj = pick(record,"visitante","time_fora","away_team","fora","away","teamAway","team_away","equipe_visitante");
   const home = teamName(homeObj), away = teamName(awayObj);
   if (!home || !away) return null;
   const competition = pick(record,"campeonato","competicao","league","competition");
@@ -193,7 +211,7 @@ function apiFixture(record: unknown, index: number, date: string): FootballMatch
     String(homeScore)+" × "+String(awayScore):"";
   const player = pick(record,"jogador_destaque","jogador","featured_player");
   const playerPhoto = teamLogo({image:pick(player,"foto","imagem","image","photo")});
-  return {id,home,away,homeId:"",awayId:"",homeBadge:teamLogo(homeObj),awayBadge:teamLogo(awayObj),
+  return {id,home,away,homeId:"",awayId:"",homeBadge:matchBadge(record,homeObj,"home"),awayBadge:matchBadge(record,awayObj,"away"),
     league,leagueId:simplify(league),...when,broadcasts:getBroadcasts(record),
     playerPhoto,playerName:playerPhoto ? teamName(player) : "",status,scoreLabel};
 }
@@ -251,56 +269,55 @@ export const getVitrineFootballMatches = createServerFn({ method: "POST" })
     await requirePaidFeature(context);
     const key = process.env.FTWB_API_KEY;
     if (!key) throw new Error("FTWB_API_KEY não configurada no ambiente do servidor.");
-    // Explicit status list retains matches that have already kicked off or ended.
+    // No status filter: FTWB returns scheduled, live and completed events together.
+    // Never discard valid Brazilian fixtures simply because their club is not famous.
     const loadFixtures=async(country?:string):Promise<unknown[]>=>{
       const url=new URL(FOOTBALL_API_URL);
       url.searchParams.set("data",data.date);
       if(country)url.searchParams.set("pais",country);
-      url.searchParams.set("status","agendado,ao_vivo,encerrado,adiado,cancelado");
-      const response=await fetch(url,{headers:{"x-api-key":key,Accept:"application/json"},signal:AbortSignal.timeout(9000),cache:"no-store"});
+      const response=await fetch(url,{
+        headers:{"x-api-key":key,Accept:"application/json"},
+        signal:AbortSignal.timeout(12000),cache:"no-store"
+      });
       if(!response.ok)throw new Error("Não foi possível consultar os jogos (HTTP "+response.status+").");
       const payload:unknown=await response.json();
-      const list=Array.isArray(payload)?payload:pick(payload,"jogos","data","results","partidas","events");
+      const list=Array.isArray(payload)?payload:pick(payload,"jogos","data","results","partidas","events","matches");
       if(!Array.isArray(list))throw new Error("Formato dos jogos não reconhecido.");
       return list;
     };
     const national=await loadFixtures("brasil");
-    // Only search the global schedule for Brazilian clubs in international fixtures.
-    // Never fill a Brazilian reseller banner with unrelated foreign games.
     let all:unknown[]=[...national];
-    if(national.length<6){
-      try{
-        const world=await loadFixtures();
-        all=[...national,...world.filter(raw=>{
-          const home=teamName(pick(raw,"mandante","time_casa","home_team","casa","home"));
-          const away=teamName(pick(raw,"visitante","time_fora","away_team","fora","away"));
-          return MAIN_TEAMS.some(club=>clubMatches(home,club)||clubMatches(away,club));
-        })];
-      }catch{/* Keep national matches even if the global schedule is unavailable. */}
-    }
+    // Include major Brazilian clubs competing abroad when they are absent from country fixtures.
+    try {
+      const international=await loadFixtures();
+      all=[...national,...international.filter(raw=>{
+        const home=teamName(pick(raw,"mandante","time_casa","home_team","casa","home","teamHome"));
+        const away=teamName(pick(raw,"visitante","time_fora","away_team","fora","away","teamAway"));
+        return MAIN_TEAMS.some(club=>clubMatches(home,club)||clubMatches(away,club));
+      })];
+    }catch{/* The national fixtures must remain visible even if the global feed fails. */}
     const seen=new Set<string>();
     const matches=all.map((raw,i)=>apiFixture(raw,i,data.date))
-      .filter((match):match is FootballMatch=>!!match && match.day===data.date && importantBrazilianMatch(match))
+      .filter((match):match is FootballMatch=>!!match && match.day===data.date)
       .filter((match)=>{
         const unique=[simplify(match.home),simplify(match.away),match.day].join("|");
         if(seen.has(unique))return false;seen.add(unique);return true;
-      })
-      .sort((a,b)=>{
+      }).sort((a,b)=>{
         const rank=(m:FootballMatch)=>{
           const idx=MAIN_TEAMS.findIndex(club=>clubMatches(m.home,club)||clubMatches(m.away,club));
           return idx<0?MAIN_TEAMS.length:idx;
         };
         return rank(a)-rank(b)||a.time.localeCompare(b.time);
-      }).slice(0,6);
+      });
     // Prefer channels explicitly supplied by FTWB; add documented fixture-specific channels only when absent.
     for(const match of matches){if(!(match.broadcasts||[]).length)match.broadcasts=verifiedBroadcasts(match,data.date)}
-    for(let index=0;index<matches.length;index+=2){
-      const group=matches.slice(index,index+2);
+    for(let index=0;index<matches.length;index+=4){
+      const group=matches.slice(index,index+4);
       if(group.some(match=>!!match.playerPhoto))continue;
       const featured=await findHighlight(group);
       if(featured)matches[index]={...matches[index],playerPhoto:featured.photo,playerName:featured.name};
     }
-    return {matches,leagues:footballLeagueOptions,source:"FTWB",partial:false,sourcesSucceeded:1};
+    return {matches,leagues:footballLeagueOptions,source:"FTWB",partial:false,sourcesSucceeded:1,fixtureCount:matches.length,missingBadges:matches.filter(m=>!m.homeBadge||!m.awayBadge).length};
   });
 
 /** Player images from other providers may require permission for commercial use. */
