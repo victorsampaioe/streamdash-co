@@ -176,7 +176,8 @@ function getBroadcasts(record: unknown): string[] {
   if (raw && typeof raw === "object" && !Array.isArray(raw)) raw = pick(raw,"canais","channels");
   const list = Array.isArray(raw) ? raw : typeof raw === "string" ? raw.split(/[,;|]/) : [];
   return [...new Set(list.map((item) => typeof item === "string" ? item :
-    String(pick(item,"nome","name","canal") || "")).map((value) => value.trim()).filter(Boolean))].slice(0,3);
+    String(pick(item,"nome","name","canal") || "")).map((value) => value.trim())
+    .filter(value=>value && !/^(?:sem transmiss[aã]o|transmiss[aã]o n[aã]o confirmada|a confirmar|n[aã]o informado|tbd)$/i.test(value)))].slice(0,3);
 }
 /**
  * Schedule-specific editorial verification for the 16 Nov 2026 Copa Paraná final.
@@ -208,7 +209,9 @@ function apiFixture(record: unknown, index: number, date: string): FootballMatch
     "horarioJogo","hora_jogo","inicio_hora","start_time","match_time","time");
   const dateTime = pick(record,"data_hora","datetime","inicio","kickoff","starts_at",
     "dataHora","date_time","matchDateTime","data_e_hora");
-  const inputTime = String(dateTime||clock||"").trim();
+  const dateTimeText=String(dateTime||"").trim();
+  const inputTime=/(?:T|\\s)\\d{1,2}:\\d{2}/.test(dateTimeText)
+    ?dateTimeText:String(clock||dateTime||"").trim();
   const timeWithZone = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}.*(?:Z|[+-]\d{2}:?\d{2})$/i.test(inputTime);
   const absolute = timeWithZone && !Number.isNaN(Date.parse(inputTime))
     ? kickoff(inputTime) : null;
