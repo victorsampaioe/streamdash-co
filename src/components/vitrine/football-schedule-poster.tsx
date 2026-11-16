@@ -52,7 +52,7 @@ function dateLabel(day: string) {
 }
 function TeamCrest({ src, size }: { src?: string; size: number }) {
   if (!src) return null;
-  return <img src={src} alt="" crossOrigin="anonymous" referrerPolicy="no-referrer"
+  return <img src={src} alt="" referrerPolicy="no-referrer"
     onError={event=>{event.currentTarget.style.display="none";}}
     style={{width:size,height:size,objectFit:"contain",flexShrink:0,filter:"drop-shadow(0 2px 3px rgba(0,0,0,.15))"}} />;
 }
@@ -144,7 +144,7 @@ export function FootballSchedulePoster({
   }}>
     {!hasPlayer && watermarkBadges.length > 0 && <div className="absolute pointer-events-none flex items-center justify-center gap-6"
       style={{top:240,left:585,right:40,height:80,opacity:.09,zIndex:2}}>
-      {watermarkBadges.map((badge,i)=><img key={i} src={badge} alt="" crossOrigin="anonymous"
+      {watermarkBadges.map((badge,i)=><img key={i} src={badge} alt=""
         onError={event=>{event.currentTarget.style.display="none";}}
         style={{height:78,width:78,objectFit:"contain"}}/>)}
     </div>}
