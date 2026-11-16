@@ -18,9 +18,9 @@ import { Toaster } from "@/components/ui/sonner";
 import { ThemeProvider } from "@/components/theme-provider";
 import { installChunkRecovery } from "@/lib/chunk-recovery";
 import { trackMetaPageView, isPrivatePath } from "@/lib/meta-pixel";
-import { captureAttribution } from "@/lib/ad-attribution";
+import { captureAttribution, clearAttribution } from "@/lib/ad-attribution";
 import { trackPosthogPage } from "@/lib/posthog-analytics";
-import { onConsentChange } from "@/lib/consent";
+import { onConsentChange, readChoice } from "@/lib/consent";
 import { AdvertisingConsentBanner } from "@/components/advertising-consent-banner";
 
 
@@ -198,6 +198,10 @@ function RootComponent() {
         landing_path: window.location.pathname,
       });
     }
+    return onConsentChange(() => {
+      if (readChoice("advertising") === "denied") clearAttribution();
+      else captureAttribution();
+    });
   }, []);
   useEffect(() => {
     void trackMetaPageView(pathname);
