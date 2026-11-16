@@ -91,11 +91,20 @@ export const Route=createFileRoute("/api/public/edge-dns/report")({
     if(saveError)return Response.json({error:"probe_store_failed"},{status:503});
 
     const primary=await cloudflareDnsReady();
-    const savedKeys=new Set((saved??[]).map(r=>r.server_id+"|"+r.checked_at));
     let applied=0,failed=0;
     if(primary){
+      // Include previously stored but unapplied reports, so a partial server
+      // failure can be retried by the Cloudflare durable outbox.
+      const {data:waiting,error:waitingError}=await (supabaseAdmin as any)
+        .from("cloudflare_dns_probes").select("server_id,checked_at")
+        .eq("applied",false).in("server_id",ids)
+        .gte("checked_at",new Date(Date.now()-4*60_000).toISOString()).limit(100);
+      if(waitingError)return Response.json({error:"pending_probe_read_failed"},{status:503});
+      const key=(id:string,ts:string)=>id+"|"+Date.parse(ts);
+      const pendingKeys=new Set((waiting??[]).map((x:{server_id:string;checked_at:string})=>key(x.server_id,x.checked_at)));
       // Read-only/unknown probes must not rewrite confirmed customer status.
-      const pending=rows.filter(r=>r.status!=="unknown"&&savedKeys.has(r.check.server_id+"|"+r.check.checked_at));
+      const pending=rows.filter(r=>r.status!=="unknown"
+        &&pendingKeys.has(key(r.check.server_id,r.check.checked_at)));
       const {runPool}=await import("@/lib/pool");
       const outcome=await runPool(pending,async r=>{
         const clean=r.resolvers.filter(x=>x.ok||x.error!=="transport_error");
