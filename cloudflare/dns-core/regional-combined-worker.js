@@ -451,11 +451,57 @@ const telegramQueueWorker={
   }
 };
 
+
+/** Incremental, anonymized monitoring history mirror.
+ * Authenticated read from the existing application. D1 stores no user
+ * identifiers or hostnames, and never becomes an auth/payment database.
+ */
+async function syncMonitoringRollups(env){
+  if(!env.METRICS_DB)return;
+  const last=await env.METRICS_DB.prepare(
+    "SELECT value FROM monitoring_sync_meta WHERE key='last_success_ms'"
+  ).first();
+  if(Number(last?.value||0)>0&&Date.now()-Number(last.value)<30*60_000)return;
+  const signature=await signatureHeaders(env,"metrics-rollups-v1");
+  const res=await fetch(ORIGIN+"/api/public/edge-metrics/rollups",{
+    headers:signature,cache:"no-store",signal:AbortSignal.timeout(18000)
+  });
+  if(!res.ok)throw new Error("metrics_origin_http_"+res.status);
+  const data=await res.json();
+  if(data?.ok!==true||!Array.isArray(data.rollups)||data.rollups.length>15)
+    throw new Error("metrics_invalid_source");
+  const stamp=new Date().toISOString(),ms=Date.now();
+  const stmts=[];
+  for(const x of data.rollups){
+    if(!/^\d{4}-\d{2}-\d{2}$/.test(x.day))throw new Error("metrics_invalid_day");
+    for(const field of ["servers","checks","ups","downs","degraded"]){
+      if(!Number.isInteger(x[field])||x[field]<0)throw new Error("metrics_invalid_count");
+    }
+    stmts.push(env.METRICS_DB.prepare(
+      "INSERT INTO monitoring_daily_rollups(day,servers,checks,ups,downs,degraded,avg_latency_ms,uptime_pct,captured_at,origin) VALUES(?,?,?,?,?,?,?,?,?,'signed-origin-incremental') ON CONFLICT(day) DO UPDATE SET servers=excluded.servers,checks=excluded.checks,ups=excluded.ups,downs=excluded.downs,degraded=excluded.degraded,avg_latency_ms=excluded.avg_latency_ms,uptime_pct=excluded.uptime_pct,captured_at=excluded.captured_at,origin=excluded.origin"
+    ).bind(x.day,x.servers,x.checks,x.ups,x.downs,x.degraded,
+      x.avg_latency_ms??null,x.uptime_pct??null,stamp));
+  }
+  if(!stmts.length)return;
+  stmts.push(env.METRICS_DB.prepare(
+    "INSERT INTO monitoring_sync_meta(key,value) VALUES('last_success_ms',?) ON CONFLICT(key) DO UPDATE SET value=excluded.value"
+  ).bind(String(ms)));
+  await env.METRICS_DB.batch(stmts);
+  console.log("cloudflare_monitoring_rollups_synced",JSON.stringify({days:data.rollups.length}));
+}
+const metricsWorker={
+  scheduled(_event,env,ctx){
+    if(!env.METRICS_DB)return;
+    ctx.waitUntil(syncMonitoringRollups(env).catch(e=>
+      console.warn("cloudflare_monitoring_rollups_sync_failed",String(e?.message||e).slice(0,150))));
+  }
+};
 export default {
   scheduled(event,env,ctx){
     regionalWorker.scheduled(event,env,ctx);
     dnsWorker.scheduled(event,env,ctx);
     telegramQueueWorker.scheduled(event,env,ctx);
+    metricsWorker.scheduled(event,env,ctx);
   },
   queue(batch,env,ctx){
     return telegramQueueWorker.queue(batch,env,ctx);
