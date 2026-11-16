@@ -11,12 +11,12 @@ type CostRow={day:string;platform:string;campaign_id:string;ad_id:string;
 type Segment={
   key:string;registrations:number;paidCustomers:number;revenueCents:number;
   activeSubscriptions:number;spendCents:number|null;linkClicks:number|null;
-  landingPageViews:number|null;costPerRegistrationCents:number|null;
+  landingPageViews:number|null;signupPageVisits:number|null;costPerRegistrationCents:number|null;
   costPerPaidCustomerCents:number|null;
 };
 function makeSegment(key:string):Segment{
   return {key,registrations:0,paidCustomers:0,revenueCents:0,
-    activeSubscriptions:0,spendCents:null,linkClicks:null,landingPageViews:null,
+    activeSubscriptions:0,spendCents:null,linkClicks:null,landingPageViews:null,signupPageVisits:null,
     costPerRegistrationCents:null,costPerPaidCustomerCents:null};
 }
 function summarize(segment:Segment){
@@ -43,7 +43,7 @@ export const getAdminAcquisitionReport=createServerFn({method:"GET"})
     const {isAdminMaster}=await import("@/lib/permissions");
     if(!isAdminMaster(adminUser?.user?.email))throw new Error("Acesso restrito.");
   }
-  const [acqQ,payQ,subQ,costQ,totalQ]=await Promise.all([
+  const [acqQ,payQ,subQ,costQ,totalQ,visitQ]=await Promise.all([
     (supabaseAdmin as any).from("customer_acquisition")
       .select("user_id,source,platform,campaign_id,utm_campaign,registered_at")
       .order("registered_at",{ascending:false}).limit(5000),
@@ -58,9 +58,13 @@ export const getAdminAcquisitionReport=createServerFn({method:"GET"})
     (supabaseAdmin as any).from("ad_spend_daily")
       .select("day,platform,campaign_id,ad_id,spend_cents,clicks,impressions,landing_page_views,retrieved_at")
       .order("day",{ascending:false}).limit(5000),
-    supabaseAdmin.from("profiles").select("id",{head:true,count:"exact"})
+    supabaseAdmin.from("profiles").select("id",{head:true,count:"exact"}),
+    (supabaseAdmin as any).from("acquisition_page_events")
+      .select("stage,source,platform,campaign_id")
+      .eq("stage","signup").gte("created_at",new Date(Date.now()-90*86400000).toISOString())
+      .order("created_at",{ascending:false}).limit(5000)
   ]);
-  for(const q of [acqQ,payQ,subQ,costQ,totalQ])if(q.error)throw new Error("Aquisição indisponível");
+  for(const q of [acqQ,payQ,subQ,costQ,totalQ,visitQ])if(q.error)throw new Error("Aquisição indisponível");
   const leads=(acqQ.data||[]) as AcquisitionRow[];
   const payments=(payQ.data||[]) as PaidRow[];
   const costs=(costQ.data||[]) as CostRow[];
@@ -96,6 +100,12 @@ export const getAdminAcquisitionReport=createServerFn({method:"GET"})
       }
     }
   }
+  for(const visit of visitQ.data||[]){
+    const source=group(bySource,visit.source||"unattributed");
+    const platform=group(byPlatform,visit.source==="meta_ads"?(visit.platform||"unknown"):"other");
+    const campaign=group(byCampaign,visit.campaign_id||"unidentified");
+    for(const x of [source,platform,campaign])x.signupPageVisits=(x.signupPageVisits??0)+1;
+  }
   const totalCost=(seg:Segment|undefined,c:CostRow)=>{
     if(!seg)return;
     seg.spendCents=(seg.spendCents??0)+Number(c.spend_cents||0);
@@ -118,6 +128,7 @@ export const getAdminAcquisitionReport=createServerFn({method:"GET"})
       historicalUnattributed:noAttribution,paidKnown:paidByUser.size,
       paidWithFirstTouch:attributablePaid,
       spendCents:costs.reduce((n,x)=>n+Number(x.spend_cents||0),0),
+      signupPageVisits:(visitQ.data||[]).length,
       linkClicks:costs.reduce((n,x)=>n+Number(x.clicks||0),0),
       landingPageViews:costs.reduce((n,x)=>n+Number(x.landing_page_views||0),0)},
     bySource:[...bySource.values()].map(summarize).sort((a,b)=>b.registrations-a.registrations),
