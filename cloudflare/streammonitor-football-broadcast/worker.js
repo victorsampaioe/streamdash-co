@@ -5,7 +5,7 @@ const SUPABASE="https://yiwyfiaqehhmngqngxvx.supabase.co";
 const MODEL="@cf/google/gemma-4-26b-a4b-instruct";
 const CHANNELS=[
 ["Premiere",/\bpremiere\b/i],["SporTV",/\bsportv\b/i],
-["Globo",/\b(?:rede globo|tv globo|globo)\b/i],
+["Globo",/\b(?:rede globo|tv globo|(?:na|pela|da) globo|globo ao vivo)\b/i],
 ["ESPN",/\bespn(?:\s*[234])?\b/i],["Disney+",/\bdisney\s*\+/i],
 ["Prime Video",/\b(?:prime video|amazon prime)\b/i],
 ["CazéTV",/\bcaze\s*tv\b/i],["Max",/\b(?:hbo\s*max|streaming max|na max)\b/i],
@@ -81,7 +81,21 @@ const bearer=request.headers.get("authorization")||"",apikey=request.headers.get
 if(!bearer.startsWith("Bearer ")||apikey.length<20||apikey.length>512)return false;
 try{
 const r=await fetch(SUPABASE+"/auth/v1/user",{headers:{authorization:bearer,apikey},signal:AbortSignal.timeout(4000)});
-return r.ok && !!(await r.json())?.id;
+if(!r.ok)return false;
+const user=await r.json();
+if(!user?.id)return false;
+const headers={authorization:bearer,apikey,"content-type":"application/json"};
+const [role,sub]=await Promise.allSettled([
+  fetch(SUPABASE+"/rest/v1/rpc/has_role",{method:"POST",headers,body:JSON.stringify({_user_id:user.id,_role:"admin"}),signal:AbortSignal.timeout(4000)}),
+  fetch(SUPABASE+"/rest/v1/subscriptions?user_id=eq."+encodeURIComponent(user.id)+"&select=plan,status,expires_at&limit=1",
+    {headers,signal:AbortSignal.timeout(4000)})
+]);
+if(role.status==="fulfilled"&&role.value.ok&&await role.value.json()===true)return true;
+if(sub.status==="fulfilled"&&sub.value.ok){
+  const list=await sub.value.json();
+  return Array.isArray(list)&&list.some(x=>x.status==="active"&&Date.parse(x.expires_at)>Date.now());
+}
+return false;
 }catch{return false;}
 }
 export default {
