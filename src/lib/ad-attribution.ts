@@ -158,3 +158,11 @@ export function sanitizeAttributionInput(input:unknown):{
     acquisition_placement:x.utm_term,
   };
 }
+
+/** Clear prior advertising identifiers immediately when consent is revoked. */
+export function clearAttribution(){
+  memoryAttribution=null;memoryWindow=null;
+  if(typeof window==="undefined")return;
+  try{window.localStorage?.removeItem(KEY);}catch{}
+  try{window.sessionStorage?.removeItem(KEY);}catch{}
+}
