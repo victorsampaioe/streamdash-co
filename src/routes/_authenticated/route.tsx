@@ -1,4 +1,5 @@
-import { createFileRoute, Outlet, redirect, isRedirect, useRouter, type ErrorComponentProps } from "@tanstack/react-router";
+import {PremiumVitrineGate} from "@/components/vitrine/premium-vitrine-gate";
+import { createFileRoute, Outlet, redirect, isRedirect, useRouter, useRouterState, type ErrorComponentProps } from "@tanstack/react-router";
 import { useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { isChunkLoadError, recoverFromChunkError } from "@/lib/chunk-recovery";
@@ -25,9 +26,20 @@ export const Route = createFileRoute("/_authenticated")({
       throw redirect({ to: "/auth" });
     }
   },
-  component: () => <Outlet />,
+  component: AuthenticatedOutlet,
   errorComponent: AuthedError,
 });
+
+/** Only subscription purchase/management remains available without a paid plan. */
+function AuthenticatedOutlet(){
+  const pathname=useRouterState({select:state=>state.location.pathname});
+  const checkout=pathname==="/app/subscription"||pathname.startsWith("/app/subscription/");
+  // Account management and reseller top-up must remain available to restore access.
+  const accountManagement=pathname==="/app/settings"||pathname.startsWith("/app/settings/")
+    ||pathname==="/app/reseller"||pathname.startsWith("/app/reseller/");
+  if(checkout||accountManagement)return <Outlet/>;
+  return <PremiumVitrineGate><Outlet/></PremiumVitrineGate>;
+}
 
 function AuthedError({ error: unknownError, reset }: ErrorComponentProps) {
   const error = unknownError instanceof Error ? unknownError : new Error("Não foi possível carregar o painel");
