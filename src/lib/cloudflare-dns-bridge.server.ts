@@ -18,26 +18,30 @@ export async function authorizeCloudflareDnsBridge(request:Request):Promise<bool
   return actual.length===reference.length&&timingSafeEqual(actual,reference);
 }
 
-export async function getCloudflareDnsPrimary():Promise<boolean>{
+export async function getCloudflareDnsMode():Promise<"legacy"|"pilot"|"cloudflare">{
   const {data,error}=await supabaseAdmin.from("app_settings")
     .select("value").eq("key","cf_dns_primary").maybeSingle();
-  if(error)return false; // Fail safe: legacy checker stays responsible for alerts.
-  return (data?.value as {mode?:string}|null)?.mode==="cloudflare";
+  if(error)return "legacy";
+  const mode=(data?.value as {mode?:string}|null)?.mode;
+  return mode==="pilot"||mode==="cloudflare"?mode:"legacy";
+}
+export async function getCloudflareDnsPrimary():Promise<boolean>{
+  return (await getCloudflareDnsMode())==="cloudflare";
 }
 
-/** Same fail-safe is used by both the cron and the report receiver.
- * A configured migration is not a cutover until recent, signed Cloudflare
- * probes cover at least 90% of active DNS targets.
+/** Fail closed when Cloudflare reports stop or coverage drops.
+ * No legacy cron is stopped merely because probes are arriving;
+ * we require their successful application to the authoritative DB.
  */
-export async function cloudflareDnsReady():Promise<boolean>{
-  if(!await getCloudflareDnsPrimary())return false;
-  const threshold=new Date(Date.now()-15*60_000).toISOString();
+async function coverageHealthy(appliedOnly:boolean):Promise<boolean>{
+  const cutoff=new Date(Date.now()-15*60_000).toISOString();
+  let query=(supabaseAdmin as any).from("cloudflare_dns_probes")
+    .select("server_id,checked_at").gte("checked_at",cutoff)
+    .order("checked_at",{ascending:false}).limit(2000);
+  if(appliedOnly)query=query.eq("applied",true);
   const [samples,active]=await Promise.all([
-    (supabaseAdmin as any).from("cloudflare_dns_probes")
-      .select("server_id,checked_at").gte("checked_at",threshold)
-      .order("checked_at",{ascending:false}).limit(2000),
-    supabaseAdmin.from("servers")
-      .select("id",{head:true,count:"exact"})
+    query,
+    supabaseAdmin.from("servers").select("id",{head:true,count:"exact"})
       .eq("dns_enabled",true).eq("monitoring_paused",false),
   ]);
   if(samples.error||active.error||!samples.data?.length)return false;
@@ -45,4 +49,14 @@ export async function cloudflareDnsReady():Promise<boolean>{
   if(!Number.isFinite(newest)||Date.now()-newest>3*60_000)return false;
   const unique=new Set(samples.data.map((r:{server_id:string})=>r.server_id)).size;
   return unique>=Math.ceil(Math.max(1,active.count??0)*0.9);
+}
+/** Allow safe recording and processing of reports while legacy stays active. */
+export async function cloudflareDnsCanApply():Promise<boolean>{
+  const mode=await getCloudflareDnsMode();
+  if(mode==="legacy")return false;
+  return coverageHealthy(false);
+}
+export async function cloudflareDnsReady():Promise<boolean>{
+  if(!(await getCloudflareDnsPrimary()))return false;
+  return coverageHealthy(true);
 }
