@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { toPng } from "html-to-image";
 import { supabase } from "@/integrations/supabase/client";
+import { prepareTransparentLogo } from "@/lib/vitrine-image";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -22,6 +23,7 @@ const safeColor = (input: string | undefined) => /^#[0-9a-f]{6}$/i.test(input||"
 export function VitrineFootballStudio() {
   const load = useServerFn(getVitrineFootballMatches);
   const [brand, setBrand] = useState<Branding>(fallbackBrand);
+  const [transparentLogo, setTransparentLogo] = useState(fallbackBrand.logo);
   const [saving, setSaving] = useState<number | null>(null);
   const [width, setWidth] = useState(520);
   const wrapper = useRef<HTMLDivElement>(null);
@@ -59,6 +61,13 @@ export function VitrineFootballStudio() {
     void fetchBrand();
     return () => {active=false;};
   }, []);
+
+  useEffect(() => {
+    let cancelled=false;
+    setTransparentLogo(brand.logo);
+    void prepareTransparentLogo(brand.logo).then(value=>{if(!cancelled)setTransparentLogo(value);});
+    return ()=>{cancelled=true};
+  },[brand.logo]);
 
   const games = useQuery({
     queryKey:["vitrine-football-ftwb",day],
@@ -98,11 +107,11 @@ export function VitrineFootballStudio() {
     <div className="flex flex-wrap items-center justify-between gap-4">
       <div>
         <div className="flex items-center gap-2 text-xs font-bold tracking-[.18em] text-blue-400"><Trophy size={17}/> STREAM MONITOR</div>
-        <h1 className="mt-2 text-3xl font-black tracking-tight">Jogos do dia · Artes automáticas</h1>
-        <p className="mt-2 text-sm text-muted-foreground">Os confrontos dos principais times são organizados automaticamente em até 3 artes, com até 3 canais por jogo.</p>
+        <h1 className="mt-2 text-3xl font-black tracking-tight">Eventos de hoje · Artes automáticas</h1>
+        <p className="mt-2 text-sm text-muted-foreground">Os principais confrontos de hoje são organizados em até 3 artes. Mostramos até 3 canais confirmados por jogo.</p>
       </div>
       <Button type="button" variant="outline" disabled={games.isFetching} onClick={()=>{setDay(today());void games.refetch()}}>
-        <RefreshCw size={16} className={games.isFetching?"mr-2 animate-spin":"mr-2"}/> Atualizar jogos
+        <RefreshCw size={16} className={games.isFetching?"mr-2 animate-spin":"mr-2"}/> Atualizar eventos
       </Button>
     </div>
     {games.isPending&&<Card className="p-8 text-center">Consultando jogos de hoje…</Card>}
@@ -130,7 +139,7 @@ export function VitrineFootballStudio() {
             <div style={{width:baseSize,height:baseSize,transform:"scale("+scale+")",transformOrigin:"top left"}}>
               <div ref={el=>{posterRefs.current[index]=el;}} style={{width:baseSize,height:baseSize}}>
                 <FootballSchedulePoster kind="today" format="feed" matches={group} day={day}
-                  headline="JOGOS DO DIA" brand={brand.name} logo={brand.logo} contact={brand.contact}
+                  headline="EVENTOS DE HOJE" brand={brand.name} logo={transparentLogo} contact={brand.contact}
                   badgeImages={badgeImages} broadcastByMatch={channels}
                   playerPhoto={featured?.playerPhoto||""} playerName={featured?.playerName||""}
                   stadium="" accent={brand.accent}/>
