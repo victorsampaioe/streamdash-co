@@ -184,25 +184,25 @@ async function run(env){
   }catch(e){await updateError(env,object.id,e);throw e;}
   return {catalog,mode:"copying",source:object.bucket};
 }
+async function runLeased(env){
+  if(!env.BACKUP_STATE)throw new Error("backup_state_missing");
+  const now=Date.now(),leaseUntil=now+5*60_000;
+  const lock=await env.BACKUP_STATE.prepare(
+    "INSERT INTO backup_control(key,value) VALUES('worker_lease_until',?) "+
+    "ON CONFLICT(key) DO UPDATE SET value=excluded.value "+
+    "WHERE CAST(backup_control.value AS INTEGER)<?"
+  ).bind(String(leaseUntil),now).run();
+  if(!lock.meta?.changes)return {mode:"lease_held"};
+  try{return await run(env);}
+  finally{
+    await env.BACKUP_STATE.prepare(
+      "UPDATE backup_control SET value='0' WHERE key='worker_lease_until' AND value=?"
+    ).bind(String(leaseUntil)).run();
+  }
+}
 export default {
  async scheduled(_controller,env,ctx){
-  ctx.waitUntil((async()=>{
-    // D1 compare-and-set lease prevents overlapping scheduled multipart
-    // writes. A crashed run frees itself after five minutes.
-    const now=Date.now(),leaseUntil=now+5*60_000;
-    const lock=await env.BACKUP_STATE.prepare(
-      "INSERT INTO backup_control(key,value) VALUES('worker_lease_until',?) "+
-      "ON CONFLICT(key) DO UPDATE SET value=excluded.value "+
-      "WHERE CAST(backup_control.value AS INTEGER)<?"
-    ).bind(String(leaseUntil),now).run();
-    if(!lock.meta?.changes)return {mode:"lease_held"};
-    try{return await run(env);}
-    finally{
-      await env.BACKUP_STATE.prepare(
-        "UPDATE backup_control SET value='0' WHERE key='worker_lease_until' AND value=?"
-      ).bind(String(leaseUntil)).run();
-    }
-  })().then(x=>console.log("private_backup_cycle_ok",JSON.stringify(x)))
+  ctx.waitUntil(runLeased(env).then(x=>console.log("private_backup_cycle_ok",JSON.stringify(x)))
     .catch(e=>console.error("private_backup_cycle_failed",String(e?.message||e).slice(0,160))));
  },
  async fetch(){
@@ -217,6 +217,11 @@ export default {
  * Cloudflare: only its SHA256 is sent to the signed enrollment endpoint.
  */
 export class BackupEnrollment extends WorkerEntrypoint {
+  /** Internal-only fallback until a newly created Cron Trigger propagates. */
+  async copyBackupBatch(){
+    const result=await runLeased(this.env);
+    return {mode:result.mode,source:result.source??null};
+  }
   async getSecretFingerprint(){
     const token=this.env.BACKUP_BRIDGE_TOKEN;
     const valid=typeof token==="string"&&/^[a-zA-Z0-9_-]{64,128}$/.test(token);
