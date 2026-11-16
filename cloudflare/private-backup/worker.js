@@ -193,11 +193,11 @@ async function run(env){
   }
   if(object.source_size<=SMALL_LIMIT){
     // A single small-object copy per minute unnecessarily stretches a
-    // 26-file photo migration. Keep this bounded: six small files maximum,
+    // 26-file photo migration. Keep this bounded: twelve small files maximum,
     // sequentially verified with SHA-256, all using the same D1 lease.
     const batch=await env.BACKUP_STATE.prepare(
       "SELECT * FROM backup_objects WHERE status IN ('pending','retry') "+
-      "AND source_size<=? ORDER BY source_size ASC LIMIT 6"
+      "AND source_size<=? ORDER BY source_size ASC LIMIT 12"
     ).bind(SMALL_LIMIT).all();
     let copied=0,failed=0;
     for(const candidate of batch.results||[]){
