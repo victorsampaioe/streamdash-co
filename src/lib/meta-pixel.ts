@@ -1,4 +1,4 @@
-import { canTrack, onConsentChange, readChoice } from "@/lib/consent";
+import { canTrack, onConsentChange } from "@/lib/consent";
 
 /** Pixel do Stream Monitor no Meta (conta de anúncios 1813033566413744). */
 const PIXEL_ID = "2289395685308884";
@@ -25,6 +25,7 @@ let lastPath: string | null = null;
 let pendingPath: string | null = null;
 let unsubscribe: (() => void) | null = null;
 const conversionsInFlight = new Set<string>();
+const conversionsSentThisPage = new Set<string>();
 
 function hostAllowed() {
   return typeof window !== "undefined" && ALLOWED_HOSTS.includes(window.location.hostname);
@@ -73,7 +74,7 @@ async function ensurePixel(): Promise<boolean> {
     window.fbq("init", PIXEL_ID, {}, { agent: "lovable" });
     initialized = true;
   }
-  // In Brazil, tracking can be allowed by regional defaults without a stored choice.
+  // Explicit opt-in is required before the Pixel initializes or sends data.
   window.fbq!("consent", "grant");
   return true;
 }
@@ -102,7 +103,7 @@ async function trackConversion(
   eventID: string,
   durable: boolean,
 ) {
-  if (!hostAllowed() || conversionsInFlight.has(key)) return;
+  if (!hostAllowed() || conversionsInFlight.has(key) || conversionsSentThisPage.has(key)) return;
   let store: Storage | null = null;
   try { store = durable ? window.localStorage : window.sessionStorage; } catch { /* private browser */ }
   try {
@@ -119,6 +120,7 @@ async function trackConversion(
       // Ignore private-mode storage restrictions.
     }
     window.fbq!("track", eventName, data, { eventID });
+    conversionsSentThisPage.add(key);
     try { store?.setItem(key, "1"); } catch { /* Ignore blocked storage. */ }
   } finally {
     conversionsInFlight.delete(key);
