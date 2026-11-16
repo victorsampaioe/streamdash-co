@@ -15,7 +15,13 @@ export const Route = createFileRoute("/api/public/cron/dns-recovery")({
           return Response.json({ ok: true, skipped: true, reason: "worker mode" });
         }
         try {
-          const { withCycleLock } = await import("@/lib/job-lock.server");
+          // When Cloudflare is the healthy primary DNS engine, do not launch a
+        // parallel origin DNS probe that can overwrite or duplicate edge state.
+        const {cloudflareDnsReady}=await import("@/lib/cloudflare-dns-bridge.server");
+        if(await cloudflareDnsReady())return Response.json({
+          ok:true,skipped:true,provider:"cloudflare-dns-core"
+        },{headers:{"Cache-Control":"no-store"}});
+        const { withCycleLock } = await import("@/lib/job-lock.server");
           const { runDueDnsRecoveryChecks } = await import("@/lib/dns.server");
           // Share the DNS cycle lock with /cron/check to prevent concurrent checks and duplicate alerts.
           const result = await withCycleLock("cron-dns", 180, () => runDueDnsRecoveryChecks(16));
