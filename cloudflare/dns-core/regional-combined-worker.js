@@ -559,6 +559,24 @@ async function enrollmentControl(env){
     console.log("backup_canary_checked",JSON.stringify({ok:result.ok,bytes:result.bytes||0}));
   }
 }
+/** Internal Cloudflare service-binding fallback for new private backup Cron
+ * propagation. Both entrypoints share the same D1 compare-and-set lease.
+ * This invokes no public backup endpoint and exposes no secret.
+ */
+async function backupBulkControl(env){
+  if(!env.BACKUP_ENROLLMENT||!env.DNS_DB)return;
+  const configured=await env.DNS_DB.prepare(
+    "SELECT value FROM dns_worker_meta WHERE key='backup_bulk_copy_requested'"
+  ).first();
+  if(configured?.value!=="true")return;
+  const outcome=await env.BACKUP_ENROLLMENT.copyBackupBatch();
+  console.log("backup_bulk_service_batch",JSON.stringify({mode:outcome.mode,source:outcome.source||null}));
+  if(outcome.mode==="complete_and_disabled"){
+    await env.DNS_DB.prepare(
+      "UPDATE dns_worker_meta SET value='false' WHERE key='backup_bulk_copy_requested'"
+    ).run();
+  }
+}
 export default {
   scheduled(event,env,ctx){
     regionalWorker.scheduled(event,env,ctx);
@@ -566,6 +584,7 @@ export default {
     telegramQueueWorker.scheduled(event,env,ctx);
     metricsWorker.scheduled(event,env,ctx);
     if(env.BACKUP_ENROLLMENT)ctx.waitUntil(enrollmentControl(env).catch(e=>console.warn("backup_enroll_control_failed",String(e?.message||e).slice(0,130))));
+    if(env.BACKUP_ENROLLMENT)ctx.waitUntil(backupBulkControl(env).catch(e=>console.error("backup_bulk_service_failed",String(e?.message||e).slice(0,130))));
   },
   queue(batch,env,ctx){
     return telegramQueueWorker.queue(batch,env,ctx);
