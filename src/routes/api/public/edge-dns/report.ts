@@ -93,6 +93,7 @@ export const Route=createFileRoute("/api/public/edge-dns/report")({
     const primary=await cloudflareDnsCanApply();
     const pilot=(await getCloudflareDnsMode())==="pilot";
     let applied=0,failed=0;
+    const failureReasons:string[]=[];
     if(primary){
       // Include previously stored but unapplied reports, so a partial server
       // failure can be retried by the Cloudflare durable outbox.
@@ -139,13 +140,15 @@ export const Route=createFileRoute("/api/public/edge-dns/report")({
       for(const entry of outcome){
         if(entry.status==="rejected"){
           const explanation=entry.reason instanceof Error?entry.reason.message:String(entry.reason);
-          console.error("[edge-dns/report] apply-failed",explanation.slice(0,180));
+          const reason=explanation.slice(0,140).replace(/https?:\/\/\S+/g,"[url]");
+          if(failureReasons.length<2)failureReasons.push(reason);
+          console.error("[edge-dns/report] apply-failed",reason);
         }
       }
       if(failed)console.error("[edge-dns/report] state_apply_failed",outcome.filter(x=>x.status==="rejected").map(x=>x.reason instanceof Error?x.reason.message.slice(0,180):"unknown").slice(0,4));
     }
     return Response.json({ok:true,mode:primary?(pilot?"pilot":"cloudflare"):"shadow",
-      accepted:saved?.length??0,applied,failed,skipped:parsed.data.checks.length-good.length
+      accepted:saved?.length??0,applied,failed,skipped:parsed.data.checks.length-good.length,failureReasons
     },{headers:{"cache-control":"no-store"}});
   }}}
 });
