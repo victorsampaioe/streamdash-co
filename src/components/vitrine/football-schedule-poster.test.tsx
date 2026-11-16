@@ -62,6 +62,19 @@ describe("Vitrine Futebol — imagens e exportação", () => {
     expect(html).toContain("Canal confirmado");
     expect(html).toContain("#7537ed");
   });
+  it("não cria quadrados de escudos vazios quando a fonte não oferece imagem",()=>{
+    const html=renderToStaticMarkup(<FootballSchedulePoster {...base} />);
+    expect(html).not.toContain('src=""');
+    expect(html).not.toContain("HORÁRIOS E TRANSMISSÕES SUJEITOS A CONFIRMAÇÃO");
+    expect(html).toContain("height:345px"); // destaque em banner com um jogo e sem jogador
+  });
+  it("mantém dois confrontos completos no mesmo banner",()=>{
+    const second={...sample,id:"match-second",home:"Athletico-PR",away:"Paraná Clube"};
+    const html=renderToStaticMarkup(<FootballSchedulePoster {...base} matches={[sample,second]} />);
+    expect(html).toContain("Time da Casa X Time Visitante");
+    expect(html).toContain("Athletico-PR X Paraná Clube");
+    expect(html).not.toContain("HORÁRIOS E TRANSMISSÕES SUJEITOS");
+  });
   it("não inventa times quando não há jogos", () => {
     const html = renderToStaticMarkup(<FootballSchedulePoster {...base} matches={[]} />);
     expect(html).toContain("ESCOLHA JOGOS REAIS PARA MONTAR A ARTE");
