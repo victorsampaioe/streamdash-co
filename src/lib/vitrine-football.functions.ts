@@ -226,7 +226,7 @@ export const getVitrineFootballMatches = createServerFn({ method: "POST" })
     await requirePaidFeature(context);
     const key = process.env.FTWB_API_KEY;
     if (!key) throw new Error("FTWB_API_KEY não configurada no ambiente do servidor.");
-    // Explicit status list retains matches that have already kicked off or ended.
+    // Include scheduled, live and completed fixtures in today's automatic posters.
     const loadFixtures=async(country?:string):Promise<unknown[]>=>{
       const url=new URL(FOOTBALL_API_URL);
       url.searchParams.set("data",data.date);
