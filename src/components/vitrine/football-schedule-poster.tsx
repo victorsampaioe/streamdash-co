@@ -187,8 +187,7 @@ export function FootballSchedulePoster({
       background: "transparent", padding: 0,
       boxShadow: "none",
     }}>
-      {logo ? <img src={logo} alt={branding} crossOrigin="anonymous" onError={event=>{event.currentTarget.style.display="none";}} style={{width:"100%",height:"100%",objectFit:"contain",objectPosition:"center"}} />
-        : <span style={{fontSize:24,fontWeight:1000,textAlign:"center"}}>{branding.slice(0,18)}</span>}
+      {logo && <img src={logo} alt={branding} crossOrigin="anonymous" onError={event=>{event.currentTarget.style.display="none";}} style={{width:"100%",height:"100%",objectFit:"contain",objectPosition:"center"}} />}
     </div>
     <div className="absolute" style={{
       left: landscape ? 315 : 430, top: landscape ? 42 : story ? 65 : 65,
