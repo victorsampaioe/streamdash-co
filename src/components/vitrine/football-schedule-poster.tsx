@@ -1,5 +1,5 @@
 import type { FootballMatch } from "@/lib/vitrine-football.functions";
-import { ShieldCheck } from "lucide-react";
+
 
 export type FootballPosterFormat = "feed" | "story" | "landscape";
 export type FootballPosterKind = "today" | "featured";
@@ -67,9 +67,8 @@ function FixtureRibbon({ match, badgeImages, broadcast, accent, width, height }:
   const homeBadge=badgeImages[`home:${match.id}`] || badgeImages[match.homeBadge];
   const awayBadge=badgeImages[`away:${match.id}`] || badgeImages[match.awayBadge];
   const short=height<=160;
-  const score=match.scoreLabel?"FINAL "+match.scoreLabel:
-    /ao_vivo|ao vivo|live|em andamento/i.test(match.status||"")?"AO VIVO":
-    /encerrad|finaliz|finished|concluid|ended/i.test(match.status||"")?"ENCERRADO":match.time||"A confirmar";
+  // The primary pill always displays scheduled kickoff, even after the game ends.
+  const kickoffTime=/^\\d{2}:\\d{2}$/.test(match.time||"")?match.time:"A confirmar";
   const teamFont=(name:string)=>{
     const length=name.length;
     return short?(length>28?16:length>18?19:23):(length>32?20:length>23?25:30);
@@ -108,7 +107,7 @@ function FixtureRibbon({ match, badgeImages, broadcast, accent, width, height }:
       background:`linear-gradient(115deg,${darken(accent,.55)},${accent})`,
       borderTopLeftRadius:short?16:25,fontWeight:1000,
       fontSize:short?23:29,textShadow:"0 1px 3px #0005"
-    }}>{score}</div>
+    }}>{kickoffTime}</div>
   </div>;
 }
 
@@ -132,7 +131,7 @@ export function FootballSchedulePoster({
   const playerWidth = landscape ? 560 : story ? 700 : 620;
   const footerBottom = story ? 79 : landscape ? 38 : 48;
   const hasPlayer = Boolean(playerPhoto);
-  const watermarkBadges = [...new Set(shown.flatMap(m => [badgeImages[`home:${m.id}`] || badgeImages[m.homeBadge] || m.homeBadge, badgeImages[`away:${m.id}`] || badgeImages[m.awayBadge] || m.awayBadge]).filter(Boolean))].slice(0,4);
+
   const posterCardWidth = format==="feed" ? 984 : cardWidth;
   const posterCardLeft = format==="feed" ? 48 : d.left;
   const rowHeight = format==="feed" && shown.length===1 ? 210 : d.rowHeight;
@@ -142,12 +141,6 @@ export function FootballSchedulePoster({
     background: `radial-gradient(ellipse at 88% 30%,${accent} 0%,${dark2} 31%,${dark} 73%,#060607 100%)`,
     color: "white",
   }}>
-    {!hasPlayer && watermarkBadges.length > 0 && <div className="absolute pointer-events-none flex items-center justify-center gap-6"
-      style={{top:240,left:585,right:40,height:80,opacity:.09,zIndex:2}}>
-      {watermarkBadges.map((badge,i)=><img key={i} src={badge} alt=""
-        onError={event=>{event.currentTarget.style.display="none";}}
-        style={{height:78,width:78,objectFit:"contain"}}/>)}
-    </div>}
     {/* Animated-looking stadium lighting is static for reliable PNG output. */}
     {stadium && <img src={stadium} alt="" className="absolute inset-0 h-full w-full object-cover"
       style={{ opacity: 0.30, filter: "saturate(1.15) contrast(1.1)" }} />}
@@ -160,6 +153,13 @@ export function FootballSchedulePoster({
       backgroundImage: "repeating-linear-gradient(159deg,transparent 0px,transparent 23px,rgba(255,255,255,.025) 24px,transparent 25px)",
       opacity: .52,
     }} />
+    {/* Faint reseller watermark, never team shields. Same transparent logo used by the brand. */}
+    {logo && <img src={logo} alt="" crossOrigin="anonymous"
+      onError={event=>{event.currentTarget.style.display="none";}}
+      className="absolute pointer-events-none" style={{
+        left:105,top:330,width:870,height:590,
+        objectFit:"contain",opacity:.09,zIndex:1,filter:"grayscale(1)"
+      }}/>}
     {/* Sports-poster white torn paper edges, not the watermarked reference photo. */}
     <div className="absolute inset-x-0 top-0 h-[44px] bg-[#f7f7f6]" style={{
       clipPath: "polygon(0 0,100% 0,100% 57%,97% 64%,94% 49%,91% 75%,88% 53%,84% 69%,80% 43%,77% 65%,73% 55%,69% 76%,65% 45%,60% 65%,56% 47%,52% 76%,48% 49%,44% 60%,39% 47%,35% 67%,29% 46%,25% 70%,20% 54%,16% 72%,12% 48%,7% 69%,3% 53%,0 72%)",
@@ -236,29 +236,21 @@ export function FootballSchedulePoster({
             color: "#111", fontSize: 32, padding: 40,
           }}>ESCOLHA JOGOS REAIS PARA MONTAR A ARTE</div>}
     </div>
-    {/* Contact + reseller branding stay clear of the torn bottom edge. */}
-    <div className="absolute z-[4] flex items-center" style={{
-      left: story ? 74 : 55, bottom: footerBottom,
-      height: story ? 95 : landscape ? 54 : 69,
-      maxWidth: landscape ? 590 : 670,
-      padding: "0 22px", borderRadius: 99,
-      background: phone ? "linear-gradient(100deg,#099a53,#18bb6a)" : `linear-gradient(110deg,${dark2},${accent})`,
-      border: "3px solid white",
-      boxShadow: "0 6px 12px rgba(0,0,0,.45)",
+    {/* Compact WhatsApp contact strip, kept clear of the reseller logo. */}
+    {phone && <div className="absolute z-[4] flex items-center" style={{
+      left:55,bottom:footerBottom,width:Math.min(530,270+phone.length*17),height:65,
+      borderRadius:16,background:"linear-gradient(100deg,#07854a,#1dba69)",
+      border:"2px solid rgba(255,255,255,.85)",padding:"0 17px",
+      boxShadow:"0 8px 18px rgba(0,0,0,.28)",gap:13
     }}>
-      {phone
-        ? <><svg width={story ? 52 : landscape ? 31 : 40} height={story ? 52 : landscape ? 31 : 40}
-             viewBox="0 0 32 32" role="img" aria-label="WhatsApp" xmlns="http://www.w3.org/2000/svg">
-            <path fill="white" d="M16 3C8.82 3 3 8.78 3 15.94c0 2.28.6 4.5 1.72 6.47L3 29l6.77-1.77a13.06 13.06 0 0 0 6.23 1.57c7.18 0 13-5.79 13-12.94S23.18 3 16 3Zm0 23.44c-1.94 0-3.84-.52-5.49-1.5l-.39-.23-4.02 1.05 1.07-3.9-.25-.4a10.47 10.47 0 0 1-1.6-5.52c0-5.84 4.8-10.59 10.7-10.59 5.9 0 10.7 4.75 10.7 10.59S21.9 26.44 16 26.44Zm5.88-7.94c-.32-.16-1.88-.92-2.18-1.02-.29-.11-.5-.16-.71.16-.21.32-.82 1.02-1.01 1.22-.18.21-.37.24-.69.08-.32-.16-1.35-.49-2.58-1.57-.95-.84-1.59-1.87-1.77-2.19-.18-.31-.02-.48.14-.64.15-.14.32-.37.48-.55.16-.19.21-.32.32-.53.11-.21.05-.4-.03-.56-.08-.16-.71-1.71-.97-2.34-.26-.61-.52-.52-.72-.53h-.61c-.21 0-.55.08-.84.4-.29.32-1.1 1.07-1.1 2.62s1.13 3.05 1.29 3.26c.16.21 2.23 3.39 5.41 4.75.76.32 1.35.52 1.81.66.76.24 1.46.2 2.01.12.61-.09 1.88-.77 2.14-1.52.26-.75.26-1.39.18-1.53-.08-.13-.29-.21-.61-.37Z"/>
-          </svg>
-          <span style={{
-            marginLeft: 12, fontWeight: 1000,
-            fontSize: story ? 42 : landscape ? 27 : 30,
-            whiteSpace: "nowrap", letterSpacing: "-.025em",
-          }}>{phone}</span></>
-        : <><ShieldCheck size={story ? 42 : 30} color="#fff" />
-          <span style={{ marginLeft: 12, fontSize: story ? 29 : 23, fontWeight: 1000 }}>CONSULTE A PROGRAMAÇÃO</span></>}
-    </div>
+      <svg width="39" height="39" viewBox="0 0 32 32" role="img" aria-label="WhatsApp" xmlns="http://www.w3.org/2000/svg" style={{flexShrink:0}}>
+        <path fill="white" d="M16 3C8.82 3 3 8.78 3 15.94c0 2.28.6 4.5 1.72 6.47L3 29l6.77-1.77a13.06 13.06 0 0 0 6.23 1.57c7.18 0 13-5.79 13-12.94S23.18 3 16 3Zm0 23.44c-1.94 0-3.84-.52-5.49-1.5l-.39-.23-4.02 1.05 1.07-3.9-.25-.4a10.47 10.47 0 0 1-1.6-5.52c0-5.84 4.8-10.59 10.7-10.59 5.9 0 10.7 4.75 10.7 10.59S21.9 26.44 16 26.44Zm5.88-7.94c-.32-.16-1.88-.92-2.18-1.02-.29-.11-.5-.16-.71.16-.21.32-.82 1.02-1.22.18-.21-.37-.24-.69-.08-.32.16-1.35.49-2.58-1.57-.95-.84-1.59-1.87-1.77-2.19-.18-.31-.02-.48.14-.64.15-.14.32-.37.48-.55.16-.19.21-.32.32-.53.11-.21.05-.4-.03-.56-.08-.16-.71-1.71-.97-2.34-.26-.61-.52-.52-.72-.53h-.61c-.21 0-.55.08-.84.4-.29.32-1.1 1.07-1.1 2.62s1.13 3.05 1.29 3.26c.16.21 2.23 3.39 5.41 4.75.76.32 1.35.52 1.81.66.76.24 1.46.2 2.01.12.61-.09 1.88-.77 2.14-1.52.26-.75.26-1.39.18-1.53-.08-.13-.29-.21-.61-.37Z"/>
+      </svg>
+      <div className="flex flex-col min-w-0" style={{lineHeight:1.08}}>
+        <span style={{fontSize:13,fontWeight:850,letterSpacing:".09em"}}>FALE PELO WHATSAPP</span>
+        <span style={{fontSize:25,fontWeight:1000,whiteSpace:"nowrap"}}>{phone}</span>
+      </div>
+    </div>}
     {/* Brand logo only: never print a placeholder reseller name in artwork. */}
     {logo && <div className="absolute z-[5] flex items-center justify-end" style={{
       right:45,bottom:footerBottom-3,width:350,height:82
