@@ -203,9 +203,21 @@ function apiFixture(record: unknown, index: number, date: string): FootballMatch
   if (!home || !away) return null;
   const competition = pick(record,"campeonato","competicao","league","competition","tournament","torneio","nome_campeonato","campeonato_nome","leagueName","competitionName");
   const league = typeof competition === "string" ? competition : String(pick(competition,"nome","name","title","descricao","description")||"Futebol");
-  const inputTime = String(pick(record,"data_hora","datetime","inicio","horario","hora","kickoff")||"");
-  const when = /^\d{4}-\d{2}-\d{2}T/.test(inputTime) && !Number.isNaN(Date.parse(inputTime)) ? kickoff(inputTime) :
-    {iso:"",day:date,time: /^\d{2}:\d{2}$/.test(inputTime)?inputTime:"A confirmar"};
+  // Respect kickoff time even if the match is already finished; never manufacture "00:00".
+  const clock = pick(record,"horario","hora","hora_inicio","horario_inicio","horaJogo",
+    "horarioJogo","hora_jogo","inicio_hora","start_time","match_time","time");
+  const dateTime = pick(record,"data_hora","datetime","inicio","kickoff","starts_at",
+    "dataHora","date_time","matchDateTime","data_e_hora");
+  const inputTime = String(dateTime||clock||"").trim();
+  const timeWithZone = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}.*(?:Z|[+-]\d{2}:?\d{2})$/i.test(inputTime);
+  const absolute = timeWithZone && !Number.isNaN(Date.parse(inputTime))
+    ? kickoff(inputTime) : null;
+  const dayFromValue=/^(\d{4}-\d{2}-\d{2})[T ]/.exec(inputTime)?.[1] || date;
+  const clockMatch=/(?:^|[T\s])(\d{1,2}):(\d{2})(?::\d{2})?(?:\s|$|[Z+-])/.exec(inputTime)
+    || /^(\d{1,2}):(\d{2})$/.exec(String(clock||"").trim());
+  const formattedClock = clockMatch && Number(clockMatch[1])<24 && Number(clockMatch[2])<60
+    ? clockMatch[1].padStart(2,"0")+":"+clockMatch[2] : "A confirmar";
+  const when=absolute||{iso:"",day:dayFromValue,time:formattedClock};
   const id = String(pick(record,"id","jogo_id","match_id")||[date,home,away,index].join(":"));
   const rawStatus=pick(record,"status","situacao","state","match_status");
   const status=typeof rawStatus==="string"?rawStatus:String(pick(rawStatus,"nome","name","slug")||"");
@@ -564,39 +576,62 @@ export const getVitrineFootballMatches = createServerFn({ method: "POST" })
     await attachEspnBadges(matches);
     await enrichBadges(matches);
     await inlinePosterBadges(matches);
-    // Cloudflare Workers AI researches missing transmissions with sourced headlines.
-    // A paid Cloudflare web-search gateway is not required for the RSS fallback.
-    // The Cloudflare Worker verifies the same Supabase identity server-side.
-    const possible=matches.filter(match=>!(match.broadcasts||[]).length);
-    const requestAuth=getRequest()?.headers.get("authorization")||"";
-    const supabasePublicKey=process.env.SUPABASE_PUBLISHABLE_KEY||"";
-    if(possible.length && requestAuth.startsWith("Bearer ") && supabasePublicKey){
-      const endpoint="https://streammonitor-football-broadcast.victorsampaio133.workers.dev/broadcasts";
-      const batches:FootballMatch[][]=[];
-      for(let offset=0;offset<Math.min(possible.length,32);offset+=8){
-        batches.push(possible.slice(offset,offset+8));
-      }
-      const enrichment=await Promise.allSettled(batches.map(async group=>{
-        const response=await fetch(endpoint,{
-          method:"POST",
-          headers:{authorization:requestAuth,apikey:supabasePublicKey,"content-type":"application/json"},
-          body:JSON.stringify({matches:group.map(m=>({id:m.id,home:m.home,away:m.away,date:m.day}))}),
-          cache:"no-store",signal:AbortSignal.timeout(15000)
-        });
-        if(!response.ok)return [] as Array<{id:string;channels:string[]}>;
-        const payload=await response.json() as {results?:Array<{id:string;channels:string[]}>};
-        return Array.isArray(payload.results)?payload.results:[];
-      }));
-      const found=new Map(enrichment.flatMap(item=>item.status==="fulfilled"?item.value:[])
-        .filter(item=>Array.isArray(item.channels)&&item.channels.length>0)
-        .map(item=>[item.id,item.channels.filter(x=>typeof x==="string").slice(0,3)] as const));
-      for(const match of matches){
-        if(!(match.broadcasts||[]).length && found.has(match.id))
-          match.broadcasts=found.get(match.id);
-      }
+    // Retain FTWB channels and previously checked event-specific information first.
+    for(const match of matches){
+      if(!(match.broadcasts||[]).length)match.broadcasts=verifiedBroadcasts(match,data.date);
     }
-    // Prefer channels explicitly supplied by FTWB; add documented fixture-specific channels only when absent.
-    for(const match of matches){if(!(match.broadcasts||[]).length)match.broadcasts=verifiedBroadcasts(match,data.date)}
+    const withoutChannels=matches.filter(match=>!(match.broadcasts||[]).length);
+    const authorization=getRequest()?.headers.get("authorization")||"";
+    const publicKey=process.env.SUPABASE_PUBLISHABLE_KEY||"";
+    // ONE HTTP request -> ONE AI inference at most, for all eligible missing games.
+    if(withoutChannels.length && authorization.startsWith("Bearer ") && publicKey){
+      try{
+        const response=await fetch(
+          "https://streammonitor-football-broadcast.victorsampaio133.workers.dev/broadcasts",{
+          method:"POST",
+          headers:{authorization,apikey:publicKey,"content-type":"application/json"},
+          body:JSON.stringify({matches:withoutChannels.slice(0,64)
+            .map(m=>({id:m.id,home:m.home,away:m.away,date:m.day}))}),
+          cache:"no-store",signal:AbortSignal.timeout(25000)
+        });
+        if(response.ok){
+          const payload=await response.json() as {results?:Array<{id:string;channels?:string[]}>};
+          const records=Array.isArray(payload.results)?payload.results:[];
+          const found=new Map(records.filter(item=>typeof item.id==="string"&&
+            Array.isArray(item.channels))
+            .map(item=>[item.id,Array.from(new Set(item.channels!.filter(channel=>
+              typeof channel==="string"&&channel.trim().length>0))).slice(0,3)]));
+          for(const match of withoutChannels){
+            const channels=found.get(match.id);
+            if(channels?.length)match.broadcasts=channels;
+          }
+        }
+      }catch{/* News/AI downtime must never block the poster generation. */}
+    }
+    // Put real broadcast events and the major competitions first within the same day.
+    // Keep matches without available broadcasts; they will display "Sem transmissão".
+    const competitionPriority=(name:string)=>{
+      const league=simplify(name);
+      if(/copa do brasil|brasileir|campeonato brasileiro/.test(league))return 0;
+      if(/libertadores|sul americana|sudamericana/.test(league))return 1;
+      if(/champions league|liga dos campeoes/.test(league))return 2;
+      if(/uefa|europa league|conference league/.test(league))return 3;
+      if(/nations league|liga das nacoes/.test(league))return 4;
+      return 5;
+    };
+    const teamPriority=(match:FootballMatch)=>{
+      const main=MAIN_TEAMS.findIndex(team=>clubMatches(match.home,team)||clubMatches(match.away,team));
+      if(main>=0)return main;
+      const international=WORLD_TEAMS.findIndex(team=>
+        clubMatches(match.home,team)||clubMatches(match.away,team));
+      return international>=0?50+international:100;
+    };
+    matches.sort((a,b)=>{
+      const aShown=(a.broadcasts||[]).length?0:1;
+      const bShown=(b.broadcasts||[]).length?0:1;
+      return aShown-bShown||competitionPriority(a.league)-competitionPriority(b.league)||
+        teamPriority(a)-teamPriority(b)||a.time.localeCompare(b.time);
+    });
     for(let index=0;index<matches.length;index+=4){
       const group=matches.slice(index,index+4);
       if(group.some(match=>!!match.playerPhoto))continue;
