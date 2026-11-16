@@ -76,6 +76,7 @@ function SubscriptionPage() {
 
   const handlePaid = useCallback(async () => {
     await refetch();
+    window.dispatchEvent(new Event("streammonitor:payment-confirmed"));
     toast.success("Pagamento confirmado! Saldo atualizado e recursos liberados.");
     setOpenPlan(null);
     setPix(null);
