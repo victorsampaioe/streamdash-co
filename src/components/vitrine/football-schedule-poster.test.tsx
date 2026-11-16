@@ -71,9 +71,14 @@ describe("Vitrine Futebol — imagens e exportação", () => {
   });
   it("mantém quatro confrontos completos no mesmo banner",()=>{
     const second={...sample,id:"match-second",home:"Athletico-PR",away:"Paraná Clube"};
-    const html=renderToStaticMarkup(<FootballSchedulePoster {...base} matches={[sample,second]} />);
-    expect(html).toContain("Time da Casa X Time Visitante");
-    expect(html).toContain("Athletico-PR X Paraná Clube");
+    const third={...sample,id:"match-third",home:"Flamengo",away:"Palmeiras"};
+    const fourth={...sample,id:"match-fourth",home:"Corinthians",away:"São Paulo"};
+    const fifth={...sample,id:"match-fifth",home:"Extra",away:"Extra 2"};
+    const html=renderToStaticMarkup(<FootballSchedulePoster {...base} matches={[sample,second,third,fourth,fifth]} />);
+    for(const team of ["Time da Casa","Time Visitante","Athletico-PR","Paraná Clube","Flamengo","Palmeiras","Corinthians","São Paulo"]){
+      expect(html).toContain(team);
+    }
+    expect(html).not.toContain("Extra 2");
     expect(html).not.toContain("HORÁRIOS E TRANSMISSÕES SUJEITOS");
   });
   it("mostra só a logo no rodapé, sem escrever o nome Minha Revenda",()=>{
