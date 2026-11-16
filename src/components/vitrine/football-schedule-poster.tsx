@@ -81,12 +81,12 @@ function FixtureRibbon({ match, badgeImages, broadcast, accent, width, height }:
     <div className="absolute inset-x-0 top-0" style={{ height: "43%", background: "linear-gradient(180deg,#ffffff,#f6f7f8)" }} />
     <div className="absolute left-[3%] top-[9%] flex items-center justify-center gap-3"
       style={{ width: "41%", height: "59%" }}>
-      <TeamCrest name={match.home} src={badgeImages[match.homeBadge]} size={clubSize} />
+      <TeamCrest name={match.home} src={badgeImages[`home:${match.id}`] || badgeImages[match.homeBadge]} size={clubSize} />
       <span style={{
         fontSize: compact ? 33 : 40, color: "#11141a", fontStyle: "italic",
         fontWeight: 1000, letterSpacing: "-.13em", marginRight: 8,
       }}>VS</span>
-      <TeamCrest name={match.away} src={badgeImages[match.awayBadge]} size={clubSize} />
+      <TeamCrest name={match.away} src={badgeImages[`away:${match.id}`] || badgeImages[match.awayBadge]} size={clubSize} />
     </div>
     <div className="absolute flex flex-col justify-center" style={{
       left: "45.5%", right: 14, top: 8, height: "66%", textAlign: "center",
