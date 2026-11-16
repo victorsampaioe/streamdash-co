@@ -7,7 +7,6 @@ const ORIGIN="https://streammonitor.site";
 const PART_BYTES=8*1024*1024;
 const MAX_PARTS_PER_TICK=4;
 const SMALL_LIMIT=7*1024*1024;
-const HEADERS=()=>({"x-sm-backup-key":""}); // replaced at runtime from secret
 
 function auth(env){return {"x-sm-backup-key":env.BACKUP_BRIDGE_TOKEN};}
 async function callOrigin(env,path,payload){
