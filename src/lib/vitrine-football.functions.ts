@@ -197,9 +197,11 @@ function apiFixture(record: unknown, index: number, date: string): FootballMatch
     league,leagueId:simplify(league),...when,broadcasts:getBroadcasts(record),
     playerPhoto,playerName:playerPhoto ? teamName(player) : "",status,scoreLabel};
 }
+// Compare full normalized words: "Sport" must not match "Sportivo Barracas".
+const clubMatches=(name:string,club:string)=>(" "+simplify(name)+" ").includes(" "+club+" ");
 function importantBrazilianMatch(match:FootballMatch):boolean{
   const home=simplify(match.home),away=simplify(match.away);
-  if(MAIN_TEAMS.some(team=>home.includes(team)||away.includes(team)))return true;
+  if(MAIN_TEAMS.some(team=>clubMatches(home,team)||clubMatches(away,team)))return true;
   // Include relevant national competitions even without a listed major club.
   const league=simplify(match.league);
   return /brasileir|serie a|serie b|copa do brasil|copa parana|copa nordeste|copa verde|libertadores|sul americana/.test(league) &&
@@ -272,7 +274,7 @@ export const getVitrineFootballMatches = createServerFn({ method: "POST" })
         all=[...national,...world.filter(raw=>{
           const home=teamName(pick(raw,"mandante","time_casa","home_team","casa","home"));
           const away=teamName(pick(raw,"visitante","time_fora","away_team","fora","away"));
-          return MAIN_TEAMS.some(club=>simplify(home).includes(club)||simplify(away).includes(club));
+          return MAIN_TEAMS.some(club=>clubMatches(home,club)||clubMatches(away,club));
         })];
       }catch{/* Keep national matches even if the global schedule is unavailable. */}
     }
@@ -285,7 +287,7 @@ export const getVitrineFootballMatches = createServerFn({ method: "POST" })
       })
       .sort((a,b)=>{
         const rank=(m:FootballMatch)=>{
-          const idx=MAIN_TEAMS.findIndex(club=>simplify(m.home).includes(club)||simplify(m.away).includes(club));
+          const idx=MAIN_TEAMS.findIndex(club=>clubMatches(m.home,club)||clubMatches(m.away,club));
           return idx<0?MAIN_TEAMS.length:idx;
         };
         return rank(a)-rank(b)||a.time.localeCompare(b.time);
