@@ -107,7 +107,7 @@ export const Route=createFileRoute("/api/public/edge-dns/report")({
       // Read-only/unknown probes must not rewrite confirmed customer status.
       const matching=rows.filter(r=>r.status!=="unknown"
         &&pendingKeys.has(key(r.check.server_id,r.check.checked_at)));
-      const pending=pilot?matching.slice(0,1):matching;
+      const pending=matching.slice(0,20);
       const {runPool}=await import("@/lib/pool");
       const outcome=await runPool(pending,async r=>{
         const clean=r.resolvers.filter(x=>x.ok||x.error!=="transport_error");
