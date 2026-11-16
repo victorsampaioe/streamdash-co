@@ -132,7 +132,7 @@ async function loadLeague(date: string, league: (typeof leagues)[number]) {
 
 /** FTWB fixtures are fetched on the server for authenticated paid resellers. */
 const FOOTBALL_API_URL = "https://ftwb.notiffly.com.br/jogos";
-const MAIN_TEAMS = ["flamengo", "corinthians", "palmeiras", "sao paulo", "santos", "vasco", "fluminense", "botafogo", "gremio", "internacional", "atletico mg", "atletico mineiro", "cruzeiro", "bahia", "vitoria", "fortaleza", "ceara", "sport", "athletico", "coritiba"];
+const MAIN_TEAMS = ["flamengo", "corinthians", "palmeiras", "sao paulo", "santos", "vasco", "fluminense", "botafogo", "gremio", "internacional", "atletico mg", "atletico mineiro", "cruzeiro", "bahia", "vitoria", "fortaleza", "ceara", "sport recife", "sport club do recife", "sport", "athletico", "atletico pr", "coritiba", "parana clube", "bragantino", "chapecoense", "goias", "america mg", "juventude"];
 const simplify = (input: unknown) => String(input ?? "").normalize("NFD")
   .replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
 function pick(record: unknown, ...fields: string[]): unknown {
@@ -197,6 +197,16 @@ function apiFixture(record: unknown, index: number, date: string): FootballMatch
     league,leagueId:simplify(league),...when,broadcasts:getBroadcasts(record),
     playerPhoto,playerName:playerPhoto ? teamName(player) : "",status,scoreLabel};
 }
+// Compare full normalized words: "Sport" must not match "Sportivo Barracas".
+const clubMatches=(name:string,club:string)=>(" "+simplify(name)+" ").includes(" "+club+" ");
+function importantBrazilianMatch(match:FootballMatch):boolean{
+  const home=simplify(match.home),away=simplify(match.away);
+  if(MAIN_TEAMS.some(team=>clubMatches(home,team)||clubMatches(away,team)))return true;
+  // Include relevant national competitions even without a listed major club.
+  const league=simplify(match.league);
+  return /brasileir|serie a|serie b|copa do brasil|copa parana|copa nordeste|copa verde|libertadores|sul americana/.test(league) &&
+    !/argentin|rosario|colombia|uruguai|mexic|espan|italian/.test(league);
+}
 /** Look up a real portrait using the previous sports player search. Never fabricate a player. */
 const PLAYER_HINTS: Array<{team:string;name:string}> = [
   {team:"flamengo",name:"Pedro"}, {team:"corinthians",name:"Yuri Alberto"},
@@ -255,22 +265,29 @@ export const getVitrineFootballMatches = createServerFn({ method: "POST" })
       return list;
     };
     const national=await loadFixtures("brasil");
-    // Country filtering can exclude Brazilian clubs playing international competitions.
-    // Also retrieve the global schedule when the national response has fewer than nine games.
-    let all= national;
+    // Only search the global schedule for Brazilian clubs in international fixtures.
+    // Never fill a Brazilian reseller banner with unrelated foreign games.
+    let all:unknown[]=[...national];
     if(national.length<6){
-      try{const world=await loadFixtures();all=[...national,...world];}
-      catch{/* The Brazilian schedule remains available if the second request fails. */}
+      try{
+        const world=await loadFixtures();
+        all=[...national,...world.filter(raw=>{
+          const home=teamName(pick(raw,"mandante","time_casa","home_team","casa","home"));
+          const away=teamName(pick(raw,"visitante","time_fora","away_team","fora","away"));
+          return MAIN_TEAMS.some(club=>clubMatches(home,club)||clubMatches(away,club));
+        })];
+      }catch{/* Keep national matches even if the global schedule is unavailable. */}
     }
     const seen=new Set<string>();
-    const matches=all.map((raw,i)=>apiFixture(raw,i,data.date)).filter((match):match is FootballMatch=>!!match)
+    const matches=all.map((raw,i)=>apiFixture(raw,i,data.date))
+      .filter((match):match is FootballMatch=>!!match && match.day===data.date && importantBrazilianMatch(match))
       .filter((match)=>{
-        const unique=[simplify(match.home),simplify(match.away),match.day||data.date].join("|");
+        const unique=[simplify(match.home),simplify(match.away),match.day].join("|");
         if(seen.has(unique))return false;seen.add(unique);return true;
       })
       .sort((a,b)=>{
         const rank=(m:FootballMatch)=>{
-          const idx=MAIN_TEAMS.findIndex(team=>simplify(m.home).includes(team)||simplify(m.away).includes(team));
+          const idx=MAIN_TEAMS.findIndex(club=>clubMatches(m.home,club)||clubMatches(m.away,club));
           return idx<0?MAIN_TEAMS.length:idx;
         };
         return rank(a)-rank(b)||a.time.localeCompare(b.time);

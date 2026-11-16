@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { toPng } from "html-to-image";
@@ -17,6 +17,27 @@ const today = () => new Intl.DateTimeFormat("sv-SE", {
 type Branding = { name: string; logo: string; contact: string; accent: string };
 const fallbackBrand: Branding = {name:"Stream Monitor",logo:"/favicon.ico",contact:"",accent:"#146df2"};
 const baseSize = 1080;
+/** Measure the actual artwork card rather than the entire dashboard width. */
+function ResponsivePoster({children,onPosterRef}:{
+  children:ReactNode; onPosterRef:(element:HTMLDivElement|null)=>void;
+}) {
+  const frame = useRef<HTMLDivElement>(null);
+  const [size,setSize] = useState(520);
+  useEffect(()=>{
+    const element=frame.current;
+    if(!element)return;
+    const update=()=>setSize(Math.max(1,Math.min(550,element.clientWidth)));
+    update();
+    const observer=new ResizeObserver(update);
+    observer.observe(element);
+    return ()=>observer.disconnect();
+  },[]);
+  return <div ref={frame} className="relative mx-auto aspect-square w-full min-w-0 max-w-[550px] overflow-hidden rounded-xl">
+    <div style={{width:baseSize,height:baseSize,transform:"scale("+(size/baseSize)+")",transformOrigin:"top left"}}>
+      <div ref={onPosterRef} style={{width:baseSize,height:baseSize}}>{children}</div>
+    </div>
+  </div>;
+}
 const safeColor = (input: string | undefined) => /^#[0-9a-f]{6}$/i.test(input||"") ? input! : "#146df2";
 
 /** Automated posters: two fixtures (four clubs) per artwork, with optional color customization. */
@@ -27,18 +48,9 @@ export function VitrineFootballStudio() {
   const [selectedColor, setSelectedColor] = useState<string | null>(null);
   const [colorStorageKey, setColorStorageKey] = useState<string | null>(null);
   const [saving, setSaving] = useState<number | null>(null);
-  const [width, setWidth] = useState(520);
-  const wrapper = useRef<HTMLDivElement>(null);
   const posterRefs = useRef<(HTMLDivElement | null)[]>([]);
   const [day, setDay] = useState(today);
 
-  useEffect(() => {
-    const holder = wrapper.current;
-    if (!holder) return;
-    const observe = new ResizeObserver(() => setWidth(Math.min(550, Math.max(280, holder.clientWidth - 8))));
-    observe.observe(holder);
-    return () => observe.disconnect();
-  }, []);
   useEffect(() => {
     let active = true;
     async function fetchBrand() {
@@ -96,6 +108,19 @@ export function VitrineFootballStudio() {
     const matches = games.data?.matches ?? [];
     return [matches.slice(0,2),matches.slice(2,4),matches.slice(4,6)].filter((group)=>group.length>0);
   }, [games.data]);
+  const [validatedPhotos,setValidatedPhotos]=useState<Record<string,boolean>>({});
+  useEffect(()=>{
+    let mounted=true;
+    const urls=[...new Set(groups.map(group=>group.find(match=>!!match.playerPhoto)?.playerPhoto).filter((url):url is string=>!!url))];
+    for(const url of urls){
+      const image=new Image();
+      image.crossOrigin="anonymous";
+      image.onload=()=>{if(mounted)setValidatedPhotos(prev=>({...prev,[url]:true}))};
+      image.onerror=()=>{if(mounted)setValidatedPhotos(prev=>({...prev,[url]:false}))};
+      image.src=url;
+    }
+    return ()=>{mounted=false};
+  },[groups]);
   const haveChannels = (match:FootballMatch) => (match.broadcasts||[]).slice(0,3).join(" • ") || "TRANSMISSÃO NÃO CONFIRMADA";
 
   async function download(index:number) {
@@ -119,8 +144,7 @@ export function VitrineFootballStudio() {
       toast.error("Falha ao exportar PNG. Uma imagem externa pode estar bloqueando a exportação.");
     } finally {setSaving(null);}
   }
-  const scale=width/baseSize;
-  return <main ref={wrapper} className="mx-auto max-w-7xl space-y-6 px-4 py-8">
+  return <main className="mx-auto max-w-7xl space-y-6 px-4 py-8">
     <div className="flex flex-wrap items-center justify-between gap-4">
       <div>
         <div className="flex items-center gap-2 text-xs font-bold tracking-[.18em] text-blue-400"><Trophy size={17}/> STREAM MONITOR</div>
@@ -155,34 +179,29 @@ export function VitrineFootballStudio() {
       {games.error instanceof Error?games.error.message:"Não foi possível consultar os jogos de hoje."}
     </Card>}
     {games.isSuccess&&groups.length===0&&<Card className="p-8 text-center">Nenhum evento de futebol encontrado para hoje.</Card>}
-    {games.isSuccess&&groups.length>0&&<div className="grid gap-8 xl:grid-cols-2">
+    {games.isSuccess&&groups.length>0&&<div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
       {groups.map((group,index)=>{
-        const featured=group.find(match=>!!match.playerPhoto);
+        const featured=group.find(match=>!!match.playerPhoto && validatedPhotos[match.playerPhoto]===true);
         const badgeImages:Record<string,string>={};
         for(const match of group) {
           if(match.homeBadge)badgeImages[match.homeBadge]=match.homeBadge;
           if(match.awayBadge)badgeImages[match.awayBadge]=match.awayBadge;
         }
         const channels=Object.fromEntries(group.map(match=>[match.id,haveChannels(match)]));
-        return <Card className="overflow-hidden p-4" key={group.map(m=>m.id).join("|")}>
+        return <Card className="min-w-0 overflow-hidden p-3 sm:p-4" key={group.map(m=>m.id).join("|")}>
           <div className="flex items-center justify-between gap-3 pb-4">
             <strong className="text-base">Arte {index+1} de {groups.length}</strong>
             <Button type="button" disabled={saving!==null} onClick={()=>void download(index)}>
               <Download size={16} className="mr-2"/>{saving===index?"Preparando PNG…":"Baixar PNG"}
             </Button>
           </div>
-          <div className="relative mx-auto overflow-hidden rounded-xl" style={{width,maxWidth:"100%",height:width}}>
-            <div style={{width:baseSize,height:baseSize,transform:"scale("+scale+")",transformOrigin:"top left"}}>
-              <div ref={el=>{posterRefs.current[index]=el;}} style={{width:baseSize,height:baseSize}}>
-                <FootballSchedulePoster kind="today" format="feed" matches={group} day={day}
-                  headline="EVENTOS DE HOJE" brand={brand.name} logo={transparentLogo} contact={brand.contact}
-                  badgeImages={badgeImages} broadcastByMatch={channels}
-                  playerPhoto={featured?.playerPhoto||""} playerName={featured?.playerName||""}
-                  stadium="" accent={accent}/>
-              </div>
-            </div>
-          </div>
-          <p className="mt-3 text-xs text-muted-foreground">Canais não informados pela fonte aparecem como transmissão não confirmada. Confirme antes de divulgar.</p>
+          <ResponsivePoster onPosterRef={el=>{posterRefs.current[index]=el}}>
+            <FootballSchedulePoster kind="today" format="feed" matches={group} day={day}
+              headline="EVENTOS DE HOJE" brand={brand.name} logo={transparentLogo} contact={brand.contact}
+              badgeImages={badgeImages} broadcastByMatch={channels}
+              playerPhoto={featured?.playerPhoto||""} playerName={featured?.playerName||""}
+              stadium="" accent={accent}/>
+          </ResponsivePoster>
         </Card>;
       })}
     </div>}

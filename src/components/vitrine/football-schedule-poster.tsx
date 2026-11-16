@@ -52,7 +52,8 @@ function dateLabel(day: string) {
 }
 function TeamCrest({ src, size }: { src?: string; size: number }) {
   if (!src) return null;
-  return <img src={src} alt="" crossOrigin="anonymous"
+  return <img src={src} alt="" crossOrigin="anonymous" referrerPolicy="no-referrer"
+    onError={event=>{event.currentTarget.style.display="none";}}
     style={{width:size,height:size,objectFit:"contain",flexShrink:0,filter:"drop-shadow(0 2px 3px rgba(0,0,0,.15))"}} />;
 }
 function FixtureRibbon({ match, badgeImages, broadcast, accent, width, height }: {
@@ -65,8 +66,12 @@ function FixtureRibbon({ match, badgeImages, broadcast, accent, width, height }:
 }) {
   const compact = height < 145;
   const clubSize = compact ? 65 : 96;
-  const titleSize = compact ? 23 : 34;
+  const matchupLength=(match.home+" "+match.away).length;
+  const titleSize = compact ? (matchupLength > 32 ? 18 : 23) : matchupLength > 41 ? 22 : matchupLength > 29 ? 27 : 34;
   const timeSize = compact ? 30 : 41;
+  const homeBadge=badgeImages[`home:${match.id}`] || badgeImages[match.homeBadge];
+  const awayBadge=badgeImages[`away:${match.id}`] || badgeImages[match.awayBadge];
+  const hasBadges=Boolean(homeBadge || awayBadge);
   return <div className="relative overflow-hidden bg-white"
     style={{
       width, height, color: "#11131b", border: `5px solid ${accent}`,
@@ -76,12 +81,12 @@ function FixtureRibbon({ match, badgeImages, broadcast, accent, width, height }:
     <div className="absolute inset-x-0 top-0" style={{ height: "43%", background: "linear-gradient(180deg,#ffffff,#f6f7f8)" }} />
     <div className="absolute left-[3%] top-[9%] flex items-center justify-center gap-3"
       style={{ width: "41%", height: "59%" }}>
-      <TeamCrest src={badgeImages[`home:${match.id}`] || badgeImages[match.homeBadge]} size={clubSize} />
+      <TeamCrest src={homeBadge} size={clubSize} />
       <span style={{
-        fontSize: compact ? 33 : 40, color: "#11141a", fontStyle: "italic",
+        fontSize: compact ? 33 : hasBadges ? 40 : 72, color: "#11141a", fontStyle: "italic",
         fontWeight: 1000, letterSpacing: "-.13em", marginRight: 8,
       }}>VS</span>
-      <TeamCrest src={badgeImages[`away:${match.id}`] || badgeImages[match.awayBadge]} size={clubSize} />
+      <TeamCrest src={awayBadge} size={clubSize} />
     </div>
     <div className="absolute flex flex-col justify-center" style={{
       left: "45.5%", right: 14, top: 8, height: "66%", textAlign: "center",
@@ -91,9 +96,10 @@ function FixtureRibbon({ match, badgeImages, broadcast, accent, width, height }:
         lineHeight: 1.05, overflow: "hidden", maxHeight: 25,
       }}>{match.league}</div>
       <div style={{
-        fontSize: titleSize, fontWeight: 1000, lineHeight: 0.99,
+        fontSize: titleSize, fontWeight: 1000, lineHeight: 1.04,
         letterSpacing: "-.035em", textTransform: "uppercase",
-        display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden",
+        display: "-webkit-box", WebkitLineClamp: 3, WebkitBoxOrient: "vertical",
+        overflow: "hidden", overflowWrap: "anywhere", wordBreak: "break-word",
       }}>{match.home} X {match.away}</div>
     </div>
     <div className="absolute flex items-center justify-center"
@@ -146,9 +152,11 @@ export function FootballSchedulePoster({
   const footerBottom = story ? 79 : landscape ? 38 : 48;
   const hasPlayer = Boolean(playerPhoto);
   const watermarkBadges = [...new Set(shown.flatMap(m => [badgeImages[`home:${m.id}`] || badgeImages[m.homeBadge] || m.homeBadge, badgeImages[`away:${m.id}`] || badgeImages[m.awayBadge] || m.awayBadge]).filter(Boolean))].slice(0,4);
-  const offset = !hasPlayer && format === "feed" ? 65 : 0;
+  const singleWithoutPlayer = !hasPlayer && format === "feed" && shown.length === 1;
+  const offset = !hasPlayer && format === "feed" ? (singleWithoutPlayer ? 90 : 65) : 0;
   const posterCardWidth = !hasPlayer && format === "feed" ? 974 : cardWidth;
   const posterCardLeft = !hasPlayer && format === "feed" ? 53 : d.left;
+  const rowHeight = singleWithoutPlayer ? 345 : d.rowHeight;
 
   return <div className="relative isolate overflow-hidden font-sans" style={{
     width: d.width, height: d.height,
@@ -156,8 +164,9 @@ export function FootballSchedulePoster({
     color: "white",
   }}>
     {!hasPlayer && watermarkBadges.length > 0 && <div className="absolute pointer-events-none flex items-center justify-center gap-6"
-      style={{top:235,left:575,right:40,height:145,opacity:.1,zIndex:2}}>
+      style={{top:235,left:565,right:40,height:155,opacity:.10,zIndex:2}}>
       {watermarkBadges.map((badge,i)=><img key={i} src={badge} alt="" crossOrigin="anonymous"
+        onError={event=>{event.currentTarget.style.display="none";}}
         style={{height:115,width:115,objectFit:"contain"}}/>)}
     </div>}
     {/* Animated-looking stadium lighting is static for reliable PNG output. */}
@@ -180,6 +189,7 @@ export function FootballSchedulePoster({
       clipPath: "polygon(0 38%,3% 48%,7% 27%,11% 51%,16% 29%,19% 46%,23% 21%,27% 45%,32% 34%,36% 56%,40% 29%,44% 44%,48% 25%,52% 55%,57% 31%,61% 47%,65% 20%,69% 45%,73% 35%,77% 52%,81% 24%,86% 47%,91% 25%,95% 46%,100% 31%,100% 100%,0 100%)",
     }} />
     {playerPhoto && <img src={playerPhoto} alt={playerName || ""}
+      onError={event=>{event.currentTarget.style.display="none";}}
       className="absolute"
       style={{
         right: landscape ? -120 : -155,
@@ -191,14 +201,14 @@ export function FootballSchedulePoster({
         filter: "drop-shadow(-20px 11px 28px rgba(0,0,0,.72))",
         maskImage: "linear-gradient(180deg,transparent 0%,black 9%,black 83%,transparent 99%)",
       }} />}
-    <div className="absolute z-[5] flex items-center justify-center overflow-hidden" style={{
+    <div className="absolute z-[5] flex items-center justify-center" style={{
       left: landscape ? 47 : 55, top: landscape ? 48 : story ? 74 : 58,
-      width: landscape ? 210 : 225, height: landscape ? 135 : 160,
+      width: landscape ? 235 : 248, height: landscape ? 140 : 165,
       border: "none", borderRadius: 0,
       background: "transparent", padding: 0,
       boxShadow: "none",
     }}>
-      {logo ? <img src={logo} alt={branding} style={{width:"100%",height:"100%",objectFit:"contain"}} />
+      {logo ? <img src={logo} alt={branding} crossOrigin="anonymous" onError={event=>{event.currentTarget.style.display="none";}} style={{width:"100%",height:"100%",objectFit:"contain",objectPosition:"center"}} />
         : <span style={{fontSize:24,fontWeight:1000,textAlign:"center"}}>{branding.slice(0,18)}</span>}
     </div>
     <div className="absolute" style={{
@@ -240,7 +250,7 @@ export function FootballSchedulePoster({
         ? shown.map((match) => <FixtureRibbon key={match.id}
           match={match} badgeImages={badgeImages}
           broadcast={broadcastByMatch[match.id] || ""}
-          accent={accent} width={posterCardWidth} height={d.rowHeight} />)
+          accent={accent} width={posterCardWidth} height={rowHeight} />)
         : <div className="flex items-center justify-center text-center font-black"
           style={{
             width: cardWidth, height: d.rowHeight * 2,
