@@ -156,7 +156,7 @@ export function FootballSchedulePoster({
     color: "white",
   }}>
     {!hasPlayer && watermarkBadges.length > 0 && <div className="absolute pointer-events-none flex items-center justify-center gap-6"
-      style={{top:235,left:575,right:40,height:145,opacity:.11,zIndex:2}}>
+      style={{top:235,left:575,right:40,height:145,opacity:.1,zIndex:2}}>
       {watermarkBadges.map((badge,i)=><img key={i} src={badge} alt="" crossOrigin="anonymous"
         style={{height:115,width:115,objectFit:"contain"}}/>)}
     </div>}
