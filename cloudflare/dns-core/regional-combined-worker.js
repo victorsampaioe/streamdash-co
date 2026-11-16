@@ -541,6 +541,17 @@ async function enrollmentControl(env){
     await write("backup_manifest_status",manifest.ok?"verified_"+manifest.count:String(manifest.reason||"failed").slice(0,90));
     console.log("backup_enrollment_complete",JSON.stringify({manifestVerified:manifest.ok,count:manifest.count||0}));
   }
+  if(await read("backup_integrity_requested")==="true"){
+    await write("backup_integrity_requested","false");
+    try{
+      const result=await env.BACKUP_ENROLLMENT.verifyCanaryAndArchiveRange();
+      await write("backup_integrity_status",result.ok?"canary_sha256_ok_archive_range_ok":String(result.reason||"failed").slice(0,120));
+      console.log("backup_integrity_verified",JSON.stringify({ok:result.ok,canarySha256Match:result.canarySha256Match===true,archiveRangeSupported:result.archiveRangeSupported===true}));
+    }catch(e){
+      await write("backup_integrity_status","verification_failed");
+      console.warn("backup_integrity_test_failed",String(e?.name||"error"));
+    }
+  }
   if(await read("backup_canary_requested")==="true"){
     await write("backup_canary_requested","false");
     const result=await env.BACKUP_ENROLLMENT.canaryCopySmall();
