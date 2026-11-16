@@ -198,7 +198,7 @@ export const getVitrineFootballMatches = createServerFn({ method: "POST" })
     return {matches,leagues:footballLeagueOptions,source:"FTWB",partial:false,sourcesSucceeded:1};
   });
 
-rights to photograph. */
+/** Player images from other providers may require permission for commercial use. */
 export const getVitrineFootballPlayers = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: unknown) => z.object({
