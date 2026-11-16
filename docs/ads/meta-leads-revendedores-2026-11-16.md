@@ -1,27 +1,37 @@
 # Stream Monitor — RASCUNHO INTERNO Meta Ads / Leads (16/11/2026)
 
-## Atualização Meta Ads — 16/11/2026
+## Status da implantação no Meta Ads — 16/11/2026
 
-- **Campanha real criada PAUSADA na conta Meta Ads `1813033566413744`: `120251923483840158`.**
-- Nome: `Stream Monitor | CADASTROS SITE | Revendedores IPTV | Nov 2026 | RASCUNHO`.
-- Objetivo enviado e aceito pela API Meta: `OUTCOME_LEADS`.
-- Campanha sem orçamento de campanha; `is_adset_budget_sharing_enabled=false`.
-- Criação do conjunto de anúncios `OFFSITE_CONVERSIONS` / `WEBSITE`, Pixel `2289395685308884`, evento `COMPLETE_REGISTRATION` **não concluída**: a Meta exige orçamento diário ou vitalício no conjunto, inclusive quando pausado (erro 1487061). Nenhum valor financeiro foi atribuído sem aprovação.
-- **Não existe anúncio novo criado** nem nova entrega. O anúncio anterior e conjunto anteriores constam arquivados no conector. O vídeo já existente na conta Meta é o asset `2622906684900533` do próprio Stream Monitor.
-- Para completar: obter autorização expressa do novo orçamento TOTAL e prazo (não confundir total com orçamento diário); criar conjunto e ad `SIGN_UP` pausados; confirmar Pixel no Events Manager e aprovar ativação separadamente.
-- Este documento registra as ações reais. O texto abaixo ainda é a proposta para o conjunto e criativo que não puderam ser criados por falta de orçamento aprovado.
+**Campanha, conjunto e anúncio criados e mantidos PAUSADOS. Nenhum deles foi ativado.**
 
-> **NÃO PUBLICAR / NÃO ATIVAR / NÃO ALTERAR ORÇAMENTO.**
-> Este documento é preparação técnica/comercial, **não** é campanha criada no Meta Ads.
-> Pré-condições: comprovar PageView, CompleteRegistration e Purchase no Meta Events Manager, testar cadastro consentido em navegador comum e interno, conferir domínio e dados de pixel, apresentar orçamento/substituição ao titular e obter aprovação financeira expressa.
+| Recurso | Identificador | Estado |
+|---|---|---|
+| Meta Ads account | `1813033566413744` | Conectada |
+| Campanha Leads website | `120251923483840158` | Criada pausada |
+| Conjunto Site / CompleteRegistration | `120251923519650158` | Criado pausado |
+| Anúncio de vídeo | `120251923520610158` | Criado pausado e criativo atualizado |
+
+- **Objetivo aceito:** `OUTCOME_LEADS` (Leads).
+- **Conversão de site:** `OFFSITE_CONVERSIONS`, `destination_type=WEBSITE`.
+- **Pixel/evento:** `2289395685308884` → `COMPLETE_REGISTRATION`. A API aceitou sua configuração no conjunto; **não está comprovado o recebimento dos eventos no Events Manager**, portanto não ativar ainda.
+- **Orçamento autorizado e configurado exclusivamente no conjunto:** `lifetime_budget=3000` centavos = **R$30 TOTAL**, sem orçamento diário, estratégia `LOWEST_COST_WITHOUT_CAP`.
+- **Janela configurada:** término **19/11/2026 às 11h20 (America/Fortaleza)**; o conjunto permaneceu pausado. Se a ativação ocorrer depois da criação, **o término é fixo e precisa ser reavaliado** para preservar três dias completos de entrega; não alterar prazo sem aprovação.
+- **Público:** Brasil, Facebook e Instagram; 25–54 anos; interesses reais já observados na conta em duas camadas IPTV + infraestrutura de servidores/hospedagem; `advantage_audience=false`, sem inclusão de interesse em design gráfico.
+- **Vídeo existente reutilizado:** Meta video ID `2622906684900533`, identidade de página original verificada em `effective_object_story_id=1486583531204322_...`. Miniatura recuperada do anúncio original na Meta.
+- **Texto e CTA realmente aplicados no criativo:** mensagem profissional sobre monitoramento DNS e servidor, título “Monitore seus servidores IPTV”, descrição “Crie sua conta no Stream Monitor.”, `SIGN_UP`, destino `https://streammonitor.site/auth?tab=signup`.
+- **Atribuição de anúncios:** `utm_source={{site_source_name}}`, `utm_medium=paid_social`, identificadores dinâmicos de campanha, conjunto e anúncio e `utm_content=video_painel_original`.
+- **Confirmações das ferramentas:** ação `create_adset` retornou sucesso, `create_ad` retornou sucesso, e `update_ad` confirmou sucesso com novo `object_story_spec.video_data`. A primeira tentativa de editar o criativo reaproveitado (`update_ad_creative`) falhou porque ele não tinha subespecificação editável; foi substituída por um `object_story_spec` novo, aceito pela Meta, preservando o vídeo.
+- **Financeiro:** criar R$30 total **não é gasto realizado**. Nenhuma campanha foi ativada nem orçamento da campanha antiga alterado.
+
+> **NÃO ATIVAR / NÃO ALTERAR ORÇAMENTO SEM NOVA APROVAÇÃO.** Também verificar recebimento real do `CompleteRegistration` e entrega da página `/auth?tab=signup` antes de qualquer lançamento.
 
 ## Motivo do novo teste
 
 Objetivo primário: cadastros de **revendedores, gestores de painéis IPTV e profissionais de infraestrutura** que depois assinem o Stream Monitor. Métrica principal **custo por assinante pagante (CAC)**, secundárias custo por cadastro e taxa de conversão cadastro→assinatura. Nunca divulgar comercialização de listas, canais ou conteúdo protegido.
 
-A campanha de Tráfego atual `120251902436720158` tem **limite total R$30**. Preservá-lo integralmente. **Não criar um segundo gasto simultâneo, nem duplicar R$30, sem autorização**. O orçamento remanescente no Meta pode mudar; conferir antes de sugerir substituição. A proposta é ativar Leads só após pausar/encerrar Tráfego, com orçamento próprio explicitamente aprovado. NÃO transferir o orçamento da campanha antiga por suposição.
+A campanha de Tráfego anterior `120251902436720158` tinha limite total R$30 e aparece arquivada no conector. O novo orçamento de R$30 foi **autorizado expressamente nesta conversa, mas a campanha nova segue PAUSADA**. Não há autorização para executar simultaneamente campanhas, incrementar gastos nem reativar a anterior.
 
-## Especificação Meta planejada, não enviada
+## Especificação técnica planejada originalmente (histórico; execução real acima)
 
 - Conta: `1813033566413744`, Brasil, idioma português, Facebook e Instagram.
 - Campanha: `Stream Monitor | Leads Site | Revendedores Brasil | Preparação`.
