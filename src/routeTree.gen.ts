@@ -234,9 +234,7 @@ const AuthenticatedAppRoute = AuthenticatedAppRouteImport.update({
 } as any)
 const AuthenticatedVitrineAiRoute = AuthenticatedVitrineAiRouteImport.update({
   id: '/vitrine-ai',
-  id: '/vitrine-futebol',
   path: '/vitrine-ai',
-  path: '/vitrine-futebol',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const AuthenticatedVitrineFutebolRoute = AuthenticatedVitrineFutebolRouteImport.update({
