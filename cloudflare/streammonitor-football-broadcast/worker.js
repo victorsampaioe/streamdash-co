@@ -59,7 +59,16 @@ const QUIET_CACHE_SECONDS=1800;
 const TEAM_ALIASES={
  "holanda":"paises baixos","netherlands":"paises baixos","netherland":"paises baixos",
  "the netherlands":"paises baixos","alemanha":"alemanha","germany":"alemanha",
- "deutschland":"alemanha","germania":"alemanha"
+ "deutschland":"alemanha","germania":"alemanha",
+ "switzerland":"suica","swiss":"suica","schweiz":"suica",
+ "scotland":"escocia","schottland":"escocia",
+ "kazakhstan":"cazaquistao","slovakia":"eslovaquia",
+ "faroe islands":"ilhas faroe","faroe":"ilhas faroe",
+ "moldova":"moldavia","estonia":"estonia","estonia national team":"estonia",
+ "iceland":"islandia","lithuania":"lituania",
+ "greece":"grecia","serbia":"servia",
+ "north macedonia":"macedonia do norte",
+ "slovenia":"eslovenia","bulgaria":"bulgaria"
 };
 function canonicalTeam(name){
  const value=norm(name);
