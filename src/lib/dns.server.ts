@@ -443,7 +443,9 @@ export async function runDnsCheck(serverId: string, opts: { quick?: boolean; edg
     .eq("server_id", serverId)
     .gte("changed_at", historyBoundary);
 
-  // A Cloudflare consulta os resolvedores. A rotina original conserva snapshots,\n  // confirmação dupla, incidentes e Telegram sem refazer sondagens no Lovable.\n  const report = opts.edgeReport ?? await analyzeDns(srv.host, recentChanges ?? 0, opts);
+  // A Cloudflare consulta os resolvedores. A rotina original conserva snapshots,
+  // confirmação dupla, incidentes e Telegram sem refazer sondagens no Lovable.
+  const report = opts.edgeReport ?? await analyzeDns(srv.host, recentChanges ?? 0, opts);
 
   const { data: prev } = await supabaseAdmin
     .from("dns_snapshots")
