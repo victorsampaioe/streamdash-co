@@ -191,10 +191,23 @@ async function run(env){
     ).run();
     return {catalog,mode:"complete_and_disabled"};
   }
-  try{
-    if(object.source_size<=SMALL_LIMIT)await writeSmall(env,object);
-    else await writeLarge(env,object);
-  }catch(e){await updateError(env,object.id,e);throw e;}
+  if(object.source_size<=SMALL_LIMIT){
+    // A single small-object copy per minute unnecessarily stretches a
+    // 26-file photo migration. Keep this bounded: six small files maximum,
+    // sequentially verified with SHA-256, all using the same D1 lease.
+    const batch=await env.BACKUP_STATE.prepare(
+      "SELECT * FROM backup_objects WHERE status IN ('pending','retry') "+
+      "AND source_size<=? ORDER BY source_size ASC LIMIT 6"
+    ).bind(SMALL_LIMIT).all();
+    let copied=0,failed=0;
+    for(const candidate of batch.results||[]){
+      try{await writeSmall(env,candidate);copied++;}
+      catch(e){await updateError(env,candidate.id,e);failed++;}
+    }
+    return {catalog,mode:"small_files",copied,failed};
+  }
+  try{await writeLarge(env,object);}
+  catch(e){await updateError(env,object.id,e);throw e;}
   return {catalog,mode:"copying",source:object.bucket};
 }
 async function runLeased(env){
