@@ -343,6 +343,19 @@ async function flushReports(env){
   }
   return {sent,failed};
 }
+async function diagnosePublishedOrigin(env){
+  const auth=await signatureHeaders(env,"dns-targets");
+  for(const origin of ["https://streamdash-co.lovable.app","https://streammonitor.site"]){
+    try{
+      const result=await fetch(origin+"/api/public/edge-dns/targets",{
+        headers:auth,redirect:"manual",
+        signal:AbortSignal.timeout(6500),
+      });
+      console.log("edge_dns_origin_probe",JSON.stringify({origin:new URL(origin).hostname,status:result.status}));
+      if(result.body)await result.body.cancel().catch(()=>{});
+    }catch(e){console.warn("edge_dns_origin_probe_failed",new URL(origin).hostname,String(e?.name??"error"));}
+  }
+}
 async function runCycle(env){
   if(!env.DNS_DB||!(env.REGION_WORKER_SECRET||env.SIGNING_KEY_JWK))
     throw new Error("Missing D1 or DNS bridge secret");
@@ -387,6 +400,7 @@ export default {
   scheduled(event,env,ctx){
     regionalWorker.scheduled(event,env,ctx);
     dnsWorker.scheduled(event,env,ctx);
+    ctx.waitUntil(diagnosePublishedOrigin(env));
   },
   fetch(request,env,ctx){
     const path=new URL(request.url).pathname;
