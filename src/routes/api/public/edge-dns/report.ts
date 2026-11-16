@@ -29,9 +29,14 @@ export const Route=createFileRoute("/api/public/edge-dns/report")({
     if(size>55000)return Response.json({error:"too_large"},{status:413});
     const {authorizeCloudflareDnsBridge,getCloudflareDnsPrimary}
       =await import("@/lib/cloudflare-dns-bridge.server");
-    if(!await authorizeCloudflareDnsBridge(request))
-      return Response.json({error:"unauthorized"},{status:401});
     const raw=await request.text();
+    const {verifyRegionSignature}=await import("@/lib/region-auth.server");
+    const {verifyCloudflareEdgeSignature}=await import("@/lib/region-cloudflare-auth.server");
+    // Body is read only once and the exact bytes are authenticated.
+    const verified=await authorizeCloudflareDnsBridge(request)
+      ||verifyRegionSignature(raw,request.headers.get("x-signature"))
+      ||await verifyCloudflareEdgeSignature(raw,request.headers.get("x-cf-signature"));
+    if(!verified)return Response.json({error:"unauthorized"},{status:401});
     if(raw.length>55000)return Response.json({error:"too_large"},{status:413});
     const parsed=payload.safeParse(JSON.parse(raw||"null"));
     if(!parsed.success)return Response.json({error:"invalid_report"},{status:400});
