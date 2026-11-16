@@ -38,7 +38,7 @@ function darken(hex: string, amount: number) {
   return "#" + channels.map((x) => x.toString(16).padStart(2, "0")).join("");
 }
 const dimensions = {
-  feed: { width: 1080, height: 1080, left: 53, rowWidth: 782, top: 322, rowHeight: 139, gap: 13, count: 3 },
+  feed: { width: 1080, height: 1080, left: 53, rowWidth: 782, top: 335, rowHeight: 215, gap: 23, count: 2 },
   story: { width: 1080, height: 1920, left: 52, rowWidth: 812, top: 498, rowHeight: 188, gap: 18, count: 6 },
   landscape: { width: 1200, height: 675, left: 48, rowWidth: 830, top: 204, rowHeight: 138, gap: 15, count: 2 },
 } as const;
@@ -50,16 +50,10 @@ function dateLabel(day: string) {
     timeZone: "America/Fortaleza", weekday: "long", day: "2-digit", month: "long",
   }).format(value).replace("-feira", "").toUpperCase();
 }
-function shortName(text: string) {
-  return text.trim().split(/\s+/).slice(0, 3).map((word) => word[0]).join("").toUpperCase();
-}
-function TeamCrest({ src, name, size }: { src?: string; name: string; size: number }) {
-  return <div className="flex shrink-0 items-center justify-center overflow-hidden rounded-full"
-    style={{ height: size, width: size, background: src ? "#fff" : "#ecedf0", border: "2px solid #15171c19" }}>
-    {src
-      ? <img src={src} alt="" style={{ width: "85%", height: "85%", objectFit: "contain" }} />
-      : <span style={{ fontWeight: 1000, fontSize: size * 0.29, color: "#15191d" }}>{shortName(name)}</span>}
-  </div>;
+function TeamCrest({ src, size }: { src?: string; size: number }) {
+  if (!src) return null;
+  return <img src={src} alt="" crossOrigin="anonymous"
+    style={{width:size,height:size,objectFit:"contain",flexShrink:0,filter:"drop-shadow(0 2px 3px rgba(0,0,0,.15))"}} />;
 }
 function FixtureRibbon({ match, badgeImages, broadcast, accent, width, height }: {
   match: FootballMatch;
@@ -70,9 +64,9 @@ function FixtureRibbon({ match, badgeImages, broadcast, accent, width, height }:
   height: number;
 }) {
   const compact = height < 145;
-  const clubSize = compact ? 65 : 81;
-  const titleSize = compact ? 23 : 29;
-  const timeSize = compact ? 30 : 38;
+  const clubSize = compact ? 65 : 96;
+  const titleSize = compact ? 23 : 34;
+  const timeSize = compact ? 30 : 41;
   return <div className="relative overflow-hidden bg-white"
     style={{
       width, height, color: "#11131b", border: `5px solid ${accent}`,
@@ -82,12 +76,12 @@ function FixtureRibbon({ match, badgeImages, broadcast, accent, width, height }:
     <div className="absolute inset-x-0 top-0" style={{ height: "43%", background: "linear-gradient(180deg,#ffffff,#f6f7f8)" }} />
     <div className="absolute left-[3%] top-[9%] flex items-center justify-center gap-3"
       style={{ width: "41%", height: "59%" }}>
-      <TeamCrest name={match.home} src={badgeImages[`home:${match.id}`] || badgeImages[match.homeBadge]} size={clubSize} />
+      <TeamCrest src={badgeImages[`home:${match.id}`] || badgeImages[match.homeBadge]} size={clubSize} />
       <span style={{
         fontSize: compact ? 33 : 40, color: "#11141a", fontStyle: "italic",
         fontWeight: 1000, letterSpacing: "-.13em", marginRight: 8,
       }}>VS</span>
-      <TeamCrest name={match.away} src={badgeImages[`away:${match.id}`] || badgeImages[match.awayBadge]} size={clubSize} />
+      <TeamCrest src={badgeImages[`away:${match.id}`] || badgeImages[match.awayBadge]} size={clubSize} />
     </div>
     <div className="absolute flex flex-col justify-center" style={{
       left: "45.5%", right: 14, top: 8, height: "66%", textAlign: "center",
@@ -150,12 +144,22 @@ export function FootballSchedulePoster({
   const cardWidth = landscape ? 790 : d.rowWidth;
   const playerWidth = landscape ? 560 : story ? 700 : 620;
   const footerBottom = story ? 79 : landscape ? 38 : 48;
+  const hasPlayer = Boolean(playerPhoto);
+  const watermarkBadges = [...new Set(shown.flatMap(m => [badgeImages[m.homeBadge] || m.homeBadge, badgeImages[m.awayBadge] || m.awayBadge]).filter(Boolean))].slice(0,4);
+  const offset = !hasPlayer && format === "feed" ? 65 : 0;
+  const posterCardWidth = !hasPlayer && format === "feed" ? 974 : cardWidth;
+  const posterCardLeft = !hasPlayer && format === "feed" ? 53 : d.left;
 
   return <div className="relative isolate overflow-hidden font-sans" style={{
     width: d.width, height: d.height,
     background: `radial-gradient(ellipse at 88% 30%,${accent} 0%,${dark2} 31%,${dark} 73%,#060607 100%)`,
     color: "white",
   }}>
+    {!hasPlayer && watermarkBadges.length > 0 && <div className="absolute pointer-events-none flex items-center justify-center gap-6"
+      style={{top:530,left:60,right:60,height:230,opacity:.09,zIndex:0}}>
+      {watermarkBadges.map((badge,i)=><img key={i} src={badge} alt="" crossOrigin="anonymous"
+        style={{height:150,width:150,objectFit:"contain"}}/>)}
+    </div>}
     {/* Animated-looking stadium lighting is static for reliable PNG output. */}
     {stadium && <img src={stadium} alt="" className="absolute inset-0 h-full w-full object-cover"
       style={{ opacity: 0.30, filter: "saturate(1.15) contrast(1.1)" }} />}
@@ -188,17 +192,17 @@ export function FootballSchedulePoster({
         maskImage: "linear-gradient(180deg,transparent 0%,black 9%,black 83%,transparent 99%)",
       }} />}
     <div className="absolute z-[5] flex items-center justify-center overflow-hidden" style={{
-      left: landscape ? 47 : 55, top: landscape ? 48 : story ? 74 : 65,
-      width: landscape ? 185 : 190, height: landscape ? 115 : 136,
-      border: "3px solid rgba(255,255,255,.8)", borderRadius: 22,
-      background: "rgba(3,15,34,.30)", padding: 12,
-      boxShadow: "0 0 0 4px "+accent+",0 14px 18px rgba(0,0,0,.35)",
+      left: landscape ? 47 : 55, top: landscape ? 48 : story ? 74 : 58,
+      width: landscape ? 210 : 225, height: landscape ? 135 : 160,
+      border: "none", borderRadius: 0,
+      background: "transparent", padding: 0,
+      boxShadow: "none",
     }}>
       {logo ? <img src={logo} alt={branding} style={{width:"100%",height:"100%",objectFit:"contain"}} />
         : <span style={{fontSize:24,fontWeight:1000,textAlign:"center"}}>{branding.slice(0,18)}</span>}
     </div>
     <div className="absolute" style={{
-      left: landscape ? 298 : 298, top: landscape ? 42 : story ? 65 : 65,
+      left: landscape ? 315 : 322, top: landscape ? 42 : story ? 65 : 65,
       width: landscape ? 690 : 727, maxHeight: story ? 305 : 185,
       textShadow: "0 10px 17px rgba(0,0,0,.32)",
     }}>
@@ -224,19 +228,19 @@ export function FootballSchedulePoster({
       }}>{dateLabel(day)}</div>
     </div>
     <div className="absolute" style={{
-      left: d.left, top: d.top - (story ? 30 : 14),
-      height: story ? 7 : 5, width: cardWidth - 6,
+      left: posterCardLeft, top: d.top + offset - (story ? 30 : 14),
+      height: story ? 7 : 5, width: posterCardWidth - 6,
       background: accent, boxShadow: "0 0 25px rgba(255,255,255,.22)",
     }} />
     <div className="absolute" style={{
-      left: d.left, top: d.top, display: "flex", flexDirection: "column",
+      left: posterCardLeft, top: d.top + offset, display: "flex", flexDirection: "column",
       gap: d.gap, zIndex: 3,
     }}>
       {shown.length
         ? shown.map((match) => <FixtureRibbon key={match.id}
           match={match} badgeImages={badgeImages}
           broadcast={broadcastByMatch[match.id] || ""}
-          accent={accent} width={cardWidth} height={d.rowHeight} />)
+          accent={accent} width={posterCardWidth} height={d.rowHeight} />)
         : <div className="flex items-center justify-center text-center font-black"
           style={{
             width: cardWidth, height: d.rowHeight * 2,
@@ -244,13 +248,6 @@ export function FootballSchedulePoster({
             color: "#111", fontSize: 32, padding: 40,
           }}>ESCOLHA JOGOS REAIS PARA MONTAR A ARTE</div>}
     </div>
-    <div className="absolute font-bold" style={{
-      writingMode: "vertical-rl", transform: "rotate(180deg)",
-      left: story ? 17 : 9, top: story ? 525 : landscape ? 225 : 345,
-      height: story ? 1040 : landscape ? 260 : 590,
-      color: "white", fontSize: story ? 21 : 15,
-      opacity: .93, lineHeight: 1,
-    }}>HORÁRIOS E TRANSMISSÕES SUJEITOS A ALTERAÇÃO · CONFIRA ANTES DE DIVULGAR</div>
     {/* Contact + reseller branding stay clear of the torn bottom edge. */}
     <div className="absolute z-[4] flex items-center" style={{
       left: story ? 74 : 55, bottom: footerBottom,
@@ -290,9 +287,5 @@ export function FootballSchedulePoster({
         overflowWrap: "anywhere",
       }}>{branding.slice(0, 36)}</strong>
     </div>
-    <div className="absolute z-[5] inset-x-0 text-center" style={{
-      bottom: story ? 22 : 13, color: "#1d2027", fontSize: story ? 13 : 10,
-      fontWeight: 900, letterSpacing: ".16em",
-    }}>HORÁRIOS E TRANSMISSÕES SUJEITOS A CONFIRMAÇÃO</div>
   </div>;
 }
