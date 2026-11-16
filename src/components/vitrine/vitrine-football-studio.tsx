@@ -94,7 +94,7 @@ export function VitrineFootballStudio() {
     } finally {setSaving(null);}
   }
   const scale=width/baseSize;
-  return <main className="mx-auto max-w-7xl space-y-6 px-4 py-8">
+  return <main ref={wrapper} className="mx-auto max-w-7xl space-y-6 px-4 py-8">
     <div className="flex flex-wrap items-center justify-between gap-4">
       <div>
         <div className="flex items-center gap-2 text-xs font-bold tracking-[.18em] text-blue-400"><Trophy size={17}/> STREAM MONITOR</div>
@@ -110,7 +110,7 @@ export function VitrineFootballStudio() {
       {games.error instanceof Error?games.error.message:"Não foi possível consultar os jogos de hoje."}
     </Card>}
     {games.isSuccess&&groups.length===0&&<Card className="p-8 text-center">Não foram encontrados jogos dos times prioritários para hoje.</Card>}
-    {games.isSuccess&&groups.length>0&&<div className="grid gap-8 xl:grid-cols-2" ref={wrapper}>
+    {games.isSuccess&&groups.length>0&&<div className="grid gap-8 xl:grid-cols-2">
       {groups.map((group,index)=>{
         const featured=group.find(match=>!!match.playerPhoto);
         const badgeImages:Record<string,string>={};
