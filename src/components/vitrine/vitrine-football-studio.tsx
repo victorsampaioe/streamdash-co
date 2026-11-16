@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
 import { toast } from "sonner";
 import { CalendarDays, Check, Download, ImagePlus, RefreshCw, ShieldCheck, Sparkles, Trophy } from "lucide-react";
+import { FootballSchedulePoster, FOOTBALL_POSTER_PALETTES } from "@/components/vitrine/football-schedule-poster";
 import {
   getVitrineFootballMatches, getVitrineFootballPlayers, getVitrineFootballImage,
   type FootballMatch, type FootballPlayer,
@@ -47,15 +48,6 @@ const AI_WORKER_URL = "https://streammonitor-vitrine-ai.victorsampaio133.workers
 const getToday = () => new Intl.DateTimeFormat("sv-SE", {
   timeZone: "America/Fortaleza", year: "numeric", month: "2-digit", day: "2-digit",
 }).format(new Date());
-const dateDisplay = (day: string) => {
-  const d = new Date(day + "T12:00:00-03:00");
-  return Number.isNaN(d.getTime()) ? day : new Intl.DateTimeFormat("pt-BR", {
-    timeZone: "America/Fortaleza", day: "2-digit", month: "long", year: "numeric",
-  }).format(d);
-};
-function initials(name: string) {
-  return name.trim().split(/\s+/).map((s) => s[0]).filter(Boolean).slice(0, 2).join("").toUpperCase();
-}
 async function uploadedDataUrl(file: File) {
   if (!["image/png", "image/jpeg", "image/webp"].includes(file.type) || file.size > 5 * 1024 * 1024) {
     throw new Error("Envie imagem PNG, JPG ou WEBP com até 5 MB.");
@@ -67,142 +59,6 @@ async function uploadedDataUrl(file: File) {
     reader.readAsDataURL(file);
   });
 }
-function TeamIdentity({ name, badge, size = 104 }: { name: string; badge?: string; size?: number }) {
-  return <div className="flex shrink-0 items-center justify-center overflow-hidden rounded-full border border-white/15 bg-white/10"
-    style={{ width: size, height: size }}>
-    {badge ? <img src={badge} alt="" className="h-[77%] w-[77%] object-contain" /> :
-      <span className="font-black text-white/90" style={{ fontSize: size * 0.28 }}>{initials(name)}</span>}
-  </div>;
-}
-function FixtureCard({ m, badges, rowHeight }: {
-  m: FootballMatch; badges: Record<string, string>; rowHeight: number;
-}) {
-  return <div className="relative isolate flex items-center justify-between gap-4 overflow-hidden rounded-[23px] border border-white/15 bg-[#071831]/90 px-7 shadow-[0_16px_45px_rgba(0,0,0,.22)] backdrop-blur-xl"
-    style={{ height: rowHeight }}>
-    <div className="absolute inset-y-0 left-0 w-[7px] bg-gradient-to-b from-sky-300 to-blue-700" />
-    <div className="flex min-w-0 flex-1 items-center gap-5">
-      <TeamIdentity name={m.home} badge={badges[m.homeBadge]} size={82} />
-      <div className="min-w-0 text-left text-[23px] font-[900] uppercase leading-[1.05] tracking-[-0.03em] text-white"
-        style={{ textShadow: "0 2px 20px #0007" }}>{m.home}</div>
-    </div>
-    <div className="flex w-[180px] shrink-0 flex-col items-center justify-center gap-1 text-center">
-      <span className="text-[42px] font-black leading-none text-[#7ed8ff]">{m.time}</span>
-      <span className="max-w-full overflow-hidden text-ellipsis whitespace-nowrap text-[13px] font-extrabold uppercase tracking-[0.06em] text-slate-300">{m.league}</span>
-      <span className="text-[13px] font-black uppercase tracking-[0.2em] text-white/40">CONFRONTO</span>
-    </div>
-    <div className="flex min-w-0 flex-1 items-center justify-end gap-5">
-      <div className="min-w-0 text-right text-[23px] font-[900] uppercase leading-[1.05] tracking-[-0.03em] text-white"
-        style={{ textShadow: "0 2px 20px #0007" }}>{m.away}</div>
-      <TeamIdentity name={m.away} badge={badges[m.awayBadge]} size={82} />
-    </div>
-  </div>;
-}
-
-function FootballArt({
-  kind, match, matches, format, day, headline, brand, logo, stadium, badgeImages, photo,
-  playerName,
-}: {
-  kind: Kind; match: FootballMatch | null; matches: FootballMatch[];
-  format: Format; day: string; headline: string; brand: string; logo: string;
-  stadium: string; badgeImages: Record<string, string>; photo: string; playerName: string;
-}) {
-  const dims = DIMENSIONS[format];
-  const story = format === "story";
-  const landscape = format === "landscape";
-  const maxGames = landscape ? 2 : story ? 7 : 4;
-  const list = matches.slice(0, maxGames);
-  const rowHeight = landscape ? 134 : story ? 175 : 148;
-  const listTop = landscape ? 275 : story ? 430 : 370;
-  const headlineSize = landscape ? 68 : story ? 111 : 96;
-  const heroTop = landscape ? 138 : story ? 221 : 184;
-  const safeBrand = brand || "STREAM MONITOR";
-  const firstWord = kind === "today" ? "JOGOS" : "HOJE TEM";
-  const secondWord = kind === "today" ? "DE HOJE" : "JOGAÇO";
-  return <div className="relative isolate overflow-hidden bg-[#030c20] font-sans text-white"
-    style={{ width: dims.width, height: dims.height }}>
-    {stadium ? <img alt="" src={stadium} className="absolute inset-0 h-full w-full object-cover opacity-[.62]" /> : <>
-      <div className="absolute inset-0" style={{ background: "radial-gradient(circle at 70% 38%, #164c84 0%, #0b254d 38%, #030c20 78%)" }} />
-      <div className="absolute -right-[120px] -top-[200px] h-[750px] w-[750px] rounded-full border-[90px] border-[#3295fe]/[.12] blur-xl" />
-      <div className="absolute -bottom-32 left-20 h-[350px] w-[900px] rounded-[50%] bg-[#127be5]/[.15] blur-[95px]" />
-    </>}
-    <div className="absolute inset-0 bg-gradient-to-b from-[#020a1b]/90 via-[#04132b]/25 to-[#010a1c]/95" />
-    <div className="absolute inset-x-0 top-0 h-[11px] bg-gradient-to-r from-[#0043d6] via-[#71d7ff] to-[#0053cc]" />
-    <div className="absolute left-0 top-0 h-full w-2 bg-[#4cb5ff]/30" />
-    <div className="absolute left-[60px] right-[60px] top-[55px] flex h-[90px] items-center justify-between border-b border-white/20 pb-5">
-      <div className="flex min-w-0 items-center gap-5">
-        {logo ? <img src={logo} alt="" className="h-[70px] w-[70px] object-contain" /> :
-          <div className="flex h-[64px] w-[64px] items-center justify-center rounded-xl bg-gradient-to-br from-sky-500 to-blue-800 text-[24px] font-black">SM</div>}
-        <div className="text-[24px] font-[900] uppercase tracking-[0.11em]">{safeBrand}</div>
-      </div>
-      <span className="rounded-lg border border-sky-400/40 bg-sky-500/15 px-5 py-3 text-[16px] font-black uppercase tracking-[0.19em] text-sky-200">
-        AGENDA DE JOGOS
-      </span>
-    </div>
-
-    {kind === "today" ? <>
-      <div className="absolute left-[60px] right-[60px]" style={{ top: heroTop }}>
-        <p className="mb-2 text-[22px] font-black uppercase tracking-[0.25em] text-sky-300">A PROGRAMAÇÃO DO SEU DIA · {dateDisplay(day)}</p>
-        <div className="font-black uppercase tracking-[-0.06em] leading-[.91]"
-          style={{ fontSize: headlineSize, textShadow: "0 9px 35px #0008" }}>
-          {headline === "JOGOS DE HOJE" ? <><span className="block">JOGOS</span><span className="block text-[#6bcaff]">DE HOJE</span></> : headline}
-        </div>
-      </div>
-      <div className="absolute left-[60px] right-[60px] flex flex-col" style={{ top: listTop, gap: story ? 20 : 13 }}>
-        {list.map((m) => <FixtureCard key={m.id} m={m} badges={badgeImages} rowHeight={rowHeight} />)}
-        {!list.length && <div className="rounded-3xl border border-white/20 bg-[#0b2041]/80 p-12 text-center text-[30px] font-black">ESCOLHA OS JOGOS PARA MONTAR A ARTE</div>}
-      </div>
-      <div className="absolute bottom-[106px] left-[60px] right-[60px] h-[2px] bg-gradient-to-r from-blue-400/80 via-blue-300/30 to-transparent" />
-    </> : <>
-      <div className="absolute left-[60px] right-[60px]" style={{ top: heroTop }}>
-        <div className="mb-3 inline-flex rounded-lg border border-sky-300/40 bg-sky-400/15 px-4 py-3 text-[20px] font-black uppercase tracking-[.22em] text-sky-200">
-          {match?.league || "JOGO EM DESTAQUE"}
-        </div>
-        <h2 className="max-w-[960px] font-black uppercase tracking-[-.06em] leading-[.96]"
-          style={{ fontSize: landscape ? 85 : story ? 120 : 105, textShadow: "0 10px 35px #000a" }}>
-          {headline || "HOJE TEM JOGAÇO"}
-        </h2>
-      </div>
-      {photo ? <div className="absolute inset-y-[18%] left-[-5%] w-[69%] overflow-hidden">
-        <img src={photo} alt="" className="h-full w-full object-contain object-bottom"
-          style={{
-            maskImage: "linear-gradient(to bottom,transparent 0%,black 18%,black 80%,transparent 99%)",
-            filter: "drop-shadow(10px 18px 55px rgba(0,0,0,.8))",
-          }} />
-      </div> : <>
-        <div className="absolute bottom-[21%] left-[-20%] h-[720px] w-[720px] rounded-full border-[65px] border-sky-400/10" />
-        <div className="absolute bottom-[20%] left-[7%] rotate-[-15deg] text-[340px] font-black leading-none text-white/[.06]">VS</div>
-      </>}
-      <div className={`absolute right-[60px] flex ${landscape ? "flex-row items-center gap-3" : "flex-col items-end gap-5"}`}
-        style={{ bottom: story ? 465 : landscape ? 234 : 325 }}>
-        <div className={`flex items-center rounded-3xl bg-[#061934]/80 backdrop-blur-xl ${landscape ? "gap-3 px-4 py-3" : "gap-5 px-8 py-5"}`}>
-          <div className={`text-right font-black uppercase tracking-[-0.035em] ${landscape ? "max-w-[190px] text-[22px]" : "max-w-[320px] text-[35px]"}`}>{match?.home || "Mandante"}</div>
-          <TeamIdentity name={match?.home || "Mandante"} badge={match ? badgeImages[match.homeBadge] : undefined} size={landscape ? 72 : 117} />
-        </div>
-        <div className={`font-black italic leading-none text-sky-300 ${landscape ? "text-[42px]" : "pr-12 text-[65px]"}`}>VS</div>
-        <div className={`flex items-center rounded-3xl bg-[#061934]/80 backdrop-blur-xl ${landscape ? "gap-3 px-4 py-3" : "gap-5 px-8 py-5"}`}>
-          <div className={`text-right font-black uppercase tracking-[-0.035em] ${landscape ? "max-w-[190px] text-[22px]" : "max-w-[320px] text-[35px]"}`}>{match?.away || "Visitante"}</div>
-          <TeamIdentity name={match?.away || "Visitante"} badge={match ? badgeImages[match.awayBadge] : undefined} size={landscape ? 72 : 117} />
-        </div>
-      </div>
-      <div className="absolute left-[60px] right-[60px] flex items-end justify-between border-t-2 border-white/20 pt-6"
-        style={{ bottom: story ? 150 : landscape ? 92 : 145 }}>
-        <div>
-          <div className="text-[19px] font-black uppercase tracking-[.2em] text-sky-300">{dateDisplay(day)}</div>
-          {playerName && photo && <div className="mt-3 max-w-[430px] text-[27px] font-black uppercase tracking-wide">{playerName}</div>}
-        </div>
-        <div className="text-right">
-          <div className={`font-black leading-none tracking-tight text-white ${landscape ? "text-[55px]" : "text-[70px]"}`}>{match?.time || "--:--"}</div>
-          <span className="text-[17px] font-bold tracking-[.2em] text-white/60">HORÁRIO DE BRASÍLIA</span>
-        </div>
-      </div>
-    </>}
-    <div className="absolute inset-x-0 bottom-0 flex h-[77px] items-center justify-between border-t border-white/10 bg-[#020816]/90 px-[60px] text-[15px] font-bold uppercase tracking-[.13em] text-white/55">
-      <span>STREAM MONITOR · VITRINE FUTEBOL</span>
-      <span>DADOS: SPORTscore · {dateDisplay(day)}</span>
-    </div>
-  </div>;
-}
-
 export function VitrineFootballStudio() {
   const fetchGames = useServerFn(getVitrineFootballMatches);
   const fetchPlayers = useServerFn(getVitrineFootballPlayers);
@@ -220,6 +76,9 @@ export function VitrineFootballStudio() {
   const [playerUpload, setPlayerUpload] = useState("");
   const [logo, setLogo] = useState("");
   const [brand, setBrand] = useState("Stream Monitor");
+  const [whatsapp, setWhatsapp] = useState("");
+  const [accent, setAccent] = useState("#ee1519");
+  const [channels, setChannels] = useState<Record<string,string>>({});
   const [headline, setHeadline] = useState("");
   const [rightsConfirmed, setRightsConfirmed] = useState(false);
   const [aiBackground, setAiBackground] = useState("");
@@ -240,7 +99,7 @@ export function VitrineFootballStudio() {
   const fixtures = useMemo(() => games.data?.matches ?? [], [games.data]);
   const featured = fixtures.find((m) => m.id === featuredId) ?? fixtures[0] ?? null;
   const visibleMatches = useMemo(() =>
-    selectedIds.length ? fixtures.filter((m) => selectedIds.includes(m.id)) : fixtures.slice(0, 5),
+    selectedIds.length ? fixtures.filter((m) => selectedIds.includes(m.id)) : fixtures.slice(0, 6),
     [fixtures, selectedIds]);
   useEffect(() => {
     const timer = setTimeout(() => setDebouncedPlayerSearch(playerSearch.trim()), 400);
@@ -248,7 +107,7 @@ export function VitrineFootballStudio() {
   }, [playerSearch]);
   const players = useQuery({
     queryKey: ["admin-football-players", debouncedPlayerSearch],
-    enabled: mode === "featured" && debouncedPlayerSearch.length >= 2,
+    enabled: debouncedPlayerSearch.length >= 2,
     queryFn: () => fetchPlayers({ data: { query: debouncedPlayerSearch } }),
     staleTime: 10 * 60_000,
     retry: 0,
@@ -286,7 +145,7 @@ export function VitrineFootballStudio() {
   const scale = maxWidth / sizes.width;
 
   const usedBadges = useMemo(() => {
-    const matches = mode === "today" ? visibleMatches.slice(0, format === "landscape" ? 2 : format === "story" ? 7 : 4) : featured ? [featured] : [];
+    const matches = mode === "today" ? visibleMatches.slice(0, format === "landscape" ? 2 : format === "story" ? 6 : 4) : featured ? [featured] : [];
     return [...new Set(matches.flatMap((m) => [m.homeBadge, m.awayBadge]).filter(Boolean))];
   }, [mode, visibleMatches, featured, format]);
 
@@ -307,16 +166,16 @@ export function VitrineFootballStudio() {
 
   useEffect(() => {
     setPlayerRemote("");
-    if (!rightsConfirmed || !athlete?.image || mode !== "featured" || playerUpload) return;
+    if (!rightsConfirmed || !athlete?.image || playerUpload) return;
     let disposed = false;
     void fetchImage({ data: { url: athlete.image, rightsConfirmed: true } })
       .then((v) => { if (!disposed) setPlayerRemote(v.dataUrl); })
       .catch(() => { if (!disposed) setPlayerRemote(""); });
     return () => { disposed = true; };
-  }, [rightsConfirmed, athlete?.image, playerUpload, mode, fetchImage]);
+  }, [rightsConfirmed, athlete?.image, playerUpload, fetchImage]);
 
   const playerPhoto = rightsConfirmed ? playerUpload || playerRemote : "";
-  const effectiveHeadline = headline.trim() || (mode === "today" ? "JOGOS DE HOJE" : "HOJE TEM JOGAÇO");
+  const effectiveHeadline = headline.trim() || (mode === "today" ? "JOGOS DO DIA" : "JOGAÇO DO DIA");
 
   async function onFile(file: File | undefined, type: "logo" | "player") {
     if (!file) return;
@@ -341,8 +200,8 @@ export function VitrineFootballStudio() {
           "Content-Type": "application/json" },
         body: JSON.stringify({
           title: "Estádio cinematográfico original",
-          overview: "A beautiful packed professional football soccer stadium at dusk under enormous bright floodlights, dramatic clouds, green pitch, luminous blue smoke and cinematic energy, completely original architecture and anonymous unrecognizable crowd, no players, no faces, no team symbols, no signage and no words.",
-          genre: "football, sport, stadium, matchday, blue cinematic atmosphere",
+          overview: "An original cinematic packed football stadium at dusk under floodlights, dramatic clouds, realistic green pitch and anonymous unrecognizable crowd. Dramatic lighting color: " + accent + ". No recognizable players or faces, team symbols, signage, trademarks or writing.",
+          genre: "football, sport, original stadium, matchday, dynamic colorful cinematic atmosphere",
           mediaType: "movie",
           style: "acao",
           format,
@@ -366,7 +225,7 @@ export function VitrineFootballStudio() {
     try {
       const png = await toPng(artRef.current, {
         pixelRatio: 1,
-        backgroundColor: "#050d22",
+        backgroundColor: accent,
         skipFonts: true,
         cacheBust: false,
       });
@@ -437,13 +296,13 @@ export function VitrineFootballStudio() {
           </p>}
           <div className="max-h-[360px] space-y-2 overflow-y-auto pr-1">
             {fixtures.map((m) => {
-              const checked = mode === "featured" ? featured?.id === m.id : (selectedIds.length ? selectedIds.includes(m.id) : fixtures.slice(0, 5).some((v) => v.id === m.id));
+              const checked = mode === "featured" ? featured?.id === m.id : (selectedIds.length ? selectedIds.includes(m.id) : fixtures.slice(0, 6).some((v) => v.id === m.id));
               return <button key={m.id} type="button"
                 onClick={() => {
                   if (mode === "featured") setFeaturedId(m.id);
                   else {
-                    const defaults = selectedIds.length ? selectedIds : fixtures.slice(0, 5).map((v) => v.id);
-                    setSelectedIds(checked ? defaults.filter((id) => id !== m.id) : [...defaults, m.id].slice(0, 7));
+                    const defaults = selectedIds.length ? selectedIds : fixtures.slice(0, 6).map((v) => v.id);
+                    setSelectedIds(checked ? defaults.filter((id) => id !== m.id) : [...defaults, m.id].slice(0, 6));
                   }
                 }}
                 className={`w-full rounded-xl border p-3 text-left text-sm transition-colors ${checked ? "border-sky-400/60 bg-sky-500/10" : "border-border hover:bg-muted/60"}`}>
@@ -532,12 +391,14 @@ export function VitrineFootballStudio() {
               <div style={{ width: sizes.width, height: sizes.height,
                 transform: `scale(${scale})`, transformOrigin: "top left" }}>
                 <div ref={artRef}>
-                  <FootballArt
-                    kind={mode} match={featured} matches={visibleMatches}
+                  <FootballSchedulePoster
+                    kind={mode} matches={mode === "today" ? visibleMatches : featured ? [featured] : []}
                     format={format} day={date} headline={effectiveHeadline}
-                    brand={brand} logo={logo} stadium={aiBackground}
+                    brand={brand} logo={logo} contact={whatsapp}
+                    stadium={aiBackground} accent={accent}
+                    broadcastByMatch={channels}
                     badgeImages={rightsConfirmed ? badgeImages : {}}
-                    photo={playerPhoto} playerName={athlete?.name || ""}
+                    playerPhoto={playerPhoto} playerName={athlete?.name || ""}
                   />
                 </div>
               </div>
