@@ -20,6 +20,7 @@ import { installChunkRecovery } from "@/lib/chunk-recovery";
 import { trackMetaPageView, isPrivatePath } from "@/lib/meta-pixel";
 import { captureAttribution, clearAttribution } from "@/lib/ad-attribution";
 import { trackPosthogPage } from "@/lib/posthog-analytics";
+import {trackAcquisitionPage} from "@/lib/acquisition-page";
 import { onConsentChange, readChoice } from "@/lib/consent";
 import { AdvertisingConsentBanner } from "@/components/advertising-consent-banner";
 
@@ -79,7 +80,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
   head: () => ({
     meta: [
       { charSet: "utf-8" },
-      { name: "viewport", content: "width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0, viewport-fit=cover" },
+      { name: "viewport", content: "width=device-width, initial-scale=1, viewport-fit=cover" },
       { name: "apple-mobile-web-app-capable", content: "yes" },
       { name: "apple-mobile-web-app-status-bar-style", content: "black-translucent" },
       { name: "theme-color", content: "#0A0A0A" },
@@ -205,6 +206,14 @@ function RootComponent() {
   }, []);
   useEffect(() => {
     void trackMetaPageView(pathname);
+  }, [pathname]);
+  useEffect(() => {
+    if (pathname === "/" || pathname === "/revendedor-stream-monitor" || pathname === "/monitoramento-dns")
+      void trackAcquisitionPage("landing");
+    return onConsentChange(() => {
+      if (pathname === "/" || pathname === "/revendedor-stream-monitor" || pathname === "/monitoramento-dns")
+        void trackAcquisitionPage("landing");
+    });
   }, [pathname]);
   // Privacy-respecting PostHog tracking, independently controlled by the
   // existing analytics consent preference. The key is not yet configured.
