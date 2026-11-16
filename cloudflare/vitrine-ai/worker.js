@@ -86,6 +86,40 @@ export default {
       const user = await authResponse.json();
       if (!user || !user.id) return respond({error:"Sessão inválida."},401,origin);
 
+      // Premium entitlement is checked against the authenticated user's own
+      // subscription before quota usage or any AI inference. Never trust UI state.
+      const authHeaders={"apikey":publicKey,"Authorization":authorization,"Content-Type":"application/json"};
+      const [adminResponse,subscriptionResponse] = await Promise.all([
+        fetch(SUPABASE_URL+"/rest/v1/rpc/has_role",{method:"POST",headers:authHeaders,
+          body:JSON.stringify({_user_id:user.id,_role:"admin"}),cache:"no-store"}),
+        fetch(SUPABASE_URL+"/rest/v1/subscriptions?user_id=eq."+encodeURIComponent(user.id)+"&select=plan,status,expires_at&limit=1",
+          {headers:authHeaders,cache:"no-store"})
+      ]);
+      if (!adminResponse.ok || !subscriptionResponse.ok)
+        return respond({error:"Não foi possível verificar sua assinatura."},503,origin);
+      const admin=await adminResponse.json();
+      const subscriptions=await subscriptionResponse.json();
+      const sub=Array.isArray(subscriptions)?subscriptions[0]:null;
+      let paid=admin===true || (sub?.status==="active" &&
+        ["monthly","yearly","basic","reseller"].includes(sub.plan) &&
+        Date.parse(sub.expires_at)>Date.now());
+      if (!paid) {
+        const [resellerResponse,subResellerResponse,walletResponse]=await Promise.all([
+          fetch(SUPABASE_URL+"/rest/v1/rpc/has_role",{method:"POST",headers:authHeaders,
+            body:JSON.stringify({_user_id:user.id,_role:"reseller"}),cache:"no-store"}),
+          fetch(SUPABASE_URL+"/rest/v1/rpc/has_role",{method:"POST",headers:authHeaders,
+            body:JSON.stringify({_user_id:user.id,_role:"sub_reseller"}),cache:"no-store"}),
+          fetch(SUPABASE_URL+"/rest/v1/reseller_wallet?reseller_id=eq."+encodeURIComponent(user.id)+"&select=credits&limit=1",
+            {headers:authHeaders,cache:"no-store"})
+        ]);
+        if(!resellerResponse.ok||!subResellerResponse.ok||!walletResponse.ok)
+          return respond({error:"Não foi possível verificar o saldo da revenda."},503,origin);
+        const reseller=await resellerResponse.json(),subReseller=await subResellerResponse.json();
+        const wallet=await walletResponse.json();
+        paid=(reseller===true||subReseller===true)&&Number(Array.isArray(wallet)?wallet[0]?.credits:0)>0;
+      }
+      if (!paid) return respond({error:"Assinatura necessária. Assine um plano para gerar artes na Vitrine IA."},402,origin);
+
       const body = await request.json().catch(() => null);
       if (!body || typeof body !== "object") return respond({error:"Pedido inválido."},400,origin);
       const title = clean(body.title, 150);
