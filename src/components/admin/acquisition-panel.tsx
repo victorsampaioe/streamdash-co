@@ -46,6 +46,7 @@ export function AcquisitionPanel(){
   <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
    <Kpi title="Cliques no link (Meta)" value={totals.linkClicks.toLocaleString("pt-BR")}/>
    <Kpi title="Visualizações da página (Meta)" value={totals.landingPageViews.toLocaleString("pt-BR")}/>
+   <Kpi title="Visitas ao cadastro (com consentimento)" value={totals.signupPageVisits.toLocaleString("pt-BR")}/>
    <Kpi title="Pagantes com origem registrada" value={totals.paidWithFirstTouch.toLocaleString("pt-BR")}/>
   </div>
   <Card>
@@ -53,12 +54,13 @@ export function AcquisitionPanel(){
    <CardContent className="overflow-x-auto">
     <table className="w-full text-sm min-w-[690px]">
      <thead><tr className="text-left text-muted-foreground border-b">
-      <th className="p-2">Origem</th><th className="p-2">Cadastros</th>
+      <th className="p-2">Origem</th><th className="p-2">Visitas ao cadastro</th><th className="p-2">Cadastros</th>
       <th className="p-2">Pagantes</th><th className="p-2">Receita paga</th>
       <th className="p-2">Gasto</th><th className="p-2">Custo por pagante</th>
      </tr></thead>
      <tbody>{bySource.map(x=><tr className="border-b border-border/50" key={x.key}>
       <td className="p-2 font-medium">{label(x.key)}</td>
+      <td className="p-2 tabular-nums">{x.signupPageVisits??"—"}</td>
       <td className="p-2 tabular-nums">{x.registrations}</td>
       <td className="p-2 tabular-nums">{x.paidCustomers}</td>
       <td className="p-2 tabular-nums">{money(x.revenueCents)}</td>
@@ -75,7 +77,7 @@ export function AcquisitionPanel(){
      <p className="font-bold">{label(x.key)}</p>
      <p className="text-sm">Gasto: <strong>{money(x.spendCents)}</strong></p>
      <p className="text-sm">Cliques: <strong>{x.linkClicks??"—"}</strong> · Destino: <strong>{x.landingPageViews??"—"}</strong></p>
-     <p className="text-sm">Cadastros atribuídos: <strong>{x.registrations}</strong> · Pagantes: <strong>{x.paidCustomers}</strong></p>
+     <p className="text-sm">Cadastros atribuídos: <strong>{x.registrations}</strong> · Pagantes: <strong>{x.paidCustomers}</strong> · Cadastro visitado: <strong>{x.signupPageVisits??"—"}</strong></p>
      <p className="text-sm">Custo por cliente pagante: <strong>{money(x.costPerPaidCustomerCents)}</strong></p>
     </div>)}
    </CardContent>
