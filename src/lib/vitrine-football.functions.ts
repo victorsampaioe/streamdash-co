@@ -128,7 +128,7 @@ async function loadLeague(date: string, league: (typeof leagues)[number]) {
   return events;
 }
 
-/** Date-scoped, league-scoped real-world fixtures for the 
+/** FTWB fixtures are fetched on the server for authenticated paid resellers. */
 const FOOTBALL_API_URL = "https://ftwb.notiffly.com.br/jogos";
 const MAIN_TEAMS = ["flamengo", "corinthians", "palmeiras", "sao paulo", "santos", "vasco", "fluminense", "botafogo", "gremio", "internacional", "atletico mg", "atletico mineiro", "cruzeiro", "bahia", "vitoria", "fortaleza", "ceara", "sport", "athletico", "coritiba"];
 const simplify = (input: unknown) => String(input ?? "").normalize("NFD")
