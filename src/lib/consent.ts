@@ -82,6 +82,9 @@ export function readChoice(purpose: Purpose): Choice | null {
 export async function canTrack(purpose: Purpose): Promise<boolean> {
   const choice = readChoice(purpose);
   if (choice !== null) return choice === "granted";
+  // Meta Pixel and ad click identifiers require an affirmative advertising
+  // choice in Brazil as well; no regional auto-grant for advertising.
+  if (purpose === "advertising") return false;
   const required = await isConsentRequiredRegion();
   const latest = readChoice(purpose);
   return latest !== null ? latest === "granted" : !required;
@@ -101,7 +104,8 @@ function restoreChoices(purposes: Purpose[]) {
       applySignals(purpose, choice);
       continue;
     }
-    // A cleared answer falls back to the regional default.
+    // Advertising never silently grants consent based on visitor location.
+    if (purpose === "advertising") { applySignals(purpose, "denied"); continue; }
     void isConsentRequiredRegion().then((required) => {
       if (readChoice(purpose) === null) applySignals(purpose, required ? "denied" : "granted");
     });
@@ -126,8 +130,10 @@ export function saveChoices(choices: Partial<Record<Purpose, Choice>>) {
 }
 
 export async function needsAnswer(purposes: Purpose[]): Promise<boolean> {
+  if (globalPrivacyControl()) return false;
+  if (purposes.includes("advertising") && (storedAnswer("advertising")?.stale ?? true)) return true;
   const required = await isConsentRequiredRegion();
-  return required && !globalPrivacyControl() && purposes.some((purpose) => storedAnswer(purpose)?.stale ?? true);
+  return required && purposes.some((purpose) => storedAnswer(purpose)?.stale ?? true);
 }
 
 /** Fires on changes from this tab and from other tabs. */
