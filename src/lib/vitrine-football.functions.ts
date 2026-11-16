@@ -2,6 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { requirePaidFeature } from "@/lib/premium-feature-access";
+import { isMajorFootballCompetition } from "@/lib/vitrine-football-competitions";
 
 /**
  * FTWB is the primary fixture provider for subscribed users.
@@ -199,8 +200,8 @@ function apiFixture(record: unknown, index: number, date: string): FootballMatch
     ?? pick(nested,"visitante","fora","away","awayTeam");
   const home = teamName(homeObj), away = teamName(awayObj);
   if (!home || !away) return null;
-  const competition = pick(record,"campeonato","competicao","league","competition");
-  const league = typeof competition === "string" ? competition : String(pick(competition,"nome","name")||"Futebol");
+  const competition = pick(record,"campeonato","competicao","league","competition","tournament","torneio","nome_campeonato","campeonato_nome","leagueName","competitionName");
+  const league = typeof competition === "string" ? competition : String(pick(competition,"nome","name","title","descricao","description")||"Futebol");
   const inputTime = String(pick(record,"data_hora","datetime","inicio","horario","hora","kickoff")||"");
   const when = /^\d{4}-\d{2}-\d{2}T/.test(inputTime) && !Number.isNaN(Date.parse(inputTime)) ? kickoff(inputTime) :
     {iso:"",day:date,time: /^\d{2}:\d{2}$/.test(inputTime)?inputTime:"A confirmar"};
@@ -282,6 +283,103 @@ async function findTeamBadge(name:string):Promise<string>{
   badgeCache.set(normalized,{expires:Date.now()+60*60_000,url:logo});
   return logo;
 }
+
+/**
+ * ESPN publishes a catalog of team records by competition, including logo
+ * URLs. Fetch a relevant league only when a selected game lacks its crest,
+ * and match team names exactly to avoid wrong badges.
+ */
+type EspnTeam = {displayName?:string;name?:string;shortDisplayName?:string;abbreviation?:string;
+  logos?:Array<{href?:string}>;logo?:string;};
+const espnCatalog=new Map<string,{expires:number,teams:EspnTeam[]}>();
+function espnLeagueSlugs(league:string):string[]{
+  const name=simplify(league);
+  if(/copa do brasil/.test(name))return ["bra.1","bra.2"];
+  if(/brasileirao|campeonato brasileiro|brasil serie/.test(name))return /serie b/.test(name)?["bra.2"]:["bra.1"];
+  if(/libertadores/.test(name))return ["conmebol.libertadores","bra.1"];
+  if(/sul ?americana|sudamericana/.test(name))return ["conmebol.sudamericana","bra.1"];
+  if(/nations league|liga das nacoes/.test(name))return ["uefa.nations"];
+  if(/copa america/.test(name))return ["conmebol.america"];
+  if(/copa do mundo|world cup/.test(name))return ["fifa.world"];
+  if(/eliminatorias/.test(name))return ["fifa.worldq"];
+  if(/club world cup|mundial de clubes/.test(name))return ["fifa.cwc"];
+  if(/champions league|liga dos campeoes/.test(name))return ["uefa.champions"];
+  if(/europa league/.test(name))return ["uefa.europa"];
+  if(/conference league/.test(name))return ["uefa.europa.conf"];
+  if(/premier league/.test(name))return ["eng.1"];
+  if(/la liga|laliga/.test(name))return ["esp.1"];
+  if(/bundesliga/.test(name))return ["ger.1"];
+  if(/serie a|italian/.test(name))return ["ita.1"];
+  if(/ligue 1/.test(name))return ["fra.1"];
+  if(/liga portugal|primeira liga/.test(name))return ["por.1"];
+  if(/liga profesional|primera division argentina/.test(name))return ["arg.1"];
+  if(/\bmls\b|major league soccer/.test(name))return ["usa.1"];
+  return [];
+}
+function normalizeClubName(name:string):string{
+  let n=simplify(name).replace(/\b(futebol clube|futbol club|football club|esporte clube|sport club|fc|sc|ec)\b/g,"")
+    .replace(/\s+/g," ").trim();
+  const aliases:Record<string,string>={
+    "athletico pr":"athletico paranaense","atletico paranaense":"athletico paranaense",
+    "parana":"parana clube","parana clube":"parana clube",
+    "internacional rs":"internacional","inter porto alegre":"internacional",
+    "atletico mg":"atletico mineiro","galo":"atletico mineiro",
+    "sao paulo sp":"sao paulo","gremio rs":"gremio",
+    "red bull bragantino":"bragantino","rb bragantino":"bragantino",
+    "man united":"manchester united","man city":"manchester city",
+    "psg":"paris saint germain","bayern munich":"bayern munchen",
+  };
+  return aliases[n]||n;
+}
+function espnBadge(team:EspnTeam):string{
+  const url=team.logos?.find(item=>typeof item.href==="string")?.href||team.logo||"";
+  try{
+    const parsed=new URL(url);
+    return parsed.protocol==="https:" && parsed.hostname==="a.espncdn.com" ? parsed.toString() : "";
+  }catch{return ""}
+}
+async function loadEspnCatalog(slug:string):Promise<EspnTeam[]>{
+  const cached=espnCatalog.get(slug);
+  if(cached && cached.expires>Date.now())return cached.teams;
+  let teams:EspnTeam[]=[];
+  try{
+    const url="https://site.api.espn.com/apis/site/v2/sports/soccer/"+slug+"/teams?limit=150";
+    const response=await fetch(url,{headers:{Accept:"application/json"},signal:AbortSignal.timeout(4500)});
+    if(response.ok){
+      const data:unknown=await response.json();
+      const sports=pick(data,"sports");
+      const leagues=Array.isArray(sports)?sports.flatMap(s=>Array.isArray(pick(s,"leagues"))?pick(s,"leagues") as unknown[]:[]):[];
+      const entries=leagues.flatMap(l=>Array.isArray(pick(l,"teams"))?pick(l,"teams") as unknown[]:[]);
+      const alternative=pick(data,"teams");
+      const rows=entries.length?entries:Array.isArray(alternative)?alternative:[];
+      teams=rows.map(row=>(pick(row,"team")||row) as EspnTeam).filter(team=>Boolean(team.displayName||team.name));
+    }
+  }catch{/* Optional crest lookup must never break matches. */}
+  espnCatalog.set(slug,{expires:Date.now()+3*60*60_000,teams});
+  return teams;
+}
+async function attachEspnBadges(matches:FootballMatch[]):Promise<void>{
+  const missing=matches.filter(match=>!match.homeBadge||!match.awayBadge);
+  if(!missing.length)return;
+  const slugs=[...new Set(missing.flatMap(match=>espnLeagueSlugs(match.league)))].slice(0,10);
+  if(!slugs.length)return;
+  const catalogs=new Map(await Promise.all(slugs.map(async slug=>[slug,await loadEspnCatalog(slug)] as const)));
+  for(const match of missing){
+    const candidates=espnLeagueSlugs(match.league).flatMap(slug=>catalogs.get(slug)||[]);
+    const resolve=(name:string):string=>{
+      const target=normalizeClubName(name);
+      for(const team of candidates){
+        if([team.displayName,team.name,team.shortDisplayName]
+          .filter((v):v is string=>!!v)
+          .some(v=>normalizeClubName(v)===target))return espnBadge(team);
+      }
+      return "";
+    };
+    if(!match.homeBadge)match.homeBadge=resolve(match.home);
+    if(!match.awayBadge)match.awayBadge=resolve(match.away);
+  }
+}
+
 async function enrichBadges(matches:FootballMatch[]):Promise<void>{
   const names=[...new Set(matches.flatMap(m=>[!m.homeBadge?m.home:"",!m.awayBadge?m.away:""]).filter(Boolean))].slice(0,16);
   // Limit network fanout for busy fixture days.
@@ -309,7 +407,7 @@ async function inlineTrustedBadge(url:string):Promise<string>{
   try{
     const parsed=new URL(url);
     if(parsed.protocol!=="https:"||parsed.port||parsed.username||parsed.password ||
-      !["www.zerozero.pt","www.futbox.com","img.thesports.com","flagcdn.com"].includes(parsed.hostname))return url;
+      !["www.zerozero.pt","www.futbox.com","img.thesports.com","flagcdn.com","a.espncdn.com"].includes(parsed.hostname))return url;
     const response=await fetch(url,{redirect:"error",signal:AbortSignal.timeout(3000)});
     const mime=response.headers.get("content-type")?.split(";")[0]||"";
     if(response.ok && ["image/png","image/jpeg","image/webp"].includes(mime)&&
@@ -323,8 +421,8 @@ async function inlineTrustedBadge(url:string):Promise<string>{
 }
 async function inlinePosterBadges(matches:FootballMatch[]):Promise<void>{
   const urls=[...new Set(matches.flatMap(m=>[m.homeBadge,m.awayBadge]).filter(Boolean))]
-    .filter(url=>{try{return ["www.zerozero.pt","www.futbox.com","img.thesports.com"].includes(new URL(url).hostname)}catch{return false}})
-    .slice(0,12);
+    .filter(url=>{try{return ["www.zerozero.pt","www.futbox.com","img.thesports.com","a.espncdn.com","flagcdn.com"].includes(new URL(url).hostname)}catch{return false}})
+    .slice(0,32);
   const entries=await Promise.all(urls.map(async url=>[url,await inlineTrustedBadge(url)] as const));
   const mapped=new Map(entries);
   for(const match of matches){
@@ -358,7 +456,7 @@ function relevantWorldFixture(raw:unknown):boolean{
   const competition=pick(raw,"campeonato","competicao","league","competition");
   const league=simplify(typeof competition==="string"?competition:pick(competition,"nome","name","title"));
   if(GLOBAL_COMPETITIONS.some(term=>league.includes(term)))return true;
-  return WORLD_TEAMS.some(team=>clubMatches(home,team)||clubMatches(away,team));
+  return isMajorFootballCompetition(league);
 }
 
 /** Look up a real portrait using the previous sports player search. Never fabricate a player. */
@@ -445,7 +543,7 @@ export const getVitrineFootballMatches = createServerFn({ method: "POST" })
     }
     const seen=new Set<string>();
     const matches=all.map((raw,i)=>apiFixture(raw,i,data.date))
-      .filter((match):match is FootballMatch=>!!match && match.day===data.date)
+      .filter((match):match is FootballMatch=>!!match && match.day===data.date && isMajorFootballCompetition(match.league))
       .filter((match)=>{
         const unique=[simplify(match.home),simplify(match.away),match.day].join("|");
         if(seen.has(unique))return false;seen.add(unique);return true;
@@ -461,6 +559,7 @@ export const getVitrineFootballMatches = createServerFn({ method: "POST" })
         return rank(a)-rank(b)||a.time.localeCompare(b.time);
       });
     // Enrich shields before returning the match list; no bogus placeholders.
+    await attachEspnBadges(matches);
     await enrichBadges(matches);
     await inlinePosterBadges(matches);
     // Prefer channels explicitly supplied by FTWB; add documented fixture-specific channels only when absent.
