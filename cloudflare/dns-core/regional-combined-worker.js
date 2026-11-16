@@ -152,7 +152,7 @@ const regionalWorker = {
  * No IPTV credentials and no plaintext API tokens in source/D1.
  */
 const ORIGIN="https://project--53f0eb67-2e35-46bc-9ab5-dc7ffc20dcbd.lovable.app";
-const MAX_NORMAL=8,MAX_PRIORITY=2,MAX_THIRD=3;
+const MAX_NORMAL=15,MAX_PRIORITY=4,MAX_THIRD=6;
 const DNS_TIMEOUT_MS=5500,HTTP_TIMEOUT_MS=18000;
 const RESOLVERS=[
   {code:"cloudflare",base:"https://cloudflare-dns.com/dns-query"},
