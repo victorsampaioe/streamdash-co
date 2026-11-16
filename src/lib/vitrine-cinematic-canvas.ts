@@ -21,6 +21,7 @@ export type CinematicOptions={
   poster:CanvasImageSource|null;
   logo:CanvasImageSource|null;
   video:HTMLVideoElement|null;
+  deviceBanner?:{enabled:boolean;title:string;background:string;accent:string;text:string;icons:string};
   /** Region captured from a user-shared browser tab, in source pixel coordinates. */
   videoCrop?:{sx:number;sy:number;sw:number;sh:number}|null;
 };
@@ -226,6 +227,57 @@ function renderAdaptiveSynopsis(
     ctx.fillText(chosen[i],x,y+i*lineHeight);
   }
 }
+
+/** Compact reseller device strip, shared by live preview and PNG/JPG exports. */
+function drawDeviceStrip(ctx:CanvasRenderingContext2D,opt:CinematicOptions,x:number,y:number,w:number,h:number){
+  const style=opt.deviceBanner;
+  if(!style?.enabled||opt.mode!=="banner")return;
+  const valid=(v:string,fallback:string)=>/^#[0-9a-f]{6}$/i.test(v)?v:fallback;
+  const bg=valid(style.background,"#120c2b"),accent=valid(style.accent,"#a855f7");
+  const ink=valid(style.text,"#ffffff"),iconInk=valid(style.icons,"#e9d5ff");
+  ctx.save();
+  ctx.shadowColor=accent;ctx.shadowBlur=20;
+  roundRect(ctx,x,y,w,h,22);ctx.fillStyle=bg;ctx.globalAlpha=.94;ctx.fill();
+  ctx.globalAlpha=1;ctx.shadowBlur=0;ctx.strokeStyle=accent;ctx.lineWidth=3;ctx.stroke();
+  const leftWidth=w*.38;
+  const shine=ctx.createLinearGradient(x,y,x+leftWidth,y);
+  shine.addColorStop(0,accent);shine.addColorStop(1,bg);
+  ctx.fillStyle=shine;roundRect(ctx,x+3,y+3,leftWidth-3,h-6,19);ctx.fill();
+  ctx.fillStyle=ink;ctx.textAlign="center";ctx.textBaseline="middle";
+  const compact=h<95;
+  ctx.font="900 "+(compact?19:23)+"px Arial, sans-serif";
+  const title=(style.title||"DISPONÍVEL EM").trim();
+  const words=title.split(/\s+/);
+  const lines:string[]=[];let line="";
+  for(const word of words){
+    const proposed=line?line+" "+word:word;
+    if(line&&ctx.measureText(proposed).width>leftWidth-22){lines.push(line);line=word;}else line=proposed;
+  }
+  if(line)lines.push(line);
+  const shown=lines.slice(0,3);
+  shown.forEach((v,i)=>ctx.fillText(v,x+leftWidth/2,y+h/2+(i-(shown.length-1)/2)*(compact?21:26),leftWidth-20));
+  const devices=[["TV Smart","tv"],["TV Box","box"],["Celular","phone"],["PC","pc"]] as const;
+  const step=(w-leftWidth-16)/4;
+  devices.forEach(([label,type],i)=>{
+    const cx=x+leftWidth+8+step*(i+.5), cy=y+h*.38;
+    ctx.save();ctx.strokeStyle=iconInk;ctx.lineWidth=3;ctx.lineJoin="round";ctx.lineCap="round";
+    if(type==="tv"||type==="pc"){
+      ctx.strokeRect(cx-16,cy-12,32,23);
+      ctx.beginPath();ctx.moveTo(cx,cy+11);ctx.lineTo(cx,cy+18);ctx.moveTo(cx-10,cy+18);ctx.lineTo(cx+10,cy+18);ctx.stroke();
+    }else if(type==="phone"){
+      roundRect(ctx,cx-9,cy-16,18,33,4);ctx.stroke();
+      ctx.beginPath();ctx.arc(cx,cy+12,1.3,0,Math.PI*2);ctx.fillStyle=iconInk;ctx.fill();
+    }else{
+      roundRect(ctx,cx-18,cy-7,36,23,5);ctx.stroke();
+      ctx.beginPath();ctx.arc(cx-7,cy+4,1,0,Math.PI*2);ctx.arc(cx,cy+4,1,0,Math.PI*2);ctx.fillStyle=iconInk;ctx.fill();
+      ctx.beginPath();ctx.arc(cx,cy-12,13,Math.PI*1.25,Math.PI*1.75);ctx.stroke();
+    }
+    ctx.fillStyle=ink;ctx.font="700 "+(compact?13:17)+"px Arial, sans-serif";
+    ctx.fillText(label,cx,y+h*.78,step-6);ctx.restore();
+  });
+  ctx.restore();
+}
+
 export function cinematicVideoFrameRect(
   ctx:CanvasRenderingContext2D,opt:Omit<CinematicOptions,"video">
 ){
@@ -377,7 +429,7 @@ export function renderCinematic(ctx:CanvasRenderingContext2D,opt:CinematicOption
     ctx.restore();
     textY=y+vh+(h>=1800?83:62);
   }else{
-    textY=Math.max(wide?h*.76:story?h*.69:h*.76,metadataY+54);
+    textY=Math.max(opt.deviceBanner?.enabled?(wide?h*.62:story?h*.67:h*.67):(wide?h*.76:story?h*.69:h*.76),metadataY+54);
     if(opt.posterVisible&&opt.poster){
       const pw=wide?235:225,ph=wide?330:322;
       const x=w-margin-pw,y=wide?280:h*.28;
@@ -394,7 +446,10 @@ export function renderCinematic(ctx:CanvasRenderingContext2D,opt:CinematicOption
   const contactTop=storyPost?h-292:h-121;
   const preferredFont=storyPost?38:wide?30:28;
   const minFont=storyPost?26:22;
-  const textRoom=Math.max(0,footerTop-textY-37);
+  const deviceVisible=opt.mode==="banner"&&!!opt.deviceBanner?.enabled;
+  const deviceTop=storyPost?h-465:footerTop-135;
+  const deviceHeight=storyPost?105:wide?92:105;
+  const textRoom=Math.max(0,(deviceVisible?deviceTop-30:footerTop-37)-textY);
   // Adapt the synopsis to actual available space instead of silently
   // chopping words or appending ellipses in any export format.
   if(textRoom>=32){
@@ -405,6 +460,7 @@ export function renderCinematic(ctx:CanvasRenderingContext2D,opt:CinematicOption
       margin,textY,w-margin*2,textRoom,preferredFont,minFont,
       storyPost?6:wide?3:4);
   }
+  if(deviceVisible)drawDeviceStrip(ctx,opt,margin,deviceTop,w-margin*2,deviceHeight);
   // Original reseller-only footer. Story placement respects app UI overlays.
   ctx.fillStyle="rgba(255,255,255,.21)";
   ctx.fillRect(margin,footerTop,w-margin*2,1);
