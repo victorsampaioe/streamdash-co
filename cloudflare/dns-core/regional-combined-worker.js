@@ -151,7 +151,7 @@ const regionalWorker = {
  * writer; its legacy DNS cron stays on until these reports are verified.
  * No IPTV credentials and no plaintext API tokens in source/D1.
  */
-const ORIGIN="https://project--53f0eb67-2e35-46bc-9ab5-dc7ffc20dcbd.lovable.app";
+const ORIGIN="https://streammonitor.site";
 const MAX_NORMAL=15,MAX_PRIORITY=4,MAX_THIRD=6;
 const DNS_TIMEOUT_MS=5500,HTTP_TIMEOUT_MS=18000;
 const RESOLVERS=[
@@ -343,19 +343,6 @@ async function flushReports(env){
   }
   return {sent,failed};
 }
-async function diagnosePublishedOrigin(env){
-  const auth=await signatureHeaders(env,"dns-targets");
-  for(const origin of ["https://streamdash-co.lovable.app","https://streammonitor.site"]){
-    try{
-      const result=await fetch(origin+"/api/public/edge-dns/targets",{
-        headers:auth,redirect:"manual",
-        signal:AbortSignal.timeout(6500),
-      });
-      console.log("edge_dns_origin_probe",JSON.stringify({origin:new URL(origin).hostname,status:result.status}));
-      if(result.body)await result.body.cancel().catch(()=>{});
-    }catch(e){console.warn("edge_dns_origin_probe_failed",new URL(origin).hostname,String(e?.name??"error"));}
-  }
-}
 async function runCycle(env){
   if(!env.DNS_DB||!(env.REGION_WORKER_SECRET||env.SIGNING_KEY_JWK))
     throw new Error("Missing D1 or DNS bridge secret");
@@ -400,7 +387,6 @@ export default {
   scheduled(event,env,ctx){
     regionalWorker.scheduled(event,env,ctx);
     dnsWorker.scheduled(event,env,ctx);
-    ctx.waitUntil(diagnosePublishedOrigin(env));
   },
   fetch(request,env,ctx){
     const path=new URL(request.url).pathname;
