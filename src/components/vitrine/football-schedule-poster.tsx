@@ -124,7 +124,10 @@ function FixtureRibbon({ match, badgeImages, broadcast, accent, width, height }:
       fontSize: timeSize, fontWeight: 1000,
       lineHeight: 1, letterSpacing: "-.02em",
       textShadow: "0 3px 8px rgba(0,0,0,.45)",
-    }}>{match.time || "A confirmar"}</div>
+    }}>{match.scoreLabel ? "FINAL "+match.scoreLabel :
+      /ao_vivo|ao vivo|live|em andamento/i.test(match.status||"") ? "AO VIVO · "+(match.time||"") :
+      /encerrad|finaliz|finished|concluid|ended/i.test(match.status||"") ? "ENCERRADO" :
+      match.time || "A confirmar"}</div>
   </div>;
 }
 
