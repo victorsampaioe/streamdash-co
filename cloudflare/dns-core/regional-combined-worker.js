@@ -496,12 +496,65 @@ const metricsWorker={
       console.warn("cloudflare_monitoring_rollups_sync_failed",String(e?.message||e).slice(0,150))));
   }
 };
+
+/** Enroll only a SHA-256 digest from a private Cloudflare service binding.
+ * Plaintext BACKUP_BRIDGE_TOKEN is never returned, logged or copied to this
+ * regional Worker. A signed request authenticates enrollment to the app.
+ */
+async function enrollmentControl(env){
+  if(!env.BACKUP_ENROLLMENT||!env.DNS_DB)return;
+  const read=async(key)=>{
+    const row=await env.DNS_DB.prepare("SELECT value FROM dns_worker_meta WHERE key=?").bind(key).first();
+    return row?.value??null;
+  };
+  const write=async(key,value)=>{
+    await env.DNS_DB.prepare(
+      "INSERT INTO dns_worker_meta(key,value) VALUES (?,?) ON CONFLICT(key) DO UPDATE SET value=excluded.value"
+    ).bind(key,String(value)).run();
+  };
+  if(await read("backup_enroll_requested")==="true"){
+    const identity=await env.BACKUP_ENROLLMENT.getSecretFingerprint();
+    if(!identity?.valid||!identity.sha256){
+      await write("backup_enroll_status",identity?.configured?"secret_invalid_format":"secret_missing");
+      await write("backup_enroll_requested","false");
+      console.warn("backup_enrollment_invalid_format");
+      return;
+    }
+    const payload=JSON.stringify({
+      sha256:identity.sha256,timestamp:Date.now(),nonce:crypto.randomUUID()
+    });
+    const response=await fetch(ORIGIN+"/api/public/edge-backup/enroll",{
+      method:"POST",headers:{"content-type":"application/json",...await signatureHeaders(env,payload)},
+      body:payload,signal:AbortSignal.timeout(13000),cache:"no-store"
+    });
+    if(!response.ok){
+      await write("backup_enroll_status","origin_http_"+response.status);
+      console.warn("backup_enrollment_http_failure",response.status);
+      return;
+    }
+    const confirmation=await response.json();
+    if(confirmation.ok!==true)throw new Error("backup_enrollment_rejected");
+    await write("backup_enroll_status","enrolled");
+    await write("backup_enroll_requested","false");
+    // Access test is read-only, no file transfer or secret exposure.
+    const manifest=await env.BACKUP_ENROLLMENT.testManifest();
+    await write("backup_manifest_status",manifest.ok?"verified_"+manifest.count:String(manifest.reason||"failed").slice(0,90));
+    console.log("backup_enrollment_complete",JSON.stringify({manifestVerified:manifest.ok,count:manifest.count||0}));
+  }
+  if(await read("backup_canary_requested")==="true"){
+    await write("backup_canary_requested","false");
+    const result=await env.BACKUP_ENROLLMENT.canaryCopySmall();
+    await write("backup_canary_status",result.ok?("copied_"+(result.bytes||0)):String(result.reason||"error").slice(0,110));
+    console.log("backup_canary_checked",JSON.stringify({ok:result.ok,bytes:result.bytes||0}));
+  }
+}
 export default {
   scheduled(event,env,ctx){
     regionalWorker.scheduled(event,env,ctx);
     dnsWorker.scheduled(event,env,ctx);
     telegramQueueWorker.scheduled(event,env,ctx);
     metricsWorker.scheduled(event,env,ctx);
+    if(env.BACKUP_ENROLLMENT)ctx.waitUntil(enrollmentControl(env).catch(e=>console.warn("backup_enroll_control_failed",String(e?.message||e).slice(0,130))));
   },
   queue(batch,env,ctx){
     return telegramQueueWorker.queue(batch,env,ctx);
