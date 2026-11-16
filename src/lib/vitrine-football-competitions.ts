@@ -13,6 +13,8 @@ export function isYouthFootballFixture(competition: string, home: string, away: 
 export function isMajorFootballCompetition(name: string): boolean {
   const n = normalize(name || "");
   if (!n || n === "futebol") return false;
+  // UEFA Nations League only; exclude the CONCACAF tournament shown in earlier artwork.
+  if (/concacaf|u ?20|sub ?20|sub ?23|afc|caf|ofc/.test(n)) return false;
   if (/\b(sub ?(?:1[5-9]|2[0-9])|u ?(?:1[5-9]|2[0-9])|under ?(?:1[5-9]|2[0-9])|youth|juvenil|junior|reservas?|reserve|sub ?20|sub ?23|4 ?divisao|terceira divisao|quarta divisao|serie [cd])\b/.test(n)) return false;
 
   return [

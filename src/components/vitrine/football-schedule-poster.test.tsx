@@ -87,6 +87,20 @@ describe("Vitrine Futebol — imagens e exportação", () => {
     expect(html).not.toContain("<strong");
     expect(html).not.toContain(">Minha Revenda</");
   });
+  it("mostra horário original mesmo em jogo encerrado e Sem transmissão",()=>{
+    const html=renderToStaticMarkup(<FootballSchedulePoster {...base}
+      matches={[{...sample,status:"encerrado",scoreLabel:"2 × 0",time:"18:30"}]} />);
+    expect(html).toContain("18:30");
+    expect(html).toContain("Sem transmissão");
+    expect(html).not.toContain("ENCERRADO");
+    expect(html).not.toContain("A confirmar");
+  });
+  it("não inventa horário quando a fonte omite o início",()=>{
+    const html=renderToStaticMarkup(<FootballSchedulePoster {...base}
+      matches={[{...sample,time:"A confirmar"}]} />);
+    expect(html).toContain("Horário indisponível");
+    expect(html).not.toContain("00:00");
+  });
   it("não inventa times quando não há jogos", () => {
     const html = renderToStaticMarkup(<FootballSchedulePoster {...base} matches={[]} />);
     expect(html).toContain("ESCOLHA JOGOS REAIS PARA MONTAR A ARTE");

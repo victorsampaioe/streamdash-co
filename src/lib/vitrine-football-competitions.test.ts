@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { isMajorFootballCompetition as main } from "./vitrine-football-competitions";
+import { isMajorFootballCompetition as main, isYouthFootballFixture } from "./vitrine-football-competitions";
 
 describe("Vitrine Futebol — só competições importantes",()=>{
   it.each([
@@ -13,6 +13,11 @@ describe("Vitrine Futebol — só competições importantes",()=>{
     "4ª Divisão Argentina","Copa Paraná","Campeonato Paulista Sub-20",
     "Campeonato Paulista Série A3","Campeonato Brasileiro Série C",
     "Liga Reserva","Liga de Bairro","Copa Amadora",
-    "Champions League Sub-20","Futebol"
+    "Champions League Sub-20","Futebol","CONCACAF Nations League",
+    "Liga das Nações CONCACAF","UEFA Nations League Sub 20",
   ])("exclui %s",value=>{expect(main(value)).toBe(false)});
+  it("rejeita Sub-20 mesmo quando o campeonato é principal",()=>{
+    expect(isYouthFootballFixture("UEFA Nations League","Brasil Sub-20","Itália Sub-20")).toBe(true);
+    expect(isYouthFootballFixture("UEFA Nations League","Brasil","Itália")).toBe(false);
+  });
 });
