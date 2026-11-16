@@ -284,6 +284,43 @@ async function enrichBadges(matches:FootballMatch[]):Promise<void>{
   }
 }
 
+/**
+ * Small, allowlisted logo images are converted to data URLs on the server.
+ * This avoids CORS/hotlink failures when exporting the final PNG.
+ * No arbitrary FTWB-provided destination is fetched here.
+ */
+const badgeDataCache=new Map<string,{expires:number,value:string}>();
+async function inlineTrustedBadge(url:string):Promise<string>{
+  const cached=badgeDataCache.get(url);
+  if(cached&&cached.expires>Date.now())return cached.value;
+  let value=url;
+  try{
+    const parsed=new URL(url);
+    if(parsed.protocol!=="https:"||parsed.port||parsed.username||parsed.password ||
+      !["www.zerozero.pt","www.futbox.com","img.thesports.com"].includes(parsed.hostname))return url;
+    const response=await fetch(url,{redirect:"error",signal:AbortSignal.timeout(3000)});
+    const mime=response.headers.get("content-type")?.split(";")[0]||"";
+    if(response.ok && ["image/png","image/jpeg","image/webp"].includes(mime)&&
+       Number(response.headers.get("content-length")||"0")<=600_000){
+      const body=await response.arrayBuffer();
+      if(body.byteLength<=600_000)value="data:"+mime+";base64,"+Buffer.from(body).toString("base64");
+    }
+  }catch{/* Use original HTTPS URL when the allowed image CDN cannot be reached. */}
+  badgeDataCache.set(url,{expires:Date.now()+60*60_000,value});
+  return value;
+}
+async function inlinePosterBadges(matches:FootballMatch[]):Promise<void>{
+  const urls=[...new Set(matches.flatMap(m=>[m.homeBadge,m.awayBadge]).filter(Boolean))]
+    .filter(url=>{try{return ["www.zerozero.pt","www.futbox.com","img.thesports.com"].includes(new URL(url).hostname)}catch{return false}})
+    .slice(0,12);
+  const entries=await Promise.all(urls.map(async url=>[url,await inlineTrustedBadge(url)] as const));
+  const mapped=new Map(entries);
+  for(const match of matches){
+    match.homeBadge=mapped.get(match.homeBadge)||match.homeBadge;
+    match.awayBadge=mapped.get(match.awayBadge)||match.awayBadge;
+  }
+}
+
 /** Look up a real portrait using the previous sports player search. Never fabricate a player. */
 const PLAYER_HINTS: Array<{team:string;name:string}> = [
   {team:"flamengo",name:"Pedro"}, {team:"corinthians",name:"Yuri Alberto"},
@@ -383,6 +420,7 @@ export const getVitrineFootballMatches = createServerFn({ method: "POST" })
       });
     // Enrich shields before returning the match list; no bogus placeholders.
     await enrichBadges(matches);
+    await inlinePosterBadges(matches);
     // Prefer channels explicitly supplied by FTWB; add documented fixture-specific channels only when absent.
     for(const match of matches){if(!(match.broadcasts||[]).length)match.broadcasts=verifiedBroadcasts(match,data.date)}
     for(let index=0;index<matches.length;index+=4){
