@@ -249,7 +249,7 @@ export function VitrineFootballStudio() {
             <ShieldCheck className="h-4 w-4" /> Teste privado · apenas admin
           </div>
           <h1 className="flex items-center gap-3 text-3xl font-black sm:text-4xl"><Trophy className="h-9 w-9 text-sky-300" /> Vitrine IA Futebol</h1>
-          <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-300">Programação real do dia e arte de destaque com cenário da Cloudflare IA, escudos e foto autorizada do jogador. Nada é divulgado automaticamente.</p>
+          <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-300">Novo visual de cartaz esportivo: agenda em cartões brancos, jogador grande, sua marca, WhatsApp e 6 cores de fundo. Partidas reais e download PNG, sem divulgação automática.</p>
         </div>
         <div className="rounded-2xl border border-white/20 bg-white/10 px-5 py-4 text-sm text-slate-200">Fuso dos jogos: <strong>Fortaleza / Brasília</strong><br />Fonte: <strong>SportScore</strong></div>
       </div>
@@ -321,12 +321,13 @@ export function VitrineFootballStudio() {
           </div>
         </Card>
 
-        {mode === "featured" && <Card className="space-y-4 p-5">
-          <h2 className="text-lg font-bold">2. Jogador em destaque</h2>
-          <div className="flex gap-3">
+        <Card className="space-y-4 p-5">
+          <h2 className="text-lg font-bold">2. Foto do jogador (opcional)</h2>
+          <p className="text-xs text-muted-foreground">No novo design, o jogador aparece grande à direita, inclusive na agenda Jogos do Dia. Escolha uma imagem com fundo transparente para o melhor resultado.</p>
+          {mode === "featured" && <div className="flex gap-3">
             <Button variant={playerSide === "home" ? "default" : "outline"} className="flex-1" onClick={() => setPlayerSide("home")}>{featured?.home || "Mandante"}</Button>
             <Button variant={playerSide === "away" ? "default" : "outline"} className="flex-1" onClick={() => setPlayerSide("away")}>{featured?.away || "Visitante"}</Button>
-          </div>
+          </div>}
           <p className="text-xs text-muted-foreground">Pesquise o jogador principal pelo nome. O resultado pode incluir atletas de outros clubes; confirme identidade, time e direitos da foto antes de publicar.</p>
           <Input value={playerSearch} onChange={(e) => setPlayerSearch(e.target.value)} placeholder="Ex.: Vini Jr, Arrascaeta, Neymar" maxLength={70} />
           <select value={playerId} onChange={(e) => setPlayerId(e.target.value)}
@@ -344,10 +345,10 @@ export function VitrineFootballStudio() {
             <input type="file" accept="image/png,image/jpeg,image/webp" className="sr-only" onChange={(e) => void onFile(e.target.files?.[0], "player")} />
           </label>
           {playerUpload && <Button variant="outline" size="sm" onClick={() => setPlayerUpload("")}>Remover foto enviada</Button>}
-        </Card>}
+        </Card>
 
         <Card className="space-y-4 p-5">
-          <h2 className="text-lg font-bold">{mode === "featured" ? "3" : "2"}. Personalize sua arte</h2>
+          <h2 className="text-lg font-bold">3. Personalize a arte de futebol</h2>
           <label className="block text-sm font-semibold">Formato
             <select value={format} onChange={(e) => { setFormat(e.target.value as Format); setAiBackground(""); }}
               className="mt-2 h-11 w-full rounded-lg border border-input bg-background px-3">
@@ -355,11 +356,53 @@ export function VitrineFootballStudio() {
             </select>
           </label>
           <label className="block text-sm font-semibold">Chamada principal
-            <Input className="mt-2" maxLength={50} placeholder={mode === "today" ? "Jogos de Hoje" : "Hoje tem jogaço!"} value={headline} onChange={(e) => setHeadline(e.target.value)} />
+            <Input className="mt-2" maxLength={50} placeholder={mode === "today" ? "Jogos do Dia" : "Jogaço do Dia!"} value={headline} onChange={(e) => setHeadline(e.target.value)} />
           </label>
           <label className="block text-sm font-semibold">Marca
             <Input className="mt-2" maxLength={36} value={brand} onChange={(e) => setBrand(e.target.value)} />
           </label>
+          <label className="block text-sm font-semibold">WhatsApp do revendedor (opcional)
+            <Input className="mt-2" type="tel" maxLength={25} placeholder="(85) 99999-9999"
+              value={whatsapp} onChange={(e) => setWhatsapp(e.target.value)} />
+          </label>
+          <div className="space-y-3 rounded-xl border border-red-500/15 bg-muted/20 p-3">
+            <div>
+              <strong className="text-sm">Cor de fundo do cartaz</strong>
+              <p className="mt-1 text-xs text-muted-foreground">Modelo vermelho como referência, com outras cores personalizáveis. O texto e os cartões continuam legíveis.</p>
+            </div>
+            <div className="grid grid-cols-3 gap-2 sm:grid-cols-6">
+              {FOOTBALL_POSTER_PALETTES.map((palette) => <button
+                key={palette.id} type="button" aria-label={palette.label}
+                aria-pressed={accent.toLowerCase() === palette.hex.toLowerCase()}
+                title={palette.label}
+                onClick={() => setAccent(palette.hex)}
+                className={`flex h-12 items-center justify-center rounded-xl border-2 transition-transform hover:scale-[1.03] ${accent.toLowerCase() === palette.hex.toLowerCase() ? "border-white ring-2 ring-blue-500" : "border-border"}`}
+                style={{ background: `linear-gradient(135deg,${palette.hex},#080b16)` }}>
+                {accent.toLowerCase() === palette.hex.toLowerCase() && <Check className="h-6 w-6 text-white drop-shadow" />}
+              </button>)}
+            </div>
+            <label className="flex items-center gap-3 text-sm font-semibold">
+              <input type="color" aria-label="Escolher cor personalizada"
+                className="h-11 w-14 cursor-pointer rounded border border-border bg-transparent"
+                value={accent} onChange={(e) => setAccent(e.target.value)} />
+              Escolher outra cor
+              <span className="ml-auto font-mono text-xs text-muted-foreground">{accent}</span>
+            </label>
+          </div>
+          <div className="rounded-xl border border-border bg-muted/20 p-3">
+            <strong className="text-sm">Emissoras / Onde assistir (opcional)</strong>
+            <p className="mt-1 text-xs leading-5 text-muted-foreground">
+              Informe somente canais cuja transmissão você confirmou. Não inventamos canais nem exibimos uma emissora sem sua indicação.
+            </p>
+            <div className="mt-3 max-h-[260px] space-y-3 overflow-y-auto">
+              {(mode === "today" ? visibleMatches.slice(0, format === "landscape" ? 2 : format === "story" ? 6 : 4) : featured ? [featured] : []).map((m) => <label key={m.id} className="block text-xs font-semibold">
+                <span className="mb-1 block truncate">{m.home} × {m.away}</span>
+                <Input placeholder="Ex.: canal oficial confirmado"
+                  maxLength={40} value={channels[m.id] || ""}
+                  onChange={(e) => setChannels((current) => ({ ...current, [m.id]: e.target.value }))} />
+              </label>)}
+            </div>
+          </div>
           <label className="flex cursor-pointer items-center gap-3 rounded-xl border border-dashed p-4 text-sm hover:bg-muted/40">
             <ImagePlus className="h-5 w-5 text-blue-400" /> Adicionar minha logo (opcional)
             <input type="file" accept="image/png,image/jpeg,image/webp" className="sr-only" onChange={(e) => void onFile(e.target.files?.[0], "logo")} />
@@ -380,13 +423,13 @@ export function VitrineFootballStudio() {
           <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
             <div>
               <h2 className="text-xl font-black">Prévia profissional</h2>
-              <p className="text-sm text-muted-foreground">Arte privada; pronta para baixar e testar.</p>
+              <p className="text-sm text-muted-foreground">Visual de cartaz esportivo com jogador, cartões brancos, cores e marca. Confira as informações antes de publicar.</p>
             </div>
             <Button onClick={() => void download()} disabled={exporting || games.isLoading || !fixtures.length} className="h-11">
               <Download className="mr-2 h-4 w-4" /> {exporting ? "Preparando PNG..." : "Baixar arte PNG"}
             </Button>
           </div>
-          <div ref={measureRef} className="w-full min-w-0 overflow-hidden rounded-2xl border border-blue-500/20 bg-[#020817] p-2">
+          <div ref={measureRef} className="w-full min-w-0 overflow-hidden rounded-2xl border border-red-500/20 bg-[#090b12] p-2">
             <div className="relative mx-auto" style={{ width: maxWidth, height: sizes.height * scale }}>
               <div style={{ width: sizes.width, height: sizes.height,
                 transform: `scale(${scale})`, transformOrigin: "top left" }}>
