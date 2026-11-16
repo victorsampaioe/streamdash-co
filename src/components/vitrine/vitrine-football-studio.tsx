@@ -151,7 +151,7 @@ export function VitrineFootballStudio() {
       <div>
         <div className="flex items-center gap-2 text-xs font-bold tracking-[.18em] text-blue-400"><Trophy size={17}/> STREAM MONITOR</div>
         <h1 className="mt-2 text-3xl font-black tracking-tight">Eventos de hoje · Artes automáticas</h1>
-        <p className="mt-2 text-sm text-muted-foreground">Até 4 confrontos (8 times) por arte. Todos os jogos recebidos para hoje, separados automaticamente em quantas artes forem necessárias.</p>
+        <p className="mt-2 text-sm text-muted-foreground">Até 4 confrontos por arte, apenas das principais competições do dia. Escudos reais aparecem quando disponíveis.</p>
       </div>
       <Button type="button" variant="outline" disabled={games.isFetching} onClick={()=>{setDay(today());void games.refetch()}}>
         <RefreshCw size={16} className={games.isFetching?"mr-2 animate-spin":"mr-2"}/> Atualizar eventos
