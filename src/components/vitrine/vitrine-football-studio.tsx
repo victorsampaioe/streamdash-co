@@ -396,13 +396,35 @@ export function VitrineFootballStudio() {
             </option>)}
           </select>
           {players.isLoading && <p className="text-xs text-muted-foreground">Buscando jogadores…</p>}
-          {athlete?.image && <p className="text-xs text-amber-500">Há foto na fonte, mas a licença comercial e o direito de imagem não são garantidos. Confirme os direitos antes de usar.</p>}
-          <label className="flex cursor-pointer items-center gap-3 rounded-xl border border-dashed p-4 text-sm hover:bg-muted/40">
-            <ImagePlus className="h-5 w-5 text-blue-400" />
-            Enviar foto autorizada do jogador (PNG/JPG/WEBP)
-            <input type="file" accept="image/png,image/jpeg,image/webp" className="sr-only" onChange={(e) => void onFile(e.target.files?.[0], "player")} />
+          {athlete?.image && <p className="text-xs text-amber-500">
+            Fotos buscadas na internet exigem confirmação de direitos na seção 3. Se a foto remota falhar, envie uma imagem autorizada do seu computador.
+          </p>}
+          <label className="flex cursor-pointer items-center gap-3 rounded-xl border-2 border-dashed border-blue-500/40 bg-blue-500/5 p-4 text-sm hover:bg-blue-500/10">
+            <ImagePlus className="h-6 w-6 shrink-0 text-blue-400" />
+            <span className="font-semibold">Enviar foto autorizada do jogador (PNG/JPG/WEBP, até 5 MB)</span>
+            <input type="file" accept="image/png,image/jpeg,image/webp" className="sr-only" onChange={(e) => {
+              const file = e.currentTarget.files?.[0];
+              e.currentTarget.value = "";
+              void onFile(file, "player");
+            }} />
           </label>
-          {playerUpload && <Button variant="outline" size="sm" onClick={() => setPlayerUpload("")}>Remover foto enviada</Button>}
+          {playerUpload && <div className="flex flex-wrap items-center gap-3 rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-3">
+            <img src={playerUpload} alt="Foto carregada do jogador" className="h-20 w-20 rounded-lg object-contain" />
+            <div className="min-w-0 flex-1">
+              <p className="font-semibold text-emerald-400">Foto aplicada ao cartaz!</p>
+              <p className="truncate text-xs text-muted-foreground">{playerUploadName}</p>
+              <p className="text-xs text-muted-foreground">Já aparece na prévia à direita.</p>
+            </div>
+            <Button variant="outline" size="sm" onClick={() => {
+              setPlayerUpload(""); setPlayerUploadName("");
+            }}>Remover</Button>
+          </div>}
+          {!playerUpload && rightsConfirmed && remotePlayerError && <p role="alert" className="rounded-lg border border-amber-500/30 p-3 text-xs text-amber-400">
+            A foto remota não carregou: {remotePlayerError}. Você pode enviar seu próprio PNG autorizado acima.
+          </p>}
+          {!playerUpload && !playerRemote && !athlete?.image && <p className="text-xs text-muted-foreground">
+            Ainda não há foto do jogador. A prévia usa o cenário de fundo até você enviar uma imagem.
+          </p>}
         </Card>
 
         <Card className="space-y-4 p-5">
@@ -447,6 +469,59 @@ export function VitrineFootballStudio() {
               <span className="ml-auto font-mono text-xs text-muted-foreground">{accent}</span>
             </label>
           </div>
+          <div className="space-y-3 rounded-xl border border-blue-500/25 bg-blue-500/5 p-4">
+            <div>
+              <strong className="text-sm">Escudos dos times</strong>
+              <p className="mt-1 text-xs leading-5 text-muted-foreground">
+                Se a fonte esportiva não disponibilizar os escudos ou bloquear as imagens, você pode enviar cada escudo em PNG/JPG/WEBP.
+                Escudos enviados manualmente aparecem imediatamente na prévia e no PNG.
+              </p>
+            </div>
+            <label className="flex cursor-pointer items-start gap-3 rounded-lg border border-border bg-background/50 p-3 text-sm">
+              <input type="checkbox" checked={rightsConfirmed} onChange={(e) => setRightsConfirmed(e.target.checked)}
+                className="mt-0.5 h-4 w-4 accent-blue-500" />
+              <span>Tenho autorização para usar as imagens de terceiros; carregar os escudos e as fotos disponíveis na fonte.</span>
+            </label>
+            {rightsConfirmed ? <p className="text-xs text-muted-foreground" role="status">
+              {badgeLoading ? "Buscando escudos autorizados…" :
+                badgeUrlCount === 0 ? "A fonte não enviou URLs de escudos para estas partidas." :
+                `Escudos da fonte: ${badgeOkCount} de ${badgeUrlCount} carregados.`}
+            </p> : <p className="text-xs text-muted-foreground">
+              O carregamento automático está desligado até você confirmar os direitos acima.
+            </p>}
+            {rightsConfirmed && Object.keys(badgeFailures).length > 0 && <p role="alert" className="text-xs text-amber-400">
+              Alguns escudos externos não puderam ser carregados. Envie-os manualmente abaixo.
+              {Object.values(badgeFailures).slice(0, 1).map((error) => <span key={error}> Motivo: {error}</span>)}
+            </p>}
+            <div className="grid gap-3">
+              {(mode === "today" ? visibleMatches.slice(0, format === "landscape" ? 2 : format === "story" ? 6 : 4) : featured ? [featured] : [])
+                .map((m) => <div key={m.id} className="space-y-2 rounded-lg border border-border bg-background/60 p-3">
+                  <p className="text-xs font-bold">{m.home} × {m.away}</p>
+                  <div className="grid grid-cols-2 gap-2">
+                    {([
+                      { side: "home" as const, name: m.home, key: `home:${m.id}`, remoteKey: m.homeBadge },
+                      { side: "away" as const, name: m.away, key: `away:${m.id}`, remoteKey: m.awayBadge },
+                    ]).map((team) => <label key={team.key}
+                      className="flex min-w-0 cursor-pointer flex-col items-center gap-2 rounded-lg border border-dashed border-blue-500/25 p-2 text-center hover:bg-blue-500/10">
+                      <span className="w-full truncate text-[11px] font-semibold" title={team.name}>{team.name}</span>
+                      {manualBadgeImages[team.key] || badgeImages[team.remoteKey]
+                        ? <img alt={team.name} src={manualBadgeImages[team.key] || badgeImages[team.remoteKey]}
+                            className="h-14 w-14 object-contain" />
+                        : <span className="flex h-14 w-14 items-center justify-center rounded-full bg-muted text-[11px]">Sem escudo</span>}
+                      <span className="text-[11px] font-semibold text-blue-400">
+                        {manualBadgeImages[team.key] ? "Trocar arquivo" : "Enviar escudo"}
+                      </span>
+                      <input type="file" accept="image/png,image/jpeg,image/webp" className="sr-only"
+                        onChange={(e) => {
+                          const file = e.currentTarget.files?.[0];
+                          e.currentTarget.value = "";
+                          void onTeamBadge(file, team.key, team.name);
+                        }} />
+                    </label>)}
+                  </div>
+                </div>)}
+            </div>
+          </div>
           <div className="rounded-xl border border-border bg-muted/20 p-3">
             <strong className="text-sm">Emissoras / Onde assistir (opcional)</strong>
             <p className="mt-1 text-xs leading-5 text-muted-foreground">
@@ -465,10 +540,10 @@ export function VitrineFootballStudio() {
             <ImagePlus className="h-5 w-5 text-blue-400" /> Adicionar minha logo (opcional)
             <input type="file" accept="image/png,image/jpeg,image/webp" className="sr-only" onChange={(e) => void onFile(e.target.files?.[0], "logo")} />
           </label>
-          <label className="flex items-start gap-3 rounded-lg bg-muted/50 p-4 text-sm leading-6">
-            <input type="checkbox" checked={rightsConfirmed} onChange={(e) => setRightsConfirmed(e.target.checked)} className="mt-1 h-4 w-4 accent-blue-500" />
-            <span>Confirmo ter autorização para usar as fotos e escudos selecionados, inclusive para divulgação comercial. Dados de SportScore não concedem direitos sobre fotos de jogadores ou marcas dos clubes. Sem esta confirmação, o estúdio usa nomes e cenário original.</span>
-          </label>
+          <p className="rounded-lg bg-muted/50 p-3 text-xs leading-5 text-muted-foreground">
+            Use apenas fotos e escudos que você tem autorização para divulgar. A fonte SportScore não concede licença comercial para imagens.
+            As imagens que você envia são mostradas na prévia sem depender do carregamento automático.
+          </p>
           <Button onClick={() => void generateStadium()} disabled={generating} className="h-12 w-full bg-blue-600 text-white hover:bg-blue-700">
             <Sparkles className={`mr-2 h-5 w-5 ${generating ? "animate-pulse" : ""}`} />{generating ? "Gerando cenário..." : "Gerar cenário com Cloudflare IA"}
           </Button>
