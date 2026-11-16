@@ -39,7 +39,7 @@ type RemoteMatch = {
   competition?: string; competition_logo?: string;
   time?: string; status?: string;
 };
-type RemotePlayer = { name?: string; slug?: string; logo?: string; url?: string };
+type RemotePlayer = { name?: string; slug?: string; logo?: string; url?: string; team?: string | { name?: string }; club?: string | { name?: string }; team_name?: string };
 const cache = new Map<string, { at: number; events: FootballMatch[] }>();
 
 export type FootballMatch = {
@@ -147,7 +147,7 @@ function teamLogo(source: unknown): string {
   catch { return ""; }
 }
 function getBroadcasts(record: unknown): string[] {
-  let raw = pick(record,"canais","transmissoes","transmissao","onde_assistir","broadcast","tv");
+  let raw = pick(record,"canais","transmissoes","transmissao","onde_assistir","broadcast","tv","tvNetworks","ondeAssistir","broadcasts","streaming","transmission");
   if (raw && typeof raw === "object" && !Array.isArray(raw)) raw = pick(raw,"canais","channels");
   const list = Array.isArray(raw) ? raw : typeof raw === "string" ? raw.split(/[,;|]/) : [];
   return [...new Set(list.map((item) => typeof item === "string" ? item :
@@ -171,6 +171,39 @@ function apiFixture(record: unknown, index: number, date: string): FootballMatch
     league,leagueId:simplify(league),...when,broadcasts:getBroadcasts(record),
     playerPhoto,playerName:playerPhoto ? teamName(player) : ""};
 }
+/** Look up a real portrait using the previous sports player search. Never fabricate a player. */
+const PLAYER_HINTS: Array<{team:string;name:string}> = [
+  {team:"flamengo",name:"Pedro"}, {team:"corinthians",name:"Yuri Alberto"},
+  {team:"palmeiras",name:"Raphael Veiga"}, {team:"sao paulo",name:"Lucas Moura"},
+  {team:"santos",name:"Neymar"}, {team:"vasco",name:"Philippe Coutinho"},
+  {team:"fluminense",name:"German Cano"}, {team:"gremio",name:"Cristaldo"},
+  {team:"internacional",name:"Alan Patrick"}, {team:"cruzeiro",name:"Matheus Pereira"},
+  {team:"bahia",name:"Everton Ribeiro"}, {team:"botafogo",name:"Marlon Freitas"},
+];
+const imageCache=new Map<string,{expires:number;photo:string;name:string}>();
+async function findHighlight(group:FootballMatch[]):Promise<{photo:string;name:string}|null>{
+  const winner=PLAYER_HINTS.find(({team})=>group.some(m=>simplify(m.home).includes(team)||simplify(m.away).includes(team)));
+  if(!winner)return null;
+  const cached=imageCache.get(winner.team);
+  if(cached&&cached.expires>Date.now())return cached.photo?cached:null;
+  let found:{photo:string;name:string}={photo:"",name:""};
+  try{
+    const query=new URLSearchParams({q:winner.name,sport:"football",limit:"15"});
+    const response=await getJson<{players?:RemotePlayer[]}>("/search/?"+query.toString());
+    for(const player of response.players||[]){
+      const name=String(player.name||"");
+      if(simplify(name)!==simplify(winner.name))continue;
+      const team=player.team_name||(typeof player.team==="string"?player.team:player.team?.name)||(typeof player.club==="string"?player.club:player.club?.name)||"";
+      if(team && !simplify(team).includes(winner.team))continue;
+      const photo=teamLogo({image:player.logo});
+      if(!photo || new URL(photo).hostname!=="img.thesports.com")continue;
+      found={photo,name};break;
+    }
+  }catch{/* Missing portraits do not break the match list. */}
+  imageCache.set(winner.team,{...found,expires:Date.now()+60*60_000});
+  return found.photo?found:null;
+}
+
 /** Server-side: the FTWB key never reaches the browser or git. */
 export const getVitrineFootballMatches = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
@@ -185,7 +218,7 @@ export const getVitrineFootballMatches = createServerFn({ method: "POST" })
     const url = new URL(FOOTBALL_API_URL);
     url.searchParams.set("pais","brasil");
     url.searchParams.set("data",data.date);
-    url.searchParams.set("status","agendado,ao_vivo");
+    // Fetch all events on the chosen date, including matches already completed.
     const response = await fetch(url,{headers:{"x-api-key":key,Accept:"application/json"},signal:AbortSignal.timeout(9000),cache:"no-store"});
     if(!response.ok) throw new Error("Não foi possível consultar a API FTWB (HTTP "+response.status+").");
     const payload:unknown = await response.json();
@@ -194,7 +227,16 @@ export const getVitrineFootballMatches = createServerFn({ method: "POST" })
     const seen = new Set<string>();
     const matches = list.map((raw,i)=>apiFixture(raw,i,data.date)).filter((match):match is FootballMatch=>!!match)
       .filter((match)=>{const unique=[simplify(match.home),simplify(match.away),match.time].join("|");if(seen.has(unique))return false;seen.add(unique);return true;})
-      .sort((a,b)=>a.time.localeCompare(b.time)).slice(0,9);
+      .sort((a,b)=>{
+        const rank=(m:FootballMatch)=>MAIN_TEAMS.findIndex(team=>simplify(m.home).includes(team)||simplify(m.away).includes(team));
+        return rank(a)-rank(b)||a.time.localeCompare(b.time);
+      }).slice(0,9);
+    for(let index=0;index<matches.length;index+=3){
+      const group=matches.slice(index,index+3);
+      if(group.some(match=>!!match.playerPhoto))continue;
+      const featured=await findHighlight(group);
+      if(featured)matches[index]={...matches[index],playerPhoto:featured.photo,playerName:featured.name};
+    }
     return {matches,leagues:footballLeagueOptions,source:"FTWB",partial:false,sourcesSucceeded:1};
   });
 
