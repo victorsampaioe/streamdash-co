@@ -210,7 +210,7 @@ function apiFixture(record: unknown, index: number, date: string): FootballMatch
   const dateTime = pick(record,"data_hora","datetime","inicio","kickoff","starts_at",
     "dataHora","date_time","matchDateTime","data_e_hora");
   const dateTimeText=String(dateTime||"").trim();
-  const inputTime=/(?:T|\\s)\\d{1,2}:\\d{2}/.test(dateTimeText)
+  const inputTime=/(?:T|\s)\d{1,2}:\d{2}/.test(dateTimeText)
     ?dateTimeText:String(clock||dateTime||"").trim();
   const timeWithZone = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}.*(?:Z|[+-]\d{2}:?\d{2})$/i.test(inputTime);
   const absolute = timeWithZone && !Number.isNaN(Date.parse(inputTime))
