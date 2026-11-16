@@ -19,7 +19,7 @@ const fallbackBrand: Branding = {name:"Stream Monitor",logo:"/favicon.ico",conta
 const baseSize = 1080;
 const safeColor = (input: string | undefined) => /^#[0-9a-f]{6}$/i.test(input||"") ? input! : "#146df2";
 
-/** Automated posters: up to three events per artwork, with no manual selectors. */
+/** Automated posters: up to three fixtures per artwork, with optional color customization. */
 export function VitrineFootballStudio() {
   const load = useServerFn(getVitrineFootballMatches);
   const [brand, setBrand] = useState<Branding>(fallbackBrand);
