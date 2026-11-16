@@ -3,8 +3,13 @@ import {createFileRoute} from "@tanstack/react-router";
 export const Route=createFileRoute("/api/public/edge-dns/targets")({
   server:{handlers:{GET:async({request})=>{
     const {authorizeCloudflareDnsBridge}=await import("@/lib/cloudflare-dns-bridge.server");
-    if(!await authorizeCloudflareDnsBridge(request))
-      return Response.json({error:"unauthorized"},{status:401});
+    const {verifyRegionSignature}=await import("@/lib/region-auth.server");
+    const {verifyCloudflareEdgeSignature}=await import("@/lib/region-cloudflare-auth.server");
+    const signature="dns-targets";
+    const verified=await authorizeCloudflareDnsBridge(request)
+      ||verifyRegionSignature(signature,request.headers.get("x-signature"))
+      ||await verifyCloudflareEdgeSignature(signature,request.headers.get("x-cf-signature"));
+    if(!verified)return Response.json({error:"unauthorized"},{status:401});
     const {supabaseAdmin}=await import("@/integrations/supabase/client.server");
     const {getActiveOwnerIds}=await import("@/lib/service-status.server");
     const {data,error}=await supabaseAdmin.from("servers")
