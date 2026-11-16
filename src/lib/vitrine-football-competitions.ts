@@ -5,10 +5,15 @@
 const normalize = (value: string) => value.normalize("NFD")
   .replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
 
+export function isYouthFootballFixture(competition: string, home: string, away: string): boolean {
+  const subject=normalize([competition,home,away].join(" "));
+  return /\b(sub ?(?:1[5-9]|2[0-9])|u ?(?:1[5-9]|2[0-9])|under ?(?:1[5-9]|2[0-9])|youth|junior|juvenil|base|reservas?|reserve)\b/.test(subject);
+}
+
 export function isMajorFootballCompetition(name: string): boolean {
   const n = normalize(name || "");
   if (!n || n === "futebol") return false;
-  if (/\b(sub ?(?:1[5-9]|2[0-3])|u ?(?:1[5-9]|2[0-3])|youth|juvenil|junior|reservas?|reserve|4 ?divisao|terceira divisao|quarta divisao|serie [cd])\b/.test(n)) return false;
+  if (/\b(sub ?(?:1[5-9]|2[0-9])|u ?(?:1[5-9]|2[0-9])|under ?(?:1[5-9]|2[0-9])|youth|juvenil|junior|reservas?|reserve|sub ?20|sub ?23|4 ?divisao|terceira divisao|quarta divisao|serie [cd])\b/.test(n)) return false;
 
   return [
     /\bbrasileirao\b(?:\s+serie\s+[ab])?\b/,
