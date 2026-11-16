@@ -134,6 +134,7 @@ export const Route=createFileRoute("/api/public/edge-dns/report")({
       },{concurrency:3});
       applied=outcome.filter(x=>x.status==="fulfilled").length;
       failed=outcome.filter(x=>x.status==="rejected").length;
+      if(failed)console.error("[edge-dns/report] state_apply_failed",outcome.filter(x=>x.status==="rejected").map(x=>x.reason instanceof Error?x.reason.message.slice(0,180):"unknown").slice(0,4));
     }
     return Response.json({ok:true,mode:primary?"cloudflare":"shadow",
       accepted:saved?.length??0,applied,failed,skipped:parsed.data.checks.length-good.length
