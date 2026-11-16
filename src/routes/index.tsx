@@ -386,7 +386,7 @@ function Landing() {
 
             <article className="group overflow-hidden rounded-3xl border border-blue-400/25 bg-[#071126]/95 shadow-[0_18px_70px_rgba(0,0,0,.3)]">
               <div className="relative overflow-hidden bg-[#051022] p-3 sm:p-5">
-                <img src="https://assets.streammonitor.site/Tres-Horas-Para-Viver-1080x1350.png" alt="Exemplo de Vitrine Banner: Três Horas Para Viver, com sinopse, dispositivos compatíveis e contato WhatsApp" width={1080} height={1350} loading="lazy" className="mx-auto aspect-[4/5] w-full max-w-[440px] rounded-2xl object-contain shadow-2xl transition-transform duration-500 group-hover:scale-[1.015]" />
+                <img src="https://assets.streammonitor.site/Tres-Horas-Para-Viver-1080x1350.png" onError={e=>{const img=e.currentTarget;if(!img.dataset.fallback){img.dataset.fallback="1";img.src="/examples/vitrine-banner-dispositivos.svg";}}} alt="Exemplo de Vitrine Banner: Três Horas Para Viver, com sinopse, dispositivos compatíveis e contato WhatsApp" width={1080} height={1350} loading="lazy" className="mx-auto aspect-[4/5] w-full max-w-[440px] rounded-2xl object-contain shadow-2xl transition-transform duration-500 group-hover:scale-[1.015]" />
                 <span className="absolute left-6 top-6 rounded-full border border-blue-300/35 bg-[#07172f]/90 px-3 py-1.5 text-[11px] font-bold uppercase tracking-wider text-blue-200">Criações ilimitadas</span>
               </div>
               <div className="space-y-4 p-6 sm:p-7">
