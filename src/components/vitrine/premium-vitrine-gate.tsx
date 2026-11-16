@@ -20,7 +20,7 @@ export function PremiumVitrineGate({children}:{children:ReactNode}){
     <main className="mx-auto mt-10 max-w-xl rounded-2xl border border-blue-500/30 bg-slate-950 p-7 text-center text-white shadow-2xl">
       <div className="text-4xl">🔒</div>
       <h1 className="mt-4 text-2xl font-bold">Assinatura necessária</h1>
-      <p className="mt-3 text-slate-300">A Vitrine Banner e a Vitrine IA são recursos exclusivos de contas com assinatura ativa. Para criar ou baixar artes, escolha um plano e conclua o pagamento.</p>
+      <p className="mt-3 text-slate-300">As ferramentas premium do Stream Monitor, incluindo Vitrine Banner e Vitrine IA, exigem uma assinatura paga e vigente. Escolha um plano e conclua o pagamento para liberar o painel.</p>
       <Link to="/app/subscription" className="mt-6 inline-flex items-center justify-center rounded-xl bg-blue-600 px-6 py-3 font-semibold text-white hover:bg-blue-500">Ver planos e pagar com Pix</Link>
       <button type="button" onClick={()=>state.refetch()} className="mt-4 block w-full text-sm text-blue-300 underline">Já paguei · verificar novamente</button>
     </main>
