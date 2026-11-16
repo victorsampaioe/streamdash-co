@@ -281,6 +281,17 @@ export function VitrineFootballStudio() {
     if (mode === "featured" && !featured) return toast.error("Selecione uma partida real.");
     setExporting(true);
     try {
+      // Uploaded images are data URLs, but React may not have finished painting
+      // them yet when the user immediately clicks Download.
+      await Promise.all([...artRef.current.querySelectorAll("img")].map(
+        async (image) => {
+          if (!image.complete && typeof image.decode === "function") {
+            await image.decode().catch(() => {});
+          } else if (image.complete && image.naturalWidth === 0) {
+            throw new Error("Uma imagem não pôde ser carregada para a exportação.");
+          }
+        }
+      ));
       const png = await toPng(artRef.current, {
         pixelRatio: 1,
         backgroundColor: accent,
@@ -294,8 +305,8 @@ export function VitrineFootballStudio() {
       a.click();
       a.remove();
       toast.success("Arte PNG gerada com sucesso.");
-    } catch {
-      toast.error("Falha ao exportar a arte. Remova imagens externas ou tente outro navegador.");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Não foi possível exportar o PNG. Confira as imagens selecionadas.");
     } finally { setExporting(false); }
   }
 
