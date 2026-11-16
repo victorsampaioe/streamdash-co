@@ -329,6 +329,7 @@ async function flushReports(env){
     }
     try{
       const result=await api(env,"/api/public/edge-dns/report","POST",JSON.parse(item.payload));
+      console.log("edge_dns_report_result",JSON.stringify({mode:result.mode,accepted:result.accepted,applied:result.applied,failed:result.failed,reasons:result.failureReasons||[]}).slice(0,350));
       console.log("edge_dns_delivery_response",JSON.stringify({mode:result.mode,accepted:result.accepted,applied:result.applied,failed:result.failed}));
       if(Number(result.failed||0)>0)throw new Error("origin_partial_apply_failure: "+(result.failureReasons||[]).join("; ").slice(0,250));
       await env.DNS_DB.prepare("DELETE FROM dns_pending_reports WHERE id=?").bind(item.id).run();
