@@ -206,6 +206,49 @@ export class BackupEnrollment extends WorkerEntrypoint {
       return {ok:false,reason:String(e?.message||e).slice(0,110)};
     }
   }
+  /**
+   * Verify the source and R2 bytes of the canary match cryptographically.
+   * Separately confirm private Storage supports bounded HTTP Range for the
+   * PostgreSQL archive. Do not download the full archive in a single Worker.
+   */
+  async verifyCanaryAndArchiveRange(){
+    const file=await this.env.BACKUP_STATE.prepare(
+      "SELECT * FROM backup_objects WHERE status='copied_size_verified' AND source_size<=? ORDER BY source_size ASC LIMIT 1"
+    ).bind(SMALL_LIMIT).first();
+    if(!file)return {ok:false,reason:"canary_missing"};
+    const saved=await this.env.BACKUP_BUCKET.get(file.r2_key);
+    if(!saved||saved.size!==file.source_size)return {ok:false,reason:"r2_canary_missing"};
+    const sourceUrl=await signedFile(this.env,file);
+    const sourceBytes=await readSource(sourceUrl,0,file.source_size-1,false);
+    const targetBytes=await saved.arrayBuffer();
+    const [left,right]=await Promise.all([
+      crypto.subtle.digest("SHA-256",sourceBytes),
+      crypto.subtle.digest("SHA-256",targetBytes)
+    ]);
+    const first=new Uint8Array(left),second=new Uint8Array(right);
+    const equal=first.length===second.length&&first.every((b,i)=>b===second[i]);
+    if(!equal)return {ok:false,reason:"canary_sha256_mismatch"};
+    const archive=await this.env.BACKUP_STATE.prepare(
+      "SELECT * FROM backup_objects WHERE bucket='database_export_15_11_26' AND source_size>? LIMIT 1"
+    ).bind(SMALL_LIMIT).first();
+    if(!archive)return {ok:false,reason:"archive_not_in_inventory",canarySha256Match:true};
+    const archiveUrl=await signedFile(this.env,archive);
+    const response=await fetch(archiveUrl,{
+      method:"GET",headers:{range:"bytes=0-1023"},
+      redirect:"follow",cache:"no-store",signal:AbortSignal.timeout(20000)
+    });
+    const contentRange=response.headers.get("content-range")||"";
+    const rightStatus=response.status===206
+      &&contentRange.startsWith("bytes 0-1023/")
+      &&contentRange.endsWith("/"+archive.source_size);
+    if(!rightStatus){
+      if(response.body)await response.body.cancel().catch(()=>{});
+      return {ok:false,reason:"archive_range_not_supported_"+response.status,canarySha256Match:true};
+    }
+    const chunk=await response.arrayBuffer();
+    if(chunk.byteLength!==1024)return {ok:false,reason:"archive_range_wrong_size",canarySha256Match:true};
+    return {ok:true,canarySha256Match:true,archiveRangeSupported:true,canaryBytes:file.source_size};
+  }
   async canaryCopySmall(){
     if(!(await this.testManifest()).ok)return {ok:false,reason:"manifest_not_verified"};
     const inventory=await recordInventory(this.env);
