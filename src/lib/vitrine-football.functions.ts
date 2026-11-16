@@ -211,11 +211,11 @@ function apiFixture(record: unknown, index: number, date: string): FootballMatch
   // Trust the provider's explicit fixture date when it is present. The requested
   // date is only a fallback for records without their own date field.
   const sourceDate=String(pick(record,"data","data_jogo","date","match_date","matchDate","dataPartida","dia")||"").trim();
-  const isoSource=/^(\\d{4}-\\d{2}-\\d{2})(?:[T\\s]|$)/.exec(sourceDate)?.[1];
-  const brazilianSource=/^(\\d{2})\\/(\\d{2})\\/(\\d{4})$/.exec(sourceDate);
+  const isoSource=/^(\d{4}-\d{2}-\d{2})(?:[T\s]|$)/.exec(sourceDate)?.[1];
+  const brazilianSource=/^(\d{2})\/(\d{2})\/(\d{4})$/.exec(sourceDate);
   const sourceDay=isoSource||(brazilianSource
     ?brazilianSource[3]+"-"+brazilianSource[2]+"-"+brazilianSource[1]:date);
-  const dayFromValue=/^(\\d{4}-\\d{2}-\\d{2})[T ]/.exec(inputTime)?.[1] || sourceDay;
+  const dayFromValue=/^(\d{4}-\d{2}-\d{2})[T ]/.exec(inputTime)?.[1] || sourceDay;
   const clockMatch=/(?:^|[T\s])(\d{1,2}):(\d{2})(?::\d{2})?(?:\s|$|[Z+-])/.exec(inputTime)
     || /^(\d{1,2}):(\d{2})$/.exec(String(clock||"").trim());
   const formattedClock = clockMatch && Number(clockMatch[1])<24 && Number(clockMatch[2])<60
