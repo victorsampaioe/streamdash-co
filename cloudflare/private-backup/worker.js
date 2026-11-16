@@ -104,6 +104,14 @@ async function markComplete(env,file){
   console.log("private_backup_object_copied",JSON.stringify({source:file.bucket,bytes:file.source_size}));
 }
 async function writeLarge(env,file){
+  // A Worker can be interrupted after multipart completion but before its D1
+  // state update. Reconcile with R2 first instead of retrying a closed upload.
+  const existing=await env.BACKUP_BUCKET.head(file.r2_key);
+  if(existing){
+    if(existing.size!==file.source_size)throw new Error("backup_r2_existing_size_mismatch");
+    await markComplete(env,file);
+    return;
+  }
   let uploadId=file.upload_id;
   let parts=JSON.parse(file.parts_json||"[]");
   let next=Math.max(1,Number(file.next_part)||1);
