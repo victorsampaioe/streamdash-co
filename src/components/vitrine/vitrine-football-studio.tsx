@@ -3,623 +3,143 @@ import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { toPng } from "html-to-image";
 import { supabase } from "@/integrations/supabase/client";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Card } from "@/components/ui/card";
 import { toast } from "sonner";
-import { CalendarDays, Check, Download, ImagePlus, RefreshCw, ShieldCheck, Sparkles, Trophy } from "lucide-react";
-import { FootballSchedulePoster, FOOTBALL_POSTER_PALETTES } from "@/components/vitrine/football-schedule-poster";
-import {
-  getVitrineFootballMatches, getVitrineFootballPlayers, getVitrineFootballImage,
-  type FootballMatch, type FootballPlayer,
-} from "@/lib/vitrine-football.functions";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { Download, RefreshCw, Trophy } from "lucide-react";
+import { FootballSchedulePoster } from "@/components/vitrine/football-schedule-poster";
+import { getVitrineFootballMatches, type FootballMatch } from "@/lib/vitrine-football.functions";
 
-type Kind = "today" | "featured";
-type Format = "feed" | "story" | "landscape";
-type TeamSide = "home" | "away";
-const DEFAULT_LEAGUES = [
-  "brazilian-serie-a", "brazilian-serie-b", "conmebol-copa-libertadores",
-  "spanish-la-liga", "english-premier-league", "uefa-champions-league",
-  "uefa-nations-league", "international-friendly",
-];
-const LEAGUES = [
-  {id:"brazilian-serie-a",name:"🇧🇷 Série A"},{id:"brazilian-serie-b",name:"🇧🇷 Série B"},
-  {id:"brazilian-cup",name:"🇧🇷 Copa do Brasil"},
-  {id:"conmebol-copa-libertadores",name:"🏆 Libertadores"},
-  {id:"conmebol-copa-sudamericana",name:"🏆 Sul-Americana"},
-  {id:"spanish-la-liga",name:"🇪🇸 La Liga"},
-  {id:"english-premier-league",name:"🏴 Premier League"},
-  {id:"uefa-champions-league",name:"⭐ Champions League"},
-  {id:"uefa-europa-league",name:"🏆 Europa League"},
-  {id:"italian-serie-a",name:"🇮🇹 Serie A"},
-  {id:"bundesliga",name:"🇩🇪 Bundesliga"},
-  {id:"french-ligue-1",name:"🇫🇷 Ligue 1"},
-  {id:"portuguese-primera-liga",name:"🇵🇹 Liga Portugal"},
-  {id:"uefa-nations-league",name:"🌍 Nations League"},
-  {id:"international-friendly",name:"🌍 Amistosos"},
-  {id:"fifa-world-cup",name:"🌎 Copa do Mundo"},
-];
-const DIMENSIONS: Record<Format, { width: number; height: number; title: string }> = {
-  feed: { width: 1080, height: 1080, title: "Feed 1080 × 1080" },
-  story: { width: 1080, height: 1920, title: "Story 1080 × 1920" },
-  landscape: { width: 1200, height: 675, title: "Banner 1200 × 675" },
-};
-const AI_WORKER_URL = "https://streammonitor-vitrine-ai.victorsampaio133.workers.dev/generate";
-const getToday = () => new Intl.DateTimeFormat("sv-SE", {
+const today = () => new Intl.DateTimeFormat("sv-SE", {
   timeZone: "America/Fortaleza", year: "numeric", month: "2-digit", day: "2-digit",
 }).format(new Date());
-async function uploadedDataUrl(file: File) {
-  if (!["image/png", "image/jpeg", "image/webp"].includes(file.type) || file.size > 5 * 1024 * 1024 || file.size === 0) {
-    throw new Error("Envie imagem PNG, JPG ou WEBP de até 5 MB.");
-  }
-  return new Promise<string>((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onerror = () => reject(new Error("Não foi possível ler o arquivo enviado."));
-    reader.onload = () => {
-      const result = String(reader.result || "");
-      if (!result.startsWith("data:image/")) {
-        reject(new Error("Formato de arquivo inválido.")); return;
-      }
-      const image = new Image();
-      image.onload = () => {
-        if (image.naturalWidth < 1 || image.naturalHeight < 1) reject(new Error("Imagem sem dimensões válidas."));
-        else resolve(result);
-      };
-      image.onerror = () => reject(new Error("Arquivo de imagem corrompido ou incompatível."));
-      image.src = result;
-    };
-    reader.readAsDataURL(file);
-  });
-}
+type Branding = { name: string; logo: string; contact: string; accent: string };
+const fallbackBrand: Branding = {name:"Stream Monitor",logo:"/favicon.ico",contact:"",accent:"#146df2"};
+const baseSize = 1080;
+const safeColor = (input: string | undefined) => /^#[0-9a-f]{6}$/i.test(input||"") ? input! : "#146df2";
+
+/** One poster per three real fixtures; no user-facing game, team or player controls. */
 export function VitrineFootballStudio() {
-  const fetchGames = useServerFn(getVitrineFootballMatches);
-  const fetchPlayers = useServerFn(getVitrineFootballPlayers);
-  const fetchImage = useServerFn(getVitrineFootballImage);
-  const [date, setDate] = useState(getToday);
-  const [mode, setMode] = useState<Kind>("today");
-  const [format, setFormat] = useState<Format>("feed");
-  const [selectedLeagues, setSelectedLeagues] = useState<string[]>(DEFAULT_LEAGUES);
-  const [playerSearch, setPlayerSearch] = useState("");
-  const [debouncedPlayerSearch, setDebouncedPlayerSearch] = useState("");
-  const [selectedIds, setSelectedIds] = useState<string[]>([]);
-  const [featuredId, setFeaturedId] = useState("");
-  const [playerSide, setPlayerSide] = useState<TeamSide>("home");
-  const [playerId, setPlayerId] = useState("");
-  const [playerUpload, setPlayerUpload] = useState("");
-  const [playerUploadName, setPlayerUploadName] = useState("");
-  const [playerFit, setPlayerFit] = useState<"contain" | "cover">("contain");
-  const [manualBadgeImages, setManualBadgeImages] = useState<Record<string, string>>({});
-  const [badgeFailures, setBadgeFailures] = useState<Record<string, string>>({});
-  const [badgeLoading, setBadgeLoading] = useState(false);
-  const [badgeReload, setBadgeReload] = useState(0);
-  const [remotePlayerError, setRemotePlayerError] = useState("");
-  const [logo, setLogo] = useState("");
-  const [brand, setBrand] = useState("Stream Monitor");
-  const [whatsapp, setWhatsapp] = useState("");
-  const [accent, setAccent] = useState("#ee1519");
-  const [channels, setChannels] = useState<Record<string,string>>({});
-  const [headline, setHeadline] = useState("");
-  const [rightsConfirmed, setRightsConfirmed] = useState(false);
-  const [aiBackground, setAiBackground] = useState("");
-  const [generating, setGenerating] = useState(false);
-  const [exporting, setExporting] = useState(false);
-  const [badgeImages, setBadgeImages] = useState<Record<string, string>>({});
-  const [playerRemote, setPlayerRemote] = useState("");
-  const [maxWidth, setMaxWidth] = useState(520);
-  const artRef = useRef<HTMLDivElement>(null);
-  const measureRef = useRef<HTMLDivElement>(null);
-  const games = useQuery({
-    queryKey: ["admin-football-games", date, selectedLeagues],
-    enabled: selectedLeagues.length > 0,
-    queryFn: () => fetchGames({ data: { date, leagues: selectedLeagues } }),
-    staleTime: 5 * 60_000,
-    retry: 1,
-  });
-  const fixtures = useMemo(() => games.data?.matches ?? [], [games.data]);
-  const featured = fixtures.find((m) => m.id === featuredId) ?? fixtures[0] ?? null;
-  const visibleMatches = useMemo(() =>
-    selectedIds.length ? fixtures.filter((m) => selectedIds.includes(m.id)) : fixtures.slice(0, 6),
-    [fixtures, selectedIds]);
-  useEffect(() => {
-    const timer = setTimeout(() => setDebouncedPlayerSearch(playerSearch.trim()), 400);
-    return () => clearTimeout(timer);
-  }, [playerSearch]);
-  const players = useQuery({
-    queryKey: ["admin-football-players", debouncedPlayerSearch],
-    enabled: debouncedPlayerSearch.length >= 2,
-    queryFn: () => fetchPlayers({ data: { query: debouncedPlayerSearch } }),
-    staleTime: 10 * 60_000,
-    retry: 0,
-  });
-  const athleteList = players.data?.players ?? [];
-  const athlete = athleteList.find((x) => x.id === playerId) ?? null;
+  const load = useServerFn(getVitrineFootballMatches);
+  const [brand, setBrand] = useState<Branding>(fallbackBrand);
+  const [saving, setSaving] = useState<number | null>(null);
+  const [width, setWidth] = useState(520);
+  const wrapper = useRef<HTMLDivElement>(null);
+  const posterRefs = useRef<(HTMLDivElement | null)[]>([]);
+  const [day, setDay] = useState(today);
 
   useEffect(() => {
-    setFeaturedId("");
-    setSelectedIds([]);
-    setAiBackground("");
-  }, [date, selectedLeagues]);
-  useEffect(() => {
-    // Changing fixtures does not erase a manually uploaded player photo.
-    // Only the remote player suggestion depends on the selected match.
-    setPlayerId("");
-    setPlayerRemote("");
-    setRemotePlayerError("");
-  }, [featured?.id, playerSide]);
-  useEffect(() => {
-    if (playerId || !athleteList.length) return;
-    // The first API result is a suggestion, NOT a verified starting player or star.
-    const preferred = athleteList.find((p) => p.image) ?? athleteList[0];
-    if (preferred) setPlayerId(preferred.id);
-  }, [athleteList, playerId]);
-  useEffect(() => {
-    const node = measureRef.current;
-    if (!node) return;
-    const update = () => setMaxWidth(Math.max(270, Math.min(550, node.clientWidth - 16)));
-    update();
-    const observer = new ResizeObserver(update);
-    observer.observe(node);
-    return () => observer.disconnect();
+    const holder = wrapper.current;
+    if (!holder) return;
+    const observe = new ResizeObserver(() => setWidth(Math.min(550, Math.max(280, holder.clientWidth - 8))));
+    observe.observe(holder);
+    return () => observe.disconnect();
   }, []);
-  const sizes = DIMENSIONS[format];
-  const scale = maxWidth / sizes.width;
-
-  const usedBadges = useMemo(() => {
-    const matches = mode === "today" ? visibleMatches.slice(0, format === "landscape" ? 2 : format === "story" ? 6 : 4) : featured ? [featured] : [];
-    return [...new Set(matches.flatMap((m) => [m.homeBadge, m.awayBadge]).filter(Boolean))];
-  }, [mode, visibleMatches, featured, format]);
-
   useEffect(() => {
-    if (!rightsConfirmed || !usedBadges.length) {
-      setBadgeImages({});
-      setBadgeFailures({});
-      setBadgeLoading(false);
-      return;
+    let active = true;
+    async function fetchBrand() {
+      const {data:{user}} = await supabase.auth.getUser();
+      if (!user) return;
+      const [promo, page, profile] = await Promise.all([
+        supabase.from("promo_brand_settings" as any).select("brand_name,logo_url,whatsapp,primary_color").eq("owner_id",user.id).maybeSingle(),
+        supabase.from("reseller_pages" as any).select("display_name,logo_url,whatsapp,primary_color").eq("owner_id",user.id).maybeSingle(),
+        supabase.from("profiles").select("full_name,whatsapp,phone").eq("id",user.id).maybeSingle(),
+      ]);
+      if (!active) return;
+      const p = promo.data as {brand_name?:string;logo_url?:string;whatsapp?:string;primary_color?:string} | null;
+      const r = page.data as {display_name?:string;logo_url?:string;whatsapp?:string;primary_color?:string} | null;
+      const u = profile.data as {full_name?:string;whatsapp?:string;phone?:string} | null;
+      setBrand({
+        name:p?.brand_name||r?.display_name||u?.full_name||"Stream Monitor",
+        logo:p?.logo_url||r?.logo_url||"/favicon.ico",
+        contact:p?.whatsapp||r?.whatsapp||u?.whatsapp||u?.phone||"",
+        accent:safeColor(p?.primary_color||r?.primary_color),
+      });
     }
-    let disposed = false;
-    setBadgeLoading(true);
-    void (async () => {
-      const results = await Promise.all(usedBadges.map(async (url) => {
-        try {
-          const response = await fetchImage({ data: { url, rightsConfirmed: true } });
-          return { url, src: response.dataUrl, error: "" };
-        } catch (error) {
-          return { url, src: "", error: error instanceof Error ? error.message : "Imagem indisponível" };
-        }
+    void fetchBrand();
+    return () => {active=false;};
+  }, []);
+
+  const games = useQuery({
+    queryKey:["vitrine-football-ftwb",day],
+    queryFn:()=>load({data:{date:day}}),
+    staleTime:5*60_000,
+    retry:1,
+  });
+  const groups = useMemo(() => {
+    const matches = games.data?.matches ?? [];
+    return [matches.slice(0,3),matches.slice(3,6),matches.slice(6,9)].filter((group)=>group.length>0);
+  }, [games.data]);
+  const haveChannels = (match:FootballMatch) => (match.broadcasts||[]).slice(0,3).join(" • ") || "TRANSMISSÃO NÃO CONFIRMADA";
+
+  async function download(index:number) {
+    const node=posterRefs.current[index];
+    if (!node || saving!==null) return;
+    setSaving(index);
+    try {
+      await document.fonts.ready;
+      const images=Array.from(node.querySelectorAll("img"));
+      await Promise.all(images.map(async (img)=>{
+        if(img.complete) return;
+        await new Promise<void>((resolve)=>{img.addEventListener("load",()=>resolve(),{once:true});img.addEventListener("error",()=>resolve(),{once:true});});
       }));
-      if (!disposed) {
-        setBadgeImages(Object.fromEntries(results.map((x) => [x.url, x.src])));
-        setBadgeFailures(Object.fromEntries(results.filter((x) => x.error).map((x) => [x.url, x.error])));
-        setBadgeLoading(false);
-      }
-    })();
-    return () => { disposed = true; };
-  }, [rightsConfirmed, usedBadges, fetchImage, badgeReload]);
-
-  useEffect(() => {
-    setPlayerRemote("");
-    setRemotePlayerError("");
-    if (!rightsConfirmed || !athlete?.image || playerUpload) return;
-    let disposed = false;
-    void fetchImage({ data: { url: athlete.image, rightsConfirmed: true } })
-      .then((v) => { if (!disposed) setPlayerRemote(v.dataUrl); })
-      .catch((error) => {
-        if (!disposed) {
-          setPlayerRemote("");
-          setRemotePlayerError(error instanceof Error ? error.message : "Foto remota indisponível.");
-        }
-      });
-    return () => { disposed = true; };
-  }, [rightsConfirmed, athlete?.image, playerUpload, fetchImage]);
-
-  // Manually supplied artwork must be previewed immediately; rights consent
-  // only gates third-party images fetched automatically from the provider.
-  const playerPhoto = playerUpload || (rightsConfirmed ? playerRemote : "");
-  const appliedBadges = { ...badgeImages, ...manualBadgeImages };
-  const badgeUrlCount = usedBadges.length;
-  const badgeOkCount = usedBadges.filter((url) => !!badgeImages[url]).length;
-  const effectiveHeadline = headline.trim() || (mode === "today" ? "JOGOS DO DIA" : "JOGAÇO DO DIA");
-
-  async function onFile(file: File | undefined, type: "logo" | "player") {
-    if (!file) return;
-    try {
-      const dataUrl = await uploadedDataUrl(file);
-      if (type === "logo") {
-        setLogo(dataUrl);
-        toast.success("Logo aplicada à prévia.");
-      } else {
-        setPlayerUpload(dataUrl);
-        setPlayerUploadName(file.name);
-        setPlayerFit(file.type === "image/png" ? "contain" : "cover");
-        toast.success("Foto do jogador aplicada à prévia.");
-      }
-    } catch (error) { toast.error(error instanceof Error ? error.message : "Imagem inválida."); }
+      const png=await toPng(node,{pixelRatio:1,cacheBust:true,backgroundColor:"#071227",skipFonts:false});
+      const anchor=document.createElement("a");
+      anchor.href=png;
+      anchor.download="stream-monitor-futebol-"+day+"-arte-"+(index+1)+".png";
+      anchor.click();
+      toast.success("Arte "+(index+1)+" baixada.");
+    } catch {
+      toast.error("Falha ao exportar PNG. Uma imagem externa pode estar bloqueando a exportação.");
+    } finally {setSaving(null);}
   }
-
-  async function onTeamBadge(file: File | undefined, key: string, teamName: string) {
-    if (!file) return;
-    try {
-      const dataUrl = await uploadedDataUrl(file);
-      setManualBadgeImages((current) => ({ ...current, [key]: dataUrl }));
-      toast.success(`Escudo de ${teamName} aplicado.`);
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Não foi possível abrir o escudo.");
-    }
-  }
-
-  async function generateStadium() {
-    if (generating) return;
-    setGenerating(true);
-    try {
-      const { data: { session }, error } = await supabase.auth.getSession();
-      if (error || !session?.access_token) throw new Error("Faça login novamente.");
-      const publicKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
-      if (!publicKey) throw new Error("Chave pública do projeto não configurada.");
-      const response = await fetch(AI_WORKER_URL, {
-        method: "POST",
-        headers: { Authorization: `Bearer ${session.access_token}`, apikey: publicKey,
-          "Content-Type": "application/json" },
-        body: JSON.stringify({
-          title: "Estádio cinematográfico original",
-          overview: "An original cinematic packed football stadium at dusk under floodlights, dramatic clouds, realistic green pitch and anonymous unrecognizable crowd. Dramatic lighting color: " + accent + ". No recognizable players or faces, team symbols, signage, trademarks or writing.",
-          genre: "football, sport, original stadium, matchday, dynamic colorful cinematic atmosphere",
-          mediaType: "movie",
-          style: "acao",
-          format,
-        }),
-      });
-      const data = await response.json() as { image?: string; error?: string };
-      if (!response.ok || !data.image?.startsWith("data:image/")) {
-        throw new Error(data.error || "A Cloudflare não retornou a imagem.");
-      }
-      setAiBackground(data.image);
-      toast.success("Estádio gerado pela Cloudflare IA. Agora finalize sua arte.");
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Não foi possível gerar o cenário.");
-    } finally { setGenerating(false); }
-  }
-  async function download() {
-    if (!artRef.current || exporting) return;
-    if (mode === "today" && visibleMatches.length === 0) return toast.error("Selecione pelo menos uma partida real.");
-    if (mode === "featured" && !featured) return toast.error("Selecione uma partida real.");
-    setExporting(true);
-    try {
-      // Uploaded images are data URLs, but React may not have finished painting
-      // them yet when the user immediately clicks Download.
-      await Promise.all([...artRef.current.querySelectorAll("img")].map(
-        async (image) => {
-          if (!image.complete && typeof image.decode === "function") {
-            await image.decode().catch(() => {});
-          } else if (image.complete && image.naturalWidth === 0) {
-            throw new Error("Uma imagem não pôde ser carregada para a exportação.");
-          }
-        }
-      ));
-      const png = await toPng(artRef.current, {
-        pixelRatio: 1,
-        backgroundColor: accent,
-        skipFonts: true,
-        cacheBust: false,
-      });
-      const a = document.createElement("a");
-      a.href = png;
-      a.download = `stream-monitor-futebol-${mode}-${date}-${format}.png`;
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      toast.success("Arte PNG gerada com sucesso.");
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Não foi possível exportar o PNG. Confira as imagens selecionadas.");
-    } finally { setExporting(false); }
-  }
-
-  return <div className="mx-auto w-full max-w-[1550px] space-y-6 pb-20">
-    <div className="overflow-hidden rounded-3xl border border-sky-500/25 bg-gradient-to-r from-[#071329] via-[#0c234b] to-[#092350] p-6 text-white shadow-2xl sm:p-8">
-      <div className="flex flex-wrap items-center justify-between gap-4">
-        <div>
-          <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-blue-400/40 bg-blue-500/15 px-4 py-2 text-xs font-bold uppercase tracking-widest text-blue-200">
-            <ShieldCheck className="h-4 w-4" /> Teste privado · apenas admin
-          </div>
-          <h1 className="flex items-center gap-3 text-3xl font-black sm:text-4xl"><Trophy className="h-9 w-9 text-sky-300" /> Vitrine IA Futebol</h1>
-          <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-300">Novo visual de cartaz esportivo: agenda em cartões brancos, jogador grande, sua marca, WhatsApp e 6 cores de fundo. Partidas reais e download PNG, sem divulgação automática.</p>
-        </div>
-        <div className="rounded-2xl border border-white/20 bg-white/10 px-5 py-4 text-sm text-slate-200">Fuso dos jogos: <strong>Fortaleza / Brasília</strong><br />Fonte: <strong>SportScore</strong></div>
+  const scale=width/baseSize;
+  return <main className="mx-auto max-w-7xl space-y-6 px-4 py-8">
+    <div className="flex flex-wrap items-center justify-between gap-4">
+      <div>
+        <div className="flex items-center gap-2 text-xs font-bold tracking-[.18em] text-blue-400"><Trophy size={17}/> STREAM MONITOR</div>
+        <h1 className="mt-2 text-3xl font-black tracking-tight">Jogos do dia · Artes automáticas</h1>
+        <p className="mt-2 text-sm text-muted-foreground">Os confrontos dos principais times são organizados automaticamente em até 3 artes, com até 3 canais por jogo.</p>
       </div>
+      <Button type="button" variant="outline" disabled={games.isFetching} onClick={()=>{setDay(today());void games.refetch()}}>
+        <RefreshCw size={16} className={games.isFetching?"mr-2 animate-spin":"mr-2"}/> Atualizar jogos
+      </Button>
     </div>
-
-    <div className="grid gap-6 xl:grid-cols-[minmax(0,470px)_minmax(0,1fr)]">
-      <div className="space-y-5">
-        <Card className="space-y-5 p-5">
-          <h2 className="text-lg font-bold">1. Escolha o tipo de arte</h2>
-          <div className="grid grid-cols-2 gap-3">
-            <Button onClick={() => { setMode("today"); setHeadline(""); }} variant={mode === "today" ? "default" : "outline"} className="h-14">Jogos de Hoje</Button>
-            <Button onClick={() => { setMode("featured"); setHeadline(""); }} variant={mode === "featured" ? "default" : "outline"} className="h-14">Jogo em Destaque</Button>
-          </div>
-          <label className="block text-sm font-semibold">Data dos jogos
-            <Input type="date" className="mt-2" value={date} onChange={(e) => setDate(e.target.value || getToday())} />
-          </label>
-          <div className="space-y-3 rounded-xl border border-blue-500/15 bg-blue-500/5 p-3">
-            <div className="flex items-center justify-between">
-              <strong className="text-sm">Campeonatos</strong>
-              <Button variant="ghost" size="sm" onClick={() => setSelectedLeagues(LEAGUES.map((l) => l.id))}>Todos</Button>
-            </div>
-            <div className="flex flex-wrap gap-2">
-              {LEAGUES.map((league) => <button key={league.id} type="button"
-                aria-pressed={selectedLeagues.includes(league.id)}
-                onClick={() => setSelectedLeagues((old) => old.includes(league.id) ? old.filter((id) => id !== league.id) : [...old, league.id])}
-                className={`rounded-full border px-3 py-2 text-xs font-bold transition-colors ${selectedLeagues.includes(league.id) ? "border-sky-500 bg-blue-600 text-white" : "border-border bg-background text-muted-foreground hover:border-blue-500/60"}`}>
-                {league.name}
-              </button>)}
-            </div>
-            {!selectedLeagues.length && <p className="text-xs text-amber-400">Selecione pelo menos um campeonato.</p>}
-          </div>
-          <div className="flex items-center justify-between">
-            <span className="text-sm font-bold">Partidas encontradas: {fixtures.length}</span>
-            <Button variant="outline" size="sm" onClick={() => void games.refetch()} disabled={games.isFetching}>
-              <RefreshCw className={`mr-2 h-4 w-4 ${games.isFetching ? "animate-spin" : ""}`} /> Atualizar
+    {games.isPending&&<Card className="p-8 text-center">Consultando jogos de hoje…</Card>}
+    {games.isError&&<Card className="p-8 text-center text-destructive" role="alert">
+      {games.error instanceof Error?games.error.message:"Não foi possível consultar os jogos de hoje."}
+    </Card>}
+    {games.isSuccess&&groups.length===0&&<Card className="p-8 text-center">Não foram encontrados jogos dos times prioritários para hoje.</Card>}
+    {games.isSuccess&&groups.length>0&&<div className="grid gap-8 xl:grid-cols-2" ref={wrapper}>
+      {groups.map((group,index)=>{
+        const featured=group.find(match=>!!match.playerPhoto);
+        const badgeImages:Record<string,string>={};
+        for(const match of group) {
+          if(match.homeBadge)badgeImages[match.homeBadge]=match.homeBadge;
+          if(match.awayBadge)badgeImages[match.awayBadge]=match.awayBadge;
+        }
+        const channels=Object.fromEntries(group.map(match=>[match.id,haveChannels(match)]));
+        return <Card className="overflow-hidden p-4" key={group.map(m=>m.id).join("|")}>
+          <div className="flex items-center justify-between gap-3 pb-4">
+            <strong className="text-base">Arte {index+1} de {groups.length}</strong>
+            <Button type="button" disabled={saving!==null} onClick={()=>void download(index)}>
+              <Download size={16} className="mr-2"/>{saving===index?"Preparando PNG…":"Baixar PNG"}
             </Button>
           </div>
-          {games.isLoading && <p className="text-sm text-muted-foreground">Consultando a programação esportiva…</p>}
-          {games.isError && <p role="alert" className="rounded-lg border border-red-500/30 bg-red-500/5 p-3 text-sm text-red-400">Não foi possível consultar os jogos. Verifique a conexão e tente novamente.</p>}
-          {!!games.data && <p className="rounded-lg border border-blue-500/15 bg-blue-500/5 p-3 text-xs leading-5 text-muted-foreground">
-            Agenda: {games.data.sourcesSucceeded}/{games.data.sourcesTotal} consultas concluídas.
-            {games.data.partial ? " Algumas consultas falharam; tente atualizar. " : " "}
-            Confira horários antes de publicar. Dados de <a href="https://sportscore.com/" rel="dofollow" target="_blank" className="font-semibold text-sky-500 underline">SportScore</a>.
-          </p>}
-          <div className="max-h-[360px] space-y-2 overflow-y-auto pr-1">
-            {fixtures.map((m) => {
-              const checked = mode === "featured" ? featured?.id === m.id : (selectedIds.length ? selectedIds.includes(m.id) : fixtures.slice(0, 6).some((v) => v.id === m.id));
-              return <button key={m.id} type="button"
-                onClick={() => {
-                  if (mode === "featured") setFeaturedId(m.id);
-                  else {
-                    const defaults = selectedIds.length ? selectedIds : fixtures.slice(0, 6).map((v) => v.id);
-                    setSelectedIds(checked ? defaults.filter((id) => id !== m.id) : [...defaults, m.id].slice(0, 6));
-                  }
-                }}
-                className={`w-full rounded-xl border p-3 text-left text-sm transition-colors ${checked ? "border-sky-400/60 bg-sky-500/10" : "border-border hover:bg-muted/60"}`}>
-                <div className="flex items-center gap-3">
-                  <div className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full border ${checked ? "border-sky-400 bg-sky-500 text-white" : "border-slate-500"}`}>
-                    {checked && <Check className="h-4 w-4" />}
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <div className="font-bold">{m.home} <span className="text-muted-foreground">×</span> {m.away}</div>
-                    <div className="mt-1 text-xs text-muted-foreground">{m.league} · {m.time} BRT</div>
-                  </div>
-                </div>
-              </button>;
-            })}
-            {!games.isLoading && !fixtures.length && <p className="rounded-xl border border-dashed p-4 text-sm text-muted-foreground">Nenhum jogo confirmado pela fonte gratuita nesta data. Escolha outra data ou tente atualizar.</p>}
-          </div>
-        </Card>
-
-        <Card className="space-y-4 p-5">
-          <h2 className="text-lg font-bold">2. Foto do jogador (opcional)</h2>
-          <p className="text-xs text-muted-foreground">No novo design, o jogador aparece grande à direita, inclusive na agenda Jogos do Dia. Escolha uma imagem com fundo transparente para o melhor resultado.</p>
-          {mode === "featured" && <div className="flex gap-3">
-            <Button variant={playerSide === "home" ? "default" : "outline"} className="flex-1" onClick={() => setPlayerSide("home")}>{featured?.home || "Mandante"}</Button>
-            <Button variant={playerSide === "away" ? "default" : "outline"} className="flex-1" onClick={() => setPlayerSide("away")}>{featured?.away || "Visitante"}</Button>
-          </div>}
-          <p className="text-xs text-muted-foreground">Pesquise o jogador principal pelo nome. O resultado pode incluir atletas de outros clubes; confirme identidade, time e direitos da foto antes de publicar.</p>
-          <Input value={playerSearch} onChange={(e) => setPlayerSearch(e.target.value)} placeholder="Ex.: Vini Jr, Arrascaeta, Neymar" maxLength={70} />
-          <select value={playerId} onChange={(e) => setPlayerId(e.target.value)}
-            className="h-11 w-full rounded-lg border border-input bg-background px-3 text-sm">
-            <option value="">Escolha o jogador</option>
-            {athleteList.map((p: FootballPlayer) => <option value={p.id} key={p.id}>
-              {p.name}{p.position ? ` · ${p.position}` : ""}{p.image ? " · possui imagem" : ""}
-            </option>)}
-          </select>
-          {players.isLoading && <p className="text-xs text-muted-foreground">Buscando jogadores…</p>}
-          {athlete?.image && <p className="text-xs text-amber-500">
-            Fotos buscadas na internet exigem confirmação de direitos na seção 3. Se a foto remota falhar, envie uma imagem autorizada do seu computador.
-          </p>}
-          <label className="flex cursor-pointer items-center gap-3 rounded-xl border-2 border-dashed border-blue-500/40 bg-blue-500/5 p-4 text-sm hover:bg-blue-500/10">
-            <ImagePlus className="h-6 w-6 shrink-0 text-blue-400" />
-            <span className="font-semibold">Enviar foto autorizada do jogador (PNG/JPG/WEBP, até 5 MB)</span>
-            <input type="file" accept="image/png,image/jpeg,image/webp" className="sr-only" onChange={(e) => {
-              const file = e.currentTarget.files?.[0];
-              e.currentTarget.value = "";
-              void onFile(file, "player");
-            }} />
-          </label>
-          {playerUpload && <div className="flex flex-wrap items-center gap-3 rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-3">
-            <img src={playerUpload} alt="Foto carregada do jogador" className="h-20 w-20 rounded-lg object-contain" />
-            <div className="min-w-0 flex-1">
-              <p className="font-semibold text-emerald-400">Foto aplicada ao cartaz!</p>
-              <p className="truncate text-xs text-muted-foreground">{playerUploadName}</p>
-              <p className="text-xs text-muted-foreground">Já aparece na prévia à direita.</p>
-            </div>
-            <Button variant="outline" size="sm" onClick={() => {
-              setPlayerUpload(""); setPlayerUploadName("");
-            }}>Remover</Button>
-          </div>}
-          {playerPhoto && <div className="rounded-xl border border-border bg-muted/20 p-3">
-            <p className="mb-2 text-xs font-semibold">Ajuste de enquadramento do jogador</p>
-            <div className="grid grid-cols-2 gap-2">
-              <Button type="button" size="sm" variant={playerFit === "contain" ? "default" : "outline"}
-                onClick={() => setPlayerFit("contain")}>Foto inteira</Button>
-              <Button type="button" size="sm" variant={playerFit === "cover" ? "default" : "outline"}
-                onClick={() => setPlayerFit("cover")}>Preencher o espaço</Button>
-            </div>
-            <p className="mt-2 text-xs text-muted-foreground">Se o jogador estiver pequeno, experimente “Preencher o espaço”. PNG com fundo transparente costuma ficar melhor em “Foto inteira”.</p>
-          </div>}
-          {!playerUpload && rightsConfirmed && remotePlayerError && <p role="alert" className="rounded-lg border border-amber-500/30 p-3 text-xs text-amber-400">
-            A foto remota não carregou: {remotePlayerError}. Você pode enviar seu próprio PNG autorizado acima.
-          </p>}
-          {!playerUpload && !playerRemote && !athlete?.image && <p className="text-xs text-muted-foreground">
-            Ainda não há foto do jogador. A prévia usa o cenário de fundo até você enviar uma imagem.
-          </p>}
-        </Card>
-
-        <Card className="space-y-4 p-5">
-          <h2 className="text-lg font-bold">3. Personalize a arte de futebol</h2>
-          <label className="block text-sm font-semibold">Formato
-            <select value={format} onChange={(e) => { setFormat(e.target.value as Format); setAiBackground(""); }}
-              className="mt-2 h-11 w-full rounded-lg border border-input bg-background px-3">
-              {Object.entries(DIMENSIONS).map(([value, props]) => <option key={value} value={value}>{props.title}</option>)}
-            </select>
-          </label>
-          <label className="block text-sm font-semibold">Chamada principal
-            <Input className="mt-2" maxLength={50} placeholder={mode === "today" ? "Jogos do Dia" : "Jogaço do Dia!"} value={headline} onChange={(e) => setHeadline(e.target.value)} />
-          </label>
-          <label className="block text-sm font-semibold">Marca
-            <Input className="mt-2" maxLength={36} value={brand} onChange={(e) => setBrand(e.target.value)} />
-          </label>
-          <label className="block text-sm font-semibold">WhatsApp do revendedor (opcional)
-            <Input className="mt-2" type="tel" maxLength={25} placeholder="(85) 99999-9999"
-              value={whatsapp} onChange={(e) => setWhatsapp(e.target.value)} />
-          </label>
-          <div className="space-y-3 rounded-xl border border-red-500/15 bg-muted/20 p-3">
-            <div>
-              <strong className="text-sm">Cor de fundo do cartaz</strong>
-              <p className="mt-1 text-xs text-muted-foreground">Modelo vermelho como referência, com outras cores personalizáveis. O texto e os cartões continuam legíveis.</p>
-            </div>
-            <div className="grid grid-cols-3 gap-2 sm:grid-cols-6">
-              {FOOTBALL_POSTER_PALETTES.map((palette) => <button
-                key={palette.id} type="button" aria-label={palette.label}
-                aria-pressed={accent.toLowerCase() === palette.hex.toLowerCase()}
-                title={palette.label}
-                onClick={() => setAccent(palette.hex)}
-                className={`flex h-12 items-center justify-center rounded-xl border-2 transition-transform hover:scale-[1.03] ${accent.toLowerCase() === palette.hex.toLowerCase() ? "border-white ring-2 ring-blue-500" : "border-border"}`}
-                style={{ background: `linear-gradient(135deg,${palette.hex},#080b16)` }}>
-                {accent.toLowerCase() === palette.hex.toLowerCase() && <Check className="h-6 w-6 text-white drop-shadow" />}
-              </button>)}
-            </div>
-            <label className="flex items-center gap-3 text-sm font-semibold">
-              <input type="color" aria-label="Escolher cor personalizada"
-                className="h-11 w-14 cursor-pointer rounded border border-border bg-transparent"
-                value={accent} onChange={(e) => setAccent(e.target.value)} />
-              Escolher outra cor
-              <span className="ml-auto font-mono text-xs text-muted-foreground">{accent}</span>
-            </label>
-          </div>
-          <div className="space-y-3 rounded-xl border border-blue-500/25 bg-blue-500/5 p-4">
-            <div>
-              <strong className="text-sm">Escudos dos times</strong>
-              <p className="mt-1 text-xs leading-5 text-muted-foreground">
-                Se a fonte esportiva não disponibilizar os escudos ou bloquear as imagens, você pode enviar cada escudo em PNG/JPG/WEBP.
-                Escudos enviados manualmente aparecem imediatamente na prévia e no PNG.
-              </p>
-            </div>
-            <label className="flex cursor-pointer items-start gap-3 rounded-lg border border-border bg-background/50 p-3 text-sm">
-              <input type="checkbox" checked={rightsConfirmed} onChange={(e) => setRightsConfirmed(e.target.checked)}
-                className="mt-0.5 h-4 w-4 accent-blue-500" />
-              <span>Tenho autorização para usar as imagens de terceiros; carregar os escudos e as fotos disponíveis na fonte.</span>
-            </label>
-            {rightsConfirmed ? <p className="text-xs text-muted-foreground" role="status">
-              {badgeLoading ? "Buscando escudos autorizados…" :
-                badgeUrlCount === 0 ? "A fonte não enviou URLs de escudos para estas partidas." :
-                `Escudos da fonte: ${badgeOkCount} de ${badgeUrlCount} carregados.`}
-            </p> : <p className="text-xs text-muted-foreground">
-              O carregamento automático está desligado até você confirmar os direitos acima.
-            </p>}
-            {rightsConfirmed && badgeUrlCount > 0 && <Button type="button" size="sm"
-              variant="outline" disabled={badgeLoading}
-              onClick={() => setBadgeReload((value) => value + 1)}>
-              <RefreshCw className={`mr-2 h-3 w-3 ${badgeLoading ? "animate-spin" : ""}`} />
-              {badgeLoading ? "Carregando escudos…" : "Tentar carregar escudos novamente"}
-            </Button>}
-            {rightsConfirmed && Object.keys(badgeFailures).length > 0 && <p role="alert" className="text-xs text-amber-400">
-              Alguns escudos externos não puderam ser carregados. Envie-os manualmente abaixo.
-              {Object.values(badgeFailures).slice(0, 1).map((error) => <span key={error}> Motivo: {error}</span>)}
-            </p>}
-            <div className="grid gap-3">
-              {(mode === "today" ? visibleMatches.slice(0, format === "landscape" ? 2 : format === "story" ? 6 : 4) : featured ? [featured] : [])
-                .map((m) => <div key={m.id} className="space-y-2 rounded-lg border border-border bg-background/60 p-3">
-                  <p className="text-xs font-bold">{m.home} × {m.away}</p>
-                  <div className="grid grid-cols-2 gap-2">
-                    {([
-                      { side: "home" as const, name: m.home, key: `home:${m.id}`, remoteKey: m.homeBadge },
-                      { side: "away" as const, name: m.away, key: `away:${m.id}`, remoteKey: m.awayBadge },
-                    ]).map((team) => <label key={team.key}
-                      className="flex min-w-0 cursor-pointer flex-col items-center gap-2 rounded-lg border border-dashed border-blue-500/25 p-2 text-center hover:bg-blue-500/10">
-                      <span className="w-full truncate text-[11px] font-semibold" title={team.name}>{team.name}</span>
-                      {manualBadgeImages[team.key] || badgeImages[team.remoteKey]
-                        ? <img alt={team.name} src={manualBadgeImages[team.key] || badgeImages[team.remoteKey]}
-                            className="h-14 w-14 object-contain" />
-                        : <span className="flex h-14 w-14 items-center justify-center rounded-full bg-muted text-[11px]">Sem escudo</span>}
-                      <span className="text-[11px] font-semibold text-blue-400">
-                        {manualBadgeImages[team.key] ? "Trocar arquivo" : "Enviar escudo"}
-                      </span>
-                      <input type="file" accept="image/png,image/jpeg,image/webp" className="sr-only"
-                        onChange={(e) => {
-                          const file = e.currentTarget.files?.[0];
-                          e.currentTarget.value = "";
-                          void onTeamBadge(file, team.key, team.name);
-                        }} />
-                    </label>)}
-                  </div>
-                </div>)}
-            </div>
-          </div>
-          <div className="rounded-xl border border-border bg-muted/20 p-3">
-            <strong className="text-sm">Emissoras / Onde assistir (opcional)</strong>
-            <p className="mt-1 text-xs leading-5 text-muted-foreground">
-              Informe somente canais cuja transmissão você confirmou. Não inventamos canais nem exibimos uma emissora sem sua indicação.
-            </p>
-            <div className="mt-3 max-h-[260px] space-y-3 overflow-y-auto">
-              {(mode === "today" ? visibleMatches.slice(0, format === "landscape" ? 2 : format === "story" ? 6 : 4) : featured ? [featured] : []).map((m) => <label key={m.id} className="block text-xs font-semibold">
-                <span className="mb-1 block truncate">{m.home} × {m.away}</span>
-                <Input placeholder="Ex.: canal oficial confirmado"
-                  maxLength={40} value={channels[m.id] || ""}
-                  onChange={(e) => setChannels((current) => ({ ...current, [m.id]: e.target.value }))} />
-              </label>)}
-            </div>
-          </div>
-          <label className="flex cursor-pointer items-center gap-3 rounded-xl border border-dashed p-4 text-sm hover:bg-muted/40">
-            <ImagePlus className="h-5 w-5 text-blue-400" /> Adicionar minha logo (opcional)
-            <input type="file" accept="image/png,image/jpeg,image/webp" className="sr-only" onChange={(e) => void onFile(e.target.files?.[0], "logo")} />
-          </label>
-          <p className="rounded-lg bg-muted/50 p-3 text-xs leading-5 text-muted-foreground">
-            Use apenas fotos e escudos que você tem autorização para divulgar. A fonte SportScore não concede licença comercial para imagens.
-            As imagens que você envia são mostradas na prévia sem depender do carregamento automático.
-          </p>
-          <Button onClick={() => void generateStadium()} disabled={generating} className="h-12 w-full bg-blue-600 text-white hover:bg-blue-700">
-            <Sparkles className={`mr-2 h-5 w-5 ${generating ? "animate-pulse" : ""}`} />{generating ? "Gerando cenário..." : "Gerar cenário com Cloudflare IA"}
-          </Button>
-          <p className="text-xs leading-5 text-muted-foreground">A IA cria somente o estádio original. Nomes, horários, escudos e a foto autorizada são adicionados no editor para evitar informações ou rostos inventados.</p>
-        </Card>
-      </div>
-
-      <div className="min-w-0 space-y-5">
-        <Card className="overflow-hidden p-4 sm:p-6">
-          <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
-            <div>
-              <h2 className="text-xl font-black">Prévia profissional</h2>
-              <p className="text-sm text-muted-foreground">Visual de cartaz esportivo com jogador, cartões brancos, cores e marca. Confira as informações antes de publicar.</p>
-            </div>
-            <Button onClick={() => void download()} disabled={exporting || games.isLoading || !fixtures.length} className="h-11">
-              <Download className="mr-2 h-4 w-4" /> {exporting ? "Preparando PNG..." : "Baixar arte PNG"}
-            </Button>
-          </div>
-          <div ref={measureRef} className="w-full min-w-0 overflow-hidden rounded-2xl border border-red-500/20 bg-[#090b12] p-2">
-            <div className="relative mx-auto" style={{ width: maxWidth, height: sizes.height * scale }}>
-              <div style={{ width: sizes.width, height: sizes.height,
-                transform: `scale(${scale})`, transformOrigin: "top left" }}>
-                <div ref={artRef}>
-                  <FootballSchedulePoster
-                    kind={mode} matches={mode === "today" ? visibleMatches : featured ? [featured] : []}
-                    format={format} day={date} headline={effectiveHeadline}
-                    brand={brand} logo={logo} contact={whatsapp}
-                    stadium={aiBackground} accent={accent}
-                    broadcastByMatch={channels}
-                    badgeImages={appliedBadges}
-                    playerPhoto={playerPhoto} playerName={athlete?.name || ""} playerFit={playerFit}
-                  />
-                </div>
+          <div className="relative mx-auto overflow-hidden rounded-xl" style={{width,maxWidth:"100%",height:width}}>
+            <div style={{width:baseSize,height:baseSize,transform:"scale("+scale+")",transformOrigin:"top left"}}>
+              <div ref={el=>{posterRefs.current[index]=el;}} style={{width:baseSize,height:baseSize}}>
+                <FootballSchedulePoster kind="today" format="feed" matches={group} day={day}
+                  headline="JOGOS DO DIA" brand={brand.name} logo={brand.logo} contact={brand.contact}
+                  badgeImages={badgeImages} broadcastByMatch={channels}
+                  playerPhoto={featured?.playerPhoto||""} playerName={featured?.playerName||""}
+                  stadium="" accent={brand.accent}/>
               </div>
             </div>
           </div>
-          <p className="mt-4 flex items-start gap-2 text-xs leading-5 text-muted-foreground">
-            <CalendarDays className="mt-0.5 h-4 w-4 shrink-0" />
-            Confira horários oficiais antes de divulgar. Jogos, times e escudos são carregados da fonte, sem partidas inventadas. <a href="https://sportscore.com/" rel="dofollow" target="_blank" className="underline text-sky-500">Powered by SportScore</a>.
-          </p>
-        </Card>
-        <div className="flex items-center gap-3 rounded-xl border border-blue-500/20 bg-blue-500/5 p-4 text-sm text-muted-foreground">
-          <ShieldCheck className="h-5 w-5 shrink-0 text-blue-400" />
-          Esta funcionalidade é uma área experimental exclusiva do administrador. Não há publicação automática, nem acesso no menu dos revendedores.
-        </div>
-      </div>
-    </div>
-  </div>;
+          <p className="mt-3 text-xs text-muted-foreground">Canais não informados pela fonte aparecem como transmissão não confirmada. Confirme antes de divulgar.</p>
+        </Card>;
+      })}
+    </div>}
+  </main>;
 }
