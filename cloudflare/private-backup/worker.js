@@ -82,19 +82,24 @@ async function updateError(env,id,e){
   console.warn("private_backup_retry",err);
 }
 async function writeSmall(env,file){
-  const destination=await env.BACKUP_BUCKET.head(file.r2_key);
-  if(destination?.size===file.source_size){
-    await markComplete(env,file);
-    return;
-  }
+  // Never trust a matching object size as proof of identical content.
   const url=await signedFile(env,file);
   const bytes=await readSource(url,0,file.source_size-1,false);
-  await env.BACKUP_BUCKET.put(file.r2_key,bytes,{
-    httpMetadata:{contentType:file.content_type||"application/octet-stream"},
-    customMetadata:{backupSource:"lovable-private-storage",sourceVersion:file.source_updated}
-  });
-  const head=await env.BACKUP_BUCKET.head(file.r2_key);
-  if(!head||head.size!==file.source_size)throw new Error("backup_r2_head_mismatch");
+  const originDigest=new Uint8Array(await crypto.subtle.digest("SHA-256",bytes));
+  const existing=await env.BACKUP_BUCKET.head(file.r2_key);
+  if(!existing||existing.size!==file.source_size){
+    await env.BACKUP_BUCKET.put(file.r2_key,bytes,{
+      httpMetadata:{contentType:file.content_type||"application/octet-stream"},
+      customMetadata:{backupSource:"lovable-private-storage",sourceVersion:file.source_updated}
+    });
+  }
+  const stored=await env.BACKUP_BUCKET.get(file.r2_key);
+  if(!stored||stored.size!==file.source_size)throw new Error("backup_r2_head_mismatch");
+  const output=await stored.arrayBuffer();
+  const targetDigest=new Uint8Array(await crypto.subtle.digest("SHA-256",output));
+  if(originDigest.length!==targetDigest.length||
+    !originDigest.every((value,index)=>value===targetDigest[index]))
+    throw new Error("backup_r2_sha256_mismatch");
   await markComplete(env,file);
 }
 async function markComplete(env,file){
