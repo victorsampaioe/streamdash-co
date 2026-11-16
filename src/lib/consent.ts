@@ -131,7 +131,10 @@ export function saveChoices(choices: Partial<Record<Purpose, Choice>>) {
 
 export async function needsAnswer(purposes: Purpose[]): Promise<boolean> {
   if (globalPrivacyControl()) return false;
-  if (purposes.includes("advertising") && (storedAnswer("advertising")?.stale ?? true)) return true;
+  // A previous explicit refusal stays respected: do not show a banner
+  // repeatedly just because the refusal record aged. An expired grant
+  // must be renewed before any new marketing events.
+  if (purposes.includes("advertising") && readChoice("advertising") === null) return true;
   const required = await isConsentRequiredRegion();
   return required && purposes.some((purpose) => storedAnswer(purpose)?.stale ?? true);
 }
