@@ -59,6 +59,8 @@ export type FootballMatch = {
   broadcasts?: string[];
   playerPhoto?: string;
   playerName?: string;
+  status?: string;
+  scoreLabel?: string;
 };
 export type FootballPlayer = {
   id: string;
@@ -158,18 +160,27 @@ function apiFixture(record: unknown, index: number, date: string): FootballMatch
   const awayObj = pick(record,"visitante","time_fora","away_team","fora","away");
   const home = teamName(homeObj), away = teamName(awayObj);
   if (!home || !away) return null;
-  if (!MAIN_TEAMS.some((team) => simplify(home).includes(team) || simplify(away).includes(team))) return null;
   const competition = pick(record,"campeonato","competicao","league","competition");
   const league = typeof competition === "string" ? competition : String(pick(competition,"nome","name")||"Futebol");
   const inputTime = String(pick(record,"data_hora","datetime","inicio","horario","hora","kickoff")||"");
   const when = /^\d{4}-\d{2}-\d{2}T/.test(inputTime) && !Number.isNaN(Date.parse(inputTime)) ? kickoff(inputTime) :
     {iso:"",day:date,time: /^\d{2}:\d{2}$/.test(inputTime)?inputTime:"A confirmar"};
   const id = String(pick(record,"id","jogo_id","match_id")||[date,home,away,index].join(":"));
+  const rawStatus=pick(record,"status","situacao","state","match_status");
+  const status=typeof rawStatus==="string"?rawStatus:String(pick(rawStatus,"nome","name","slug")||"");
+  const score=pick(record,"placar","score","resultado");
+  const homeScore=pick(record,"placar_mandante","placar_casa","home_score","score_home") ??
+    pick(score,"mandante","casa","home","home_score");
+  const awayScore=pick(record,"placar_visitante","placar_fora","away_score","score_away") ??
+    pick(score,"visitante","fora","away","away_score");
+  const finished=/encerrado|finaliz|finished|concluid|ft|ended/i.test(status);
+  const scoreLabel=finished&&homeScore!=null&&awayScore!=null?
+    String(homeScore)+" × "+String(awayScore):"";
   const player = pick(record,"jogador_destaque","jogador","featured_player");
   const playerPhoto = teamLogo({image:pick(player,"foto","imagem","image","photo")});
   return {id,home,away,homeId:"",awayId:"",homeBadge:teamLogo(homeObj),awayBadge:teamLogo(awayObj),
     league,leagueId:simplify(league),...when,broadcasts:getBroadcasts(record),
-    playerPhoto,playerName:playerPhoto ? teamName(player) : ""};
+    playerPhoto,playerName:playerPhoto ? teamName(player) : "",status,scoreLabel};
 }
 /** Look up a real portrait using the previous sports player search. Never fabricate a player. */
 const PLAYER_HINTS: Array<{team:string;name:string}> = [
@@ -215,20 +226,38 @@ export const getVitrineFootballMatches = createServerFn({ method: "POST" })
     await requirePaidFeature(context);
     const key = process.env.FTWB_API_KEY;
     if (!key) throw new Error("FTWB_API_KEY não configurada no ambiente do servidor.");
-    const url = new URL(FOOTBALL_API_URL);
-    url.searchParams.set("pais","brasil");
-    url.searchParams.set("data",data.date);
-    // Fetch all events on the chosen date, including matches already completed.
-    const response = await fetch(url,{headers:{"x-api-key":key,Accept:"application/json"},signal:AbortSignal.timeout(9000),cache:"no-store"});
-    if(!response.ok) throw new Error("Não foi possível consultar a API FTWB (HTTP "+response.status+").");
-    const payload:unknown = await response.json();
-    const list = Array.isArray(payload)?payload:pick(payload,"jogos","data","results");
-    if(!Array.isArray(list)) throw new Error("Formato da lista de jogos da FTWB não reconhecido.");
-    const seen = new Set<string>();
-    const matches = list.map((raw,i)=>apiFixture(raw,i,data.date)).filter((match):match is FootballMatch=>!!match)
-      .filter((match)=>{const unique=[simplify(match.home),simplify(match.away),match.time].join("|");if(seen.has(unique))return false;seen.add(unique);return true;})
+    // Explicit status list retains matches that have already kicked off or ended.
+    const loadFixtures=async(country?:string):Promise<unknown[]>=>{
+      const url=new URL(FOOTBALL_API_URL);
+      url.searchParams.set("data",data.date);
+      if(country)url.searchParams.set("pais",country);
+      url.searchParams.set("status","agendado,ao_vivo,encerrado,adiado,cancelado");
+      const response=await fetch(url,{headers:{"x-api-key":key,Accept:"application/json"},signal:AbortSignal.timeout(9000),cache:"no-store"});
+      if(!response.ok)throw new Error("Não foi possível consultar os jogos (HTTP "+response.status+").");
+      const payload:unknown=await response.json();
+      const list=Array.isArray(payload)?payload:pick(payload,"jogos","data","results","partidas","events");
+      if(!Array.isArray(list))throw new Error("Formato dos jogos não reconhecido.");
+      return list;
+    };
+    const national=await loadFixtures("brasil");
+    // Country filtering can exclude Brazilian clubs playing international competitions.
+    // Also retrieve the global schedule when the national response has fewer than nine games.
+    let all= national;
+    if(national.length<9){
+      try{const world=await loadFixtures();all=[...national,...world];}
+      catch{/* The Brazilian schedule remains available if the second request fails. */}
+    }
+    const seen=new Set<string>();
+    const matches=all.map((raw,i)=>apiFixture(raw,i,data.date)).filter((match):match is FootballMatch=>!!match)
+      .filter((match)=>{
+        const unique=[simplify(match.home),simplify(match.away),match.day||data.date].join("|");
+        if(seen.has(unique))return false;seen.add(unique);return true;
+      })
       .sort((a,b)=>{
-        const rank=(m:FootballMatch)=>MAIN_TEAMS.findIndex(team=>simplify(m.home).includes(team)||simplify(m.away).includes(team));
+        const rank=(m:FootballMatch)=>{
+          const idx=MAIN_TEAMS.findIndex(team=>simplify(m.home).includes(team)||simplify(m.away).includes(team));
+          return idx<0?MAIN_TEAMS.length:idx;
+        };
         return rank(a)-rank(b)||a.time.localeCompare(b.time);
       }).slice(0,9);
     for(let index=0;index<matches.length;index+=3){
