@@ -1,3 +1,4 @@
+import {requirePaidFeature} from "@/lib/premium-feature-access";
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
@@ -15,7 +16,8 @@ export const getVitrineTmdbFeed = createServerFn({ method: "POST" })
       feed: feedSchema,
       query: z.string().trim().max(120).optional(),
     }).parse(input))
-  .handler(async ({ data }) => {
+  .handler(async ({ context, data }) => {
+    await requirePaidFeature(context);
     const { fetchFeed, searchTmdb } = await import("./tmdb.server");
     const desiredType = data.feed === "tv_recent" ? "tv" : "movie";
     const rows = data.query
@@ -43,7 +45,8 @@ export const getVitrineTmdbDetail = createServerFn({ method: "POST" })
       media: mediaSchema,
       id: z.number().int().positive(),
     }).parse(input))
-  .handler(async ({ data }) => {
+  .handler(async ({ context, data }) => {
+    await requirePaidFeature(context);
     const { fetchDetail } = await import("./tmdb.server");
     const detail = await fetchDetail(data.media, data.id);
     // Public descriptive metadata only; no availability from other accounts.
