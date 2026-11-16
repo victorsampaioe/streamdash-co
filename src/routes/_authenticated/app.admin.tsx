@@ -44,6 +44,7 @@ import { ReactivationPanel } from "@/components/admin/reactivation-panel";
 import { CircuitBreakerPanel } from "@/components/admin/circuit-breaker-panel";
 import { MonitorHealthPanel } from "@/components/admin/monitor-health-panel";
 import { SignupSecurityPanel } from "@/components/admin/signup-security-panel";
+import { AcquisitionPanel } from "@/components/admin/acquisition-panel";
 import { ApiManagementPanel } from "@/components/admin/api-management-panel";
 
 import { UserCog, History, PlusCircle, UserCheck, UserRoundCog, Settings2, Trash2, ShoppingBag as StoreIcon, Wallet, ExternalLink, Zap } from "lucide-react";
@@ -373,6 +374,7 @@ function AdminPage() {
             <TabsTrigger value="paused" className="px-4">DNS Pausados</TabsTrigger>
             <TabsTrigger value="android" className="px-4">Android Play</TabsTrigger>
             <TabsTrigger value="storage" className="px-4">Armazenamento</TabsTrigger>
+            <TabsTrigger value="acquisition" className="px-4">Aquisição de Clientes</TabsTrigger>
             <TabsTrigger value="signup-security" className="px-4">Segurança de Cadastro</TabsTrigger>
             <TabsTrigger value="commercial-api" className="px-4">API Comercial</TabsTrigger>
 
@@ -381,6 +383,10 @@ function AdminPage() {
 
         <TabsContent value="commercial-api" className="space-y-6">
           <ApiManagementPanel />
+        </TabsContent>
+
+        <TabsContent value="acquisition" className="space-y-6">
+          <AcquisitionPanel />
         </TabsContent>
 
         <TabsContent value="signup-security" className="space-y-6">
