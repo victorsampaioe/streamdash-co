@@ -159,6 +159,16 @@ const RESOLVERS=[
   {code:"google",base:"https://dns.google/resolve"},
   {code:"adguard",base:"https://dns.adguard-dns.com/resolve"},
 ];
+const validIpv4=ip=>typeof ip==="string"&&/^\d{1,3}(?:\.\d{1,3}){3}$/.test(ip)
+  &&ip.split(".").every(s=>Number(s)>=0&&Number(s)<=255);
+function hostName(raw){
+  const host=String(raw??"").trim().toLowerCase().replace(/^https?:\/\//,"")
+    .split("/")[0].replace(/:\d+$/,"").replace(/\.$/,"");
+  if(host.length>253||!/^([a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/.test(host))return null;
+  if(host.endsWith(".local")||host.endsWith(".internal")||host==="localhost")return null;
+  if(validIpv4(host))return null; // An IP literal isn't a DNS A-record query.
+  return host;
+}
 async function api(env,path,method="GET",payload){
   const raw=payload===undefined?undefined:JSON.stringify(payload);
   const headers=await signatureHeaders(env,raw??"dns-targets");
