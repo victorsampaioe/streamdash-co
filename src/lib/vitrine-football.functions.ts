@@ -162,8 +162,8 @@ function matchBadge(record:unknown,team:unknown,side:"home"|"away"):string{
   const embedded=teamLogo(typeof team==="object"?team:undefined);
   if(embedded)return embedded;
   const fields=side==="home"
-    ?["escudo_mandante","escudo_casa","logo_mandante","logo_casa","mandante_escudo","mandante_logo","time_casa_escudo","time_casa_logo","home_logo","homeBadge","homeTeamLogo","teamHomeBadge","escudoMandante","logoMandante","mandanteLogo","home_team_badge","home_team_logo"]
-    :["escudo_visitante","escudo_fora","logo_visitante","logo_fora","visitante_escudo","visitante_logo","time_fora_escudo","time_fora_logo","away_logo","awayBadge","awayTeamLogo","teamAwayBadge","escudoVisitante","logoVisitante","visitanteLogo","away_team_badge","away_team_logo"];
+    ?["escudo_mandante","escudo_casa","logo_mandante","logo_casa","mandante_escudo","mandante_logo","time_casa_escudo","time_casa_logo","home_logo","homeBadge","homeTeamLogo","teamHomeBadge","escudoMandante","logoMandante","mandanteLogo","home_team_badge","home_team_logo","logoA","escudoA","logo_time_a","escudo_time_a","timeA_logo","timeALogo","logo_home"]
+    :["escudo_visitante","escudo_fora","logo_visitante","logo_fora","visitante_escudo","visitante_logo","time_fora_escudo","time_fora_logo","away_logo","awayBadge","awayTeamLogo","teamAwayBadge","escudoVisitante","logoVisitante","visitanteLogo","away_team_badge","away_team_logo","logoB","escudoB","logo_time_b","escudo_time_b","timeB_logo","timeBLogo","logo_away"];
   const first=pick(record,...fields);
   const candidates=pick(record,"logos","escudos","badges","images");
   const nested=pick(candidates,side==="home"?"home":"away",side==="home"?"mandante":"visitante",side==="home"?"casa":"fora");
@@ -194,9 +194,9 @@ function verifiedBroadcasts(match:FootballMatch, date:string):string[]{
 }
 function apiFixture(record: unknown, index: number, date: string): FootballMatch | null {
   const nested=pick(record,"times","equipes","teams");
-  const homeObj = pick(record,"mandante","time_casa","home_team","casa","home","teamHome","team_home","equipe_mandante")
+  const homeObj = pick(record,"mandante","time_casa","home_team","casa","home","teamHome","team_home","equipe_mandante","timeA","equipeA")
     ?? pick(nested,"mandante","casa","home","homeTeam");
-  const awayObj = pick(record,"visitante","time_fora","away_team","fora","away","teamAway","team_away","equipe_visitante")
+  const awayObj = pick(record,"visitante","time_fora","away_team","fora","away","teamAway","team_away","equipe_visitante","timeB","equipeB")
     ?? pick(nested,"visitante","fora","away","awayTeam");
   const home = teamName(homeObj), away = teamName(awayObj);
   if (!home || !away) return null;
@@ -309,7 +309,8 @@ function espnLeagueSlugs(league:string):string[]{
   if(/premier league/.test(name))return ["eng.1"];
   if(/la liga|laliga/.test(name))return ["esp.1"];
   if(/bundesliga/.test(name))return ["ger.1"];
-  if(/serie a|italian/.test(name))return ["ita.1"];
+  if(/serie a|italian/.test(name))return ["bra.1","ita.1"];
+  if(/serie b/.test(name))return ["bra.2"];
   if(/ligue 1/.test(name))return ["fra.1"];
   if(/liga portugal|primeira liga/.test(name))return ["por.1"];
   if(/liga profesional|primera division argentina/.test(name))return ["arg.1"];
