@@ -241,11 +241,23 @@ const VERIFIED_BADGES:Record<string,string>={
   "parana clube":"https://www.futbox.com/img/v1/529/eb5/159/002/84bf7f2e5d9223114251_zoom.png",
 };
 type RemoteTeam={name?:string;nome?:string;logo?:string;image?:string;escudo?:string;team?:{name?:string;logo?:string}};
+const NATIONAL_FLAGS:Record<string,string>={
+  "brasil":"br","peru":"pe","alemanha":"de","paises baixos":"nl","holanda":"nl",
+  "grecia":"gr","servia":"rs","suica":"ch","eslovaquia":"sk","cazaquistao":"kz",
+  "ilhas faroe":"fo","moldavia":"md","estonia":"ee","bulgaria":"bg",
+  "lituania":"lt","liechtenstein":"li","islandia":"is","luxemburgo":"lu",
+  "gibraltar":"gi","malta":"mt","macedonia do norte":"mk","eslovenia":"si",
+  "andorra":"ad","azerbaijao":"az","franca":"fr","espanha":"es",
+  "portugal":"pt","italia":"it","uruguai":"uy","argentina":"ar",
+  "belgica":"be","escocia":"gb-sct"
+};
 const badgeCache=new Map<string,{expires:number,url:string}>();
 async function findTeamBadge(name:string):Promise<string>{
   const normalized=simplify(name);
   const known=VERIFIED_BADGES[normalized];
   if(known)return known;
+  // National teams use their country's flag if the FTWB does not supply a crest.
+  if(NATIONAL_FLAGS[normalized])return "https://flagcdn.com/w80/"+NATIONAL_FLAGS[normalized]+".png";
   const cached=badgeCache.get(normalized);
   if(cached && cached.expires>Date.now())return cached.url;
   let logo="";
@@ -297,7 +309,7 @@ async function inlineTrustedBadge(url:string):Promise<string>{
   try{
     const parsed=new URL(url);
     if(parsed.protocol!=="https:"||parsed.port||parsed.username||parsed.password ||
-      !["www.zerozero.pt","www.futbox.com","img.thesports.com"].includes(parsed.hostname))return url;
+      !["www.zerozero.pt","www.futbox.com","img.thesports.com","flagcdn.com"].includes(parsed.hostname))return url;
     const response=await fetch(url,{redirect:"error",signal:AbortSignal.timeout(3000)});
     const mime=response.headers.get("content-type")?.split(";")[0]||"";
     if(response.ok && ["image/png","image/jpeg","image/webp"].includes(mime)&&
