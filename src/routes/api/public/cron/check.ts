@@ -148,13 +148,42 @@ async function reapStaleLogs() {
  * Mesmo se um ciclo de catálogos/servidores demorar, cada disparo do cron
  * pode iniciar o DNS sem ficar bloqueado pela execução geral anterior.
  */
+/**
+ * Automatic fail-safe migration: Cloudflare becomes the primary DNS probe
+ * engine only after fresh signed reports cover >=90% of active DNS targets.
+ * If Cloudflare or the bridge stops reporting, legacy checks resume without
+ * changing the users' DNS state or alert delivery pipeline.
+ */
+async function cloudflareDnsReady(): Promise<boolean> {
+  const {getCloudflareDnsPrimary}=await import("@/lib/cloudflare-dns-bridge.server");
+  if(!await getCloudflareDnsPrimary())return false;
+  const {supabaseAdmin}=await import("@/integrations/supabase/client.server");
+  const cutoff=new Date(Date.now()-15*60_000).toISOString();
+  const [latest,active]=await Promise.all([
+    (supabaseAdmin as any).from("cloudflare_dns_probes")
+      .select("server_id,checked_at").gte("checked_at",cutoff)
+      .order("checked_at",{ascending:false}).limit(2000),
+    supabaseAdmin.from("servers")
+      .select("id",{head:true,count:"exact"})
+      .eq("dns_enabled",true).eq("monitoring_paused",false),
+  ]);
+  if(latest.error||active.error||!latest.data?.length)return false;
+  const last=Date.parse(latest.data[0].checked_at);
+  if(!Number.isFinite(last)||Date.now()-last>3*60_000)return false;
+  const coverage=new Set(latest.data.map((r:{server_id:string})=>r.server_id)).size;
+  return coverage>=Math.ceil(Math.max(1,active.count??0)*0.90);
+}
+
 async function guardedRun() {
   const { withCycleLock } = await import("@/lib/job-lock.server");
   if (process.env.IS_CORE === "true" || missingEnv().length) return run();
 
   const [dnsResult, mainResult] = await Promise.all([
     withCycleLock("cron-dns", 180, async () => {
-      const { runDueDnsChecks } = await import("@/lib/dns.server");
+      if(await cloudflareDnsReady()){
+        return {checked:0,errors:0,skipped:true,provider:"cloudflare"};
+      }
+      const {runDueDnsChecks}=await import("@/lib/dns.server");
       return runDueDnsChecks(40);
     }).catch((error) => {
       console.error("[cron-dns] Falha no ciclo", error);
@@ -172,6 +201,7 @@ async function guardedRun() {
     ok: !((mainResult as any)?.ok === false ||
       ("errors" in dnsResult && dnsResult.errors > 0)),
     monitorMode: "separate-cron",
+    dnsProvider: "provider" in dnsResult ? dnsResult.provider : "legacy-fallback",
     dnsChecked: "checked" in dnsResult ? dnsResult.checked : 0,
     dnsErrors: "errors" in dnsResult ? dnsResult.errors : 0,
     dnsSkipped: "skipped" in dnsResult ? dnsResult.skipped : false,
