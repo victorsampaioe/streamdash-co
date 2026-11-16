@@ -26,6 +26,7 @@ type PosterProps = {
   broadcastByMatch: Record<string, string>;
   playerPhoto: string;
   playerName: string;
+  playerFit?: "contain" | "cover";
   stadium: string;
   accent: string;
 };
@@ -129,7 +130,7 @@ function FixtureRibbon({ match, badgeImages, broadcast, accent, width, height }:
 
 export function FootballSchedulePoster({
   kind, format, matches, day, headline, brand, logo, contact,
-  badgeImages, broadcastByMatch, playerPhoto, playerName, stadium, accent,
+  badgeImages, broadcastByMatch, playerPhoto, playerName, playerFit = "contain", stadium, accent,
 }: PosterProps) {
   const d = dimensions[format];
   const shown = matches.slice(0, d.count);
@@ -172,12 +173,14 @@ export function FootballSchedulePoster({
       clipPath: "polygon(0 38%,3% 48%,7% 27%,11% 51%,16% 29%,19% 46%,23% 21%,27% 45%,32% 34%,36% 56%,40% 29%,44% 44%,48% 25%,52% 55%,57% 31%,61% 47%,65% 20%,69% 45%,73% 35%,77% 52%,81% 24%,86% 47%,91% 25%,95% 46%,100% 31%,100% 100%,0 100%)",
     }} />
     {playerPhoto && <img src={playerPhoto} alt={playerName || ""}
-      className="absolute object-contain object-bottom"
+      className="absolute"
       style={{
-        right: landscape ? -22 : -48,
+        right: landscape ? -120 : -155,
         bottom: landscape ? 18 : story ? 42 : 30,
         width: playerWidth,
         height: story ? 1570 : landscape ? 610 : 920,
+        objectFit: playerFit,
+        objectPosition: "center bottom",
         filter: "drop-shadow(-20px 11px 28px rgba(0,0,0,.72))",
         maskImage: "linear-gradient(180deg,transparent 0%,black 9%,black 83%,transparent 99%)",
       }} />}
