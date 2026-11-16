@@ -56,7 +56,7 @@ export function AcquisitionPanel(){
      <thead><tr className="text-left text-muted-foreground border-b">
       <th className="p-2">Origem</th><th className="p-2">Visitas ao cadastro</th><th className="p-2">Cadastros</th>
       <th className="p-2">Pagantes</th><th className="p-2">Receita paga</th>
-      <th className="p-2">Gasto</th><th className="p-2">Custo por pagante</th>
+      <th className="p-2">Gasto</th><th className="p-2">Custo por cadastro</th><th className="p-2">Custo por pagante</th>
      </tr></thead>
      <tbody>{bySource.map(x=><tr className="border-b border-border/50" key={x.key}>
       <td className="p-2 font-medium">{label(x.key)}</td>
@@ -65,6 +65,7 @@ export function AcquisitionPanel(){
       <td className="p-2 tabular-nums">{x.paidCustomers}</td>
       <td className="p-2 tabular-nums">{money(x.revenueCents)}</td>
       <td className="p-2 tabular-nums">{money(x.spendCents)}</td>
+      <td className="p-2 tabular-nums">{money(x.costPerRegistrationCents)}</td>
       <td className="p-2 tabular-nums font-semibold">{money(x.costPerPaidCustomerCents)}</td>
      </tr>)}</tbody>
     </table>
@@ -78,6 +79,7 @@ export function AcquisitionPanel(){
      <p className="text-sm">Gasto: <strong>{money(x.spendCents)}</strong></p>
      <p className="text-sm">Cliques: <strong>{x.linkClicks??"—"}</strong> · Destino: <strong>{x.landingPageViews??"—"}</strong></p>
      <p className="text-sm">Cadastros atribuídos: <strong>{x.registrations}</strong> · Pagantes: <strong>{x.paidCustomers}</strong> · Cadastro visitado: <strong>{x.signupPageVisits??"—"}</strong></p>
+     <p className="text-sm">Custo por cadastro: <strong>{money(x.costPerRegistrationCents)}</strong></p>
      <p className="text-sm">Custo por cliente pagante: <strong>{money(x.costPerPaidCustomerCents)}</strong></p>
     </div>)}
    </CardContent>
@@ -87,7 +89,7 @@ export function AcquisitionPanel(){
    <CardContent className="space-y-2">
     {byCampaign.filter(x=>x.spendCents!==null||x.registrations>0).map(x=><div key={x.key} className="flex items-center justify-between gap-3 rounded-lg border p-3 text-sm">
      <span className="min-w-0 break-words">{x.key}</span>
-     <span className="shrink-0 text-right">Gasto {money(x.spendCents)} · {x.registrations} cadastros · {x.paidCustomers} pagantes</span>
+     <span className="shrink-0 text-right">Gasto {money(x.spendCents)} · {x.registrations} cadastros · {x.paidCustomers} pagantes · Receita {money(x.revenueCents)} · CAC {money(x.costPerPaidCustomerCents)}</span>
     </div>)}
    </CardContent>
   </Card>
