@@ -5,6 +5,7 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { requirePaidFeature } from "@/lib/premium-feature-access";
 import { isMajorFootballCompetition, isYouthFootballFixture } from "@/lib/vitrine-football-competitions";
 import { verifiedFootballBroadcasts } from "@/lib/vitrine-football-verified-broadcasts";
+import { officialFixtureDate } from "@/lib/vitrine-football-official-date";
 
 /**
  * FTWB is the primary fixture provider for subscribed users.
@@ -207,12 +208,23 @@ function apiFixture(record: unknown, index: number, date: string): FootballMatch
   const timeWithZone = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}.*(?:Z|[+-]\d{2}:?\d{2})$/i.test(inputTime);
   const absolute = timeWithZone && !Number.isNaN(Date.parse(inputTime))
     ? kickoff(inputTime) : null;
-  const dayFromValue=/^(\d{4}-\d{2}-\d{2})[T ]/.exec(inputTime)?.[1] || date;
+  // Trust the provider's explicit fixture date when it is present. The requested
+  // date is only a fallback for records without their own date field.
+  const sourceDate=String(pick(record,"data","data_jogo","date","match_date","matchDate","dataPartida","dia")||"").trim();
+  const isoSource=/^(\\d{4}-\\d{2}-\\d{2})(?:[T\\s]|$)/.exec(sourceDate)?.[1];
+  const brazilianSource=/^(\\d{2})\\/(\\d{2})\\/(\\d{4})$/.exec(sourceDate);
+  const sourceDay=isoSource||(brazilianSource
+    ?brazilianSource[3]+"-"+brazilianSource[2]+"-"+brazilianSource[1]:date);
+  const dayFromValue=/^(\\d{4}-\\d{2}-\\d{2})[T ]/.exec(inputTime)?.[1] || sourceDay;
   const clockMatch=/(?:^|[T\s])(\d{1,2}):(\d{2})(?::\d{2})?(?:\s|$|[Z+-])/.exec(inputTime)
     || /^(\d{1,2}):(\d{2})$/.exec(String(clock||"").trim());
   const formattedClock = clockMatch && Number(clockMatch[1])<24 && Number(clockMatch[2])<60
     ? clockMatch[1].padStart(2,"0")+":"+clockMatch[2] : "A confirmar";
-  const when=absolute||{iso:"",day:dayFromValue,time:formattedClock};
+  const official=officialFixtureDate(home,away);
+  // Suppress a provider entry incorrectly attached to the next calendar day.
+  if(official && official.day!==date)return null;
+  const when=official?{iso:official.iso,day:official.day,time:official.time}
+    :absolute||{iso:"",day:dayFromValue,time:formattedClock};
   const id = String(pick(record,"id","jogo_id","match_id")||[date,home,away,index].join(":"));
   const rawStatus=pick(record,"status","situacao","state","match_status");
   const status=typeof rawStatus==="string"?rawStatus:String(pick(rawStatus,"nome","name","slug")||"");
@@ -633,7 +645,9 @@ export const getVitrineFootballMatches = createServerFn({ method: "POST" })
       const featured=await findHighlight(group);
       if(featured)matches[index]={...matches[index],playerPhoto:featured.photo,playerName:featured.name};
     }
-    return {matches,leagues:footballLeagueOptions,source:"FTWB",partial:false,sourcesSucceeded:1,fixtureCount:matches.length,missingBadges:matches.filter(m=>!m.homeBadge||!m.awayBadge).length};
+    return {matches,leagues:footballLeagueOptions,source:"FTWB",partial:false,sourcesSucceeded:1,
+      fixtureCount:matches.length,missingBadges:matches.filter(m=>!m.homeBadge||!m.awayBadge).length,
+      queriedDate:data.date,checkedAt:new Date().toISOString(),timeZone:"America/Fortaleza"};
   });
 
 /** Player images from other providers may require permission for commercial use. */
