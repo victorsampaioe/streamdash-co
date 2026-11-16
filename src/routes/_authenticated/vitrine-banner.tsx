@@ -1,3 +1,4 @@
+import {PremiumVitrineGate} from "@/components/vitrine/premium-vitrine-gate";
 import {createFileRoute} from "@tanstack/react-router";
 import {CinematicStudio} from "@/components/vitrine/cinematic-studio";
 
@@ -9,7 +10,7 @@ import {CinematicStudio} from "@/components/vitrine/cinematic-studio";
  */
 export const Route=createFileRoute("/_authenticated/vitrine-banner")({
   ssr:false,
-  component:()=> <CinematicStudio mode="banner"/>,
+  component:()=> <PremiumVitrineGate><CinematicStudio mode="banner"/></PremiumVitrineGate>,
   head:()=>({meta:[
     {title:"Vitrine Banner Cinematográfica | Stream Monitor"},
     {name:"robots",content:"noindex,nofollow"},
