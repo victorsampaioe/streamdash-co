@@ -170,7 +170,14 @@ async function run(env){
       "SELECT * FROM backup_objects WHERE status IN ('pending','retry','uploading') ORDER BY CASE WHEN bucket='database_export_15_11_26' THEN 0 ELSE 1 END,source_size ASC LIMIT 1"
     ).first();
   }
-  if(!object)return {catalog,mode:"complete"};
+  if(!object){
+    // One-shot migration: stop scheduled transfer work automatically when
+    // there are no source files left in a pending/retry/uploading state.
+    await env.BACKUP_STATE.prepare(
+      "UPDATE backup_control SET value='false' WHERE key='enabled'"
+    ).run();
+    return {catalog,mode:"complete_and_disabled"};
+  }
   try{
     if(object.source_size<=SMALL_LIMIT)await writeSmall(env,object);
     else await writeLarge(env,object);
