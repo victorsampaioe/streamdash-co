@@ -6,7 +6,7 @@
  * No IPTV credentials and no plaintext API tokens in source/D1.
  */
 const ORIGIN="https://project--53f0eb67-2e35-46bc-9ab5-dc7ffc20dcbd.lovable.app";
-const MAX_NORMAL=16,MAX_PRIORITY=4,MAX_THIRD=5;
+const MAX_NORMAL=15,MAX_PRIORITY=4,MAX_THIRD=5;
 const DNS_TIMEOUT_MS=5500,HTTP_TIMEOUT_MS=18000;
 const RESOLVERS=[
   {code:"cloudflare",base:"https://cloudflare-dns.com/dns-query"},
@@ -136,7 +136,10 @@ function chooseTargets(rows){
   const priority=ordered.filter(x=>x.source_status==="offline"||x.source_status==="unstable"||x.last_status==="down")
     .slice(0,MAX_PRIORITY);
   const picked=new Set(priority.map(x=>x.server_id));
-  return [...priority,...ordered.filter(x=>!picked.has(x.server_id)).slice(0,MAX_NORMAL)];
+  // Reserve normal slots even when many domains remain offline.
+  const normal=ordered.filter(x=>!picked.has(x.server_id)
+    &&x.source_status!=="offline"&&x.source_status!=="unstable"&&x.last_status!=="down");
+  return [...priority,...normal.slice(0,MAX_NORMAL)];
 }
 async function gather(targets){
   const checked=new Array(targets.length);
