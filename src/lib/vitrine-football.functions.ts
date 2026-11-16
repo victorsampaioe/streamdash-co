@@ -1,8 +1,9 @@
 import { createServerFn } from "@tanstack/react-start";
+import { getRequest } from "@tanstack/react-start/server";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { requirePaidFeature } from "@/lib/premium-feature-access";
-import { isMajorFootballCompetition } from "@/lib/vitrine-football-competitions";
+import { isMajorFootballCompetition, isYouthFootballFixture } from "@/lib/vitrine-football-competitions";
 
 /**
  * FTWB is the primary fixture provider for subscribed users.
@@ -544,7 +545,7 @@ export const getVitrineFootballMatches = createServerFn({ method: "POST" })
     }
     const seen=new Set<string>();
     const matches=all.map((raw,i)=>apiFixture(raw,i,data.date))
-      .filter((match):match is FootballMatch=>!!match && match.day===data.date && isMajorFootballCompetition(match.league))
+      .filter((match):match is FootballMatch=>!!match && match.day===data.date && isMajorFootballCompetition(match.league) && !isYouthFootballFixture(match.league,match.home,match.away))
       .filter((match)=>{
         const unique=[simplify(match.home),simplify(match.away),match.day].join("|");
         if(seen.has(unique))return false;seen.add(unique);return true;
@@ -563,6 +564,37 @@ export const getVitrineFootballMatches = createServerFn({ method: "POST" })
     await attachEspnBadges(matches);
     await enrichBadges(matches);
     await inlinePosterBadges(matches);
+    // Cloudflare Workers AI researches missing transmissions with sourced headlines.
+    // A paid Cloudflare web-search gateway is not required for the RSS fallback.
+    // The Cloudflare Worker verifies the same Supabase identity server-side.
+    const possible=matches.filter(match=>!(match.broadcasts||[]).length);
+    const requestAuth=getRequest()?.headers.get("authorization")||"";
+    const supabasePublicKey=process.env.SUPABASE_PUBLISHABLE_KEY||"";
+    if(possible.length && requestAuth.startsWith("Bearer ") && supabasePublicKey){
+      const endpoint="https://streammonitor-football-broadcast.victorsampaio133.workers.dev/broadcasts";
+      const batches:FootballMatch[][]=[];
+      for(let offset=0;offset<Math.min(possible.length,32);offset+=8){
+        batches.push(possible.slice(offset,offset+8));
+      }
+      const enrichment=await Promise.allSettled(batches.map(async group=>{
+        const response=await fetch(endpoint,{
+          method:"POST",
+          headers:{authorization:requestAuth,apikey:supabasePublicKey,"content-type":"application/json"},
+          body:JSON.stringify({matches:group.map(m=>({id:m.id,home:m.home,away:m.away,date:m.day}))}),
+          cache:"no-store",signal:AbortSignal.timeout(15000)
+        });
+        if(!response.ok)return [] as Array<{id:string;channels:string[]}>;
+        const payload=await response.json() as {results?:Array<{id:string;channels:string[]}>};
+        return Array.isArray(payload.results)?payload.results:[];
+      }));
+      const found=new Map(enrichment.flatMap(item=>item.status==="fulfilled"?item.value:[])
+        .filter(item=>Array.isArray(item.channels)&&item.channels.length>0)
+        .map(item=>[item.id,item.channels.filter(x=>typeof x==="string").slice(0,3)] as const));
+      for(const match of matches){
+        if(!(match.broadcasts||[]).length && found.has(match.id))
+          match.broadcasts=found.get(match.id);
+      }
+    }
     // Prefer channels explicitly supplied by FTWB; add documented fixture-specific channels only when absent.
     for(const match of matches){if(!(match.broadcasts||[]).length)match.broadcasts=verifiedBroadcasts(match,data.date)}
     for(let index=0;index<matches.length;index+=4){
