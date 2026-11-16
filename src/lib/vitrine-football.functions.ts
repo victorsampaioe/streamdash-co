@@ -321,6 +321,34 @@ async function inlinePosterBadges(matches:FootballMatch[]):Promise<void>{
   }
 }
 
+
+/** Major international fixtures are relevant even when neither team is Brazilian.
+ * Low-tier unrelated competitions should not fill a reseller banner by accident.
+ */
+const GLOBAL_COMPETITIONS=[
+  "liga das nacoes","nations league","uefa","eliminatorias","world cup",
+  "copa do mundo","champions league","liga dos campeoes","libertadores",
+  "sul americana","sudamericana","premier league","bundesliga","la liga",
+  "serie a italiana","liga portugal","amistosos internacionais",
+  "amistoso internacional","amistoso sub 20","international friendly",
+  "copa intercontinental","concacaf","campeonato uruguaio"
+];
+const WORLD_TEAMS=["brasil","alemanha","paises baixos","holanda","franca","espanha",
+  "inglaterra","italia","portugal","argentina","uruguai","belgica","suica",
+  "escocia","servia","grecia","japao","colombia","estados unidos"];
+function relevantWorldFixture(raw:unknown):boolean{
+  const nested=pick(raw,"times","equipes","teams");
+  const home=teamName(pick(raw,"mandante","time_casa","home_team","casa","home","teamHome")
+    ??pick(nested,"mandante","casa","home"));
+  const away=teamName(pick(raw,"visitante","time_fora","away_team","fora","away","teamAway")
+    ??pick(nested,"visitante","fora","away"));
+  if(MAIN_TEAMS.some(club=>clubMatches(home,club)||clubMatches(away,club)))return true;
+  const competition=pick(raw,"campeonato","competicao","league","competition");
+  const league=simplify(typeof competition==="string"?competition:pick(competition,"nome","name","title"));
+  if(GLOBAL_COMPETITIONS.some(term=>league.includes(term)))return true;
+  return WORLD_TEAMS.some(team=>clubMatches(home,team)||clubMatches(away,team));
+}
+
 /** Look up a real portrait using the previous sports player search. Never fabricate a player. */
 const PLAYER_HINTS: Array<{team:string;name:string}> = [
   {team:"flamengo",name:"Pedro"}, {team:"corinthians",name:"Yuri Alberto"},
@@ -393,18 +421,16 @@ export const getVitrineFootballMatches = createServerFn({ method: "POST" })
     if(!successful.length)throw new Error("Não foi possível consultar os jogos da FTWB em nenhum status.");
     const national=successful.flatMap(entry=>entry.value);
     let all:unknown[]=[...national];
-    // Add only international fixtures featuring major Brazilian clubs, not unrelated foreign matches.
-    try{
-      const abroad=await loadFixtures(undefined,"agendado,ao_vivo,encerrado");
-      all.push(...abroad.filter(raw=>{
-        const nested=pick(raw,"times","equipes","teams");
-        const home=teamName(pick(raw,"mandante","time_casa","home_team","casa","home","teamHome")
-          ??pick(nested,"mandante","casa","home"));
-        const away=teamName(pick(raw,"visitante","time_fora","away_team","fora","away","teamAway")
-          ??pick(nested,"visitante","fora","away"));
-        return MAIN_TEAMS.some(club=>clubMatches(home,club)||clubMatches(away,club));
-      }));
-    }catch{/* Keep the national fixture feed available even if the global query fails. */}
+    // The global feed is essential on international-match days (e.g. UEFA Nations League).
+    // Fetch finished games separately because the provider can default to upcoming games.
+    const worldQueries=await Promise.allSettled([
+      loadFixtures(undefined,"agendado,ao_vivo,encerrado,adiado,cancelado"),
+      loadFixtures(undefined,"encerrado"),
+      loadFixtures()
+    ]);
+    for(const entry of worldQueries){
+      if(entry.status==="fulfilled")all.push(...entry.value.filter(relevantWorldFixture));
+    }
     const seen=new Set<string>();
     const matches=all.map((raw,i)=>apiFixture(raw,i,data.date))
       .filter((match):match is FootballMatch=>!!match && match.day===data.date)
@@ -414,7 +440,11 @@ export const getVitrineFootballMatches = createServerFn({ method: "POST" })
       }).sort((a,b)=>{
         const rank=(m:FootballMatch)=>{
           const idx=MAIN_TEAMS.findIndex(club=>clubMatches(m.home,club)||clubMatches(m.away,club));
-          return idx<0?MAIN_TEAMS.length:idx;
+          if(idx>=0)return idx;
+          const league=simplify(m.league);
+          if(league.includes("nations league")||league.includes("liga das nacoes"))return 40;
+          if(WORLD_TEAMS.some(team=>clubMatches(m.home,team)||clubMatches(m.away,team)))return 45;
+          return MAIN_TEAMS.length+50;
         };
         return rank(a)-rank(b)||a.time.localeCompare(b.time);
       });
