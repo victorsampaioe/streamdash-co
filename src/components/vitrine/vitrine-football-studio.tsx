@@ -181,7 +181,7 @@ export function VitrineFootballStudio() {
       {games.error instanceof Error?games.error.message:"Não foi possível consultar os jogos de hoje."}
     </Card>}
     {games.isSuccess&&groups.length===0&&<Card className="p-8 text-center">Nenhum evento retornado pela FTWB para hoje.</Card>}
-    {games.isSuccess&&groups.length>0&&<p className="text-sm text-muted-foreground">{games.data.matches.length} confrontos encontrados • {groups.length} {groups.length===1?"arte":"artes"} • 4 confrontos por arte</p>}
+    {games.isSuccess&&groups.length>0&&<p className="text-sm text-muted-foreground">{games.data.matches.length} confrontos encontrados • {groups.length} {groups.length===1?"arte":"artes"} • 4 confrontos por arte • FTWB consultada para {games.data.queriedDate} às {new Intl.DateTimeFormat("pt-BR",{timeZone:"America/Fortaleza",hour:"2-digit",minute:"2-digit"}).format(new Date(games.data.checkedAt))} (Fortaleza)</p>}
     {games.isSuccess&&groups.length>0&&<div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
       {groups.map((group,index)=>{
         const featured=group.find(match=>!!match.playerPhoto && validatedPhotos[match.playerPhoto]===true);
