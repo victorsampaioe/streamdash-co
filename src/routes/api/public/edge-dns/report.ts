@@ -27,7 +27,7 @@ export const Route=createFileRoute("/api/public/edge-dns/report")({
   server:{handlers:{POST:async({request})=>{
     const size=Number(request.headers.get("content-length")||0);
     if(size>55000)return Response.json({error:"too_large"},{status:413});
-    const {authorizeCloudflareDnsBridge,getCloudflareDnsPrimary}
+    const {authorizeCloudflareDnsBridge,cloudflareDnsReady}
       =await import("@/lib/cloudflare-dns-bridge.server");
     const raw=await request.text();
     const {verifyRegionSignature}=await import("@/lib/region-auth.server");
@@ -90,7 +90,7 @@ export const Route=createFileRoute("/api/public/edge-dns/report")({
       .select("server_id,checked_at");
     if(saveError)return Response.json({error:"probe_store_failed"},{status:503});
 
-    const primary=await getCloudflareDnsPrimary();
+    const primary=await cloudflareDnsReady();
     const savedKeys=new Set((saved??[]).map(r=>r.server_id+"|"+r.checked_at));
     let applied=0,failed=0;
     if(primary){
