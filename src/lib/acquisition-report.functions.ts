@@ -61,7 +61,8 @@ export const getAdminAcquisitionReport=createServerFn({method:"GET"})
     supabaseAdmin.from("profiles").select("id",{head:true,count:"exact"}),
     (supabaseAdmin as any).from("acquisition_page_events")
       .select("stage,source,platform,campaign_id")
-      .eq("stage","signup").gte("created_at",new Date(Date.now()-90*86400000).toISOString())
+      .eq("stage","signup").eq("is_qa",false)
+      .gte("created_at",new Date(Date.now()-90*86400000).toISOString())
       .order("created_at",{ascending:false}).limit(5000)
   ]);
   for(const q of [acqQ,payQ,subQ,costQ,totalQ,visitQ])if(q.error)throw new Error("Aquisição indisponível");
