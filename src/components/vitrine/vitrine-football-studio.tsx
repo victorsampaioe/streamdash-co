@@ -8,7 +8,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Download, RefreshCw, Trophy } from "lucide-react";
-import { FootballSchedulePoster } from "@/components/vitrine/football-schedule-poster";
+import { FootballSchedulePoster, FOOTBALL_POSTER_PALETTES } from "@/components/vitrine/football-schedule-poster";
 import { getVitrineFootballMatches, type FootballMatch } from "@/lib/vitrine-football.functions";
 
 const today = () => new Intl.DateTimeFormat("sv-SE", {
@@ -24,6 +24,8 @@ export function VitrineFootballStudio() {
   const load = useServerFn(getVitrineFootballMatches);
   const [brand, setBrand] = useState<Branding>(fallbackBrand);
   const [transparentLogo, setTransparentLogo] = useState(fallbackBrand.logo);
+  const [selectedColor, setSelectedColor] = useState<string | null>(null);
+  const [colorStorageKey, setColorStorageKey] = useState<string | null>(null);
   const [saving, setSaving] = useState<number | null>(null);
   const [width, setWidth] = useState(520);
   const wrapper = useRef<HTMLDivElement>(null);
@@ -42,6 +44,12 @@ export function VitrineFootballStudio() {
     async function fetchBrand() {
       const {data:{user}} = await supabase.auth.getUser();
       if (!user) return;
+      const storageKey="streammonitor-football-color:"+user.id;
+      setColorStorageKey(storageKey);
+      try {
+        const stored=window.localStorage.getItem(storageKey);
+        setSelectedColor(stored && /^#[0-9a-f]{6}$/i.test(stored) ? stored : null);
+      } catch { setSelectedColor(null); }
       const [promo, page, profile] = await Promise.all([
         supabase.from("promo_brand_settings" as any).select("brand_name,logo_url,whatsapp,primary_color").eq("owner_id",user.id).maybeSingle(),
         supabase.from("reseller_pages" as any).select("display_name,logo_url,whatsapp,primary_color").eq("owner_id",user.id).maybeSingle(),
@@ -68,6 +76,15 @@ export function VitrineFootballStudio() {
     void prepareTransparentLogo(brand.logo).then(value=>{if(!cancelled)setTransparentLogo(value);});
     return ()=>{cancelled=true};
   },[brand.logo]);
+
+  const accent=selectedColor||brand.accent;
+  const chooseColor=(value:string)=>{
+    const color=safeColor(value);
+    setSelectedColor(color);
+    if(colorStorageKey){
+      try{window.localStorage.setItem(colorStorageKey,color)}catch{/* Private browsing can block local storage. */}
+    }
+  };
 
   const games = useQuery({
     queryKey:["vitrine-football-ftwb",day],
@@ -114,11 +131,30 @@ export function VitrineFootballStudio() {
         <RefreshCw size={16} className={games.isFetching?"mr-2 animate-spin":"mr-2"}/> Atualizar eventos
       </Button>
     </div>
+    <div className="flex flex-wrap items-center gap-3 rounded-xl border border-border/70 bg-card/60 px-4 py-3" aria-label="Personalizar cor da arte">
+      <span className="text-sm font-semibold">Cor do banner</span>
+      <div className="flex flex-wrap items-center gap-2" role="group" aria-label="Cores disponíveis">
+        {FOOTBALL_POSTER_PALETTES.map(option=><button
+          key={option.id} type="button" title={option.label} aria-label={option.label}
+          aria-pressed={accent.toLowerCase()===option.hex.toLowerCase()}
+          onClick={()=>chooseColor(option.hex)}
+          className={"h-8 w-8 rounded-full border-2 transition-transform hover:scale-110 "+
+            (accent.toLowerCase()===option.hex.toLowerCase()?"border-white ring-2 ring-blue-400":"border-white/30")}
+          style={{backgroundColor:option.hex}}
+        />)}
+      </div>
+      <label className="flex items-center gap-2 text-xs text-muted-foreground">
+        Personalizada
+        <input type="color" className="h-8 w-9 cursor-pointer rounded border border-border bg-transparent p-0"
+          aria-label="Escolher cor personalizada" value={accent} onChange={event=>chooseColor(event.target.value)}/>
+      </label>
+      <span className="text-xs text-muted-foreground">A cor também será usada no PNG.</span>
+    </div>
     {games.isPending&&<Card className="p-8 text-center">Consultando jogos de hoje…</Card>}
     {games.isError&&<Card className="p-8 text-center text-destructive" role="alert">
       {games.error instanceof Error?games.error.message:"Não foi possível consultar os jogos de hoje."}
     </Card>}
-    {games.isSuccess&&groups.length===0&&<Card className="p-8 text-center">Não foram encontrados jogos dos times prioritários para hoje.</Card>}
+    {games.isSuccess&&groups.length===0&&<Card className="p-8 text-center">Nenhum evento de futebol encontrado para hoje.</Card>}
     {games.isSuccess&&groups.length>0&&<div className="grid gap-8 xl:grid-cols-2">
       {groups.map((group,index)=>{
         const featured=group.find(match=>!!match.playerPhoto);
@@ -142,7 +178,7 @@ export function VitrineFootballStudio() {
                   headline="EVENTOS DE HOJE" brand={brand.name} logo={transparentLogo} contact={brand.contact}
                   badgeImages={badgeImages} broadcastByMatch={channels}
                   playerPhoto={featured?.playerPhoto||""} playerName={featured?.playerName||""}
-                  stadium="" accent={brand.accent}/>
+                  stadium="" accent={accent}/>
               </div>
             </div>
           </div>
