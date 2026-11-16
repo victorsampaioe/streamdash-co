@@ -91,6 +91,7 @@ export function VitrineFootballStudio() {
   const [manualBadgeImages, setManualBadgeImages] = useState<Record<string, string>>({});
   const [badgeFailures, setBadgeFailures] = useState<Record<string, string>>({});
   const [badgeLoading, setBadgeLoading] = useState(false);
+  const [badgeReload, setBadgeReload] = useState(0);
   const [remotePlayerError, setRemotePlayerError] = useState("");
   const [logo, setLogo] = useState("");
   const [brand, setBrand] = useState("Stream Monitor");
@@ -193,7 +194,7 @@ export function VitrineFootballStudio() {
       }
     })();
     return () => { disposed = true; };
-  }, [rightsConfirmed, usedBadges, fetchImage]);
+  }, [rightsConfirmed, usedBadges, fetchImage, badgeReload]);
 
   useEffect(() => {
     setPlayerRemote("");
@@ -512,6 +513,12 @@ export function VitrineFootballStudio() {
             </p> : <p className="text-xs text-muted-foreground">
               O carregamento automático está desligado até você confirmar os direitos acima.
             </p>}
+            {rightsConfirmed && badgeUrlCount > 0 && <Button type="button" size="sm"
+              variant="outline" disabled={badgeLoading}
+              onClick={() => setBadgeReload((value) => value + 1)}>
+              <RefreshCw className={`mr-2 h-3 w-3 ${badgeLoading ? "animate-spin" : ""}`} />
+              {badgeLoading ? "Carregando escudos…" : "Tentar carregar escudos novamente"}
+            </Button>}
             {rightsConfirmed && Object.keys(badgeFailures).length > 0 && <p role="alert" className="text-xs text-amber-400">
               Alguns escudos externos não puderam ser carregados. Envie-os manualmente abaixo.
               {Object.values(badgeFailures).slice(0, 1).map((error) => <span key={error}> Motivo: {error}</span>)}
