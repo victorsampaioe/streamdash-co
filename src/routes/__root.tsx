@@ -21,6 +21,7 @@ import { trackMetaPageView, isPrivatePath } from "@/lib/meta-pixel";
 import { captureAttribution } from "@/lib/ad-attribution";
 import { trackPosthogPage } from "@/lib/posthog-analytics";
 import { onConsentChange } from "@/lib/consent";
+import { AdvertisingConsentBanner } from "@/components/advertising-consent-banner";
 
 
 function NotFoundComponent() {
@@ -223,6 +224,7 @@ function RootComponent() {
       <ThemeProvider>
         <Outlet />
         <Toaster richColors position="top-right" />
+        <AdvertisingConsentBanner />
       </ThemeProvider>
     </QueryClientProvider>
   );
