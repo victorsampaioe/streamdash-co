@@ -307,8 +307,13 @@ export function renderCinematic(ctx:CanvasRenderingContext2D,opt:CinematicOption
   // "Minha Revenda", no Stream Monitor default watermark or name.
   // Preserve PNG transparency and original proportions in every format.
   const story=h>=1800&&!wide;
-  const logoW=wide?286:story?322:278;
-  const logoH=wide?128:story?190:146;
+  const logoW=opt.mode==="banner"?w*.25:wide?286:story?322:278;
+  // Size the complete reseller artwork, not just a short fixed-height slot.
+  // Keep its top anchor and contain tall logos without cropping or a matte.
+  const logoSize=opt.logo?imageSize(opt.logo):null;
+  const logoH=opt.mode==="banner"
+    ?logoSize?.width?Math.min(logoW,logoW*logoSize.height/logoSize.width):logoW
+    :wide?128:story?190:146;
   const logoY=story?68:49;
   const logoX=opt.logoPosition==="left"?margin:w-margin-logoW;
   if(opt.logo){
