@@ -1,3 +1,4 @@
+import {requirePaidFeature} from "@/lib/premium-feature-access";
 import {createServerFn} from "@tanstack/react-start";
 import {z} from "zod";
 import {requireSupabaseAuth} from "@/integrations/supabase/auth-middleware";
@@ -195,7 +196,8 @@ export const getCinematicBannerDetail=createServerFn({method:"POST"})
     media:z.enum(["movie","tv"]),
     id:z.number().int().positive(),
   }).parse(input))
-  .handler(async ({data})=>{
+  .handler(async ({context,data})=>{
+    await requirePaidFeature(context);
     const {fetchDetail,fetchCinematicExtras}=await import("./tmdb.server");
     const [detail,extras]=await Promise.all([
       fetchDetail(data.media,data.id),fetchCinematicExtras(data.media,data.id),
@@ -219,6 +221,7 @@ export const getCinematicBannerDetail=createServerFn({method:"POST"})
 export const getCinematicBannerBrand=createServerFn({method:"GET"})
   .middleware([requireSupabaseAuth])
   .handler(async ({context})=>{
+    await requirePaidFeature(context);
     const ownerId=context.userId;
     const {supabaseAdmin}=await import("@/integrations/supabase/client.server");
     const db=supabaseAdmin as any;
