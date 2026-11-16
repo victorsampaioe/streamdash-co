@@ -4,6 +4,7 @@ import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { requirePaidFeature } from "@/lib/premium-feature-access";
 import { isMajorFootballCompetition, isYouthFootballFixture } from "@/lib/vitrine-football-competitions";
+import { verifiedFootballBroadcasts } from "@/lib/vitrine-football-verified-broadcasts";
 
 /**
  * FTWB is the primary fixture provider for subscribed users.
@@ -185,15 +186,6 @@ function getBroadcasts(record: unknown): string[] {
  * ge.globo.com/pr/futebol/noticia/2026/11/16/athletico-x-parana-clube-pela-final-da-copa-parana-onde-assistir-ao-vivo-horario-e-escalacoes.ghtml
  * parana.pr.gov.br/aen/Noticia/TV-Parana-Turismo-transmite-para-todo-o-Brasil-finais-da-Copa-Parana
  */
-function verifiedBroadcasts(match:FootballMatch, date:string):string[]{
-  const h=simplify(match.home),a=simplify(match.away);
-  const isAthletico=(v:string)=>v.includes("athletico")||v.includes("atletico pr")||v.includes("atletico paranaense");
-  const isParana=(v:string)=>(v==="parana"||v.includes("parana clube"))&&!isAthletico(v);
-  if(date==="2026-11-16" && ((isAthletico(h)&&isParana(a))||(isAthletico(a)&&isParana(h)))) {
-    return ["FPF TV","Rede Furacão","TMC Esporte"];
-  }
-  return [];
-}
 function apiFixture(record: unknown, index: number, date: string): FootballMatch | null {
   const nested=pick(record,"times","equipes","teams");
   const homeObj = pick(record,"mandante","time_casa","home_team","casa","home","teamHome","team_home","equipe_mandante","timeA","equipeA")
@@ -581,7 +573,7 @@ export const getVitrineFootballMatches = createServerFn({ method: "POST" })
     await inlinePosterBadges(matches);
     // Retain FTWB channels and previously checked event-specific information first.
     for(const match of matches){
-      if(!(match.broadcasts||[]).length)match.broadcasts=verifiedBroadcasts(match,data.date);
+      if(!(match.broadcasts||[]).length)match.broadcasts=verifiedFootballBroadcasts(match.home,match.away,data.date);
     }
     const withoutChannels=matches.filter(match=>!(match.broadcasts||[]).length);
     const authorization=getRequest()?.headers.get("authorization")||"";
