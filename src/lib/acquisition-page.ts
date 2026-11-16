@@ -7,6 +7,8 @@ const counted=new Set<string>();
  */
 export async function trackAcquisitionPage(stage:"landing"|"signup"){
  if(typeof window==="undefined"||readChoice("advertising")!=="granted")return;
+ // Synthetic browser automation is useful for QA but is not a real visitor.
+ if(navigator.webdriver===true)return;
  captureAttribution();
  const attribution=readAttribution();
  if(!attribution)return;
