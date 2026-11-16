@@ -17,7 +17,7 @@ import { trackMetaCompleteRegistration } from "@/lib/meta-pixel";
 import { trackPosthogEvent } from "@/lib/posthog-analytics";
 import { readAttribution, readAttributionPlatform, readAttributionSource } from "@/lib/ad-attribution";
 import {trackAcquisitionPage} from "@/lib/acquisition-page";
-import {onConsentChange} from "@/lib/consent";
+import {onConsentChange,readChoice} from "@/lib/consent";
 
 const searchSchema = z.object({ redirect: z.string().optional(), ref: z.string().regex(/^[A-Za-z0-9]{4,16}$/).optional(), tab: z.enum(["signin","signup"]).optional() }).partial();
 
@@ -132,7 +132,8 @@ function AuthPage() {
   function markSignupStarted() {
     if (signupStartedRef.current) return;
     signupStartedRef.current = true;
-    window.__lovableEvents?.track?.("project.signup_started", { source: readAttributionSource() });
+    if (readChoice("advertising")==="granted")
+      window.__lovableEvents?.track?.("project.signup_started", { source: readAttributionSource() });
     void trackPosthogEvent("sm_signup_started");
   }
 
@@ -162,7 +163,8 @@ function AuthPage() {
         throw new Error(result.error ?? "Não conseguimos criar sua conta agora. Tente novamente em alguns segundos.");
       }
       // Conta criada pelo servidor: único ponto que conta como cadastro concluído.
-      window.__lovableEvents?.track?.("project.signup_completed", { source: readAttributionSource(), platform: readAttributionPlatform(), pending_activation: Boolean(result.needsEmailConfirmation) });
+      if (readChoice("advertising")==="granted")
+        window.__lovableEvents?.track?.("project.signup_completed", { source: readAttributionSource(), platform: readAttributionPlatform(), pending_activation: Boolean(result.needsEmailConfirmation) });
       if (result.ok && result.registrationEventId) void trackMetaCompleteRegistration(result.registrationEventId);
       void trackPosthogEvent("sm_signup_completed");
       if (result.needsEmailConfirmation) {
