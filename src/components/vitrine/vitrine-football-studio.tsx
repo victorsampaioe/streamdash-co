@@ -19,7 +19,7 @@ const fallbackBrand: Branding = {name:"Stream Monitor",logo:"/favicon.ico",conta
 const baseSize = 1080;
 const safeColor = (input: string | undefined) => /^#[0-9a-f]{6}$/i.test(input||"") ? input! : "#146df2";
 
-/** Automated posters: up to three fixtures per artwork, with optional color customization. */
+/** Automated posters: two fixtures (four clubs) per artwork, with optional color customization. */
 export function VitrineFootballStudio() {
   const load = useServerFn(getVitrineFootballMatches);
   const [brand, setBrand] = useState<Branding>(fallbackBrand);
@@ -94,7 +94,7 @@ export function VitrineFootballStudio() {
   });
   const groups = useMemo(() => {
     const matches = games.data?.matches ?? [];
-    return [matches.slice(0,3),matches.slice(3,6),matches.slice(6,9)].filter((group)=>group.length>0);
+    return [matches.slice(0,2),matches.slice(2,4),matches.slice(4,6)].filter((group)=>group.length>0);
   }, [games.data]);
   const haveChannels = (match:FootballMatch) => (match.broadcasts||[]).slice(0,3).join(" • ") || "TRANSMISSÃO NÃO CONFIRMADA";
 
@@ -125,7 +125,7 @@ export function VitrineFootballStudio() {
       <div>
         <div className="flex items-center gap-2 text-xs font-bold tracking-[.18em] text-blue-400"><Trophy size={17}/> STREAM MONITOR</div>
         <h1 className="mt-2 text-3xl font-black tracking-tight">Eventos de hoje · Artes automáticas</h1>
-        <p className="mt-2 text-sm text-muted-foreground">Os principais confrontos de hoje são organizados em até 3 artes. Mostramos até 3 canais confirmados por jogo.</p>
+        <p className="mt-2 text-sm text-muted-foreground">Até 2 confrontos (4 times) por arte, em até 3 artes. Canais só são exibidos quando confirmados.</p>
       </div>
       <Button type="button" variant="outline" disabled={games.isFetching} onClick={()=>{setDay(today());void games.refetch()}}>
         <RefreshCw size={16} className={games.isFetching?"mr-2 animate-spin":"mr-2"}/> Atualizar eventos
