@@ -55,6 +55,7 @@ export type FootballMatch = {
   time: string;
   iso: string;
   day: string;
+  broadcasts?: string[];
 };
 export type FootballPlayer = {
   id: string;
@@ -124,49 +125,74 @@ async function loadLeague(date: string, league: (typeof leagues)[number]) {
   return events;
 }
 
-/** Date-scoped, league-scoped real-world fixtures for the private admin studio. */
+/** Date-scoped, league-scoped real-world fixtures for the 
+const FOOTBALL_API_URL = "https://ftwb.notiffly.com.br/jogos";
+const MAIN_TEAMS = ["flamengo", "corinthians", "palmeiras", "sao paulo", "santos", "vasco", "fluminense", "botafogo", "gremio", "internacional", "atletico mg", "atletico mineiro", "cruzeiro", "bahia", "vitoria", "fortaleza", "ceara", "sport", "athletico", "coritiba"];
+const simplify = (input: unknown) => String(input ?? "").normalize("NFD")
+  .replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+function pick(record: unknown, ...fields: string[]): unknown {
+  if (!record || typeof record !== "object") return undefined;
+  const data = record as Record<string, unknown>;
+  return fields.map((key) => data[key]).find((value) => value !== null && value !== undefined && value !== "");
+}
+function teamName(source: unknown): string {
+  return typeof source === "string" ? source : String(pick(source,"nome","name","short_name") || "");
+}
+function teamLogo(source: unknown): string {
+  const url = String(pick(source,"escudo","logo","image","badge") || "");
+  try { const parsed = new URL(url); return parsed.protocol === "https:" ? url : ""; }
+  catch { return ""; }
+}
+function getBroadcasts(record: unknown): string[] {
+  let raw = pick(record,"canais","transmissoes","transmissao","onde_assistir","broadcast","tv");
+  if (raw && typeof raw === "object" && !Array.isArray(raw)) raw = pick(raw,"canais","channels");
+  const list = Array.isArray(raw) ? raw : typeof raw === "string" ? raw.split(/[,;|]/) : [];
+  return [...new Set(list.map((item) => typeof item === "string" ? item :
+    String(pick(item,"nome","name","canal") || "")).map((value) => value.trim()).filter(Boolean))].slice(0,3);
+}
+function apiFixture(record: unknown, index: number, date: string): FootballMatch | null {
+  const homeObj = pick(record,"mandante","time_casa","home_team","casa","home");
+  const awayObj = pick(record,"visitante","time_fora","away_team","fora","away");
+  const home = teamName(homeObj), away = teamName(awayObj);
+  if (!home || !away) return null;
+  if (!MAIN_TEAMS.some((team) => simplify(home).includes(team) || simplify(away).includes(team))) return null;
+  const competition = pick(record,"campeonato","competicao","league","competition");
+  const league = typeof competition === "string" ? competition : String(pick(competition,"nome","name")||"Futebol");
+  const inputTime = String(pick(record,"data_hora","datetime","inicio","horario","hora","kickoff")||"");
+  const when = /^\d{4}-\d{2}-\d{2}T/.test(inputTime) && !Number.isNaN(Date.parse(inputTime)) ? kickoff(inputTime) :
+    {iso:"",day:date,time: /^\d{2}:\d{2}$/.test(inputTime)?inputTime:"A confirmar"};
+  const id = String(pick(record,"id","jogo_id","match_id")||[date,home,away,index].join(":"));
+  return {id,home,away,homeId:"",awayId:"",homeBadge:teamLogo(homeObj),awayBadge:teamLogo(awayObj),
+    league,leagueId:simplify(league),...when,broadcasts:getBroadcasts(record)};
+}
+/** Server-side: the FTWB key never reaches the browser or git. */
 export const getVitrineFootballMatches = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: unknown) => z.object({
     date: dateSchema,
     leagues: z.array(z.string().max(70)).max(16).optional(),
   }).parse(input))
-  .handler(async ({ data, context }) => {
+  .handler(async ({data, context}) => {
     await requireFootballAdmin(context);
-    const filtered = data.leagues?.length
-      ? leagues.filter((l) => data.leagues!.includes(l.id)) : [...leagues];
-    const next = new Date(`${data.date}T12:00:00Z`);
-    next.setUTCDate(next.getUTCDate() + 1);
-    const nextDate = next.toISOString().slice(0, 10);
-    const tasks = filtered.flatMap((league) => [data.date, nextDate].map((date) => () => loadLeague(date, league)));
-    const results: PromiseSettledResult<FootballMatch[]>[] = [];
-    // Bounded concurrency: do not hammer the free source with every league at once.
-    for (let i = 0; i < tasks.length; i += 5) {
-      results.push(...await Promise.allSettled(tasks.slice(i, i + 5).map((run) => run())));
-    }
-    const matches = new Map<string, FootballMatch>();
-    for (const r of results) {
-      if (r.status !== "fulfilled") continue;
-      for (const m of r.value) if (m.day === data.date && !matches.has(m.id)) matches.set(m.id, m);
-    }
-    const featuredMatches = [...matches.values()].filter((m) =>
-      m.leagueId !== "international-friendly" ||
-      !/\bU\s?-?(?:1[5-9]|2[0-3])\b|feminino|women|\(w\)/i.test(m.home + " " + m.away));
-    return {
-      matches: featuredMatches.sort((a, b) => {
-        const aLeague = leagues.findIndex((l) => l.id === a.leagueId);
-        const bLeague = leagues.findIndex((l) => l.id === b.leagueId);
-        return aLeague - bLeague || a.iso.localeCompare(b.iso);
-      }).slice(0, 160),
-      leagues: footballLeagueOptions,
-      source: "SportScore",
-      partial: results.some((r) => r.status === "rejected"),
-      sourcesSucceeded: results.filter((r) => r.status === "fulfilled").length,
-      sourcesTotal: results.length,
-    };
+    const key = process.env.FTWB_API_KEY;
+    if (!key) throw new Error("FTWB_API_KEY não configurada no ambiente do servidor.");
+    const url = new URL(FOOTBALL_API_URL);
+    url.searchParams.set("pais","brasil");
+    url.searchParams.set("data",data.date);
+    url.searchParams.set("status","agendado,ao_vivo");
+    const response = await fetch(url,{headers:{"x-api-key":key,Accept:"application/json"},signal:AbortSignal.timeout(9000),cache:"no-store"});
+    if(!response.ok) throw new Error("Não foi possível consultar a API FTWB (HTTP "+response.status+").");
+    const payload:unknown = await response.json();
+    const list = Array.isArray(payload)?payload:pick(payload,"jogos","data","results");
+    if(!Array.isArray(list)) throw new Error("Formato da lista de jogos da FTWB não reconhecido.");
+    const seen = new Set<string>();
+    const matches = list.map((raw,i)=>apiFixture(raw,i,data.date)).filter((match):match is FootballMatch=>!!match)
+      .filter((match)=>{const unique=[simplify(match.home),simplify(match.away),match.time].join("|");if(seen.has(unique))return false;seen.add(unique);return true;})
+      .sort((a,b)=>a.time.localeCompare(b.time)).slice(0,9);
+    return {matches,leagues:footballLeagueOptions,source:"FTWB",partial:false,sourcesSucceeded:1};
   });
 
-/** Search real athletes by name. A result is not proof of the current team or rights to photograph. */
+rights to photograph. */
 export const getVitrineFootballPlayers = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: unknown) => z.object({
