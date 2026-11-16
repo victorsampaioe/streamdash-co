@@ -40,7 +40,7 @@ function ResponsivePoster({children,onPosterRef}:{
 }
 const safeColor = (input: string | undefined) => /^#[0-9a-f]{6}$/i.test(input||"") ? input! : "#146df2";
 
-/** Automated posters: two fixtures (four clubs) per artwork, with optional color customization. */
+/** Automated posters: four fixtures (eight clubs) per artwork, with automatic pagination. */
 export function VitrineFootballStudio() {
   const load = useServerFn(getVitrineFootballMatches);
   const [brand, setBrand] = useState<Branding>(fallbackBrand);
@@ -106,7 +106,9 @@ export function VitrineFootballStudio() {
   });
   const groups = useMemo(() => {
     const matches = games.data?.matches ?? [];
-    return [matches.slice(0,2),matches.slice(2,4),matches.slice(4,6)].filter((group)=>group.length>0);
+    const chunks:FootballMatch[][]=[];
+    for(let i=0;i<matches.length;i+=4)chunks.push(matches.slice(i,i+4));
+    return chunks;
   }, [games.data]);
   const [validatedPhotos,setValidatedPhotos]=useState<Record<string,boolean>>({});
   useEffect(()=>{
@@ -149,7 +151,7 @@ export function VitrineFootballStudio() {
       <div>
         <div className="flex items-center gap-2 text-xs font-bold tracking-[.18em] text-blue-400"><Trophy size={17}/> STREAM MONITOR</div>
         <h1 className="mt-2 text-3xl font-black tracking-tight">Eventos de hoje · Artes automáticas</h1>
-        <p className="mt-2 text-sm text-muted-foreground">Até 2 confrontos (4 times) por arte, em até 3 artes, com canais verificados quando disponíveis.</p>
+        <p className="mt-2 text-sm text-muted-foreground">Até 4 confrontos (8 times) por arte. Todos os jogos recebidos para hoje, separados automaticamente em quantas artes forem necessárias.</p>
       </div>
       <Button type="button" variant="outline" disabled={games.isFetching} onClick={()=>{setDay(today());void games.refetch()}}>
         <RefreshCw size={16} className={games.isFetching?"mr-2 animate-spin":"mr-2"}/> Atualizar eventos
@@ -178,7 +180,8 @@ export function VitrineFootballStudio() {
     {games.isError&&<Card className="p-8 text-center text-destructive" role="alert">
       {games.error instanceof Error?games.error.message:"Não foi possível consultar os jogos de hoje."}
     </Card>}
-    {games.isSuccess&&groups.length===0&&<Card className="p-8 text-center">Nenhum evento de futebol encontrado para hoje.</Card>}
+    {games.isSuccess&&groups.length===0&&<Card className="p-8 text-center">Nenhum evento retornado pela FTWB para hoje.</Card>}
+    {games.isSuccess&&groups.length>0&&<p className="text-sm text-muted-foreground">{games.data.matches.length} confrontos encontrados • {groups.length} {groups.length===1?"arte":"artes"} • 4 confrontos por arte</p>}
     {games.isSuccess&&groups.length>0&&<div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
       {groups.map((group,index)=>{
         const featured=group.find(match=>!!match.playerPhoto && validatedPhotos[match.playerPhoto]===true);

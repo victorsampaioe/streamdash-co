@@ -43,7 +43,8 @@ describe("Vitrine Futebol — imagens e exportação", () => {
     />);
     expect(html).toContain('src="data:image/png;base64,HOME"');
     expect(html).toContain('src="data:image/png;base64,AWAY"');
-    expect(html).toContain("Time da Casa X Time Visitante");
+    expect(html).toContain("Time da Casa");
+    expect(html).toContain("Time Visitante");
   });
   it("prioriza escudo manual em vez do escudo remoto e conserva cores e canais", () => {
     const source = { ...sample, homeBadge: "https://img.thesports.com/football/team/aa.png" };
@@ -66,14 +67,25 @@ describe("Vitrine Futebol — imagens e exportação", () => {
     const html=renderToStaticMarkup(<FootballSchedulePoster {...base} />);
     expect(html).not.toContain('src=""');
     expect(html).not.toContain("HORÁRIOS E TRANSMISSÕES SUJEITOS A CONFIRMAÇÃO");
-    expect(html).toContain("height:345px"); // destaque em banner com um jogo e sem jogador
+    expect(html).toContain("height:210px");
   });
-  it("mantém dois confrontos completos no mesmo banner",()=>{
+  it("mantém quatro confrontos completos no mesmo banner",()=>{
     const second={...sample,id:"match-second",home:"Athletico-PR",away:"Paraná Clube"};
-    const html=renderToStaticMarkup(<FootballSchedulePoster {...base} matches={[sample,second]} />);
-    expect(html).toContain("Time da Casa X Time Visitante");
-    expect(html).toContain("Athletico-PR X Paraná Clube");
+    const third={...sample,id:"match-third",home:"Flamengo",away:"Palmeiras"};
+    const fourth={...sample,id:"match-fourth",home:"Corinthians",away:"São Paulo"};
+    const fifth={...sample,id:"match-fifth",home:"Extra",away:"Extra 2"};
+    const html=renderToStaticMarkup(<FootballSchedulePoster {...base} matches={[sample,second,third,fourth,fifth]} />);
+    for(const team of ["Time da Casa","Time Visitante","Athletico-PR","Paraná Clube","Flamengo","Palmeiras","Corinthians","São Paulo"]){
+      expect(html).toContain(team);
+    }
+    expect(html).not.toContain("Extra 2");
     expect(html).not.toContain("HORÁRIOS E TRANSMISSÕES SUJEITOS");
+  });
+  it("mostra só a logo no rodapé, sem escrever o nome Minha Revenda",()=>{
+    const html=renderToStaticMarkup(<FootballSchedulePoster {...base} logo="data:image/png;base64,BRAND" />);
+    expect(html).toContain('src="data:image/png;base64,BRAND"');
+    expect(html).not.toContain("<strong");
+    expect(html).not.toContain(">Minha Revenda</");
   });
   it("não inventa times quando não há jogos", () => {
     const html = renderToStaticMarkup(<FootballSchedulePoster {...base} matches={[]} />);
