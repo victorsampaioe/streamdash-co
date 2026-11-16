@@ -1,3 +1,4 @@
+import {WorkerEntrypoint} from "cloudflare:workers";
 /**
  * Stream Monitor: one-way, private Supabase Storage -> Cloudflare R2 backup.
  * No public routes, no user data in logs, no deletion at source.
@@ -177,3 +178,51 @@ export default {
   return new Response("Not Found",{status:404});
  }
 };
+
+/**
+ * Service-binding-only RPC. The Worker has no workers.dev URL or public
+ * route, and its default HTTP handler remains 404. The token never leaves
+ * Cloudflare: only its SHA256 is sent to the signed enrollment endpoint.
+ */
+export class BackupEnrollment extends WorkerEntrypoint {
+  async getSecretFingerprint(){
+    const token=this.env.BACKUP_BRIDGE_TOKEN;
+    const valid=typeof token==="string"&&/^[a-zA-Z0-9_-]{64,128}$/.test(token);
+    return {
+      configured:typeof token==="string"&&token.length>0,
+      valid,
+      sha256:valid?await sha(token):null
+    };
+  }
+  async testManifest(){
+    const token=this.env.BACKUP_BRIDGE_TOKEN;
+    if(typeof token!=="string"||!/^[a-zA-Z0-9_-]{64,128}$/.test(token))
+      return {ok:false,reason:"secret_invalid_format"};
+    try{
+      const result=await callOrigin(this.env,"/api/public/edge-backup/manifest");
+      return {ok:true,count:result.count,
+        groups:(result.files||[]).reduce((a,f)=>{a[f.bucket]=(a[f.bucket]||0)+1;return a;},{})};
+    }catch(e){
+      return {ok:false,reason:String(e?.message||e).slice(0,110)};
+    }
+  }
+  async canaryCopySmall(){
+    if(!(await this.testManifest()).ok)return {ok:false,reason:"manifest_not_verified"};
+    const inventory=await recordInventory(this.env);
+    const existing=await this.env.BACKUP_STATE.prepare(
+      "SELECT * FROM backup_objects WHERE status='copied_size_verified' AND source_size<=? ORDER BY source_size ASC LIMIT 1"
+    ).bind(SMALL_LIMIT).first();
+    if(existing)return {ok:true,already:true,bytes:existing.source_size};
+    const file=await this.env.BACKUP_STATE.prepare(
+      "SELECT * FROM backup_objects WHERE status IN ('pending','retry') AND source_size<=? ORDER BY source_size ASC LIMIT 1"
+    ).bind(SMALL_LIMIT).first();
+    if(!file)return {ok:false,reason:"no_small_source_file",inventoryCount:inventory.found};
+    try{
+      await writeSmall(this.env,file);
+      return {ok:true,copied:true,bytes:file.source_size};
+    }catch(e){
+      await updateError(this.env,file.id,e);
+      return {ok:false,reason:String(e?.message||e).slice(0,110)};
+    }
+  }
+}
