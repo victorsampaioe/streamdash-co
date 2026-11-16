@@ -38,7 +38,7 @@ function darken(hex: string, amount: number) {
   return "#" + channels.map((x) => x.toString(16).padStart(2, "0")).join("");
 }
 const dimensions = {
-  feed: { width: 1080, height: 1080, left: 53, rowWidth: 782, top: 335, rowHeight: 215, gap: 23, count: 2 },
+  feed: { width: 1080, height: 1080, left: 48, rowWidth: 984, top: 320, rowHeight: 135, gap: 14, count: 4 },
   story: { width: 1080, height: 1920, left: 52, rowWidth: 812, top: 498, rowHeight: 188, gap: 18, count: 6 },
   landscape: { width: 1200, height: 675, left: 48, rowWidth: 830, top: 204, rowHeight: 138, gap: 15, count: 2 },
 } as const;
@@ -58,76 +58,57 @@ function TeamCrest({ src, size }: { src?: string; size: number }) {
 }
 function FixtureRibbon({ match, badgeImages, broadcast, accent, width, height }: {
   match: FootballMatch;
-  badgeImages: Record<string, string>;
+  badgeImages: Record<string,string>;
   broadcast: string;
   accent: string;
   width: number;
   height: number;
 }) {
-  const compact = height < 145;
-  const clubSize = compact ? 65 : 96;
-  const matchupLength=(match.home+" "+match.away).length;
-  const titleSize = compact ? (matchupLength > 32 ? 18 : 23) : matchupLength > 41 ? 22 : matchupLength > 29 ? 27 : 34;
-  const timeSize = compact ? 30 : 41;
   const homeBadge=badgeImages[`home:${match.id}`] || badgeImages[match.homeBadge];
   const awayBadge=badgeImages[`away:${match.id}`] || badgeImages[match.awayBadge];
-  const hasBadges=Boolean(homeBadge || awayBadge);
-  return <div className="relative overflow-hidden bg-white"
-    style={{
-      width, height, color: "#11131b", border: `5px solid ${accent}`,
-      borderRadius: compact ? 37 : 46,
-      boxShadow: "0 12px 5px rgba(0,0,0,.11),0 20px 30px rgba(0,0,0,.32)",
-    }}>
-    <div className="absolute inset-x-0 top-0" style={{ height: "43%", background: "linear-gradient(180deg,#ffffff,#f6f7f8)" }} />
-    <div className="absolute left-[3%] top-[9%] flex items-center justify-center gap-3"
-      style={{ width: "41%", height: "59%" }}>
-      <TeamCrest src={homeBadge} size={clubSize} />
-      <span style={{
-        fontSize: compact ? 33 : hasBadges ? 40 : 72, color: "#11141a", fontStyle: "italic",
-        fontWeight: 1000, letterSpacing: "-.13em", marginRight: 8,
-      }}>VS</span>
-      <TeamCrest src={awayBadge} size={clubSize} />
+  const short=height<=160;
+  const score=match.scoreLabel?"FINAL "+match.scoreLabel:
+    /ao_vivo|ao vivo|live|em andamento/i.test(match.status||"")?"AO VIVO":
+    /encerrad|finaliz|finished|concluid|ended/i.test(match.status||"")?"ENCERRADO":match.time||"A confirmar";
+  const teamFont=(name:string)=>{
+    const length=name.length;
+    return short?(length>28?16:length>18?19:23):(length>32?20:length>23?25:30);
+  };
+  return <div className="relative bg-white" style={{
+    width,height,flexShrink:0,border:`3px solid ${accent}`,borderRadius:short?23:35,
+    color:"#17223b",boxShadow:"0 9px 20px rgba(0,0,0,.23)",overflow:"hidden",
+  }}>
+    <div className="absolute inset-x-0 top-0" style={{height:"66%",background:"linear-gradient(175deg,#fff,#f4f7ff)"}}/>
+    <div className="absolute font-black uppercase" style={{
+      top:short?6:12,left:24,right:24,fontSize:short?12:15,color:"#5c6880",
+      lineHeight:1.1,textAlign:"center",overflow:"hidden",whiteSpace:"nowrap",textOverflow:"ellipsis"
+    }}>{match.league||"FUTEBOL"}</div>
+    <div className="absolute flex items-center" style={{left:18,right:18,top:short?29:40,height:short?58:100,justifyContent:"space-between"}}>
+      <div className="flex min-w-0 items-center justify-start" style={{width:"45%",gap:11}}>
+        <TeamCrest src={homeBadge} size={short?49:75}/>
+        <span style={{fontSize:teamFont(match.home),fontWeight:900,lineHeight:1.05,overflowWrap:"anywhere",
+          display:"-webkit-box",WebkitLineClamp:2,WebkitBoxOrient:"vertical",overflow:"hidden"}}>{match.home}</span>
+      </div>
+      <span style={{fontWeight:1000,color:accent,fontSize:short?19:28,padding:"0 6px"}}>X</span>
+      <div className="flex min-w-0 items-center justify-end" style={{width:"45%",gap:11,textAlign:"right"}}>
+        <span style={{fontSize:teamFont(match.away),fontWeight:900,lineHeight:1.05,overflowWrap:"anywhere",
+          display:"-webkit-box",WebkitLineClamp:2,WebkitBoxOrient:"vertical",overflow:"hidden"}}>{match.away}</span>
+        <TeamCrest src={awayBadge} size={short?49:75}/>
+      </div>
     </div>
-    <div className="absolute flex flex-col justify-center" style={{
-      left: "45.5%", right: 14, top: 8, height: "66%", textAlign: "center",
-    }}>
-      <div style={{
-        fontSize: compact ? 12 : 13, fontWeight: 800, color: "#595b65",
-        lineHeight: 1.05, overflow: "hidden", maxHeight: 25,
-      }}>{match.league}</div>
-      <div style={{
-        fontSize: titleSize, fontWeight: 1000, lineHeight: 1.04,
-        letterSpacing: "-.035em", textTransform: "uppercase",
-        display: "-webkit-box", WebkitLineClamp: 3, WebkitBoxOrient: "vertical",
-        overflow: "hidden", overflowWrap: "anywhere", wordBreak: "break-word",
-      }}>{match.home} X {match.away}</div>
-    </div>
-    <div className="absolute flex items-center justify-center"
-      style={{
-        left: "4.5%", bottom: compact ? 8 : 12,
-        width: "43%", height: compact ? 30 : 37,
-        borderRadius: 30, background: "linear-gradient(180deg,#fff,#e9e9ed)",
-        boxShadow: "inset 0 1px 2px #0002,0 3px 4px #0002",
-        border: "1px solid #d9dade",
-      }}>
-      <span style={{
-        display: "block", width: "96%", color: "#222734", textAlign: "center",
-        fontSize: compact ? 13 : 16, lineHeight: 1,
-        fontWeight: 900, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
-      }}>{broadcast.trim() || "TRANSMISSÃO NÃO CONFIRMADA"}</span>
-    </div>
+    <div className="absolute flex items-center justify-center" style={{
+      left:0,right:"38%",bottom:0,height:short?37:51,
+      borderTop:"1px solid #d9deeb",background:"#f1f5fa",padding:"0 12px",
+      fontSize:short?13:16,fontWeight:850,color:"#263349"
+    }}><span style={{whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>
+      {broadcast.trim()||"Transmissão não confirmada"}
+    </span></div>
     <div className="absolute flex items-center justify-center text-white" style={{
-      bottom: compact ? 3 : 4, right: 0, width: "46%", height: compact ? 46 : 59,
-      background: `linear-gradient(110deg,${darken(accent, .5)},${accent})`,
-      borderTopLeftRadius: 26, borderBottomLeftRadius: 25,
-      borderTopRightRadius: 0, borderBottomRightRadius: 24,
-      fontSize: timeSize, fontWeight: 1000,
-      lineHeight: 1, letterSpacing: "-.02em",
-      textShadow: "0 3px 8px rgba(0,0,0,.45)",
-    }}>{match.scoreLabel ? "FINAL "+match.scoreLabel :
-      /ao_vivo|ao vivo|live|em andamento/i.test(match.status||"") ? "AO VIVO · "+(match.time||"") :
-      /encerrad|finaliz|finished|concluid|ended/i.test(match.status||"") ? "ENCERRADO" :
-      match.time || "A confirmar"}</div>
+      right:0,bottom:0,width:"38%",height:short?37:51,
+      background:`linear-gradient(115deg,${darken(accent,.55)},${accent})`,
+      borderTopLeftRadius:short?16:25,fontWeight:1000,
+      fontSize:short?23:29,textShadow:"0 1px 3px #0005"
+    }}>{score}</div>
   </div>;
 }
 
@@ -146,17 +127,15 @@ export function FootballSchedulePoster({
   const phone = digits.length > 0 ? contact.trim().slice(0, 25) : "";
   const heading = headline.trim() || (kind === "featured" ? "JOGAÇO DO DIA" : "JOGOS DO DIA");
   const standardHeading = ["JOGOS DO DIA", "JOGOS DE HOJE", "EVENTOS DE HOJE"].includes(heading.toUpperCase());
-  const headingFont = landscape ? 68 : story ? 98 : 78;
+  const headingFont = landscape ? 68 : story ? 98 : 72;
   const cardWidth = landscape ? 790 : d.rowWidth;
   const playerWidth = landscape ? 560 : story ? 700 : 620;
   const footerBottom = story ? 79 : landscape ? 38 : 48;
   const hasPlayer = Boolean(playerPhoto);
   const watermarkBadges = [...new Set(shown.flatMap(m => [badgeImages[`home:${m.id}`] || badgeImages[m.homeBadge] || m.homeBadge, badgeImages[`away:${m.id}`] || badgeImages[m.awayBadge] || m.awayBadge]).filter(Boolean))].slice(0,4);
-  const singleWithoutPlayer = !hasPlayer && format === "feed" && shown.length === 1;
-  const offset = !hasPlayer && format === "feed" ? (singleWithoutPlayer ? 90 : 65) : 0;
-  const posterCardWidth = !hasPlayer && format === "feed" ? 974 : cardWidth;
-  const posterCardLeft = !hasPlayer && format === "feed" ? 53 : d.left;
-  const rowHeight = singleWithoutPlayer ? 345 : d.rowHeight;
+  const posterCardWidth = format==="feed" ? 984 : cardWidth;
+  const posterCardLeft = format==="feed" ? 48 : d.left;
+  const rowHeight = format==="feed" && shown.length===1 ? 210 : d.rowHeight;
 
   return <div className="relative isolate overflow-hidden font-sans" style={{
     width: d.width, height: d.height,
@@ -164,10 +143,10 @@ export function FootballSchedulePoster({
     color: "white",
   }}>
     {!hasPlayer && watermarkBadges.length > 0 && <div className="absolute pointer-events-none flex items-center justify-center gap-6"
-      style={{top:235,left:565,right:40,height:155,opacity:.10,zIndex:2}}>
+      style={{top:240,left:585,right:40,height:80,opacity:.09,zIndex:2}}>
       {watermarkBadges.map((badge,i)=><img key={i} src={badge} alt="" crossOrigin="anonymous"
         onError={event=>{event.currentTarget.style.display="none";}}
-        style={{height:115,width:115,objectFit:"contain"}}/>)}
+        style={{height:78,width:78,objectFit:"contain"}}/>)}
     </div>}
     {/* Animated-looking stadium lighting is static for reliable PNG output. */}
     {stadium && <img src={stadium} alt="" className="absolute inset-0 h-full w-full object-cover"
@@ -202,8 +181,8 @@ export function FootballSchedulePoster({
         maskImage: "linear-gradient(180deg,transparent 0%,black 9%,black 83%,transparent 99%)",
       }} />}
     <div className="absolute z-[5] flex items-center justify-center" style={{
-      left: landscape ? 47 : 55, top: landscape ? 48 : story ? 74 : 58,
-      width: landscape ? 235 : 248, height: landscape ? 140 : 165,
+      left: landscape ? 47 : 45, top: landscape ? 48 : story ? 74 : 69,
+      width: landscape ? 235 : 350, height: landscape ? 140 : 163,
       border: "none", borderRadius: 0,
       background: "transparent", padding: 0,
       boxShadow: "none",
@@ -212,8 +191,8 @@ export function FootballSchedulePoster({
         : <span style={{fontSize:24,fontWeight:1000,textAlign:"center"}}>{branding.slice(0,18)}</span>}
     </div>
     <div className="absolute" style={{
-      left: landscape ? 315 : 322, top: landscape ? 42 : story ? 65 : 65,
-      width: landscape ? 690 : 727, maxHeight: story ? 305 : 185,
+      left: landscape ? 315 : 430, top: landscape ? 42 : story ? 65 : 65,
+      width: landscape ? 690 : 605, maxHeight: story ? 305 : 185,
       textShadow: "0 10px 17px rgba(0,0,0,.32)",
     }}>
       {standardHeading ? <>
@@ -238,12 +217,12 @@ export function FootballSchedulePoster({
       }}>{dateLabel(day)}</div>
     </div>
     <div className="absolute" style={{
-      left: posterCardLeft, top: d.top + offset - (story ? 30 : 14),
+      left: posterCardLeft, top: d.top - (story ? 30 : 14),
       height: story ? 7 : 5, width: posterCardWidth - 6,
       background: accent, boxShadow: "0 0 25px rgba(255,255,255,.22)",
     }} />
     <div className="absolute" style={{
-      left: posterCardLeft, top: d.top + offset, display: "flex", flexDirection: "column",
+      left: posterCardLeft, top: d.top, display: "flex", flexDirection: "column",
       gap: d.gap, zIndex: 3,
     }}>
       {shown.length
@@ -281,21 +260,11 @@ export function FootballSchedulePoster({
         : <><ShieldCheck size={story ? 42 : 30} color="#fff" />
           <span style={{ marginLeft: 12, fontSize: story ? 29 : 23, fontWeight: 1000 }}>CONSULTE A PROGRAMAÇÃO</span></>}
     </div>
-    <div className="absolute z-[4] flex items-center justify-end gap-3" style={{
-      right: landscape ? 52 : 44, bottom: footerBottom + (story ? 0 : 2),
-      width: landscape ? 350 : story ? 340 : 350,
-      height: story ? 91 : landscape ? 52 : 67,
-      textAlign: "right",
-    }}>
-      {logo && <img src={logo} alt="" style={{
-        width: story ? 85 : 60, height: story ? 85 : 60, objectFit: "contain",
-        filter: "drop-shadow(0 6px 7px rgba(0,0,0,.4))",
-      }} />}
-      <strong style={{
-        color: "#fff", fontSize: story ? 45 : landscape ? 29 : 34,
-        fontWeight: 1000, lineHeight: .98, textShadow: "0 7px 14px #000",
-        overflowWrap: "anywhere",
-      }}>{branding.slice(0, 36)}</strong>
-    </div>
+    {/* Brand logo only: never print a placeholder reseller name in artwork. */}
+    {logo && <div className="absolute z-[5] flex items-center justify-end" style={{
+      right:45,bottom:footerBottom-3,width:350,height:82
+    }}><img src={logo} alt="" crossOrigin="anonymous" onError={event=>{event.currentTarget.style.display="none";}}
+      style={{width:"100%",height:"100%",objectFit:"contain",objectPosition:"right center"}}/></div>}
+
   </div>;
 }
