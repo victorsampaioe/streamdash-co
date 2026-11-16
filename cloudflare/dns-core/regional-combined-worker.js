@@ -577,6 +577,27 @@ async function backupBulkControl(env){
     ).run();
   }
 }
+/** Verify the completed archive against a local-computer SHA256 by an
+ * independent Worker. No archive or token is exposed to this Worker.
+ */
+async function backupArchiveVerifyControl(env){
+  if(!env.BACKUP_VERIFY||!env.DNS_DB)return;
+  const flag=await env.DNS_DB.prepare(
+    "SELECT value FROM dns_worker_meta WHERE key='backup_archive_verify_requested'"
+  ).first();
+  if(flag?.value!=="true")return;
+  const result=await env.BACKUP_VERIFY.verifyArchive();
+  if(result.reason==="archive_not_yet_copied")return;
+  const state=result.matched?"verified_sha256":"verification_failed";
+  await env.DNS_DB.prepare(
+    "INSERT INTO dns_worker_meta(key,value) VALUES('backup_archive_verify_status',?) "+
+    "ON CONFLICT(key) DO UPDATE SET value=excluded.value"
+  ).bind(state).run();
+  await env.DNS_DB.prepare(
+    "UPDATE dns_worker_meta SET value='false' WHERE key='backup_archive_verify_requested'"
+  ).run();
+  console.log("backup_archive_verification_completed",JSON.stringify({sha256Matched:result.matched===true,bytes:result.bytes||null,reason:result.reason||null}));
+}
 export default {
   scheduled(event,env,ctx){
     regionalWorker.scheduled(event,env,ctx);
@@ -585,6 +606,7 @@ export default {
     metricsWorker.scheduled(event,env,ctx);
     if(env.BACKUP_ENROLLMENT)ctx.waitUntil(enrollmentControl(env).catch(e=>console.warn("backup_enroll_control_failed",String(e?.message||e).slice(0,130))));
     if(env.BACKUP_ENROLLMENT)ctx.waitUntil(backupBulkControl(env).catch(e=>console.error("backup_bulk_service_failed",String(e?.message||e).slice(0,130))));
+    if(env.BACKUP_VERIFY)ctx.waitUntil(backupArchiveVerifyControl(env).catch(e=>console.error("backup_sha256_check_failed",String(e?.name||"error"))));
   },
   queue(batch,env,ctx){
     return telegramQueueWorker.queue(batch,env,ctx);
