@@ -145,7 +145,7 @@ export function FootballSchedulePoster({
   const playerWidth = landscape ? 560 : story ? 700 : 620;
   const footerBottom = story ? 79 : landscape ? 38 : 48;
   const hasPlayer = Boolean(playerPhoto);
-  const watermarkBadges = [...new Set(shown.flatMap(m => [badgeImages[m.homeBadge] || m.homeBadge, badgeImages[m.awayBadge] || m.awayBadge]).filter(Boolean))].slice(0,4);
+  const watermarkBadges = [...new Set(shown.flatMap(m => [badgeImages[`home:${m.id}`] || badgeImages[m.homeBadge] || m.homeBadge, badgeImages[`away:${m.id}`] || badgeImages[m.awayBadge] || m.awayBadge]).filter(Boolean))].slice(0,4);
   const offset = !hasPlayer && format === "feed" ? 65 : 0;
   const posterCardWidth = !hasPlayer && format === "feed" ? 974 : cardWidth;
   const posterCardLeft = !hasPlayer && format === "feed" ? 53 : d.left;
