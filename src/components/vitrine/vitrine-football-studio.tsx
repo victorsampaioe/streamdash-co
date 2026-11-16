@@ -123,7 +123,7 @@ export function VitrineFootballStudio() {
     }
     return ()=>{mounted=false};
   },[groups]);
-  const haveChannels = (match:FootballMatch) => (match.broadcasts||[]).slice(0,3).join(" • ") || "TRANSMISSÃO NÃO CONFIRMADA";
+  const haveChannels = (match:FootballMatch) => (match.broadcasts||[]).slice(0,3).join(" • ") || "Sem transmissão";
 
   async function download(index:number) {
     const node=posterRefs.current[index];
