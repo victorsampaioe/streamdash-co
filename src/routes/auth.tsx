@@ -16,6 +16,8 @@ import { toast } from "sonner";
 import { trackMetaCompleteRegistration } from "@/lib/meta-pixel";
 import { trackPosthogEvent } from "@/lib/posthog-analytics";
 import { readAttribution, readAttributionPlatform, readAttributionSource } from "@/lib/ad-attribution";
+import {trackAcquisitionPage} from "@/lib/acquisition-page";
+import {onConsentChange} from "@/lib/consent";
 
 const searchSchema = z.object({ redirect: z.string().optional(), ref: z.string().regex(/^[A-Za-z0-9]{4,16}$/).optional(), tab: z.enum(["signin","signup"]).optional() }).partial();
 
@@ -67,7 +69,12 @@ function AuthPage() {
   }, []);
 
   const { data: signupConfig } = useQuery({ queryKey: ["signup-config"], queryFn: () => getSignupConfig(), staleTime: 30 * 60 * 1000 });
-  const siteKey = signupConfig?.turnstileSiteKey ?? null;
+  useEffect(() => {
+    if(tab!=="signup")return;
+    void trackAcquisitionPage("signup");
+    return onConsentChange(()=>void trackAcquisitionPage("signup"));
+  },[tab]);
+    const siteKey = signupConfig?.turnstileSiteKey ?? null;
   const passwordCheck = useMemo(() => validatePassword(password), [password]);
   const passwordsMatch = confirmPassword.length > 0 && password === confirmPassword;
 
