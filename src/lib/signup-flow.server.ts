@@ -197,6 +197,7 @@ export async function handleSignup(input: SignupInput, headers: Headers): Promis
     const msg = signUpError?.message || "Não foi possível criar a conta.";
     sec.log("signup failed", { ip: ipMasked, message: msg });
     const duplicated = /already registered|already exists|duplicate/i.test(msg);
+    const weakPassword = /weak.password|known to be weak|easy to guess|compromised password|password.*(weak|pwned)/i.test(msg);
     await sec.closeAttempt(
       attemptId,
       "rejected",
@@ -207,15 +208,47 @@ export async function handleSignup(input: SignupInput, headers: Headers): Promis
     );
     return {
       status: duplicated ? 409 : 400,
-      body: { error: duplicated ? "Este e-mail já possui uma conta. Clique em Entrar." : "Não conseguimos criar sua conta agora. Tente novamente em alguns segundos.", code: duplicated ? "email_exists" : "signup_failed" },
+      body: {
+        error: duplicated
+          ? "Este e-mail já possui uma conta. Clique em Entrar."
+          : weakPassword
+            ? "Essa senha aparece em vazamentos conhecidos. Escolha uma senha forte ou toque em Gerar senha segura."
+            : "Não conseguimos criar sua conta agora. Tente novamente em alguns segundos.",
+        code: duplicated ? "email_exists" : weakPassword ? "password_weak" : "signup_failed",
+      },
     };
   }
 
-  const userId = signUpData.user.id;
-  const { error: profileError } = await supabaseAdmin.from("profiles").update({ username, ...(sanitizeAttributionInput(input.attribution) ?? {}) }).eq("id", userId);
-  if (profileError) {
-    sec.log("username profile update failed", { userId, code: profileError.code });
+  // GoTrue can return an obfuscated user for an existing account when
+  // email confirmation is enabled. Never count that as a real registration.
+  if(Array.isArray(signUpData.user.identities)&&signUpData.user.identities.length===0){
+    await sec.closeAttempt(attemptId,"rejected","duplicate_email",null,"existing_account",
+      "Existing account returned without a new identity");
+    return {status:409,body:{error:"Este e-mail já possui uma conta. Clique em Entrar.",code:"email_exists"}};
   }
+
+  const userId = signUpData.user.id;
+  // Preserve an existing acquisition source and never overwrite a first touch.
+  const attribution=sanitizeAttributionInput(input.attribution);
+  const {data:profileUpdated,error:profileError}=await supabaseAdmin.from("profiles")
+    .update({username,...(attribution??{})}).eq("id",userId).select("id").maybeSingle();
+  if(profileError||!profileUpdated){
+    sec.log("profile update incomplete",{userId,code:profileError?.code||"missing_profile"});
+    // The Auth account exists, but the signup response must not claim that
+    // the profile was provisioned successfully before its record is available.
+    const {data:verified}=await supabaseAdmin.from("profiles").select("id").eq("id",userId).maybeSingle();
+    if(!verified){
+      await sec.closeAttempt(attemptId,"rejected","signup_failed",userId,"internal_failure",
+        "auth user created but profile missing");
+      return {status:503,body:{error:"Sua conta foi criada, mas o perfil ainda está sendo preparado. Tente entrar em alguns instantes.",code:"profile_pending"}};
+    }
+  }
+  // Acquisition is a separate restricted record. Failures do not undo signup.
+  try{
+    const {recordRegistrationAttribution}=await import("./customer-acquisition.server");
+    await recordRegistrationAttribution({userId,profileCreatedAt:new Date().toISOString(),
+      attribution:input.attribution,referralApplied:!!referralCode});
+  }catch(e){sec.log("acquisition record failed",{reason:e instanceof Error?e.name:"unknown"});}
   await sec.closeAttempt(attemptId, "created", null, userId, "created");
   sec.log("account created", { ip: ipMasked, userId });
 
@@ -241,6 +274,7 @@ export async function handleSignup(input: SignupInput, headers: Headers): Promis
       referralApplied: !!referralCode,
       email,
       username,
+      registrationEventId:userId,
     },
   };
 }
