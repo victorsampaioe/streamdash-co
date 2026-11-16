@@ -1,5 +1,16 @@
 # Stream Monitor — RASCUNHO INTERNO Meta Ads / Leads (16/11/2026)
 
+## Atualização Meta Ads — 16/11/2026
+
+- **Campanha real criada PAUSADA na conta Meta Ads `1813033566413744`: `120251923483840158`.**
+- Nome: `Stream Monitor | CADASTROS SITE | Revendedores IPTV | Nov 2026 | RASCUNHO`.
+- Objetivo enviado e aceito pela API Meta: `OUTCOME_LEADS`.
+- Campanha sem orçamento de campanha; `is_adset_budget_sharing_enabled=false`.
+- Criação do conjunto de anúncios `OFFSITE_CONVERSIONS` / `WEBSITE`, Pixel `2289395685308884`, evento `COMPLETE_REGISTRATION` **não concluída**: a Meta exige orçamento diário ou vitalício no conjunto, inclusive quando pausado (erro 1487061). Nenhum valor financeiro foi atribuído sem aprovação.
+- **Não existe anúncio novo criado** nem nova entrega. O anúncio anterior e conjunto anteriores constam arquivados no conector. O vídeo já existente na conta Meta é o asset `2622906684900533` do próprio Stream Monitor.
+- Para completar: obter autorização expressa do novo orçamento TOTAL e prazo (não confundir total com orçamento diário); criar conjunto e ad `SIGN_UP` pausados; confirmar Pixel no Events Manager e aprovar ativação separadamente.
+- Este documento registra as ações reais. O texto abaixo ainda é a proposta para o conjunto e criativo que não puderam ser criados por falta de orçamento aprovado.
+
 > **NÃO PUBLICAR / NÃO ATIVAR / NÃO ALTERAR ORÇAMENTO.**
 > Este documento é preparação técnica/comercial, **não** é campanha criada no Meta Ads.
 > Pré-condições: comprovar PageView, CompleteRegistration e Purchase no Meta Events Manager, testar cadastro consentido em navegador comum e interno, conferir domínio e dados de pixel, apresentar orçamento/substituição ao titular e obter aprovação financeira expressa.
