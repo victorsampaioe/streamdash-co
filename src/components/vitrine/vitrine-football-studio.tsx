@@ -87,6 +87,7 @@ export function VitrineFootballStudio() {
   const [playerId, setPlayerId] = useState("");
   const [playerUpload, setPlayerUpload] = useState("");
   const [playerUploadName, setPlayerUploadName] = useState("");
+  const [playerFit, setPlayerFit] = useState<"contain" | "cover">("contain");
   const [manualBadgeImages, setManualBadgeImages] = useState<Record<string, string>>({});
   const [badgeFailures, setBadgeFailures] = useState<Record<string, string>>({});
   const [badgeLoading, setBadgeLoading] = useState(false);
@@ -228,6 +229,7 @@ export function VitrineFootballStudio() {
       } else {
         setPlayerUpload(dataUrl);
         setPlayerUploadName(file.name);
+        setPlayerFit(file.type === "image/png" ? "contain" : "cover");
         toast.success("Foto do jogador aplicada à prévia.");
       }
     } catch (error) { toast.error(error instanceof Error ? error.message : "Imagem inválida."); }
@@ -430,6 +432,16 @@ export function VitrineFootballStudio() {
               setPlayerUpload(""); setPlayerUploadName("");
             }}>Remover</Button>
           </div>}
+          {playerPhoto && <div className="rounded-xl border border-border bg-muted/20 p-3">
+            <p className="mb-2 text-xs font-semibold">Ajuste de enquadramento do jogador</p>
+            <div className="grid grid-cols-2 gap-2">
+              <Button type="button" size="sm" variant={playerFit === "contain" ? "default" : "outline"}
+                onClick={() => setPlayerFit("contain")}>Foto inteira</Button>
+              <Button type="button" size="sm" variant={playerFit === "cover" ? "default" : "outline"}
+                onClick={() => setPlayerFit("cover")}>Preencher o espaço</Button>
+            </div>
+            <p className="mt-2 text-xs text-muted-foreground">Se o jogador estiver pequeno, experimente “Preencher o espaço”. PNG com fundo transparente costuma ficar melhor em “Foto inteira”.</p>
+          </div>}
           {!playerUpload && rightsConfirmed && remotePlayerError && <p role="alert" className="rounded-lg border border-amber-500/30 p-3 text-xs text-amber-400">
             A foto remota não carregou: {remotePlayerError}. Você pode enviar seu próprio PNG autorizado acima.
           </p>}
@@ -585,7 +597,7 @@ export function VitrineFootballStudio() {
                     stadium={aiBackground} accent={accent}
                     broadcastByMatch={channels}
                     badgeImages={appliedBadges}
-                    playerPhoto={playerPhoto} playerName={athlete?.name || ""}
+                    playerPhoto={playerPhoto} playerName={athlete?.name || ""} playerFit={playerFit}
                   />
                 </div>
               </div>
