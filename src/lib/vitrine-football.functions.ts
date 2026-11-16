@@ -155,6 +155,21 @@ function getBroadcasts(record: unknown): string[] {
   return [...new Set(list.map((item) => typeof item === "string" ? item :
     String(pick(item,"nome","name","canal") || "")).map((value) => value.trim()).filter(Boolean))].slice(0,3);
 }
+/**
+ * Schedule-specific editorial verification for the 16 Nov 2026 Copa Paraná final.
+ * Do not infer channels for other matches. Sources checked:
+ * ge.globo.com/pr/futebol/noticia/2026/11/16/athletico-x-parana-clube-pela-final-da-copa-parana-onde-assistir-ao-vivo-horario-e-escalacoes.ghtml
+ * parana.pr.gov.br/aen/Noticia/TV-Parana-Turismo-transmite-para-todo-o-Brasil-finais-da-Copa-Parana
+ */
+function verifiedBroadcasts(match:FootballMatch, date:string):string[]{
+  const h=simplify(match.home),a=simplify(match.away);
+  const isAthletico=(v:string)=>v.includes("athletico")||v.includes("atletico pr")||v.includes("atletico paranaense");
+  const isParana=(v:string)=>(v==="parana"||v.includes("parana clube"))&&!isAthletico(v);
+  if(date==="2026-11-16" && ((isAthletico(h)&&isParana(a))||(isAthletico(a)&&isParana(h)))) {
+    return ["FPF TV","Rede Furacão","TMC Esporte"];
+  }
+  return [];
+}
 function apiFixture(record: unknown, index: number, date: string): FootballMatch | null {
   const homeObj = pick(record,"mandante","time_casa","home_team","casa","home");
   const awayObj = pick(record,"visitante","time_fora","away_team","fora","away");
@@ -243,7 +258,7 @@ export const getVitrineFootballMatches = createServerFn({ method: "POST" })
     // Country filtering can exclude Brazilian clubs playing international competitions.
     // Also retrieve the global schedule when the national response has fewer than nine games.
     let all= national;
-    if(national.length<9){
+    if(national.length<6){
       try{const world=await loadFixtures();all=[...national,...world];}
       catch{/* The Brazilian schedule remains available if the second request fails. */}
     }
@@ -259,9 +274,11 @@ export const getVitrineFootballMatches = createServerFn({ method: "POST" })
           return idx<0?MAIN_TEAMS.length:idx;
         };
         return rank(a)-rank(b)||a.time.localeCompare(b.time);
-      }).slice(0,9);
-    for(let index=0;index<matches.length;index+=3){
-      const group=matches.slice(index,index+3);
+      }).slice(0,6);
+    // Prefer channels explicitly supplied by FTWB; add documented fixture-specific channels only when absent.
+    for(const match of matches){if(!(match.broadcasts||[]).length)match.broadcasts=verifiedBroadcasts(match,data.date)}
+    for(let index=0;index<matches.length;index+=2){
+      const group=matches.slice(index,index+2);
       if(group.some(match=>!!match.playerPhoto))continue;
       const featured=await findHighlight(group);
       if(featured)matches[index]={...matches[index],playerPhoto:featured.photo,playerName:featured.name};
