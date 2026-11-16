@@ -140,7 +140,8 @@ export const Route=createFileRoute("/api/public/edge-dns/report")({
       for(const entry of outcome){
         if(entry.status==="rejected"){
           const explanation=entry.reason instanceof Error?entry.reason.message:String(entry.reason);
-          const reason=explanation.slice(0,140).replace(/https?:\/\/\S+/g,"[url]");
+          const firstFrame=entry.reason instanceof Error ? (entry.reason.stack||"").split("\n").slice(1,3).join(" | ").slice(0,130) : "";
+          const reason=(explanation.slice(0,100)+" @ "+firstFrame).replace(/https?:\/\/\S+/g,"[url]");
           if(failureReasons.length<2)failureReasons.push(reason);
           console.error("[edge-dns/report] apply-failed",reason);
         }
