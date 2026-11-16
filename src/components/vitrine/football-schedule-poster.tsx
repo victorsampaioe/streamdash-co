@@ -1,5 +1,5 @@
 import type { FootballMatch } from "@/lib/vitrine-football.functions";
-import { MessageCircle, ShieldCheck } from "lucide-react";
+import { ShieldCheck } from "lucide-react";
 
 export type FootballPosterFormat = "feed" | "story" | "landscape";
 export type FootballPosterKind = "today" | "featured";
@@ -142,8 +142,8 @@ export function FootballSchedulePoster({
   const digits = contact.replace(/\D/g, "").slice(0, 13);
   const phone = digits.length > 0 ? contact.trim().slice(0, 25) : "";
   const heading = headline.trim() || (kind === "featured" ? "JOGAÇO DO DIA" : "JOGOS DO DIA");
-  const standardHeading = heading.toUpperCase() === "JOGOS DO DIA" || heading.toUpperCase() === "JOGOS DE HOJE";
-  const headingFont = landscape ? 74 : story ? 116 : 93;
+  const standardHeading = ["JOGOS DO DIA", "JOGOS DE HOJE", "EVENTOS DE HOJE"].includes(heading.toUpperCase());
+  const headingFont = landscape ? 68 : story ? 98 : 78;
   const cardWidth = landscape ? 790 : d.rowWidth;
   const playerWidth = landscape ? 560 : story ? 700 : 620;
   const footerBottom = story ? 79 : landscape ? 38 : 48;
@@ -186,28 +186,28 @@ export function FootballSchedulePoster({
       }} />}
     <div className="absolute z-[5] flex items-center justify-center overflow-hidden" style={{
       left: landscape ? 47 : 55, top: landscape ? 48 : story ? 74 : 65,
-      width: landscape ? 165 : 180, height: landscape ? 115 : 136,
+      width: landscape ? 185 : 190, height: landscape ? 115 : 136,
       border: "3px solid rgba(255,255,255,.8)", borderRadius: 22,
-      background: "rgba(3,15,34,.68)", padding: 12,
+      background: "rgba(3,15,34,.30)", padding: 12,
       boxShadow: "0 0 0 4px "+accent+",0 14px 18px rgba(0,0,0,.35)",
     }}>
       {logo ? <img src={logo} alt={branding} style={{width:"100%",height:"100%",objectFit:"contain"}} />
         : <span style={{fontSize:24,fontWeight:1000,textAlign:"center"}}>{branding.slice(0,18)}</span>}
     </div>
     <div className="absolute" style={{
-      left: landscape ? 238 : 237, top: landscape ? 42 : story ? 65 : 65,
-      width: landscape ? 760 : 810, maxHeight: story ? 305 : 185,
+      left: landscape ? 298 : 298, top: landscape ? 42 : story ? 65 : 65,
+      width: landscape ? 690 : 727, maxHeight: story ? 305 : 185,
       textShadow: "0 10px 17px rgba(0,0,0,.32)",
     }}>
       {standardHeading ? <>
         <div style={{
           color: "#ffcf3e", fontSize: headingFont, fontWeight: 1000,
           fontStyle: "italic", lineHeight: .89, letterSpacing: "-.075em",
-        }}>JOGOS</div>
+        }}>EVENTOS</div>
         <div style={{
           color: "white", fontSize: headingFont * .77, fontWeight: 1000,
           fontStyle: "italic", lineHeight: 1, letterSpacing: "-.065em",
-        }}>DO DIA</div>
+        }}>DE HOJE</div>
       </> : <div style={{
         color: "#fff", fontSize: headingFont * .63, fontWeight: 1000,
         fontStyle: "italic", lineHeight: 1.05, textTransform: "uppercase",
@@ -259,9 +259,12 @@ export function FootballSchedulePoster({
       boxShadow: "0 6px 12px rgba(0,0,0,.45)",
     }}>
       {phone
-        ? <><MessageCircle color="white" size={story ? 52 : landscape ? 31 : 40} strokeWidth={3} />
+        ? <><svg width={story ? 52 : landscape ? 31 : 40} height={story ? 52 : landscape ? 31 : 40}
+             viewBox="0 0 32 32" role="img" aria-label="WhatsApp" xmlns="http://www.w3.org/2000/svg">
+            <path fill="white" d="M16 3C8.82 3 3 8.78 3 15.94c0 2.28.6 4.5 1.72 6.47L3 29l6.77-1.77a13.06 13.06 0 0 0 6.23 1.57c7.18 0 13-5.79 13-12.94S23.18 3 16 3Zm0 23.44c-1.94 0-3.84-.52-5.49-1.5l-.39-.23-4.02 1.05 1.07-3.9-.25-.4a10.47 10.47 0 0 1-1.6-5.52c0-5.84 4.8-10.59 10.7-10.59 5.9 0 10.7 4.75 10.7 10.59S21.9 26.44 16 26.44Zm5.88-7.94c-.32-.16-1.88-.92-2.18-1.02-.29-.11-.5-.16-.71.16-.21.32-.82 1.02-1.01 1.22-.18.21-.37.24-.69.08-.32-.16-1.35-.49-2.58-1.57-.95-.84-1.59-1.87-1.77-2.19-.18-.31-.02-.48.14-.64.15-.14.32-.37.48-.55.16-.19.21-.32.32-.53.11-.21.05-.4-.03-.56-.08-.16-.71-1.71-.97-2.34-.26-.61-.52-.52-.72-.53h-.61c-.21 0-.55.08-.84.4-.29.32-1.1 1.07-1.1 2.62s1.13 3.05 1.29 3.26c.16.21 2.23 3.39 5.41 4.75.76.32 1.35.52 1.81.66.76.24 1.46.2 2.01.12.61-.09 1.88-.77 2.14-1.52.26-.75.26-1.39.18-1.53-.08-.13-.29-.21-.61-.37Z"/>
+          </svg>
           <span style={{
-            marginLeft: 15, fontWeight: 1000,
+            marginLeft: 12, fontWeight: 1000,
             fontSize: story ? 42 : landscape ? 27 : 30,
             whiteSpace: "nowrap", letterSpacing: "-.025em",
           }}>{phone}</span></>
