@@ -145,7 +145,16 @@ async function run(env){
     "SELECT value FROM backup_control WHERE key='enabled'"
   ).first();
   if(enabled?.value!=="true")return {mode:"disabled"};
-  const catalog=await recordInventory(env);
+  // A single migration snapshot contains 27 files. Avoid re-reading
+  // the same private 27-object manifest and 27 D1 rows on each minute tick.
+  const [inventorySize,expected]=await Promise.all([
+    env.BACKUP_STATE.prepare("SELECT COUNT(*) n FROM backup_objects").first(),
+    env.BACKUP_STATE.prepare("SELECT value FROM backup_control WHERE key='expected_source_objects'").first(),
+  ]);
+  const expectedCount=Number(expected?.value||0);
+  const catalog=expectedCount>0&&Number(inventorySize?.n||0)>=expectedCount
+    ?{found:Number(inventorySize.n),added:0}
+    :await recordInventory(env);
   // Back up a small object first to confirm the pipeline. Then protect
   // the database archive, before copying the remaining promotional assets.
   const finished=await env.BACKUP_STATE.prepare(
@@ -170,7 +179,23 @@ async function run(env){
 }
 export default {
  async scheduled(_controller,env,ctx){
-  ctx.waitUntil(run(env).then(x=>console.log("private_backup_cycle_ok",JSON.stringify(x)))
+  ctx.waitUntil((async()=>{
+    // D1 compare-and-set lease prevents overlapping scheduled multipart
+    // writes. A crashed run frees itself after five minutes.
+    const now=Date.now(),leaseUntil=now+5*60_000;
+    const lock=await env.BACKUP_STATE.prepare(
+      "INSERT INTO backup_control(key,value) VALUES('worker_lease_until',?) "+
+      "ON CONFLICT(key) DO UPDATE SET value=excluded.value "+
+      "WHERE CAST(backup_control.value AS INTEGER)<?"
+    ).bind(String(leaseUntil),now).run();
+    if(!lock.meta?.changes)return {mode:"lease_held"};
+    try{return await run(env);}
+    finally{
+      await env.BACKUP_STATE.prepare(
+        "UPDATE backup_control SET value='0' WHERE key='worker_lease_until' AND value=?"
+      ).bind(String(leaseUntil)).run();
+    }
+  })().then(x=>console.log("private_backup_cycle_ok",JSON.stringify(x)))
     .catch(e=>console.error("private_backup_cycle_failed",String(e?.message||e).slice(0,160))));
  },
  async fetch(){
