@@ -4,9 +4,10 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { requirePaidFeature } from "@/lib/premium-feature-access";
 
 
-const PNG_WIDTH=1080;
-const MAX_PNG_BYTES=9*1024*1024; // Telegram sendPhoto accepts up to 10 MB.
-const MAX_DATA_URL_CHARS=12_600_000;
+const PNG_WIDTH=2160;
+const PNG_HEIGHT=2700;
+const MAX_PNG_BYTES=18*1024*1024; // Send as a document without Telegram photo recompression.
+const MAX_DATA_URL_CHARS=25_200_000;
 const sentRecently=new Map<string,number>();
 
 /** Telegram targets belong to the reseller's enabled alert_channels only.
@@ -34,8 +35,8 @@ export function validateFootballPosterDataUrl(dataUrl:string):Buffer{
   if(png.length<1000 || png.length>MAX_PNG_BYTES ||
      png.subarray(0,8).toString("hex")!=="89504e470d0a1a0a" ||
      png.toString("ascii",12,16)!=="IHDR" ||
-     png.readUInt32BE(16)!==PNG_WIDTH || png.readUInt32BE(20)!==PNG_WIDTH){
-    throw new Error("Não foi possível validar a arte completa em 1080 × 1080.");
+     png.readUInt32BE(16)!==PNG_WIDTH || png.readUInt32BE(20)!==PNG_HEIGHT){
+    throw new Error("Não foi possível validar a arte completa em 2160 × 2700.");
   }
   return png;
 }
@@ -90,17 +91,17 @@ export const sendVitrineFootballToRegisteredTelegram=createServerFn({method:"POS
     const body=new FormData();
     body.append("chat_id",destination.chat);
     body.append("caption","⚽ Eventos de hoje • Stream Monitor\nConfira os jogos, horários e transmissões.\n📅 "+data.date.split("-").reverse().join("/"));
-    body.append("photo",new Blob([new Uint8Array(image)],{type:"image/png"}),
-      "stream-monitor-futebol-"+data.date+".png");
+    body.append("document",new Blob([new Uint8Array(image)],{type:"image/png"}),
+      "stream-monitor-futebol-"+data.date+"-2160x2700.png");
 
     try{
-      const response=await fetch("https://api.telegram.org/bot"+destination.token+"/sendPhoto",{
+      const response=await fetch("https://api.telegram.org/bot"+destination.token+"/sendDocument",{
         method:"POST",body,signal:AbortSignal.timeout(25000)
       });
       const result=await response.json().catch(()=>null);
       if(!response.ok || result?.ok!==true){
         if(response.status===403 || response.status===400){
-          throw new Error("O bot não conseguiu enviar a foto. Inicie o bot no Telegram ou libere o envio de imagens no grupo/canal cadastrado.");
+          throw new Error("O bot não conseguiu enviar a foto. Inicie o bot no Telegram ou libere o envio de arquivos no grupo/canal cadastrado.");
         }
         if(response.status===429)throw new Error("Telegram limitou os envios. Tente novamente mais tarde.");
         throw new Error("Telegram recusou o envio. Confira o Telegram cadastrado e tente novamente.");
