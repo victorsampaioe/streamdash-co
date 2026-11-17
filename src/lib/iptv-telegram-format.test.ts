@@ -12,7 +12,7 @@ describe("Telegram IPTV — mensagens organizadas", () => {
     };
     const text=formatIptvAlertMessage({...server,name:"GOAT",host:"cabraorange90.top"},[item],
       {observedAt:at,mode:"html",admin:true,owner:{name:"Revenda Teste",email:"teste@example.com"}});
-    expect(text).toContain("<b>ALERTA IPTV");
+    expect(text).toContain("<b>🚨 ALERTA IPTV");
     expect(text).toContain("<b>Servidor:</b> GOAT");
     expect(text).toContain("TV ao vivo: HTTP 403");
     expect(text).toContain("não confirma queda geral");
