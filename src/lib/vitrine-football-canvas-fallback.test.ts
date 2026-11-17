@@ -103,11 +103,21 @@ describe("Vitrine Futebol: PNG nativo idêntico à prévia e Telegram",()=>{
     expect(printed).toContain("Equipe 2");
     expect(printed).toContain("Equipe 3");
   });
-  it("amplia cartões dos dois modelos quando faltam confrontos",()=>{
-    expect(classicCardGeometry(1).cardHeight).toBeGreaterThan(classicCardGeometry(4).cardHeight);
-    expect(classicCardGeometry(2).badgeSize).toBeGreaterThan(classicCardGeometry(4).badgeSize);
-    expect(gridCardGeometry(2).cardHeight).toBeGreaterThan(gridCardGeometry(12).cardHeight);
-    expect(gridCardGeometry(4).badgeSize).toBeGreaterThan(gridCardGeometry(12).badgeSize);
+  it("mantém o Modelo 1 e o Modelo 2 rigorosamente fixos com poucos jogos",()=>{
+    const classic=classicCardGeometry(4),grid=gridCardGeometry(10);
+    for(const count of [1,2,3,4]){
+      expect(classicCardGeometry(count)).toEqual(classic);
+    }
+    for(const count of [1,2,3,4,5,9,10]){
+      const value=gridCardGeometry(count);
+      expect(value.cardHeight).toBe(grid.cardHeight);
+      expect(value.rowTop).toBe(grid.rowTop);
+      expect(value.badgeSize).toBe(grid.badgeSize);
+      expect(value.badgeOffset).toBe(grid.badgeOffset);
+      expect(value.gapY).toBe(grid.gapY);
+    }
+    expect(classic).toEqual({cardHeight:153,gap:18,rowTop:367,badgeSize:54,badgeOffset:48});
+    expect(grid).toEqual({lines:5,cardHeight:154,gapY:13,rowTop:322,badgeSize:109,badgeOffset:39});
   });
   it("substitui bandeira bloqueada de Singapura pelo emoji correto, sem bloquear a prévia",async()=>{
     const blocked="data:image/png;base64,sgblocked";
@@ -148,9 +158,9 @@ describe("Vitrine Futebol: PNG nativo idêntico à prévia e Telegram",()=>{
     }
     expect(canvas.toBlob).not.toHaveBeenCalled();
   });
-  it("gera Modelo 2 com 12 jogos em 2 colunas, 24 escudos e PNG 2160 × 2700",async()=>{
+  it("gera Modelo 2 com 10 jogos em 2 colunas, 20 escudos e PNG 2160 × 2700",async()=>{
     const {config,dimensions,canvas,drawImage,fillText}=setup();
-    const matches=Array.from({length:12},(_,i)=>({
+    const matches=Array.from({length:10},(_,i)=>({
       ...config.matches[i%4],id:"grid-"+i,
       home:"Mandante "+(i+1),away:"Visitante "+(i+1),
       homeBadge:"data:image/png;base64,grid-home-"+i,
@@ -164,7 +174,7 @@ describe("Vitrine Futebol: PNG nativo idêntico à prévia e Telegram",()=>{
     const shown=fillText.mock.calls.map(call=>String(call[0]));
     for(const text of ["JOGOS","DO DIA","ASSISTA EM","QUALQUER DISPOSITIVO","FALE PELO WHATSAPP",
       "(85) 99854-5009"]){expect(shown).toContain(text);}
-    for(let i=0;i<12;i++){
+    for(let i=0;i<10;i++){
       expect(shown).toContain("Mandante "+(i+1)+" × Visitante "+(i+1));
       expect(drawImage.mock.calls.some(call=>call[0]?.src==="data:image/png;base64,grid-home-"+i)).toBe(true);
       expect(drawImage.mock.calls.some(call=>call[0]?.src==="data:image/png;base64,grid-away-"+i)).toBe(true);
