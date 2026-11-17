@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { drawFootballPngFallback, FOOTBALL_PNG_WIDTH, FOOTBALL_PNG_HEIGHT } from "./vitrine-football-canvas-fallback";
+import { drawFootballPngFallback, fallbackBadgeLabel, FOOTBALL_PNG_WIDTH, FOOTBALL_PNG_HEIGHT } from "./vitrine-football-canvas-fallback";
 afterEach(()=>vi.unstubAllGlobals());
 
 const validBlob=()=>{
@@ -87,11 +87,28 @@ describe("Vitrine Futebol: PNG nativo idêntico à prévia e Telegram",()=>{
     expect(labels.filter(t=>t==="SporTV • Globo")).toHaveLength(4);
     expect(canvas.width).toBe(0); // high memory canvas released after PNG
   });
-  it("não permite exportar arquivo sem o escudo de um time",async()=>{
+  it("gera arte completa se um escudo externo falhar, mostrando iniciais em vez de espaço vazio",async()=>{
     const blocked="data:image/png;base64,away1";
-    const {config,canvas}=setup(blocked);
-    await expect(drawFootballPngFallback(config)).rejects.toThrow(/escudo ou bandeira/i);
-    expect(canvas.toBlob).not.toHaveBeenCalled();
+    const {config,canvas,fillText}=setup(blocked);
+    const file=await drawFootballPngFallback(config);
+    expect(file.type).toBe("image/png");
+    expect(canvas.toBlob).toHaveBeenCalledTimes(1);
+    expect(fillText.mock.calls.map(c=>c[0])).toContain("A1");
+  });
+  it("substitui bandeira bloqueada de Singapura pelo emoji correto, sem bloquear a prévia",async()=>{
+    const blocked="data:image/png;base64,sgblocked";
+    const {config,canvas,fillText}=setup(blocked);
+    config.matches[0]={...config.matches[0],
+      home:"Singapore",away:"Brazil",league:"Amistoso Internacional",homeBadge:blocked};
+    await drawFootballPngFallback(config);
+    expect(fillText.mock.calls.map(c=>c[0])).toContain("🇸🇬");
+    expect(fillText.mock.calls.map(c=>c[0])).toContain("Singapura");
+    expect(canvas.toBlob).toHaveBeenCalledOnce();
+  });
+  it("não atribui bandeira de país ao clube por engano",()=>{
+    expect(fallbackBadgeLabel("Flamengo","Brasileirão Série A")).toBe("F");
+    expect(fallbackBadgeLabel("Singapore","Amistoso Internacional")).toBe("🇸🇬");
+    expect(fallbackBadgeLabel("Wales","Liga das Nações")).toBe("PG");
   });
   it("não permite exportar arquivo se a logo da revenda falhar",async()=>{
     const blocked="data:image/png;base64,minha-logo";
