@@ -509,9 +509,14 @@ function drawTwoColumnGrid(ctx:CanvasRenderingContext2D,rows:FootballMatch[],
     // Leave the centre of the card clear for the kickoff time & broadcaster.
     // Use a common vertical CENTER rather than a shared image top.
     // Teams with asymmetric transparent padding are trimmed and re-centered.
-    const badgeSize=Math.min(92,Math.max(76,Math.round(cardHeight*.62)));
-    const badgeTop=y+Math.round(cardHeight*.67-badgeSize/2);
-    const homeX=x+21,awayX=x+cardWidth-badgeSize-21;
+    // The old .62 multiplier left circles tiny on the two-column layout.
+    // Fit team emblems into nearly the entire side zones, without ever
+    // intruding into the central kickoff/channel column.
+    const badgeSize=Math.min(112,Math.max(79,Math.round(cardHeight*.71)));
+    const badgeOffset=cardHeight>=145?Math.max(37,cardHeight-badgeSize-6)
+      :Math.max(28,cardHeight-badgeSize-7);
+    const badgeTop=y+badgeOffset;
+    const homeX=x+15,awayX=x+cardWidth-badgeSize-15;
     ctx.save();ctx.shadowColor="rgba(15,40,90,.16)";
     ctx.shadowBlur=7;ctx.shadowOffsetY=1;
     if(badges[i*2])containGridBadge(ctx,badges[i*2]!,homeX,badgeTop,badgeSize,exportCanvas);
