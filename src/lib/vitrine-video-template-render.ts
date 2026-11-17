@@ -2,6 +2,7 @@ import {formatCinematicWhatsApp} from "./vitrine-cinematic-canvas";
 import {supportedMp4Mime} from "./vitrine-cinematic-mp4";
 import {finalizeCinematicMp4} from "./vitrine-cinematic-whatsapp";
 import {connectVideoAudioToStream} from "./vitrine-video-audio";
+import {getResellerEncodingSettings,type ResellerVideoQuality} from "./vitrine-video-quality";
 
 export type VideoOverlayBrand={
   name:string;whatsapp:string;color:string;logo:HTMLImageElement
@@ -41,6 +42,12 @@ export function paintResellerVideoFrame(ctx:CanvasRenderingContext2D,
   const sw=source.videoWidth||width,sh=source.videoHeight||height;
   const ratio=Math.min(width/sw,height/sh),w=sw*ratio,h=sh*ratio;
   ctx.drawImage(source,(width-w)/2,(height-h)/2,w,h);
+  paintResellerVideoOverlay(ctx,brand,width,height);
+}
+/** Draw the static branding once per export, not 24-30 times a second. */
+export function paintResellerVideoOverlay(
+  ctx:CanvasRenderingContext2D,brand:VideoOverlayBrand,width:number,height:number,
+){
   const layout=videoOverlayGeometry(width,height),unit=layout.scale;
   const logo=layout.logo;
   // Only render the normalized transparent logo: no dark rectangular matte.
@@ -79,9 +86,10 @@ export function paintResellerVideoFrame(ctx:CanvasRenderingContext2D,
 }
 export async function renderResellerVideoMp4(opts:{
   source:HTMLVideoElement;brand:VideoOverlayBrand;audio:boolean;
+  quality?:ResellerVideoQuality;
   progress:(progress:VideoExportProgress)=>void;signal?:AbortSignal;
 }):Promise<Blob>{
-  const {source,brand,audio,progress,signal}=opts;
+  const {source,brand,audio,progress,signal,quality="auto"}=opts;
   if(signal?.aborted)throw new Error("Exportação interrompida pela saída da conta.");
   if(!brand.logo||!brand.logo.naturalWidth)
     throw new Error("Cadastre a logo da revenda antes de gerar o vídeo.");
@@ -94,16 +102,27 @@ export async function renderResellerVideoMp4(opts:{
     throw new Error("Este navegador não permite exportar MP4. Tente no Chrome ou Safari atualizado.");
   if(!Number.isFinite(source.duration)||source.duration<1||source.duration>120)
     throw new Error("O vídeo deve ter entre 1 e 120 segundos.");
-  const width=Math.round(source.videoWidth/2)*2;
-  const height=Math.round(source.videoHeight/2)*2;
-  if(width<128||height<128)throw new Error("Vídeo de entrada inválido.");
+  const settings=getResellerEncodingSettings(source.videoWidth,source.videoHeight,quality);
+  const {width,height}=settings;
   const canvas=document.createElement("canvas");canvas.width=width;canvas.height=height;
   const ctx=canvas.getContext("2d",{alpha:false});
   if(!ctx)throw new Error("Não foi possível iniciar o compositor.");
-  const stream=canvas.captureStream(30);
+  // Cache the transparent logo and contact once, preserving the original design.
+  const overlay=document.createElement("canvas");overlay.width=width;overlay.height=height;
+  const overlayCtx=overlay.getContext("2d",{alpha:true});
+  if(!overlayCtx)throw new Error("Não foi possível criar a camada da marca.");
+  paintResellerVideoOverlay(overlayCtx,brand,width,height);
+  const renderFrame=()=>{
+    ctx.fillStyle="#050914";ctx.fillRect(0,0,width,height);
+    const sw=source.videoWidth||width,sh=source.videoHeight||height;
+    const factor=Math.min(width/sw,height/sh);
+    ctx.drawImage(source,(width-sw*factor)/2,(height-sh*factor)/2,sw*factor,sh*factor);
+    ctx.drawImage(overlay,0,0,width,height);
+  };
+  const stream=canvas.captureStream(settings.fps);
   let disconnectAudio:(()=>void)|null=null;
   let recorder:MediaRecorder|null=null;
-  let raf=0,callback=0,watchdog:ReturnType<typeof setInterval>|null=null;
+  let raf=0,watchdog:ReturnType<typeof setInterval>|null=null;
   let stopped=false,frames=0;
   let prematureStopReason="";
   let onAbort:(()=>void)|null=null;
@@ -123,11 +142,11 @@ export async function renderResellerVideoMp4(opts:{
       // creating a new one is an InvalidStateError on the second export.
       disconnectAudio=await connectVideoAudioToStream(source,stream);
     }else source.muted=true;
-    paintResellerVideoFrame(ctx,source,brand,width,height);
+    renderFrame();
     const chunks:BlobPart[]=[];
     recorder=new MediaRecorder(stream,{
       mimeType:mime,
-      videoBitsPerSecond:width>=720?2_200_000:1_700_000,
+      videoBitsPerSecond:settings.bitrate,
       ...(audio?{audioBitsPerSecond:112_000}:{}),
     });
     const active=recorder;
@@ -158,8 +177,8 @@ export async function renderResellerVideoMp4(opts:{
     let lastPaint=0,lastProgress=0;
     const draw=(now:number)=>{
       if(stopped)return;
-      if(now-lastPaint>29&&source.readyState>=2){
-        paintResellerVideoFrame(ctx,source,brand,width,height);
+      if(now-lastPaint>=1000/settings.fps-2&&source.readyState>=2){
+        renderFrame();
         frames++;lastPaint=now;
       }
       if(now-lastProgress>350){
@@ -169,17 +188,13 @@ export async function renderResellerVideoMp4(opts:{
       }
       if(source.ended||source.currentTime>=source.duration-.035)end();
     };
-    const videoFrame=(now:number)=>{
-      draw(now);
-      if(!stopped&&typeof source.requestVideoFrameCallback==="function")
-        callback=source.requestVideoFrameCallback(videoFrame);
-    };
+    // rAF paints at a stable 24fps (30 on high). It can repeat the last
+    // decoded frame when the decoder is temporarily slow, instead of leaving
+    // avoidable capture gaps while waiting for requestVideoFrameCallback.
     const animate=(now:number)=>{draw(now);if(!stopped)raf=requestAnimationFrame(animate);};
     active.start(900);
     await source.play();
-    if(typeof source.requestVideoFrameCallback==="function")
-      callback=source.requestVideoFrameCallback(videoFrame);
-    else raf=requestAnimationFrame(animate);
+    raf=requestAnimationFrame(animate);
     // Encoding with canvas, logo, WebAudio and MP4 muxing may make playback
     // slower than real time on phones. Never treat duration+14s as EOF:
     // that prematurely stopped valid jobs at e.g. 76%.
@@ -240,8 +255,6 @@ export async function renderResellerVideoMp4(opts:{
   }finally{
     if(onAbort&&signal)signal.removeEventListener("abort",onAbort);
     if(raf)cancelAnimationFrame(raf);
-    if(callback&&typeof source.cancelVideoFrameCallback==="function")
-      source.cancelVideoFrameCallback(callback);
     if(watchdog)clearInterval(watchdog);
     if(onEnded)source.removeEventListener("ended",onEnded);
     source.pause();
@@ -249,5 +262,6 @@ export async function renderResellerVideoMp4(opts:{
     disconnectAudio?.();
     stream.getTracks().forEach(track=>track.stop());
     canvas.width=canvas.height=0;
+    overlay.width=overlay.height=0;
   }
 }
