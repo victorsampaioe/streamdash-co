@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import type { FootballMatch } from "@/lib/vitrine-football.functions";
 import { formatBrazilianWhatsApp } from "@/lib/vitrine-football-phone";
 import { footballBackgroundStyle } from "@/lib/vitrine-football-color";
+import { footballTeamNamePtBR } from "@/lib/vitrine-football-ptbr";
 
 
 export type FootballPosterFormat = "feed" | "story" | "landscape";
@@ -84,6 +85,8 @@ function FixtureRibbon({ match, badgeImages, broadcast, accent, width, height }:
 }) {
   const homeBadge=badgeImages[`home:${match.id}`] || badgeImages[match.homeBadge] || match.homeBadge;
   const awayBadge=badgeImages[`away:${match.id}`] || badgeImages[match.awayBadge] || match.awayBadge;
+  const homeName=footballTeamNamePtBR(match.home);
+  const awayName=footballTeamNamePtBR(match.away);
   const short=height<=160;
   // The primary pill always displays scheduled kickoff, even after the game ends.
   const kickoffTime=/^\d{2}:\d{2}$/.test(match.time||"")?match.time:"Horário indisponível";
@@ -102,22 +105,25 @@ function FixtureRibbon({ match, badgeImages, broadcast, accent, width, height }:
     }}>{match.league||"FUTEBOL"}</div>
     <div className="absolute flex items-center" style={{left:18,right:18,top:short?29:40,height:short?58:100,justifyContent:"space-between"}}>
       <div className="flex min-w-0 items-center justify-start" style={{width:"45%",gap:11}}>
-        <TeamCrest src={homeBadge} size={short?49:75} team={match.home}/>
-        <span style={{fontSize:teamFont(match.home),fontWeight:900,lineHeight:1.05,overflowWrap:"anywhere",
-          display:"-webkit-box",WebkitLineClamp:2,WebkitBoxOrient:"vertical",overflow:"hidden"}}>{match.home}</span>
+        <TeamCrest src={homeBadge} size={short?49:75} team={homeName}/>
+        <span lang="pt-BR" style={{fontSize:teamFont(homeName),fontWeight:900,lineHeight:1.08,
+          flex:"1 1 auto",minWidth:0,overflowWrap:"break-word",wordBreak:"normal",
+          whiteSpace:"normal"}}>{homeName}</span>
       </div>
       <span style={{fontWeight:1000,color:accent,fontSize:short?19:28,padding:"0 6px"}}>X</span>
       <div className="flex min-w-0 items-center justify-end" style={{width:"45%",gap:11,textAlign:"right"}}>
-        <span style={{fontSize:teamFont(match.away),fontWeight:900,lineHeight:1.05,overflowWrap:"anywhere",
-          display:"-webkit-box",WebkitLineClamp:2,WebkitBoxOrient:"vertical",overflow:"hidden"}}>{match.away}</span>
-        <TeamCrest src={awayBadge} size={short?49:75} team={match.away}/>
+        <span lang="pt-BR" style={{fontSize:teamFont(awayName),fontWeight:900,lineHeight:1.08,
+          flex:"1 1 auto",minWidth:0,overflowWrap:"break-word",wordBreak:"normal",
+          whiteSpace:"normal"}}>{awayName}</span>
+        <TeamCrest src={awayBadge} size={short?49:75} team={awayName}/>
       </div>
     </div>
     <div className="absolute flex items-center justify-center" style={{
       left:0,right:"38%",bottom:0,height:short?37:51,
       borderTop:"1px solid #d9deeb",background:"#f1f5fa",padding:"0 12px",
       fontSize:short?13:16,fontWeight:850,color:"#263349"
-    }}><span style={{whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>
+    }}><span style={{whiteSpace:"normal",overflowWrap:"break-word",
+      lineHeight:1.1,textAlign:"center"}}>
       {broadcast.trim()||"Sem transmissão"}
     </span></div>
     <div className="absolute flex items-center justify-center text-white" style={{
@@ -233,7 +239,9 @@ export function FootballSchedulePoster({
       <div className="inline-block bg-[#fffafa] text-[#101116]" style={{
         fontSize: landscape ? 17 : story ? 30 : 19,
         fontWeight: 1000, marginTop: story ? 13 : 6,
-        padding: "6px 22px", transform: "rotate(-1deg)",
+        padding: "6px 22px", minWidth:landscape?360:450,
+        maxWidth:"100%",boxSizing:"border-box",whiteSpace:"nowrap",
+        textAlign:"center",transform: "rotate(-1deg)",
         clipPath: "polygon(2% 0,97% 3%,100% 95%,2% 100%,0 15%)",
       }}>{dateLabel(day)}</div>
     </div>
