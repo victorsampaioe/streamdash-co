@@ -9,7 +9,7 @@ export async function run(mode:"stage"|"inview"){
   host.style.cssText=mode==="stage"?"position:fixed;left:-1800px;top:0;width:1080px;z-index:-100":"position:fixed;left:0;top:0;width:1px;height:1px;overflow:hidden;z-index:-1";
   document.body.appendChild(host);
   const inner=document.createElement("div");inner.style.cssText="width:1080px;height:1080px;overflow:hidden";host.appendChild(inner);
-  createRoot(inner).render(<FootballSchedulePoster kind="today" format="feed" matches={[0,1,2,3].map(m) as any} day="2026-11-17" headline="EVENTOS DE HOJE" brand="Revenda X" logo="/favicon.ico" contact="85999998888" badgeImages={{}} broadcastByMatch={{m0:"Globo",m1:"SporTV",m2:"Premiere",m3:"ESPN"}} playerPhoto="" playerName="" stadium="" accent="#146df2"/>);
+  createRoot(inner).render(<FootballSchedulePoster kind="today" format="feed" matches={[0,1,2,3].map(m) as any} day="2026-11-17" headline="EVENTOS DE HOJE" brand="Revenda X" logo="/favicon.ico" contact="85999998888" badgeImages={{[crest]:crest,[blocked]:blocked}} broadcastByMatch={{m0:"Globo",m1:"SporTV",m2:"Premiere",m3:"ESPN"}} playerPhoto="" playerName="" stadium="" accent="#146df2"/>);
   await new Promise(r=>setTimeout(r,2500));
   try{const f=await createFootballArtworkFile(inner,"x.png");
     (window as any).__f=f;return "OK "+f.size;}
