@@ -8,7 +8,7 @@ const debugging="http://127.0.0.1:9222";
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));
 
 let connection;
-for(let i=0;i<25;i++){
+for(let i=0;i<100;i++){
   try{
     const info=await fetch(debugging+"/json/version").then(r=>r.json());
     if(info.webSocketDebuggerUrl){connection=true;break;}
