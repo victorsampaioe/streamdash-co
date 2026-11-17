@@ -174,7 +174,8 @@ try{
     league:i%2?"Liga das Nações":"Amistoso Internacional",
     broadcasts:i%2?["Disney+"]:["Globo","SporTV","ge tv"]
   }));
-  for(const accent of ["#146df2","#ee1519","#db4796"]){
+  const backdropSamples=[];
+  for(const accent of ["#146df2","#ee1519","#db4796","#0ea56d","#c78d11","#7953b1"]){
     const painted=[];
     const original=CanvasRenderingContext2D.prototype.fillText;
     CanvasRenderingContext2D.prototype.fillText=function(text,...args){
@@ -203,22 +204,29 @@ try{
     if(!existsInRect(ctx,[237,16,174],770,65,630,180))
       throw Error("Modelo Grade: logo da revenda desapareceu");
     const rowH=Math.floor((1147-322-5*13)/6);
-    const size=Math.min(65,Math.max(54,Math.round(rowH*.46)));
+    const size=Math.min(91,Math.max(76,Math.round(rowH*.63)));
     for(let i=0;i<12;i++){
       const row=Math.floor(i/2),col=i%2,x=43+col*(488+18),
-        y=322+row*(rowH+13)+50;
-      if(!existsInRect(ctx,[24,229,170],(x+28)*2,y*2,size*2,size*2))
+        y=322+row*(rowH+13)+(rowH<140?45:51);
+      if(!existsInRect(ctx,[24,229,170],(x+21)*2,y*2,size*2,size*2))
         throw Error("Modelo Grade: escudo mandante ausente do jogo "+(i+1));
-      if(!existsInRect(ctx,[244,163,22],(x+488-size-28)*2,y*2,size*2,size*2))
+      if(!existsInRect(ctx,[244,163,22],(x+488-size-21)*2,y*2,size*2,size*2))
         throw Error("Modelo Grade: escudo visitante ausente do jogo "+(i+1));
       if(!painted.includes("Equipe "+(i+1)+" × Visitante "+(i+1)))
         throw Error("Modelo Grade: nome do jogo "+(i+1)+" não apareceu completo");
     }
+    // Real decoded pixels, sampled on the stadium outside the white cards.
+    // Colors must change throughout the artwork, not merely on card borders.
+    const sample=[...ctx.getImageData(60,430,1,1).data].slice(0,3);
+    backdropSamples.push({accent,sample});
     const foot=ctx.getImageData(120,2460,450,70).data;
     if(foot.length<2000)throw Error("Modelo Grade: rodapé incompleto");
     out.push({case:"two-column",accent,matches:12,width:2160,height:2700,
-      logos:1,badges:24,footer:true,bytes:gridFile.size});
+      logos:1,badges:24,footer:true,bytes:gridFile.size,backdropPixel:sample});
   }
+  const uniqueBackdrops=new Set(backdropSamples.map(v=>v.sample.join(",")));
+  if(uniqueBackdrops.size!==backdropSamples.length)
+    throw Error("Fundo de estádio não muda em todas as cores: "+JSON.stringify(backdropSamples));
   status.textContent="FOOTBALL_RENDER_PASS "+JSON.stringify(out);
   status.dataset.status="pass";
 }catch(e){
