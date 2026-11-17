@@ -84,6 +84,13 @@ describe("Vitrine Futebol — imagens e exportação", () => {
     expect(html).not.toContain("https://ftwb.notiffly.com.br/b.png");
     expect(html).not.toContain("football-crest-unavailable");
   });
+  it("não reutiliza link externo quebrado quando pré-carregamento marcou escudo indisponível",()=>{
+    const source={...sample,homeBadge:"https://ftwb.notiffly.com.br/broken.png"};
+    const html=renderToStaticMarkup(<FootballSchedulePoster {...base}
+      matches={[source]} badgeImages={{["home:"+source.id]:""}}/>);
+    expect(html).toContain("football-crest-unavailable");
+    expect(html).not.toContain("https://ftwb.notiffly.com.br/broken.png");
+  });
   it("não cria quadrados de escudos vazios quando a fonte não oferece imagem",()=>{
     const html=renderToStaticMarkup(<FootballSchedulePoster {...base} />);
     expect(html).not.toContain('src=""');
