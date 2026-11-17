@@ -2,7 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { requirePaidFeature } from "@/lib/premium-feature-access";
-import { supabaseAdmin } from "@/integrations/supabase/client.server";
+
 
 const PNG_WIDTH=1080;
 const MAX_PNG_BYTES=9*1024*1024; // Telegram sendPhoto accepts up to 10 MB.
@@ -48,12 +48,15 @@ export const sendVitrineFootballToRegisteredTelegram=createServerFn({method:"POS
   }).parse(raw))
   .handler(async({data,context})=>{
     await requirePaidFeature(context);
+    // Keep service-role credentials exclusively in the server runtime.
+    const {supabaseAdmin}=await import("@/integrations/supabase/client.server");
 
     const {data:channels,error}=await supabaseAdmin.from("alert_channels")
       .select("id,owner_id,target,enabled")
       .eq("owner_id",context.userId)
       .eq("kind","telegram")
       .eq("enabled",true)
+      .order("id",{ascending:true})
       .limit(20);
     if(error)throw new Error("Não foi possível consultar seu Telegram cadastrado.");
     const valid=(channels||[])
@@ -76,6 +79,9 @@ export const sendVitrineFootballToRegisteredTelegram=createServerFn({method:"POS
     const key=context.userId+":"+data.date;
     if(sentRecently.get(key) && now-(sentRecently.get(key)||0)<9000){
       throw new Error("A arte já foi enviada recentemente. Evite envios repetidos.");
+    }
+    if(sentRecently.size>600){
+      for(const [id,last] of sentRecently)if(now-last>60_000)sentRecently.delete(id);
     }
     sentRecently.set(key,now);
     const body=new FormData();
