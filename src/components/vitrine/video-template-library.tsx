@@ -57,7 +57,6 @@ export function VideoTemplateLibrary(){
   const [logo,setLogo]=useState<HTMLImageElement|null>(null);
   const [logoError,setLogoError]=useState("");
   const [videoError,setVideoError]=useState("");
-  const [videoReady,setVideoReady]=useState(false);
   const [audio,setAudio]=useState(true);
   const [working,setWorking]=useState(false);
   const [progress,setProgress]=useState({percent:0,stage:""});
@@ -85,7 +84,6 @@ export function VideoTemplateLibrary(){
   },[selectedId,model?.video_url,logoSrc,phone]);
   useEffect(()=>{
     setVideoError("");
-    setVideoReady(false);
   },[model?.id,model?.video_url]);
   useEffect(()=>()=>{
     if(overrideLogo.startsWith("blob:"))URL.revokeObjectURL(overrideLogo);
@@ -170,7 +168,7 @@ export function VideoTemplateLibrary(){
               <video key={(model?.id||"")+":"+(model?.video_url||"")}
                 ref={originalVideo} src={model?.video_url}
                 controls playsInline preload="auto" crossOrigin="anonymous"
-                onLoadedData={()=>{setVideoReady(true);setVideoError("");}}
+                onLoadedData={()=>setVideoError("")}
                 onLoadedMetadata={(event)=>{
                   // iOS Safari may display a black paused video unless its first
                   // frame has been decoded. Seek slightly into the clip.
@@ -179,9 +177,7 @@ export function VideoTemplateLibrary(){
                     try{v.currentTime=.15;}catch{/* browser may disallow preseek */}
                   }
                 }}
-                onError={()=>{setVideoReady(false);
-                  setVideoError("Não foi possível carregar este vídeo. Atualize a biblioteca ou tente outra conexão.");
-                }}
+                onError={()=>setVideoError("Não foi possível carregar este vídeo. Atualize a biblioteca ou tente outra conexão.")}
                 className="absolute inset-0 h-full w-full object-contain bg-black"/>
               <div className="pointer-events-none absolute flex items-center justify-center"
                 style={overlayStyle(overlay.logo)}>
