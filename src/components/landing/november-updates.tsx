@@ -1,5 +1,5 @@
 import {Link} from "@tanstack/react-router";
-import {ArrowRight,CalendarDays,Film,PlayCircle,Share2,Sparkles,Trophy} from "lucide-react";
+import {ArrowRight,Film,PlayCircle,Sparkles,Trophy} from "lucide-react";
 
 // Static examples supplied for the November 17 launch. This is intentionally
 // a poster frame of the submitted MP4, not a fake playable video.
