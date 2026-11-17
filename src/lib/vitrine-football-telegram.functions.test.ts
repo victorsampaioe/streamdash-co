@@ -19,16 +19,16 @@ describe("Vitrine Futebol — envio seguro ao Telegram cadastrado",()=>{
     expect(parseRegisteredTelegramTarget("123456789","")).toBeNull();
     expect(parseRegisteredTelegramTarget("0:otherbot",BOT)).toBeNull();
   });
-  it("verifica PNG completo de 1080x1080 e rejeita dados adulterados",()=>{
+  it("verifica PNG completo de 2160x2700 e rejeita dados adulterados",()=>{
     const png=Buffer.alloc(1200,0);
     Buffer.from("89504e470d0a1a0a","hex").copy(png,0);
     png.write("IHDR",12,"ascii");
-    png.writeUInt32BE(1080,16);png.writeUInt32BE(1080,20);
+    png.writeUInt32BE(2160,16);png.writeUInt32BE(2700,20);
     const dataUrl="data:image/png;base64,"+png.toString("base64");
     expect(validateFootballPosterDataUrl(dataUrl).length).toBe(1200);
     png.writeUInt32BE(240,16);
     expect(()=>validateFootballPosterDataUrl("data:image/png;base64,"+png.toString("base64")))
-      .toThrow("1080");
+      .toThrow("2160");
     expect(()=>validateFootballPosterDataUrl("data:text/html;base64,PHNjcmlwdD4="))
       .toThrow("PNG");
   });
