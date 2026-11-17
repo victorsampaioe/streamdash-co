@@ -101,28 +101,27 @@ export function formatIptvAlertMessage(
   const title = important.length
     ? "🚨 ALERTA IPTV — STREAM MONITOR"
     : "📊 ATUALIZAÇÃO IPTV — STREAM MONITOR";
-  const parts = [
+  const header = [
     bold(title),
     "🖥️ " + bold("Servidor:") + " " + literal(server.name || "Sem nome"),
     (important.length && updates
       ? "⚠️ " + important.length + (important.length === 1 ? " alerta" : " alertas") +
         " • ℹ️ " + updates + (updates === 1 ? " atualização" : " atualizações")
       : items.length > 1
-        ? "📌 " + items.length + (items.length === 1 ? " ocorrência" : " ocorrências")
+        ? "📌 " + items.length + " ocorrências"
         : ""),
-  ].filter(Boolean);
+  ].filter(Boolean).join("\n");
   const count = Math.min(items.length, 10);
-  for (let i = 0; i < count; i++) {
-    parts.push(diagnostic(items[i], mode));
-  }
-  if (items.length > count) parts.push("ℹ️ Mais " + (items.length - count) + " ocorrências disponíveis no painel.");
-  parts.push("────────────");
-  parts.push("🌐 " + bold("Host:") + " " + markup(server.host || "Não informado", mode, "code"));
-  parts.push("🔐 " + bold("IPTV:") + " " +
-    (server.hasCredentials ? "Credenciais configuradas ✅" : "Credenciais não configuradas"));
+  const details = items.slice(0, count).map(item => diagnostic(item, mode));
+  if (items.length > count) details.push("ℹ️ Mais " + (items.length - count) + " ocorrências disponíveis no painel.");
+  const footer = [
+    "🌐 " + bold("Host:") + " " + markup(server.host || "Não informado", mode, "code"),
+    "🔐 " + bold("IPTV:") + " " +
+      (server.hasCredentials ? "Credenciais configuradas ✅" : "Credenciais não configuradas"),
+  ];
   if (options.admin) {
-    if (options.owner?.name) parts.push("👤 " + bold("Revenda:") + " " + literal(options.owner.name));
-    if (options.owner?.email) parts.push("📧 " + bold("E-mail:") + " " + literal(options.owner.email));
+    if (options.owner?.name) footer.push("👤 " + bold("Revenda:") + " " + literal(options.owner.name));
+    if (options.owner?.email) footer.push("📧 " + bold("E-mail:") + " " + literal(options.owner.email));
   }
   const stamp = options.observedAt && Number.isFinite(options.observedAt.getTime())
     ? options.observedAt : new Date();
@@ -130,6 +129,6 @@ export function formatIptvAlertMessage(
     timeZone:"America/Fortaleza", day:"2-digit", month:"2-digit", year:"numeric",
     hour:"2-digit", minute:"2-digit", hour12:false,
   }).format(stamp);
-  parts.push("🕒 " + bold("Verificado em:") + " " + date + " (Fortaleza)");
-  return parts.join("\n\n");
+  footer.push("🕒 " + bold("Verificado em:") + " " + date + " (Fortaleza)");
+  return [header, ...details, "────────────\n" + footer.join("\n")].join("\n\n");
 }
