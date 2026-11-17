@@ -53,8 +53,9 @@ jobs:
             --virtual-time-budget=60000 --window-size=1200,1600 \
             --dump-dom http://127.0.0.1:4173/test/football-export-harness.html \
             > /tmp/football-browser-result.html 2>/tmp/football-browser-errors.log
-          grep -o 'FOOTBALL_RENDER_[A-Z]*[^<]*' /tmp/football-browser-result.html | tail -3 || true
-          if ! grep -q 'FOOTBALL_RENDER_PASS' /tmp/football-browser-result.html; then
+          grep -oE 'data-status="(pass|fail)">[^<]*' /tmp/football-browser-result.html | tail -3 || true
+          # Check the rendered DOM, not JavaScript source that contains the word PASS.
+          if ! grep -q 'data-status="pass">FOOTBALL_RENDER_PASS' /tmp/football-browser-result.html; then
             cat /tmp/football-browser-errors.log | tail -40
             cat /tmp/vite-football.log | tail -40
             exit 1
