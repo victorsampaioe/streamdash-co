@@ -78,9 +78,10 @@ export function paintResellerVideoFrame(ctx:CanvasRenderingContext2D,
 }
 export async function renderResellerVideoMp4(opts:{
   source:HTMLVideoElement;brand:VideoOverlayBrand;audio:boolean;
-  progress:(progress:VideoExportProgress)=>void;
+  progress:(progress:VideoExportProgress)=>void;signal?:AbortSignal;
 }):Promise<Blob>{
-  const {source,brand,audio,progress}=opts;
+  const {source,brand,audio,progress,signal}=opts;
+  if(signal?.aborted)throw new Error("Exportação interrompida pela saída da conta.");
   if(!brand.logo||!brand.logo.naturalWidth)
     throw new Error("Cadastre a logo da revenda antes de gerar o vídeo.");
   if(!/^[\d\s()+-]{9,22}$/.test(brand.whatsapp))
@@ -104,6 +105,7 @@ export async function renderResellerVideoMp4(opts:{
   let recorder:MediaRecorder|null=null;
   let raf=0,callback=0,watchdog:ReturnType<typeof setTimeout>|null=null;
   let stopped=false,frames=0;
+  let onAbort:(()=>void)|null=null;
   try{
     source.pause();
     if(source.currentTime>.05){
@@ -148,6 +150,11 @@ export async function renderResellerVideoMp4(opts:{
       if(stopped)return;
       stopped=true;if(active.state!=="inactive")active.stop();
     };
+    if(signal){
+      onAbort=()=>{source.pause();end();};
+      signal.addEventListener("abort",onAbort,{once:true});
+      if(signal.aborted)onAbort();
+    }
     source.addEventListener("ended",end,{once:true});
     let lastPaint=0,lastProgress=0;
     const draw=(now:number)=>{
@@ -176,6 +183,7 @@ export async function renderResellerVideoMp4(opts:{
     else raf=requestAnimationFrame(animate);
     watchdog=setTimeout(end,(source.duration+14)*1000);
     const blob=await finished;
+    if(signal?.aborted)throw new Error("Exportação cancelada por segurança.");
     if(source.currentTime<source.duration-.4 || frames<source.duration*6)
       throw new Error("A exportação foi interrompida. O vídeo original permanece intacto.");
     progress({percent:99,stage:"Finalizando MP4 para WhatsApp..."});
@@ -183,6 +191,7 @@ export async function renderResellerVideoMp4(opts:{
     progress({percent:100,stage:"MP4 pronto"});
     return output;
   }finally{
+    if(onAbort&&signal)signal.removeEventListener("abort",onAbort);
     if(raf)cancelAnimationFrame(raf);
     if(callback&&typeof source.cancelVideoFrameCallback==="function")
       source.cancelVideoFrameCallback(callback);
