@@ -60,8 +60,29 @@ export async function normalizeCinematicLogoPng(img:HTMLImageElement):Promise<HT
       if(tail>0)context.putImageData(pixels,0,0);
     }
   }
-  const png=canvas.toDataURL("image/png");
-  // The same PNG image is used in editor preview, canvas and exported MP4.
+  // A transparent PNG can still contain huge empty margins, making the logo
+  // appear tiny inside an otherwise large branding slot. Crop only the outer
+  // transparent bounds and keep a small safety margin for soft antialiasing.
+  const visible=context.getImageData(0,0,width,height).data;
+  let left=width,top=height,right=-1,bottom=-1;
+  for(let y=0;y<height;y++)for(let x=0;x<width;x++){
+    if(visible[(y*width+x)*4+3]<12)continue;
+    if(x<left)left=x;if(x>right)right=x;
+    if(y<top)top=y;if(y>bottom)bottom=y;
+  }
+  if(right<left||bottom<top)
+    throw new Error("A logo ficou completamente transparente. Envie outro PNG.");
+  const pad=Math.max(2,Math.round(Math.min(width,height)*.018));
+  const cropX=Math.max(0,left-pad),cropY=Math.max(0,top-pad);
+  const cropW=Math.min(width,cropX+right-left+1+pad*2)-cropX;
+  const cropH=Math.min(height,cropY+bottom-top+1+pad*2)-cropY;
+  const trimmed=document.createElement("canvas");
+  trimmed.width=cropW;trimmed.height=cropH;
+  const trimCtx=trimmed.getContext("2d");
+  if(!trimCtx)throw new Error("Não foi possível finalizar a logo.");
+  trimCtx.drawImage(canvas,cropX,cropY,cropW,cropH,0,0,cropW,cropH);
+  const png=trimmed.toDataURL("image/png");
+  // Use the EXACT same normalized transparent image for preview and MP4.
   const result=new Image();
   await new Promise<void>((resolve,reject)=>{
     result.onload=()=>resolve();
@@ -69,5 +90,6 @@ export async function normalizeCinematicLogoPng(img:HTMLImageElement):Promise<HT
     result.src=png;
   });
   canvas.width=0;canvas.height=0;
+  trimmed.width=0;trimmed.height=0;
   return result;
 }
