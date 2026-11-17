@@ -464,6 +464,30 @@ function gridBroadcast(ctx:CanvasRenderingContext2D,list:string[],x:number,y:num
   lines.forEach((line,i)=>ctx.fillText(line,x,y-(lines.length===2?6:0)+i*12));
   ctx.restore();
 }
+/** Compact only at full capacity; fewer verified fixtures grow and recenter. */
+export function gridCardGeometry(count:number){
+  const cards=Math.max(1,Math.min(12,Math.floor(count)));
+  const lines=Math.ceil(cards/2),gapY=13,range=1147-322;
+  const maxHeight=lines===1?300:lines===2?260:lines===3?218:lines===4?195:170;
+  const cardHeight=Math.min(maxHeight,Math.floor((range-(lines-1)*gapY)/lines));
+  const blockHeight=cardHeight*lines+(lines-1)*gapY;
+  const rowTop=322+Math.max(0,Math.floor((range-blockHeight)/2));
+  const badgeSize=Math.min(145,Math.max(79,Math.round(cardHeight*.71)));
+  const badgeOffset=cardHeight>=190?
+    Math.max(38,Math.round((cardHeight-badgeSize)/2)):
+    cardHeight>=145?Math.max(37,cardHeight-badgeSize-6):
+    Math.max(28,cardHeight-badgeSize-7);
+  return {lines,cardHeight,gapY,rowTop,badgeSize,badgeOffset};
+}
+export function classicCardGeometry(count:number){
+  const cards=Math.max(1,Math.min(4,Math.floor(count)));
+  const heights=[0,340,300,222,153],cardHeight=heights[cards],gap=18;
+  const blockHeight=cards*cardHeight+(cards-1)*gap;
+  const rowTop=cards===4?367:367+Math.max(0,Math.floor((720-blockHeight)/2));
+  const badgeSize=Math.min(106,Math.max(54,Math.round(cardHeight*.32)));
+  const badgeOffset=Math.max(48,Math.round((cardHeight-38-badgeSize)/2)+5);
+  return {cardHeight,gap,rowTop,badgeSize,badgeOffset};
+}
 function drawTwoColumnGrid(ctx:CanvasRenderingContext2D,rows:FootballMatch[],
   badges:(HTMLImageElement|null)[],accent:string,day:string,
   brand:HTMLImageElement|null,exportCanvas:HTMLCanvasElement){
@@ -484,14 +508,14 @@ function drawTwoColumnGrid(ctx:CanvasRenderingContext2D,rows:FootballMatch[],
   ctx.save();ctx.shadowColor=accent;ctx.shadowBlur=15;
   ctx.fillStyle=accent;rounded(ctx,42,298,996,5,2);ctx.fill();ctx.restore();
 
-  const columns=2,left=43,gapX=18,cardWidth=488,startY=322,maxY=1147;
-  const lines=Math.ceil(rows.length/columns);
-  const gapY=13;
-  const cardHeight=Math.min(170,Math.floor((maxY-startY-(lines-1)*gapY)/lines));
+  const left=43,gapX=18,cardWidth=488;
+  const {cardHeight,gapY,rowTop,badgeSize,badgeOffset}=gridCardGeometry(rows.length);
   if(cardHeight<115)throw new Error("Há mais jogos do que cabem no modelo em duas colunas.");
   for(let i=0;i<rows.length;i++){
     const row=Math.floor(i/2),col=i%2,m=rows[i];
-    const x=left+col*(cardWidth+gapX),y=startY+row*(cardHeight+gapY);
+    const lonelyLast=rows.length%2===1&&i===rows.length-1;
+    const x=left+(lonelyLast?(cardWidth+gapX)/2:col*(cardWidth+gapX));
+    const y=rowTop+row*(cardHeight+gapY);
     const cx=x+cardWidth/2;
     ctx.save();ctx.shadowColor="rgba(0,0,0,.30)";ctx.shadowBlur=10;ctx.shadowOffsetY=4;
     ctx.fillStyle="#ffffff";rounded(ctx,x,y,cardWidth,cardHeight,23);ctx.fill();ctx.restore();
@@ -512,9 +536,6 @@ function drawTwoColumnGrid(ctx:CanvasRenderingContext2D,rows:FootballMatch[],
     // The old .62 multiplier left circles tiny on the two-column layout.
     // Fit team emblems into nearly the entire side zones, without ever
     // intruding into the central kickoff/channel column.
-    const badgeSize=Math.min(112,Math.max(79,Math.round(cardHeight*.71)));
-    const badgeOffset=cardHeight>=145?Math.max(37,cardHeight-badgeSize-6)
-      :Math.max(28,cardHeight-badgeSize-7);
     const badgeTop=y+badgeOffset;
     const homeX=x+15,awayX=x+cardWidth-badgeSize-15;
     ctx.save();ctx.shadowColor="rgba(15,40,90,.16)";
@@ -526,12 +547,12 @@ function drawTwoColumnGrid(ctx:CanvasRenderingContext2D,rows:FootballMatch[],
     ctx.restore();
     const clock=/^\d{2}:\d{2}$/.test(m.time||"")?(m.time||"").replace(":","H"):"A CONFIRMAR";
     const clockW=clock==="A CONFIRMAR"?175:150;
-    const top=y+54;
+    const top=y+Math.max(54,Math.round(cardHeight*.41));
     const gradient=ctx.createLinearGradient(cx-clockW/2,0,cx+clockW/2,0);
     gradient.addColorStop(0,"#092d64");gradient.addColorStop(.95,accent);
     ctx.fillStyle=gradient;rounded(ctx,cx-clockW/2,top,clockW,41,14);ctx.fill();
     fitText(ctx,clock,cx,top+21,clockW-10,29,16,"center","#ffffff",950);
-    gridBroadcast(ctx,m.broadcasts||[],cx,y+Math.min(cardHeight-17,113),234);
+    gridBroadcast(ctx,m.broadcasts||[],cx,y+cardHeight-18,234);
   }
 }
 /** Native full-resolution artwork, never scaled from a mobile screenshot. */
@@ -545,7 +566,7 @@ export async function drawFootballPngFallback(data:FootballCanvasData):Promise<F
   ctx.scale(SCALE,SCALE);
   const {matches,day,accent,logo,contact,filename,playerPhoto}=data;
   const kind=data.kind||"today";
-  const rows=matches.slice(0,kind==="finished"?1:kind==="grid"?12:4);
+  let rows=matches.slice(0,kind==="finished"?1:kind==="grid"?12:4);
   if(rows.length===0)throw new Error("Nenhum confronto encontrado para gerar a arte.");
   const finalScore=kind==="finished"&&isVerifiedFinishedFootballMatch(rows[0])
     ?parseFootballFinalScore(rows[0].scoreLabel):null;
@@ -560,6 +581,20 @@ export async function drawFootballPngFallback(data:FootballCanvasData):Promise<F
       loadTeamBadge(m.awayBadge||"",m.away,m.league)
     ])
   ]);
+  if(kind==="today"||kind==="grid"){
+    // Last-resort safety: if a source's image is corrupt, remove the complete
+    // fixture instead of drawing fake initials or an empty white circle.
+    const allowed:number[]=[];
+    rows.forEach((match,i)=>{
+      if(badges[i*2]&&badges[i*2+1])allowed.push(i);
+    });
+    if(!allowed.length)throw new Error("Não há confrontos com escudos ou bandeiras reais dos dois times.");
+    if(allowed.length!==rows.length){
+      const retainedBadges=allowed.flatMap(i=>[badges[i*2],badges[i*2+1]]);
+      rows=allowed.map(i=>rows[i]);
+      badges.splice(0,badges.length,...retainedBadges);
+    }
+  }
   // RESTORED: the original user-approved "EVENTOS DE HOJE" sports poster
   // design. Native logical 1080×1350, rendered sharply at 2160×2700.
   // Keep the approved classic cards and typography, but share the exact same
@@ -619,8 +654,8 @@ export async function drawFootballPngFallback(data:FootballCanvasData):Promise<F
       accent,finalScore.home,finalScore.away);
   }else{
   // Compact, curved fixture ribbons reproduce the APPROVED layout.
-  const rowHeight=rows.length===1?205:153;
-  const gap=18, cardLeft=48, cardWidth=984, rowTop=367;
+  const {cardHeight:rowHeight,gap,rowTop,badgeSize:flagSize,badgeOffset}=classicCardGeometry(rows.length);
+  const cardLeft=48, cardWidth=984;
   for(let i=0;i<rows.length;i++){
     const m=rows[i], y=rowTop+i*(rowHeight+gap);
     ctx.save();ctx.shadowColor="rgba(0,0,0,.30)";
@@ -638,16 +673,17 @@ export async function drawFootballPngFallback(data:FootballCanvasData):Promise<F
     const league=String(m.league||"FUTEBOL").toUpperCase();
     fitText(ctx,league,540,y+15,875,12,10,"center","#607087",900);
     // True circular flag/club crests: NO white ring, blue circles or 'K/PG'.
-    const flagSize=54, badgeY=y+48;
+    const badgeY=y+badgeOffset,leftBadge=73,rightBadge=1031-flagSize-24;
+    const midY=badgeY+flagSize/2;
     ctx.save();ctx.shadowColor="rgba(0,0,0,.18)";ctx.shadowBlur=5;ctx.shadowOffsetY=2;
-    if(badges[i*2])contain(ctx,badges[i*2]!,73,badgeY,flagSize,flagSize);
-    else paintFallbackBadge(ctx,73,badgeY,m.home,m.league,flagSize);
-    if(badges[i*2+1])contain(ctx,badges[i*2+1]!,953,badgeY,flagSize,flagSize);
-    else paintFallbackBadge(ctx,953,badgeY,m.away,m.league,flagSize);
+    if(badges[i*2])contain(ctx,badges[i*2]!,leftBadge,badgeY,flagSize,flagSize);
+    else paintFallbackBadge(ctx,leftBadge,badgeY,m.home,m.league,flagSize);
+    if(badges[i*2+1])contain(ctx,badges[i*2+1]!,rightBadge,badgeY,flagSize,flagSize);
+    else paintFallbackBadge(ctx,rightBadge,badgeY,m.away,m.league,flagSize);
     ctx.restore();
-    fitTwoLines(ctx,footballTeamNamePtBR(m.home),141,y+75,326,"left");
-    fitTwoLines(ctx,footballTeamNamePtBR(m.away),939,y+75,326,"right");
-    textLine(ctx,"X",540,y+74,21,accent,"center",1000);
+    fitTwoLines(ctx,footballTeamNamePtBR(m.home),leftBadge+flagSize+14,midY,316,"left");
+    fitTwoLines(ctx,footballTeamNamePtBR(m.away),rightBadge-14,midY,316,"right");
+    textLine(ctx,"X",540,midY,21,accent,"center",1000);
 
     const ribbonHeight=38, ribbonY=y+rowHeight-ribbonHeight;
     ctx.save();rounded(ctx,51,ribbonY,978,ribbonHeight,13);ctx.clip();
