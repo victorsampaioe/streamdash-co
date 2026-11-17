@@ -1,4 +1,4 @@
-import {useCallback,useEffect,useMemo,useRef,useState} from "react";
+import {useEffect,useMemo,useRef,useState,useSyncExternalStore} from "react";
 import {useQuery} from "@tanstack/react-query";
 import {useServerFn} from "@tanstack/react-start";
 import {Link} from "@tanstack/react-router";
@@ -10,7 +10,11 @@ import {Card} from "@/components/ui/card";
 import {listVideoModels,type VideoModel} from "@/lib/vitrine-video-models.functions";
 import {getCinematicBannerBrand} from "@/lib/vitrine-cinematic.functions";
 import {normalizeCinematicLogoPng} from "@/lib/vitrine-cinematic-logo";
-import {renderResellerVideoMp4,videoOverlayGeometry,VIDEO_WHATSAPP_MONO,type VideoOverlayBrand} from "@/lib/vitrine-video-template-render";
+import {videoOverlayGeometry,VIDEO_WHATSAPP_MONO,type VideoOverlayBrand} from "@/lib/vitrine-video-template-render";
+import {
+  getVideoJobSnapshot,subscribeToVideoJob,prepareVideoJobSource,
+  startVideoExportInDocument,downloadVideoJob,restoreCompletedVideo,
+} from "@/lib/vitrine-video-background-job";
 import {formatCinematicWhatsApp} from "@/lib/vitrine-cinematic-canvas";
 
 const area="rounded-2xl border border-blue-400/20 bg-[#071729] p-4 sm:p-6";
@@ -58,11 +62,11 @@ export function VideoTemplateLibrary(){
   const [logoError,setLogoError]=useState("");
   const [videoError,setVideoError]=useState("");
   const [audio,setAudio]=useState(true);
-  const [working,setWorking]=useState(false);
-  const [progress,setProgress]=useState({percent:0,stage:""});
-  const [result,setResult]=useState<Blob|null>(null);
-  const [resultUrl,setResultUrl]=useState("");
   const originalVideo=useRef<HTMLVideoElement>(null);
+  const job=useSyncExternalStore(subscribeToVideoJob,getVideoJobSnapshot,getVideoJobSnapshot);
+  const working=job.status==="preparing"||job.status==="rendering";
+  const progress={percent:job.percent,stage:job.stage};
+  const result=job.status==="ready"&&job.ownerId===currentBrand?.owner_id;
   const phone=overrideWhatsapp||currentBrand?.whatsapp||"";
   const logoSrc=overrideLogo||currentBrand?.logo_url||"";
   const effectiveBrand:VideoOverlayBrand|null=logo&&currentBrand?{
@@ -79,25 +83,25 @@ export function VideoTemplateLibrary(){
     });
     return()=>{active=false};
   },[logoSrc]);
+  // Preload a separate, persistent video element owned by the document (not
+  // this React route). This remains alive when navigating elsewhere in the
+  // Stream Monitor app and drives the full MP4 export.
   useEffect(()=>{
-    setResult(null);setResultUrl(previous=>{if(previous)URL.revokeObjectURL(previous);return "";});
-  },[selectedId,model?.video_url,logoSrc,phone]);
+    if(model?.id&&model?.video_url)prepareVideoJobSource(model.id,model.video_url);
+  },[model?.id,model?.video_url]);
+  useEffect(()=>{
+    if(currentBrand?.owner_id)void restoreCompletedVideo(currentBrand.owner_id).catch(()=>{});
+  },[currentBrand?.owner_id]);
   useEffect(()=>{
     setVideoError("");
   },[model?.id,model?.video_url]);
   useEffect(()=>()=>{
     if(overrideLogo.startsWith("blob:"))URL.revokeObjectURL(overrideLogo);
-    if(resultUrl)URL.revokeObjectURL(resultUrl);
-  },[overrideLogo,resultUrl]);
+  },[overrideLogo]);
   function download(){
-    if(!result||!model)return;
-    const u=URL.createObjectURL(result);
-    const link=document.createElement("a");
-    link.href=u;link.download="stream-monitor-"+filename(model.title)+".mp4";
-    document.body.appendChild(link);link.click();link.remove();
-    window.setTimeout(()=>URL.revokeObjectURL(u),45_000);
+    if(!downloadVideoJob())toast.error("Ainda não há um MP4 pronto para baixar.");
   }
-  async function generate(){
+  function generate(){
     if(!model||!effectiveBrand||working)return;
     if(!phone.trim()){toast.error("Cadastre o WhatsApp da revenda.");return;}
     const video=originalVideo.current;
@@ -105,19 +109,17 @@ export function VideoTemplateLibrary(){
     if(!video||video.readyState<1){
       toast.error("Abra o vídeo e aguarde carregar antes de gerar.");return;
     }
-    setWorking(true);setProgress({percent:0,stage:"Preparando vídeo..."});
-    setResult(null);setResultUrl("");
     try{
-      const blob=await renderResellerVideoMp4({
-        source:video,brand:effectiveBrand,audio,
-        progress:setProgress
+      startVideoExportInDocument({
+        ownerId:currentBrand?.owner_id||"",modelId:model.id,url:model.video_url,
+        title:model.title,
+        filename:"stream-monitor-"+filename(model.title)+".mp4",
+        brand:effectiveBrand,audio,
       });
-      const url=URL.createObjectURL(blob);
-      setResult(blob);setResultUrl(url);
-      toast.success("MP4 personalizado com logo e WhatsApp!");
+      toast.success("Geração iniciada! Você pode navegar pelo Stream Monitor e acompanhar o progresso.");
     }catch(err){
-      toast.error(err instanceof Error?err.message:"Não foi possível exportar o vídeo.");
-    }finally{setWorking(false);}
+      toast.error(err instanceof Error?err.message:"Não foi possível iniciar o MP4.");
+    }
   }
   return <main className="mx-auto max-w-6xl space-y-6 p-4 text-white sm:p-7">
     <header className={area}>
@@ -125,8 +127,9 @@ export function VideoTemplateLibrary(){
       <h1 className="mt-2 text-3xl font-black">Vídeos prontos com a marca da sua revenda</h1>
       <p className="mt-2 max-w-3xl text-sm text-slate-300">
         Escolha um vídeo cadastrado pelo administrador. Sua logo e seu WhatsApp aparecem
-        durante a reprodução e no arquivo MP4 final. O vídeo é processado no seu dispositivo,
-        sem alterar o original do catálogo.
+        durante a reprodução e no arquivo MP4 final. A geração continua enquanto você
+        navega pelas páginas do Stream Monitor. No iPhone, mantenha o Safari aberto:
+        ao fechar o aplicativo, o iOS pode suspender a gravação.
       </p>
     </header>
     {templates.isPending||brandQ.isPending?<Card className="p-7 text-center">
@@ -249,8 +252,12 @@ export function VideoTemplateLibrary(){
           <Button className="mt-5 w-full" disabled={working||!logo||!model||!phone.trim()}
             onClick={()=>void generate()}>
             {working?<RefreshCw className="mr-2 h-4 w-4 animate-spin"/>:<Play className="mr-2 h-4 w-4"/>}
-            {working?"Gerando MP4...":"Gerar vídeo com minha logo e WhatsApp"}
+            {working?"Gerando MP4 (pode navegar)...":"Gerar vídeo com minha logo e WhatsApp"}
           </Button>
+          {working&&<p className="mt-2 text-xs text-blue-300">
+            A geração agora funciona fora desta tela e continua durante a navegação.
+            O progresso fica disponível no rodapé do Stream Monitor.
+          </p>}
           {working&&<div className="mt-3">
             <div className="h-2 overflow-hidden rounded-full bg-slate-800">
               <div className="h-full bg-blue-500 transition-all" style={{width:progress.percent+"%"}}/>
