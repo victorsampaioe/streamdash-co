@@ -55,7 +55,7 @@ try{
     if(!existsInRect(ctx,[237,16,174],220,145,430,370))
       throw Error("Logo colorida desapareceu da imagem");
     for(let i=0;i<count;i++){
-      const rowY=357+i*((count===4?186:count===3?205:count===2?226:240)+18);
+      const rowY=367+i*((count===1?205:153)+18);
       if(!existsInRect(ctx,[24,229,170],140,(rowY+52)*2,125,130))
         throw Error("Escudo mandante ausente na partida "+(i+1));
       if(!existsInRect(ctx,[244,163,22],1890,(rowY+52)*2,140,130))
@@ -72,32 +72,54 @@ try{
       document.querySelector("#preview").appendChild(img);
     }
   }
-  // Reproduce the real Safari screenshot: the Singapore crest CDN failed,
-  // but the PNG, preview and Telegram must still have a complete badge.
-  const originalFill=CanvasRenderingContext2D.prototype.fillText;
-  let singaporeFlagDrawn=false;
-  CanvasRenderingContext2D.prototype.fillText=function(label,...args){
-    if(String(label)==="🇸🇬")singaporeFlagDrawn=true;
-    return originalFill.call(this,label,...args);
-  };
-  try{
-    const missingSingapore=[...matches];
-    missingSingapore[0]={...missingSingapore[0],homeBadge:""};
-    const file=await drawFootballPngFallback({
-      matches:missingSingapore,day:"2026-11-17",
-      accent:"#146df2",logo,contact:"85998545009",
-      name:"Revenda Exemplo",filename:"singapore-fallback.png"
-    });
-    const bitmap=await createImageBitmap(file);
-    if(bitmap.width!==2160||bitmap.height!==2700)
-      throw Error("Fallback Singapura: dimensão incorreta");
-    bitmap.close();
-    if(!singaporeFlagDrawn)
-      throw Error("Fallback Singapura: bandeira brasileira? emoji correto não desenhado");
-    out.push({matches:4,case:"missing Singapore CDN",fallbackFlag:"🇸🇬",png:true});
-  }finally{
-    CanvasRenderingContext2D.prototype.fillText=originalFill;
+  // The real case: eight OFFLINE circular team flags without any remote CDN.
+  // This catches the old regressed "K" and "PG" placeholders for Kosovo/Wales.
+  const roundFlags=matches.map(m=>({...m,homeBadge:"",awayBadge:""}));
+  const circular=await drawFootballPngFallback({
+    matches:roundFlags,day:"2026-11-17",accent:"#146df2",
+    logo,contact:"85998545009",name:"Revenda Exemplo",
+    filename:"round-flags-2160x2700.png"
+  });
+  const flagBitmap=await createImageBitmap(circular);
+  if(flagBitmap.width!==2160||flagBitmap.height!==2700)
+    throw Error("Bandeiras offline: PNG com dimensões incorretas");
+  const flagCanvas=document.createElement("canvas");
+  flagCanvas.width=2160;flagCanvas.height=2700;
+  const fc=flagCanvas.getContext("2d",{willReadFrequently:true});
+  fc.drawImage(flagBitmap,0,0);flagBitmap.close();
+  const regionFor=(index,left)=>({
+    x:left?146:1906,
+    y:(367+index*(153+18)+48)*2,
+    w:106,h:106
+  });
+  const checks=[
+    [0,true,[216,0,39],"Singapura"],
+    [0,false,[109,165,68],"Brasil"],
+    [1,false,[0,82,180],"Kosovo"],
+    [3,true,[216,0,39],"País de Gales"]
+  ];
+  for(const [i,left,color,team] of checks){
+    const rect=regionFor(i,left);
+    if(!existsInRect(fc,color,rect.x,rect.y,rect.w,rect.h))
+      throw Error("Falhou bandeira circular offline de "+team+" (não pode virar K/PG)");
   }
+  // Run the case again with only Singapore's source missing.
+  const missingSingapore=[...matches];
+  missingSingapore[0]={...missingSingapore[0],homeBadge:""};
+  const rescue=await drawFootballPngFallback({
+    matches:missingSingapore,day:"2026-11-17",accent:"#146df2",
+    logo,contact:"85998545009",name:"Revenda Exemplo",
+    filename:"singapore-recovered.png"
+  });
+  const rescueBitmap=await createImageBitmap(rescue);
+  const rescueCanvas=document.createElement("canvas");
+  rescueCanvas.width=2160;rescueCanvas.height=2700;
+  const rescueCtx=rescueCanvas.getContext("2d",{willReadFrequently:true});
+  rescueCtx.drawImage(rescueBitmap,0,0);rescueBitmap.close();
+  if(!existsInRect(rescueCtx,[216,0,39],146,(367+48)*2,106,106))
+    throw Error("Fallback Singapura não retornou a bandeira original circular");
+  out.push({matches:4,case:"eight true circular flags including Kosovo and Wales",png:true});
+  out.push({matches:4,case:"missing Singapore CDN",restored:"round Singapore flag",png:true});
   status.textContent="FOOTBALL_RENDER_PASS "+JSON.stringify(out);
   status.dataset.status="pass";
 }catch(e){
