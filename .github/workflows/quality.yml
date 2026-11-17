@@ -33,6 +33,32 @@ jobs:
           VITE_SUPABASE_PUBLISHABLE_KEY: "sb_publishable_ci_placeholder"
           VITE_SUPABASE_PROJECT_ID: "ci"
         run: bun run build
+      - name: Real Chromium PNG render — 2160 x 2700
+        env:
+          VITE_SUPABASE_URL: "https://example.supabase.co"
+          VITE_SUPABASE_PUBLISHABLE_KEY: "sb_publishable_ci_placeholder"
+          VITE_SUPABASE_PROJECT_ID: "ci"
+        run: |
+          set -euo pipefail
+          bunx vite --host 127.0.0.1 --port 4173 > /tmp/vite-football.log 2>&1 &
+          SERVER=$!
+          trap 'kill "$SERVER" 2>/dev/null || true' EXIT
+          for i in $(seq 1 30); do
+            if curl -fsS http://127.0.0.1:4173/test/football-export-harness.html >/dev/null; then break; fi
+            sleep 1
+          done
+          CHROME="$(command -v google-chrome || command -v google-chrome-stable || command -v chromium || true)"
+          if [ -z "$CHROME" ]; then echo 'Chromium/Chrome ausente'; exit 1; fi
+          "$CHROME" --headless --no-sandbox --disable-gpu --disable-dev-shm-usage \
+            --virtual-time-budget=60000 --window-size=1200,1600 \
+            --dump-dom http://127.0.0.1:4173/test/football-export-harness.html \
+            > /tmp/football-browser-result.html 2>/tmp/football-browser-errors.log
+          grep -o 'FOOTBALL_RENDER_[A-Z]*[^<]*' /tmp/football-browser-result.html | tail -3 || true
+          if ! grep -q 'FOOTBALL_RENDER_PASS' /tmp/football-browser-result.html; then
+            cat /tmp/football-browser-errors.log | tail -40
+            cat /tmp/vite-football.log | tail -40
+            exit 1
+          fi
       - name: Verify published blog article routes
         run: |
           grep -Fq "BlogComoEvitarQuedaIptvRouteImport" src/routeTree.gen.ts
