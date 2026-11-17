@@ -326,6 +326,7 @@ function AdminPage() {
           <div className="flex flex-wrap gap-2">
             <a href="/vitrine-video" className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-bold text-white hover:bg-blue-500">Vitrine Vídeo MP4</a>
             <a href="/vitrine-banner" className="rounded-lg border border-blue-400/30 px-4 py-2 text-sm font-bold text-blue-100 hover:bg-blue-500/10">Vitrine Banner</a>
+            <a href="/app/admin/modelos-video" className="rounded-lg border border-emerald-400/40 bg-emerald-500/10 px-4 py-2 text-sm font-bold text-emerald-200 hover:bg-emerald-500/20">Biblioteca de Vídeos · Revendas</a>
           </div>
         </div>
       </section>
