@@ -23,14 +23,14 @@ export function getResellerEncodingSettings(
     (hints.deviceMemory!==undefined&&hints.deviceMemory<=3);
   const mode=quality==="auto"?(lowerPower?"compatible":"balanced"):quality;
   const longest=Math.max(sourceWidth,sourceHeight);
-  const maxLongSide=mode==="high"?1920:mode==="compatible"?960:1280;
+  const maxLongSide=mode==="high"?1920:mode==="compatible"?854:1280;
   const scale=Math.min(1,maxLongSide/longest);
   const width=Math.max(2,Math.floor(sourceWidth*scale/2)*2);
   const height=Math.max(2,Math.floor(sourceHeight*scale/2)*2);
   return {
     width,height,
     fps:mode==="high"?30:24,
-    bitrate:mode==="high"?3_000_000:mode==="compatible"?1_100_000:1_800_000,
+    bitrate:mode==="high"?3_000_000:mode==="compatible"?950_000:1_800_000,
     mode,
   } as const;
 }
