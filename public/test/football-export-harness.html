@@ -204,13 +204,14 @@ try{
     if(!existsInRect(ctx,[237,16,174],770,65,630,180))
       throw Error("Modelo Grade: logo da revenda desapareceu");
     const rowH=Math.floor((1147-322-5*13)/6);
-    const size=Math.min(92,Math.max(76,Math.round(rowH*.62)));
+    const size=Math.min(112,Math.max(79,Math.round(rowH*.71)));
+    const top=rowH>=145?Math.max(37,rowH-size-6):Math.max(28,rowH-size-7);
     for(let i=0;i<12;i++){
       const row=Math.floor(i/2),col=i%2,x=43+col*(488+18),
-        y=322+row*(rowH+13)+Math.round(rowH*.67-size/2);
-      if(!existsInRect(ctx,[24,229,170],(x+21)*2,y*2,size*2,size*2))
+        y=322+row*(rowH+13)+top;
+      if(!existsInRect(ctx,[24,229,170],(x+15)*2,y*2,size*2,size*2))
         throw Error("Modelo Grade: escudo mandante ausente do jogo "+(i+1));
-      if(!existsInRect(ctx,[244,163,22],(x+488-size-21)*2,y*2,size*2,size*2))
+      if(!existsInRect(ctx,[244,163,22],(x+488-size-15)*2,y*2,size*2,size*2))
         throw Error("Modelo Grade: escudo visitante ausente do jogo "+(i+1));
       if(!painted.includes("Equipe "+(i+1)+" × Visitante "+(i+1)))
         throw Error("Modelo Grade: nome do jogo "+(i+1)+" não apareceu completo");
@@ -282,11 +283,12 @@ try{
   const alignment=testCanvas.getContext("2d",{willReadFrequently:true});
   alignment.drawImage(alignedBitmap,0,0);alignedBitmap.close();
   const rh=Math.floor((1147-322-5*13)/6);
-  const bs=Math.min(92,Math.max(76,Math.round(rh*.62)));
-  const start=322+Math.round(rh*.67-bs/2);
-  const homeBounds=colorBounds(alignment,[24,229,170],(43+21)*2,start*2,bs*2,bs*2);
+  const bs=Math.min(112,Math.max(79,Math.round(rh*.71)));
+  const offset=rh>=145?Math.max(37,rh-bs-6):Math.max(28,rh-bs-7);
+  const start=322+offset;
+  const homeBounds=colorBounds(alignment,[24,229,170],(43+15)*2,start*2,bs*2,bs*2);
   const awayBounds=colorBounds(alignment,[244,163,22],
-    (43+488-bs-21)*2,start*2,bs*2,bs*2);
+    (43+488-bs-15)*2,start*2,bs*2,bs*2);
   if(!homeBounds||!awayBounds)
     throw Error("Grade: emblemas com transparência desalinhada desapareceram");
   const expectedCenter=(start+bs/2)*2;
