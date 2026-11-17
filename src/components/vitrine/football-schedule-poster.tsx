@@ -1,4 +1,5 @@
 import type { FootballMatch } from "@/lib/vitrine-football.functions";
+import { footballBackgroundStyle } from "@/lib/vitrine-football-color";
 
 
 export type FootballPosterFormat = "feed" | "story" | "landscape";
@@ -119,6 +120,7 @@ export function FootballSchedulePoster({
   const shown = matches.slice(0, d.count);
   const dark = darken(accent, .24);
   const dark2 = darken(accent, .44);
+  const photoTint=footballBackgroundStyle(accent);
   const story = format === "story";
   const landscape = format === "landscape";
   const branding = brand.trim() || "SUA MARCA";
@@ -141,60 +143,22 @@ export function FootballSchedulePoster({
     background: `radial-gradient(ellipse at 88% 30%,${accent} 0%,${dark2} 31%,${dark} 73%,#060607 100%)`,
     color: "white",
   }}>
-    {/* Animated-looking stadium lighting is static for reliable PNG output. */}
-    {stadium && <img src={stadium} alt="" className="absolute inset-0 h-full w-full object-cover"
-      style={{ opacity: 0.30, filter: "saturate(1.15) contrast(1.1)" }} />}
-    <div className="absolute inset-0" style={{
-      background: `linear-gradient(94deg,rgba(0,0,0,.46),transparent 70%),linear-gradient(180deg,transparent 30%,${dark}44 75%,#080609 100%)`,
-    }} />
-    <div className="absolute -right-20 top-[8%] h-[65%] w-[60%] rounded-full blur-[90px]"
-      style={{ background: accent, opacity: .33 }} />
-    <div className="absolute inset-0" style={{
-      backgroundImage: "repeating-linear-gradient(159deg,transparent 0px,transparent 23px,rgba(255,255,255,.025) 24px,transparent 25px)",
-      opacity: .52,
-    }} />
-    {/* Football atmosphere: visible in the preview AND exported PNG, with no external images. */}
+    {/* The user-approved stadium art, bundled locally to render in preview and PNG. */}
+    <div data-testid="football-stadium-image" aria-hidden="true" className="absolute inset-0 pointer-events-none"
+      style={{
+        zIndex:0,
+        backgroundImage:"url('/assets/vitrine-futebol-estadio.webp')",
+        backgroundRepeat:"no-repeat",
+        backgroundPosition:"center center",
+        backgroundSize:"cover",
+        filter:`hue-rotate(${photoTint.rotate}deg) saturate(${photoTint.saturation})`,
+        opacity:.9,
+      }}/>
+    {/* Adjustable overlay keeps the match cards and branding readable in all colors. */}
     <div className="absolute inset-0 pointer-events-none" style={{
-      background:"radial-gradient(ellipse at 78% 78%,rgba(15,167,110,.16),transparent 48%),radial-gradient(ellipse at 10% 28%,rgba(153,205,255,.13),transparent 47%)",
-      zIndex:0
+      zIndex:0,
+      background:`linear-gradient(180deg,rgba(2,7,22,.55) 0%,${dark}85 28%,${dark}70 66%,rgba(2,6,18,.65) 100%),radial-gradient(circle at 78% 16%,${accent}30,transparent 65%)`,
     }}/>
-    <svg data-testid="football-stadium-background" aria-hidden="true"
-      className="absolute inset-0 pointer-events-none" viewBox="0 0 1080 1080"
-      preserveAspectRatio="xMidYMid slice" style={{width:"100%",height:"100%",zIndex:0}}>
-      <g fill="none" stroke="#dcecff" strokeLinecap="round">
-        {/* Stadium tiers and floodlights, safely under headings. */}
-        <path d="M-75 244 Q540 25 1160 244" strokeWidth="5" opacity=".26"/>
-        <path d="M-85 275 Q540 65 1160 275" strokeWidth="3" opacity=".20"/>
-        <path d="M-85 309 Q540 110 1160 309" strokeWidth="2.5" opacity=".16"/>
-        <path d="M-80 340 Q540 146 1160 340" strokeWidth="2" opacity=".12"/>
-        <path d="M-40 370 Q540 186 1120 370" strokeWidth="1.5" opacity=".10"/>
-        {/* Large pitch markings are behind the match cards, never over text. */}
-        <rect x="97" y="390" width="886" height="610" rx="17" strokeWidth="4" opacity=".20"/>
-        <path d="M540 390 V1000" strokeWidth="3" opacity=".17"/>
-        <circle cx="540" cy="695" r="132" strokeWidth="4" opacity=".19"/>
-        <circle cx="540" cy="695" r="5" fill="#e5fcff" opacity=".28"/>
-        <path d="M337 390 V530 H743 V390 M337 1000 V860 H743 V1000"
-          strokeWidth="3" opacity=".18"/>
-        <path d="M440 390 V433 H640 V390 M440 1000 V960 H640 V1000"
-          strokeWidth="2.5" opacity=".15"/>
-        {/* A small football shape in the visible upper-right breathing room. */}
-        <circle cx="954" cy="252" r="62" strokeWidth="3.5" opacity=".25"/>
-        <path d="M954 220 l26 20 -10 30 h-32 l-10 -30z" strokeWidth="3" opacity=".24"/>
-        <path d="M954 220 v-29 M928 240 l-29 -16 M980 240 l29 -16 M938 270 l-13 27 M970 270 l13 27"
-          strokeWidth="2.6" opacity=".19"/>
-        {/* Ball outline in the free background area, lightly outlined. */}
-        <circle cx="897" cy="872" r="100" strokeWidth="4" opacity=".17"/>
-        <path d="M897 828 l42 29 -16 48 h-52 l-16 -48z" strokeWidth="3" opacity=".17"/>
-        <path d="M897 828 v-52 M855 857 l-42 -24 M939 857 l42 -24 M871 905 l-15 37 M923 905 l15 37"
-          strokeWidth="2.5" opacity=".13"/>
-      </g>
-      <g fill="#ffffff" opacity=".32">
-        <circle cx="82" cy="119" r="5"/><circle cx="101" cy="113" r="4"/>
-        <circle cx="120" cy="111" r="3"/><circle cx="139" cy="114" r="4"/>
-        <circle cx="946" cy="121" r="5"/><circle cx="965" cy="115" r="4"/>
-        <circle cx="985" cy="111" r="3"/><circle cx="1004" cy="116" r="4"/>
-      </g>
-    </svg>
     {/* Faint reseller watermark, never team shields. Same transparent logo used by the brand. */}
     {logo && <img src={logo} alt="" crossOrigin="anonymous"
       onError={event=>{event.currentTarget.style.display="none";}}
