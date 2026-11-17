@@ -207,10 +207,44 @@ export function VitrineFootballStudio() {
     };
   }
   async function createPngFile(index:number):Promise<{file:File;degraded:boolean}>{
-    // The small preview is under a CSS transform; exporting it on Safari crops content.
-    // Always render the independent original-size artwork instead.
     const node=exportRefs.current[index];
     if(!node)throw new Error("Arte completa ainda não carregada.");
+    const name="stream-monitor-futebol-"+day+"-arte-"+(index+1)+".png";
+    const fixtures=groups[index]||[];
+    const featured=fixtures.find(match=>!!match.playerPhoto&&validatedPhotos[match.playerPhoto]===true);
+    // Downloadable images must be same-origin/data URLs. Merely adding
+    // crossOrigin on an <img> doesn't make a third-party image canvas-safe.
+    const imageUrls=[transparentLogo,featured?.playerPhoto,
+      ...fixtures.flatMap(match=>[match.homeBadge,match.awayBadge])]
+      .filter((url):url is string=>typeof url==="string"&&/^https:\/\//i.test(url));
+    let resolved:Record<string,string>={};
+    if(imageUrls.length){
+      try{
+        const response=await inlineAssets({data:{urls:[...new Set(imageUrls)].slice(0,16)}});
+        resolved=response.images;
+      }catch{
+        // Retain original URLs for hosts that already allow CORS.
+        // A failed logo request must never remove the rest of the artwork.
+      }
+    }
+    const imageSrc=(url:string)=>resolved[url]||url;
+    const drawSafely=()=>drawFootballPngFallback({
+      matches:fixtures.map(match=>({
+        ...match,
+        homeBadge:imageSrc(match.homeBadge||""),
+        awayBadge:imageSrc(match.awayBadge||"")
+      })),
+      day,accent,logo:imageSrc(transparentLogo),
+      playerPhoto:imageSrc(featured?.playerPhoto||""),
+      contact:brand.contact,name:brand.name,filename:name
+    });
+    const isiOS=/iPhone|iPad|iPod/i.test(navigator.userAgent)||
+      (navigator.platform==="MacIntel"&&navigator.maxTouchPoints>1);
+    // WebKit's html-to-image foreignObject occasionally drops entire image
+    // layers even when the PNG is technically 1080x1080. Avoid that path.
+    if(isiOS){
+      return {file:await drawSafely(),degraded:false};
+    }
     await awaitAssets(node);
     const restore=await inlinePosterAssets(node);
     const options={
@@ -219,18 +253,16 @@ export function VitrineFootballStudio() {
     };
     try{
       let blob:Blob|null=null;
-      try{blob=await toBlob(node,options);}catch{/* Retry without remote font embedding. */}
+      try{blob=await toBlob(node,options);}catch{/* Retry without remote fonts. */}
       if(!blob||blob.size<1000){
-        try{blob=await toBlob(node,{...options,skipFonts:true});}catch{/* Try data URL fallback. */}
+        try{blob=await toBlob(node,{...options,skipFonts:true});}catch{/* Try data URL. */}
       }
       if(!blob||blob.size<1000){
         try{
           const data=await toPng(node,{...options,skipFonts:true});
           blob=await (await fetch(data)).blob();
-        }catch{/* The user receives an explicit error, never a silently incomplete PNG. */}
+        }catch{/* Use the Canvas fallback. */}
       }
-      const name="stream-monitor-futebol-"+day+"-arte-"+(index+1)+".png";
-      // Verify PNG IHDR before use; Safari occasionally produces a truncated image.
       let valid=false;
       if(blob && blob.size>1000){
         const head=await blob.slice(0,24).arrayBuffer();
@@ -241,14 +273,8 @@ export function VitrineFootballStudio() {
             data.getUint32(16)===baseSize && data.getUint32(20)===baseSize;
         }
       }
-      if(valid && blob)return {file:new File([blob],name,{type:"image/png"}),degraded:false};
-      // Last-resort native Canvas renderer: text, matches, broadcasters and
-      // contacts survive even when WebKit blocks html-to-image foreignObject.
-      const fallback=await drawFootballPngFallback({
-        matches:groups[index]||[],day,accent,logo:transparentLogo,
-        contact:brand.contact,name:brand.name,filename:name
-      });
-      return {file:fallback,degraded:true};
+      if(valid&&blob)return {file:new File([blob],name,{type:"image/png"}),degraded:false};
+      return {file:await drawSafely(),degraded:false};
     }finally{restore();}
   }
   function downloadBlob(file:File){
