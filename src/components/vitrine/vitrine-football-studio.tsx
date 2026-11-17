@@ -11,6 +11,7 @@ import { FootballSchedulePoster, FOOTBALL_POSTER_PALETTES } from "@/components/v
 import { getVitrineFootballMatches, type FootballMatch } from "@/lib/vitrine-football.functions";
 import { getVitrineFootballExportImages } from "@/lib/vitrine-football-export.functions";
 import { createFootballArtworkFile, describeExportError } from "@/lib/vitrine-football-dom-export";
+import { nationalTeamFlagFallback } from "@/lib/vitrine-football-ptbr";
 import { sendVitrineFootballToRegisteredTelegram } from "@/lib/vitrine-football-telegram.functions";
 
 const today = () => new Intl.DateTimeFormat("sv-SE", {
@@ -156,8 +157,11 @@ export function VitrineFootballStudio() {
   // Previously, only the hidden export copy was inlined, so browser/CORS errors
   // could silently hide shields from the visible cards or exported image.
   const crestUrls=useMemo(()=>[...new Set(groups.flatMap(group=>group.flatMap(match=>
-    [match.homeBadge,match.awayBadge].filter((url):url is string=>!!url&&/^https:\/\//i.test(url))
-  )))].slice(0,64),[groups]);
+    [match.homeBadge,match.awayBadge,
+      nationalTeamFlagFallback(match.home,match.league),
+      nationalTeamFlagFallback(match.away,match.league)
+    ].filter((url):url is string=>!!url&&/^https:\/\//i.test(url))
+  )))].slice(0,80),[groups]);
   const crestKey=JSON.stringify(crestUrls);
   const [crestMedia,setCrestMedia]=useState<{
     key:string;ready:boolean;images:Record<string,string>;unavailable:string[]
@@ -206,12 +210,19 @@ export function VitrineFootballStudio() {
     const featured=group.find(match=>!!match.playerPhoto&&validatedPhotos[match.playerPhoto]===true);
     const badgeImages:Record<string,string>={};
     for(const match of group){
-      if(match.homeBadge){
-        badgeImages[`home:${match.id}`]=crestMedia.images[match.homeBadge]||match.homeBadge;
-      }
-      if(match.awayBadge){
-        badgeImages[`away:${match.id}`]=crestMedia.images[match.awayBadge]||match.awayBadge;
-      }
+      const homeFlag=nationalTeamFlagFallback(match.home,match.league);
+      const awayFlag=nationalTeamFlagFallback(match.away,match.league);
+      // Prefer the API's real team emblem. If that URL fails to inline,
+      // display the country flag for national squads instead of a blank space.
+      // For clubs do not substitute an unrelated country's flag.
+      badgeImages[`home:${match.id}`]=
+        crestMedia.images[match.homeBadge]||
+        crestMedia.images[homeFlag]||
+        (!crestsReady ? match.homeBadge||homeFlag : "");
+      badgeImages[`away:${match.id}`]=
+        crestMedia.images[match.awayBadge]||
+        crestMedia.images[awayFlag]||
+        (!crestsReady ? match.awayBadge||awayFlag : "");
     }
     const channels=Object.fromEntries(group.map(match=>[match.id,haveChannels(match)]));
     return <FootballSchedulePoster kind="today" format="feed" matches={group} day={day}
