@@ -18,6 +18,8 @@ let snapshot:VideoJobSnapshot=idle;
 let finishedFile:Blob|null=null;
 let media:{url:string;modelId:string;video:HTMLVideoElement}|null=null;
 let running=false;
+let jobEpoch=0;
+let activeAbort:AbortController|null=null;
 const subscribers=new Set<()=>void>();
 export const getVideoJobSnapshot=()=>snapshot;
 export function subscribeToVideoJob(onChange:()=>void){
@@ -82,6 +84,9 @@ export function startVideoExportInDocument(args:StartArgs){
     throw new Error("O vídeo ainda não está pronto. Aguarde o carregamento e tente novamente.");
   finishedFile=null;
   running=true;
+  const epoch=++jobEpoch;
+  activeAbort=new AbortController();
+  const signal=activeAbort.signal;
   updateJob({
     status:"preparing",ownerId:args.ownerId,title:args.title,filename:args.filename,
     percent:0,stage:"Preparando vídeo em segundo plano na navegação...",error:"",finishedAt:null,
@@ -91,11 +96,14 @@ export function startVideoExportInDocument(args:StartArgs){
   void (async()=>{
     try{
       const blob=await renderResellerVideoMp4({
-        source:video,brand:args.brand,audio:args.audio,
+        source:video,brand:args.brand,audio:args.audio,signal,
         progress:(progress:VideoExportProgress)=>{
-          updateJob({status:"rendering",percent:progress.percent,stage:progress.stage});
+          if(epoch===jobEpoch)updateJob({
+            status:"rendering",percent:progress.percent,stage:progress.stage
+          });
         }
       });
+      if(epoch!==jobEpoch)return;
       if(blob.type!=="video/mp4"||blob.size<4096)
         throw new Error("O navegador não concluiu o arquivo MP4.");
       finishedFile=blob;
@@ -106,12 +114,15 @@ export function startVideoExportInDocument(args:StartArgs){
         // remains downloadable until this tab is closed.
       }
     }catch(e){
-      updateJob({status:"error",error:e instanceof Error?e.message:"Falha ao gerar vídeo.",
-        stage:"Não foi possível concluir o MP4"});
+      if(epoch===jobEpoch)
+        updateJob({status:"error",error:e instanceof Error?e.message:"Falha ao gerar vídeo.",
+          stage:"Não foi possível concluir o MP4"});
     }finally{
-      running=false;
-      // A finished video should not keep its source/track alive.
-      releaseSource();
+      if(epoch===jobEpoch){
+        running=false;activeAbort=null;
+        // A finished video should not keep its source/track alive.
+        releaseSource();
+      }
     }
   })();
 }
@@ -174,6 +185,13 @@ export async function restoreCompletedVideo(ownerId:string){
   return true;
 }
 export function clearVideoJobOnSignOut(){
-  // Never leak the previous account's finished MP4 through a shared browser UI.
-  if(!running){finishedFile=null;releaseSource();updateJob(idle);}
+  // Sign-out must also stop an *active* render, so another user opening this
+  // browser cannot see its logo, contact, progress or completed video.
+  ++jobEpoch;
+  activeAbort?.abort();
+  activeAbort=null;
+  running=false;
+  finishedFile=null;
+  releaseSource();
+  updateJob(idle);
 }
