@@ -65,6 +65,7 @@ export function VitrineFootballStudio() {
   useEffect(()=>()=>{for(const url of previewUrls.current)URL.revokeObjectURL(url);},[]);
   const [day, setDay] = useState(today);
   const [posterMode,setPosterMode]=useState<"today"|"finished">("today");
+  const [todayLayout,setTodayLayout]=useState<"classic"|"grid">("classic");
   const [selectedFinalId,setSelectedFinalId]=useState("");
 
   useEffect(() => {
@@ -130,10 +131,11 @@ export function VitrineFootballStudio() {
   const groups = useMemo(() => {
     if(posterMode==="finished")return selectedFinal?[[selectedFinal]]:[];
     const matches = games.data?.matches ?? [];
+    const pageSize=todayLayout==="grid"?12:4;
     const chunks:FootballMatch[][]=[];
-    for(let i=0;i<matches.length;i+=4)chunks.push(matches.slice(i,i+4));
+    for(let i=0;i<matches.length;i+=pageSize)chunks.push(matches.slice(i,i+pageSize));
     return chunks;
-  }, [games.data,posterMode,selectedFinal]);
+  }, [games.data,posterMode,selectedFinal,todayLayout]);
   const [validatedPhotos,setValidatedPhotos]=useState<Record<string,boolean>>({});
   useEffect(()=>{
     let mounted=true;
@@ -202,7 +204,7 @@ export function VitrineFootballStudio() {
   },[crestKey]);
   const crestsReady=crestMedia.key===crestKey&&crestMedia.ready;
   const exportSignature=useMemo(()=>JSON.stringify({
-    day,posterMode,accent,brand,transparentLogo,groups,validatedPhotos,
+    day,posterMode,todayLayout,accent,brand,transparentLogo,groups,validatedPhotos,
     crestKey,crestsReady,crestImages:crestMedia.images
   }),[day,posterMode,accent,brand,transparentLogo,groups,validatedPhotos,
     crestKey,crestsReady,crestMedia.images]);
@@ -248,12 +250,14 @@ export function VitrineFootballStudio() {
     ]);
     const filename=posterMode==="finished"
       ?"stream-monitor-fim-de-jogo-"+day+"-"+(index+1)+"-2160x2700.png"
+      :todayLayout==="grid"
+      ?"stream-monitor-jogos-em-grade-"+day+"-arte-"+(index+1)+"-2160x2700.png"
       :"stream-monitor-futebol-"+day+"-arte-"+(index+1)+"-2160x2700.png";
     try{
       const file=await drawFootballPngFallback({
         matches,day,accent,logo,contact:brand.contact,
         name:brand.name,filename,playerPhoto,
-        kind:posterMode,
+        kind:posterMode==="today"&&todayLayout==="grid"?"grid":posterMode,
       });
       return {file};
     }catch(error){
@@ -373,7 +377,9 @@ export function VitrineFootballStudio() {
           ?"Fim de jogo · Placar final":"Eventos de hoje · Artes automáticas"}</h1>
         <p className="mt-2 text-sm text-muted-foreground">{posterMode==="finished"
           ?"Selecione uma partida encerrada com placar confirmado pela FTWB. A arte inclui os dois times, resultado, sua logo e WhatsApp."
-          :"Até 4 confrontos por arte, apenas das principais competições do dia. Prévia e arquivo final em 2160 × 2700, com escudos ou bandeiras obrigatórios."}</p>
+          :todayLayout==="grid"
+            ?"Modelo Grade de Jogos: até 12 partidas por arte em duas colunas, escudos, horários, transmissões, logo e WhatsApp. PNG em 2160 × 2700."
+            :"Modelo Clássico: até 4 confrontos por arte, com identidade Stream Monitor. PNG em 2160 × 2700."}</p>
         {!crestsReady&&groups.length>0&&<p className="mt-1 text-xs text-blue-300" role="status">Preparando escudos das equipes para a prévia e o PNG…</p>}
         {crestsReady&&(crestMedia.unavailable.length>0||groups.some(group=>group.some(m=>!m.homeBadge||!m.awayBadge)))&&
           <p className="mt-1 text-xs text-amber-400" role="status">
@@ -398,6 +404,29 @@ export function VitrineFootballStudio() {
         🏆 Fim de jogo
       </Button>
     </div>
+    {posterMode==="today"&&<Card className="space-y-3 p-4" aria-label="Modelo do banner de jogos do dia">
+      <strong className="text-sm">Escolha o modelo dos jogos do dia</strong>
+      <div className="grid gap-2 sm:grid-cols-2" role="group" aria-label="Modelos disponíveis">
+        <button type="button" aria-pressed={todayLayout==="classic"}
+          onClick={()=>setTodayLayout("classic")}
+          className={"rounded-xl border p-3 text-left transition-colors "+
+            (todayLayout==="classic"?"border-blue-400 bg-blue-500/15":"border-border hover:border-blue-400/50")}>
+          <span className="block text-sm font-bold">Modelo 1 · Clássico</span>
+          <span className="mt-1 block text-xs text-muted-foreground">Até 4 jogos por arte, no estilo original aprovado.</span>
+        </button>
+        <button type="button" aria-pressed={todayLayout==="grid"}
+          onClick={()=>setTodayLayout("grid")}
+          className={"rounded-xl border p-3 text-left transition-colors "+
+            (todayLayout==="grid"?"border-blue-400 bg-blue-500/15":"border-border hover:border-blue-400/50")}>
+          <span className="block text-sm font-bold">Modelo 2 · Grade de Jogos</span>
+          <span className="mt-1 block text-xs text-muted-foreground">Até 12 jogos em duas colunas, no mesmo banner.</span>
+        </button>
+      </div>
+      <p className="text-xs text-muted-foreground">
+        Os dois modelos usam os jogos reais, a cor escolhida abaixo e a marca da sua revenda.
+        Ao mudar de modelo ou cor, a prévia e o PNG são gerados novamente.
+      </p>
+    </Card>}
     {posterMode==="finished"&&<Card className="space-y-3 p-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <strong className="text-base">Escolha uma partida finalizada</strong>
@@ -468,7 +497,7 @@ export function VitrineFootballStudio() {
       {groups.map((group,index)=><Card className="min-w-0 overflow-hidden p-3 sm:p-4"
         key={group.map(m=>m.id).join("|")}>
         <div className="flex flex-wrap items-center justify-between gap-3 pb-4">
-          <strong className="text-base">{posterMode==="finished"?"🏆 Fim de Jogo · Resultado final":`Arte ${index+1} de ${groups.length}`}</strong>
+          <strong className="text-base">{posterMode==="finished"?"🏆 Fim de Jogo · Resultado final":todayLayout==="grid"?`Modelo 2 · Grade de Jogos · Arte ${index+1} de ${groups.length}`:`Modelo 1 · Clássico · Arte ${index+1} de ${groups.length}`}</strong>
           <div className="flex flex-wrap gap-2">
             <Button type="button" size="sm" disabled={retrying!==null} onClick={()=>exportPoster(index,"download")}>
               <Download size={16} className="mr-2"/>{readyFile(index)?"Baixar PNG":prepareErrors[index]?"Tentar gerar PNG":"Preparando PNG…"}
