@@ -3,7 +3,6 @@ import { toCanvas } from "html-to-image";
 import {
   createFootballArtworkFile,
   describeExportError,
-  shrinkArtworkImages,
 } from "./vitrine-football-dom-export";
 
 vi.mock("html-to-image", () => ({ toCanvas: vi.fn() }));
@@ -123,7 +122,7 @@ describe("Vitrine Futebol — exportação PNG 1080 × 1080",()=>{
     };
     const ctx=canvas.getContext();
     ctx.drawImage.mockImplementationOnce(()=>{throw new Error("The canvas is tainted");});
-    (source.querySelectorAll as unknown as ReturnType<typeof vi.fn>) = vi.fn(()=>[blocked]);
+    Object.assign(source,{querySelectorAll:vi.fn(()=>[blocked])});
     const file=await createFootballArtworkFile(source,"blocked.png");
     expect(file.size).toBeGreaterThan(1000);
   });
