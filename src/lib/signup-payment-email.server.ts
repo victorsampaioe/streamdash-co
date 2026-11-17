@@ -10,7 +10,7 @@ const from="notificacoes@notify.streammonitor.site";
 const checkoutUrl="https://streammonitor.site/app/subscription";
 const htmlEscape=(v:string)=>v.replace(/[&<>"']/g,c=>({
  "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"
-})[c]||c);
+} as Record<string,string>)[c]||c);
 
 export async function sendSignupPaymentEmail(args:{
  userId:string;email:string;name:string;
