@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import type { FootballMatch } from "@/lib/vitrine-football.functions";
 import { formatBrazilianWhatsApp } from "@/lib/vitrine-football-phone";
 import { footballBackgroundStyle } from "@/lib/vitrine-football-color";
@@ -52,11 +53,26 @@ function dateLabel(day: string) {
     timeZone: "America/Fortaleza", weekday: "long", day: "2-digit", month: "long",
   }).format(value).replace("-feira", "").toUpperCase();
 }
-function TeamCrest({ src, size }: { src?: string; size: number }) {
-  if (!src) return null;
-  return <img src={src} alt="" data-football-export-image="crest" referrerPolicy="no-referrer"
-    onError={event=>{event.currentTarget.style.display="none";}}
-    style={{width:size,height:size,objectFit:"contain",flexShrink:0,filter:"drop-shadow(0 2px 3px rgba(0,0,0,.15))"}} />;
+function TeamCrest({ src, size, team }: { src?: string; size: number; team: string }) {
+  const [failed,setFailed]=useState(false);
+  // Never keep display:none after a previously blocked image is replaced with
+  // a verified inline crest. React updates src without resetting DOM styles.
+  useEffect(()=>setFailed(false),[src]);
+  const initials=team.trim().split(/\s+/).slice(0,2)
+    .map(part=>part[0]||"").join("").toUpperCase().slice(0,2)||"FC";
+  return <span style={{width:size,height:size,flexShrink:0,display:"flex",
+    justifyContent:"center",alignItems:"center"}}>
+    {src&&!failed
+      ? <img src={src} alt={`Escudo ${team}`} data-football-export-image="crest"
+          referrerPolicy="no-referrer" onError={()=>setFailed(true)}
+          style={{width:size,height:size,objectFit:"contain",flexShrink:0,
+            filter:"drop-shadow(0 2px 3px rgba(0,0,0,.15))"}}/>
+      : <span data-testid="football-crest-unavailable" title={`Escudo indisponível: ${team}`}
+          style={{width:size-4,height:size-4,borderRadius:"50%",display:"flex",
+            alignItems:"center",justifyContent:"center",border:"2px solid #cbd5e1",
+            color:"#334155",background:"#e2e8f0",fontSize:Math.max(13,Math.round(size*.33)),
+            fontWeight:900,letterSpacing:"-.05em"}}>{initials}</span>}
+  </span>;
 }
 function FixtureRibbon({ match, badgeImages, broadcast, accent, width, height }: {
   match: FootballMatch;
@@ -66,8 +82,8 @@ function FixtureRibbon({ match, badgeImages, broadcast, accent, width, height }:
   width: number;
   height: number;
 }) {
-  const homeBadge=badgeImages[`home:${match.id}`] || badgeImages[match.homeBadge];
-  const awayBadge=badgeImages[`away:${match.id}`] || badgeImages[match.awayBadge];
+  const homeBadge=badgeImages[`home:${match.id}`] || badgeImages[match.homeBadge] || match.homeBadge;
+  const awayBadge=badgeImages[`away:${match.id}`] || badgeImages[match.awayBadge] || match.awayBadge;
   const short=height<=160;
   // The primary pill always displays scheduled kickoff, even after the game ends.
   const kickoffTime=/^\d{2}:\d{2}$/.test(match.time||"")?match.time:"Horário indisponível";
@@ -86,7 +102,7 @@ function FixtureRibbon({ match, badgeImages, broadcast, accent, width, height }:
     }}>{match.league||"FUTEBOL"}</div>
     <div className="absolute flex items-center" style={{left:18,right:18,top:short?29:40,height:short?58:100,justifyContent:"space-between"}}>
       <div className="flex min-w-0 items-center justify-start" style={{width:"45%",gap:11}}>
-        <TeamCrest src={homeBadge} size={short?49:75}/>
+        <TeamCrest src={homeBadge} size={short?49:75} team={match.home}/>
         <span style={{fontSize:teamFont(match.home),fontWeight:900,lineHeight:1.05,overflowWrap:"anywhere",
           display:"-webkit-box",WebkitLineClamp:2,WebkitBoxOrient:"vertical",overflow:"hidden"}}>{match.home}</span>
       </div>
@@ -94,7 +110,7 @@ function FixtureRibbon({ match, badgeImages, broadcast, accent, width, height }:
       <div className="flex min-w-0 items-center justify-end" style={{width:"45%",gap:11,textAlign:"right"}}>
         <span style={{fontSize:teamFont(match.away),fontWeight:900,lineHeight:1.05,overflowWrap:"anywhere",
           display:"-webkit-box",WebkitLineClamp:2,WebkitBoxOrient:"vertical",overflow:"hidden"}}>{match.away}</span>
-        <TeamCrest src={awayBadge} size={short?49:75}/>
+        <TeamCrest src={awayBadge} size={short?49:75} team={match.away}/>
       </div>
     </div>
     <div className="absolute flex items-center justify-center" style={{
