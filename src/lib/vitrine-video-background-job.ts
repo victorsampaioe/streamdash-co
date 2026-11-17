@@ -1,4 +1,5 @@
 import {renderResellerVideoMp4,type VideoExportProgress,type VideoOverlayBrand} from "./vitrine-video-template-render";
+import {disposeVideoAudioGraph} from "./vitrine-video-audio";
 
 export type VideoJobStatus="idle"|"preparing"|"rendering"|"ready"|"error";
 export type VideoJobSnapshot={
@@ -72,6 +73,9 @@ export function attachVideoJobPreviewHost(host:HTMLElement|null){
 function releaseSource(){
   if(!media)return;
   media.video.pause();
+  // Explicitly dispose the audio graph ONLY when the video is permanently
+  // removed. Never dispose between attempts on the same element.
+  disposeVideoAudioGraph(media.video);
   media.video.removeAttribute("src");
   media.video.load();
   media.video.remove();
