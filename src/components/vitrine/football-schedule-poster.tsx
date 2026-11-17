@@ -54,7 +54,7 @@ function dateLabel(day: string) {
 }
 function TeamCrest({ src, size }: { src?: string; size: number }) {
   if (!src) return null;
-  return <img src={src} alt="" referrerPolicy="no-referrer"
+  return <img src={src} alt="" data-football-export-image="crest" crossOrigin="anonymous" referrerPolicy="no-referrer"
     onError={event=>{event.currentTarget.style.display="none";}}
     style={{width:size,height:size,objectFit:"contain",flexShrink:0,filter:"drop-shadow(0 2px 3px rgba(0,0,0,.15))"}} />;
 }
@@ -193,7 +193,7 @@ export function FootballSchedulePoster({
       background: "transparent", padding: 0,
       boxShadow: "none",
     }}>
-      {logo && <img src={logo} alt={branding} crossOrigin="anonymous" onError={event=>{event.currentTarget.style.display="none";}} style={{width:"100%",height:"100%",objectFit:"contain",objectPosition:"center"}} />}
+      {logo && <img src={logo} alt={branding} data-football-export-image="brand" crossOrigin="anonymous" onError={event=>{event.currentTarget.style.display="none";}} style={{width:"100%",height:"100%",objectFit:"contain",objectPosition:"center"}} />}
     </div>
     <div className="absolute" style={{
       left: landscape ? 315 : 430, top: landscape ? 42 : story ? 65 : 65,
@@ -260,7 +260,7 @@ export function FootballSchedulePoster({
     {/* Brand logo only: never print a placeholder reseller name in artwork. */}
     {logo && <div className="absolute z-[5] flex items-center justify-end" style={{
       right:45,bottom:footerBottom-3,width:350,height:82
-    }}><img src={logo} alt="" crossOrigin="anonymous" onError={event=>{event.currentTarget.style.display="none";}}
+    }}><img src={logo} alt="" data-football-export-image="brand" crossOrigin="anonymous" onError={event=>{event.currentTarget.style.display="none";}}
       style={{width:"100%",height:"100%",objectFit:"contain",objectPosition:"right center"}}/></div>}
 
   </div>;
