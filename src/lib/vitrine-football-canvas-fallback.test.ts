@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { drawFootballPngFallback, fallbackBadgeLabel, gridBackdropSwatches, FOOTBALL_PNG_WIDTH, FOOTBALL_PNG_HEIGHT } from "./vitrine-football-canvas-fallback";
+import { drawFootballPngFallback, fallbackBadgeLabel, gridBackdropSwatches, classicCardGeometry, gridCardGeometry, FOOTBALL_PNG_WIDTH, FOOTBALL_PNG_HEIGHT } from "./vitrine-football-canvas-fallback";
 afterEach(()=>vi.unstubAllGlobals());
 
 const validBlob=()=>{
@@ -89,13 +89,25 @@ describe("Vitrine Futebol: PNG nativo idêntico à prévia e Telegram",()=>{
     expect(labels.filter(t=>t==="SporTV • Globo")).toHaveLength(4);
     expect(canvas.width).toBe(0); // high memory canvas released after PNG
   });
-  it("gera arte completa se um escudo externo falhar, mostrando iniciais em vez de espaço vazio",async()=>{
+  it("omite inteiramente confronto sem escudo real, sem desenhar iniciais",async()=>{
     const blocked="data:image/png;base64,away1";
     const {config,canvas,fillText}=setup(blocked);
     const file=await drawFootballPngFallback(config);
     expect(file.type).toBe("image/png");
     expect(canvas.toBlob).toHaveBeenCalledTimes(1);
-    expect(fillText.mock.calls.map(c=>c[0])).toContain("A1");
+    const printed=fillText.mock.calls.map(c=>String(c[0]));
+    expect(printed).not.toContain("A1");
+    expect(printed).not.toContain("Equipe 1");
+    expect(printed).not.toContain("Adversário 1");
+    expect(printed).toContain("Equipe 0");
+    expect(printed).toContain("Equipe 2");
+    expect(printed).toContain("Equipe 3");
+  });
+  it("amplia cartões dos dois modelos quando faltam confrontos",()=>{
+    expect(classicCardGeometry(1).cardHeight).toBeGreaterThan(classicCardGeometry(4).cardHeight);
+    expect(classicCardGeometry(2).badgeSize).toBeGreaterThan(classicCardGeometry(4).badgeSize);
+    expect(gridCardGeometry(2).cardHeight).toBeGreaterThan(gridCardGeometry(12).cardHeight);
+    expect(gridCardGeometry(4).badgeSize).toBeGreaterThan(gridCardGeometry(12).badgeSize);
   });
   it("substitui bandeira bloqueada de Singapura pelo emoji correto, sem bloquear a prévia",async()=>{
     const blocked="data:image/png;base64,sgblocked";
