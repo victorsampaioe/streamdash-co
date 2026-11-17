@@ -13,6 +13,8 @@ import { getVitrineFootballExportImages } from "@/lib/vitrine-football-export.fu
 import { drawFootballPngFallback } from "@/lib/vitrine-football-canvas-fallback";
 import { nationalTeamFlagFallback } from "@/lib/vitrine-football-ptbr";
 import { offlineFootballFlag } from "@/lib/vitrine-football-offline-flags";
+import { isVerifiedFinishedFootballMatch,parseFootballFinalScore } from "@/lib/vitrine-football-results";
+import { footballTeamNamePtBR } from "@/lib/vitrine-football-ptbr";
 import { sendVitrineFootballToRegisteredTelegram } from "@/lib/vitrine-football-telegram.functions";
 
 const today = () => new Intl.DateTimeFormat("sv-SE", {
@@ -62,6 +64,8 @@ export function VitrineFootballStudio() {
   const previewUrls=useRef<string[]>([]);
   useEffect(()=>()=>{for(const url of previewUrls.current)URL.revokeObjectURL(url);},[]);
   const [day, setDay] = useState(today);
+  const [posterMode,setPosterMode]=useState<"today"|"finished">("today");
+  const [selectedFinalId,setSelectedFinalId]=useState("");
 
   useEffect(() => {
     let active = true;
@@ -113,15 +117,23 @@ export function VitrineFootballStudio() {
   const games = useQuery({
     queryKey:["vitrine-football-ftwb",day],
     queryFn:()=>load({data:{date:day}}),
-    staleTime:5*60_000,
+    staleTime:posterMode==="finished"?20_000:5*60_000,
+    refetchInterval:posterMode==="finished"&&day===today()?60_000:false,
+    refetchIntervalInBackground:false,
     retry:1,
   });
+  const finishedMatches=useMemo(()=>(games.data?.matches??[])
+    .filter(isVerifiedFinishedFootballMatch),[games.data]);
+  const selectedFinal=useMemo(()=>finishedMatches.find(match=>
+    [match.home,match.away,match.day].join("|")===selectedFinalId
+  )||null,[finishedMatches,selectedFinalId]);
   const groups = useMemo(() => {
+    if(posterMode==="finished")return selectedFinal?[[selectedFinal]]:[];
     const matches = games.data?.matches ?? [];
     const chunks:FootballMatch[][]=[];
     for(let i=0;i<matches.length;i+=4)chunks.push(matches.slice(i,i+4));
     return chunks;
-  }, [games.data]);
+  }, [games.data,posterMode,selectedFinal]);
   const [validatedPhotos,setValidatedPhotos]=useState<Record<string,boolean>>({});
   useEffect(()=>{
     let mounted=true;
@@ -190,9 +202,9 @@ export function VitrineFootballStudio() {
   },[crestKey]);
   const crestsReady=crestMedia.key===crestKey&&crestMedia.ready;
   const exportSignature=useMemo(()=>JSON.stringify({
-    day,accent,brand,transparentLogo,groups,validatedPhotos,
+    day,posterMode,accent,brand,transparentLogo,groups,validatedPhotos,
     crestKey,crestsReady,crestImages:crestMedia.images
-  }),[day,accent,brand,transparentLogo,groups,validatedPhotos,
+  }),[day,posterMode,accent,brand,transparentLogo,groups,validatedPhotos,
     crestKey,crestsReady,crestMedia.images]);
   // A single native 2160×2700 render produces the preview AND the exact same
   // PNG used for downloads and the registered Telegram. No DOM screenshots.
@@ -234,11 +246,14 @@ export function VitrineFootballStudio() {
       trustedAsset(transparentLogo,"logo da revenda"),
       featured?.playerPhoto?trustedAsset(featured.playerPhoto,"jogador"):Promise.resolve("")
     ]);
-    const filename="stream-monitor-futebol-"+day+"-arte-"+(index+1)+"-2160x2700.png";
+    const filename=posterMode==="finished"
+      ?"stream-monitor-fim-de-jogo-"+day+"-"+(index+1)+"-2160x2700.png"
+      :"stream-monitor-futebol-"+day+"-arte-"+(index+1)+"-2160x2700.png";
     try{
       const file=await drawFootballPngFallback({
         matches,day,accent,logo,contact:brand.contact,
         name:brand.name,filename,playerPhoto,
+        kind:posterMode,
       });
       return {file};
     }catch(error){
@@ -324,7 +339,7 @@ export function VitrineFootballStudio() {
         reader.onerror=()=>reject(new Error("Falha ao ler o arquivo PNG."));
         reader.readAsDataURL(file);
       });
-      const result=await sendRegisteredTelegram({data:{pngDataUrl,date:day}});
+      const result=await sendRegisteredTelegram({data:{pngDataUrl,date:day,posterKind:posterMode}});
       if(!result?.ok)throw new Error("Telegram não confirmou o recebimento.");
       toast.success("Banner enviado ao Telegram cadastrado da sua revenda!");
     }catch(error){
@@ -354,18 +369,71 @@ export function VitrineFootballStudio() {
     <div className="flex flex-wrap items-center justify-between gap-4">
       <div>
         <div className="flex items-center gap-2 text-xs font-bold tracking-[.18em] text-blue-400"><Trophy size={17}/> STREAM MONITOR</div>
-        <h1 className="mt-2 text-3xl font-black tracking-tight">Eventos de hoje · Artes automáticas</h1>
-        <p className="mt-2 text-sm text-muted-foreground">Até 4 confrontos por arte, apenas das principais competições do dia. Prévia e arquivo final em 2160 × 2700, com escudos ou bandeiras obrigatórios.</p>
+        <h1 className="mt-2 text-3xl font-black tracking-tight">{posterMode==="finished"
+          ?"Fim de jogo · Placar final":"Eventos de hoje · Artes automáticas"}</h1>
+        <p className="mt-2 text-sm text-muted-foreground">{posterMode==="finished"
+          ?"Selecione uma partida encerrada com placar confirmado pela FTWB. A arte inclui os dois times, resultado, sua logo e WhatsApp."
+          :"Até 4 confrontos por arte, apenas das principais competições do dia. Prévia e arquivo final em 2160 × 2700, com escudos ou bandeiras obrigatórios."}</p>
         {!crestsReady&&groups.length>0&&<p className="mt-1 text-xs text-blue-300" role="status">Preparando escudos das equipes para a prévia e o PNG…</p>}
         {crestsReady&&(crestMedia.unavailable.length>0||groups.some(group=>group.some(m=>!m.homeBadge||!m.awayBadge)))&&
           <p className="mt-1 text-xs text-amber-400" role="status">
             Algumas imagens não puderam ser carregadas pela fonte. A arte será gerada usando bandeiras das seleções ou iniciais das equipes quando necessário, sem espaços vazios.
           </p>}
       </div>
-      <Button type="button" variant="outline" disabled={games.isFetching} onClick={()=>{setDay(today());void games.refetch()}}>
-        <RefreshCw size={16} className={games.isFetching?"mr-2 animate-spin":"mr-2"}/> Atualizar eventos
+      <Button type="button" variant="outline" disabled={games.isFetching}
+        onClick={()=>{if(posterMode==="today")setDay(today());void games.refetch()}}>
+        <RefreshCw size={16} className={games.isFetching?"mr-2 animate-spin":"mr-2"}/>
+        {posterMode==="finished"?"Atualizar resultados":"Atualizar eventos"}
       </Button>
     </div>
+    <div className="flex flex-wrap gap-2" role="tablist" aria-label="Tipo de arte de futebol">
+      <Button type="button" role="tab" aria-selected={posterMode==="today"}
+        variant={posterMode==="today"?"default":"outline"}
+        onClick={()=>{setPosterMode("today");setDay(today());setSelectedFinalId("");}}>
+        ⚽ Jogos de hoje
+      </Button>
+      <Button type="button" role="tab" aria-selected={posterMode==="finished"}
+        variant={posterMode==="finished"?"default":"outline"}
+        onClick={()=>{setPosterMode("finished");setDay(today());setSelectedFinalId("");}}>
+        🏆 Fim de jogo
+      </Button>
+    </div>
+    {posterMode==="finished"&&<Card className="space-y-3 p-4">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <strong className="text-base">Escolha uma partida finalizada</strong>
+        <span className="text-xs text-muted-foreground">
+          Jogos de hoje são atualizados automaticamente a cada minuto enquanto esta página estiver aberta
+        </span>
+      </div>
+      <label className="block max-w-xs text-xs font-semibold text-muted-foreground">
+        Data da partida
+        <input type="date" value={day} max={today()}
+          onChange={event=>{setSelectedFinalId("");setDay(event.target.value||today());}}
+          className="mt-1 block w-full rounded-lg border border-border bg-background p-2 text-sm text-foreground"/>
+      </label>
+      <label className="block text-xs font-semibold text-muted-foreground">
+        Jogos com resultado oficial
+        <select value={selectedFinalId} disabled={!finishedMatches.length}
+          onChange={event=>setSelectedFinalId(event.target.value)}
+          className="mt-1 block w-full rounded-lg border border-border bg-background p-3 text-sm text-foreground">
+          <option value="">Selecione o jogo encerrado…</option>
+          {finishedMatches.map(match=>{
+            const value=[match.home,match.away,match.day].join("|");
+            return <option key={value} value={value}>
+              {footballTeamNamePtBR(match.home)} {match.scoreLabel} {footballTeamNamePtBR(match.away)} — {match.league}
+            </option>;
+          })}
+        </select>
+      </label>
+      {!finishedMatches.length&&games.isSuccess&&<p className="text-sm text-amber-400">
+        Ainda não há partidas encerradas com placar confirmado nesta data. Os resultados ficam disponíveis
+        quando a FTWB confirmar o fim do jogo e informar os dois placares.
+      </p>}
+      {selectedFinal&&<p className="text-sm text-emerald-400">
+        Resultado confirmado: <strong>{footballTeamNamePtBR(selectedFinal.home)} {parseFootballFinalScore(selectedFinal.scoreLabel)?.label} {footballTeamNamePtBR(selectedFinal.away)}</strong>.
+        A arte usará este placar sem alterações.
+      </p>}
+    </Card>}
     <div className="flex flex-wrap items-center gap-3 rounded-xl border border-border/70 bg-card/60 px-4 py-3" aria-label="Personalizar cor da arte">
       <span className="text-sm font-semibold">Cor do banner</span>
       <div className="flex flex-wrap items-center gap-2" role="group" aria-label="Cores disponíveis">
@@ -389,12 +457,18 @@ export function VitrineFootballStudio() {
     {games.isError&&<Card className="p-8 text-center text-destructive" role="alert">
       {games.error instanceof Error?games.error.message:"Não foi possível consultar os jogos de hoje."}
     </Card>}
-    {games.isSuccess&&groups.length===0&&<Card className="p-8 text-center">Nenhuma partida das principais competições encontrada na FTWB para a data selecionada.</Card>}
+    {games.isSuccess&&posterMode==="today"&&groups.length===0&&<Card className="p-8 text-center">
+      Nenhuma partida das principais competições encontrada na FTWB para a data selecionada.
+    </Card>}
+    {games.isSuccess&&posterMode==="finished"&&finishedMatches.length>0&&!selectedFinal&&
+      <Card className="p-8 text-center text-muted-foreground">
+        Escolha um dos jogos finalizados acima para gerar o novo banner Fim de Jogo.
+      </Card>}
     {games.isSuccess&&groups.length>0&&<div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
       {groups.map((group,index)=><Card className="min-w-0 overflow-hidden p-3 sm:p-4"
         key={group.map(m=>m.id).join("|")}>
         <div className="flex flex-wrap items-center justify-between gap-3 pb-4">
-          <strong className="text-base">Arte {index+1} de {groups.length}</strong>
+          <strong className="text-base">{posterMode==="finished"?"🏆 Fim de Jogo · Resultado final":`Arte ${index+1} de ${groups.length}`}</strong>
           <div className="flex flex-wrap gap-2">
             <Button type="button" size="sm" disabled={retrying!==null} onClick={()=>exportPoster(index,"download")}>
               <Download size={16} className="mr-2"/>{readyFile(index)?"Baixar PNG":prepareErrors[index]?"Tentar gerar PNG":"Preparando PNG…"}
