@@ -464,29 +464,17 @@ function gridBroadcast(ctx:CanvasRenderingContext2D,list:string[],x:number,y:num
   lines.forEach((line,i)=>ctx.fillText(line,x,y-(lines.length===2?6:0)+i*12));
   ctx.restore();
 }
-/** Compact only at full capacity; fewer verified fixtures grow and recenter. */
+/**
+ * Approved FIXED poster templates. Do not scale, recenter or redistribute
+ * cards based on how many matches have verified images. Empty slots stay
+ * background, exactly as the user-approved screenshots.
+ */
 export function gridCardGeometry(count:number){
-  const cards=Math.max(1,Math.min(12,Math.floor(count)));
-  const lines=Math.ceil(cards/2),gapY=13,range=1147-322;
-  const maxHeight=lines===1?300:lines===2?260:lines===3?218:lines===4?195:170;
-  const cardHeight=Math.min(maxHeight,Math.floor((range-(lines-1)*gapY)/lines));
-  const blockHeight=cardHeight*lines+(lines-1)*gapY;
-  const rowTop=322+Math.max(0,Math.floor((range-blockHeight)/2));
-  const badgeSize=Math.min(145,Math.max(79,Math.round(cardHeight*.71)));
-  const badgeOffset=cardHeight>=190?
-    Math.max(38,Math.round((cardHeight-badgeSize)/2)):
-    cardHeight>=145?Math.max(37,cardHeight-badgeSize-6):
-    Math.max(28,cardHeight-badgeSize-7);
-  return {lines,cardHeight,gapY,rowTop,badgeSize,badgeOffset};
+  const lines=Math.ceil(Math.max(1,Math.min(10,count))/2);
+  return {lines,cardHeight:154,gapY:13,rowTop:322,badgeSize:109,badgeOffset:39};
 }
-export function classicCardGeometry(count:number){
-  const cards=Math.max(1,Math.min(4,Math.floor(count)));
-  const heights=[0,340,300,222,153],cardHeight=heights[cards],gap=18;
-  const blockHeight=cards*cardHeight+(cards-1)*gap;
-  const rowTop=cards===4?367:367+Math.max(0,Math.floor((720-blockHeight)/2));
-  const badgeSize=Math.min(106,Math.max(54,Math.round(cardHeight*.32)));
-  const badgeOffset=Math.max(48,Math.round((cardHeight-38-badgeSize)/2)+5);
-  return {cardHeight,gap,rowTop,badgeSize,badgeOffset};
+export function classicCardGeometry(_count:number){
+  return {cardHeight:153,gap:18,rowTop:367,badgeSize:54,badgeOffset:48};
 }
 function drawTwoColumnGrid(ctx:CanvasRenderingContext2D,rows:FootballMatch[],
   badges:(HTMLImageElement|null)[],accent:string,day:string,
@@ -510,11 +498,11 @@ function drawTwoColumnGrid(ctx:CanvasRenderingContext2D,rows:FootballMatch[],
 
   const left=43,gapX=18,cardWidth=488;
   const {cardHeight,gapY,rowTop,badgeSize,badgeOffset}=gridCardGeometry(rows.length);
-  if(cardHeight<115)throw new Error("Há mais jogos do que cabem no modelo em duas colunas.");
+  if(rows.length>10)throw new Error("O Modelo 2 permite até 10 jogos por arte, mantendo o layout fixo.");
   for(let i=0;i<rows.length;i++){
     const row=Math.floor(i/2),col=i%2,m=rows[i];
-    const lonelyLast=rows.length%2===1&&i===rows.length-1;
-    const x=left+(lonelyLast?(cardWidth+gapX)/2:col*(cardWidth+gapX));
+    // Last unmatched game stays LEFT, as in the approved 9-game screenshot.
+    const x=left+col*(cardWidth+gapX);
     const y=rowTop+row*(cardHeight+gapY);
     const cx=x+cardWidth/2;
     ctx.save();ctx.shadowColor="rgba(0,0,0,.30)";ctx.shadowBlur=10;ctx.shadowOffsetY=4;
@@ -566,7 +554,7 @@ export async function drawFootballPngFallback(data:FootballCanvasData):Promise<F
   ctx.scale(SCALE,SCALE);
   const {matches,day,accent,logo,contact,filename,playerPhoto}=data;
   const kind=data.kind||"today";
-  let rows=matches.slice(0,kind==="finished"?1:kind==="grid"?12:4);
+  let rows=matches.slice(0,kind==="finished"?1:kind==="grid"?10:4);
   if(rows.length===0)throw new Error("Nenhum confronto encontrado para gerar a arte.");
   const finalScore=kind==="finished"&&isVerifiedFinishedFootballMatch(rows[0])
     ?parseFootballFinalScore(rows[0].scoreLabel):null;
