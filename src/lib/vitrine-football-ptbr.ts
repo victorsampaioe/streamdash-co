@@ -120,3 +120,16 @@ export function nationalTeamFlagFallback(team:string,competition:string):string{
   const side=nationalIndex.get(footballTeamKey(team));
   return side?`https://flagcdn.com/w160/${side.code}.png`:"";
 }
+
+/** Browser-native national flag fallback, used if the remote CDN cannot be read.
+ * Uses standard ISO 3166-1 alpha-2 country codes. Some national teams (e.g.
+ * Kosovo, Wales) do not have a universal two-letter flag emoji; those use an
+ * honest initials badge instead of a wrong country's flag.
+ */
+export function nationalTeamFlagEmoji(team:string,competition:string):string{
+  if(!isNationalFixture(competition))return "";
+  const side=nationalIndex.get(footballTeamKey(team));
+  if(!side || !/^[a-z]{2}$/.test(side.code) || side.code==="xk")return "";
+  return [...side.code.toUpperCase()]
+    .map(char=>String.fromCodePoint(0x1f1e6+char.charCodeAt(0)-65)).join("");
+}
