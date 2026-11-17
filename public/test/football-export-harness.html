@@ -171,8 +171,8 @@ try{
   }
   // Both official layouts must render using the same PNG generator.
   // Verify the second 2-column template at 12 fixtures with three palette
-  // choices, 24 badges, single brand mark and intact WhatsApp footer.
-  const fixtures12=Array.from({length:12},(_,i)=>({
+  // choices, 20 badges, single brand mark and intact WhatsApp footer.
+  const fixtures10=Array.from({length:10},(_,i)=>({
     ...matches[i%4],id:"grid-"+i,home:"Equipe "+(i+1),away:"Visitante "+(i+1),
     homeBadge:home,awayBadge:away,
     league:i%2?"Liga das Nações":"Amistoso Internacional",
@@ -188,7 +188,7 @@ try{
     let gridFile;
     try{
       gridFile=await drawFootballPngFallback({
-        matches:fixtures12,kind:"grid",day:"2026-11-17",accent,
+        matches:fixtures10,kind:"grid",day:"2026-11-17",accent,
         logo,contact:"85998545009",name:"Revenda Exemplo",
         filename:"grid-"+accent.substring(1)+".png"
       });
@@ -207,9 +207,9 @@ try{
     }
     if(!existsInRect(ctx,[237,16,174],770,65,630,180))
       throw Error("Modelo Grade: logo da revenda desapareceu");
-    const geometry=gridCardGeometry(12);
+    const geometry=gridCardGeometry(10);
     const size=geometry.badgeSize;
-    for(let i=0;i<12;i++){
+    for(let i=0;i<10;i++){
       const row=Math.floor(i/2),col=i%2,x=43+col*(488+18),
         y=geometry.rowTop+row*(geometry.cardHeight+geometry.gapY)+geometry.badgeOffset;
       if(!existsInRect(ctx,[24,229,170],(x+15)*2,y*2,size*2,size*2))
@@ -227,7 +227,7 @@ try{
     // classic four horizontal fixture cards unchanged.
     if(["#146df2","#ee1519","#7953b1"].includes(accent)){
       const classic=await drawFootballPngFallback({
-        matches:fixtures12.slice(0,4),kind:"today",day:"2026-11-17",
+        matches:fixtures10.slice(0,4),kind:"today",day:"2026-11-17",
         accent,logo,contact:"85998545009",name:"Revenda Exemplo",
         filename:"classic-dynamic-"+accent.substring(1)+".png"
       });
@@ -247,12 +247,12 @@ try{
     }
     const foot=ctx.getImageData(120,2460,450,70).data;
     if(foot.length<2000)throw Error("Modelo Grade: rodapé incompleto");
-    out.push({case:"two-column",accent,matches:12,width:2160,height:2700,
-      logos:1,badges:24,footer:true,bytes:gridFile.size,backdropPixel:sample});
+    out.push({case:"two-column",accent,matches:10,width:2160,height:2700,
+      logos:1,badges:20,footer:true,bytes:gridFile.size,backdropPixel:sample});
   }
   // Screenshot regression: the user has nine fixtures (five visual rows),
-  // not twelve; those emblems should render substantially larger.
-  const nineMatches=fixtures12.slice(0,9);
+  // not ten; those emblems should render substantially larger.
+  const nineMatches=fixtures10.slice(0,9);
   const nineFile=await drawFootballPngFallback({
     matches:nineMatches,kind:"grid",day:"2026-11-17",accent:"#146df2",
     logo,contact:"85998545009",name:"Revenda Exemplo",
@@ -267,8 +267,7 @@ try{
   if(nineSize<105)throw Error("Modelo 2: escudo de nove jogos continua pequeno");
   for(let i=0;i<nineMatches.length;i++){
     const row=Math.floor(i/2),col=i%2;
-    const orphan=i===nineMatches.length-1;
-    const x=43+(orphan?(488+18)/2:col*(488+18));
+    const x=43+col*(488+18);
     const y=nineGeom.rowTop+row*(nineGeom.cardHeight+nineGeom.gapY)+nineGeom.badgeOffset;
     if(!existsInRect(nctx,[24,229,170],(x+15)*2,y*2,nineSize*2,nineSize*2)||
        !existsInRect(nctx,[244,163,22],
@@ -276,7 +275,7 @@ try{
       throw Error("Modelo 2 com 9 jogos perdeu escudo no cartão "+(i+1));
   }
   out.push({case:"screenshot-nine-games",matches:9,
-    badgeSizeLogical:nineSize,centered:true,width:2160,height:2700,bytes:nineFile.size});
+    badgeSizeLogical:nineSize,lastMatchLeft:true,width:2160,height:2700,bytes:nineFile.size});
   // Asymmetric provider padding previously left some shields "lower" on
   // their cards. In a real PNG compare visible pixel centers, not box CSS.
   function badgeWithOffset(color,atY){
@@ -300,7 +299,7 @@ try{
   }
   const shiftedHome=badgeWithOffset("#18e5aa",64);
   const shiftedAway=badgeWithOffset("#f4a316",196);
-  const shiftedMatches=fixtures12.map(m=>({...m,
+  const shiftedMatches=fixtures10.map(m=>({...m,
     homeBadge:shiftedHome,awayBadge:shiftedAway}));
   const alignedFile=await drawFootballPngFallback({
     matches:shiftedMatches,kind:"grid",day:"2026-11-17",
@@ -312,7 +311,7 @@ try{
   testCanvas.width=2160;testCanvas.height=2700;
   const alignment=testCanvas.getContext("2d",{willReadFrequently:true});
   alignment.drawImage(alignedBitmap,0,0);alignedBitmap.close();
-  const alignedGeometry=gridCardGeometry(12);
+  const alignedGeometry=gridCardGeometry(10);
   const bs=alignedGeometry.badgeSize;
   const start=alignedGeometry.rowTop+alignedGeometry.badgeOffset;
   const homeBounds=colorBounds(alignment,[24,229,170],(43+15)*2,start*2,bs*2,bs*2);
@@ -328,16 +327,16 @@ try{
       JSON.stringify({homeBounds,awayBounds,expectedCenter}));
   if(homeBounds.height<bs*1.45||awayBounds.height<bs*1.45)
     throw Error("Grade: emblemas com padding continuam minúsculos");
-  out.push({case:"badge-normalization",badges:24,
+  out.push({case:"badge-normalization",badges:20,
     visibleCenters:[homeBounds.y,awayBounds.y],expectedCenter,
     heights:[homeBounds.height,awayBounds.height],bytes:alignedFile.size});
-  // Regression: both types must OMIT missing-club-logo matches, and make
-  // remaining cards much bigger. No fake initials are drawn.
+  // Regression: both types must OMIT missing-club-logo matches, while
+  // keeping every remaining card exactly the same size and position.
   for(const kind of ["today","grid"]){
-    const bad={...fixtures12[0],id:"bad-club",
+    const bad={...fixtures10[0],id:"bad-club",
       home:"Sem Emblema",away:"Rival Teste",
       league:"Brasileirão Série A",homeBadge:"",awayBadge:away};
-    const shortlist=[bad,...fixtures12.slice(0,3)];
+    const shortlist=[bad,...fixtures10.slice(0,3)];
     const textDrawn=[],saved=CanvasRenderingContext2D.prototype.fillText;
     CanvasRenderingContext2D.prototype.fillText=function(value,...args){
       textDrawn.push(String(value));return saved.call(this,value,...args);
@@ -359,20 +358,21 @@ try{
     t.drawImage(bmp,0,0);bmp.close();
     const count=shortlist.length-1;
     if(kind==="today"){
-      const g=classicCardGeometry(count);
-      if(g.cardHeight<=classicCardGeometry(4).cardHeight)
-        throw Error("Modelo 1 não ampliou os cartões remanescentes");
+      const g=classicCardGeometry(count),full=classicCardGeometry(4);
+      if(JSON.stringify(g)!==JSON.stringify(full))
+        throw Error("Modelo 1 mudou o tamanho ou a posição por falta de jogos");
       if(!existsInRect(t,[24,229,170],73*2,
            (g.rowTop+g.badgeOffset)*2,g.badgeSize*2,g.badgeSize*2))
-        throw Error("Modelo 1 não redistribuiu o escudo restante");
+        throw Error("Modelo 1 não manteve o escudo na posição fixa");
     }else{
-      const g=gridCardGeometry(count);
-      if(g.cardHeight<=gridCardGeometry(12).cardHeight)
-        throw Error("Modelo 2 não ampliou os cartões remanescentes");
+      const g=gridCardGeometry(count),full=gridCardGeometry(10);
+      if(g.cardHeight!==full.cardHeight||g.rowTop!==full.rowTop||
+         g.badgeSize!==full.badgeSize||g.badgeOffset!==full.badgeOffset)
+        throw Error("Modelo 2 adaptou o tamanho ou a posição por falta de jogos");
       const x=43, y=g.rowTop+g.badgeOffset;
       if(!existsInRect(t,[24,229,170],(x+15)*2,y*2,
            g.badgeSize*2,g.badgeSize*2))
-        throw Error("Modelo 2 não redistribuiu o escudo restante");
+        throw Error("Modelo 2 não manteve o escudo na posição fixa");
     }
     out.push({case:"skip-missing-crest",model:kind,shown:count,hidden:1,
       width:2160,height:2700,bytes:file.size});
