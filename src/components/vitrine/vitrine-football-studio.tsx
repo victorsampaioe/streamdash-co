@@ -49,7 +49,7 @@ export function VitrineFootballStudio() {
   const [colorStorageKey, setColorStorageKey] = useState<string | null>(null);
   const [saving, setSaving] = useState<number | null>(null);
   const [action, setAction] = useState<"download"|"telegram"|null>(null);
-  const [imagePreview, setImagePreview] = useState<{url:string;name:string;index:number}|null>(null);
+  const [imagePreview, setImagePreview] = useState<{url:string;name:string;index:number;file:File}|null>(null);
   const imagePreviewUrl = useRef<string|null>(null);
   const posterRefs = useRef<(HTMLDivElement | null)[]>([]);
   const [day, setDay] = useState(today);
@@ -135,7 +135,7 @@ export function VitrineFootballStudio() {
     if(imagePreviewUrl.current)URL.revokeObjectURL(imagePreviewUrl.current);
     const url=URL.createObjectURL(file);
     imagePreviewUrl.current=url;
-    setImagePreview({url,name:file.name,index});
+    setImagePreview({url,name:file.name,index,file});
   }
   function closeImage(){
     setImagePreview(null);
@@ -331,6 +331,24 @@ export function VitrineFootballStudio() {
             href={imagePreview.url} download={imagePreview.name} target="_blank" rel="noopener">
             <Download size={16}/> Salvar PNG
           </a>
+          <Button type="button" variant="outline" onClick={()=>{
+            if(typeof navigator.share!=="function"){
+              toast.info("Salve o PNG e abra a imagem pelo Telegram.");
+              return;
+            }
+            try{
+              void navigator.share({
+                files:[imagePreview.file],
+                title:"Eventos de hoje · Stream Monitor",
+                text:"🏆 Eventos de hoje! Confira os confrontos e transmissões. "+brand.name,
+              }).then(closeImage).catch(error=>{
+                if(!(error instanceof DOMException&&error.name==="AbortError"))
+                  toast.info("Salve o PNG e compartilhe pelo Telegram.");
+              });
+            }catch{
+              toast.info("Salve o PNG e compartilhe pelo Telegram.");
+            }
+          }}><Send size={16} className="mr-2"/> Compartilhar / Telegram</Button>
           <Button type="button" variant="outline" onClick={closeImage}>Fechar</Button>
         </div>
       </div>
