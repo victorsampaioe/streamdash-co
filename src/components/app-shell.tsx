@@ -126,6 +126,7 @@ function useNavItems() {
   });
   const isResellerRole = userRoles?.includes('reseller') || userRoles?.includes('sub_reseller');
   const isResellerOrAdmin = navIsAdmin || isResellerRole || !!subData?.profile?.is_reseller;
+  const isUnpaidPreview = !!subData && !subData.isActive && !isResellerOrAdmin;
 
   const items = [
     ...(navIsAdmin ? [{ to: "/app/admin", label: "Admin · Central de controle", icon: Users }, { to: "/app/admin/telegram-guard", label: "Admin · Entregas Telegram", icon: Bell }] : []),
@@ -167,6 +168,16 @@ function useNavItems() {
     items.push({ to: "/app/subscription", label: "Minha Assinatura", icon: CreditCard });
   }
   
+  // Unpaid accounts may browse the MARKETING PREVIEW of reseller features
+  // without mounting any premium route data or generation forms.
+  if (isUnpaidPreview) {
+    items.push({ to: "/app/pagina", label: "Minha Página · demonstração", icon: Globe });
+    items.push({ to: "/app/central-clientes", label: "Ajuda para Clientes · demonstração", icon: BookOpen });
+    items.push({ to: "/app/memoria", label: "Memória de Diagnósticos · demonstração", icon: Bot });
+    items.push({ to: "/app/evidencias", label: "Evidências · demonstração", icon: BookOpen });
+    items.push({ to: "/vitrine-futebol", label: "Vitrine IA Futebol · demonstração", icon: Trophy });
+  }
+
   // Vitrines liberadas para toda conta autenticada, inclusive revendedores
   // sem saldo/assinatura ativa. Apenas funções administrativas permanecem restritas.
   items.push({ to: "/vitrine-banner", label: "Vitrine Banner · ilimitada", icon: Sparkles });
