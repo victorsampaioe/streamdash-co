@@ -107,7 +107,7 @@ describe("Vitrine Futebol — imagens e exportação", () => {
     expect(html).toContain('viewBox="0 0 1080 1080"');
     expect(html).toContain('cx="540" cy="695"');
     expect(html).toContain('M-75 244 Q540 25 1160 244');
-    expect(html).toContain('opacity:0.26');
+    expect(html).toContain('opacity=".26"');
     expect(html).toContain('src="data:image/png;base64,MARCA"');
     expect(html).not.toContain("HORÁRIOS E TRANSMISSÕES SUJEITOS");
   });
