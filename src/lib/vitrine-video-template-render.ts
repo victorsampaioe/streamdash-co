@@ -103,9 +103,11 @@ export async function renderResellerVideoMp4(opts:{
   const stream=canvas.captureStream(30);
   let disconnectAudio:(()=>void)|null=null;
   let recorder:MediaRecorder|null=null;
-  let raf=0,callback=0,watchdog:ReturnType<typeof setTimeout>|null=null;
+  let raf=0,callback=0,watchdog:ReturnType<typeof setInterval>|null=null;
   let stopped=false,frames=0;
+  let prematureStopReason="";
   let onAbort:(()=>void)|null=null;
+  let onEnded:(()=>void)|null=null;
   try{
     source.pause();
     if(source.currentTime>.05){
@@ -151,7 +153,8 @@ export async function renderResellerVideoMp4(opts:{
       signal.addEventListener("abort",onAbort,{once:true});
       if(signal.aborted)onAbort();
     }
-    source.addEventListener("ended",end,{once:true});
+    onEnded=end;
+    source.addEventListener("ended",onEnded,{once:true});
     let lastPaint=0,lastProgress=0;
     const draw=(now:number)=>{
       if(stopped)return;
@@ -177,11 +180,59 @@ export async function renderResellerVideoMp4(opts:{
     if(typeof source.requestVideoFrameCallback==="function")
       callback=source.requestVideoFrameCallback(videoFrame);
     else raf=requestAnimationFrame(animate);
-    watchdog=setTimeout(end,(source.duration+14)*1000);
+    // Encoding with canvas, logo, WebAudio and MP4 muxing may make playback
+    // slower than real time on phones. Never treat duration+14s as EOF:
+    // that prematurely stopped valid jobs at e.g. 76%.
+    const startAt=performance.now();
+    let lastAdvanceAt=startAt,lastSourceTime=source.currentTime;
+    let recoveryAttempts=0,lastRecoveryAt=0,recoveryError="";
+    const maxElapsedMs=Math.max(8*60_000,source.duration*12_000);
+    watchdog=setInterval(()=>{
+      if(stopped)return;
+      const now=performance.now();
+      if(source.currentTime>lastSourceTime+.035){
+        lastSourceTime=source.currentTime;
+        lastAdvanceAt=now;
+        recoveryAttempts=0;
+      }
+      if(source.ended||source.currentTime>=source.duration-.035){end();return;}
+      if(now-startAt>maxElapsedMs){
+        prematureStopReason="A geração ultrapassou o limite de segurança sem chegar ao final do vídeo. Tente novamente com a aba aberta.";
+        end();return;
+      }
+      const idleMs=now-lastAdvanceAt;
+      if(idleMs>12_000&&recoveryAttempts<2&&now-lastRecoveryAt>12_000){
+        recoveryAttempts++;
+        lastRecoveryAt=now;
+        progress({
+          percent:Math.min(99,Math.floor(source.currentTime/source.duration*100)),
+          stage:"Reprodução lenta: tentando retomar o vídeo para concluir o MP4...",
+        });
+        // Resume playback without recreating the MediaElementAudioSourceNode.
+        if(source.paused||(idleMs>24_000&&source.readyState>=2)){
+          if(!source.paused)source.pause();
+          void source.play().catch(err=>{
+            recoveryError=err instanceof Error?err.message:String(err);
+          });
+        }
+      }
+      if(idleMs>75_000){
+        const pct=Math.floor(source.currentTime/source.duration*100);
+        prematureStopReason=`A geração parou em ${pct}% porque o navegador ficou sem avançar por mais de 75 segundos.`+
+          (recoveryError?` Erro de reprodução: ${recoveryError}`:"")+
+          " Mantenha a aba aberta e tente novamente.";
+        end();
+      }
+    },1000);
     const blob=await finished;
     if(signal?.aborted)throw new Error("Exportação cancelada por segurança.");
-    if(source.currentTime<source.duration-.4 || frames<source.duration*6)
-      throw new Error("A exportação foi interrompida. O vídeo original permanece intacto.");
+    if(prematureStopReason)throw new Error(prematureStopReason);
+    if(source.currentTime<source.duration-.4){
+      const pct=Math.floor(source.currentTime/source.duration*100);
+      throw new Error(`O gravador terminou antes do vídeo: ${pct}% processado. Tente novamente com a aba aberta.`);
+    }
+    if(frames<source.duration*6)
+      throw new Error("O navegador não processou quadros suficientes para gerar o vídeo inteiro. Tente novamente com a aba aberta.");
     progress({percent:99,stage:"Finalizando MP4 para WhatsApp..."});
     const output=await finalizeCinematicMp4(blob);
     progress({percent:100,stage:"MP4 pronto"});
@@ -191,7 +242,8 @@ export async function renderResellerVideoMp4(opts:{
     if(raf)cancelAnimationFrame(raf);
     if(callback&&typeof source.cancelVideoFrameCallback==="function")
       source.cancelVideoFrameCallback(callback);
-    if(watchdog)clearTimeout(watchdog);
+    if(watchdog)clearInterval(watchdog);
+    if(onEnded)source.removeEventListener("ended",onEnded);
     source.pause();
     try{if(recorder?.state!=="inactive")recorder?.stop();}catch{/*already closed*/}
     disconnectAudio?.();
