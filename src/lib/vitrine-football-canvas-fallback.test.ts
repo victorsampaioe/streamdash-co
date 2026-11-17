@@ -99,12 +99,14 @@ describe("Vitrine Futebol: PNG nativo idêntico à prévia e Telegram",()=>{
   });
   it("substitui bandeira bloqueada de Singapura pelo emoji correto, sem bloquear a prévia",async()=>{
     const blocked="data:image/png;base64,sgblocked";
-    const {config,canvas,fillText}=setup(blocked);
+    const {config,canvas,fillText,drawImage}=setup(blocked);
     config.matches[0]={...config.matches[0],
       home:"Singapore",away:"Brazil",league:"Amistoso Internacional",homeBadge:blocked};
     await drawFootballPngFallback(config);
-    expect(fillText.mock.calls.map(c=>c[0])).toContain("🇸🇬");
+    // The renderer must draw the real circular SG flag SVG, not a text emoji.
+    expect(fillText.mock.calls.map(c=>c[0])).not.toContain("🇸🇬");
     expect(fillText.mock.calls.map(c=>c[0])).toContain("Singapura");
+    expect(drawImage.mock.calls.some(call=>String(call[0]?.src).startsWith("data:image/svg+xml")&&String(call[0]?.src).includes("%3Csvg"))).toBe(true);
     expect(canvas.toBlob).toHaveBeenCalledOnce();
   });
   it("não atribui bandeira de país ao clube por engano",()=>{
