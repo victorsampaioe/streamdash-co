@@ -163,7 +163,8 @@ export function fallbackBadgeLabel(team:string,league:string):string{
   const flag=nationalTeamFlagEmoji(team,league);
   if(flag)return flag;
   const letters=footballTeamNamePtBR(team).split(/\s+/)
-    .filter(Boolean).slice(0,2).map(word=>word[0]||"").join("").toUpperCase();
+    .filter(word=>word&&!/^(de|da|do|dos|das|e)$/i.test(word))
+    .slice(0,2).map(word=>word[0]||"").join("").toUpperCase();
   return letters.slice(0,2)||"FC";
 }
 function paintFallbackBadge(ctx:CanvasRenderingContext2D,x:number,y:number,
