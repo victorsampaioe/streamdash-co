@@ -12,6 +12,7 @@ import { getVitrineFootballMatches, type FootballMatch } from "@/lib/vitrine-foo
 import { getVitrineFootballExportImages } from "@/lib/vitrine-football-export.functions";
 import { drawFootballPngFallback } from "@/lib/vitrine-football-canvas-fallback";
 import { nationalTeamFlagFallback } from "@/lib/vitrine-football-ptbr";
+import { offlineFootballFlag } from "@/lib/vitrine-football-offline-flags";
 import { sendVitrineFootballToRegisteredTelegram } from "@/lib/vitrine-football-telegram.functions";
 
 const today = () => new Intl.DateTimeFormat("sv-SE", {
@@ -199,9 +200,14 @@ export function VitrineFootballStudio() {
     const matches=group.map(match=>{
       const homeFlag=nationalTeamFlagFallback(match.home,match.league);
       const awayFlag=nationalTeamFlagFallback(match.away,match.league);
+      // Genuine club emblems from the fixture provider always take precedence.
+      // For national fixtures, use an MIT-licensed bundled circular flag if
+      // remote image/CDN is missing. Kosovo and Wales are included locally.
+      const localHome=offlineFootballFlag(homeFlag.match(/\/([\w-]+)\.png$/)?.[1]||"");
+      const localAway=offlineFootballFlag(awayFlag.match(/\/([\w-]+)\.png$/)?.[1]||"");
       return {...match,
-        homeBadge:crestMedia.images[match.homeBadge]||crestMedia.images[homeFlag]||"",
-        awayBadge:crestMedia.images[match.awayBadge]||crestMedia.images[awayFlag]||"",
+        homeBadge:crestMedia.images[match.homeBadge]||crestMedia.images[homeFlag]||localHome,
+        awayBadge:crestMedia.images[match.awayBadge]||crestMedia.images[awayFlag]||localAway,
       };
     });
     const featured=group.find(match=>!!match.playerPhoto&&validatedPhotos[match.playerPhoto]===true);
