@@ -177,6 +177,11 @@ export function FootballSchedulePoster({
           strokeWidth="3" opacity=".18"/>
         <path d="M440 390 V433 H640 V390 M440 1000 V960 H640 V1000"
           strokeWidth="2.5" opacity=".15"/>
+        {/* A small football shape in the visible upper-right breathing room. */}
+        <circle cx="954" cy="252" r="62" strokeWidth="3.5" opacity=".25"/>
+        <path d="M954 220 l26 20 -10 30 h-32 l-10 -30z" strokeWidth="3" opacity=".24"/>
+        <path d="M954 220 v-29 M928 240 l-29 -16 M980 240 l29 -16 M938 270 l-13 27 M970 270 l13 27"
+          strokeWidth="2.6" opacity=".19"/>
         {/* Ball outline in the free background area, lightly outlined. */}
         <circle cx="897" cy="872" r="100" strokeWidth="4" opacity=".17"/>
         <path d="M897 828 l42 29 -16 48 h-52 l-16 -48z" strokeWidth="3" opacity=".17"/>
