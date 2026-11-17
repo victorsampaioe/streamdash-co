@@ -54,7 +54,7 @@ function dateLabel(day: string) {
 }
 function TeamCrest({ src, size }: { src?: string; size: number }) {
   if (!src) return null;
-  return <img src={src} alt="" data-football-export-image="crest" crossOrigin="anonymous" referrerPolicy="no-referrer"
+  return <img src={src} alt="" data-football-export-image="crest" referrerPolicy="no-referrer"
     onError={event=>{event.currentTarget.style.display="none";}}
     style={{width:size,height:size,objectFit:"contain",flexShrink:0,filter:"drop-shadow(0 2px 3px rgba(0,0,0,.15))"}} />;
 }
