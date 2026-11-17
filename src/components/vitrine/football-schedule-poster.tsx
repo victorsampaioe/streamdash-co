@@ -15,6 +15,10 @@ export const FOOTBALL_POSTER_PALETTES = [
   { id: "verde", label: "Verde campo", hex: "#0ea56d" },
   { id: "dourado", label: "Dourado", hex: "#c78d11" },
   { id: "grafite", label: "Grafite", hex: "#344257" },
+  { id: "ciano", label: "Ciano neon", hex: "#00b5d8" },
+  { id: "laranja", label: "Laranja vibrante", hex: "#f16c27" },
+  { id: "rosa", label: "Rosa premium", hex: "#db4796" },
+  { id: "turquesa", label: "Turquesa", hex: "#0c9296" },
 ] as const;
 
 type PosterProps = {
