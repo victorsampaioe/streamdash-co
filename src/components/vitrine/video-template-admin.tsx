@@ -22,8 +22,11 @@ async function inspectVideo(file:File){
       video.onloadedmetadata=()=>{
         clearTimeout(timer);
         const seconds=Math.ceil(video.duration);
+        const ratio=video.videoWidth/video.videoHeight;
         if(!Number.isFinite(seconds)||seconds<1||seconds>120||video.videoWidth<128)
           reject(new Error("O MP4 deve durar até 120 segundos e ter vídeo válido."));
+        else if(ratio<.47||ratio>.70)
+          reject(new Error("Envie um vídeo vertical (formato Story, como o exemplo)."));
         else resolve({seconds,width:video.videoWidth,height:video.videoHeight});
       };
       video.onerror=()=>{clearTimeout(timer);reject(new Error("Este MP4 não pode ser reproduzido."));};
