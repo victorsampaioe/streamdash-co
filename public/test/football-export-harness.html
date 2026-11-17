@@ -147,10 +147,12 @@ try{
         "2","1","Brasil","Singapura"]){
       if(!drawnLabels.includes(label))throw Error("Fim de jogo não exibiu "+label);
     }
-    if(!existsInRect(ctx,[24,229,170],250,(360+205)*2,330,320))
-      throw Error("Fim de jogo perdeu o escudo mandante");
-    if(!existsInRect(ctx,[244,163,22],1588,(360+205)*2,340,320))
-      throw Error("Fim de jogo perdeu o escudo visitante");
+    // Real offline flags are SG red and BR green, not the turquoise/orange
+    // placeholder badges used by the old fixture test.
+    if(!existsInRect(ctx,[216,0,39],250,(360+205)*2,330,320))
+      throw Error("Fim de jogo perdeu a bandeira circular de Singapura");
+    if(!existsInRect(ctx,[109,165,68],1588,(360+205)*2,340,320))
+      throw Error("Fim de jogo perdeu a bandeira circular do Brasil");
     out.push({case:"finished",status:"encerrado",score:"2 × 1",width:2160,
       height:2700,flags:true,header:true,footer:true,bytes:final.size});
     let rejected=false;
