@@ -34,3 +34,14 @@ export function getResellerEncodingSettings(
     mode,
   } as const;
 }
+
+/** Maintain average capture cadence on 60/120Hz displays. Comparing against
+ * last *paint* time rounds 24fps up to 50ms on 60Hz displays (only 20fps).
+ * Advance a fixed timeline instead, allowing alternating 33/50ms rAF ticks.
+ */
+export function nextResellerFrameDeadline(now:number,previousDeadline:number,fps:number){
+  const interval=1000/fps;
+  if(!previousDeadline)return now+interval;
+  const next=previousDeadline+interval;
+  return next>now+.001?next:now+interval;
+}
