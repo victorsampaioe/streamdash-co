@@ -12,6 +12,6 @@ export async function run(mode:"stage"|"inview"){
   createRoot(inner).render(<FootballSchedulePoster kind="today" format="feed" matches={[0,1,2,3].map(m) as any} day="2026-11-17" headline="EVENTOS DE HOJE" brand="Revenda X" logo="/favicon.ico" contact="85999998888" badgeImages={{}} broadcastByMatch={{m0:"Globo",m1:"SporTV",m2:"Premiere",m3:"ESPN"}} playerPhoto="" playerName="" stadium="" accent="#146df2"/>);
   await new Promise(r=>setTimeout(r,2500));
   try{const f=await createFootballArtworkFile(inner,"x.png");
-    const u=URL.createObjectURL(f);(window as any).__url=u;return "OK "+f.size;}
+    (window as any).__f=f;return "OK "+f.size;}
   catch(e:any){return "ERR "+Object.prototype.toString.call(e)+" "+(e?.message||e?.type||String(e));}
 }
