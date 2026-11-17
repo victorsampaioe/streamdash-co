@@ -19,7 +19,7 @@ export function videoOverlayGeometry(width:number,height:number){
   const phoneW=378*unit;
   return {
     scale:unit,
-    logo:{x:16*unit,y:27*unit,w:226*unit,h:116*unit},
+    logo:{x:22*unit,y:32*unit,w:170*unit,h:88*unit},
     whatsapp:{x:(width-phoneW)/2,y:815*unit,w:phoneW,h:51*unit},
   };
 }
