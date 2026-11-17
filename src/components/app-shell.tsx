@@ -131,7 +131,7 @@ function useNavItems() {
     ...(navIsAdmin ? [{ to: "/app/admin", label: "Admin · Central de controle", icon: Users }, { to: "/app/admin/telegram-guard", label: "Admin · Entregas Telegram", icon: Bell }] : []),
     ...(navIsAdmin ? [{ to: "/app/auditoria", label: "Auditoria Visual", icon: ShieldAlert }] : []),
     ...(navIsAdmin ? [{ to: "/app/admin/observabilidade", label: "Admin · Central de Inteligência", icon: Gauge }] : []),
-    ...(navIsAdmin ? [{ to: "/app/admin/vitrine-futebol", label: "Admin · Vitrine IA Futebol", icon: Trophy }] : []),
+
     ...(navIsAdmin ? [{ to: "/vitrine-video", label: "Admin · Vitrine Vídeo MP4", icon: Sparkles }] : []),
     ...(navIsAdmin ? [{ to: "/app/admin/modelos-video", label: "Admin · Biblioteca de Vídeos", icon: Sparkles }] : []),
     { to: "/app", label: "Dashboard", icon: LayoutDashboard, exact: true },
@@ -158,6 +158,7 @@ function useNavItems() {
     items.push({ to: "/app/reseller", label: "Painel Revendedor", icon: ShoppingBag });
     items.push({ to: "/app/pagina", label: "Minha Página", icon: Globe });
     items.push({ to: "/app/central-clientes", label: "Ajuda para Clientes", icon: BookOpen });
+    items.push({ to: "/vitrine-futebol", label: "Vitrine IA Futebol · 3 modelos", icon: Trophy });
     items.push({ to: "/app/memoria", label: "Memória de Diagnósticos", icon: Bot });
     items.push({ to: "/app/evidencias", label: "Biblioteca de Evidências", icon: BookOpen });
     // Compra de créditos permanece acessível dentro do fluxo de assinatura,
