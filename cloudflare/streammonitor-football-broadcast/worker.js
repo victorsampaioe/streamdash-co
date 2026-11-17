@@ -4,14 +4,14 @@
 const SUPABASE="https://yiwyfiaqehhmngqngxvx.supabase.co";
 const MODEL="@cf/google/gemma-4-26b-a4b-it";
 const CHANNELS=[
-["Premiere",/\bpremiere\b/i],["SporTV",/\bsportv\b/i],
+["Premiere",/\bpremiere\b/i],["SporTV 3",/\bsportv\s*3\b/i],["SporTV 2",/\bsportv\s*2\b/i],["SporTV",/\bsportv\b(?!\s*[23])/i],
 ["Globo",/\b(?:rede globo|tv globo|(?:na|pela|da) globo|globo ao vivo)\b/i],
 ["ESPN 4",/\bespn\s*4\b/i],["ESPN 3",/\bespn\s*3\b/i],["ESPN 2",/\bespn\s*2\b/i],
 ["ESPN",/\bespn\b(?!\s*[234])/i],["Disney+",/\bdisney\s*\+/i],
 ["Prime Video",/\b(?:prime video|amazon prime)\b/i],
-["CazéTV",/\bcaze\s*tv\b/i],["Max",/\b(?:hbo\s*max|streaming max|na max)\b/i],
+["CazéTV",/\bcaz[eé]\s*tv\b/i],["Max",/\b(?:hbo\s*max|streaming max|na max)\b/i],
 ["TNT Sports",/\btnt(?:\s*sports?)?\b/i],
-["SBT",/\bsbt\b/i],["Band",/\b(?:tv band|band tv|band sports|bandsports)\b/i],
+["SBT",/\bsbt\b/i],["BandSports",/\bbandsports?\b/i],["Band",/\b(?:tv band|band tv|rede band|na band)\b/i],
 ["Record",/\b(?:tv record|record tv)\b/i],
 ["GOAT",/\b(?:canal goat|goat tv)\b/i],["DAZN",/\bdazn\b/i],
 ["FPF TV",/\bfpf\s*tv\b/i],["Rede Furacão",/\brede furacao\b/i],
@@ -77,7 +77,9 @@ async function pageText(link){
 }
 function fixtureExcerpt(source,match,isRoundup=false){
  if(!source)return "";
- const txt=norm(source),h=canonicalTeam(match.home),a=canonicalTeam(match.away);
+ const boundary="vitrinefixturedelimiter";
+ const txt=norm(source.replace(/\s+\.\s+/g," "+boundary+" ")),
+  h=canonicalTeam(match.home),a=canonicalTeam(match.away);
  const aliases=s=>s==="paises baixos"?[s,"holanda","netherlands"]:
   s==="alemanha"?[s,"germany"]:[s];
  let at=-1;
@@ -93,7 +95,13 @@ function fixtureExcerpt(source,match,isRoundup=false){
   if(at>=0)break;
  }
  if(at<0)return "";
- if(isRoundup)return txt.slice(Math.max(0,at-110),at+370);
+ if(isRoundup){
+  const before=txt.lastIndexOf(boundary,at);
+  const after=txt.indexOf(boundary,at);
+  const left=Math.max(0,before>=0?before+boundary.length:0,at-85);
+  const right=Math.min(txt.length,at+290,after>=0?after:txt.length);
+  return txt.slice(left,right);
+ }
  const parts=[txt.slice(Math.max(0,at-70),at+410)];
  for(const keyword of ["onde assistir","transmissao","na tv","canais","streaming"]){
   const pos=txt.indexOf(keyword);
