@@ -45,6 +45,13 @@ export async function createFootballArtworkFile(
   ));
   for(const img of images){
     if(!img.complete||!img.naturalWidth||!img.naturalHeight)continue;
+    // The server inlines approved external crests. An un-inlined remote image
+    // can taint Canvas, so leave it to html-to-image instead.
+    const imageUrl=img.currentSrc||img.src||"";
+    if(/^https?:\/\//i.test(imageUrl)){
+      try{if(new URL(imageUrl).origin!==document.location.origin)continue;}
+      catch{continue;}
+    }
     const rect=img.getBoundingClientRect();
     if(!rect.width||!rect.height)continue;
     const x=(rect.left-root.left)*scaleX;
