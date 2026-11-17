@@ -178,7 +178,10 @@ export function VitrineFootballStudio() {
     const assets=await inlineAssets({data:{urls:urls.slice(0,16)}});
     for(const image of images){
       const replacement=assets.images[image.src];
-      if(replacement)image.src=replacement;
+      if(replacement){
+        image.style.display="";
+        image.src=replacement;
+      }
     }
     await awaitAssets(node);
     return ()=>{
@@ -205,10 +208,15 @@ export function VitrineFootballStudio() {
       }
       if(!blob||blob.size<1000)throw new Error("Falha ao capturar o banner completo.");
       // Fail explicitly instead of silently generating a cropped/small PNG.
-      const bitmap=await createImageBitmap(blob);
-      const valid=bitmap.width===baseSize&&bitmap.height===baseSize;
-      bitmap.close();
-      if(!valid)throw new Error("O PNG não foi renderizado em 1080 × 1080.");
+      // Read the PNG IHDR dimensions directly: works even on Safari versions
+      // where createImageBitmap(Blob) is unavailable or unreliable.
+      const head=await blob.slice(0,24).arrayBuffer();
+      const data=new DataView(head);
+      const isPng=head.byteLength>=24 &&
+        data.getUint32(0)===0x89504e47 && data.getUint32(4)===0x0d0a1a0a;
+      if(!isPng||data.getUint32(16)!==baseSize||data.getUint32(20)!==baseSize){
+        throw new Error("O PNG não foi renderizado em 1080 × 1080.");
+      }
       const name="stream-monitor-futebol-"+day+"-arte-"+(index+1)+".png";
       return {file:new File([blob],name,{type:"image/png"}),degraded:false};
     }finally{restore();}
