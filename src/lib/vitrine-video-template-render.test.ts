@@ -44,9 +44,9 @@ describe("Biblioteca MP4 da revenda",()=>{
     const logoCalls=calls.filter(call=>call.name==="drawImage"&&call.args[0]===logo);
     expect(logoCalls).toHaveLength(1);
     expect(Number(logoCalls[0].args[3])).toBeGreaterThan(184);
-    // Exactly one rounded box for the slimmer WhatsApp footer and one for
-    // the small icon. The transparent logo must NOT get a dark background.
-    expect(calls.filter(call=>call.name==="roundRect")).toHaveLength(3);
+    // Only the compact WhatsApp badge and its little icon use roundRect.
+    // The transparent logo must NOT get a separate rectangular backdrop.
+    expect(calls.filter(call=>call.name==="roundRect")).toHaveLength(2);
     expect(calls.filter(call=>call.name==="fillText").map(call=>call.args[0]))
       .toContain("(85) 99854-5009");
   });
