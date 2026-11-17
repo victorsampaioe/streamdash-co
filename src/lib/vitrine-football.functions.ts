@@ -1,4 +1,5 @@
 import { createServerFn } from "@tanstack/react-start";
+import { getRequest } from "@tanstack/react-start/server";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { requirePaidFeature } from "@/lib/premium-feature-access";
@@ -276,6 +277,46 @@ export const getVitrineFootballMatches = createServerFn({ method: "POST" })
       if(!old||completeness(match)>completeness(old))unique.set(id,match);
     }
     const matches=[...unique.values()];
+    // Only TV channels may come from Cloudflare when FTWB does not specify them.
+    // All fixture dates, team names, times and crests remain exactly as returned by FTWB.
+    const missingChannels=matches.filter(m=>!m.broadcasts?.length);
+    const auth=getRequest()?.headers.get("authorization")||"";
+    const apikey=process.env.SUPABASE_PUBLISHABLE_KEY||"";
+    if(missingChannels.length && auth.startsWith("Bearer ") && apikey){
+      try{
+        // ONE POST per screen refresh; the Cloudflare Worker runs at most ONE AI inference
+        // for the batch and caches channels by fixture/date in KV.
+        const response=await fetch(
+          "https://streammonitor-football-broadcast.victorsampaio133.workers.dev/broadcasts",{
+            method:"POST",
+            headers:{authorization:auth,apikey,"content-type":"application/json"},
+            body:JSON.stringify({matches:missingChannels.slice(0,64).map(m=>({
+              id:m.id,home:m.home,away:m.away,date:m.day
+            }))}),
+            cache:"no-store",signal:AbortSignal.timeout(25000)
+          }
+        );
+        if(!response.ok){
+          console.warn("[Vitrine Futebol] Cloudflare channel lookup HTTP",response.status);
+        }else{
+          const data=await response.json() as {results?:Array<{
+            id:string;channels?:string[];verified?:boolean
+          }>};
+          const confirmed=new Map((Array.isArray(data.results)?data.results:[])
+            .filter(row=>row?.verified===true && Array.isArray(row.channels))
+            .map(row=>[row.id,[...new Set(row.channels!.filter(name=>
+              typeof name==="string"&&name.trim()))].slice(0,3)]));
+          for(const match of missingChannels){
+            const tv=confirmed.get(match.id);
+            if(tv?.length)match.broadcasts=tv;
+          }
+        }
+      }catch(error){
+        // Only the channel lookup fails; do not block FTWB matches or expose credentials.
+        console.warn("[Vitrine Futebol] Cloudflare channel lookup unavailable",
+          error instanceof Error?error.name:"unknown");
+      }
+    }
     const leaguePriority=(name:string)=>{
       const league=simplify(name);
       if(/brasileir|copa do brasil/.test(league))return 0;
