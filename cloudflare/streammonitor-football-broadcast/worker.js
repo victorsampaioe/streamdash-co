@@ -2,11 +2,12 @@
 // The publicly accessible RSS search feeds are an interim fallback because the
 // configured AI Gateway Web Search currently returns payment_required.
 const SUPABASE="https://yiwyfiaqehhmngqngxvx.supabase.co";
-const MODEL="@cf/google/gemma-4-26b-a4b-instruct";
+const MODEL="@cf/google/gemma-4-26b-a4b-it";
 const CHANNELS=[
 ["Premiere",/\bpremiere\b/i],["SporTV",/\bsportv\b/i],
 ["Globo",/\b(?:rede globo|tv globo|(?:na|pela|da) globo|globo ao vivo)\b/i],
-["ESPN",/\bespn(?:\s*[234])?\b/i],["Disney+",/\bdisney\s*\+/i],
+["ESPN 4",/\bespn\s*4\b/i],["ESPN 3",/\bespn\s*3\b/i],["ESPN 2",/\bespn\s*2\b/i],
+["ESPN",/\bespn\b(?!\s*[234])/i],["Disney+",/\bdisney\s*\+/i],
 ["Prime Video",/\b(?:prime video|amazon prime)\b/i],
 ["CazéTV",/\bcaze\s*tv\b/i],["Max",/\b(?:hbo\s*max|streaming max|na max)\b/i],
 ["TNT Sports",/\btnt(?:\s*sports?)?\b/i],
@@ -133,9 +134,11 @@ async function researchBatch(matches,env){
       'mencionados nas evidências. Não invente emissoras ou horários. '+
       'Na dúvida mantenha somente os canais comprovados.'},
      {role:"user",content:JSON.stringify({jogos:withEvidence})}
-    ],max_tokens:1500,temperature:0.1,stream:false
+    ],max_tokens:1500,temperature:0.1,stream:false,
+    chat_template_kwargs:{enable_thinking:false}
    });
-   const raw=String(output?.response||"").replace(/`{3}(?:json)?/g,"").trim();
+   const raw=String(output?.response||output?.choices?.[0]?.message?.content||"")
+    .replace(/`{3}(?:json)?/g,"").trim();
    const json=JSON.parse(raw.slice(raw.indexOf("{"),raw.lastIndexOf("}")+1));
    if(Array.isArray(json?.results)){
     for(const item of json.results){
@@ -163,26 +166,48 @@ async function researchBatch(matches,env){
  });
 }
 async function authorized(request){
-const bearer=request.headers.get("authorization")||"",apikey=request.headers.get("apikey")||"";
-if(!bearer.startsWith("Bearer ")||apikey.length<20||apikey.length>512)return false;
-try{
-const r=await fetch(SUPABASE+"/auth/v1/user",{headers:{authorization:bearer,apikey},signal:AbortSignal.timeout(4000)});
-if(!r.ok)return false;
-const user=await r.json();
-if(!user?.id)return false;
-const headers={authorization:bearer,apikey,"content-type":"application/json"};
-const [role,sub]=await Promise.allSettled([
-  fetch(SUPABASE+"/rest/v1/rpc/has_role",{method:"POST",headers,body:JSON.stringify({_user_id:user.id,_role:"admin"}),signal:AbortSignal.timeout(4000)}),
-  fetch(SUPABASE+"/rest/v1/subscriptions?user_id=eq."+encodeURIComponent(user.id)+"&select=plan,status,expires_at&limit=1",
-    {headers,signal:AbortSignal.timeout(4000)})
-]);
-if(role.status==="fulfilled"&&role.value.ok&&await role.value.json()===true)return true;
-if(sub.status==="fulfilled"&&sub.value.ok){
-  const list=await sub.value.json();
-  return Array.isArray(list)&&list.some(x=>x.status==="active"&&Date.parse(x.expires_at)>Date.now());
-}
-return false;
-}catch{return false;}
+  const bearer=request.headers.get("authorization")||"";
+  const apikey=request.headers.get("apikey")||"";
+  if(!bearer.startsWith("Bearer ")||apikey.length<20||apikey.length>512)return false;
+  try{
+    const auth=await fetch(SUPABASE+"/auth/v1/user",{
+      headers:{authorization:bearer,apikey},
+      signal:AbortSignal.timeout(4000)
+    });
+    if(!auth.ok)return false;
+    const user=await auth.json();
+    if(!user?.id)return false;
+    const headers={authorization:bearer,apikey,"content-type":"application/json"};
+    const role=async(value)=> {
+      const r=await fetch(SUPABASE+"/rest/v1/rpc/has_role",{
+        method:"POST",headers,body:JSON.stringify({_user_id:user.id,_role:value}),
+        signal:AbortSignal.timeout(4000)
+      });
+      return r.ok&&await r.json()===true;
+    };
+    if(await role("admin"))return true;
+    const subscription=await fetch(SUPABASE+"/rest/v1/subscriptions?user_id=eq."+
+      encodeURIComponent(user.id)+"&select=plan,status,expires_at&limit=1",{
+      headers,signal:AbortSignal.timeout(4000)
+    });
+    if(subscription.ok){
+      const list=await subscription.json();
+      if(Array.isArray(list)&&list.some(x=>x.status==="active"&&
+        ["monthly","yearly","basic","reseller"].includes(x.plan)&&
+        Date.parse(x.expires_at)>Date.now()))return true;
+    }
+    if(await role("reseller")||await role("sub_reseller")){
+      const wallet=await fetch(SUPABASE+"/rest/v1/reseller_wallet?reseller_id=eq."+
+        encodeURIComponent(user.id)+"&select=credits&limit=1",{
+        headers,signal:AbortSignal.timeout(4000)
+      });
+      if(wallet.ok){
+        const list=await wallet.json();
+        return Array.isArray(list)&&list.some(x=>Number(x.credits)>0);
+      }
+    }
+    return false;
+  }catch{return false;}
 }
 export default {
 async fetch(request,env){
