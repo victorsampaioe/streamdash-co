@@ -1,0 +1,230 @@
+import {useCallback,useEffect,useMemo,useRef,useState} from "react";
+import {useQuery} from "@tanstack/react-query";
+import {useServerFn} from "@tanstack/react-start";
+import {Link} from "@tanstack/react-router";
+import {toast} from "sonner";
+import {Download,Film,Play,RefreshCw,Upload,Video,CheckCircle2} from "lucide-react";
+import {Button} from "@/components/ui/button";
+import {Input} from "@/components/ui/input";
+import {Card} from "@/components/ui/card";
+import {listVideoModels,type VideoModel} from "@/lib/vitrine-video-models.functions";
+import {getCinematicBannerBrand} from "@/lib/vitrine-cinematic.functions";
+import {normalizeCinematicLogoPng} from "@/lib/vitrine-cinematic-logo";
+import {renderResellerVideoMp4,type VideoOverlayBrand} from "@/lib/vitrine-video-template-render";
+
+const area="rounded-2xl border border-blue-400/20 bg-[#071729] p-4 sm:p-6";
+function loadLogoImage(src:string):Promise<HTMLImageElement>{
+  return new Promise((resolve,reject)=>{
+    const img=new Image();
+    if(!src.startsWith("data:")&&!src.startsWith("blob:"))img.crossOrigin="anonymous";
+    img.onload=()=>img.naturalWidth?resolve(img):reject(new Error("Logo sem imagem."));
+    img.onerror=()=>reject(new Error("Falha ao carregar a logo da revenda."));
+    img.src=src;
+  });
+}
+function filename(title:string){
+  return title.normalize("NFD").replace(/[\u0300-\u036f]/g,"")
+    .toLowerCase().replace(/[^a-z0-9]+/g,"-").slice(0,40)||"video";
+}
+export function VideoTemplateLibrary(){
+  const list=useServerFn(listVideoModels);
+  const brandFn=useServerFn(getCinematicBannerBrand);
+  const templates=useQuery({
+    queryKey:["video-template-catalog"],queryFn:()=>list(),
+    staleTime:60_000,refetchOnWindowFocus:true
+  });
+  const brandQ=useQuery({
+    queryKey:["video-template-my-brand"],queryFn:()=>brandFn(),staleTime:60_000
+  });
+  const models=templates.data?.models||[];
+  const [selectedId,setSelectedId]=useState("");
+  const model=useMemo(()=>models.find(m=>m.id===selectedId)||models[0]||null,
+    [models,selectedId]);
+  const currentBrand=brandQ.data?.brands?.[0];
+  const [overrideLogo,setOverrideLogo]=useState("");
+  const [overrideWhatsapp,setOverrideWhatsapp]=useState("");
+  const [logo,setLogo]=useState<HTMLImageElement|null>(null);
+  const [logoError,setLogoError]=useState("");
+  const [audio,setAudio]=useState(true);
+  const [working,setWorking]=useState(false);
+  const [progress,setProgress]=useState({percent:0,stage:""});
+  const [result,setResult]=useState<Blob|null>(null);
+  const [resultUrl,setResultUrl]=useState("");
+  const originalVideo=useRef<HTMLVideoElement>(null);
+  const phone=overrideWhatsapp||currentBrand?.whatsapp||"";
+  const logoSrc=overrideLogo||currentBrand?.logo_url||"";
+  const effectiveBrand:VideoOverlayBrand|null=logo&&currentBrand?{
+    name:currentBrand.name,whatsapp:phone,color:currentBrand.color,logo
+  }:null;
+  useEffect(()=>{
+    setLogo(null);setLogoError("");
+    if(!logoSrc)return;
+    let active=true;
+    loadLogoImage(logoSrc).then(normalizeCinematicLogoPng).then(image=>{
+      if(active)setLogo(image);
+    }).catch(err=>{
+      if(active)setLogoError(err instanceof Error?err.message:"Logo não carregou");
+    });
+    return()=>{active=false};
+  },[logoSrc]);
+  useEffect(()=>{
+    setResult(null);setResultUrl(previous=>{if(previous)URL.revokeObjectURL(previous);return "";});
+  },[selectedId,model?.video_url,logoSrc,phone]);
+  useEffect(()=>()=>{
+    if(overrideLogo.startsWith("blob:"))URL.revokeObjectURL(overrideLogo);
+    if(resultUrl)URL.revokeObjectURL(resultUrl);
+  },[overrideLogo,resultUrl]);
+  function download(){
+    if(!result||!model)return;
+    const u=URL.createObjectURL(result);
+    const link=document.createElement("a");
+    link.href=u;link.download="stream-monitor-"+filename(model.title)+".mp4";
+    document.body.appendChild(link);link.click();link.remove();
+    window.setTimeout(()=>URL.revokeObjectURL(u),45_000);
+  }
+  async function generate(){
+    if(!model||!effectiveBrand||working)return;
+    if(!phone.trim()){toast.error("Cadastre o WhatsApp da revenda.");return;}
+    const video=originalVideo.current;
+    if(!video||video.readyState<1){
+      toast.error("Abra o vídeo e aguarde carregar antes de gerar.");return;
+    }
+    setWorking(true);setProgress({percent:0,stage:"Preparando vídeo..."});
+    setResult(null);setResultUrl("");
+    try{
+      const blob=await renderResellerVideoMp4({
+        source:video,brand:effectiveBrand,audio,
+        progress:setProgress
+      });
+      const url=URL.createObjectURL(blob);
+      setResult(blob);setResultUrl(url);
+      toast.success("MP4 personalizado com logo e WhatsApp!");
+    }catch(err){
+      toast.error(err instanceof Error?err.message:"Não foi possível exportar o vídeo.");
+    }finally{setWorking(false);}
+  }
+  return <main className="mx-auto max-w-6xl space-y-6 p-4 text-white sm:p-7">
+    <header className={area}>
+      <p className="text-xs font-bold uppercase tracking-widest text-blue-300">Stream Monitor · Vitrine Vídeos</p>
+      <h1 className="mt-2 text-3xl font-black">Vídeos prontos com a marca da sua revenda</h1>
+      <p className="mt-2 max-w-3xl text-sm text-slate-300">
+        Escolha um vídeo cadastrado pelo administrador. Sua logo e seu WhatsApp aparecem
+        durante a reprodução e no arquivo MP4 final. O vídeo é processado no seu dispositivo,
+        sem alterar o original do catálogo.
+      </p>
+    </header>
+    {templates.isPending||brandQ.isPending?<Card className="p-7 text-center">
+      Carregando vídeos e sua identidade visual...
+    </Card>:templates.isError||brandQ.isError?<Card className="p-7 text-center text-red-400">
+      Não foi possível abrir a biblioteca. Verifique sua assinatura e a conexão.
+      <Button variant="outline" onClick={()=>{void templates.refetch();void brandQ.refetch();}}
+        className="mt-4">Tentar novamente</Button>
+    </Card>:models.length===0?<div className={area}>
+      <p className="text-lg font-bold">Biblioteca de vídeos aguardando modelos</p>
+      <p className="mt-2 text-sm text-slate-300">
+        O administrador ainda não publicou vídeos MP4 nesta categoria.
+      </p>
+    </div>:<>
+      <section className={area}>
+        <div className="flex items-center justify-between gap-2">
+          <h2 className="font-bold text-lg">Escolha o vídeo</h2>
+          <Button variant="outline" size="sm" onClick={()=>void templates.refetch()}>
+            <RefreshCw className="mr-2 h-4 w-4"/> Atualizar
+          </Button>
+        </div>
+        <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          {models.filter(m=>m.active).map(item=><button key={item.id} type="button"
+            onClick={()=>setSelectedId(item.id)}
+            aria-pressed={model?.id===item.id}
+            className={"rounded-xl border p-4 text-left transition-colors "+
+              (model?.id===item.id?"border-blue-400 bg-blue-500/20":"border-slate-700 bg-slate-900/60 hover:border-blue-400/50")}>
+            <div className="flex gap-2 items-center text-sm font-bold"><Film className="h-4 w-4 text-blue-400"/>{item.title}</div>
+            <p className="mt-2 text-xs text-slate-400">{item.description||"Vídeo personalizado"}</p>
+            <p className="mt-2 text-xs text-blue-300">{item.duration_seconds}s · {item.width}×{item.height}</p>
+          </button>)}
+        </div>
+      </section>
+      <div className="grid gap-5 lg:grid-cols-[1fr_1fr]">
+        <section className={area}>
+          <h2 className="mb-4 text-lg font-bold">Prévia do modelo</h2>
+          <div className="mx-auto max-w-[370px] overflow-hidden rounded-2xl border border-blue-500/30 bg-black">
+            <div className="relative">
+              <video key={model?.id} ref={originalVideo} src={model?.video_url}
+                controls playsInline preload="metadata" crossOrigin="anonymous"
+                className="w-full aspect-[9/16] object-contain bg-black"/>
+              <div className="pointer-events-none absolute left-[4%] top-[4%] grid h-[10%] w-[38%] place-items-center rounded-xl bg-slate-950/80 p-2">
+                {logo?<img alt="Logo da revenda" src={logo.src} className="h-full w-full object-contain"/>
+                  :<span className="text-[9px]">Sua logo</span>}
+              </div>
+              <div className="pointer-events-none absolute inset-x-[4%] bottom-[5%] flex items-center gap-2 rounded-xl border border-emerald-400 bg-[#031e1b]/95 px-3 py-2">
+                <span className="rounded bg-emerald-500 px-2 py-1 text-sm">☎</span>
+                <div className="min-w-0"><p className="text-[8px] font-bold text-emerald-300">FALE PELO WHATSAPP</p>
+                  <p className="truncate text-xs font-black text-white">{phone||"Configure seu telefone"}</p>
+                </div>
+              </div>
+            </div>
+          </div>
+          <p className="mt-3 text-xs text-slate-400">
+            Reprodução com a sua marca. A exportação grava a logo e o contato em todos os quadros.
+          </p>
+        </section>
+        <section className={area}>
+          <h2 className="text-lg font-bold">Sua marca no vídeo</h2>
+          <p className="mt-2 text-sm text-slate-300">
+            A logo e o WhatsApp vêm automaticamente das configurações da sua revenda.
+          </p>
+          <div className="mt-4 space-y-3">
+            <div><p className="mb-1 text-xs text-slate-400">Marca</p>
+              <p className="font-semibold">{currentBrand?.name||"Minha revenda"}</p>
+            </div>
+            <label className="block text-sm">WhatsApp que aparece no vídeo
+              <Input value={phone} onChange={e=>setOverrideWhatsapp(e.target.value)}
+                className="mt-1 bg-slate-950 text-white" placeholder="(85) 99854-5009"/>
+            </label>
+            <label className="block text-sm">Logo PNG personalizada (opcional)
+              <Input type="file" accept="image/png,image/webp,image/jpeg" className="mt-1 bg-slate-950 text-white"
+                onChange={e=>{
+                  const f=e.target.files?.[0];
+                  if(!f)return;
+                  if(!f.type.startsWith("image/")||f.size>5*1024*1024){
+                    toast.error("Escolha uma logo JPG ou PNG de até 5 MB.");return;
+                  }
+                  setOverrideLogo(URL.createObjectURL(f));
+                }}/>
+            </label>
+            {!logoSrc&&<p className="text-amber-400 text-sm">
+              Cadastre uma logo nas configurações da sua revenda ou envie um PNG acima.
+            </p>}
+            {logoError&&<p className="text-sm text-amber-400">{logoError}</p>}
+            <label className="flex items-center gap-2 text-sm">
+              <input type="checkbox" checked={audio} onChange={e=>setAudio(e.target.checked)}/>
+              Manter o áudio original do vídeo
+            </label>
+          </div>
+          <Button className="mt-5 w-full" disabled={working||!logo||!model||!phone.trim()}
+            onClick={()=>void generate()}>
+            {working?<RefreshCw className="mr-2 h-4 w-4 animate-spin"/>:<Play className="mr-2 h-4 w-4"/>}
+            {working?"Gerando MP4...":"Gerar vídeo com minha logo e WhatsApp"}
+          </Button>
+          {working&&<div className="mt-3">
+            <div className="h-2 overflow-hidden rounded-full bg-slate-800">
+              <div className="h-full bg-blue-500 transition-all" style={{width:progress.percent+"%"}}/>
+            </div>
+            <p className="mt-2 text-xs text-slate-300">{progress.percent}% · {progress.stage}</p>
+          </div>}
+          {result&&<div className="mt-4 rounded-xl border border-green-500/30 bg-green-950/30 p-3">
+            <p className="mb-2 flex items-center gap-2 text-sm font-semibold text-green-300">
+              <CheckCircle2 className="h-4 w-4"/> MP4 personalizado pronto
+            </p>
+            <Button className="w-full" onClick={download}>
+              <Download className="mr-2 h-4 w-4"/> Baixar MP4 personalizado
+            </Button>
+            <p className="mt-2 text-xs text-slate-400">
+              Pronto para compartilhar nos seus canais. O arquivo contém o vídeo, sua logo e WhatsApp.
+            </p>
+          </div>}
+        </section>
+      </div>
+    </>}
+  </main>;
+}
