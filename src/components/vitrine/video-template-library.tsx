@@ -10,7 +10,8 @@ import {Card} from "@/components/ui/card";
 import {listVideoModels,type VideoModel} from "@/lib/vitrine-video-models.functions";
 import {getCinematicBannerBrand} from "@/lib/vitrine-cinematic.functions";
 import {normalizeCinematicLogoPng} from "@/lib/vitrine-cinematic-logo";
-import {renderResellerVideoMp4,type VideoOverlayBrand} from "@/lib/vitrine-video-template-render";
+import {renderResellerVideoMp4,videoOverlayGeometry,type VideoOverlayBrand} from "@/lib/vitrine-video-template-render";
+import {formatCinematicWhatsApp} from "@/lib/vitrine-cinematic-canvas";
 
 const area="rounded-2xl border border-blue-400/20 bg-[#071729] p-4 sm:p-6";
 function loadLogoImage(src:string):Promise<HTMLImageElement>{
@@ -40,6 +41,16 @@ export function VideoTemplateLibrary(){
   const [selectedId,setSelectedId]=useState("");
   const model=useMemo(()=>models.find(m=>m.id===selectedId)||models[0]||null,
     [models,selectedId]);
+  // Same fixed proportions as the exported MP4, never responsive to the
+  // source's opening animation or to the phone's screen size.
+  const overlay=useMemo(()=>videoOverlayGeometry(model?.width||512,model?.height||910),
+    [model?.width,model?.height]);
+  const overlayStyle=(rect:{x:number;y:number;w:number;h:number})=>({
+    left:(rect.x/(model?.width||512)*100)+"%",
+    top:(rect.y/(model?.height||910)*100)+"%",
+    width:(rect.w/(model?.width||512)*100)+"%",
+    height:(rect.h/(model?.height||910)*100)+"%"
+  });
   const currentBrand=brandQ.data?.brands?.[0];
   const [overrideLogo,setOverrideLogo]=useState("");
   const [overrideWhatsapp,setOverrideWhatsapp]=useState("");
@@ -148,18 +159,22 @@ export function VideoTemplateLibrary(){
         <section className={area}>
           <h2 className="mb-4 text-lg font-bold">Prévia do modelo</h2>
           <div className="mx-auto max-w-[370px] overflow-hidden rounded-2xl border border-blue-500/30 bg-black">
-            <div className="relative">
+            <div className="relative" style={{aspectRatio:(model?.width||512)+" / "+(model?.height||910)}}>
               <video key={model?.id} ref={originalVideo} src={model?.video_url}
                 controls playsInline preload="metadata" crossOrigin="anonymous"
-                className="w-full aspect-[9/16] object-contain bg-black"/>
-              <div className="pointer-events-none absolute left-[4%] top-[4%] grid h-[10%] w-[38%] place-items-center rounded-xl bg-slate-950/80 p-2">
-                {logo?<img alt="Logo da revenda" src={logo.src} className="h-full w-full object-contain"/>
-                  :<span className="text-[9px]">Sua logo</span>}
+                className="absolute inset-0 h-full w-full object-contain bg-black"/>
+              <div className="pointer-events-none absolute flex items-center justify-center"
+                style={overlayStyle(overlay.logo)}>
+                {logo?<img alt="Logo da revenda sem fundo" src={logo.src}
+                  className="h-full w-full object-contain drop-shadow-md"/>
+                  :<span className="text-[9px] text-white">Sua logo</span>}
               </div>
-              <div className="pointer-events-none absolute inset-x-[4%] bottom-[5%] flex items-center gap-2 rounded-xl border border-emerald-400 bg-[#031e1b]/95 px-3 py-2">
-                <span className="rounded bg-emerald-500 px-2 py-1 text-sm">☎</span>
-                <div className="min-w-0"><p className="text-[8px] font-bold text-emerald-300">FALE PELO WHATSAPP</p>
-                  <p className="truncate text-xs font-black text-white">{phone||"Configure seu telefone"}</p>
+              <div className="pointer-events-none absolute flex items-center gap-1.5 overflow-hidden rounded-lg border border-emerald-400/90 bg-[#031e1b]/90 px-2 shadow-sm"
+                style={overlayStyle(overlay.whatsapp)}>
+                <span className="flex h-[23px] w-[23px] shrink-0 items-center justify-center rounded-md bg-emerald-500 text-xs">☎</span>
+                <div className="min-w-0 leading-tight">
+                  <p className="truncate text-[7px] font-bold text-emerald-300">FALE PELO WHATSAPP</p>
+                  <p className="truncate text-[12px] font-bold text-white">{formatCinematicWhatsApp(phone)||phone||"Configure seu telefone"}</p>
                 </div>
               </div>
             </div>
