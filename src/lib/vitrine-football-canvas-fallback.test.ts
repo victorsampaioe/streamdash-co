@@ -15,7 +15,7 @@ function setup(blockedSource?:string){
   const gradient={addColorStop:vi.fn()};
   const ctx={
     save:vi.fn(),restore:vi.fn(),beginPath:vi.fn(),moveTo:vi.fn(),
-    arcTo:vi.fn(),lineTo:vi.fn(),closePath:vi.fn(),fill:vi.fn(),
+    arcTo:vi.fn(),arc:vi.fn(),lineTo:vi.fn(),closePath:vi.fn(),fill:vi.fn(),
     stroke:vi.fn(),clip:vi.fn(),fillRect:vi.fn(),drawImage,fillText,
     translate:vi.fn(),scale:vi.fn(),
     createLinearGradient:vi.fn(()=>gradient),
@@ -70,9 +70,9 @@ describe("Vitrine Futebol: PNG nativo idêntico à prévia e Telegram",()=>{
     expect(file.name).toBe("banner-completo.png");
     expect(file.type).toBe("image/png");
     expect(file.size).toBeGreaterThan(1000);
-    // Stadium + ONE brand logo + eight crests; no watermark/footer copies.
+    // Original approved art: top brand + small footer brand and eight crests.
     const logos=drawImage.mock.calls.filter(call=>call[0]?.src==="data:image/png;base64,minha-logo");
-    expect(logos).toHaveLength(1);
+    expect(logos).toHaveLength(2);
     for(let i=0;i<4;i++){
       expect(drawImage.mock.calls.some(call=>call[0]?.src==="data:image/png;base64,home"+i)).toBe(true);
       expect(drawImage.mock.calls.some(call=>call[0]?.src==="data:image/png;base64,away"+i)).toBe(true);
@@ -84,6 +84,8 @@ describe("Vitrine Futebol: PNG nativo idêntico à prévia e Telegram",()=>{
     }
     expect(labels).toContain("(85) 99854-5009");
     expect(labels).toContain("FALE PELO WHATSAPP");
+    expect(labels).toContain("EVENTOS");
+    expect(labels).toContain("DE HOJE");
     expect(labels.filter(t=>t==="SporTV • Globo")).toHaveLength(4);
     expect(canvas.width).toBe(0); // high memory canvas released after PNG
   });
