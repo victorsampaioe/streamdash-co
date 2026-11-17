@@ -10,7 +10,7 @@ import {Card} from "@/components/ui/card";
 import {listVideoModels,type VideoModel} from "@/lib/vitrine-video-models.functions";
 import {getCinematicBannerBrand} from "@/lib/vitrine-cinematic.functions";
 import {normalizeCinematicLogoPng} from "@/lib/vitrine-cinematic-logo";
-import {renderResellerVideoMp4,videoOverlayGeometry,type VideoOverlayBrand} from "@/lib/vitrine-video-template-render";
+import {renderResellerVideoMp4,videoOverlayGeometry,VIDEO_WHATSAPP_MONO,type VideoOverlayBrand} from "@/lib/vitrine-video-template-render";
 import {formatCinematicWhatsApp} from "@/lib/vitrine-cinematic-canvas";
 
 const area="rounded-2xl border border-blue-400/20 bg-[#071729] p-4 sm:p-6";
@@ -169,12 +169,18 @@ export function VideoTemplateLibrary(){
                   className="h-full w-full object-contain drop-shadow-md"/>
                   :<span className="text-[9px] text-white">Sua logo</span>}
               </div>
-              <div className="pointer-events-none absolute flex items-center gap-1.5 overflow-hidden rounded-lg border border-emerald-400/90 bg-[#031e1b]/90 px-2 shadow-sm"
-                style={overlayStyle(overlay.whatsapp)}>
-                <span className="flex h-[23px] w-[23px] shrink-0 items-center justify-center rounded-md bg-emerald-500 text-xs">☎</span>
+              <div className="pointer-events-none absolute flex items-center gap-1.5 overflow-hidden rounded-lg border px-2 shadow-sm"
+                style={{...overlayStyle(overlay.whatsapp),
+                  backgroundColor:VIDEO_WHATSAPP_MONO.background,
+                  borderColor:VIDEO_WHATSAPP_MONO.border}}>
+                <span className="flex h-[23px] w-[23px] shrink-0 items-center justify-center rounded-md text-xs"
+                  style={{backgroundColor:VIDEO_WHATSAPP_MONO.iconBackground,
+                    color:VIDEO_WHATSAPP_MONO.iconText}}>☎</span>
                 <div className="min-w-0 leading-tight">
-                  <p className="truncate text-[7px] font-bold text-emerald-300">FALE PELO WHATSAPP</p>
-                  <p className="truncate text-[12px] font-bold text-white">{formatCinematicWhatsApp(phone)||phone||"Configure seu telefone"}</p>
+                  <p className="truncate text-[7px] font-bold"
+                    style={{color:VIDEO_WHATSAPP_MONO.caption}}>FALE PELO WHATSAPP</p>
+                  <p className="truncate text-[12px] font-bold"
+                    style={{color:VIDEO_WHATSAPP_MONO.phone}}>{formatCinematicWhatsApp(phone)||phone||"Configure seu telefone"}</p>
                 </div>
               </div>
             </div>
