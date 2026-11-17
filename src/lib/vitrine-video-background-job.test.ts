@@ -6,6 +6,7 @@ import {renderResellerVideoMp4} from "./vitrine-video-template-render";
 import {
   prepareVideoJobSource,startVideoExportInDocument,getVideoJobSnapshot,
   subscribeToVideoJob,dismissVideoJob,downloadVideoJob,isVideoJobRunning,
+  clearVideoJobOnSignOut,
 } from "./vitrine-video-background-job";
 
 type FakeVideo={
@@ -69,6 +70,20 @@ describe("MP4 persistente na navegação",()=>{
     expect(updates).toContain("preparing");
     expect(vi.mocked(players[0].remove)).toHaveBeenCalledTimes(1);
     expect(downloadVideoJob).toBeTypeOf("function");
+  });
+  it("cancela a geração na saída da conta sem expor o MP4 ao próximo login",async()=>{
+    let finish!:(blob:Blob)=>void;
+    vi.mocked(renderResellerVideoMp4).mockImplementation(()=>new Promise(resolve=>{finish=resolve;}));
+    prepareVideoJobSource(args.modelId,args.url);
+    startVideoExportInDocument(args);
+    expect(getVideoJobSnapshot().status).toBe("preparing");
+    clearVideoJobOnSignOut();
+    expect(getVideoJobSnapshot().status).toBe("idle");
+    expect(isVideoJobRunning()).toBe(false);
+    finish(new Blob([new Uint8Array(8192)],{type:"video/mp4"}));
+    await new Promise(resolve=>setTimeout(resolve,0));
+    expect(getVideoJobSnapshot().status).toBe("idle");
+    expect(downloadVideoJob()).toBe(false);
   });
   it("não permite duas gerações simultâneas de revendas diferentes",async()=>{
     let finish!:(blob:Blob)=>void;
