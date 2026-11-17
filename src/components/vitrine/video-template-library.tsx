@@ -255,11 +255,11 @@ export function VideoTemplateLibrary(){
                 onChange={e=>setQuality(e.target.value as ResellerVideoQuality)}
                 className="mt-2 min-h-11 w-full rounded-xl border border-blue-400/30 bg-slate-950 px-3 py-2 text-sm text-white">
                 <option value="auto">Automática — mais leve e fluida (recomendada)</option>
-                <option value="compatible">Compatível — celulares antigos (540p / 24 fps)</option>
+                <option value="compatible">Compatível — celulares antigos (480p / 24 fps)</option>
                 <option value="high">Alta definição — mais pesada (até 1080p / 30 fps)</option>
               </select>
               <span className="mt-1.5 block text-xs leading-5 text-slate-400">
-                Automática usa 720p/24 fps, ou 540p/24 fps quando o navegador informa hardware limitado.
+                Automática usa 720p/24 fps, ou 480p/24 fps quando o navegador informa hardware limitado.
                 A narração, a logo e o WhatsApp são mantidos em todas as opções.
               </span>
             </label>
