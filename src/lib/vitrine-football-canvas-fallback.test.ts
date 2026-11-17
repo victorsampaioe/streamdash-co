@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { drawFootballPngFallback, fallbackBadgeLabel, FOOTBALL_PNG_WIDTH, FOOTBALL_PNG_HEIGHT } from "./vitrine-football-canvas-fallback";
+import { drawFootballPngFallback, fallbackBadgeLabel, gridBackdropSwatches, FOOTBALL_PNG_WIDTH, FOOTBALL_PNG_HEIGHT } from "./vitrine-football-canvas-fallback";
 afterEach(()=>vi.unstubAllGlobals());
 
 const validBlob=()=>{
@@ -159,6 +159,18 @@ describe("Vitrine Futebol: PNG nativo idêntico à prévia e Telegram",()=>{
     }
     const logos=drawImage.mock.calls.filter(call=>call[0]?.src===config.logo);
     expect(logos).toHaveLength(1);
+  });
+  it("faz o fundo da grade acompanhar todas as cores, inclusive personalizado",()=>{
+    const blue=gridBackdropSwatches("#146df2");
+    const red=gridBackdropSwatches("#ee1519");
+    const purple=gridBackdropSwatches("#7537ed");
+    const custom=gridBackdropSwatches("#9f672e");
+    const values=[blue,red,purple,custom];
+    expect(new Set(values.map(v=>v.base)).size).toBe(4);
+    expect(new Set(values.map(v=>v.shadow)).size).toBe(4);
+    expect(new Set(values.map(v=>v.haze)).size).toBe(4);
+    expect(red.rgb[0]).toBeGreaterThan(red.rgb[2]);
+    expect(blue.rgb[2]).toBeGreaterThan(blue.rgb[0]);
   });
   it("recolore a grade e mantém todos os jogos com cor personalizada",async()=>{
     const {config,dimensions,ctx}=setup();
