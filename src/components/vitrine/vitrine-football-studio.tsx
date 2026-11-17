@@ -137,7 +137,7 @@ export function VitrineFootballStudio() {
   const [validatedPhotos,setValidatedPhotos]=useState<Record<string,boolean>>({});
   useEffect(()=>{
     let mounted=true;
-    const urls=[...new Set(groups.map(group=>group.find(match=>!!match.playerPhoto)?.playerPhoto).filter((url):url is string=>!!url))];
+    const urls=[...new Set(sourceMatches.map(match=>match.playerPhoto).filter((url):url is string=>!!url))].slice(0,32);
     for(const url of urls){
       const image=new Image();
       image.crossOrigin="anonymous";
@@ -146,7 +146,7 @@ export function VitrineFootballStudio() {
       image.src=url;
     }
     return ()=>{mounted=false};
-  },[groups]);
+  },[sourceMatches]);
   // Preload the same vetted crest bytes for the on-screen preview AND PNG.
   // Previously, only the hidden export copy was inlined, so browser/CORS errors
   // could silently hide shields from the visible cards or exported image.
@@ -206,7 +206,7 @@ export function VitrineFootballStudio() {
     :{visible:[] as FootballMatch[],hidden:[] as FootballMatch[]},
     [sourceMatches,crestsReady,crestMedia.images]);
   const groups=useMemo(()=>{
-    if(posterMode==="finished")return selectedFinal?[selectedBadges.visible]:[];
+    if(posterMode==="finished")return selectedFinal&&selectedBadges.visible.length?[selectedBadges.visible]:[];
     const chunkSize=todayLayout==="grid"?12:4;
     const chunks:FootballMatch[][]=[];
     for(let i=0;i<selectedBadges.visible.length;i+=chunkSize)
