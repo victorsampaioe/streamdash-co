@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="pt-BR"><head><meta charset="utf-8"/><title>Validação visual PNG Futebol</title>
+<style>body{margin:0;background:#101628;color:#fff;font-family:sans-serif}
+#preview{max-width:550px;margin:auto}img{display:block;width:100%;height:auto}</style>
+</head><body><div id="preview"></div><pre id="results" data-status="pending">running</pre>
+<script type="module">
+import { drawFootballPngFallback } from "/src/lib/vitrine-football-canvas-fallback.ts";
+const status=document.querySelector("#results");
+function artImage(color,label){
+  const c=document.createElement("canvas");c.width=c.height=256;
+  const t=c.getContext("2d");
+  t.clearRect(0,0,256,256);
+  t.fillStyle=color;t.fillRect(0,0,256,256);
+  t.fillStyle="#ffffff";t.font="bold 62px Arial";t.fillText(label,36,158);
+  return c.toDataURL("image/png");
+}
+const logo=artImage("#ed10ae","LM");
+const home=artImage("#18e5aa","H");
+const away=artImage("#f4a316","A");
+const matches=Array.from({length:4},(_,i)=>({
+  id:"match-"+i,
+  home:["Singapore","Ireland","Poland","Wales"][i],
+  away:["Brazil","Kosovo","Sweden","Portugal"][i],
+  league:i===0?"Amistoso Internacional":"Liga das Nações",
+  day:"2026-11-17",time:i===0?"07:00":"16:45",
+  homeBadge:home,awayBadge:away,
+  broadcasts:[["Globo","SporTV","ge tv"],["Disney+"],["SportTV 2"],["SporTV"]][i],
+}));
+function existsInRect(ctx,color,x,y,w,h){
+  const d=ctx.getImageData(x,y,w,h).data;
+  for(let i=0;i<d.length;i+=4*10){
+    if(Math.abs(d[i]-color[0])<=12 &&
+       Math.abs(d[i+1]-color[1])<=12 &&
+       Math.abs(d[i+2]-color[2])<=12)return true;
+  }
+  return false;
+}
+try{
+  const out=[];
+  for(const count of [4,1,2,3]){
+    const file=await drawFootballPngFallback({
+      matches:matches.slice(0,count),day:"2026-11-17",
+      accent:"#146df2",logo,contact:"85998545009",
+      name:"Revenda Exemplo",filename:"football-"+count+".png"
+    });
+    if(file.type!=="image/png")throw Error("MIME inválido");
+    const header=new DataView(await file.slice(0,24).arrayBuffer());
+    if(header.getUint32(0)!==0x89504e47||header.getUint32(16)!==2160||header.getUint32(20)!==2700)
+      throw Error("Arquivo PNG não possui resolução exata");
+    const bitmap=await createImageBitmap(file);
+    if(bitmap.width!==2160||bitmap.height!==2700)throw Error("PNG não decodificou no tamanho esperado");
+    const canvas=document.createElement("canvas");canvas.width=2160;canvas.height=2700;
+    const ctx=canvas.getContext("2d",{willReadFrequently:true});
+    ctx.drawImage(bitmap,0,0);bitmap.close();
+    if(!existsInRect(ctx,[237,16,174],220,145,430,370))
+      throw Error("Logo colorida desapareceu da imagem");
+    for(let i=0;i<count;i++){
+      const rowY=357+i*((count===4?186:count===3?205:count===2?226:240)+18);
+      if(!existsInRect(ctx,[24,229,170],140,(rowY+52)*2,125,130))
+        throw Error("Escudo mandante ausente na partida "+(i+1));
+      if(!existsInRect(ctx,[244,163,22],1890,(rowY+52)*2,140,130))
+        throw Error("Escudo visitante ausente na partida "+(i+1));
+    }
+    const foot=ctx.getImageData(100,2460,500,70).data;
+    let dark=0;for(let p=0;p<foot.length;p+=4)if(foot[p]<130)dark++;
+    if(dark<100)throw Error("Rodapé/WhatsApp incompleto");
+    out.push({matches:count,bytes:file.size,width:bitmap.width||2160,height:bitmap.height||2700,
+      logo:true,badges:count*2,footer:true});
+    if(count===4){
+      const img=document.createElement("img");
+      img.src=URL.createObjectURL(file);img.alt="PNG exato gerado pelo exportador nativo";
+      document.querySelector("#preview").appendChild(img);
+    }
+  }
+  status.textContent="FOOTBALL_RENDER_PASS "+JSON.stringify(out);
+  status.dataset.status="pass";
+}catch(e){
+  status.textContent="FOOTBALL_RENDER_FAIL "+(e?.stack||String(e));
+  status.dataset.status="fail";
+}
+</script></body></html>
