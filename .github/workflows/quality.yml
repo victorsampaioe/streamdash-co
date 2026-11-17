@@ -40,7 +40,7 @@ jobs:
           VITE_SUPABASE_PROJECT_ID: "ci"
         run: |
           set -euo pipefail
-          bunx vite --host 127.0.0.1 --port 4173 > /tmp/vite-football.log 2>&1 &
+          bunx vite --config test/vite.football.config.ts > /tmp/vite-football.log 2>&1 &
           SERVER=$!
           trap 'kill "$SERVER" 2>/dev/null || true' EXIT
           for i in $(seq 1 30); do
@@ -56,6 +56,8 @@ jobs:
           grep -oE 'data-status="(pass|fail)">[^<]*' /tmp/football-browser-result.html | tail -3 || true
           # Check the rendered DOM, not JavaScript source that contains the word PASS.
           if ! grep -q 'data-status="pass">FOOTBALL_RENDER_PASS' /tmp/football-browser-result.html; then
+            echo 'Navegador não confirmou teste. Resumo do DOM:'
+            head -c 2000 /tmp/football-browser-result.html || true
             cat /tmp/football-browser-errors.log | tail -40
             cat /tmp/vite-football.log | tail -40
             exit 1
