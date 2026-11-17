@@ -1,5 +1,5 @@
 import {describe,it,expect} from "vitest";
-import {videoOverlayGeometry,paintResellerVideoFrame} from "./vitrine-video-template-render";
+import {videoOverlayGeometry,paintResellerVideoFrame,VIDEO_WHATSAPP_MONO} from "./vitrine-video-template-render";
 import {validateVideoTemplateFile,tusMetadata} from "./vitrine-video-template-upload";
 
 describe("Biblioteca MP4 da revenda",()=>{
@@ -49,6 +49,22 @@ describe("Biblioteca MP4 da revenda",()=>{
     expect(calls.filter(call=>call.name==="roundRect")).toHaveLength(2);
     expect(calls.filter(call=>call.name==="fillText").map(call=>call.args[0]))
       .toContain("(85) 99854-5009");
+  });
+  it("usa paleta preta e branca no contato, sem voltar ao verde anterior",()=>{
+    const colors=Object.values(VIDEO_WHATSAPP_MONO);
+    expect(colors).toEqual([
+      "rgba(0,0,0,.78)",
+      "rgba(255,255,255,.72)",
+      "#f5f5f5",
+      "#101010",
+      "#d4d4d8",
+      "#ffffff"
+    ]);
+    expect(colors.every(value=>!value.includes("#38d692")&&!value.includes("#12bd7b")&&!value.includes("#8ce7bc")))
+      .toBe(true);
+    const geometry=videoOverlayGeometry(512,910);
+    expect(geometry.whatsapp).toEqual({x:67,y:815,w:378,h:51});
+    expect(geometry.logo).toEqual({x:22,y:32,w:170,h:88});
   });
   it("bloqueia vídeos não MP4 e acima de 100 MB",()=>{
     expect(()=>validateVideoTemplateFile({name:"a.mp4",type:"video/mp4",size:36*1048576}))
