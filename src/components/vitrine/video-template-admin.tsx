@@ -21,9 +21,9 @@ async function inspectVideo(file:File){
       const timer=setTimeout(()=>reject(new Error("O navegador não conseguiu ler o MP4.")),12000);
       video.onloadedmetadata=()=>{
         clearTimeout(timer);
-        const seconds=Math.ceil(video.duration);
+        const seconds=Math.max(1,Math.round(video.duration));
         const ratio=video.videoWidth/video.videoHeight;
-        if(!Number.isFinite(seconds)||seconds<1||seconds>120||video.videoWidth<128)
+        if(!Number.isFinite(video.duration)||video.duration<1||video.duration>120.05||video.videoWidth<128)
           reject(new Error("O MP4 deve durar até 120 segundos e ter vídeo válido."));
         else if(ratio<.47||ratio>.70)
           reject(new Error("Envie um vídeo vertical (formato Story, como o exemplo)."));
