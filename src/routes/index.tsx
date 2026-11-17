@@ -2,6 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { lazy, Suspense, useState, useRef } from "react";
 import { Activity, ArrowRight, ServerIcon, Bell, Globe, Zap, ShieldCheck, LineChart, Send, BookOpen, UserCheck, TrendingUp, Search, Film, Tv, CheckCircle2, Cpu, PlayCircle, Play, Pause, Volume2, VolumeX } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import {NovemberUpdates} from "@/components/landing/november-updates";
 
 import heroVideoAsset from "@/assets/hero-video.mp4.asset.json";
 import { telegramAlertExample, maintenanceNoticeExample } from "@/assets/alert-examples";
@@ -66,6 +67,8 @@ function Landing() {
 
         </div>
       </header>
+
+      <NovemberUpdates />
 
       {/* Novidade pública: Radar Mundial de DNS via Globalping.
           Inspeções DNS distribuídas não comprovam disponibilidade do streaming. */}
