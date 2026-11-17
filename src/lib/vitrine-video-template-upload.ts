@@ -55,8 +55,11 @@ export async function uploadAdminVideoTemplate(
   const location=create.headers.get("location");
   if(!location)throw new Error("O servidor não informou o endereço do upload.");
   const uploadUrl=new URL(location,base);
+  // Never forward an administrator JWT to an unrelated Supabase tenant.
+  const authorizedHost=new URL(projectUrl).hostname;
+  const storageHost=authorizedHost.replace(/\.supabase\.co$/,".storage.supabase.co");
   if(uploadUrl.protocol!=="https:" ||
-    (!uploadUrl.hostname.endsWith(".supabase.co") && uploadUrl.host!==base.host))
+    ![authorizedHost,storageHost].includes(uploadUrl.hostname))
     throw new Error("Destino de upload não reconhecido.");
   let offset=0,attempts=0;
   while(offset<file.size){
