@@ -1,4 +1,5 @@
 import type { FootballMatch } from "@/lib/vitrine-football.functions";
+import { formatBrazilianWhatsApp } from "@/lib/vitrine-football-phone";
 import { footballBackgroundStyle } from "@/lib/vitrine-football-color";
 
 
@@ -124,8 +125,7 @@ export function FootballSchedulePoster({
   const story = format === "story";
   const landscape = format === "landscape";
   const branding = brand.trim() || "SUA MARCA";
-  const digits = contact.replace(/\D/g, "").slice(0, 13);
-  const phone = digits.length > 0 ? contact.trim().slice(0, 25) : "";
+  const phone = formatBrazilianWhatsApp(contact);
   const heading = headline.trim() || (kind === "featured" ? "JOGAÇO DO DIA" : "JOGOS DO DIA");
   const standardHeading = ["JOGOS DO DIA", "JOGOS DE HOJE", "EVENTOS DE HOJE"].includes(heading.toUpperCase());
   const headingFont = landscape ? 68 : story ? 98 : 72;

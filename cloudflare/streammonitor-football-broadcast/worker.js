@@ -4,14 +4,14 @@
 const SUPABASE="https://yiwyfiaqehhmngqngxvx.supabase.co";
 const MODEL="@cf/google/gemma-4-26b-a4b-it";
 const CHANNELS=[
-["Premiere",/\bpremiere\b/i],["SporTV",/\bsportv\b/i],
+["Premiere",/\bpremiere\b/i],["SporTV 3",/\bsportv\s*3\b/i],["SporTV 2",/\bsportv\s*2\b/i],["SporTV",/\bsportv\b(?!\s*[23])/i],
 ["Globo",/\b(?:rede globo|tv globo|(?:na|pela|da) globo|globo ao vivo)\b/i],
 ["ESPN 4",/\bespn\s*4\b/i],["ESPN 3",/\bespn\s*3\b/i],["ESPN 2",/\bespn\s*2\b/i],
 ["ESPN",/\bespn\b(?!\s*[234])/i],["Disney+",/\bdisney\s*\+/i],
 ["Prime Video",/\b(?:prime video|amazon prime)\b/i],
-["CazéTV",/\bcaze\s*tv\b/i],["Max",/\b(?:hbo\s*max|streaming max|na max)\b/i],
+["CazéTV",/\bcaz[eé]\s*tv\b/i],["Max",/\b(?:hbo\s*max|streaming max|na max)\b/i],
 ["TNT Sports",/\btnt(?:\s*sports?)?\b/i],
-["SBT",/\bsbt\b/i],["Band",/\b(?:tv band|band tv|band sports|bandsports)\b/i],
+["SBT",/\bsbt\b/i],["BandSports",/\bbandsports?\b/i],["Band",/\b(?:tv band|band tv|rede band|na band)\b/i],
 ["Record",/\b(?:tv record|record tv)\b/i],
 ["GOAT",/\b(?:canal goat|goat tv)\b/i],["DAZN",/\bdazn\b/i],
 ["FPF TV",/\bfpf\s*tv\b/i],["Rede Furacão",/\brede furacao\b/i],
@@ -34,29 +34,123 @@ const field=t=>str.match(new RegExp("<"+t+"(?:\\s[^>]*)?>([\\s\\S]*?)<\\/"+t+">"
 return {title:decode(field("title")),summary:decode(field("description")),date:decode(field("pubDate")),link:decode(field("link"))};
 });
 }
+
+const TRUSTED_PRESS=["ge.globo.com","espn.com.br","espn.com","lance.com.br",
+ "terra.com.br","uol.com.br","365scores.com","goal.com","cnn.com.br",
+ "cnnbrasil.com.br","gazetaesportiva.com","veja.abril.com.br",
+ "diariodonordeste.verdesmares.com.br","noataque.com.br","trivela.com.br",
+ "olhardigital.com.br","band.uol.com.br"];
+function isTrustedPress(link){
+ try{
+  const u=new URL(link),host=u.hostname.toLowerCase();
+  return u.protocol==="https:"&&!u.username&&!u.password&&!u.port&&
+   TRUSTED_PRESS.some(domain=>host===domain||host.endsWith("."+domain));
+ }catch{return false;}
+}
+async function rss(url){
+ try{
+  const r=await fetch(url,{
+   headers:{accept:"application/rss+xml,application/xml"},
+   redirect:"error",signal:AbortSignal.timeout(4200)
+  });
+  return r.ok?parseRss((await r.text()).slice(0,220000)):[];
+ }catch{return [];}
+}
+function nearMatchDay(row,day){
+ const t=Date.parse(row.date),d=Date.parse(day+"T12:00:00Z");
+ return !Number.isFinite(t)||Math.abs(t-d)<=5*86400000;
+}
+async function pageText(link){
+ if(!isTrustedPress(link))return "";
+ try{
+  const r=await fetch(link,{redirect:"error",headers:{accept:"text/html"},
+   signal:AbortSignal.timeout(4200)});
+  if(!r.ok||!String(r.headers.get("content-type")||"").includes("text/html"))return "";
+  if(Number(r.headers.get("content-length")||0)>900000)return "";
+  return (await r.text()).slice(0,360000)
+   .replace(/<(script|style|noscript|svg)\b[^>]*>[\s\S]*?<\/\1>/gi," ")
+   .replace(/<\/(?:p|li|div|h[1-6]|tr|article|section)>/gi," . ")
+   .replace(/<[^>]*>/g," ").replace(/&nbsp;|&#160;/gi," ")
+   .replace(/&amp;/gi,"&").replace(/&quot;/gi,'"')
+   .replace(/&#39;|&apos;/gi,"'").replace(/\s+/g," ").trim();
+ }catch{return "";}
+}
+function fixtureExcerpt(source,match,isRoundup=false){
+ if(!source)return "";
+ const boundary="vitrinefixturedelimiter";
+ const txt=norm(source.replace(/\s+\.\s+/g," "+boundary+" ")),
+  h=canonicalTeam(match.home),a=canonicalTeam(match.away);
+ const aliases=s=>s==="paises baixos"?[s,"holanda","netherlands"]:
+  s==="alemanha"?[s,"germany"]:[s];
+ let at=-1;
+ for(const home of aliases(h)){
+  let pos=txt.indexOf(home),loops=0;
+  while(pos>=0&&loops++<30){
+   if(aliases(a).some(away=>{
+    const next=txt.indexOf(away,Math.max(0,pos-160));
+    return next>=0&&Math.abs(next-pos)<165;
+   })){at=pos;break;}
+   pos=txt.indexOf(home,pos+home.length);
+  }
+  if(at>=0)break;
+ }
+ if(at<0)return "";
+ if(isRoundup){
+  const before=txt.lastIndexOf(boundary,at);
+  const after=txt.indexOf(boundary,at);
+  const left=Math.max(0,before>=0?before+boundary.length:0,at-85);
+  const right=Math.min(txt.length,at+290,after>=0?after:txt.length);
+  return txt.slice(left,right);
+ }
+ const parts=[txt.slice(Math.max(0,at-70),at+410)];
+ for(const keyword of ["onde assistir","transmissao","na tv","canais","streaming"]){
+  const pos=txt.indexOf(keyword);
+  if(pos>=0&&Math.abs(pos-at)<1400)parts.push(txt.slice(Math.max(0,pos-45),pos+300));
+ }
+ return [...new Set(parts)].join(" | ").slice(0,850);
+}
 async function search(match){
-const query=match.home+" "+match.away+" onde assistir "+match.date.split("-").reverse().join("/");
-const urls=[
-"https://www.bing.com/news/search?"+new URLSearchParams({q:query,format:"rss",setmkt:"pt-BR"}),
-"https://news.google.com/rss/search?"+new URLSearchParams({q:query+" when:7d",hl:"pt-BR",gl:"BR",ceid:"BR:pt-419"})
-];
-const batches=await Promise.all(urls.map(async link=>{
-try{const r=await fetch(link,{headers:{Accept:"application/rss+xml, application/xml"},signal:AbortSignal.timeout(4000)});
-if(!r.ok)return [];return parseRss((await r.text()).slice(0,220000));}catch{return [];}
-}));
-const seen=new Set();
-return batches.flat().filter(row=>{
-if(!includes(row.title,match.home)||!includes(row.title,match.away))return false;
-if(seen.has(row.title))return false;seen.add(row.title);
-if(row.date){const t=Date.parse(row.date),d=Date.parse(match.date+"T12:00:00Z");
-if(Number.isFinite(t)&&Math.abs(t-d)>8*86400000)return false;}
-return true;
-}).slice(0,8);
+ const p=match.date.split("-"),shortDate=p[2]+"/"+p[1]+"/"+p[0];
+ const q=match.home+" x "+match.away+" onde assistir "+shortDate;
+ const q2=match.home+" "+match.away+" transmissao TV "+p[2]+"/"+p[1];
+ const feeds=await Promise.all([
+  rss("https://www.bing.com/news/search?"+new URLSearchParams({q,format:"rss",setmkt:"pt-BR"})),
+  rss("https://news.google.com/rss/search?"+new URLSearchParams({
+   q:q2+" when:7d",hl:"pt-BR",gl:"BR",ceid:"BR:pt-419"})),
+  rss("https://www.bing.com/search?"+new URLSearchParams({q:q2,format:"rss"}))
+ ]);
+ const seen=new Set();
+ const rows=feeds.flat().filter(row=>{
+  const txt=row.title+" "+row.summary,key=norm(row.title);
+  if(!nearMatchDay(row,match.date)||seen.has(key)||
+   !includes(txt,match.home)||!includes(txt,match.away))return false;
+  seen.add(key);return true;
+ }).slice(0,7);
+ const pages=await Promise.all(rows.slice(0,3).map(row=>pageText(row.link)));
+ return rows.map((row,i)=>({
+  ...row,summary:fixtureExcerpt(pages[i]||"",match)||row.summary
+ }));
+}
+async function dailyArticles(day){
+ const [y,m,d]=day.split("-"),q="jogos de hoje "+d+"/"+m+"/"+y+" onde assistir TV";
+ const feeds=await Promise.all([
+  rss("https://www.bing.com/news/search?"+new URLSearchParams({q,format:"rss",setmkt:"pt-BR"})),
+  rss("https://news.google.com/rss/search?"+new URLSearchParams({
+   q:q+" when:7d",hl:"pt-BR",gl:"BR",ceid:"BR:pt-419"}))
+ ]);
+ const seen=new Set(),rows=feeds.flat().filter(row=>{
+  const key=norm(row.title);
+  if(seen.has(key)||!nearMatchDay(row,day)||
+   !/jogos de hoje|futebol ao vivo|agenda esportiva/i.test(row.title))return false;
+  seen.add(key);return true;
+ }).slice(0,5);
+ const pages=await Promise.all(rows.map(row=>pageText(row.link)));
+ return rows.map((row,i)=>({...row,text:pages[i]||""}));
 }
 // Gather fixture-specific news in parallel, but invoke Workers AI once per entire request.
 
 const CHANNEL_CACHE_DAYS=30;
-const QUIET_CACHE_SECONDS=1800;
+const QUIET_CACHE_SECONDS=480;
 const TEAM_ALIASES={
  "holanda":"paises baixos","netherlands":"paises baixos","netherland":"paises baixos",
  "the netherlands":"paises baixos","alemanha":"alemanha","germany":"alemanha",
@@ -84,6 +178,7 @@ async function getConfirmed(m,env){
   if(!env.VERIFIED_BROADCASTS)return null;
   const value=await env.VERIFIED_BROADCASTS.get(fixtureKey(m),{type:"json"});
   if(!value||!Array.isArray(value.channels))return null;
+  if(!value.channels.length && Date.now()-Date.parse(value.lastVerified||0)>QUIET_CACHE_SECONDS*1000)return null;
   return {id:m.id,channels:value.channels.filter(c=>typeof c==="string").slice(0,3),
     sourceCount:value.sourceCount||0,verified:value.channels.length>0,
     provider:value.provider||"Cloudflare: fonte verificada",
@@ -108,19 +203,28 @@ async function researchBatch(matches,env){
  const stored=await Promise.all(matches.map(m=>getConfirmed(m,env)));
  const pending=matches.filter((m,i)=>!stored[i]);
  if(!pending.length)return stored;
+ const dates=[...new Set(pending.map(m=>m.date))];
+ const roundups=new Map(await Promise.all(dates.map(async date=>
+  [date,await dailyArticles(date).catch(()=>[])])));
  const data=await Promise.all(pending.map(async m=>{
-  const rows=await search(m).catch(()=>[]);
+  const direct=await search(m).catch(()=>[]);
+  const agenda=(roundups.get(m.date)||[]).map(row=>{
+    const excerpt=fixtureExcerpt(row.text,m,true);
+    return excerpt?{title:m.home+" x "+m.away+" - "+m.date,
+      summary:excerpt,date:row.date,link:row.link}:null;
+  }).filter(Boolean);
+  const rows=[...direct,...agenda].slice(0,10);
   const evidence=row=>String(row.title+" "+row.summary).normalize("NFD")
    .replace(/[\u0300-\u036f]/g,"").toLowerCase();
   const possible=CHANNELS.filter(([,re])=>rows.some(row=>re.test(evidence(row))))
    .map(([name])=>name);
   return {id:m.id,home:m.home,away:m.away,date:m.date,possible,
-   evidence:rows.slice(0,4).map(row=>({
+   evidence:rows.slice(0,6).map(row=>({
     title:row.title.slice(0,160),summary:row.summary.slice(0,200),
     source:row.link||""
    }))};
  }));
- const withEvidence=data.filter(m=>m.possible.length>0);
+ const withEvidence=data.filter(m=>m.possible.length>0).slice(0,28);
  const resultMap=new Map(withEvidence.map(m=>[m.id,m.possible.slice(0,3)]));
  if(withEvidence.length && env.AI){
   try{
@@ -132,7 +236,7 @@ async function researchBatch(matches,env){
       'Responda JSON puro {"results":[{"id":"...","channels":["..."]}]}. '+
       'Use somente canais presentes na lista possible do próprio jogo e expressamente '+
       'mencionados nas evidências. Não invente emissoras ou horários. '+
-      'Na dúvida mantenha somente os canais comprovados.'},
+      'Na dúvida mantenha somente os canais comprovados. Ignore canais de outros confrontos.'},
      {role:"user",content:JSON.stringify({jogos:withEvidence})}
     ],max_tokens:1500,temperature:0.1,stream:false,
     chat_template_kwargs:{enable_thinking:false}
