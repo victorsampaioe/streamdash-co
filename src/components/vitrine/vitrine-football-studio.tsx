@@ -484,7 +484,7 @@ export function VitrineFootballStudio() {
     {games.isError&&<Card className="p-8 text-center text-destructive" role="alert">
       {games.error instanceof Error?games.error.message:"Não foi possível consultar os jogos de hoje."}
     </Card>}
-    {games.isSuccess&&posterMode==="today"&&groups.length===0&&<Card className="p-8 text-center">
+    {games.isSuccess&&crestsReady&&posterMode==="today"&&groups.length===0&&<Card className="p-8 text-center">
       Não há partidas com escudos ou bandeiras reais dos dois times disponíveis nesta data. Atualize os jogos para tentar novamente.
     </Card>}
     {games.isSuccess&&posterMode==="finished"&&finishedMatches.length>0&&!selectedFinal&&
