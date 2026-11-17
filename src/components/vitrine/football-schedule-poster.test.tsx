@@ -90,6 +90,21 @@ describe("Vitrine Futebol — imagens e exportação", () => {
     expect(html).not.toContain("HORÁRIOS E TRANSMISSÕES SUJEITOS A CONFIRMAÇÃO");
     expect(html).toContain("height:210px");
   });
+  it("exibe nomes em pt-BR sem truncar as letras nas fitas",()=>{
+    const national:FootballMatch={...sample,home:"Singapore",away:"Brazil",
+      league:"Amistoso Internacional",homeBadge:"",awayBadge:""};
+    const html=renderToStaticMarkup(
+      <FootballSchedulePoster {...base} matches={[national]}
+        badgeImages={{["home:"+national.id]:"data:image/png;base64,SG",
+          ["away:"+national.id]:"data:image/png;base64,BR"}}/>
+    );
+    expect(html).toContain(">Singapura</span>");
+    expect(html).toContain(">Brasil</span>");
+    expect(html).not.toContain(">Singapore</span>");
+    expect(html).not.toContain("-webkit-line-clamp");
+    expect(html).toContain("data:image/png;base64,SG");
+    expect(html).toContain("data:image/png;base64,BR");
+  });
   it("mantém quatro confrontos completos no mesmo banner",()=>{
     const second={...sample,id:"match-second",home:"Athletico-PR",away:"Paraná Clube"};
     const third={...sample,id:"match-third",home:"Flamengo",away:"Palmeiras"};
