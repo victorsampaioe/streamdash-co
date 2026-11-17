@@ -1,7 +1,8 @@
 // Envio de alertas IPTV pelos canais do dono do servidor (Telegram/Discord/Webhook/Email).
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
+import { formatIptvAlertMessage, type IptvNoticeItem } from "./iptv-telegram-format";
 
-export type IptvAlertItem = { title: string; detail?: string; severity?: string };
+export type IptvAlertItem = IptvNoticeItem;
 
 /** Compatibilidade: um único alerta. */
 export async function notifyServerIptvAlert(serverId: string, title: string, detail: string) {
@@ -15,33 +16,31 @@ export async function notifyServerIptvAlerts(serverId: string, items: IptvAlertI
     .from("servers").select("id, owner_id, name, host, iptv_username, iptv_password").eq("id", serverId).maybeSingle();
   if (!server) return;
 
-  const esc = (s: unknown) =>
-    String(s ?? "-").replace(/[<>&]/g, (c) => ({ "<": "&lt;", ">": "&gt;", "&": "&amp;" }[c]!));
-
-  const plainLines = items.map((i) => `• ${i.title}${i.detail ? ` — ${i.detail}` : ""}`);
-  const htmlLines = items.map((i) => `• <b>${esc(i.title)}</b>${i.detail ? ` — ${esc(i.detail)}` : ""}`);
-  const header = items.length > 1
-    ? `📡 ${items.length} problemas detectados`
-    : "📡 Alerta do servidor";
-
-  // Cópia sempre para o Telegram do admin
+  const displayServer = {
+    name: server.name, host: server.host,
+    hasCredentials: Boolean(server.iptv_username && server.iptv_password),
+  };
+  const observedAt = new Date();
+  // Admin receives the owner identity; reseller messages omit private email.
+  // Both versions share the exact same clear, HTML-escaped alert details.
+  const message = formatIptvAlertMessage(displayServer, items, { observedAt, mode: "html" });
+  const plainMessage = formatIptvAlertMessage(displayServer, items, { observedAt, mode: "plain" });
   try {
     const { notifyAdmin } = await import("./admin-telegram.server");
     const { data: prof } = await supabaseAdmin
       .from("profiles").select("full_name, email").eq("id", server.owner_id).maybeSingle();
-    await notifyAdmin(
-      `📡 <b>${esc(header)}</b>\n${esc(server.name)}\n${htmlLines.join("\n")}\n` +
-        `Revenda: ${esc(prof?.full_name)} — ${esc(prof?.email)}\n` +
-        `Host: <code>${esc(server.host)}</code>` +
-        (server.iptv_username && server.iptv_password ? "\nIPTV: credenciais ativas ✅" : ""),
-    );
-  } catch { /* ignore */ }
+    const adminMessage = formatIptvAlertMessage(displayServer, items, {
+      observedAt, mode: "html", admin: true,
+      owner: { name: prof?.full_name, email: prof?.email },
+    });
+    await notifyAdmin(adminMessage);
+  } catch (error) {
+    console.warn("[iptv-alert] Admin notification unavailable", error instanceof Error ? error.name : "unknown");
+  }
 
   const { data: channels } = await supabaseAdmin
     .from("alert_channels").select("*").eq("owner_id", server.owner_id).eq("enabled", true);
   if (!channels?.length) return;
-
-  const message = `${header}\n${server.name}\n${plainLines.join("\n")}`;
 
   await Promise.allSettled(channels.map(async (ch: { id: string; kind: string; target: string }) => {
     try {
@@ -54,13 +53,13 @@ export async function notifyServerIptvAlerts(serverId: string, items: IptvAlertI
         await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ chat_id: chatId, text: message }),
+          body: JSON.stringify({ chat_id: chatId, text: message, parse_mode: "HTML", disable_web_page_preview: true }),
         });
       } else if (ch.kind === "discord") {
         await fetch(ch.target, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ username: "StreamMonitor IPTV", content: message }),
+          body: JSON.stringify({ username: "StreamMonitor IPTV", content: plainMessage }),
         });
       } else if (ch.kind === "webhook") {
         await fetch(ch.target, {
