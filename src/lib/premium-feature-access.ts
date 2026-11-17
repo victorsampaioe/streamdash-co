@@ -31,6 +31,14 @@ export async function requirePaidFeature(context:{userId:string;supabase:any;cla
 export const checkPremiumFeature=createServerFn({method:"GET"})
  .middleware([requireSupabaseAuth])
  .handler(async ({context})=>{
-   await requirePaidFeature(context);
-   return {allowed:true};
+   try {
+     await requirePaidFeature(context);
+     return {allowed:true,preview:false};
+   } catch (error) {
+     // Only a confirmed lack of a paid entitlement enables the read-only
+     // showroom. Database/auth errors remain fail-closed, not demo-access.
+     if(error instanceof Error && error.message.startsWith("ASSINATURA_NECESSARIA:"))
+       return {allowed:false,preview:true};
+     throw error;
+   }
  });
