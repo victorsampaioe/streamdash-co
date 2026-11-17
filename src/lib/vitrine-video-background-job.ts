@@ -55,6 +55,20 @@ export function prepareVideoJobSource(modelId:string,url:string){
   video.load();
   media={modelId,url,video};
 }
+/** Keep the playing source genuinely visible inside the persistent status
+ * dock. Safari may throttle or refuse decoding a fully hidden video element,
+ * even while the user remains in the same browser tab.
+ */
+export function attachVideoJobPreviewHost(host:HTMLElement|null){
+  if(!media||typeof document==="undefined")return;
+  if(host&&running){
+    host.appendChild(media.video);
+    media.video.style.cssText="width:100%;height:100%;object-fit:contain;background:#000;border-radius:10px;pointer-events:none;";
+  }else{
+    document.body.appendChild(media.video);
+    media.video.style.cssText="position:fixed;left:0;bottom:0;width:2px;height:2px;opacity:0.001;pointer-events:none;z-index:-1;";
+  }
+}
 function releaseSource(){
   if(!media)return;
   media.video.pause();
