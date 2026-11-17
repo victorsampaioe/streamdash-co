@@ -5,6 +5,7 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { requirePaidFeature } from "@/lib/premium-feature-access";
 import { isFeaturedFootballFixture } from "@/lib/vitrine-football-competitions";
 import { extractFtwbBroadcasts } from "@/lib/vitrine-ftwb-broadcasts";
+import { isFinishedFootballStatus,matchFinalScore,preferFootballFixture } from "@/lib/vitrine-football-results";
 
 /**
  * FTWB is the primary fixture provider for subscribed users.
@@ -208,14 +209,20 @@ function apiFixture(record: unknown, index: number, date: string): FootballMatch
   const id = String(pick(record,"id","jogo_id","match_id")||[date,home,away,index].join(":"));
   const rawStatus=pick(record,"status","situacao","state","match_status");
   const status=typeof rawStatus==="string"?rawStatus:String(pick(rawStatus,"nome","name","slug")||"");
-  const score=pick(record,"placar","score","resultado");
-  const homeScore=pick(record,"placar_mandante","placar_casa","home_score","score_home") ??
-    pick(score,"mandante","casa","home","home_score");
-  const awayScore=pick(record,"placar_visitante","placar_fora","away_score","score_away") ??
-    pick(score,"visitante","fora","away","away_score");
-  const finished=/encerrado|finaliz|finished|concluid|ft|ended/i.test(status);
-  const scoreLabel=finished&&homeScore!=null&&awayScore!=null?
-    String(homeScore)+" × "+String(awayScore):"";
+  const score=pick(record,"placar","score","resultado","resultado_final","final_score");
+  const homeScore=pick(record,"placar_mandante","placar_casa","home_score","score_home",
+    "gols_mandante","gols_casa","homeScore","homeGoals","golsMandante") ??
+    pick(score,"mandante","casa","home","home_score","homeScore","gols_casa") ??
+    pick(homeObj,"gols","score","placar");
+  const awayScore=pick(record,"placar_visitante","placar_fora","away_score","score_away",
+    "gols_visitante","gols_fora","awayScore","awayGoals","golsVisitante") ??
+    pick(score,"visitante","fora","away","away_score","awayScore","gols_fora") ??
+    pick(awayObj,"gols","score","placar");
+  // Never publish an inferred result: both FTWB's final status AND numeric
+  // scores for both sides must be present. A live score is not final.
+  const finalScore=isFinishedFootballStatus(status)
+    ?matchFinalScore(homeScore,awayScore,score):null;
+  const scoreLabel=finalScore?.label||"";
   const player = pick(record,"jogador_destaque","jogador","featured_player");
   const playerPhoto = teamLogo({image:pick(player,"foto","imagem","image","photo")});
   return {id,home,away,homeId:"",awayId:"",homeBadge:matchBadge(record,homeObj,"home"),awayBadge:matchBadge(record,awayObj,"away"),
@@ -266,14 +273,12 @@ export const getVitrineFootballMatches = createServerFn({ method: "POST" })
       .filter((match):match is FootballMatch=>match!==null)
       .filter(match=>match.day===data.date && isFeaturedFootballFixture(match.league,match.home,match.away));
     const unique=new Map<string,FootballMatch>();
-    const completeness=(match:FootballMatch)=>Number(Boolean(match.homeBadge))+
-      Number(Boolean(match.awayBadge))+(match.broadcasts?.length||0)*3+
-      Number(/^\d{2}:\d{2}$/.test(match.time));
-    // Multiple status queries may return the same game; keep the richest FTWB row.
+    // Preserve verified finished status and official score even if the
+    // no-status query has more broadcaster or badge metadata.
     for(const match of candidates){
       const id=[simplify(match.home),simplify(match.away),match.day].join("|");
       const old=unique.get(id);
-      if(!old||completeness(match)>completeness(old))unique.set(id,match);
+      unique.set(id,old?preferFootballFixture(old,match):match);
     }
     const matches=[...unique.values()];
     // Only TV channels may come from Cloudflare when FTWB does not specify them.
