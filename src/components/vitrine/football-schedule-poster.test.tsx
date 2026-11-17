@@ -101,15 +101,21 @@ describe("Vitrine Futebol — imagens e exportação", () => {
     expect(html).toContain("Horário indisponível");
     expect(html).not.toContain("00:00");
   });
-  it("desenha campo de futebol bem discreto e preserva marca d’água da revenda",()=>{
+  it("usa o estádio aprovado na prévia e no PNG e mantém a marca da revenda",()=>{
     const html=renderToStaticMarkup(<FootballSchedulePoster {...base} logo="data:image/png;base64,MARCA" />);
-    expect(html).toContain('data-testid="football-stadium-background"');
-    expect(html).toContain('viewBox="0 0 1080 1080"');
-    expect(html).toContain('cx="540" cy="695"');
-    expect(html).toContain('M-75 244 Q540 25 1160 244');
-    expect(html).toContain('opacity=".26"');
+    expect(html).toContain('data-testid="football-stadium-image"');
+    expect(html).toContain("/assets/vitrine-futebol-estadio.webp");
     expect(html).toContain('src="data:image/png;base64,MARCA"');
     expect(html).not.toContain("HORÁRIOS E TRANSMISSÕES SUJEITOS");
+  });
+  it("muda a tonalidade do fundo ao trocar a cor da arte",()=>{
+    const blue=renderToStaticMarkup(<FootballSchedulePoster {...base} accent="#146df2"/>);
+    const red=renderToStaticMarkup(<FootballSchedulePoster {...base} accent="#ee1519"/>);
+    const green=renderToStaticMarkup(<FootballSchedulePoster {...base} accent="#0ea56d"/>);
+    expect(blue).toContain("/assets/vitrine-futebol-estadio.webp");
+    expect(red).toContain("/assets/vitrine-futebol-estadio.webp");
+    expect(blue.match(/hue-rotate\([^)]*\)/)?.[0]).not.toEqual(red.match(/hue-rotate\([^)]*\)/)?.[0]);
+    expect(green.match(/hue-rotate\([^)]*\)/)?.[0]).not.toEqual(red.match(/hue-rotate\([^)]*\)/)?.[0]);
   });
   it("não inventa times quando não há jogos", () => {
     const html = renderToStaticMarkup(<FootballSchedulePoster {...base} matches={[]} />);
