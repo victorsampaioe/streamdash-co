@@ -3,6 +3,7 @@ import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { requirePaidFeature } from "@/lib/premium-feature-access";
 import { isMajorFootballCompetition, isYouthFootballFixture } from "@/lib/vitrine-football-competitions";
+import { extractFtwbBroadcasts } from "@/lib/vitrine-ftwb-broadcasts";
 
 /**
  * FTWB is the primary fixture provider for subscribed users.
@@ -152,8 +153,8 @@ function teamLogo(source: unknown): string {
   try {
     const parsed=new URL(value.trim().startsWith("//")?"https:"+value.trim():value.trim(),"https://ftwb.notiffly.com.br");
     if(!["http:","https:"].includes(parsed.protocol))return "";
-    // Browsers refuse mixed-content images; try secure transport for HTTP image URLs.
-    if(parsed.protocol==="http:")parsed.protocol="https:";
+    // Preserve the actual URL from FTWB; never fabricate a new image address.
+    if(parsed.protocol==="http:")return "";
     return parsed.toString();
   }catch{return "";}
 }
@@ -168,33 +169,6 @@ function matchBadge(record:unknown,team:unknown,side:"home"|"away"):string{
   const nested=pick(candidates,side==="home"?"home":"away",side==="home"?"mandante":"visitante",side==="home"?"casa":"fora");
   const value=first||nested;
   return value?teamLogo(typeof value==="string"?value:{image:value}):"";
-}
-/** Use only broadcaster names present in the FTWB record. */
-function getBroadcasts(record:unknown):string[]{
- const raw=pick(record,"canais","transmissoes","transmissao","onde_assistir","broadcast","tv",
-   "tvNetworks","ondeAssistir","broadcasts","streaming","transmission","channels",
-   "emissoras","plataformas");
- const found:string[]=[];
- const read=(value:unknown,depth=0):void=>{
-  if(value==null||depth>4)return;
-  if(Array.isArray(value)){for(const item of value)read(item,depth+1);return}
-  if(typeof value==="string"){
-   for(const piece of value.split(/[,;|]/)){
-    const name=piece.trim();
-    if(name&&!/^(sem transmiss[aã]o|transmiss[aã]o n[aã]o confirmada|a confirmar|n[aã]o informado|tbd|n\/a|null)$/i.test(name)
-      &&!found.includes(name))found.push(name);
-   }
-   return;
-  }
-  if(typeof value==="object"){
-   const name=pick(value,"nome","name","canal","channel","emissora","plataforma","titulo","title","label");
-   if(name!==undefined)read(name,depth+1);
-   else for(const key of ["canais","channels","transmissoes","transmissao","emissoras","plataformas","tv","streaming"]){
-    const nested=pick(value,key);if(nested!==undefined)read(nested,depth+1);
-   }
-  }
- };
- read(raw);return found.slice(0,3);
 }
 function apiFixture(record: unknown, index: number, date: string): FootballMatch | null {
   const nested=pick(record,"times","equipes","teams");
@@ -244,7 +218,7 @@ function apiFixture(record: unknown, index: number, date: string): FootballMatch
   const player = pick(record,"jogador_destaque","jogador","featured_player");
   const playerPhoto = teamLogo({image:pick(player,"foto","imagem","image","photo")});
   return {id,home,away,homeId:"",awayId:"",homeBadge:matchBadge(record,homeObj,"home"),awayBadge:matchBadge(record,awayObj,"away"),
-    league,leagueId:simplify(league),...when,broadcasts:getBroadcasts(record),
+    league,leagueId:simplify(league),...when,broadcasts:extractFtwbBroadcasts(record),
     playerPhoto,playerName:playerPhoto ? teamName(player) : "",status,scoreLabel};
 }
 /** Server-side: the FTWB key never reaches the browser or git. */
