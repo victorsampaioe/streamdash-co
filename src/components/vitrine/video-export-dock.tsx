@@ -1,9 +1,10 @@
-import {useEffect,useSyncExternalStore} from "react";
+import {useEffect,useRef,useSyncExternalStore} from "react";
 import {Link} from "@tanstack/react-router";
 import {Download,LoaderCircle,CheckCircle2,AlertTriangle,Video} from "lucide-react";
 import {Button} from "@/components/ui/button";
 import {
   subscribeToVideoJob,getVideoJobSnapshot,isVideoJobRunning,downloadVideoJob,
+  attachVideoJobPreviewHost,
 } from "@/lib/vitrine-video-background-job";
 
 /**
@@ -19,6 +20,12 @@ export function VideoExportDock(){
     subscribeToVideoJob,getVideoJobSnapshot,getVideoJobSnapshot
   );
   const running=job.status==="preparing"||job.status==="rendering";
+  const previewHost=useRef<HTMLDivElement>(null);
+  useEffect(()=>{
+    if(!running)return;
+    attachVideoJobPreviewHost(previewHost.current);
+    return()=>attachVideoJobPreviewHost(null);
+  },[running]);
   useEffect(()=>{
     if(!running)return;
     const warn=(event:BeforeUnloadEvent)=>{
@@ -44,6 +51,9 @@ export function VideoExportDock(){
       </div>
       <span className="text-xs font-bold text-blue-200">{job.percent}%</span>
     </div>
+    {running&&<div ref={previewHost}
+      className="mt-3 h-[118px] overflow-hidden rounded-lg border border-white/15 bg-black"
+      aria-label="Vídeo sendo processado"/>}
     {running&&<div className="mt-2 h-2 overflow-hidden rounded-full bg-white/15">
       <div className="h-full bg-blue-400 transition-[width] duration-300"
         style={{width:job.percent+"%"}}/>
