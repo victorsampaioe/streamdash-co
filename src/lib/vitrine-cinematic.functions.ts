@@ -225,18 +225,32 @@ export const getCinematicBannerBrand=createServerFn({method:"GET"})
     const ownerId=context.userId;
     const {supabaseAdmin}=await import("@/integrations/supabase/client.server");
     const db=supabaseAdmin as any;
-    const [promo,page,profile]=await Promise.all([
+    // Many resellers already uploaded their logo in the player, help
+    // center or app settings rather than the promotional profile. Read only
+    // records owned by the authenticated reseller, never another tenant.
+    const [promo,page,help,player,app,profile]=await Promise.all([
       db.from("promo_brand_settings")
         .select("brand_name,logo_url,whatsapp,primary_color")
         .eq("owner_id",ownerId).maybeSingle(),
       db.from("reseller_pages")
         .select("display_name,logo_url,whatsapp,primary_color")
         .eq("owner_id",ownerId).maybeSingle(),
+      db.from("reseller_help_settings")
+        .select("display_name,logo_url,whatsapp")
+        .eq("owner_id",ownerId).maybeSingle(),
+      db.from("player_settings")
+        .select("brand_name,logo_url,primary_color")
+        .eq("profile_id",ownerId).order("updated_at",{ascending:false})
+        .limit(1).maybeSingle(),
+      db.from("reseller_app_config")
+        .select("app_name,logo_url,primary_color")
+        .eq("reseller_id",ownerId).order("updated_at",{ascending:false})
+        .limit(1).maybeSingle(),
       db.from("profiles")
         .select("full_name,phone,whatsapp")
         .eq("id",ownerId).maybeSingle(),
     ]);
-    if(promo.error||page.error||profile.error)
+    if([promo,page,help,player,app,profile].some(x=>x.error))
       throw new Error("Não foi possível carregar sua identidade de revenda.");
     const saved=promo.data as {
       brand_name?:string|null;logo_url?:string|null;
@@ -246,17 +260,30 @@ export const getCinematicBannerBrand=createServerFn({method:"GET"})
       display_name?:string|null;logo_url?:string|null;
       whatsapp?:string|null;primary_color?:string|null;
     }|null;
+    const support=help.data as {
+      display_name?:string|null;logo_url?:string|null;whatsapp?:string|null;
+    }|null;
+    const playerBrand=player.data as {
+      brand_name?:string|null;logo_url?:string|null;primary_color?:string|null;
+    }|null;
+    const resellerApp=app.data as {
+      app_name?:string|null;logo_url?:string|null;primary_color?:string|null;
+    }|null;
     const me=profile.data as {
       full_name?:string|null;whatsapp?:string|null;phone?:string|null;
     }|null;
     const first=(...values:(string|null|undefined)[])=>
       values.map(x=>String(x??"").trim()).find(Boolean)||"";
-    const resolvedColor=first(saved?.primary_color,registered?.primary_color);
+    const resolvedColor=first(saved?.primary_color,registered?.primary_color,
+      playerBrand?.primary_color,resellerApp?.primary_color);
     const brand:CinematicBrand={
       owner_id:ownerId,
-      name:first(saved?.brand_name,registered?.display_name,me?.full_name)||"Minha Revenda",
-      logo_url:first(saved?.logo_url,registered?.logo_url),
-      whatsapp:first(saved?.whatsapp,registered?.whatsapp,me?.whatsapp,me?.phone),
+      name:first(saved?.brand_name,registered?.display_name,support?.display_name,
+        playerBrand?.brand_name,resellerApp?.app_name,me?.full_name)||"Minha Revenda",
+      logo_url:first(saved?.logo_url,registered?.logo_url,support?.logo_url,
+        playerBrand?.logo_url,resellerApp?.logo_url),
+      whatsapp:first(saved?.whatsapp,registered?.whatsapp,
+        support?.whatsapp,me?.whatsapp,me?.phone),
       color:colorPattern.test(resolvedColor)?resolvedColor:"#2563eb",
     };
     return {currentOwner:ownerId,brands:[brand]};
