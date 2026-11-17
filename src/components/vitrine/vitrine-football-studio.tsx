@@ -311,8 +311,11 @@ export function VitrineFootballStudio() {
       (navigator.platform==="MacIntel" && navigator.maxTouchPoints>1);
     if(mode==="download"){
       if(isAppleMobile){
-        // Safari may ignore download on Blob URLs. Open the image to save in Photos.
+        // This download now occurs in the actual click (the File was prepared
+        // beforehand). Also show the full-size preview for Save to Photos.
+        downloadBlob(file);
         showImage(file,index);
+        toast.info("PNG enviado para Downloads. Você também pode salvar em Fotos pela imagem.");
       }else{
         downloadBlob(file);
         toast.success("PNG pronto para salvar.");
