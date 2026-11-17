@@ -55,7 +55,13 @@ jobs:
             > /tmp/football-chrome.log 2>&1 &
           CHROME_PID=$!
           trap 'kill "$CHROME_PID" "$SERVER" 2>/dev/null || true' EXIT
-          node scripts/verify-football-browser.mjs
+          if ! node scripts/verify-football-browser.mjs; then
+            echo "Chrome launch/debug logs:"
+            tail -50 /tmp/football-chrome.log || true
+            echo "Vite server:"
+            tail -50 /tmp/vite-football.log || true
+            exit 1
+          fi
       - name: Verify published blog article routes
         run: |
           grep -Fq "BlogComoEvitarQuedaIptvRouteImport" src/routeTree.gen.ts
