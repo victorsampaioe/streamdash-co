@@ -10,7 +10,7 @@ import { Download, RefreshCw, Trophy, Send } from "lucide-react";
 import { FootballSchedulePoster, FOOTBALL_POSTER_PALETTES } from "@/components/vitrine/football-schedule-poster";
 import { getVitrineFootballMatches, type FootballMatch } from "@/lib/vitrine-football.functions";
 import { getVitrineFootballExportImages } from "@/lib/vitrine-football-export.functions";
-import { createFootballArtworkFile } from "@/lib/vitrine-football-dom-export";
+import { createFootballArtworkFile, describeExportError } from "@/lib/vitrine-football-dom-export";
 import { sendVitrineFootballToRegisteredTelegram } from "@/lib/vitrine-football-telegram.functions";
 
 const today = () => new Intl.DateTimeFormat("sv-SE", {
@@ -206,8 +206,8 @@ export function VitrineFootballStudio() {
     }catch(error){
       // Never send a second, visually different fallback drawing that loses
       // crests, brand logos or the rest of the original design.
-      throw new Error("Falha ao exportar a arte idêntica à prévia: "+
-        (error instanceof Error?error.message:"tente atualizar os jogos."));
+      console.error("[vitrine-futebol] export arte "+(index+1),error);
+      throw new Error("Falha ao exportar a arte "+(index+1)+": "+describeExportError(error));
     }finally{restore();}
   }
   function downloadBlob(file:File){
@@ -363,14 +363,18 @@ export function VitrineFootballStudio() {
         <ResponsivePoster>{renderArtwork(group)}</ResponsivePoster>
       </Card>)}
     </div>}
-    {/* A dedicated, unscaled copy at 1080×1080 for downloads; never inside a clipped card. */}
+    {/* Unscaled 1080×1080 copies for export, laid out at the viewport origin
+        (not far off-screen, which WebKit may skip) inside a 1px clipping box,
+        so the native layout is identical to the preview and invisible. */}
     {groups.length>0&&<div data-testid="football-export-stage" aria-hidden="true"
-      style={{position:"fixed",left:-1800,top:0,width:baseSize,pointerEvents:"none",zIndex:-100}}>
+      style={{position:"fixed",left:0,top:0,width:1,height:1,overflow:"hidden",opacity:1,pointerEvents:"none",zIndex:-100}}>
+      <div style={{width:baseSize}}>
       {groups.map((group,index)=><div key={group.map(m=>m.id).join("|")}
         ref={el=>{exportRefs.current[index]=el}}
         style={{width:baseSize,height:baseSize,overflow:"hidden"}}>
         {renderArtwork(group)}
       </div>)}
+      </div>
     </div>}
   </main>;
 }

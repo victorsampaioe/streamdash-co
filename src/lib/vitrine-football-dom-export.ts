@@ -82,8 +82,8 @@ export async function createFootballArtworkFile(
       imagePlaceholder:"data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw==",
       style:{transform:"none",transformOrigin:"top left",margin:"0"},
     };
-    const isWebKit=typeof navigator!=="undefined"&&/AppleWebKit/i.test(navigator.userAgent)&&
-      !/Chrome|Chromium|CriOS|Edg|Android/i.test(navigator.userAgent);
+    const isWebKit=typeof navigator!=="undefined"&&(/CriOS|FxiOS|iPhone|iPad/i.test(navigator.userAgent)||/AppleWebKit/i.test(navigator.userAgent)&&
+      !/Chrome|Chromium|Edg|Android|Firefox/i.test(navigator.userAgent));
     if(isWebKit){
       try{
         const warm=await withTimeout(toCanvas(source,options),20000,"Pré-captura Safari");
