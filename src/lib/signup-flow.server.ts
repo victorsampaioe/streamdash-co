@@ -4,6 +4,7 @@ import * as sec from "./signup-security.server";
 import * as v from "./signup-validation";
 import { notifyAdminSignup } from "./admin-telegram.server";
 import { sanitizeAttributionInput } from "./ad-attribution";
+import {sendSignupPaymentEmail} from "./signup-payment-email.server";
 
 export interface SignupInput {
   name?: unknown;
@@ -264,6 +265,16 @@ export async function handleSignup(input: SignupInput, headers: Headers): Promis
     } catch (e) {
       sec.log("telegram notify failed", { message: (e as Error).message });
     }
+  }
+
+  // 10. Cloudflare transactional onboarding email to unpaid registrants.
+  // Uses a private, unique database claim; never sends without a server-side
+  // Email Sending API token and never blocks or rolls back a valid signup.
+  try {
+    const emailStatus=await sendSignupPaymentEmail({userId,email,name:displayName});
+    if(emailStatus==="failed")sec.log("signup welcome email failed",{userId});
+  }catch(e){
+    sec.log("signup welcome email unavailable",{reason:e instanceof Error?e.name:"unknown"});
   }
 
   return {
