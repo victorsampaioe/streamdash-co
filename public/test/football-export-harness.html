@@ -4,7 +4,7 @@
 #preview{max-width:550px;margin:auto}img{display:block;width:100%;height:auto}</style>
 </head><body><div id="preview"></div><pre id="results" data-status="pending">running</pre>
 <script type="module">
-import { drawFootballPngFallback } from "/src/lib/vitrine-football-canvas-fallback.ts";
+import { drawFootballPngFallback, gridCardGeometry, classicCardGeometry } from "/src/lib/vitrine-football-canvas-fallback.ts";
 const status=document.querySelector("#results");
 function artImage(color,label){
   const c=document.createElement("canvas");c.width=c.height=256;
@@ -54,11 +54,15 @@ try{
     ctx.drawImage(bitmap,0,0);bitmap.close();
     if(!existsInRect(ctx,[237,16,174],220,145,430,370))
       throw Error("Logo colorida desapareceu da imagem");
+    const classic=classicCardGeometry(count);
     for(let i=0;i<count;i++){
-      const rowY=367+i*((count===1?205:153)+18);
-      if(!existsInRect(ctx,[24,229,170],140,(rowY+52)*2,125,130))
+      const rowY=classic.rowTop+i*(classic.cardHeight+classic.gap)+classic.badgeOffset;
+      const rightX=1031-classic.badgeSize-24;
+      if(!existsInRect(ctx,[24,229,170],73*2,rowY*2,
+          classic.badgeSize*2,classic.badgeSize*2))
         throw Error("Escudo mandante ausente na partida "+(i+1));
-      if(!existsInRect(ctx,[244,163,22],1890,(rowY+52)*2,140,130))
+      if(!existsInRect(ctx,[244,163,22],rightX*2,rowY*2,
+          classic.badgeSize*2,classic.badgeSize*2))
         throw Error("Escudo visitante ausente na partida "+(i+1));
     }
     const foot=ctx.getImageData(100,2460,500,70).data;
@@ -203,12 +207,11 @@ try{
     }
     if(!existsInRect(ctx,[237,16,174],770,65,630,180))
       throw Error("Modelo Grade: logo da revenda desapareceu");
-    const rowH=Math.floor((1147-322-5*13)/6);
-    const size=Math.min(112,Math.max(79,Math.round(rowH*.71)));
-    const top=rowH>=145?Math.max(37,rowH-size-6):Math.max(28,rowH-size-7);
+    const geometry=gridCardGeometry(12);
+    const size=geometry.badgeSize;
     for(let i=0;i<12;i++){
       const row=Math.floor(i/2),col=i%2,x=43+col*(488+18),
-        y=322+row*(rowH+13)+top;
+        y=geometry.rowTop+row*(geometry.cardHeight+geometry.gapY)+geometry.badgeOffset;
       if(!existsInRect(ctx,[24,229,170],(x+15)*2,y*2,size*2,size*2))
         throw Error("Modelo Grade: escudo mandante ausente do jogo "+(i+1));
       if(!existsInRect(ctx,[244,163,22],(x+488-size-15)*2,y*2,size*2,size*2))
@@ -259,14 +262,14 @@ try{
   const nc=document.createElement("canvas");nc.width=2160;nc.height=2700;
   const nctx=nc.getContext("2d",{willReadFrequently:true});
   nctx.drawImage(nineBmp,0,0);nineBmp.close();
-  const nineRowH=Math.min(170,Math.floor((1147-322-4*13)/5));
-  const nineSize=Math.min(112,Math.max(79,Math.round(nineRowH*.71)));
-  const nineOffset=nineRowH>=145?Math.max(37,nineRowH-nineSize-6)
-    :Math.max(28,nineRowH-nineSize-7);
+  const nineGeom=gridCardGeometry(9);
+  const nineSize=nineGeom.badgeSize;
   if(nineSize<105)throw Error("Modelo 2: escudo de nove jogos continua pequeno");
   for(let i=0;i<nineMatches.length;i++){
     const row=Math.floor(i/2),col=i%2;
-    const x=43+col*(488+18),y=322+row*(nineRowH+13)+nineOffset;
+    const orphan=i===nineMatches.length-1;
+    const x=43+(orphan?(488+18)/2:col*(488+18));
+    const y=nineGeom.rowTop+row*(nineGeom.cardHeight+nineGeom.gapY)+nineGeom.badgeOffset;
     if(!existsInRect(nctx,[24,229,170],(x+15)*2,y*2,nineSize*2,nineSize*2)||
        !existsInRect(nctx,[244,163,22],
          (x+488-nineSize-15)*2,y*2,nineSize*2,nineSize*2))
@@ -309,10 +312,9 @@ try{
   testCanvas.width=2160;testCanvas.height=2700;
   const alignment=testCanvas.getContext("2d",{willReadFrequently:true});
   alignment.drawImage(alignedBitmap,0,0);alignedBitmap.close();
-  const rh=Math.floor((1147-322-5*13)/6);
-  const bs=Math.min(112,Math.max(79,Math.round(rh*.71)));
-  const offset=rh>=145?Math.max(37,rh-bs-6):Math.max(28,rh-bs-7);
-  const start=322+offset;
+  const alignedGeometry=gridCardGeometry(12);
+  const bs=alignedGeometry.badgeSize;
+  const start=alignedGeometry.rowTop+alignedGeometry.badgeOffset;
   const homeBounds=colorBounds(alignment,[24,229,170],(43+15)*2,start*2,bs*2,bs*2);
   const awayBounds=colorBounds(alignment,[244,163,22],
     (43+488-bs-15)*2,start*2,bs*2,bs*2);
@@ -329,6 +331,52 @@ try{
   out.push({case:"badge-normalization",badges:24,
     visibleCenters:[homeBounds.y,awayBounds.y],expectedCenter,
     heights:[homeBounds.height,awayBounds.height],bytes:alignedFile.size});
+  // Regression: both types must OMIT missing-club-logo matches, and make
+  // remaining cards much bigger. No fake initials are drawn.
+  for(const kind of ["today","grid"]){
+    const bad={...fixtures12[0],id:"bad-club",
+      home:"Sem Emblema",away:"Rival Teste",
+      league:"Brasileirão Série A",homeBadge:"",awayBadge:away};
+    const shortlist=[bad,...fixtures12.slice(0,3)];
+    const textDrawn=[],saved=CanvasRenderingContext2D.prototype.fillText;
+    CanvasRenderingContext2D.prototype.fillText=function(value,...args){
+      textDrawn.push(String(value));return saved.call(this,value,...args);
+    };
+    let file;
+    try{
+      file=await drawFootballPngFallback({matches:shortlist,kind,
+        day:"2026-11-17",accent:"#146df2",logo,contact:"85998545009",
+        name:"Revenda Exemplo",filename:"missing-club-"+kind+".png"});
+    }finally{CanvasRenderingContext2D.prototype.fillText=saved}
+    if(textDrawn.some(t=>t.includes("Sem Emblema")))
+      throw Error("Jogo com logo ausente não foi excluído do modelo "+kind);
+    const bmp=await createImageBitmap(file);
+    if(bmp.width!==2160||bmp.height!==2700)
+      throw Error("Export "+kind+" com jogos removidos perdeu resolução");
+    const target=document.createElement("canvas");
+    target.width=2160;target.height=2700;
+    const t=target.getContext("2d",{willReadFrequently:true});
+    t.drawImage(bmp,0,0);bmp.close();
+    const count=shortlist.length-1;
+    if(kind==="today"){
+      const g=classicCardGeometry(count);
+      if(g.cardHeight<=classicCardGeometry(4).cardHeight)
+        throw Error("Modelo 1 não ampliou os cartões remanescentes");
+      if(!existsInRect(t,[24,229,170],73*2,
+           (g.rowTop+g.badgeOffset)*2,g.badgeSize*2,g.badgeSize*2))
+        throw Error("Modelo 1 não redistribuiu o escudo restante");
+    }else{
+      const g=gridCardGeometry(count);
+      if(g.cardHeight<=gridCardGeometry(12).cardHeight)
+        throw Error("Modelo 2 não ampliou os cartões remanescentes");
+      const x=43, y=g.rowTop+g.badgeOffset;
+      if(!existsInRect(t,[24,229,170],(x+15)*2,y*2,
+           g.badgeSize*2,g.badgeSize*2))
+        throw Error("Modelo 2 não redistribuiu o escudo restante");
+    }
+    out.push({case:"skip-missing-crest",model:kind,shown:count,hidden:1,
+      width:2160,height:2700,bytes:file.size});
+  }
   const uniqueBackdrops=new Set(backdropSamples.map(v=>v.sample.join(",")));
   if(uniqueBackdrops.size!==backdropSamples.length)
     throw Error("Fundo de estádio não muda em todas as cores: "+JSON.stringify(backdropSamples));
