@@ -7,6 +7,7 @@ import {
   prepareVideoJobSource,startVideoExportInDocument,getVideoJobSnapshot,
   subscribeToVideoJob,dismissVideoJob,downloadVideoJob,isVideoJobRunning,
   clearVideoJobOnSignOut,
+  attachVideoJobPreviewHost,
 } from "./vitrine-video-background-job";
 
 type FakeVideo={
@@ -62,6 +63,9 @@ describe("MP4 persistente na navegação",()=>{
     // Simulate leaving the React page: there is no route-local cleanup to call,
     // so the DOM-owned source is still attached and rendering continues.
     unsubscribe();
+    const previewHost={appendChild:vi.fn()} as unknown as HTMLElement;
+    attachVideoJobPreviewHost(previewHost);
+    expect(previewHost.appendChild).toHaveBeenCalledWith(players[0]);
     expect(vi.mocked(players[0].remove)).not.toHaveBeenCalled();
     finish(new Blob([new Uint8Array(8192)],{type:"video/mp4"}));
     await vi.waitFor(()=>expect(getVideoJobSnapshot().status).toBe("ready"));
