@@ -1,17 +1,16 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { toBlob, toPng } from "html-to-image";
 import { supabase } from "@/integrations/supabase/client";
 import { prepareTransparentLogo } from "@/lib/vitrine-image";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Download, RefreshCw, Trophy, Send, X, Image as ImageIcon } from "lucide-react";
+import { Download, RefreshCw, Trophy, Send } from "lucide-react";
 import { FootballSchedulePoster, FOOTBALL_POSTER_PALETTES } from "@/components/vitrine/football-schedule-poster";
 import { getVitrineFootballMatches, type FootballMatch } from "@/lib/vitrine-football.functions";
 import { getVitrineFootballExportImages } from "@/lib/vitrine-football-export.functions";
-import { drawFootballPngFallback } from "@/lib/vitrine-football-canvas-fallback";
+import { createFootballArtworkFile } from "@/lib/vitrine-football-dom-export";
 import { sendVitrineFootballToRegisteredTelegram } from "@/lib/vitrine-football-telegram.functions";
 
 const today = () => new Intl.DateTimeFormat("sv-SE", {
@@ -55,8 +54,6 @@ export function VitrineFootballStudio() {
   const [prepareErrors,setPrepareErrors]=useState<Record<number,string>>({});
   const [retrying,setRetrying]=useState<number|null>(null);
   const [telegramSending,setTelegramSending]=useState(false);
-  const [imagePreview, setImagePreview] = useState<{url:string;name:string;index:number;file:File}|null>(null);
-  const imagePreviewUrl = useRef<string|null>(null);
   const exportRefs = useRef<(HTMLDivElement | null)[]>([]);
   const [day, setDay] = useState(today);
 
@@ -154,18 +151,6 @@ export function VitrineFootballStudio() {
 
 
 
-  useEffect(()=>()=>{if(imagePreviewUrl.current)URL.revokeObjectURL(imagePreviewUrl.current);},[]);
-
-  function showImage(file:File,index:number){
-    if(imagePreviewUrl.current)URL.revokeObjectURL(imagePreviewUrl.current);
-    const url=URL.createObjectURL(file);
-    imagePreviewUrl.current=url;
-    setImagePreview({url,name:file.name,index,file});
-  }
-  function closeImage(){
-    setImagePreview(null);
-    // Keep the blob URL alive until after React unmounts the preview image.
-  }
   async function awaitAssets(node:HTMLElement){
     if(document.fonts?.ready){
       await Promise.race([document.fonts.ready,new Promise<void>(resolve=>setTimeout(resolve,3000))]);
@@ -207,74 +192,22 @@ export function VitrineFootballStudio() {
     };
   }
   async function createPngFile(index:number):Promise<{file:File;degraded:boolean}>{
+    // Vitrine Banner's successful approach: export the exact DOM-based artwork.
+    // One file is generated once and reused by download AND registered Telegram.
     const node=exportRefs.current[index];
     if(!node)throw new Error("Arte completa ainda não carregada.");
     const name="stream-monitor-futebol-"+day+"-arte-"+(index+1)+".png";
-    const fixtures=groups[index]||[];
-    const featured=fixtures.find(match=>!!match.playerPhoto&&validatedPhotos[match.playerPhoto]===true);
-    // Downloadable images must be same-origin/data URLs. Merely adding
-    // crossOrigin on an <img> doesn't make a third-party image canvas-safe.
-    const imageUrls=[transparentLogo,featured?.playerPhoto,
-      ...fixtures.flatMap(match=>[match.homeBadge,match.awayBadge])]
-      .filter((url):url is string=>typeof url==="string"&&/^https:\/\//i.test(url));
-    let resolved:Record<string,string>={};
-    if(imageUrls.length){
-      try{
-        const response=await inlineAssets({data:{urls:[...new Set(imageUrls)].slice(0,16)}});
-        resolved=response.images;
-      }catch{
-        // Retain original URLs for hosts that already allow CORS.
-        // A failed logo request must never remove the rest of the artwork.
-      }
-    }
-    const imageSrc=(url:string)=>resolved[url]||url;
-    const drawSafely=()=>drawFootballPngFallback({
-      matches:fixtures.map(match=>({
-        ...match,
-        homeBadge:imageSrc(match.homeBadge||""),
-        awayBadge:imageSrc(match.awayBadge||"")
-      })),
-      day,accent,logo:imageSrc(transparentLogo),
-      playerPhoto:imageSrc(featured?.playerPhoto||""),
-      contact:brand.contact,name:brand.name,filename:name
-    });
-    const isiOS=/iPhone|iPad|iPod/i.test(navigator.userAgent)||
-      (navigator.platform==="MacIntel"&&navigator.maxTouchPoints>1);
-    // WebKit's html-to-image foreignObject occasionally drops entire image
-    // layers even when the PNG is technically 1080x1080. Avoid that path.
-    if(isiOS){
-      return {file:await drawSafely(),degraded:false};
-    }
     await awaitAssets(node);
     const restore=await inlinePosterAssets(node);
-    const options={
-      width:baseSize,height:baseSize,pixelRatio:1,backgroundColor:"#071227",
-      cacheBust:false,skipAutoScale:true,
-    };
     try{
-      let blob:Blob|null=null;
-      try{blob=await toBlob(node,options);}catch{/* Retry without remote fonts. */}
-      if(!blob||blob.size<1000){
-        try{blob=await toBlob(node,{...options,skipFonts:true});}catch{/* Try data URL. */}
-      }
-      if(!blob||blob.size<1000){
-        try{
-          const data=await toPng(node,{...options,skipFonts:true});
-          blob=await (await fetch(data)).blob();
-        }catch{/* Use the Canvas fallback. */}
-      }
-      let valid=false;
-      if(blob && blob.size>1000){
-        const head=await blob.slice(0,24).arrayBuffer();
-        if(head.byteLength===24){
-          const data=new DataView(head);
-          valid=data.getUint32(0)===0x89504e47 &&
-            data.getUint32(4)===0x0d0a1a0a &&
-            data.getUint32(16)===baseSize && data.getUint32(20)===baseSize;
-        }
-      }
-      if(valid&&blob)return {file:new File([blob],name,{type:"image/png"}),degraded:false};
-      return {file:await drawSafely(),degraded:false};
+      await awaitAssets(node);
+      const file=await createFootballArtworkFile(node,name);
+      return {file,degraded:false};
+    }catch(error){
+      // Never send a second, visually different fallback drawing that loses
+      // crests, brand logos or the rest of the original design.
+      throw new Error("Falha ao exportar a arte idêntica à prévia: "+
+        (error instanceof Error?error.message:"tente atualizar os jogos."));
     }finally{restore();}
   }
   function downloadBlob(file:File){
@@ -368,16 +301,10 @@ export function VitrineFootballStudio() {
       void sendImageToMyTelegram(file);
       return;
     }
-    const isAppleMobile=/iPhone|iPad|iPod/i.test(navigator.userAgent) ||
-      (navigator.platform==="MacIntel" && navigator.maxTouchPoints>1);
-    if(isAppleMobile){
-      downloadBlob(file);
-      showImage(file,index);
-      toast.info("PNG enviado para Downloads. Você também pode salvar em Fotos pela imagem.");
-    }else{
-      downloadBlob(file);
-      toast.success("PNG pronto para salvar.");
-    }
+    // Same file-download flow as Vitrine Banner on all devices.
+    // Don't open a separate full-screen browser preview on iPhone.
+    downloadBlob(file);
+    toast.success("Banner completo salvo em PNG.");
   }
 
   return <main className="mx-auto max-w-7xl space-y-6 px-4 py-8">
@@ -444,36 +371,6 @@ export function VitrineFootballStudio() {
         style={{width:baseSize,height:baseSize,overflow:"hidden"}}>
         {renderArtwork(group)}
       </div>)}
-    </div>}
-    {imagePreview&&<div role="dialog" aria-modal="true" aria-label="Salvar ou compartilhar arte de futebol"
-      className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 p-4"
-      onClick={closeImage}>
-      <div className="w-full max-w-md space-y-4 rounded-2xl border border-border bg-card p-4 shadow-2xl"
-        onClick={event=>event.stopPropagation()}>
-        <div className="flex items-center justify-between">
-          <strong className="flex items-center gap-2 text-base"><ImageIcon size={19}/> Arte {imagePreview.index+1} em PNG</strong>
-          <Button type="button" size="icon" variant="ghost" onClick={closeImage} aria-label="Fechar imagem">
-            <X size={18}/>
-          </Button>
-        </div>
-        <img src={imagePreview.url} alt="Prévia final da arte para salvar"
-          className="aspect-square w-full rounded-lg object-contain"/>
-        <p className="text-sm text-muted-foreground">
-          No iPhone, toque e segure para salvar em Fotos. “Enviar ao meu Telegram” encaminha a imagem para o Telegram cadastrado na sua revenda.
-        </p>
-        <div className="flex flex-wrap gap-2">
-          <a className="inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-primary px-4 text-sm font-semibold text-primary-foreground"
-            href={imagePreview.url} download={imagePreview.name} target="_blank" rel="noopener">
-            <Download size={16}/> Salvar PNG
-          </a>
-          <Button type="button" variant="outline" disabled={telegramSending}
-            onClick={()=>void sendImageToMyTelegram(imagePreview.file)}>
-            <Send size={16} className="mr-2"/>
-            {telegramSending?"Enviando…":"Enviar ao meu Telegram"}
-          </Button>
-          <Button type="button" variant="outline" onClick={closeImage}>Fechar</Button>
-        </div>
-      </div>
     </div>}
   </main>;
 }
