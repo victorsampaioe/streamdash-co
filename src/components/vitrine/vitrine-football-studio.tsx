@@ -343,7 +343,7 @@ export function VitrineFootballStudio() {
         {!crestsReady&&groups.length>0&&<p className="mt-1 text-xs text-blue-300" role="status">Preparando escudos das equipes para a prévia e o PNG…</p>}
         {crestsReady&&(crestMedia.unavailable.length>0||groups.some(group=>group.some(m=>!m.homeBadge||!m.awayBadge)))&&
           <p className="mt-1 text-xs text-amber-400" role="status">
-            Há escudos indisponíveis na fonte. O sistema não exportará uma arte sem escudos ou bandeiras; atualize os jogos ou confira a fonte.
+            Algumas imagens não puderam ser carregadas pela fonte. A arte será gerada usando bandeiras das seleções ou iniciais das equipes quando necessário, sem espaços vazios.
           </p>}
       </div>
       <Button type="button" variant="outline" disabled={games.isFetching} onClick={()=>{setDay(today());void games.refetch()}}>
