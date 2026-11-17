@@ -38,6 +38,29 @@ function ResponsivePoster({children}:{children:ReactNode}) {
     </div>
   </div>;
 }
+/** Keep crest data URLs small, to avoid Safari's large SVG/foreignObject memory limit. */
+async function compactCrest(input:string):Promise<string>{
+  return new Promise(resolve=>{
+    const image=new Image();
+    image.onload=()=>{
+      try{
+        const scale=Math.min(1,192/Math.max(image.naturalWidth,image.naturalHeight));
+        const canvas=document.createElement("canvas");
+        canvas.width=Math.max(1,Math.round(image.naturalWidth*scale));
+        canvas.height=Math.max(1,Math.round(image.naturalHeight*scale));
+        const context=canvas.getContext("2d");
+        if(!context)return resolve(input);
+        context.drawImage(image,0,0,canvas.width,canvas.height);
+        const compact=canvas.toDataURL("image/png");
+        canvas.width=canvas.height=0;
+        resolve(compact.length>30?compact:input);
+      }catch{resolve(input)}
+    };
+    image.onerror=()=>resolve(input);
+    image.src=input;
+  });
+}
+
 const safeColor = (input: string | undefined) => /^#[0-9a-f]{6}$/i.test(input||"") ? input! : "#146df2";
 
 /** Automated posters: four fixtures (eight clubs) per artwork, with automatic pagination. */
@@ -155,10 +178,17 @@ export function VitrineFootballStudio() {
         inlineAssetsRef.current({data:{urls}})
       ));
       if(cancelled)return;
-      const images:Record<string,string>={};
+      const received:Record<string,string>={};
       for(const result of results){
-        if(result.status==="fulfilled")Object.assign(images,result.value.images||{});
+        if(result.status==="fulfilled")Object.assign(received,result.value.images||{});
       }
+      // Rasterise on the client only after the authenticated server has vetted
+      // the URL and inlined its image. No cross-origin drawing or unknown hosts.
+      const images:Record<string,string>={};
+      await Promise.all(Object.entries(received).map(async([url,data])=>{
+        images[url]=await compactCrest(data);
+      }));
+      if(cancelled)return;
       setCrestMedia({key:crestKey,ready:true,images,
         unavailable:crestUrls.filter(url=>!images[url])});
     })();
@@ -268,6 +298,7 @@ export function VitrineFootballStudio() {
     let cancelled=false;
     setPreparedExports({});
     setPrepareErrors({});
+    if(!crestsReady)return ()=>{cancelled=true};
     const handle=window.setTimeout(()=>{
       void (async()=>{
         for(let i=0;i<groups.length&&!cancelled;i++){
@@ -289,6 +320,7 @@ export function VitrineFootballStudio() {
     return cached?.signature===exportSignature?cached.file:null;
   };
   async function retryExport(index:number){
+    if(!crestsReady){toast.info("Preparando escudos dos times para a arte.");return;}
     if(retrying!==null)return;
     setRetrying(index);
     setPrepareErrors(prev=>{const next={...prev};delete next[index];return next});
@@ -333,6 +365,7 @@ export function VitrineFootballStudio() {
     }finally{setTelegramSending(false);}
   }
   function exportPoster(index:number,mode:"download"|"telegram"){
+    if(!crestsReady){toast.info("Carregando escudos dos times. A exportação ficará pronta automaticamente.");return;}
     const file=readyFile(index);
     if(!file){
       if(prepareErrors[index]){void retryExport(index);return;}
@@ -355,6 +388,11 @@ export function VitrineFootballStudio() {
         <div className="flex items-center gap-2 text-xs font-bold tracking-[.18em] text-blue-400"><Trophy size={17}/> STREAM MONITOR</div>
         <h1 className="mt-2 text-3xl font-black tracking-tight">Eventos de hoje · Artes automáticas</h1>
         <p className="mt-2 text-sm text-muted-foreground">Até 4 confrontos por arte, apenas das principais competições do dia. Escudos reais aparecem quando disponíveis.</p>
+        {!crestsReady&&groups.length>0&&<p className="mt-1 text-xs text-blue-300" role="status">Preparando escudos das equipes para a prévia e o PNG…</p>}
+        {crestsReady&&(crestMedia.unavailable.length>0||groups.some(group=>group.some(m=>!m.homeBadge||!m.awayBadge)))&&
+          <p className="mt-1 text-xs text-amber-400" role="status">
+            Alguns escudos não vieram da fonte ou não puderam ser recuperados. Eles serão identificados pelas iniciais do time, sem mostrar um escudo incorreto.
+          </p>}
       </div>
       <Button type="button" variant="outline" disabled={games.isFetching} onClick={()=>{setDay(today());void games.refetch()}}>
         <RefreshCw size={16} className={games.isFetching?"mr-2 animate-spin":"mr-2"}/> Atualizar eventos
