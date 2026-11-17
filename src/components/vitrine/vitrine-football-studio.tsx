@@ -207,7 +207,7 @@ export function VitrineFootballStudio() {
     [sourceMatches,crestsReady,crestMedia.images]);
   const groups=useMemo(()=>{
     if(posterMode==="finished")return selectedFinal&&selectedBadges.visible.length?[selectedBadges.visible]:[];
-    const chunkSize=todayLayout==="grid"?12:4;
+    const chunkSize=todayLayout==="grid"?10:4;
     const chunks:FootballMatch[][]=[];
     for(let i=0;i<selectedBadges.visible.length;i+=chunkSize)
       chunks.push(selectedBadges.visible.slice(i,i+chunkSize));
@@ -376,7 +376,7 @@ export function VitrineFootballStudio() {
         <p className="mt-2 text-sm text-muted-foreground">{posterMode==="finished"
           ?"Selecione uma partida encerrada com placar confirmado pela FTWB. A arte inclui os dois times, resultado, sua logo e WhatsApp."
           :todayLayout==="grid"
-            ?"Modelo Grade de Jogos: até 12 partidas por arte em duas colunas, escudos, horários, transmissões, logo e WhatsApp. PNG em 2160 × 2700."
+            ?"Modelo Grade de Jogos: até 10 partidas por arte em duas colunas fixas, escudos, horários, transmissões, logo e WhatsApp. PNG em 2160 × 2700."
             :"Modelo Clássico: até 4 confrontos por arte, com identidade Stream Monitor. PNG em 2160 × 2700."}</p>
         {!crestsReady&&sourceMatches.length>0&&<p className="mt-1 text-xs text-blue-300" role="status">Validando escudos reais dos dois times antes de montar as artes…</p>}
         {crestsReady&&selectedBadges.hidden.length>0&&
@@ -417,7 +417,7 @@ export function VitrineFootballStudio() {
           className={"rounded-xl border p-3 text-left transition-colors "+
             (todayLayout==="grid"?"border-blue-400 bg-blue-500/15":"border-border hover:border-blue-400/50")}>
           <span className="block text-sm font-bold">Modelo 2 · Grade de Jogos</span>
-          <span className="mt-1 block text-xs text-muted-foreground">Até 12 jogos em duas colunas, no mesmo banner.</span>
+          <span className="mt-1 block text-xs text-muted-foreground">Até 10 jogos em duas colunas, sem alterar o tamanho dos cartões.</span>
         </button>
       </div>
       <p className="text-xs text-muted-foreground">
