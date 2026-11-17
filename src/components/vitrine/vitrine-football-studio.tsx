@@ -12,6 +12,7 @@ import { FootballSchedulePoster, FOOTBALL_POSTER_PALETTES } from "@/components/v
 import { getVitrineFootballMatches, type FootballMatch } from "@/lib/vitrine-football.functions";
 import { getVitrineFootballExportImages } from "@/lib/vitrine-football-export.functions";
 import { drawFootballPngFallback } from "@/lib/vitrine-football-canvas-fallback";
+import { sendVitrineFootballToRegisteredTelegram } from "@/lib/vitrine-football-telegram.functions";
 
 const today = () => new Intl.DateTimeFormat("sv-SE", {
   timeZone: "America/Fortaleza", year: "numeric", month: "2-digit", day: "2-digit",
@@ -44,6 +45,7 @@ const safeColor = (input: string | undefined) => /^#[0-9a-f]{6}$/i.test(input||"
 export function VitrineFootballStudio() {
   const load = useServerFn(getVitrineFootballMatches);
   const inlineAssets = useServerFn(getVitrineFootballExportImages);
+  const sendRegisteredTelegram = useServerFn(sendVitrineFootballToRegisteredTelegram);
   const [brand, setBrand] = useState<Branding>(fallbackBrand);
   const [transparentLogo, setTransparentLogo] = useState(fallbackBrand.logo);
   const [selectedColor, setSelectedColor] = useState<string | null>(null);
@@ -52,6 +54,7 @@ export function VitrineFootballStudio() {
   const [preparedExports,setPreparedExports]=useState<Record<number,{signature:string;file:File}>>({});
   const [prepareErrors,setPrepareErrors]=useState<Record<number,string>>({});
   const [retrying,setRetrying]=useState<number|null>(null);
+  const [telegramSending,setTelegramSending]=useState(false);
   const [imagePreview, setImagePreview] = useState<{url:string;name:string;index:number;file:File}|null>(null);
   const imagePreviewUrl = useRef<string|null>(null);
   const exportRefs = useRef<(HTMLDivElement | null)[]>([]);
@@ -300,6 +303,34 @@ export function VitrineFootballStudio() {
       setRetrying(null);
     }
   }
+
+  async function sendImageToMyTelegram(file:File){
+    if(telegramSending)return;
+    setTelegramSending(true);
+    try{
+      if(file.size>9*1024*1024){
+        throw new Error("Este PNG excede o limite de 9 MB para envio pelo bot.");
+      }
+      // Bot credentials and the recipient chat are resolved on the server,
+      // using only Telegram channels active for the signed-in reseller.
+      const pngDataUrl=await new Promise<string>((resolve,reject)=>{
+        const reader=new FileReader();
+        reader.onload=()=>{
+          const result=reader.result;
+          if(typeof result==="string")resolve(result);
+          else reject(new Error("Não foi possível abrir o PNG para envio."));
+        };
+        reader.onerror=()=>reject(new Error("Falha ao ler o arquivo PNG."));
+        reader.readAsDataURL(file);
+      });
+      const result=await sendRegisteredTelegram({data:{pngDataUrl,date:day}});
+      if(!result?.ok)throw new Error("Telegram não confirmou o recebimento.");
+      toast.success("Banner enviado ao Telegram cadastrado da sua revenda!");
+    }catch(error){
+      toast.error(error instanceof Error?error.message:
+        "Não foi possível enviar ao Telegram cadastrado.");
+    }finally{setTelegramSending(false);}
+  }
   function exportPoster(index:number,mode:"download"|"telegram"){
     const file=readyFile(index);
     if(!file){
@@ -307,47 +338,19 @@ export function VitrineFootballStudio() {
       toast.info("Preparando a arte completa em PNG. O botão ficará pronto automaticamente.");
       return;
     }
-    const isAppleMobile=/iPhone|iPad|iPod/i.test(navigator.userAgent) ||
-      (navigator.platform==="MacIntel" && navigator.maxTouchPoints>1);
-    if(mode==="download"){
-      if(isAppleMobile){
-        // This download now occurs in the actual click (the File was prepared
-        // beforehand). Also show the full-size preview for Save to Photos.
-        downloadBlob(file);
-        showImage(file,index);
-        toast.info("PNG enviado para Downloads. Você também pode salvar em Fotos pela imagem.");
-      }else{
-        downloadBlob(file);
-        toast.success("PNG pronto para salvar.");
-      }
+    if(mode==="telegram"){
+      void sendImageToMyTelegram(file);
       return;
     }
-    // Critical: called SYNCHRONOUSLY from user click, never after awaiting toBlob().
-    let canShare=typeof navigator.share==="function";
-    try{
-      if(canShare&&typeof navigator.canShare==="function"){
-        canShare=navigator.canShare({files:[file]});
-      }
-    }catch{canShare=false;}
-    if(canShare){
-      try{
-        void navigator.share({
-          files:[file],
-          title:"Eventos de hoje · Stream Monitor",
-          text:"🏆 Eventos de hoje! Confira os confrontos e as transmissões. "+brand.name
-        }).catch(error=>{
-          if(!(error instanceof DOMException&&error.name==="AbortError")){
-            showImage(file,index);
-            toast.info("Compartilhamento indisponível. Salve o PNG e envie pelo Telegram.");
-          }
-        });
-      }catch{
-        showImage(file,index);
-        toast.info("Compartilhamento indisponível. Salve o PNG e envie pelo Telegram.");
-      }
-    }else{
+    const isAppleMobile=/iPhone|iPad|iPod/i.test(navigator.userAgent) ||
+      (navigator.platform==="MacIntel" && navigator.maxTouchPoints>1);
+    if(isAppleMobile){
+      downloadBlob(file);
       showImage(file,index);
-      toast.info("Abra ou salve o PNG e compartilhe no Telegram.");
+      toast.info("PNG enviado para Downloads. Você também pode salvar em Fotos pela imagem.");
+    }else{
+      downloadBlob(file);
+      toast.success("PNG pronto para salvar.");
     }
   }
 
@@ -395,9 +398,9 @@ export function VitrineFootballStudio() {
             <Button type="button" size="sm" disabled={retrying!==null} onClick={()=>exportPoster(index,"download")}>
               <Download size={16} className="mr-2"/>{readyFile(index)?"Baixar PNG":prepareErrors[index]?"Tentar gerar PNG":"Preparando PNG…"}
             </Button>
-            <Button type="button" size="sm" variant="outline" disabled={retrying!==null}
+            <Button type="button" size="sm" variant="outline" disabled={retrying!==null||telegramSending}
               onClick={()=>exportPoster(index,"telegram")}>
-              <Send size={16} className="mr-2"/>{readyFile(index)?"Enviar ao Telegram":prepareErrors[index]?"Tentar gerar PNG":"Preparando PNG…"}
+              <Send size={16} className="mr-2"/>{telegramSending?"Enviando ao Telegram…":readyFile(index)?"Enviar ao meu Telegram":prepareErrors[index]?"Tentar gerar PNG":"Preparando PNG…"}
             </Button>
           </div>
         </div>
@@ -430,31 +433,18 @@ export function VitrineFootballStudio() {
         <img src={imagePreview.url} alt="Prévia final da arte para salvar"
           className="aspect-square w-full rounded-lg object-contain"/>
         <p className="text-sm text-muted-foreground">
-          No iPhone, toque e segure a imagem e escolha “Salvar em Fotos”. Para enviar ao Telegram, use o botão de compartilhar.
+          No iPhone, toque e segure para salvar em Fotos. “Enviar ao meu Telegram” encaminha a imagem para o Telegram cadastrado na sua revenda.
         </p>
         <div className="flex flex-wrap gap-2">
           <a className="inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-primary px-4 text-sm font-semibold text-primary-foreground"
             href={imagePreview.url} download={imagePreview.name} target="_blank" rel="noopener">
             <Download size={16}/> Salvar PNG
           </a>
-          <Button type="button" variant="outline" onClick={()=>{
-            if(typeof navigator.share!=="function"){
-              toast.info("Salve o PNG e abra a imagem pelo Telegram.");
-              return;
-            }
-            try{
-              void navigator.share({
-                files:[imagePreview.file],
-                title:"Eventos de hoje · Stream Monitor",
-                text:"🏆 Eventos de hoje! Confira os confrontos e transmissões. "+brand.name,
-              }).then(closeImage).catch(error=>{
-                if(!(error instanceof DOMException&&error.name==="AbortError"))
-                  toast.info("Salve o PNG e compartilhe pelo Telegram.");
-              });
-            }catch{
-              toast.info("Salve o PNG e compartilhe pelo Telegram.");
-            }
-          }}><Send size={16} className="mr-2"/> Compartilhar / Telegram</Button>
+          <Button type="button" variant="outline" disabled={telegramSending}
+            onClick={()=>void sendImageToMyTelegram(imagePreview.file)}>
+            <Send size={16} className="mr-2"/>
+            {telegramSending?"Enviando…":"Enviar ao meu Telegram"}
+          </Button>
           <Button type="button" variant="outline" onClick={closeImage}>Fechar</Button>
         </div>
       </div>
