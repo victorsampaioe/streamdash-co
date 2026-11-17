@@ -81,6 +81,11 @@ describe("Vitrine Futebol — imagens e exportação", () => {
     expect(html).not.toContain("Extra 2");
     expect(html).not.toContain("HORÁRIOS E TRANSMISSÕES SUJEITOS");
   });
+  it("mostra o telefone da revenda em formato (85) 99854-5009",()=>{
+    const html=renderToStaticMarkup(<FootballSchedulePoster {...base} contact="85998545009" />);
+    expect(html).toContain("(85) 99854-5009");
+    expect(html).not.toContain(">85998545009<");
+  });
   it("mostra só a logo no rodapé, sem escrever o nome Minha Revenda",()=>{
     const html=renderToStaticMarkup(<FootballSchedulePoster {...base} logo="data:image/png;base64,BRAND" />);
     expect(html).toContain('src="data:image/png;base64,BRAND"');
