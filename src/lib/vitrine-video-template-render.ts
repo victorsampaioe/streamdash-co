@@ -10,11 +10,17 @@ function rounded(ctx:CanvasRenderingContext2D,x:number,y:number,w:number,h:numbe
   const corner=Math.min(r,w/2,h/2);
   ctx.beginPath();ctx.roundRect(x,y,w,h,corner);ctx.closePath();
 }
+/** Stable branding geometry in native video coordinates.
+ * A single frame-independent layout is used for the preview and EVERY MP4 frame.
+ * The transparent logo is larger; the phone footer is intentionally compact.
+ */
 export function videoOverlayGeometry(width:number,height:number){
   const unit=Math.max(.1,Math.min(width/512,height/910));
+  const phoneW=378*unit;
   return {
-    scale:unit,logo:{x:18*unit,y:32*unit,w:184*unit,h:90*unit},
-    whatsapp:{x:20*unit,y:795*unit,w:472*unit,h:70*unit},
+    scale:unit,
+    logo:{x:16*unit,y:27*unit,w:226*unit,h:116*unit},
+    whatsapp:{x:(width-phoneW)/2,y:815*unit,w:phoneW,h:51*unit},
   };
 }
 export function paintResellerVideoFrame(ctx:CanvasRenderingContext2D,
@@ -27,34 +33,38 @@ export function paintResellerVideoFrame(ctx:CanvasRenderingContext2D,
   ctx.drawImage(source,(width-w)/2,(height-h)/2,w,h);
   const layout=videoOverlayGeometry(width,height),unit=layout.scale;
   const logo=layout.logo;
-  ctx.save();ctx.shadowColor="rgba(0,0,0,.45)";
-  ctx.shadowBlur=14*unit;ctx.fillStyle="rgba(2,8,27,.77)";
-  rounded(ctx,logo.x-6*unit,logo.y-5*unit,logo.w+12*unit,logo.h+10*unit,16*unit);
-  ctx.fill();ctx.restore();
+  // Only render the normalized transparent logo: no dark rectangular matte.
   if(brand.logo?.naturalWidth>0){
-    const scale=Math.min(logo.w/brand.logo.naturalWidth,logo.h/brand.logo.naturalHeight);
-    const lw=brand.logo.naturalWidth*scale,lh=brand.logo.naturalHeight*scale;
+    const logoScale=Math.min(logo.w/brand.logo.naturalWidth,logo.h/brand.logo.naturalHeight);
+    const lw=brand.logo.naturalWidth*logoScale,lh=brand.logo.naturalHeight*logoScale;
+    ctx.save();
+    ctx.shadowColor="rgba(0,0,0,.4)";
+    ctx.shadowBlur=5*unit;
     ctx.drawImage(brand.logo,logo.x+(logo.w-lw)/2,logo.y+(logo.h-lh)/2,lw,lh);
+    ctx.restore();
   }
-  // Footer is below the sample's original supported-device graphics.
+  // Compact, consistently sized footer beneath the original device row.
   const phone=layout.whatsapp;
-  ctx.save();ctx.shadowColor="rgba(0,0,0,.62)";ctx.shadowBlur=12*unit;
-  ctx.fillStyle="rgba(1,21,22,.91)";
-  rounded(ctx,phone.x,phone.y,phone.w,phone.h,16*unit);ctx.fill();
-  ctx.strokeStyle="#38d692";ctx.lineWidth=2*unit;ctx.stroke();ctx.restore();
+  ctx.save();ctx.shadowColor="rgba(0,0,0,.38)";ctx.shadowBlur=7*unit;
+  ctx.fillStyle="rgba(1,21,22,.86)";
+  rounded(ctx,phone.x,phone.y,phone.w,phone.h,11*unit);ctx.fill();
+  ctx.strokeStyle="#38d692";ctx.lineWidth=1.4*unit;ctx.stroke();ctx.restore();
   ctx.save();ctx.fillStyle="#12bd7b";
-  rounded(ctx,phone.x+12*unit,phone.y+13*unit,46*unit,44*unit,12*unit);ctx.fill();
-  ctx.fillStyle="#ffffff";ctx.font="bold "+(27*unit)+"px Arial,sans-serif";
+  rounded(ctx,phone.x+10*unit,phone.y+10*unit,32*unit,31*unit,8*unit);ctx.fill();
+  ctx.fillStyle="#ffffff";ctx.font="bold "+(18*unit)+"px Arial,sans-serif";
   ctx.textAlign="center";ctx.textBaseline="middle";
-  ctx.fillText("☎",phone.x+35*unit,phone.y+35*unit);
+  ctx.fillText("☎",phone.x+26*unit,phone.y+25.5*unit);
   ctx.textAlign="left";ctx.textBaseline="alphabetic";
-  ctx.fillStyle="#8ce7bc";ctx.font="bold "+(12*unit)+"px Arial,sans-serif";
-  ctx.fillText("FALE PELO WHATSAPP",phone.x+70*unit,phone.y+27*unit);
+  ctx.fillStyle="#8ce7bc";ctx.font="bold "+(9*unit)+"px Arial,sans-serif";
+  ctx.fillText("FALE PELO WHATSAPP",phone.x+52*unit,phone.y+18*unit);
   const label=formatCinematicWhatsApp(brand.whatsapp)||brand.whatsapp;
-  ctx.font="bold "+(25*unit)+"px Arial,sans-serif";
-  if(ctx.measureText(label).width>(phone.w-91*unit))
-    ctx.font="bold "+(20*unit)+"px Arial,sans-serif";
-  ctx.fillStyle="#ffffff";ctx.fillText(label,phone.x+70*unit,phone.y+55*unit);
+  let numberSize=18;
+  do{
+    ctx.font="bold "+(numberSize*unit)+"px Arial,sans-serif";
+    if(ctx.measureText(label).width<phone.w-66*unit)break;
+    numberSize-=1;
+  }while(numberSize>=12);
+  ctx.fillStyle="#ffffff";ctx.fillText(label,phone.x+52*unit,phone.y+40*unit);
   ctx.restore();
 }
 export async function renderResellerVideoMp4(opts:{
