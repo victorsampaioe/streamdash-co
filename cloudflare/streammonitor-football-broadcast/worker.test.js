@@ -60,6 +60,40 @@ describe("Cloudflare pesquisa transmissões por confronto",()=>{
     expect(ai.run).toHaveBeenCalledTimes(1);
     vi.unstubAllGlobals();
   });
+  it("retorna canais confirmados do cache KV para cada jogo, sem pesquisa ou IA",async()=>{
+    const lineup=[
+      {id:"1",home:"Irlanda",away:"Kosovo",date},
+      {id:"2",home:"Polônia",away:"Suécia",date},
+      {id:"3",home:"País de Gales",away:"Portugal",date},
+      {id:"4",home:"Singapura",away:"Brasil",date},
+    ];
+    const normalized=value=>value.normalize("NFD").replace(/[\\u0300-\\u036f]/g,"")
+      .toLowerCase().replace(/[^a-z0-9]+/g," ").trim();
+    const kv=new Map(lineup.map((m,index)=>[
+      "v3:"+date+":"+[normalized(m.home),normalized(m.away)].sort().join(":"),
+      {channels:[["Disney+"],["SporTV 2"],["SporTV"],["Globo","SporTV","ge tv"]][index],
+        provider:"Fontes verificadas",sourceCount:2}
+    ]));
+    const model={run:vi.fn()};
+    vi.stubGlobal("fetch",vi.fn(async(input)=>{
+      const u=String(input);
+      if(u.includes("/auth/v1/user"))return Response.json({id:"test-account"});
+      if(u.includes("/rest/v1/rpc/has_role"))return Response.json(true);
+      throw new Error("Não deve fazer pesquisa para canais já confirmados: "+u);
+    }));
+    const response=await worker.fetch(new Request("https://worker.example/broadcasts",{
+      method:"POST",headers:{authorization:"Bearer authenticated-test",
+        apikey:"sb_publishable_01234567890123456789","content-type":"application/json"},
+      body:JSON.stringify({matches:lineup})
+    }),{AI:model,VERIFIED_BROADCASTS:{get:async key=>kv.get(key)||null}});
+    expect(response.status).toBe(200);
+    const payload=await response.json();
+    expect(payload.results.map(item=>item.channels)).toEqual([
+      ["Disney+"],["SporTV 2"],["SporTV"],["Globo","SporTV","ge tv"]
+    ]);
+    expect(model.run).not.toHaveBeenCalled();
+    vi.unstubAllGlobals();
+  });
   it("não permite consulta sem autenticação",async()=>{
     const result=await worker.fetch(new Request("https://worker.example/broadcasts",{
       method:"POST",headers:{"content-type":"application/json"},
