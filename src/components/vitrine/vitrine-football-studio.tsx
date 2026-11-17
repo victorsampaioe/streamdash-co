@@ -175,7 +175,14 @@ export function VitrineFootballStudio() {
     const urls=[...new Set(images.map(img=>img.src).filter(src=>/^https:\/\//i.test(src)))];
     if(!urls.length)return ()=>{};
     const oldSources=images.map(img=>[img,img.src] as const);
-    const assets=await inlineAssets({data:{urls:urls.slice(0,16)}});
+    let assets:{images:Record<string,string>};
+    try{
+      assets=await inlineAssets({data:{urls:urls.slice(0,16)}});
+    }catch{
+      // If the image proxy is temporarily unavailable, attempt the original
+      // export normally instead of blocking all downloads.
+      return ()=>{};
+    }
     for(const image of images){
       const replacement=assets.images[image.src];
       if(replacement){
