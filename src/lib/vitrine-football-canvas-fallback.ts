@@ -269,6 +269,159 @@ function validatedPng(blob:Blob):Promise<void>{
   });
 }
 
+/** Branded stadium backdrop: every hue is calculated from the selected swatch.
+ * Stadium texture is desaturated before colorization so green grass / blue
+ * floodlights never leak into the red, purple, golden or custom-color art.
+ * Canvas-only rendering keeps preview, downloaded PNG and Telegram identical.
+ */
+function gridRgb(accent:string):[number,number,number]{
+  const match=/^#([0-9a-f]{6})$/i.exec(accent);
+  if(!match)return [20,109,242];
+  const hex=match[1];
+  return [0,2,4].map(i=>parseInt(hex.slice(i,i+2),16)) as [number,number,number];
+}
+function gridMix(a:[number,number,number],b:[number,number,number],mix:number){
+  const t=Math.max(0,Math.min(1,mix));
+  const values=a.map((value,i)=>Math.round(value*(1-t)+b[i]*t));
+  return "rgb("+values.join(",")+")";
+}
+function gridAlpha(rgb:[number,number,number],alpha:number){
+  return "rgba("+rgb.join(",")+","+Math.max(0,Math.min(1,alpha))+")";
+}
+export function gridBackdropSwatches(accent:string){
+  const rgb=gridRgb(accent),ink:[number,number,number]=[3,8,22];
+  return {
+    base:gridMix(rgb,ink,.72),
+    shadow:gridMix(rgb,ink,.90),
+    mid:gridMix(rgb,ink,.38),
+    highlight:gridMix(rgb,[255,255,255],.29),
+    glow:gridAlpha(rgb,.72),
+    haze:gridAlpha(rgb,.27),
+    rgb
+  };
+}
+function drawAdaptiveGridBackdrop(ctx:CanvasRenderingContext2D,
+  stadium:HTMLImageElement|null,accent:string){
+  const palette=gridBackdropSwatches(accent);
+  const base=ctx.createLinearGradient(0,0,1080,1350);
+  base.addColorStop(0,palette.shadow);
+  base.addColorStop(.36,palette.base);
+  base.addColorStop(.74,palette.mid);
+  base.addColorStop(1,palette.shadow);
+  ctx.fillStyle=base;ctx.fillRect(0,0,1080,1350);
+  if(stadium){
+    ctx.save();
+    ctx.filter="grayscale(1) contrast(1.16) brightness(.72)";
+    ctx.globalAlpha=.66;
+    cover(ctx,stadium,0,0,1080,1350);
+    ctx.restore();
+    // The *entire* stadium, including the pitch, follows the swatch.
+    ctx.save();
+    ctx.globalCompositeOperation="color";
+    ctx.fillStyle=accent;
+    ctx.fillRect(0,0,1080,1350);
+    ctx.restore();
+  }
+  const dark=ctx.createLinearGradient(0,0,0,1350);
+  dark.addColorStop(0,"rgba(1,3,15,.52)");
+  dark.addColorStop(.22,"rgba(1,3,15,.32)");
+  dark.addColorStop(.52,"rgba(1,3,15,.39)");
+  dark.addColorStop(.77,"rgba(1,3,15,.24)");
+  dark.addColorStop(1,"rgba(1,3,15,.65)");
+  ctx.fillStyle=dark;ctx.fillRect(0,0,1080,1350);
+  const lights=[
+    {x:165,y:48,r:530,opacity:.51},
+    {x:910,y:63,r:550,opacity:.44},
+    {x:575,y:630,r:760,opacity:.20},
+    {x:180,y:1180,r:420,opacity:.24},
+    {x:925,y:1135,r:440,opacity:.21},
+  ];
+  for(const light of lights){
+    const glow=ctx.createRadialGradient(light.x,light.y,0,
+      light.x,light.y,light.r);
+    glow.addColorStop(0,gridAlpha(palette.rgb,light.opacity));
+    glow.addColorStop(.32,gridAlpha(palette.rgb,light.opacity*.46));
+    glow.addColorStop(1,gridAlpha(palette.rgb,0));
+    ctx.fillStyle=glow;ctx.fillRect(0,0,1080,1350);
+  }
+  // Subtle stadium floodlight cones with the SAME chosen hue.
+  for(const [x,y,dx] of [[112,32,240],[976,32,-265]] as const){
+    const beam=ctx.createLinearGradient(x,y,x+dx,630);
+    beam.addColorStop(0,gridAlpha(palette.rgb,.39));
+    beam.addColorStop(.43,gridAlpha(palette.rgb,.12));
+    beam.addColorStop(1,gridAlpha(palette.rgb,0));
+    ctx.fillStyle=beam;
+    ctx.beginPath();ctx.moveTo(x-17,y);ctx.lineTo(x+17,y);
+    ctx.lineTo(x+dx+195,650);ctx.lineTo(x+dx-195,650);
+    ctx.closePath();ctx.fill();
+  }
+  // Discrete perimeter strokes add polish without fighting with the cards.
+  ctx.save();ctx.strokeStyle=gridAlpha(palette.rgb,.33);
+  ctx.lineWidth=2;
+  for(const y of [288,1159]){
+    ctx.beginPath();ctx.moveTo(40,y);ctx.lineTo(1040,y);ctx.stroke();
+  }
+  ctx.restore();
+}
+type BadgeCrop={x:number;y:number;width:number;height:number};
+/** Strip transparent padding from provider logos (which can occupy only 20%
+ * of their image box). Never trim opaque/white portions of national flags.
+ */
+const badgeCropCache=new WeakMap<HTMLImageElement,BadgeCrop|null>();
+function trimmedBadgeCrop(image:HTMLImageElement,
+  exportCanvas:HTMLCanvasElement):BadgeCrop|null{
+  if(badgeCropCache.has(image))return badgeCropCache.get(image)??null;
+  let result:BadgeCrop|null=null;
+  try{
+    const test=document.createElement("canvas");
+    // Unit-test DOM mocks sometimes reuse the target canvas for all elements.
+    if(test===exportCanvas) return null;
+    test.width=test.height=112;
+    const probe=test.getContext("2d",{willReadFrequently:true});
+    if(!probe?.getImageData)return null;
+    probe.clearRect(0,0,112,112);
+    probe.drawImage(image,0,0,112,112);
+    const pixels=probe.getImageData(0,0,112,112).data;
+    let minX=112,minY=112,maxX=-1,maxY=-1,anyTransparent=false;
+    for(let y=0;y<112;y++){
+      for(let x=0;x<112;x++){
+        const alpha=pixels[(y*112+x)*4+3];
+        if(alpha<8)anyTransparent=true;
+        if(alpha<28)continue;
+        minX=Math.min(x,minX);maxX=Math.max(x,maxX);
+        minY=Math.min(y,minY);maxY=Math.max(y,maxY);
+      }
+    }
+    if(anyTransparent&&maxX>=minX&&maxY>=minY){
+      const minRatio=.28;
+      const visibleW=(maxX-minX+1)/112,visibleH=(maxY-minY+1)/112;
+      if(visibleW>=minRatio&&visibleH>=minRatio &&
+        (visibleW<.86||visibleH<.86)){
+        const pad=2;
+        const x=Math.max(0,minX-pad),y=Math.max(0,minY-pad);
+        const w=Math.min(112-x,maxX+pad-x+1);
+        const h=Math.min(112-y,maxY+pad-y+1);
+        result={
+          x:x/112*image.naturalWidth,y:y/112*image.naturalHeight,
+          width:w/112*image.naturalWidth,height:h/112*image.naturalHeight
+        };
+      }
+    }
+    test.width=test.height=0;
+  }catch{/* Cross-origin or unsupported canvas: render the original image. */}
+  badgeCropCache.set(image,result);
+  return result;
+}
+function containGridBadge(ctx:CanvasRenderingContext2D,
+  image:HTMLImageElement,x:number,y:number,size:number,
+  exportCanvas:HTMLCanvasElement){
+  const crop=trimmedBadgeCrop(image,exportCanvas);
+  if(!crop){contain(ctx,image,x,y,size,size);return;}
+  const ratio=Math.min(size/crop.width,size/crop.height);
+  const width=crop.width*ratio,height=crop.height*ratio;
+  ctx.drawImage(image,crop.x,crop.y,crop.width,crop.height,
+    x+(size-width)/2,y+(size-height)/2,width,height);
+}
 /** Exact second Stream Monitor template: two columns of real fixtures.
  * Shares the same source match data, renderer, reseller brand, downloaded file
  * and Telegram document. All coordinates are logical 1080×1350, x2 output.
@@ -311,7 +464,7 @@ function gridBroadcast(ctx:CanvasRenderingContext2D,list:string[],x:number,y:num
 }
 function drawTwoColumnGrid(ctx:CanvasRenderingContext2D,rows:FootballMatch[],
   badges:(HTMLImageElement|null)[],accent:string,day:string,
-  brand:HTMLImageElement|null){
+  brand:HTMLImageElement|null,exportCanvas:HTMLCanvasElement){
   const titleColor=gridTitleColor(accent);
   // Reseller mark on top, never hardcoded or duplicated over the fixtures.
   if(brand)contain(ctx,brand,385,39,310,81);
@@ -350,12 +503,18 @@ function drawTwoColumnGrid(ctx:CanvasRenderingContext2D,rows:FootballMatch[],
     const title=footballTeamNamePtBR(m.home)+" × "+footballTeamNamePtBR(m.away);
     fitText(ctx,title,cx,y+19,cardWidth-22,21,11,"center","#132342",950);
     fitText(ctx,(m.league||"FUTEBOL").toUpperCase(),cx,y+39,cardWidth-32,12,9,"center","#58749d",850);
-    const badgeSize=Math.min(65,Math.max(54,Math.round(cardHeight*.46)));
-    const badgeTop=y+50;
-    if(badges[i*2])contain(ctx,badges[i*2]!,x+28,badgeTop,badgeSize,badgeSize);
-    else paintFallbackBadge(ctx,x+28,badgeTop,m.home,m.league,badgeSize);
-    if(badges[i*2+1])contain(ctx,badges[i*2+1]!,x+cardWidth-badgeSize-28,badgeTop,badgeSize,badgeSize);
-    else paintFallbackBadge(ctx,x+cardWidth-badgeSize-28,badgeTop,m.away,m.league,badgeSize);
+    // Larger matched emblems, with transparent padding removed when present.
+    // Leave the centre of the card clear for the kickoff time & broadcaster.
+    const badgeSize=Math.min(91,Math.max(76,Math.round(cardHeight*.63)));
+    const badgeTop=y+(cardHeight<140?45:51);
+    const homeX=x+21,awayX=x+cardWidth-badgeSize-21;
+    ctx.save();ctx.shadowColor="rgba(15,40,90,.20)";
+    ctx.shadowBlur=8;ctx.shadowOffsetY=3;
+    if(badges[i*2])containGridBadge(ctx,badges[i*2]!,homeX,badgeTop,badgeSize,exportCanvas);
+    else paintFallbackBadge(ctx,homeX,badgeTop,m.home,m.league,badgeSize);
+    if(badges[i*2+1])containGridBadge(ctx,badges[i*2+1]!,awayX,badgeTop,badgeSize,exportCanvas);
+    else paintFallbackBadge(ctx,awayX,badgeTop,m.away,m.league,badgeSize);
+    ctx.restore();
     const clock=/^\d{2}:\d{2}$/.test(m.time||"")?(m.time||"").replace(":","H"):"A CONFIRMAR";
     const clockW=clock==="A CONFIRMAR"?175:150;
     const top=y+54;
@@ -413,7 +572,11 @@ export async function drawFootballPngFallback(data:FootballCanvasData):Promise<F
   const glow=ctx.createRadialGradient(850,380,12,770,410,650);
   glow.addColorStop(0,accent+"22");glow.addColorStop(1,"rgba(0,0,0,0)");
   ctx.fillStyle=glow;ctx.fillRect(0,0,1080,1350);
-  if(player){
+  if(kind==="grid"){
+    // Do not apply the classic poster's fixed blue/green stadium on this
+    // template; recolor its complete backdrop from the selected accent.
+    drawAdaptiveGridBackdrop(ctx,stadium,accent);
+  }else if(player){
     ctx.save();ctx.globalAlpha=.40;contain(ctx,player,615,275,460,850);ctx.restore();
   }
 
@@ -440,7 +603,7 @@ export async function drawFootballPngFallback(data:FootballCanvasData):Promise<F
 
   }
   if(kind==="grid"){
-    drawTwoColumnGrid(ctx,rows,badges,accent,day,brand);
+    drawTwoColumnGrid(ctx,rows,badges,accent,day,brand,canvas);
   }else if(kind==="finished"&&finalScore){
     drawFinalScoreboard(ctx,rows[0],badges[0]||null,badges[1]||null,
       accent,finalScore.home,finalScore.away);
