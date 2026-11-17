@@ -3,7 +3,7 @@ import { getRequest } from "@tanstack/react-start/server";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { requirePaidFeature } from "@/lib/premium-feature-access";
-import { isMajorFootballCompetition, isYouthFootballFixture } from "@/lib/vitrine-football-competitions";
+import { isFeaturedFootballFixture } from "@/lib/vitrine-football-competitions";
 import { extractFtwbBroadcasts } from "@/lib/vitrine-ftwb-broadcasts";
 
 /**
@@ -264,8 +264,7 @@ export const getVitrineFootballMatches = createServerFn({ method: "POST" })
     const fields=[...new Set(successful.flatMap(result=>result.value.fields))].slice(0,60);
     const candidates=records.map((record,index)=>apiFixture(record,index,data.date))
       .filter((match):match is FootballMatch=>match!==null)
-      .filter(match=>match.day===data.date && isMajorFootballCompetition(match.league) &&
-        !isYouthFootballFixture(match.league,match.home,match.away));
+      .filter(match=>match.day===data.date && isFeaturedFootballFixture(match.league,match.home,match.away));
     const unique=new Map<string,FootballMatch>();
     const completeness=(match:FootballMatch)=>Number(Boolean(match.homeBadge))+
       Number(Boolean(match.awayBadge))+(match.broadcasts?.length||0)*3+

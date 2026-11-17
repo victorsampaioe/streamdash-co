@@ -11,6 +11,7 @@ import { Download, RefreshCw, Trophy, Send, X, Image as ImageIcon } from "lucide
 import { FootballSchedulePoster, FOOTBALL_POSTER_PALETTES } from "@/components/vitrine/football-schedule-poster";
 import { getVitrineFootballMatches, type FootballMatch } from "@/lib/vitrine-football.functions";
 import { getVitrineFootballExportImages } from "@/lib/vitrine-football-export.functions";
+import { drawFootballPngFallback } from "@/lib/vitrine-football-canvas-fallback";
 
 const today = () => new Intl.DateTimeFormat("sv-SE", {
   timeZone: "America/Fortaleza", year: "numeric", month: "2-digit", day: "2-digit",
@@ -47,8 +48,10 @@ export function VitrineFootballStudio() {
   const [transparentLogo, setTransparentLogo] = useState(fallbackBrand.logo);
   const [selectedColor, setSelectedColor] = useState<string | null>(null);
   const [colorStorageKey, setColorStorageKey] = useState<string | null>(null);
-  const [saving, setSaving] = useState<number | null>(null);
-  const [action, setAction] = useState<"download"|"telegram"|null>(null);
+  // Render PNGs before tapping: iOS Web Share needs an active user gesture.
+  const [preparedExports,setPreparedExports]=useState<Record<number,{signature:string;file:File}>>({});
+  const [prepareErrors,setPrepareErrors]=useState<Record<number,string>>({});
+  const [retrying,setRetrying]=useState<number|null>(null);
   const [imagePreview, setImagePreview] = useState<{url:string;name:string;index:number;file:File}|null>(null);
   const imagePreviewUrl = useRef<string|null>(null);
   const exportRefs = useRef<(HTMLDivElement | null)[]>([]);
@@ -126,6 +129,9 @@ export function VitrineFootballStudio() {
     }
     return ()=>{mounted=false};
   },[groups]);
+  const exportSignature=useMemo(()=>JSON.stringify({
+    day,accent,brand,transparentLogo,groups,validatedPhotos
+  }),[day,accent,brand,transparentLogo,groups,validatedPhotos]);
   const haveChannels = (match:FootballMatch) => (match.broadcasts||[]).slice(0,3).join(" • ") || "Sem transmissão";
 
   const renderArtwork=(group:FootballMatch[])=>{
@@ -220,19 +226,26 @@ export function VitrineFootballStudio() {
           blob=await (await fetch(data)).blob();
         }catch{/* The user receives an explicit error, never a silently incomplete PNG. */}
       }
-      if(!blob||blob.size<1000)throw new Error("Falha ao capturar o banner completo.");
-      // Fail explicitly instead of silently generating a cropped/small PNG.
-      // Read the PNG IHDR dimensions directly: works even on Safari versions
-      // where createImageBitmap(Blob) is unavailable or unreliable.
-      const head=await blob.slice(0,24).arrayBuffer();
-      const data=new DataView(head);
-      const isPng=head.byteLength>=24 &&
-        data.getUint32(0)===0x89504e47 && data.getUint32(4)===0x0d0a1a0a;
-      if(!isPng||data.getUint32(16)!==baseSize||data.getUint32(20)!==baseSize){
-        throw new Error("O PNG não foi renderizado em 1080 × 1080.");
-      }
       const name="stream-monitor-futebol-"+day+"-arte-"+(index+1)+".png";
-      return {file:new File([blob],name,{type:"image/png"}),degraded:false};
+      // Verify PNG IHDR before use; Safari occasionally produces a truncated image.
+      let valid=false;
+      if(blob && blob.size>1000){
+        const head=await blob.slice(0,24).arrayBuffer();
+        if(head.byteLength===24){
+          const data=new DataView(head);
+          valid=data.getUint32(0)===0x89504e47 &&
+            data.getUint32(4)===0x0d0a1a0a &&
+            data.getUint32(16)===baseSize && data.getUint32(20)===baseSize;
+        }
+      }
+      if(valid && blob)return {file:new File([blob],name,{type:"image/png"}),degraded:false};
+      // Last-resort native Canvas renderer: text, matches, broadcasters and
+      // contacts survive even when WebKit blocks html-to-image foreignObject.
+      const fallback=await drawFootballPngFallback({
+        matches:groups[index]||[],day,accent,logo:transparentLogo,
+        contact:brand.contact,name:brand.name,filename:name
+      });
+      return {file:fallback,degraded:true};
     }finally{restore();}
   }
   function downloadBlob(file:File){
@@ -246,46 +259,92 @@ export function VitrineFootballStudio() {
     anchor.remove();
     setTimeout(()=>URL.revokeObjectURL(url),60000);
   }
-  async function exportPoster(index:number,mode:"download"|"telegram"){
-    if(saving!==null)return;
-    setSaving(index);
-    setAction(mode);
-    try{
-      const {file,degraded}=await createPngFile(index);
-      if(degraded)toast.warning("Algumas imagens externas não permitiram exportação e foram ocultadas no PNG.");
-      let canShare=typeof navigator.share==="function";
-      try{
-        if(canShare&&typeof navigator.canShare==="function")canShare=navigator.canShare({files:[file]});
-      }catch{canShare=false;}
-      const isAppleMobile=/iPhone|iPad|iPod/i.test(navigator.userAgent) ||
-        (navigator.platform==="MacIntel" && navigator.maxTouchPoints>1);
-      if(mode==="telegram" || isAppleMobile){
-        if(canShare){
+  // Prepare full-size artifacts before the click: iOS needs an active user gesture.
+  useEffect(()=>{
+    let cancelled=false;
+    setPreparedExports({});
+    setPrepareErrors({});
+    const handle=window.setTimeout(()=>{
+      void (async()=>{
+        for(let i=0;i<groups.length&&!cancelled;i++){
           try{
-            await navigator.share({
-              files:[file],
-              title:"Eventos de hoje · Stream Monitor",
-              text:"🏆 Eventos de hoje! Confira os confrontos e as transmissões. "+brand.name
-            });
-            return;
+            const {file}=await createPngFile(i);
+            if(!cancelled)setPreparedExports(prev=>({...prev,[i]:{signature:exportSignature,file}}));
           }catch(error){
-            if(error instanceof DOMException && error.name==="AbortError")return;
+            if(!cancelled)setPrepareErrors(prev=>({...prev,[i]:
+              error instanceof Error?error.message:"Não foi possível gerar o PNG."}));
           }
         }
-        showImage(file,index);
-        toast.info(mode==="telegram"?
-          "Abra ou salve o PNG e compartilhe no Telegram.":
-          "Toque e segure a imagem para salvá-la no iPhone.");
-        return;
-      }
-      downloadBlob(file);
-      toast.success("PNG preparado para download.");
+      })();
+    },160);
+    return ()=>{cancelled=true;window.clearTimeout(handle)};
+  },[exportSignature]);
+
+  const readyFile=(index:number)=>{
+    const cached=preparedExports[index];
+    return cached?.signature===exportSignature?cached.file:null;
+  };
+  async function retryExport(index:number){
+    if(retrying!==null)return;
+    setRetrying(index);
+    setPrepareErrors(prev=>{const next={...prev};delete next[index];return next});
+    try{
+      const {file}=await createPngFile(index);
+      setPreparedExports(prev=>({...prev,[index]:{signature:exportSignature,file}}));
+      toast.success("Arte pronta. Agora você pode baixar ou enviar ao Telegram.");
     }catch(error){
-      toast.error(error instanceof Error?error.message:
-        "Não foi possível preparar o PNG. Tente novamente.");
+      const message=error instanceof Error?error.message:"Falha na geração do PNG.";
+      setPrepareErrors(prev=>({...prev,[index]:message}));
+      toast.error(message);
     }finally{
-      setSaving(null);
-      setAction(null);
+      setRetrying(null);
+    }
+  }
+  function exportPoster(index:number,mode:"download"|"telegram"){
+    const file=readyFile(index);
+    if(!file){
+      if(prepareErrors[index]){void retryExport(index);return;}
+      toast.info("Preparando a arte completa em PNG. O botão ficará pronto automaticamente.");
+      return;
+    }
+    const isAppleMobile=/iPhone|iPad|iPod/i.test(navigator.userAgent) ||
+      (navigator.platform==="MacIntel" && navigator.maxTouchPoints>1);
+    if(mode==="download"){
+      if(isAppleMobile){
+        // Safari may ignore download on Blob URLs. Open the image to save in Photos.
+        showImage(file,index);
+      }else{
+        downloadBlob(file);
+        toast.success("PNG pronto para salvar.");
+      }
+      return;
+    }
+    // Critical: called SYNCHRONOUSLY from user click, never after awaiting toBlob().
+    let canShare=typeof navigator.share==="function";
+    try{
+      if(canShare&&typeof navigator.canShare==="function"){
+        canShare=navigator.canShare({files:[file]});
+      }
+    }catch{canShare=false;}
+    if(canShare){
+      try{
+        void navigator.share({
+          files:[file],
+          title:"Eventos de hoje · Stream Monitor",
+          text:"🏆 Eventos de hoje! Confira os confrontos e as transmissões. "+brand.name
+        }).catch(error=>{
+          if(!(error instanceof DOMException&&error.name==="AbortError")){
+            showImage(file,index);
+            toast.info("Compartilhamento indisponível. Salve o PNG e envie pelo Telegram.");
+          }
+        });
+      }catch{
+        showImage(file,index);
+        toast.info("Compartilhamento indisponível. Salve o PNG e envie pelo Telegram.");
+      }
+    }else{
+      showImage(file,index);
+      toast.info("Abra ou salve o PNG e compartilhe no Telegram.");
     }
   }
 
@@ -330,15 +389,18 @@ export function VitrineFootballStudio() {
         <div className="flex flex-wrap items-center justify-between gap-3 pb-4">
           <strong className="text-base">Arte {index+1} de {groups.length}</strong>
           <div className="flex flex-wrap gap-2">
-            <Button type="button" size="sm" disabled={saving!==null} onClick={()=>void exportPoster(index,"download")}>
-              <Download size={16} className="mr-2"/>{saving===index&&action==="download"?"Preparando…":"Baixar PNG"}
+            <Button type="button" size="sm" disabled={retrying!==null} onClick={()=>exportPoster(index,"download")}>
+              <Download size={16} className="mr-2"/>{readyFile(index)?"Baixar PNG":prepareErrors[index]?"Tentar gerar PNG":"Preparando PNG…"}
             </Button>
-            <Button type="button" size="sm" variant="outline" disabled={saving!==null}
-              onClick={()=>void exportPoster(index,"telegram")}>
-              <Send size={16} className="mr-2"/>{saving===index&&action==="telegram"?"Preparando…":"Enviar ao Telegram"}
+            <Button type="button" size="sm" variant="outline" disabled={retrying!==null}
+              onClick={()=>exportPoster(index,"telegram")}>
+              <Send size={16} className="mr-2"/>{readyFile(index)?"Enviar ao Telegram":prepareErrors[index]?"Tentar gerar PNG":"Preparando PNG…"}
             </Button>
           </div>
         </div>
+        {prepareErrors[index]&&<p role="alert" className="mb-2 text-sm text-amber-400">
+          Não foi possível preparar o PNG: {prepareErrors[index]} Toque em “Tentar gerar PNG”.
+        </p>}
         <ResponsivePoster>{renderArtwork(group)}</ResponsivePoster>
       </Card>)}
     </div>}
@@ -365,7 +427,7 @@ export function VitrineFootballStudio() {
         <img src={imagePreview.url} alt="Prévia final da arte para salvar"
           className="aspect-square w-full rounded-lg object-contain"/>
         <p className="text-sm text-muted-foreground">
-          No iPhone, toque e segure a imagem para salvar em Fotos. Depois, compartilhe pelo Telegram.
+          No iPhone, toque e segure a imagem e escolha “Salvar em Fotos”. Para enviar ao Telegram, use o botão de compartilhar.
         </p>
         <div className="flex flex-wrap gap-2">
           <a className="inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-primary px-4 text-sm font-semibold text-primary-foreground"

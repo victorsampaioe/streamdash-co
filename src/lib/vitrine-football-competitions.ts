@@ -18,10 +18,6 @@ export function isMajorFootballCompetition(name: string): boolean {
   if (/\b(sub ?(?:1[5-9]|2[0-9])|u ?(?:1[5-9]|2[0-9])|under ?(?:1[5-9]|2[0-9])|youth|juvenil|junior|reservas?|reserve|sub ?20|sub ?23|4 ?divisao|terceira divisao|quarta divisao|serie [cd])\b/.test(n)) return false;
 
   return [
-    // Senior international friendlies (including Brazil's national team).
-    /\bamistos(?:o|os|a|as)(?:\s+(?:internaciona(?:l|is)|de\s+selecoes|de\s+selecao|entre\s+selecoes|fifa|data\s+fifa))?\b/,
-    /\binternational\s+(?:friendly|friendlies|friendship\s+matches|friendly\s+games)\b/,
-    /\bfriendly\s+(?:international|match|matches|games)\b/,
     /\bbrasileirao\b(?:\s+serie\s+[ab])?\b/,
     /\bcampeonato brasileiro\s*(?:serie\s*[ab])?\b/,
     /\bbrasileiro\s+serie\s+[ab]\b/,
@@ -58,4 +54,21 @@ export function isMajorFootballCompetition(name: string): boolean {
     /\bprimera division argentina\b/,
     /\bmajor league soccer\b|\bmls\b/,
   ].some(pattern => pattern.test(n));
+}
+
+/** Include adult international friendlies only when Brazil's senior selection plays.
+ * Major club tournaments and senior national championships remain unchanged.
+ */
+export function isFeaturedFootballFixture(competition:string,home:string,away:string):boolean{
+  if(isYouthFootballFixture(competition,home,away))return false;
+  const league=normalize(competition);
+  const friendly=/\bamistos(?:o|os|a|as)\b|\binternational\s+(?:friendly|friendlies|friendship\s+matches|friendly\s+games)\b|\bfriendly\s+(?:international|match|matches|games)\b/.test(league);
+  if(friendly){
+    const brazilTeam=(team:string)=>{
+      const n=normalize(team);
+      return /^(?:brasil|brazil|selecao brasileira|brazil national team|selecao do brasil)$/.test(n);
+    };
+    return brazilTeam(home)||brazilTeam(away);
+  }
+  return isMajorFootballCompetition(competition);
 }
