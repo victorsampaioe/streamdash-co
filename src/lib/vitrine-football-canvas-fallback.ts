@@ -3,6 +3,7 @@ import { formatBrazilianWhatsApp } from "@/lib/vitrine-football-phone";
 import { footballBackgroundStyle } from "@/lib/vitrine-football-color";
 import { footballTeamNamePtBR, nationalTeamFlagEmoji, nationalTeamFlagFallback } from "@/lib/vitrine-football-ptbr";
 import { offlineFootballFlag } from "@/lib/vitrine-football-offline-flags";
+import { isVerifiedFinishedFootballMatch, parseFootballFinalScore } from "@/lib/vitrine-football-results";
 
 /**
  * ONE renderer used by PNG download, Telegram and on-screen preview.
@@ -18,7 +19,7 @@ const SCALE=2;
 
 export type FootballCanvasData={
   matches:FootballMatch[];day:string;accent:string;logo:string;contact:string;
-  name:string;filename:string;playerPhoto?:string;
+  name:string;filename:string;playerPhoto?:string;kind?:"today"|"finished";
 };
 
 const guard=(src:string)=>src?.trim()||"";
@@ -207,6 +208,57 @@ function whatsappIcon(ctx:CanvasRenderingContext2D,x:number,y:number){
   }
   ctx.restore();
 }
+/** Dedicated finished-match composition using the approved poster's
+ * stadium, flags, slanted headline, blue accents and WhatsApp footer.
+ * The scoreboard is drawn natively, not layered over a mobile screenshot.
+ */
+function drawFinalScoreboard(ctx:CanvasRenderingContext2D,match:FootballMatch,
+  homeBadge:HTMLImageElement|null,awayBadge:HTMLImageElement|null,
+  accent:string,homeGoals:number,awayGoals:number){
+  const x=48,y=360,w=984,h=675;
+  ctx.save();ctx.shadowColor="rgba(0,0,0,.42)";
+  ctx.shadowBlur=34;ctx.shadowOffsetY=13;
+  ctx.fillStyle="#fff";rounded(ctx,x,y,w,h,32);ctx.fill();ctx.restore();
+  const panel=ctx.createLinearGradient(x,y,x+w,y+h);
+  panel.addColorStop(0,"#ffffff");panel.addColorStop(.63,"#eef5ff");
+  panel.addColorStop(1,"#ffffff");
+  ctx.save();rounded(ctx,x,y,w,h,32);ctx.clip();
+  ctx.fillStyle=panel;ctx.fillRect(x,y,w,h);ctx.restore();
+  ctx.strokeStyle=accent;ctx.lineWidth=5;
+  rounded(ctx,x+2,y+2,w-4,h-4,32);ctx.stroke();
+
+  fitText(ctx,match.league.toUpperCase(),540,y+52,900,23,16,"center","#5d708c",900);
+  ctx.fillStyle="#0e284f";rounded(ctx,375,y+79,330,56,18);ctx.fill();
+  textLine(ctx,"APITO FINAL",540,y+107,26,"#fff","center",950);
+
+  // Large matching circular crests, including bundled offline national flags.
+  const circleSize=162,flagsY=y+205;
+  if(homeBadge)contain(ctx,homeBadge,125,flagsY,circleSize,circleSize);
+  else paintFallbackBadge(ctx,125,flagsY,match.home,match.league,circleSize);
+  if(awayBadge)contain(ctx,awayBadge,794,flagsY,circleSize,circleSize);
+  else paintFallbackBadge(ctx,794,flagsY,match.away,match.league,circleSize);
+
+  // Score columns have dedicated widths for two-digit scores.
+  ctx.save();ctx.fillStyle="#0c2344";ctx.shadowColor="rgba(20,109,242,.15)";
+  ctx.shadowBlur=8;
+  fitText(ctx,String(homeGoals),431,y+287,146,125,92,"center","#11294c",1000);
+  fitText(ctx,String(awayGoals),649,y+287,146,125,92,"center","#11294c",1000);
+  ctx.restore();
+  textLine(ctx,"×",540,y+287,79,accent,"center",950);
+
+  // Display team names below the flags, with no truncation.
+  fitTwoLines(ctx,footballTeamNamePtBR(match.home),235,y+452,365,"center");
+  fitTwoLines(ctx,footballTeamNamePtBR(match.away),845,y+452,365,"center");
+
+  ctx.save();ctx.shadowColor="rgba(12,40,74,.17)";ctx.shadowBlur=12;
+  const stripe=ctx.createLinearGradient(x+40,0,x+w-40,0);
+  stripe.addColorStop(0,"#071f44");stripe.addColorStop(.55,accent);
+  stripe.addColorStop(1,"#071f44");
+  ctx.fillStyle=stripe;rounded(ctx,x+45,y+551,w-90,76,20);ctx.fill();
+  ctx.restore();
+  textLine(ctx,"RESULTADO FINAL",540,y+588,35,"#ffffff","center",1000);
+  ctx.fillStyle=accent;rounded(ctx,x+82,y+648,w-164,4,2);ctx.fill();
+}
 function validatedPng(blob:Blob):Promise<void>{
   return blob.slice(0,24).arrayBuffer().then(header=>{
     if(header.byteLength!==24)throw new Error("PNG inválido: cabeçalho incompleto.");
@@ -227,8 +279,13 @@ export async function drawFootballPngFallback(data:FootballCanvasData):Promise<F
   if(!ctx)throw new Error("Canvas indisponível para renderizar o banner em alta resolução.");
   ctx.scale(SCALE,SCALE);
   const {matches,day,accent,logo,contact,filename,playerPhoto}=data;
-  const rows=matches.slice(0,4);
+  const kind=data.kind||"today";
+  const rows=matches.slice(0,kind==="finished"?1:4);
   if(rows.length===0)throw new Error("Nenhum confronto encontrado para gerar a arte.");
+  const finalScore=kind==="finished"&&isVerifiedFinishedFootballMatch(rows[0])
+    ?parseFootballFinalScore(rows[0].scoreLabel):null;
+  if(kind==="finished"&&!finalScore)
+    throw new Error("O resultado ainda não foi confirmado pela fonte de jogos.");
   const [stadium,brand,player,...badges]=await Promise.all([
     loadImage("/assets/vitrine-futebol-estadio.webp","fundo do estádio"),
     loadImage(logo,"logo do revendedor"),
@@ -269,10 +326,10 @@ export async function drawFootballPngFallback(data:FootballCanvasData):Promise<F
   ctx.shadowColor="rgba(0,0,0,.35)";ctx.shadowBlur=10;
   ctx.fillStyle="#ffcf3e";ctx.textAlign="left";ctx.textBaseline="middle";
   ctx.font="italic 1000 77px Arial,Helvetica,sans-serif";
-  ctx.fillText("EVENTOS",430,118);
+  ctx.fillText(kind==="finished"?"FIM DE":"EVENTOS",430,118);
   ctx.fillStyle="#ffffff";
   ctx.font="italic 1000 61px Arial,Helvetica,sans-serif";
-  ctx.fillText("DE HOJE",430,184);
+  ctx.fillText(kind==="finished"?"JOGO":"DE HOJE",430,184);
   ctx.restore();
   // Slightly torn and angled date strip, rather than a plain square label.
   ctx.save();ctx.fillStyle="#fffafa";
@@ -283,6 +340,10 @@ export async function drawFootballPngFallback(data:FootballCanvasData):Promise<F
   ctx.save();ctx.shadowColor="rgba(167,218,255,.65)";ctx.shadowBlur=13;
   ctx.fillStyle=accent;rounded(ctx,48,342,981,5,3);ctx.fill();ctx.restore();
 
+  if(kind==="finished"&&finalScore){
+    drawFinalScoreboard(ctx,rows[0],badges[0]||null,badges[1]||null,
+      accent,finalScore.home,finalScore.away);
+  }else{
   // Compact, curved fixture ribbons reproduce the APPROVED layout.
   const rowHeight=rows.length===1?205:153;
   const gap=18, cardLeft=48, cardWidth=984, rowTop=367;
@@ -326,6 +387,7 @@ export async function drawFootballPngFallback(data:FootballCanvasData):Promise<F
     fitText(ctx,clock,849,ribbonY+ribbonHeight/2,322,23,16,"center","#ffffff",1000);
   }
 
+  }
   // The original compact green WhatsApp strip AND a separate discreet footer
   // brand mark. Two deliberate placements, not repeated overlapping logos.
   const phone=formatBrazilianWhatsApp(contact);
