@@ -2,7 +2,7 @@ import {formatCinematicWhatsApp} from "./vitrine-cinematic-canvas";
 import {supportedMp4Mime} from "./vitrine-cinematic-mp4";
 import {finalizeCinematicMp4} from "./vitrine-cinematic-whatsapp";
 import {connectVideoAudioToStream} from "./vitrine-video-audio";
-import {getResellerEncodingSettings,type ResellerVideoQuality} from "./vitrine-video-quality";
+import {getResellerEncodingSettings,nextResellerFrameDeadline,type ResellerVideoQuality} from "./vitrine-video-quality";
 
 export type VideoOverlayBrand={
   name:string;whatsapp:string;color:string;logo:HTMLImageElement
@@ -174,12 +174,13 @@ export async function renderResellerVideoMp4(opts:{
     }
     onEnded=end;
     source.addEventListener("ended",onEnded,{once:true});
-    let lastPaint=0,lastProgress=0;
+    let nextPaintAt=0,lastProgress=0;
     const draw=(now:number)=>{
       if(stopped)return;
-      if(now-lastPaint>=1000/settings.fps-2&&source.readyState>=2){
+      if(now>=nextPaintAt&&source.readyState>=2){
         renderFrame();
-        frames++;lastPaint=now;
+        frames++;
+        nextPaintAt=nextResellerFrameDeadline(now,nextPaintAt,settings.fps);
       }
       if(now-lastProgress>350){
         progress({percent:Math.min(99,Math.floor(source.currentTime/source.duration*100)),
