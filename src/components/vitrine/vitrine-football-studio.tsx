@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { supabase } from "@/integrations/supabase/client";
@@ -7,10 +7,10 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Download, RefreshCw, Trophy, Send } from "lucide-react";
-import { FootballSchedulePoster, FOOTBALL_POSTER_PALETTES } from "@/components/vitrine/football-schedule-poster";
+import { FOOTBALL_POSTER_PALETTES } from "@/components/vitrine/football-schedule-poster";
 import { getVitrineFootballMatches, type FootballMatch } from "@/lib/vitrine-football.functions";
 import { getVitrineFootballExportImages } from "@/lib/vitrine-football-export.functions";
-import { createFootballArtworkFile, describeExportError } from "@/lib/vitrine-football-dom-export";
+import { drawFootballPngFallback } from "@/lib/vitrine-football-canvas-fallback";
 import { nationalTeamFlagFallback } from "@/lib/vitrine-football-ptbr";
 import { sendVitrineFootballToRegisteredTelegram } from "@/lib/vitrine-football-telegram.functions";
 
@@ -19,26 +19,6 @@ const today = () => new Intl.DateTimeFormat("sv-SE", {
 }).format(new Date());
 type Branding = { name: string; logo: string; contact: string; accent: string };
 const fallbackBrand: Branding = {name:"Stream Monitor",logo:"/favicon.ico",contact:"",accent:"#146df2"};
-const baseSize = 1080;
-/** Measure the actual artwork card rather than the entire dashboard width. */
-function ResponsivePoster({children}:{children:ReactNode}) {
-  const frame = useRef<HTMLDivElement>(null);
-  const [size,setSize] = useState(520);
-  useEffect(()=>{
-    const element=frame.current;
-    if(!element)return;
-    const update=()=>setSize(Math.max(1,Math.min(550,element.clientWidth)));
-    update();
-    const observer=new ResizeObserver(update);
-    observer.observe(element);
-    return ()=>observer.disconnect();
-  },[]);
-  return <div ref={frame} className="relative mx-auto aspect-square w-full min-w-0 max-w-[550px] overflow-hidden rounded-xl">
-    <div style={{width:baseSize,height:baseSize,transform:"scale("+(size/baseSize)+")",transformOrigin:"top left"}}>
-      <div style={{width:baseSize,height:baseSize}}>{children}</div>
-    </div>
-  </div>;
-}
 /** Keep crest data URLs small, to avoid Safari's large SVG/foreignObject memory limit. */
 async function compactCrest(input:string):Promise<string>{
   return new Promise(resolve=>{
@@ -74,11 +54,12 @@ export function VitrineFootballStudio() {
   const [selectedColor, setSelectedColor] = useState<string | null>(null);
   const [colorStorageKey, setColorStorageKey] = useState<string | null>(null);
   // Render PNGs before tapping: iOS Web Share needs an active user gesture.
-  const [preparedExports,setPreparedExports]=useState<Record<number,{signature:string;file:File}>>({});
+  const [preparedExports,setPreparedExports]=useState<Record<number,{signature:string;file:File;previewUrl:string}>>({});
   const [prepareErrors,setPrepareErrors]=useState<Record<number,string>>({});
   const [retrying,setRetrying]=useState<number|null>(null);
   const [telegramSending,setTelegramSending]=useState(false);
-  const exportRefs = useRef<(HTMLDivElement | null)[]>([]);
+  const previewUrls=useRef<string[]>([]);
+  useEffect(()=>()=>{for(const url of previewUrls.current)URL.revokeObjectURL(url);},[]);
   const [day, setDay] = useState(today);
 
   useEffect(() => {
@@ -204,94 +185,51 @@ export function VitrineFootballStudio() {
     crestKey,crestsReady,crestImages:crestMedia.images
   }),[day,accent,brand,transparentLogo,groups,validatedPhotos,
     crestKey,crestsReady,crestMedia.images]);
-  const haveChannels = (match:FootballMatch) => (match.broadcasts||[]).slice(0,3).join(" • ") || "Sem transmissão";
-
-  const renderArtwork=(group:FootballMatch[])=>{
-    const featured=group.find(match=>!!match.playerPhoto&&validatedPhotos[match.playerPhoto]===true);
-    const badgeImages:Record<string,string>={};
-    for(const match of group){
+  // A single native 2160×2700 render produces the preview AND the exact same
+  // PNG used for downloads and the registered Telegram. No DOM screenshots.
+  const savePreviewFile=(index:number,file:File,signature:string)=>{
+    const previewUrl=URL.createObjectURL(file);
+    previewUrls.current.push(previewUrl);
+    setPreparedExports(prev=>({...prev,[index]:{signature,file,previewUrl}}));
+  };
+  async function createPngFile(index:number):Promise<{file:File}>{
+    const group=groups[index];
+    if(!group?.length)throw new Error("Nenhum jogo disponível para esta arte.");
+    if(!crestsReady)throw new Error("Ainda carregando escudos das equipes.");
+    const matches=group.map(match=>{
       const homeFlag=nationalTeamFlagFallback(match.home,match.league);
       const awayFlag=nationalTeamFlagFallback(match.away,match.league);
-      // Prefer the API's real team emblem. If that URL fails to inline,
-      // display the country flag for national squads instead of a blank space.
-      // For clubs do not substitute an unrelated country's flag.
-      badgeImages[`home:${match.id}`]=
-        crestMedia.images[match.homeBadge]||
-        crestMedia.images[homeFlag]||
-        (!crestsReady ? match.homeBadge||homeFlag : "");
-      badgeImages[`away:${match.id}`]=
-        crestMedia.images[match.awayBadge]||
-        crestMedia.images[awayFlag]||
-        (!crestsReady ? match.awayBadge||awayFlag : "");
-    }
-    const channels=Object.fromEntries(group.map(match=>[match.id,haveChannels(match)]));
-    return <FootballSchedulePoster kind="today" format="feed" matches={group} day={day}
-      headline="EVENTOS DE HOJE" brand={brand.name} logo={transparentLogo} contact={brand.contact}
-      badgeImages={badgeImages} broadcastByMatch={channels}
-      playerPhoto={featured?.playerPhoto||""} playerName={featured?.playerName||""}
-      stadium="" accent={accent}/>;
-  };
-
-
-
-  async function awaitAssets(node:HTMLElement){
-    if(document.fonts?.ready){
-      await Promise.race([document.fonts.ready,new Promise<void>(resolve=>setTimeout(resolve,3000))]);
-    }
-    const images=Array.from(node.querySelectorAll("img"));
-    await Promise.all(images.map(img=>Promise.race([
-      img.decode ? img.decode().catch(()=>{}) : Promise.resolve(),
-      new Promise<void>(resolve=>setTimeout(resolve,4500))
-    ])));
-  }
-  /** Make the export independent of mobile CSS scaling and avoid external CORS failures.
-   * Only the off-screen copy is altered; the visible poster remains untouched.
-   */
-  async function inlinePosterAssets(node:HTMLElement):Promise<()=>void>{
-    const images=Array.from(node.querySelectorAll("img"));
-    const urls=[...new Set(images.map(img=>img.src).filter(src=>/^https:\/\//i.test(src)))];
-    if(!urls.length)return ()=>{};
-    const oldSources=images.map(img=>[img,img.src] as const);
-    let assets:{images:Record<string,string>};
-    try{
-      assets=await inlineAssets({data:{urls:urls.slice(0,16)}});
-    }catch{
-      // If the image proxy is temporarily unavailable, attempt the original
-      // export normally instead of blocking all downloads.
-      return ()=>{};
-    }
-    for(const image of images){
-      const replacement=assets.images[image.src];
-      if(replacement){
-        image.style.display="";
-        image.src=replacement;
-      }
-    }
-    await awaitAssets(node);
-    return ()=>{
-      for(const [image,src] of oldSources){
-        if(image.src!==src)image.src=src;
-      }
+      return {...match,
+        homeBadge:crestMedia.images[match.homeBadge]||crestMedia.images[homeFlag]||"",
+        awayBadge:crestMedia.images[match.awayBadge]||crestMedia.images[awayFlag]||"",
+      };
+    });
+    const featured=group.find(match=>!!match.playerPhoto&&validatedPhotos[match.playerPhoto]===true);
+    const trustedAsset=async(src:string,label:string)=>{
+      if(!/^https:\/\//i.test(src))return src;
+      const result=await inlineAssetsRef.current({data:{urls:[src]}});
+      if(result.images?.[src])return result.images[src];
+      // Canvas can still load image if the origin permits CORS; otherwise
+      // the renderer raises an error instead of returning an incomplete PNG.
+      console.warn("[vitrine-futebol] Própria fonte não autorizou proxy:",label);
+      return src;
     };
-  }
-  async function createPngFile(index:number):Promise<{file:File;degraded:boolean}>{
-    // Vitrine Banner's successful approach: export the exact DOM-based artwork.
-    // One file is generated once and reused by download AND registered Telegram.
-    const node=exportRefs.current[index];
-    if(!node)throw new Error("Arte completa ainda não carregada.");
-    const name="stream-monitor-futebol-"+day+"-arte-"+(index+1)+".png";
-    await awaitAssets(node);
-    const restore=await inlinePosterAssets(node);
+    const [logo,playerPhoto]=await Promise.all([
+      trustedAsset(transparentLogo,"logo da revenda"),
+      featured?.playerPhoto?trustedAsset(featured.playerPhoto,"jogador"):Promise.resolve("")
+    ]);
+    const filename="stream-monitor-futebol-"+day+"-arte-"+(index+1)+"-2160x2700.png";
     try{
-      await awaitAssets(node);
-      const file=await createFootballArtworkFile(node,name);
-      return {file,degraded:false};
+      const file=await drawFootballPngFallback({
+        matches,day,accent,logo,contact:brand.contact,
+        name:brand.name,filename,playerPhoto,
+      });
+      return {file};
     }catch(error){
-      // Never send a second, visually different fallback drawing that loses
-      // crests, brand logos or the rest of the original design.
       console.error("[vitrine-futebol] export arte "+(index+1),error);
-      throw new Error("Falha ao exportar a arte "+(index+1)+": "+describeExportError(error));
-    }finally{restore();}
+      throw new Error("Arte "+(index+1)+": "+
+        (error instanceof Error?error.message:"Não foi possível gerar o PNG."));
+    }
   }
   function downloadBlob(file:File){
     const url=URL.createObjectURL(file);
@@ -307,6 +245,9 @@ export function VitrineFootballStudio() {
   // Prepare full-size artifacts before the click: iOS needs an active user gesture.
   useEffect(()=>{
     let cancelled=false;
+    // Revoke previous previews before preparing a new day, color or reseller.
+    for(const url of previewUrls.current)URL.revokeObjectURL(url);
+    previewUrls.current=[];
     setPreparedExports({});
     setPrepareErrors({});
     if(!crestsReady)return ()=>{cancelled=true};
@@ -315,7 +256,7 @@ export function VitrineFootballStudio() {
         for(let i=0;i<groups.length&&!cancelled;i++){
           try{
             const {file}=await createPngFile(i);
-            if(!cancelled)setPreparedExports(prev=>({...prev,[i]:{signature:exportSignature,file}}));
+            if(!cancelled)savePreviewFile(i,file,exportSignature);
           }catch(error){
             if(!cancelled)setPrepareErrors(prev=>({...prev,[i]:
               error instanceof Error?error.message:"Não foi possível gerar o PNG."}));
@@ -337,7 +278,7 @@ export function VitrineFootballStudio() {
     setPrepareErrors(prev=>{const next={...prev};delete next[index];return next});
     try{
       const {file}=await createPngFile(index);
-      setPreparedExports(prev=>({...prev,[index]:{signature:exportSignature,file}}));
+      savePreviewFile(index,file,exportSignature);
       toast.success("Arte pronta. Agora você pode baixar ou enviar ao Telegram.");
     }catch(error){
       const message=error instanceof Error?error.message:"Falha na geração do PNG.";
@@ -352,8 +293,8 @@ export function VitrineFootballStudio() {
     if(telegramSending)return;
     setTelegramSending(true);
     try{
-      if(file.size>9*1024*1024){
-        throw new Error("Este PNG excede o limite de 9 MB para envio pelo bot.");
+      if(file.size>18*1024*1024){
+        throw new Error("Este PNG excede o limite de 18 MB para envio pelo bot.");
       }
       // Bot credentials and the recipient chat are resolved on the server,
       // using only Telegram channels active for the signed-in reseller.
@@ -398,11 +339,11 @@ export function VitrineFootballStudio() {
       <div>
         <div className="flex items-center gap-2 text-xs font-bold tracking-[.18em] text-blue-400"><Trophy size={17}/> STREAM MONITOR</div>
         <h1 className="mt-2 text-3xl font-black tracking-tight">Eventos de hoje · Artes automáticas</h1>
-        <p className="mt-2 text-sm text-muted-foreground">Até 4 confrontos por arte, apenas das principais competições do dia. Escudos reais aparecem quando disponíveis.</p>
+        <p className="mt-2 text-sm text-muted-foreground">Até 4 confrontos por arte, apenas das principais competições do dia. Prévia e arquivo final em 2160 × 2700, com escudos ou bandeiras obrigatórios.</p>
         {!crestsReady&&groups.length>0&&<p className="mt-1 text-xs text-blue-300" role="status">Preparando escudos das equipes para a prévia e o PNG…</p>}
         {crestsReady&&(crestMedia.unavailable.length>0||groups.some(group=>group.some(m=>!m.homeBadge||!m.awayBadge)))&&
           <p className="mt-1 text-xs text-amber-400" role="status">
-            Alguns escudos não vieram da fonte ou não puderam ser recuperados. Eles serão identificados pelas iniciais do time, sem mostrar um escudo incorreto.
+            Há escudos indisponíveis na fonte. O sistema não exportará uma arte sem escudos ou bandeiras; atualize os jogos ou confira a fonte.
           </p>}
       </div>
       <Button type="button" variant="outline" disabled={games.isFetching} onClick={()=>{setDay(today());void games.refetch()}}>
@@ -451,21 +392,17 @@ export function VitrineFootballStudio() {
         {prepareErrors[index]&&<p role="alert" className="mb-2 text-sm text-amber-400">
           Não foi possível preparar o PNG: {prepareErrors[index]} Toque em “Tentar gerar PNG”.
         </p>}
-        <ResponsivePoster>{renderArtwork(group)}</ResponsivePoster>
+        {readyFile(index)&&preparedExports[index]?.previewUrl?
+          <img src={preparedExports[index].previewUrl}
+            alt={"Prévia exata da Arte "+(index+1)+" — PNG 2160 × 2700"}
+            data-testid="football-png-preview"
+            className="mx-auto block h-auto w-full max-w-[550px] rounded-xl"
+            style={{aspectRatio:"4 / 5",objectFit:"contain"}}/>
+          :<div className="mx-auto flex w-full max-w-[550px] items-center justify-center rounded-xl bg-slate-950/80 px-5 text-center text-sm text-slate-300"
+              style={{aspectRatio:"4 / 5"}}>
+              {prepareErrors[index]?"Não foi possível preparar a prévia. Verifique o erro acima e tente novamente.":"Gerando a mesma imagem de alta resolução usada no download e no Telegram…"}
+            </div>}
       </Card>)}
-    </div>}
-    {/* Unscaled 1080×1080 copies for export, laid out at the viewport origin
-        (not far off-screen, which WebKit may skip) inside a 1px clipping box,
-        so the native layout is identical to the preview and invisible. */}
-    {groups.length>0&&<div data-testid="football-export-stage" aria-hidden="true"
-      style={{position:"fixed",left:0,top:0,width:1,height:1,overflow:"hidden",opacity:1,pointerEvents:"none",zIndex:-100}}>
-      <div style={{width:baseSize}}>
-      {groups.map((group,index)=><div key={group.map(m=>m.id).join("|")}
-        ref={el=>{exportRefs.current[index]=el}}
-        style={{width:baseSize,height:baseSize,overflow:"hidden"}}>
-        {renderArtwork(group)}
-      </div>)}
-      </div>
     </div>}
   </main>;
 }
