@@ -247,6 +247,33 @@ try{
     out.push({case:"two-column",accent,matches:12,width:2160,height:2700,
       logos:1,badges:24,footer:true,bytes:gridFile.size,backdropPixel:sample});
   }
+  // Screenshot regression: the user has nine fixtures (five visual rows),
+  // not twelve; those emblems should render substantially larger.
+  const nineMatches=fixtures12.slice(0,9);
+  const nineFile=await drawFootballPngFallback({
+    matches:nineMatches,kind:"grid",day:"2026-11-17",accent:"#146df2",
+    logo,contact:"85998545009",name:"Revenda Exemplo",
+    filename:"grid-nine-big-badges.png"
+  });
+  const nineBmp=await createImageBitmap(nineFile);
+  const nc=document.createElement("canvas");nc.width=2160;nc.height=2700;
+  const nctx=nc.getContext("2d",{willReadFrequently:true});
+  nctx.drawImage(nineBmp,0,0);nineBmp.close();
+  const nineRowH=Math.min(170,Math.floor((1147-322-4*13)/5));
+  const nineSize=Math.min(112,Math.max(79,Math.round(nineRowH*.71)));
+  const nineOffset=nineRowH>=145?Math.max(37,nineRowH-nineSize-6)
+    :Math.max(28,nineRowH-nineSize-7);
+  if(nineSize<105)throw Error("Modelo 2: escudo de nove jogos continua pequeno");
+  for(let i=0;i<nineMatches.length;i++){
+    const row=Math.floor(i/2),col=i%2;
+    const x=43+col*(488+18),y=322+row*(nineRowH+13)+nineOffset;
+    if(!existsInRect(nctx,[24,229,170],(x+15)*2,y*2,nineSize*2,nineSize*2)||
+       !existsInRect(nctx,[244,163,22],
+         (x+488-nineSize-15)*2,y*2,nineSize*2,nineSize*2))
+      throw Error("Modelo 2 com 9 jogos perdeu escudo no cartão "+(i+1));
+  }
+  out.push({case:"screenshot-nine-games",matches:9,
+    badgeSizeLogical:nineSize,centered:true,width:2160,height:2700,bytes:nineFile.size});
   // Asymmetric provider padding previously left some shields "lower" on
   // their cards. In a real PNG compare visible pixel centers, not box CSS.
   function badgeWithOffset(color,atY){
