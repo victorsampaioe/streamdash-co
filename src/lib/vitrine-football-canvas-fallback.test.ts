@@ -109,6 +109,33 @@ describe("Vitrine Futebol: PNG nativo idêntico à prévia e Telegram",()=>{
     expect(drawImage.mock.calls.some(call=>String(call[0]?.src).startsWith("data:image/svg+xml")&&String(call[0]?.src).includes("%3Csvg"))).toBe(true);
     expect(canvas.toBlob).toHaveBeenCalledOnce();
   });
+  it("faz banner FIM DE JOGO com placar final verificado e logos da revenda",async()=>{
+    const {config,fillText,drawImage,canvas,dimensions}=setup();
+    config.matches=[{...config.matches[0],status:"encerrado",scoreLabel:"3 × 1",
+      home:"Brazil",away:"Singapore",league:"Amistoso Internacional"}];
+    const file=await drawFootballPngFallback({...config,kind:"finished"});
+    expect(file.name).toBe("banner-completo.png");
+    expect(dimensions).toEqual([{width:2160,height:2700}]);
+    const labels=fillText.mock.calls.map(c=>String(c[0]));
+    for(const text of ["FIM DE","JOGO","APITO FINAL","RESULTADO FINAL","3","1","Brasil","Singapura",
+      "(85) 99854-5009"])expect(labels).toContain(text);
+    const logos=drawImage.mock.calls.filter(c=>c[0]?.src==="data:image/png;base64,minha-logo");
+    expect(logos).toHaveLength(2);
+    expect(canvas.toBlob).toHaveBeenCalledTimes(1);
+  });
+  it("não permite placar de um jogo ao vivo, agendado ou sem resultado oficial",async()=>{
+    const {config,canvas}=setup();
+    const common={...config.matches[0],home:"Brazil",away:"Portugal"};
+    for(const game of [
+      {...common,status:"ao_vivo",scoreLabel:"2 × 1"},
+      {...common,status:"encerrado",scoreLabel:""},
+      {...common,status:"adiado",scoreLabel:"3 × 1"}
+    ]){
+      await expect(drawFootballPngFallback({...config,matches:[game],kind:"finished"}))
+        .rejects.toThrow("resultado ainda não foi confirmado");
+    }
+    expect(canvas.toBlob).not.toHaveBeenCalled();
+  });
   it("não atribui bandeira de país ao clube por engano",()=>{
     expect(fallbackBadgeLabel("Flamengo","Brasileirão Série A")).toBe("F");
     expect(fallbackBadgeLabel("Singapore","Amistoso Internacional")).toBe("🇸🇬");
