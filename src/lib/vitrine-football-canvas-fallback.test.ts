@@ -136,6 +136,36 @@ describe("Vitrine Futebol: PNG nativo idêntico à prévia e Telegram",()=>{
     }
     expect(canvas.toBlob).not.toHaveBeenCalled();
   });
+  it("gera Modelo 2 com 12 jogos em 2 colunas, 24 escudos e PNG 2160 × 2700",async()=>{
+    const {config,dimensions,canvas,drawImage,fillText}=setup();
+    const matches=Array.from({length:12},(_,i)=>({
+      ...config.matches[i%4],id:"grid-"+i,
+      home:"Mandante "+(i+1),away:"Visitante "+(i+1),
+      homeBadge:"data:image/png;base64,grid-home-"+i,
+      awayBadge:"data:image/png;base64,grid-away-"+i,
+      broadcasts:["Globo","SporTV","ge tv"],
+    }));
+    const file=await drawFootballPngFallback({...config,matches,kind:"grid"});
+    expect(file.type).toBe("image/png");
+    expect(dimensions).toEqual([{width:2160,height:2700}]);
+    expect(canvas.toBlob).toHaveBeenCalledOnce();
+    const shown=fillText.mock.calls.map(call=>String(call[0]));
+    for(const text of ["JOGOS","DO DIA","ASSISTA EM","QUALQUER DISPOSITIVO","FALE PELO WHATSAPP",
+      "(85) 99854-5009"]){expect(shown).toContain(text);}
+    for(let i=0;i<12;i++){
+      expect(shown).toContain("Mandante "+(i+1)+" × Visitante "+(i+1));
+      expect(drawImage.mock.calls.some(call=>call[0]?.src==="data:image/png;base64,grid-home-"+i)).toBe(true);
+      expect(drawImage.mock.calls.some(call=>call[0]?.src==="data:image/png;base64,grid-away-"+i)).toBe(true);
+    }
+    const logos=drawImage.mock.calls.filter(call=>call[0]?.src===config.logo);
+    expect(logos).toHaveLength(1);
+  });
+  it("recolore a grade e mantém todos os jogos com cor personalizada",async()=>{
+    const {config,dimensions,ctx}=setup();
+    await drawFootballPngFallback({...config,kind:"grid",accent:"#db4796"});
+    expect(dimensions).toEqual([{width:2160,height:2700}]);
+    expect(ctx.createLinearGradient).toHaveBeenCalled();
+  });
   it("não atribui bandeira de país ao clube por engano",()=>{
     expect(fallbackBadgeLabel("Flamengo","Brasileirão Série A")).toBe("F");
     expect(fallbackBadgeLabel("Singapore","Amistoso Internacional")).toBe("🇸🇬");
