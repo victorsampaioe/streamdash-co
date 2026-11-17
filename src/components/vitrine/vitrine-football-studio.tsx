@@ -13,6 +13,7 @@ import { getVitrineFootballExportImages } from "@/lib/vitrine-football-export.fu
 import { drawFootballPngFallback } from "@/lib/vitrine-football-canvas-fallback";
 import { nationalTeamFlagFallback } from "@/lib/vitrine-football-ptbr";
 import { offlineFootballFlag } from "@/lib/vitrine-football-offline-flags";
+import { onlyMatchesWithRealBadges } from "@/lib/vitrine-football-verified-badges";
 import { isVerifiedFinishedFootballMatch,parseFootballFinalScore } from "@/lib/vitrine-football-results";
 import { footballTeamNamePtBR } from "@/lib/vitrine-football-ptbr";
 import { sendVitrineFootballToRegisteredTelegram } from "@/lib/vitrine-football-telegram.functions";
@@ -128,14 +129,11 @@ export function VitrineFootballStudio() {
   const selectedFinal=useMemo(()=>finishedMatches.find(match=>
     [match.home,match.away,match.day].join("|")===selectedFinalId
   )||null,[finishedMatches,selectedFinalId]);
-  const groups = useMemo(() => {
-    if(posterMode==="finished")return selectedFinal?[[selectedFinal]]:[];
-    const matches = games.data?.matches ?? [];
-    const pageSize=todayLayout==="grid"?12:4;
-    const chunks:FootballMatch[][]=[];
-    for(let i=0;i<matches.length;i+=pageSize)chunks.push(matches.slice(i,i+pageSize));
-    return chunks;
-  }, [games.data,posterMode,selectedFinal,todayLayout]);
+  // Resolve badges on the full source set FIRST. Grouping happens only
+  // after we know which fixtures have two genuine team images.
+  const sourceMatches=useMemo(()=>posterMode==="finished"
+    ?(selectedFinal?[selectedFinal]:[])
+    :(games.data?.matches??[]),[games.data,posterMode,selectedFinal]);
   const [validatedPhotos,setValidatedPhotos]=useState<Record<string,boolean>>({});
   useEffect(()=>{
     let mounted=true;
@@ -155,7 +153,7 @@ export function VitrineFootballStudio() {
   // Local circular flags cover national fixtures without making slow,
   // failure-prone network requests (particularly on Safari). Proxy only the
   // emblems which are not already bundled for the selected match.
-  const crestUrls=useMemo(()=>[...new Set(groups.flatMap(group=>group.flatMap(match=>{
+  const crestUrls=useMemo(()=>[...new Set(sourceMatches.flatMap(match=>{
     const choices=[
       [match.homeBadge,nationalTeamFlagFallback(match.home,match.league)],
       [match.awayBadge,nationalTeamFlagFallback(match.away,match.league)],
@@ -165,7 +163,7 @@ export function VitrineFootballStudio() {
       if(offlineFootballFlag(code))return [] as string[];
       return [source,flag];
     });
-  })).filter((url):url is string=>!!url&&/^https:\/\//i.test(url)))].slice(0,80),[groups]);
+  }).filter((url):url is string=>!!url&&/^https:\/\//i.test(url)))],[sourceMatches]);
   const crestKey=JSON.stringify(crestUrls);
   const [crestMedia,setCrestMedia]=useState<{
     key:string;ready:boolean;images:Record<string,string>;unavailable:string[]
@@ -203,11 +201,23 @@ export function VitrineFootballStudio() {
     return ()=>{cancelled=true};
   },[crestKey]);
   const crestsReady=crestMedia.key===crestKey&&crestMedia.ready;
+  const selectedBadges=useMemo(()=>crestsReady
+    ?onlyMatchesWithRealBadges(sourceMatches,crestMedia.images)
+    :{visible:[] as FootballMatch[],hidden:[] as FootballMatch[]},
+    [sourceMatches,crestsReady,crestMedia.images]);
+  const groups=useMemo(()=>{
+    if(posterMode==="finished")return selectedFinal?[selectedBadges.visible]:[];
+    const chunkSize=todayLayout==="grid"?12:4;
+    const chunks:FootballMatch[][]=[];
+    for(let i=0;i<selectedBadges.visible.length;i+=chunkSize)
+      chunks.push(selectedBadges.visible.slice(i,i+chunkSize));
+    return chunks;
+  },[posterMode,selectedFinal,todayLayout,selectedBadges.visible]);
   const exportSignature=useMemo(()=>JSON.stringify({
     day,posterMode,todayLayout,accent,brand,transparentLogo,groups,validatedPhotos,
     crestKey,crestsReady,crestImages:crestMedia.images
   }),[day,posterMode,accent,brand,transparentLogo,groups,validatedPhotos,
-    crestKey,crestsReady,crestMedia.images]);
+    crestKey,crestsReady,crestMedia.images,todayLayout]);
   // A single native 2160×2700 render produces the preview AND the exact same
   // PNG used for downloads and the registered Telegram. No DOM screenshots.
   const savePreviewFile=(index:number,file:File,signature:string)=>{
@@ -219,21 +229,9 @@ export function VitrineFootballStudio() {
     const group=groups[index];
     if(!group?.length)throw new Error("Nenhum jogo disponível para esta arte.");
     if(!crestsReady)throw new Error("Ainda carregando escudos das equipes.");
-    const matches=group.map(match=>{
-      const homeFlag=nationalTeamFlagFallback(match.home,match.league);
-      const awayFlag=nationalTeamFlagFallback(match.away,match.league);
-      // Genuine club emblems from the fixture provider always take precedence.
-      // For national fixtures, use an MIT-licensed bundled circular flag if
-      // remote image/CDN is missing. Kosovo and Wales are included locally.
-      const localHome=offlineFootballFlag(homeFlag.match(/\/([\w-]+)\.png$/)?.[1]||"");
-      const localAway=offlineFootballFlag(awayFlag.match(/\/([\w-]+)\.png$/)?.[1]||"");
-      return {...match,
-        // National fixtures use our genuine round SVG flags (original poster
-        // appearance) irrespective of what shape a remote provider sends.
-        homeBadge:localHome||crestMedia.images[match.homeBadge]||crestMedia.images[homeFlag]||"",
-        awayBadge:localAway||crestMedia.images[match.awayBadge]||crestMedia.images[awayFlag]||"",
-      };
-    });
+    // Group already contains only resolved real emblems; do not replace them
+    // with arbitrary country flags or initials at PNG time.
+    const matches=group;
     const featured=group.find(match=>!!match.playerPhoto&&validatedPhotos[match.playerPhoto]===true);
     const trustedAsset=async(src:string,label:string)=>{
       if(!/^https:\/\//i.test(src))return src;
@@ -380,10 +378,10 @@ export function VitrineFootballStudio() {
           :todayLayout==="grid"
             ?"Modelo Grade de Jogos: até 12 partidas por arte em duas colunas, escudos, horários, transmissões, logo e WhatsApp. PNG em 2160 × 2700."
             :"Modelo Clássico: até 4 confrontos por arte, com identidade Stream Monitor. PNG em 2160 × 2700."}</p>
-        {!crestsReady&&groups.length>0&&<p className="mt-1 text-xs text-blue-300" role="status">Preparando escudos das equipes para a prévia e o PNG…</p>}
-        {crestsReady&&(crestMedia.unavailable.length>0||groups.some(group=>group.some(m=>!m.homeBadge||!m.awayBadge)))&&
+        {!crestsReady&&sourceMatches.length>0&&<p className="mt-1 text-xs text-blue-300" role="status">Validando escudos reais dos dois times antes de montar as artes…</p>}
+        {crestsReady&&selectedBadges.hidden.length>0&&
           <p className="mt-1 text-xs text-amber-400" role="status">
-            Algumas imagens não puderam ser carregadas pela fonte. A arte será gerada usando bandeiras das seleções ou iniciais das equipes quando necessário, sem espaços vazios.
+            {selectedBadges.hidden.length} {selectedBadges.hidden.length===1?"confronto foi ocultado":"confrontos foram ocultados"} por falta de escudos ou bandeiras reais. Os jogos restantes serão ampliados e reorganizados automaticamente.
           </p>}
       </div>
       <Button type="button" variant="outline" disabled={games.isFetching}
@@ -487,7 +485,7 @@ export function VitrineFootballStudio() {
       {games.error instanceof Error?games.error.message:"Não foi possível consultar os jogos de hoje."}
     </Card>}
     {games.isSuccess&&posterMode==="today"&&groups.length===0&&<Card className="p-8 text-center">
-      Nenhuma partida das principais competições encontrada na FTWB para a data selecionada.
+      Não há partidas com escudos ou bandeiras reais dos dois times disponíveis nesta data. Atualize os jogos para tentar novamente.
     </Card>}
     {games.isSuccess&&posterMode==="finished"&&finishedMatches.length>0&&!selectedFinal&&
       <Card className="p-8 text-center text-muted-foreground">
