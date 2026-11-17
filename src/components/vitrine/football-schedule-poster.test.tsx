@@ -101,6 +101,14 @@ describe("Vitrine Futebol — imagens e exportação", () => {
     expect(html).toContain("Horário indisponível");
     expect(html).not.toContain("00:00");
   });
+  it("desenha campo de futebol bem discreto e preserva marca d’água da revenda",()=>{
+    const html=renderToStaticMarkup(<FootballSchedulePoster {...base} logo="data:image/png;base64,MARCA" />);
+    expect(html).toContain('viewBox="0 0 1080 1080"');
+    expect(html).toContain('cx="540" cy="665"');
+    expect(html).toContain('opacity:0.12');
+    expect(html).toContain('src="data:image/png;base64,MARCA"');
+    expect(html).not.toContain("HORÁRIOS E TRANSMISSÕES SUJEITOS");
+  });
   it("não inventa times quando não há jogos", () => {
     const html = renderToStaticMarkup(<FootballSchedulePoster {...base} matches={[]} />);
     expect(html).toContain("ESCOLHA JOGOS REAIS PARA MONTAR A ARTE");
