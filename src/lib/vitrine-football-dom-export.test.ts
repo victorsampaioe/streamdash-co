@@ -9,15 +9,16 @@ afterEach(()=>vi.unstubAllGlobals());
 describe("Vitrine Futebol — mesma arte da Vitrine Banner",()=>{
   it("exporta 1080x1080 pela prévia verdadeira e inclui escudos e logos",async()=>{
     const drawImage=vi.fn();
-    const ctx={drawImage,toBlob:vi.fn((done:(blob:Blob)=>void)=>{
+    const makeBlob=vi.fn((done:(blob:Blob)=>void)=>{
       const bytes=new Uint8Array(1600);
       bytes.set([0x89,0x50,0x4e,0x47,0x0d,0x0a,0x1a,0x0a],0);
       bytes.set([73,72,68,82],12);
       new DataView(bytes.buffer).setUint32(16,1080);
       new DataView(bytes.buffer).setUint32(20,1080);
       done(new Blob([bytes],{type:"image/png"}));
-    }),save:vi.fn(),restore:vi.fn()};
-    const canvas={width:0,height:0,getContext:vi.fn(()=>ctx)};
+    });
+    const ctx={drawImage,save:vi.fn(),restore:vi.fn()};
+    const canvas={width:0,height:0,getContext:vi.fn(()=>ctx),toBlob:makeBlob};
     vi.stubGlobal("document",{createElement:vi.fn(()=>canvas)});
     vi.stubGlobal("getComputedStyle",vi.fn(()=>({objectPosition:"center center"})));
     class Img{
