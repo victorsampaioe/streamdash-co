@@ -180,8 +180,16 @@ export function VitrineFootballStudio() {
     {games.isError&&<Card className="p-8 text-center text-destructive" role="alert">
       {games.error instanceof Error?games.error.message:"Não foi possível consultar os jogos de hoje."}
     </Card>}
-    {games.isSuccess&&groups.length===0&&<Card className="p-8 text-center">Nenhum evento retornado pela FTWB para hoje.</Card>}
-    {games.isSuccess&&groups.length>0&&<p className="text-sm text-muted-foreground">{games.data.matches.length} confrontos encontrados • {groups.length} {groups.length===1?"arte":"artes"} • 4 confrontos por arte • FTWB consultada para {games.data.queriedDate} às {new Intl.DateTimeFormat("pt-BR",{timeZone:"America/Fortaleza",hour:"2-digit",minute:"2-digit"}).format(new Date(games.data.checkedAt))} (Fortaleza)</p>}
+    {games.isSuccess&&groups.length===0&&<Card className="p-8 text-center">Nenhuma partida das principais competições encontrada na FTWB para a data selecionada.</Card>}
+    {games.isSuccess&&<div className="space-y-2 text-sm text-muted-foreground">
+      <p>{games.data.matches.length} confrontos das principais competições • {groups.length} {groups.length===1?"arte":"artes"} • 4 confrontos por arte • FTWB consultada para {games.data.queriedDate} às {new Intl.DateTimeFormat("pt-BR",{timeZone:"America/Fortaleza",hour:"2-digit",minute:"2-digit"}).format(new Date(games.data.checkedAt))} (Fortaleza)</p>
+      <p>Dados diretamente da FTWB: {games.data.providerRecords} registros recebidos • {games.data.matches.length-games.data.withoutBroadcast} jogos com canais • {games.data.matches.length-games.data.missingBadges} jogos com dois escudos • {games.data.matches.length-games.data.missingKickoff} jogos com horário.</p>
+      <details className="rounded-lg border border-border/60 px-3 py-2 text-xs">
+        <summary className="cursor-pointer">Diagnóstico FTWB: campos recebidos</summary>
+        <p className="mt-2 break-words">{games.data.providerFields.join(", ") || "Nenhum campo disponível na resposta."}</p>
+        {games.data.partial&&<p className="mt-1">Uma das consultas à FTWB falhou; a arte usa os dados das consultas concluídas.</p>}
+      </details>
+    </div>}
     {games.isSuccess&&groups.length>0&&<div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
       {groups.map((group,index)=>{
         const featured=group.find(match=>!!match.playerPhoto && validatedPhotos[match.playerPhoto]===true);
