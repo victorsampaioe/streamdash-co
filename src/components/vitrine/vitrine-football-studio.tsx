@@ -185,6 +185,7 @@ export function VitrineFootballStudio() {
         blob=await (await fetch(png)).blob();
       }
     }
+    if(!blob||blob.size<1000)throw new Error("Não foi possível gerar o arquivo PNG.");
     const name="stream-monitor-futebol-"+day+"-arte-"+(index+1)+".png";
     return {file:new File([blob],name,{type:"image/png"}),degraded};
   }
@@ -206,11 +207,13 @@ export function VitrineFootballStudio() {
     try{
       const {file,degraded}=await createPngFile(index);
       if(degraded)toast.warning("Algumas imagens externas não permitiram exportação e foram ocultadas no PNG.");
-      const canShare=typeof navigator.share==="function" &&
-        (typeof navigator.canShare!=="function"||navigator.canShare({files:[file]}));
+      let canShare=typeof navigator.share==="function";
+      try{
+        if(canShare&&typeof navigator.canShare==="function")canShare=navigator.canShare({files:[file]});
+      }catch{canShare=false;}
       const isAppleMobile=/iPhone|iPad|iPod/i.test(navigator.userAgent) ||
         (navigator.platform==="MacIntel" && navigator.maxTouchPoints>1);
-      if(mode==="telegram" || (isAppleMobile&&canShare)){
+      if(mode==="telegram" || isAppleMobile){
         if(canShare){
           try{
             await navigator.share({
