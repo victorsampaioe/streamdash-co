@@ -18,10 +18,17 @@ export function isMajorFootballCompetition(name: string): boolean {
   if (/\b(sub ?(?:1[5-9]|2[0-9])|u ?(?:1[5-9]|2[0-9])|under ?(?:1[5-9]|2[0-9])|youth|juvenil|junior|reservas?|reserve|sub ?20|sub ?23|4 ?divisao|terceira divisao|quarta divisao|serie [cd])\b/.test(n)) return false;
 
   return [
+    // Senior international friendlies (including Brazil's national team).
+    /\bamistos(?:o|os|a|as)(?:\s+(?:internaciona(?:l|is)|de\s+selecoes|de\s+selecao|entre\s+selecoes|fifa|data\s+fifa))?\b/,
+    /\binternational\s+(?:friendly|friendlies|friendship\s+matches|friendly\s+games)\b/,
+    /\bfriendly\s+(?:international|match|matches|games)\b/,
     /\bbrasileirao\b(?:\s+serie\s+[ab])?\b/,
     /\bcampeonato brasileiro\s*(?:serie\s*[ab])?\b/,
     /\bbrasileiro\s+serie\s+[ab]\b/,
     /\bbrasil\s+serie\s+[ab]\b/,
+    /\bcampeonato\s+paulista\s+feminino\b/,
+    /\bpaulistao\s+feminino\b/,
+    /\bbrasileir(?:ao|o)\s+feminin[oa]\b/,
     /\bcopa do brasil\b/,
     /\b(?:copa )?libertadores\b/,
     /\b(?:copa )?(?:sul ?americana|sudamericana)\b/,

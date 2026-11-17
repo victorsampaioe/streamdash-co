@@ -8,6 +8,9 @@ describe("Vitrine Futebol — só competições importantes",()=>{
     "UEFA Nations League","Liga das Nações","Premier League","La Liga",
     "Bundesliga","Serie A Italiana","Copa do Mundo","Eliminatórias",
     "Copa América","FIFA Club World Cup",
+    "Amistoso Internacional","Amistosos de Seleções","Amistosos",
+    "International Friendlies","International Friendly Games",
+    "Campeonato Paulista Feminino","Brasileirão Feminino",
   ])("inclui %s",value=>{expect(main(value)).toBe(true)});
   it.each([
     "4ª Divisão Argentina","Copa Paraná","Campeonato Paulista Sub-20",
@@ -15,7 +18,12 @@ describe("Vitrine Futebol — só competições importantes",()=>{
     "Liga Reserva","Liga de Bairro","Copa Amadora",
     "Champions League Sub-20","Futebol","CONCACAF Nations League",
     "Liga das Nações CONCACAF","UEFA Nations League Sub 20",
+    "Amistoso Internacional Sub-20","Campeonato Paulista Feminino Sub-20",
   ])("exclui %s",value=>{expect(main(value)).toBe(false)});
+  it("inclui o amistoso da Seleção Brasileira",()=>{
+    expect(main("Amistoso Internacional")).toBe(true);
+    expect(isYouthFootballFixture("Amistoso Internacional","Singapura","Brasil")).toBe(false);
+  });
   it("rejeita Sub-20 mesmo quando o campeonato é principal",()=>{
     expect(isYouthFootballFixture("UEFA Nations League","Brasil Sub-20","Itália Sub-20")).toBe(true);
     expect(isYouthFootballFixture("UEFA Nations League","Brasil","Itália")).toBe(false);

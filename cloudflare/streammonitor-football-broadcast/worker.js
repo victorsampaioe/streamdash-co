@@ -7,9 +7,9 @@ const CHANNELS=[
 ["Premiere",/\bpremiere\b/i],["SporTV 3",/\bsportv\s*3\b/i],["SporTV 2",/\bsportv\s*2\b/i],["SporTV",/\bsportv\b(?!\s*[23])/i],
 ["Globo",/\b(?:rede globo|tv globo|(?:na|pela|da) globo|globo ao vivo)\b/i],
 ["ESPN 4",/\bespn\s*4\b/i],["ESPN 3",/\bespn\s*3\b/i],["ESPN 2",/\bespn\s*2\b/i],
-["ESPN",/\bespn\b(?!\s*[234])/i],["Disney+",/\bdisney\s*\+/i],
+["ESPN Brasil (YouTube)",/\bespn\s*brasil(?:\s*\(?youtube\)?)?/i],["ESPN",/\bespn\b(?!\s*(?:[234]|brasil))/i],["Disney+",/\bdisney\s*\+/i],
 ["Prime Video",/\b(?:prime video|amazon prime)\b/i],
-["CazéTV",/\bcaz[eé]\s*tv\b/i],["Max",/\b(?:hbo\s*max|streaming max|na max)\b/i],
+["ge tv",/\b(?:ge\s*tv|getv)\b/i],["CazéTV",/\bcaz[eé]\s*tv\b/i],["Max",/\b(?:hbo\s*max|streaming max|na max)\b/i],
 ["TNT Sports",/\btnt(?:\s*sports?)?\b/i],
 ["SBT",/\bsbt\b/i],["BandSports",/\bbandsports?\b/i],["Band",/\b(?:tv band|band tv|rede band|na band)\b/i],
 ["Record",/\b(?:tv record|record tv)\b/i],
@@ -20,7 +20,19 @@ const CHANNELS=[
 ["Paramount+",/\bparamount\s*\+/i],["Apple TV",/\bapple tv\b/i],
 ];
 const norm=s=>String(s||"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase().replace(/[^a-z0-9]+/g," ").trim();
-const includes=(text,team)=>{const n=canonicalTeam(team),hay=norm(text);const aliases=n==="paises baixos"?["paises baixos","holanda","netherlands"]:n==="alemanha"?["alemanha","germany"]: [n];return !!n&&aliases.some(value=>(" "+hay+" ").includes(" "+value+" "));};
+const includes=(text,team)=>{const n=canonicalTeam(team),hay=norm(text);
+ const aliases=n==="paises baixos"?["paises baixos","holanda","netherlands"]:
+ n==="alemanha"?["alemanha","germany"]:
+ n==="brasil"?["brasil","brazil","selecao brasileira"]:
+ n==="singapura"?["singapura","singapore","singapur"]:
+ n==="pais de gales"?["pais de gales","wales"]:
+ n==="suecia"?["suecia","sweden"]:
+ n==="polonia"?["polonia","poland"]:
+ n==="irlanda"?["irlanda","ireland"]:
+ n==="irlanda do norte"?["irlanda do norte","northern ireland"]:
+ n==="noruega"?["noruega","norway"]:
+ n==="dinamarca"?["dinamarca","denmark"]:
+ [n];return !!n&&aliases.some(value=>(" "+hay+" ").includes(" "+value+" "));};
 function decode(s){
 return String(s||"").replace(/<!\[CDATA\[([\s\S]*?)\]\]>/g,"$1")
 .replace(/&amp;/g,"&").replace(/&quot;/g,'"').replace(/&#39;|&apos;/g,"'")
@@ -163,7 +175,18 @@ const TEAM_ALIASES={
  "iceland":"islandia","lithuania":"lituania",
  "greece":"grecia","serbia":"servia",
  "north macedonia":"macedonia do norte",
- "slovenia":"eslovenia","bulgaria":"bulgaria"
+ "slovenia":"eslovenia","bulgaria":"bulgaria",
+ "singapore":"singapura","singapur":"singapura",
+ "brazil":"brasil","selecao brasileira":"brasil",
+ "wales":"pais de gales","poland":"polonia","sweden":"suecia",
+ "ireland":"irlanda","northern ireland":"irlanda do norte",
+ "denmark":"dinamarca","norway":"noruega",
+ "hungary":"hungria","austria":"austria",
+ "bosnia and herzegovina":"bosnia e herzegovina",
+ "bosnia herzegovina":"bosnia e herzegovina",
+ "romania":"romenia","ukraine":"ucrania","georgia":"georgia",
+ "japan":"japao","argentina":"argentina",
+ "costa rica":"costa rica","paraguay":"paraguai"
 };
 function canonicalTeam(name){
  const value=norm(name);
@@ -224,8 +247,9 @@ async function researchBatch(matches,env){
     source:row.link||""
    }))};
  }));
- const withEvidence=data.filter(m=>m.possible.length>0).slice(0,28);
- const resultMap=new Map(withEvidence.map(m=>[m.id,m.possible.slice(0,3)]));
+ const allEvidence=data.filter(m=>m.possible.length>0);
+ const withEvidence=allEvidence.slice(0,28);
+ const resultMap=new Map(allEvidence.map(m=>[m.id,m.possible.slice(0,3)]));
  if(withEvidence.length && env.AI){
   try{
    const output=await env.AI.run(MODEL,{
