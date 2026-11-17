@@ -1,6 +1,7 @@
 import {formatCinematicWhatsApp} from "./vitrine-cinematic-canvas";
 import {supportedMp4Mime} from "./vitrine-cinematic-mp4";
 import {finalizeCinematicMp4} from "./vitrine-cinematic-whatsapp";
+import {connectVideoAudioToStream} from "./vitrine-video-audio";
 
 export type VideoOverlayBrand={
   name:string;whatsapp:string;color:string;logo:HTMLImageElement
@@ -100,8 +101,7 @@ export async function renderResellerVideoMp4(opts:{
   const ctx=canvas.getContext("2d",{alpha:false});
   if(!ctx)throw new Error("Não foi possível iniciar o compositor.");
   const stream=canvas.captureStream(30);
-  let audioCtx:AudioContext|null=null;
-  let audioSrc:MediaElementAudioSourceNode|null=null;
+  let disconnectAudio:(()=>void)|null=null;
   let recorder:MediaRecorder|null=null;
   let raf=0,callback=0,watchdog:ReturnType<typeof setTimeout>|null=null;
   let stopped=false,frames=0;
@@ -116,14 +116,10 @@ export async function renderResellerVideoMp4(opts:{
       });
     }
     if(audio){
-      audioCtx=new AudioContext();
-      audioSrc=audioCtx.createMediaElementSource(source);
-      const destination=audioCtx.createMediaStreamDestination();
-      audioSrc.connect(destination);
-      for(const track of destination.stream.getAudioTracks())stream.addTrack(track);
-      if(!destination.stream.getAudioTracks().length)
-        throw new Error("Este navegador não permite capturar o áudio original.");
-      source.muted=false;await audioCtx.resume();
+      // Reuse the existing MediaElementAudioSourceNode across retries.
+      // Browsers permanently associate this node with the video element:
+      // creating a new one is an InvalidStateError on the second export.
+      disconnectAudio=await connectVideoAudioToStream(source,stream);
     }else source.muted=true;
     paintResellerVideoFrame(ctx,source,brand,width,height);
     const chunks:BlobPart[]=[];
@@ -198,9 +194,8 @@ export async function renderResellerVideoMp4(opts:{
     if(watchdog)clearTimeout(watchdog);
     source.pause();
     try{if(recorder?.state!=="inactive")recorder?.stop();}catch{/*already closed*/}
+    disconnectAudio?.();
     stream.getTracks().forEach(track=>track.stop());
-    audioSrc?.disconnect();
-    if(audioCtx&&audioCtx.state!=="closed")void audioCtx.close().catch(()=>{});
     canvas.width=canvas.height=0;
   }
 }
