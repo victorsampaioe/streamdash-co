@@ -6,6 +6,15 @@ export type VideoOverlayBrand={
   name:string;whatsapp:string;color:string;logo:HTMLImageElement
 };
 export type VideoExportProgress={percent:number;stage:string};
+/** Neutral palette shared by the MP4 compositor and the responsive preview. */
+export const VIDEO_WHATSAPP_MONO={
+  background:"rgba(0,0,0,.78)",
+  border:"rgba(255,255,255,.72)",
+  iconBackground:"#f5f5f5",
+  iconText:"#101010",
+  caption:"#d4d4d8",
+  phone:"#ffffff",
+} as const;
 function rounded(ctx:CanvasRenderingContext2D,x:number,y:number,w:number,h:number,r:number){
   const corner=Math.min(r,w/2,h/2);
   ctx.beginPath();ctx.roundRect(x,y,w,h,corner);ctx.closePath();
@@ -46,16 +55,16 @@ export function paintResellerVideoFrame(ctx:CanvasRenderingContext2D,
   // Compact, consistently sized footer beneath the original device row.
   const phone=layout.whatsapp;
   ctx.save();ctx.shadowColor="rgba(0,0,0,.38)";ctx.shadowBlur=7*unit;
-  ctx.fillStyle="rgba(1,21,22,.86)";
+  ctx.fillStyle=VIDEO_WHATSAPP_MONO.background;
   rounded(ctx,phone.x,phone.y,phone.w,phone.h,11*unit);ctx.fill();
-  ctx.strokeStyle="#38d692";ctx.lineWidth=1.4*unit;ctx.stroke();ctx.restore();
-  ctx.save();ctx.fillStyle="#12bd7b";
+  ctx.strokeStyle=VIDEO_WHATSAPP_MONO.border;ctx.lineWidth=1.4*unit;ctx.stroke();ctx.restore();
+  ctx.save();ctx.fillStyle=VIDEO_WHATSAPP_MONO.iconBackground;
   rounded(ctx,phone.x+10*unit,phone.y+10*unit,32*unit,31*unit,8*unit);ctx.fill();
-  ctx.fillStyle="#ffffff";ctx.font="bold "+(18*unit)+"px Arial,sans-serif";
+  ctx.fillStyle=VIDEO_WHATSAPP_MONO.iconText;ctx.font="bold "+(18*unit)+"px Arial,sans-serif";
   ctx.textAlign="center";ctx.textBaseline="middle";
   ctx.fillText("☎",phone.x+26*unit,phone.y+25.5*unit);
   ctx.textAlign="left";ctx.textBaseline="alphabetic";
-  ctx.fillStyle="#8ce7bc";ctx.font="bold "+(9*unit)+"px Arial,sans-serif";
+  ctx.fillStyle=VIDEO_WHATSAPP_MONO.caption;ctx.font="bold "+(9*unit)+"px Arial,sans-serif";
   ctx.fillText("FALE PELO WHATSAPP",phone.x+52*unit,phone.y+18*unit);
   const label=formatCinematicWhatsApp(brand.whatsapp)||brand.whatsapp;
   let numberSize=18;
@@ -64,7 +73,7 @@ export function paintResellerVideoFrame(ctx:CanvasRenderingContext2D,
     if(ctx.measureText(label).width<phone.w-66*unit)break;
     numberSize-=1;
   }while(numberSize>=12);
-  ctx.fillStyle="#ffffff";ctx.fillText(label,phone.x+52*unit,phone.y+40*unit);
+  ctx.fillStyle=VIDEO_WHATSAPP_MONO.phone;ctx.fillText(label,phone.x+52*unit,phone.y+40*unit);
   ctx.restore();
 }
 export async function renderResellerVideoMp4(opts:{
