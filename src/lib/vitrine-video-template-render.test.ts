@@ -5,7 +5,7 @@ import {validateVideoTemplateFile,tusMetadata} from "./vitrine-video-template-up
 describe("Biblioteca MP4 da revenda",()=>{
   it("mantém logo no alto e telefone abaixo dos ícones de aparelhos",()=>{
     const g=videoOverlayGeometry(512,910);
-    expect(g.logo).toEqual({x:16,y:27,w:226,h:116});
+    expect(g.logo).toEqual({x:22,y:32,w:170,h:88});
     expect(g.whatsapp).toEqual({x:67,y:815,w:378,h:51});
     expect(g.whatsapp.y).toBeGreaterThan(g.logo.y+g.logo.h);
   });
@@ -14,11 +14,11 @@ describe("Biblioteca MP4 da revenda",()=>{
     expect(high.logo.x).toBe(low.logo.x*2);
     expect(high.whatsapp.w).toBe(low.whatsapp.w*2);
   });
-  it("mantém sobreposição do WhatsApp compacta e logo maior na prévia e no MP4",()=>{
+  it("mantém WhatsApp compacto e logo reduzida na prévia e no MP4",()=>{
     const a=videoOverlayGeometry(512,910),b=videoOverlayGeometry(512,910);
     expect(a).toEqual(b);
-    expect(a.logo.w).toBeGreaterThan(184);
-    expect(a.logo.h).toBeGreaterThan(90);
+    expect(a.logo.w).toBeLessThan(184);
+    expect(a.logo.h).toBeLessThan(90);
     expect(a.whatsapp.w).toBeLessThan(472);
     expect(a.whatsapp.h).toBeLessThan(70);
     expect(a.whatsapp.x+a.whatsapp.w).toBeLessThan(512);
@@ -43,7 +43,7 @@ describe("Biblioteca MP4 da revenda",()=>{
     },512,910);
     const logoCalls=calls.filter(call=>call.name==="drawImage"&&call.args[0]===logo);
     expect(logoCalls).toHaveLength(1);
-    expect(Number(logoCalls[0].args[3])).toBeGreaterThan(184);
+    expect(Number(logoCalls[0].args[3])).toBe(170);
     // Only the compact WhatsApp badge and its little icon use roundRect.
     // The transparent logo must NOT get a separate rectangular backdrop.
     expect(calls.filter(call=>call.name==="roundRect")).toHaveLength(2);
