@@ -197,7 +197,7 @@ export function VitrineFootballStudio() {
   const crestsReady=crestMedia.key===crestKey&&crestMedia.ready;
   const exportSignature=useMemo(()=>JSON.stringify({
     day,accent,brand,transparentLogo,groups,validatedPhotos,
-    crestKey,crestsReady,crestMedia.images
+    crestKey,crestsReady,crestImages:crestMedia.images
   }),[day,accent,brand,transparentLogo,groups,validatedPhotos,
     crestKey,crestsReady,crestMedia.images]);
   const haveChannels = (match:FootballMatch) => (match.broadcasts||[]).slice(0,3).join(" • ") || "Sem transmissão";
