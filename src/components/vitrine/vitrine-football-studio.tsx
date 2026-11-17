@@ -381,7 +381,7 @@ export function VitrineFootballStudio() {
         {!crestsReady&&sourceMatches.length>0&&<p className="mt-1 text-xs text-blue-300" role="status">Validando escudos reais dos dois times antes de montar as artes…</p>}
         {crestsReady&&selectedBadges.hidden.length>0&&
           <p className="mt-1 text-xs text-amber-400" role="status">
-            {selectedBadges.hidden.length} {selectedBadges.hidden.length===1?"confronto foi ocultado":"confrontos foram ocultados"} por falta de escudos ou bandeiras reais. Os jogos restantes serão ampliados e reorganizados automaticamente.
+            {selectedBadges.hidden.length} {selectedBadges.hidden.length===1?"confronto foi ocultado":"confrontos foram ocultados"} por falta de escudos ou bandeiras reais. Os modelos mantêm o tamanho e a posição originais dos cartões.
           </p>}
       </div>
       <Button type="button" variant="outline" disabled={games.isFetching}
