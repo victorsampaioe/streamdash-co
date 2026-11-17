@@ -34,6 +34,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, Dialog
 import { formatBRL } from "@/lib/payments";
 import { cn } from "@/lib/utils";
 import { broadcastTelegram } from "@/lib/telegram-broadcast.functions";
+import { broadcastVitrineFootballLaunch } from "@/lib/telegram-football-launch.functions";
+import { FOOTBALL_3MODELS_ANNOUNCEMENT } from "@/lib/telegram-football-launch-copy";
 import { verifyCustomerPix } from "@/lib/payment-recovery.functions";
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -1110,24 +1112,70 @@ function StatusBadge({ status, expired }: { status: AdminUser["status"]; expired
   return map[status as keyof typeof map] || <Badge variant="outline">{status}</Badge>;
 }
 
+async function photoForTelegramAlbum(file:File):Promise<string>{
+  if(!["image/jpeg","image/png"].includes(file.type))
+    throw new Error("Escolha apenas imagens JPG ou PNG.");
+  if(file.size>5*1024*1024)throw new Error("Cada exemplo deve ter até 5 MB.");
+  const bitmap=await createImageBitmap(file);
+  try{
+    const scale=Math.min(1,960/bitmap.width,1200/bitmap.height);
+    const canvas=document.createElement("canvas");
+    canvas.width=Math.round(bitmap.width*scale);
+    canvas.height=Math.round(bitmap.height*scale);
+    const ctx=canvas.getContext("2d");
+    if(!ctx)throw new Error("Não foi possível preparar a imagem.");
+    ctx.fillStyle="#fff";ctx.fillRect(0,0,canvas.width,canvas.height);
+    ctx.drawImage(bitmap,0,0,canvas.width,canvas.height);
+    return canvas.toDataURL("image/jpeg",.88);
+  }finally{bitmap.close();}
+}
 function TelegramBroadcastCard() {
   const [message, setMessage] = useState("✅ StreamMonitor está online! Todas as suas monitorações estão sendo executadas normalmente.");
+  const [gallery,setGallery]=useState<string[]>([]);
+  const [galleryNames,setGalleryNames]=useState<string[]>([]);
+  const [galleryError,setGalleryError]=useState("");
+  const [galleryLoading,setGalleryLoading]=useState(false);
   const PROMO_MSG = "🔥 <b>UMA HOJE PROMOÇÃO PARA HOJE MEUS REVENDA ADMIN</b>\n\nValor de <b>R$ 35,00</b> por apenas <b>R$ 25,00</b> válido só hoje!\n\n👉 Assine agora pelo PIX: https://streammonitor.site/app/subscription";
   const send = useServerFn(broadcastTelegram);
+  const sendFootballLaunch=useServerFn(broadcastVitrineFootballLaunch);
   const mut = useMutation({
     mutationFn: async (msg: string) => await send({ data: { message: msg } }),
-    onSuccess: (r: any) => toast.success(`Enviado para ${r.sent}/${r.total} usuários${r.failed ? ` · ${r.failed} falhas` : ""}`),
+    onSuccess: (r: any) => toast.success("Enviado para "+r.sent+"/"+r.total+" usuários"+(r.failed?" · "+r.failed+" falhas":"")),
     onError: (e: Error) => toast.error(e.message),
   });
+  const footballMut=useMutation({
+    mutationFn: async()=>await sendFootballLaunch({data:{photos:gallery}}),
+    onSuccess:(r:any)=>toast.success("Álbum de futebol entregue a "+r.sent+"/"+r.total+" Telegram(s) configurados"+
+      (r.failed?" · "+r.failed+" falha(s)":"")),
+    onError:(e:Error)=>toast.error("Falha no anúncio de futebol: "+e.message),
+  });
+  async function prepareGallery(list:FileList|null){
+    const files=Array.from(list||[]);
+    setGalleryError("");
+    if(files.length!==3){
+      setGallery([]);setGalleryNames([]);
+      setGalleryError("Selecione exatamente três imagens: Modelo 1, Modelo 2 e Fim de Jogo.");
+      return;
+    }
+    setGalleryLoading(true);
+    try{
+      const urls=await Promise.all(files.map(photoForTelegramAlbum));
+      setGallery(urls);setGalleryNames(files.map(f=>f.name));
+    }catch(error){
+      setGallery([]);setGalleryNames([]);
+      setGalleryError(error instanceof Error?error.message:"Falha ao preparar os exemplos.");
+    }finally{setGalleryLoading(false);}
+  }
   return (
-    <Card className="p-4 space-y-3 border-primary/30 bg-gradient-to-br from-primary/5 to-transparent">
+    <Card className="p-4 space-y-4 border-primary/30 bg-gradient-to-br from-primary/5 to-transparent">
       <div className="flex items-center gap-2">
         <Send className="h-4 w-4 text-primary" />
         <h2 className="font-semibold">Broadcast Telegram</h2>
         <Badge variant="outline" className="text-xs">Somente admin</Badge>
       </div>
       <p className="text-xs text-muted-foreground">
-        Envia esta mensagem para todos os usuários que já configuraram o Telegram como canal de alerta.
+        Envia aos usuários com Telegram de alertas ativado, incluindo revendas com
+        assinatura ativa ou inativa. Telegram desativado não recebe o anúncio.
       </p>
       <Textarea rows={4} value={message} onChange={(e) => setMessage(e.target.value)} />
       <div className="flex justify-end gap-2 flex-wrap">
@@ -1136,13 +1184,57 @@ function TelegramBroadcastCard() {
         </Button>
         <Button onClick={() => mut.mutate(message)} disabled={mut.isPending || !message.trim()}>
           <Send className="h-4 w-4 mr-2" />
-          {mut.isPending ? "Enviando..." : "Enviar para todos"}
+          {mut.isPending ? "Enviando..." : "Enviar texto para todos"}
         </Button>
+      </div>
+
+      <div className="border-t border-border/70 pt-4 space-y-3">
+        <div className="flex items-center gap-2">
+          <span aria-hidden>⚽</span>
+          <h3 className="font-bold">Novidade Futebol — Álbum com 3 exemplos</h3>
+        </div>
+        <p className="text-sm text-muted-foreground">
+          Divulgue os três modelos: Eventos de Hoje, Jogos do Dia e Fim de Jogo.
+          O texto abaixo acompanha um álbum de três imagens enviadas juntas pelo
+          bot cadastrado. Os destinatários incluem revendas inativas com alertas
+          Telegram habilitados.
+        </p>
+        <div className="rounded-lg border border-border bg-muted/30 p-3 text-sm whitespace-pre-wrap">
+          {FOOTBALL_3MODELS_ANNOUNCEMENT.replace(/<\/?b>/g,"")}
+        </div>
+        <label className="block text-sm font-medium">
+          Envie exatamente 3 imagens (clássico, grade e fim de jogo)
+          <input type="file" multiple accept="image/png,image/jpeg"
+            onChange={e=>void prepareGallery(e.target.files)}
+            className="mt-2 block w-full rounded-lg border border-border bg-background px-3 py-2 text-sm"/>
+        </label>
+        {galleryLoading&&<p className="text-xs text-blue-400">Preparando exemplos para envio…</p>}
+        {galleryError&&<p className="text-xs text-destructive" role="alert">{galleryError}</p>}
+        {gallery.length===3&&<div className="grid grid-cols-3 gap-2">
+          {gallery.map((src,index)=>(
+            <div key={index} className="min-w-0">
+              <img src={src} alt={"Exemplo "+(index+1)+" do banner de futebol"}
+                className="w-full aspect-[4/5] object-contain rounded-md border border-border"/>
+              <p className="truncate text-[10px] text-muted-foreground">{galleryNames[index]}</p>
+            </div>
+          ))}
+        </div>}
+        <Button className="w-full" disabled={gallery.length!==3||galleryLoading||footballMut.isPending}
+          onClick={()=>{
+            if(window.confirm("Enviar o comunicado e as 3 imagens para todos os Telegrams cadastrados e habilitados, inclusive contas inativas?"))
+              footballMut.mutate();
+          }}>
+          <Send className="h-4 w-4 mr-2"/>
+          {footballMut.isPending?"Enviando 3 exemplos...":"📸 Enviar comunicado e os 3 exemplos"}
+        </Button>
+        <p className="text-xs text-muted-foreground">
+          O contador de entregas aparece apenas após resposta do Telegram.
+          Não serão enviadas mensagens a canais de alerta desativados.
+        </p>
       </div>
     </Card>
   );
 }
-
 
 function GrantPlanDialog({ user }: { user: AdminUser }) {
   const qc = useQueryClient();
