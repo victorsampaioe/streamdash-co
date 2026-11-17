@@ -83,8 +83,8 @@ function FixtureRibbon({ match, badgeImages, broadcast, accent, width, height }:
   width: number;
   height: number;
 }) {
-  const homeBadge=badgeImages[`home:${match.id}`] || badgeImages[match.homeBadge] || match.homeBadge;
-  const awayBadge=badgeImages[`away:${match.id}`] || badgeImages[match.awayBadge] || match.awayBadge;
+  const homeBadge=badgeImages[`home:${match.id}`] ?? badgeImages[match.homeBadge] ?? match.homeBadge;
+  const awayBadge=badgeImages[`away:${match.id}`] ?? badgeImages[match.awayBadge] ?? match.awayBadge;
   const homeName=footballTeamNamePtBR(match.home);
   const awayName=footballTeamNamePtBR(match.away);
   const short=height<=160;
