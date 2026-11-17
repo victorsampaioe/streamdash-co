@@ -1,13 +1,13 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { toPng } from "html-to-image";
+import { toBlob, toPng } from "html-to-image";
 import { supabase } from "@/integrations/supabase/client";
 import { prepareTransparentLogo } from "@/lib/vitrine-image";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Download, RefreshCw, Trophy } from "lucide-react";
+import { Download, RefreshCw, Trophy, Send, X, Image as ImageIcon } from "lucide-react";
 import { FootballSchedulePoster, FOOTBALL_POSTER_PALETTES } from "@/components/vitrine/football-schedule-poster";
 import { getVitrineFootballMatches, type FootballMatch } from "@/lib/vitrine-football.functions";
 
@@ -48,6 +48,9 @@ export function VitrineFootballStudio() {
   const [selectedColor, setSelectedColor] = useState<string | null>(null);
   const [colorStorageKey, setColorStorageKey] = useState<string | null>(null);
   const [saving, setSaving] = useState<number | null>(null);
+  const [action, setAction] = useState<"download"|"telegram"|null>(null);
+  const [imagePreview, setImagePreview] = useState<{url:string;name:string;index:number;file:File}|null>(null);
+  const imagePreviewUrl = useRef<string|null>(null);
   const posterRefs = useRef<(HTMLDivElement | null)[]>([]);
   const [day, setDay] = useState(today);
 
@@ -125,27 +128,121 @@ export function VitrineFootballStudio() {
   },[groups]);
   const haveChannels = (match:FootballMatch) => (match.broadcasts||[]).slice(0,3).join(" • ") || "Sem transmissão";
 
-  async function download(index:number) {
-    const node=posterRefs.current[index];
-    if (!node || saving!==null) return;
-    setSaving(index);
-    try {
-      await document.fonts.ready;
-      const images=Array.from(node.querySelectorAll("img"));
-      await Promise.all(images.map(async (img)=>{
-        if(img.complete) return;
-        await new Promise<void>((resolve)=>{img.addEventListener("load",()=>resolve(),{once:true});img.addEventListener("error",()=>resolve(),{once:true});});
-      }));
-      const png=await toPng(node,{pixelRatio:1,cacheBust:true,backgroundColor:"#071227",skipFonts:false});
-      const anchor=document.createElement("a");
-      anchor.href=png;
-      anchor.download="stream-monitor-futebol-"+day+"-arte-"+(index+1)+".png";
-      anchor.click();
-      toast.success("Arte "+(index+1)+" baixada.");
-    } catch {
-      toast.error("Falha ao exportar PNG. Uma imagem externa pode estar bloqueando a exportação.");
-    } finally {setSaving(null);}
+
+  useEffect(()=>()=>{if(imagePreviewUrl.current)URL.revokeObjectURL(imagePreviewUrl.current);},[]);
+
+  function showImage(file:File,index:number){
+    if(imagePreviewUrl.current)URL.revokeObjectURL(imagePreviewUrl.current);
+    const url=URL.createObjectURL(file);
+    imagePreviewUrl.current=url;
+    setImagePreview({url,name:file.name,index,file});
   }
+  function closeImage(){
+    setImagePreview(null);
+    // Keep the blob URL alive until after React unmounts the preview image.
+  }
+  async function awaitAssets(node:HTMLElement){
+    if(document.fonts?.ready){
+      await Promise.race([document.fonts.ready,new Promise<void>(resolve=>setTimeout(resolve,3000))]);
+    }
+    const images=[...node.querySelectorAll("img")];
+    await Promise.all(images.map(img=>
+      Promise.race([
+        img.decode ? img.decode().catch(()=>{}) : Promise.resolve(),
+        new Promise<void>(resolve=>setTimeout(resolve,4000))
+      ])
+    ));
+  }
+  async function createPngFile(index:number):Promise<{file:File;degraded:boolean}>{
+    const node=posterRefs.current[index];
+    if(!node)throw new Error("Arte ainda não carregada.");
+    await awaitAssets(node);
+    const options={
+      width:baseSize,height:baseSize,pixelRatio:1,backgroundColor:"#071227",
+      cacheBust:true,skipAutoScale:true
+    };
+    let blob:Blob|null=null;
+    let degraded=false;
+    try{
+      blob=await toBlob(node,options);
+      if(!blob||blob.size<1000)throw new Error("PNG vazio");
+    }catch{
+      // Some third-party crests block canvas export via CORS. Export the poster
+      // rather than failing completely; only unsupported remote images are omitted.
+      degraded=true;
+      const safer={
+        ...options,skipFonts:true,
+        filter:(element:HTMLElement)=>{
+          if(element instanceof HTMLImageElement && /^https?:/i.test(element.src))return false;
+          return true;
+        }
+      };
+      try{
+        blob=await toBlob(node,safer);
+        if(!blob||blob.size<1000)throw new Error("PNG vazio");
+      }catch{
+        const png=await toPng(node,safer);
+        blob=await (await fetch(png)).blob();
+      }
+    }
+    if(!blob||blob.size<1000)throw new Error("Não foi possível gerar o arquivo PNG.");
+    const name="stream-monitor-futebol-"+day+"-arte-"+(index+1)+".png";
+    return {file:new File([blob],name,{type:"image/png"}),degraded};
+  }
+  function downloadBlob(file:File){
+    const url=URL.createObjectURL(file);
+    const anchor=document.createElement("a");
+    anchor.href=url;
+    anchor.download=file.name;
+    anchor.rel="noopener";
+    document.body.appendChild(anchor);
+    anchor.click();
+    anchor.remove();
+    setTimeout(()=>URL.revokeObjectURL(url),60000);
+  }
+  async function exportPoster(index:number,mode:"download"|"telegram"){
+    if(saving!==null)return;
+    setSaving(index);
+    setAction(mode);
+    try{
+      const {file,degraded}=await createPngFile(index);
+      if(degraded)toast.warning("Algumas imagens externas não permitiram exportação e foram ocultadas no PNG.");
+      let canShare=typeof navigator.share==="function";
+      try{
+        if(canShare&&typeof navigator.canShare==="function")canShare=navigator.canShare({files:[file]});
+      }catch{canShare=false;}
+      const isAppleMobile=/iPhone|iPad|iPod/i.test(navigator.userAgent) ||
+        (navigator.platform==="MacIntel" && navigator.maxTouchPoints>1);
+      if(mode==="telegram" || isAppleMobile){
+        if(canShare){
+          try{
+            await navigator.share({
+              files:[file],
+              title:"Eventos de hoje · Stream Monitor",
+              text:"🏆 Eventos de hoje! Confira os confrontos e as transmissões. "+brand.name
+            });
+            return;
+          }catch(error){
+            if(error instanceof DOMException && error.name==="AbortError")return;
+          }
+        }
+        showImage(file,index);
+        toast.info(mode==="telegram"?
+          "Abra ou salve o PNG e compartilhe no Telegram.":
+          "Toque e segure a imagem para salvá-la no iPhone.");
+        return;
+      }
+      downloadBlob(file);
+      toast.success("PNG preparado para download.");
+    }catch(error){
+      toast.error(error instanceof Error?error.message:
+        "Não foi possível preparar o PNG. Tente novamente.");
+    }finally{
+      setSaving(null);
+      setAction(null);
+    }
+  }
+
   return <main className="mx-auto max-w-7xl space-y-6 px-4 py-8">
     <div className="flex flex-wrap items-center justify-between gap-4">
       <div>
@@ -191,11 +288,17 @@ export function VitrineFootballStudio() {
         }
         const channels=Object.fromEntries(group.map(match=>[match.id,haveChannels(match)]));
         return <Card className="min-w-0 overflow-hidden p-3 sm:p-4" key={group.map(m=>m.id).join("|")}>
-          <div className="flex items-center justify-between gap-3 pb-4">
+          <div className="flex flex-wrap items-center justify-between gap-3 pb-4">
             <strong className="text-base">Arte {index+1} de {groups.length}</strong>
-            <Button type="button" disabled={saving!==null} onClick={()=>void download(index)}>
-              <Download size={16} className="mr-2"/>{saving===index?"Preparando PNG…":"Baixar PNG"}
-            </Button>
+            <div className="flex flex-wrap gap-2">
+              <Button type="button" size="sm" disabled={saving!==null} onClick={()=>void exportPoster(index,"download")}>
+                <Download size={16} className="mr-2"/>{saving===index&&action==="download"?"Preparando…":"Baixar PNG"}
+              </Button>
+              <Button type="button" size="sm" variant="outline" disabled={saving!==null}
+                onClick={()=>void exportPoster(index,"telegram")}>
+                <Send size={16} className="mr-2"/>{saving===index&&action==="telegram"?"Preparando…":"Enviar ao Telegram"}
+              </Button>
+            </div>
           </div>
           <ResponsivePoster onPosterRef={el=>{posterRefs.current[index]=el}}>
             <FootballSchedulePoster kind="today" format="feed" matches={group} day={day}
@@ -206,6 +309,49 @@ export function VitrineFootballStudio() {
           </ResponsivePoster>
         </Card>;
       })}
+    </div>}
+    {imagePreview&&<div role="dialog" aria-modal="true" aria-label="Salvar ou compartilhar arte de futebol"
+      className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 p-4"
+      onClick={closeImage}>
+      <div className="w-full max-w-md space-y-4 rounded-2xl border border-border bg-card p-4 shadow-2xl"
+        onClick={event=>event.stopPropagation()}>
+        <div className="flex items-center justify-between">
+          <strong className="flex items-center gap-2 text-base"><ImageIcon size={19}/> Arte {imagePreview.index+1} em PNG</strong>
+          <Button type="button" size="icon" variant="ghost" onClick={closeImage} aria-label="Fechar imagem">
+            <X size={18}/>
+          </Button>
+        </div>
+        <img src={imagePreview.url} alt="Prévia final da arte para salvar"
+          className="aspect-square w-full rounded-lg object-contain"/>
+        <p className="text-sm text-muted-foreground">
+          No iPhone, toque e segure a imagem para salvar em Fotos. Depois, compartilhe pelo Telegram.
+        </p>
+        <div className="flex flex-wrap gap-2">
+          <a className="inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-primary px-4 text-sm font-semibold text-primary-foreground"
+            href={imagePreview.url} download={imagePreview.name} target="_blank" rel="noopener">
+            <Download size={16}/> Salvar PNG
+          </a>
+          <Button type="button" variant="outline" onClick={()=>{
+            if(typeof navigator.share!=="function"){
+              toast.info("Salve o PNG e abra a imagem pelo Telegram.");
+              return;
+            }
+            try{
+              void navigator.share({
+                files:[imagePreview.file],
+                title:"Eventos de hoje · Stream Monitor",
+                text:"🏆 Eventos de hoje! Confira os confrontos e transmissões. "+brand.name,
+              }).then(closeImage).catch(error=>{
+                if(!(error instanceof DOMException&&error.name==="AbortError"))
+                  toast.info("Salve o PNG e compartilhe pelo Telegram.");
+              });
+            }catch{
+              toast.info("Salve o PNG e compartilhe pelo Telegram.");
+            }
+          }}><Send size={16} className="mr-2"/> Compartilhar / Telegram</Button>
+          <Button type="button" variant="outline" onClick={closeImage}>Fechar</Button>
+        </div>
+      </div>
     </div>}
   </main>;
 }
