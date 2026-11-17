@@ -1,0 +1,32 @@
+import type { FootballMatch } from "./vitrine-football.functions";
+import { nationalTeamFlagFallback } from "./vitrine-football-ptbr";
+import { offlineFootballFlag } from "./vitrine-football-offline-flags";
+
+/** No invented shields: local country flags or already-proxied genuine club logos.
+ * If either side is unavailable, omit the ENTIRE fixture before pagination.
+ */
+export function verifiedTeamBadge(team:string,league:string,sourceUrl:string,
+  proxied:Record<string,string>):string{
+  const flag=nationalTeamFlagFallback(team,league);
+  const code=flag.match(/\/([\w-]+)\.png$/)?.[1]||"";
+  const local=offlineFootballFlag(code);
+  if(local)return local;
+  const source=proxied[sourceUrl]||proxied[flag]||"";
+  // Do not draw third-party URLs with broken CORS or fallback initials.
+  return /^data:image\/(?:png|jpeg|jpg|webp|gif|svg\+xml);/i.test(source)?source:"";
+}
+export type FootballVisibleSelection={
+  visible:FootballMatch[];hidden:FootballMatch[];
+};
+export function onlyMatchesWithRealBadges(
+  matches:FootballMatch[],proxied:Record<string,string>
+):FootballVisibleSelection{
+  const visible:FootballMatch[]=[],hidden:FootballMatch[]=[];
+  for(const match of matches){
+    const home=verifiedTeamBadge(match.home,match.league,match.homeBadge||"",proxied);
+    const away=verifiedTeamBadge(match.away,match.league,match.awayBadge||"",proxied);
+    if(!home||!away){hidden.push(match);continue;}
+    visible.push({...match,homeBadge:home,awayBadge:away});
+  }
+  return {visible,hidden};
+}
