@@ -129,17 +129,59 @@ export function VitrineFootballStudio() {
     }
     return ()=>{mounted=false};
   },[groups]);
+  // Preload the same vetted crest bytes for the on-screen preview AND PNG.
+  // Previously, only the hidden export copy was inlined, so browser/CORS errors
+  // could silently hide shields from the visible cards or exported image.
+  const crestUrls=useMemo(()=>[...new Set(groups.flatMap(group=>group.flatMap(match=>
+    [match.homeBadge,match.awayBadge].filter((url):url is string=>!!url&&/^https:\/\//i.test(url))
+  )))].slice(0,64),[groups]);
+  const crestKey=JSON.stringify(crestUrls);
+  const [crestMedia,setCrestMedia]=useState<{
+    key:string;ready:boolean;images:Record<string,string>;unavailable:string[]
+  }>({key:"[]",ready:true,images:{},unavailable:[]});
+  const inlineAssetsRef=useRef(inlineAssets);
+  inlineAssetsRef.current=inlineAssets;
+  useEffect(()=>{
+    let cancelled=false;
+    if(!crestUrls.length){
+      setCrestMedia({key:crestKey,ready:true,images:{},unavailable:[]});
+      return ()=>{cancelled=true};
+    }
+    setCrestMedia({key:crestKey,ready:false,images:{},unavailable:[]});
+    void (async()=>{
+      const chunks:string[][]=[];
+      for(let i=0;i<crestUrls.length;i+=16)chunks.push(crestUrls.slice(i,i+16));
+      const results=await Promise.allSettled(chunks.map(urls=>
+        inlineAssetsRef.current({data:{urls}})
+      ));
+      if(cancelled)return;
+      const images:Record<string,string>={};
+      for(const result of results){
+        if(result.status==="fulfilled")Object.assign(images,result.value.images||{});
+      }
+      setCrestMedia({key:crestKey,ready:true,images,
+        unavailable:crestUrls.filter(url=>!images[url])});
+    })();
+    return ()=>{cancelled=true};
+  },[crestKey]);
+  const crestsReady=crestMedia.key===crestKey&&crestMedia.ready;
   const exportSignature=useMemo(()=>JSON.stringify({
-    day,accent,brand,transparentLogo,groups,validatedPhotos
-  }),[day,accent,brand,transparentLogo,groups,validatedPhotos]);
+    day,accent,brand,transparentLogo,groups,validatedPhotos,
+    crestKey,crestsReady,crestMedia.images
+  }),[day,accent,brand,transparentLogo,groups,validatedPhotos,
+    crestKey,crestsReady,crestMedia.images]);
   const haveChannels = (match:FootballMatch) => (match.broadcasts||[]).slice(0,3).join(" • ") || "Sem transmissão";
 
   const renderArtwork=(group:FootballMatch[])=>{
     const featured=group.find(match=>!!match.playerPhoto&&validatedPhotos[match.playerPhoto]===true);
     const badgeImages:Record<string,string>={};
     for(const match of group){
-      if(match.homeBadge)badgeImages[match.homeBadge]=match.homeBadge;
-      if(match.awayBadge)badgeImages[match.awayBadge]=match.awayBadge;
+      if(match.homeBadge){
+        badgeImages[`home:${match.id}`]=crestMedia.images[match.homeBadge]||match.homeBadge;
+      }
+      if(match.awayBadge){
+        badgeImages[`away:${match.id}`]=crestMedia.images[match.awayBadge]||match.awayBadge;
+      }
     }
     const channels=Object.fromEntries(group.map(match=>[match.id,haveChannels(match)]));
     return <FootballSchedulePoster kind="today" format="feed" matches={group} day={day}
