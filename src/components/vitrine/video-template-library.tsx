@@ -16,6 +16,7 @@ import {
   startVideoExportInDocument,downloadVideoJob,restoreCompletedVideo,
 } from "@/lib/vitrine-video-background-job";
 import {formatCinematicWhatsApp} from "@/lib/vitrine-cinematic-canvas";
+import type {ResellerVideoQuality} from "@/lib/vitrine-video-quality";
 
 const area="rounded-2xl border border-blue-400/20 bg-[#071729] p-4 sm:p-6";
 function loadLogoImage(src:string):Promise<HTMLImageElement>{
@@ -62,6 +63,7 @@ export function VideoTemplateLibrary(){
   const [logoError,setLogoError]=useState("");
   const [videoError,setVideoError]=useState("");
   const [audio,setAudio]=useState(true);
+  const [quality,setQuality]=useState<ResellerVideoQuality>("auto");
   const originalVideo=useRef<HTMLVideoElement>(null);
   const job=useSyncExternalStore(subscribeToVideoJob,getVideoJobSnapshot,getVideoJobSnapshot);
   const working=job.status==="preparing"||job.status==="rendering";
@@ -114,7 +116,7 @@ export function VideoTemplateLibrary(){
         ownerId:currentBrand?.owner_id||"",modelId:model.id,url:model.video_url,
         title:model.title,
         filename:"stream-monitor-"+filename(model.title)+".mp4",
-        brand:effectiveBrand,audio,
+        brand:effectiveBrand,audio,quality,
       });
       toast.success("Geração iniciada! Você pode navegar pelo Stream Monitor e acompanhar o progresso.");
     }catch(err){
@@ -247,6 +249,19 @@ export function VideoTemplateLibrary(){
             <label className="flex items-center gap-2 text-sm">
               <input type="checkbox" checked={audio} onChange={e=>setAudio(e.target.checked)}/>
               Manter o áudio original do vídeo
+            </label>
+            <label className="block text-sm">Qualidade do MP4 (para evitar travadas)
+              <select value={quality} disabled={working}
+                onChange={e=>setQuality(e.target.value as ResellerVideoQuality)}
+                className="mt-2 min-h-11 w-full rounded-xl border border-blue-400/30 bg-slate-950 px-3 py-2 text-sm text-white">
+                <option value="auto">Automática — mais leve e fluida (recomendada)</option>
+                <option value="compatible">Compatível — celulares antigos (540p / 24 fps)</option>
+                <option value="high">Alta definição — mais pesada (até 1080p / 30 fps)</option>
+              </select>
+              <span className="mt-1.5 block text-xs leading-5 text-slate-400">
+                Automática usa 720p/24 fps, ou 540p/24 fps quando o navegador informa hardware limitado.
+                A narração, a logo e o WhatsApp são mantidos em todas as opções.
+              </span>
             </label>
           </div>
           <Button className="mt-5 w-full" disabled={working||!logo||!model||!phone.trim()}
