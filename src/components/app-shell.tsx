@@ -133,6 +133,7 @@ function useNavItems() {
     ...(navIsAdmin ? [{ to: "/app/admin/observabilidade", label: "Admin · Central de Inteligência", icon: Gauge }] : []),
     ...(navIsAdmin ? [{ to: "/app/admin/vitrine-futebol", label: "Admin · Vitrine IA Futebol", icon: Trophy }] : []),
     ...(navIsAdmin ? [{ to: "/vitrine-video", label: "Admin · Vitrine Vídeo MP4", icon: Sparkles }] : []),
+    ...(navIsAdmin ? [{ to: "/app/admin/modelos-video", label: "Admin · Biblioteca de Vídeos", icon: Sparkles }] : []),
     { to: "/app", label: "Dashboard", icon: LayoutDashboard, exact: true },
     { to: "/app/servers", label: "Servidores", icon: ServerIcon },
     { to: "/app/central", label: "Central Inteligente", icon: ShieldAlert },
@@ -169,6 +170,7 @@ function useNavItems() {
   // sem saldo/assinatura ativa. Apenas funções administrativas permanecem restritas.
   items.push({ to: "/vitrine-banner", label: "Vitrine Banner · ilimitada", icon: Sparkles });
   items.push({ to: "/vitrine-ai", label: "Vitrine IA · 5 por dia", icon: Sparkles });
+  items.push({ to: "/vitrine-video-modelos", label: "Vitrine Vídeos · Minha Marca", icon: Sparkles });
   items.push({ to: "/app/ajuda", label: "Central de Ajuda", icon: BookOpen });
 
   return items;
