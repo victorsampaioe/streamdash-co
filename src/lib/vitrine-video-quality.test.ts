@@ -6,13 +6,13 @@ describe("Vitrine Vídeos: MP4 fluido e compatível",()=>{
     expect(getResellerEncodingSettings(1080,1920,"auto",{hardwareConcurrency:8,deviceMemory:8}))
       .toMatchObject({width:720,height:1280,fps:24,bitrate:1_800_000,mode:"balanced"});
   });
-  it("adapta para 540x960 24 fps em celulares menos potentes",()=>{
+  it("adapta para 480x854 24 fps em celulares menos potentes",()=>{
     expect(getResellerEncodingSettings(1080,1920,"auto",{hardwareConcurrency:4}))
-      .toMatchObject({width:540,height:960,fps:24,mode:"compatible"});
+      .toMatchObject({width:480,height:854,fps:24,mode:"compatible"});
   });
   it("oferece modo manual de compatibilidade quando hardware é desconhecido",()=>{
     expect(getResellerEncodingSettings(1080,1920,"compatible",{}))
-      .toMatchObject({width:540,height:960,fps:24,bitrate:1_100_000});
+      .toMatchObject({width:480,height:854,fps:24,bitrate:950_000});
   });
   it("mantém opção original sem ampliar a resolução",()=>{
     expect(getResellerEncodingSettings(1080,1920,"high",{}))
