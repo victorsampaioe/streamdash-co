@@ -76,7 +76,10 @@ export const sendVitrineFootballToRegisteredTelegram=createServerFn({method:"POS
     // Best-effort protection against double taps / repeated identical requests.
     // Cross-instance throttling is enforced separately by application protections.
     const now=Date.now();
-    const key=context.userId+":"+data.date;
+    const {createHash}=await import("node:crypto");
+    // One duplicate per image is blocked; different posters from the same
+    // day's four-fixture batches can all be sent to the owner's Telegram.
+    const key=context.userId+":"+createHash("sha256").update(image).digest("hex");
     if(sentRecently.get(key) && now-(sentRecently.get(key)||0)<9000){
       throw new Error("A arte já foi enviada recentemente. Evite envios repetidos.");
     }
