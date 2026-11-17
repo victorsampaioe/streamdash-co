@@ -165,6 +165,60 @@ try{
   }finally{
     CanvasRenderingContext2D.prototype.fillText=originalText;
   }
+  // Both official layouts must render using the same PNG generator.
+  // Verify the second 2-column template at 12 fixtures with three palette
+  // choices, 24 badges, single brand mark and intact WhatsApp footer.
+  const fixtures12=Array.from({length:12},(_,i)=>({
+    ...matches[i%4],id:"grid-"+i,home:"Equipe "+(i+1),away:"Visitante "+(i+1),
+    homeBadge:home,awayBadge:away,
+    league:i%2?"Liga das Nações":"Amistoso Internacional",
+    broadcasts:i%2?["Disney+"]:["Globo","SporTV","ge tv"]
+  }));
+  for(const accent of ["#146df2","#ee1519","#db4796"]){
+    const painted=[];
+    const original=CanvasRenderingContext2D.prototype.fillText;
+    CanvasRenderingContext2D.prototype.fillText=function(text,...args){
+      painted.push(String(text));return original.call(this,text,...args);
+    };
+    let gridFile;
+    try{
+      gridFile=await drawFootballPngFallback({
+        matches:fixtures12,kind:"grid",day:"2026-11-17",accent,
+        logo,contact:"85998545009",name:"Revenda Exemplo",
+        filename:"grid-"+accent.substring(1)+".png"
+      });
+    }finally{CanvasRenderingContext2D.prototype.fillText=original;}
+    const header=new DataView(await gridFile.slice(0,24).arrayBuffer());
+    if(header.getUint32(16)!==2160||header.getUint32(20)!==2700)
+      throw Error("Modelo Grade: dimensões PNG incorretas");
+    const bitmap=await createImageBitmap(gridFile);
+    if(bitmap.width!==2160||bitmap.height!==2700)
+      throw Error("Modelo Grade: PNG inválido");
+    const canvas=document.createElement("canvas");canvas.width=2160;canvas.height=2700;
+    const ctx=canvas.getContext("2d",{willReadFrequently:true});
+    ctx.drawImage(bitmap,0,0);bitmap.close();
+    for(const label of ["JOGOS","DO DIA","FALE PELO WHATSAPP","ASSISTA EM","QUALQUER DISPOSITIVO"]){
+      if(!painted.includes(label))throw Error("Modelo Grade não exibiu "+label);
+    }
+    if(!existsInRect(ctx,[237,16,174],770,65,630,180))
+      throw Error("Modelo Grade: logo da revenda desapareceu");
+    const rowH=Math.floor((1147-322-5*13)/6);
+    const size=Math.min(65,Math.max(54,Math.round(rowH*.46)));
+    for(let i=0;i<12;i++){
+      const row=Math.floor(i/2),col=i%2,x=43+col*(488+18),
+        y=322+row*(rowH+13)+50;
+      if(!existsInRect(ctx,[24,229,170],(x+28)*2,y*2,size*2,size*2))
+        throw Error("Modelo Grade: escudo mandante ausente do jogo "+(i+1));
+      if(!existsInRect(ctx,[244,163,22],(x+488-size-28)*2,y*2,size*2,size*2))
+        throw Error("Modelo Grade: escudo visitante ausente do jogo "+(i+1));
+      if(!painted.includes("Equipe "+(i+1)+" × Visitante "+(i+1)))
+        throw Error("Modelo Grade: nome do jogo "+(i+1)+" não apareceu completo");
+    }
+    const foot=ctx.getImageData(120,2460,450,70).data;
+    if(foot.length<2000)throw Error("Modelo Grade: rodapé incompleto");
+    out.push({case:"two-column",accent,matches:12,width:2160,height:2700,
+      logos:1,badges:24,footer:true,bytes:gridFile.size});
+  }
   status.textContent="FOOTBALL_RENDER_PASS "+JSON.stringify(out);
   status.dataset.status="pass";
 }catch(e){
