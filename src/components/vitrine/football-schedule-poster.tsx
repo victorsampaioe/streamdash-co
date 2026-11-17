@@ -153,6 +153,28 @@ export function FootballSchedulePoster({
       backgroundImage: "repeating-linear-gradient(159deg,transparent 0px,transparent 23px,rgba(255,255,255,.025) 24px,transparent 25px)",
       opacity: .52,
     }} />
+    {/* Quiet football pitch texture. Vector shapes export cleanly with the PNG. */}
+    <svg aria-hidden="true" className="absolute inset-0 pointer-events-none" viewBox="0 0 1080 1080"
+      preserveAspectRatio="xMidYMid slice"
+      style={{width:"100%",height:"100%",opacity:.12,zIndex:0}}>
+      <g fill="none" stroke="#ffffff" strokeWidth="3">
+        <path d="M-120 260 Q540 12 1200 260" opacity=".3" />
+        <path d="M-120 296 Q540 48 1200 296" opacity=".17" />
+        <path d="M-120 330 Q540 94 1200 330" opacity=".10" />
+        <rect x="160" y="345" width="760" height="640" rx="11" opacity=".32" />
+        <path d="M540 345 V985" opacity=".25" />
+        <circle cx="540" cy="665" r="125" opacity=".33" />
+        <circle cx="540" cy="665" r="7" fill="#ffffff" opacity=".25" />
+        <path d="M375 345 V476 H705 V345 M375 985 V854 H705 V985" opacity=".25" />
+        <path d="M440 345 V390 H640 V345 M440 985 V940 H640 V985" opacity=".20" />
+      </g>
+      <g fill="#ffffff" opacity=".45">
+        <circle cx="140" cy="140" r="5"/><circle cx="156" cy="136" r="4"/>
+        <circle cx="172" cy="133" r="3"/><circle cx="188" cy="135" r="4"/>
+        <circle cx="890" cy="139" r="4"/><circle cx="906" cy="136" r="5"/>
+        <circle cx="922" cy="133" r="3"/><circle cx="938" cy="136" r="4"/>
+      </g>
+    </svg>
     {/* Faint reseller watermark, never team shields. Same transparent logo used by the brand. */}
     {logo && <img src={logo} alt="" crossOrigin="anonymous"
       onError={event=>{event.currentTarget.style.display="none";}}
