@@ -1,5 +1,5 @@
 import {describe,it,expect} from "vitest";
-import {getResellerEncodingSettings} from "./vitrine-video-quality";
+import {getResellerEncodingSettings,nextResellerFrameDeadline} from "./vitrine-video-quality";
 
 describe("Vitrine Vídeos: MP4 fluido e compatível",()=>{
   it("reduz 1080x1920 para 720x1280 24 fps em aparelhos atuais",()=>{
@@ -30,5 +30,28 @@ describe("Vitrine Vídeos: MP4 fluido e compatível",()=>{
   it("recusa dimensões inválidas em vez de gerar vídeo quebrado",()=>{
     expect(()=>getResellerEncodingSettings(0,1920)).toThrow(/inválidas/);
     expect(()=>getResellerEncodingSettings(Number.NaN,1920)).toThrow(/inválidas/);
+  });
+  it("mantém 24 fps médios numa tela de 60 Hz, sem cair para 20 fps",()=>{
+    let next=0,painted=0;
+    for(let i=0;i<600;i++){
+      const now=i*1000/60;
+      if(now+.001>=next){
+        painted++;
+        next=nextResellerFrameDeadline(now,next,24);
+      }
+    }
+    expect(painted).toBeGreaterThanOrEqual(238);
+    expect(painted).toBeLessThanOrEqual(241);
+  });
+  it("preserva 30 fps médios em modo alta definição",()=>{
+    let next=0,painted=0;
+    for(let i=0;i<600;i++){
+      const now=i*1000/60;
+      if(now+.001>=next){
+        painted++;
+        next=nextResellerFrameDeadline(now,next,30);
+      }
+    }
+    expect(painted).toBe(300);
   });
 });
