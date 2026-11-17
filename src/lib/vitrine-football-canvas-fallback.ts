@@ -1,7 +1,7 @@
 import type { FootballMatch } from "@/lib/vitrine-football.functions";
 import { formatBrazilianWhatsApp } from "@/lib/vitrine-football-phone";
 import { footballBackgroundStyle } from "@/lib/vitrine-football-color";
-import { footballTeamNamePtBR } from "@/lib/vitrine-football-ptbr";
+import { footballTeamNamePtBR, nationalTeamFlagEmoji } from "@/lib/vitrine-football-ptbr";
 
 /**
  * ONE renderer used by PNG download, Telegram and on-screen preview.
@@ -153,6 +153,35 @@ function torn(ctx:CanvasRenderingContext2D){
   for(let x=1080;x>=0;x-=27)ctx.lineTo(x,1325+(Math.round(x/27)%2?10:-5));
   ctx.closePath();ctx.fill();ctx.restore();
 }
+/**
+ * External logos are best-effort assets, not a reason to blank out the entire
+ * poster. When an upstream image is missing, paint a visible, honest badge:
+ * the country's actual flag emoji for national teams, or team initials.
+ * Both preview and downloaded file come from these exact canvas pixels.
+ */
+export function fallbackBadgeLabel(team:string,league:string):string{
+  const flag=nationalTeamFlagEmoji(team,league);
+  if(flag)return flag;
+  const letters=footballTeamNamePtBR(team).split(/\s+/)
+    .filter(Boolean).slice(0,2).map(word=>word[0]||"").join("").toUpperCase();
+  return letters.slice(0,2)||"FC";
+}
+function paintFallbackBadge(ctx:CanvasRenderingContext2D,x:number,y:number,
+  team:string,league:string,size=62){
+  const label=fallbackBadgeLabel(team,league);
+  ctx.save();
+  ctx.shadowColor="rgba(0,0,0,.20)";ctx.shadowBlur=7;ctx.shadowOffsetY=2;
+  ctx.fillStyle="#eef4fc";rounded(ctx,x,y,size,size,size/2);ctx.fill();
+  ctx.restore();
+  ctx.save();ctx.strokeStyle="#9bb7df";ctx.lineWidth=2;
+  rounded(ctx,x+1,y+1,size-2,size-2,size/2);ctx.stroke();
+  ctx.fillStyle="#14345d";ctx.textAlign="center";ctx.textBaseline="middle";
+  ctx.font=label.length>2
+    ? "42px 'Apple Color Emoji','Segoe UI Emoji','Noto Color Emoji',sans-serif"
+    : "900 23px Arial,Helvetica,sans-serif";
+  ctx.fillText(label,x+size/2,y+size/2+1);
+  ctx.restore();
+}
 function whatsappIcon(ctx:CanvasRenderingContext2D,x:number,y:number){
   ctx.save();ctx.fillStyle="#11b96d";rounded(ctx,x,y,48,48,12);ctx.fill();
   ctx.fillStyle="#fff";setFont(ctx,28,900);ctx.textAlign="center";
@@ -185,8 +214,8 @@ export async function drawFootballPngFallback(data:FootballCanvasData):Promise<F
     loadImage(logo,"logo do revendedor"),
     loadImage(playerPhoto||"","foto opcional do jogador",!!playerPhoto),
     ...rows.flatMap(m=>[
-      loadImage(m.homeBadge||"","escudo ou bandeira de "+footballTeamNamePtBR(m.home)),
-      loadImage(m.awayBadge||"","escudo ou bandeira de "+footballTeamNamePtBR(m.away))
+      loadImage(m.homeBadge||"","escudo ou bandeira de "+footballTeamNamePtBR(m.home),false),
+      loadImage(m.awayBadge||"","escudo ou bandeira de "+footballTeamNamePtBR(m.away),false)
     ])
   ]);
   const bg=ctx.createLinearGradient(0,0,1080,1350);
@@ -223,8 +252,10 @@ export async function drawFootballPngFallback(data:FootballCanvasData):Promise<F
     ctx.fillStyle="#f4f7ff";rounded(ctx,52,y+3,976,rowHeight-51,21);ctx.fill();
     const league=String(m.league||"FUTEBOL").toUpperCase();
     fitText(ctx,league,540,y+19,900,14,11,"center","#64738b",800);
-    contain(ctx,badges[i*2]!,72,y+54,62,62);
-    contain(ctx,badges[i*2+1]!,945,y+54,62,62);
+    if(badges[i*2])contain(ctx,badges[i*2]!,72,y+54,62,62);
+    else paintFallbackBadge(ctx,72,y+54,m.home,m.league);
+    if(badges[i*2+1])contain(ctx,badges[i*2+1]!,945,y+54,62,62);
+    else paintFallbackBadge(ctx,945,y+54,m.away,m.league);
     fitTwoLines(ctx,footballTeamNamePtBR(m.home),146,y+87,310,"left");
     fitTwoLines(ctx,footballTeamNamePtBR(m.away),929,y+87,310,"right");
     textLine(ctx,"X",540,y+87,26,accent,"center",1000);
