@@ -19,7 +19,7 @@ const SCALE=2;
 
 export type FootballCanvasData={
   matches:FootballMatch[];day:string;accent:string;logo:string;contact:string;
-  name:string;filename:string;playerPhoto?:string;kind?:"today"|"finished";
+  name:string;filename:string;playerPhoto?:string;kind?:"today"|"finished"|"grid";
 };
 
 const guard=(src:string)=>src?.trim()||"";
@@ -269,6 +269,103 @@ function validatedPng(blob:Blob):Promise<void>{
   });
 }
 
+/** Exact second Stream Monitor template: two columns of real fixtures.
+ * Shares the same source match data, renderer, reseller brand, downloaded file
+ * and Telegram document. All coordinates are logical 1080×1350, x2 output.
+ */
+function gridTitleColor(accent:string):string{
+  if(/^#146df2$/i.test(accent))return "#ffcf3e";
+  const code=/^#([0-9a-f]{6})$/i.exec(accent)?.[1];
+  if(!code)return "#ffcf3e";
+  const r=parseInt(code.slice(0,2),16),g=parseInt(code.slice(2,4),16),b=parseInt(code.slice(4,6),16);
+  return "rgb("+Math.min(255,Math.round(r*.58+255*.42))+","+
+    Math.min(255,Math.round(g*.58+255*.42))+","+
+    Math.min(255,Math.round(b*.58+255*.42))+")";
+}
+function gridBroadcast(ctx:CanvasRenderingContext2D,list:string[],x:number,y:number,width:number){
+  const channelsList=list.filter(s=>!!s?.trim());
+  const msg=channelsList.length?channelsList.join(" • "):"Transmissão não informada";
+  ctx.save();ctx.textAlign="center";ctx.textBaseline="middle";ctx.fillStyle="#18345a";
+  for(let size=15;size>=10;size--){
+    setFont(ctx,size,880);
+    if(ctx.measureText(msg).width<=width){
+      ctx.fillText(msg,x,y);ctx.restore();return;
+    }
+  }
+  // Do not silently truncate channels; at most two centred lines.
+  const lines:string[]=[];
+  let active="";
+  setFont(ctx,11,880);
+  for(const name of channelsList.length?channelsList:["Transmissão não informada"]){
+    const proposed=active?active+" • "+name:name;
+    if(active&&ctx.measureText(proposed).width>width){
+      lines.push(active);active=name;
+    }else active=proposed;
+  }
+  if(active)lines.push(active);
+  if(lines.length>2||lines.some(line=>ctx.measureText(line).width>width)){
+    ctx.restore();throw new Error("Canais não cabem na grade com 2 colunas: "+msg);
+  }
+  lines.forEach((line,i)=>ctx.fillText(line,x,y-(lines.length===2?6:0)+i*12));
+  ctx.restore();
+}
+function drawTwoColumnGrid(ctx:CanvasRenderingContext2D,rows:FootballMatch[],
+  badges:(HTMLImageElement|null)[],accent:string,day:string,
+  brand:HTMLImageElement|null){
+  const titleColor=gridTitleColor(accent);
+  // Reseller mark on top, never hardcoded or duplicated over the fixtures.
+  if(brand)contain(ctx,brand,385,39,310,81);
+  ctx.save();ctx.shadowColor="rgba(3,8,25,.62)";ctx.shadowBlur=14;
+  ctx.textBaseline="middle";ctx.font="italic 1000 71px Arial,Helvetica,sans-serif";
+  ctx.fillStyle=titleColor;ctx.textAlign="right";ctx.fillText("JOGOS",551,163);
+  ctx.fillStyle="#ffffff";ctx.textAlign="left";ctx.fillText("DO DIA",560,163);
+  ctx.restore();
+  ctx.save();
+  ctx.fillStyle="#ffffff";
+  ctx.beginPath();ctx.moveTo(258,212);ctx.lineTo(837,210);
+  ctx.lineTo(822,272);ctx.lineTo(272,275);ctx.closePath();ctx.fill();
+  ctx.restore();
+  fitText(ctx,stampDate(day),548,241,505,26,17,"center","#112440",1000);
+  ctx.save();ctx.shadowColor=accent;ctx.shadowBlur=15;
+  ctx.fillStyle=accent;rounded(ctx,42,298,996,5,2);ctx.fill();ctx.restore();
+
+  const columns=2,left=43,gapX=18,cardWidth=488,startY=322,maxY=1147;
+  const lines=Math.ceil(rows.length/columns);
+  const gapY=13;
+  const cardHeight=Math.min(170,Math.floor((maxY-startY-(lines-1)*gapY)/lines));
+  if(cardHeight<115)throw new Error("Há mais jogos do que cabem no modelo em duas colunas.");
+  for(let i=0;i<rows.length;i++){
+    const row=Math.floor(i/2),col=i%2,m=rows[i];
+    const x=left+col*(cardWidth+gapX),y=startY+row*(cardHeight+gapY);
+    const cx=x+cardWidth/2;
+    ctx.save();ctx.shadowColor="rgba(0,0,0,.30)";ctx.shadowBlur=10;ctx.shadowOffsetY=4;
+    ctx.fillStyle="#ffffff";rounded(ctx,x,y,cardWidth,cardHeight,23);ctx.fill();ctx.restore();
+    const background=ctx.createLinearGradient(0,y,0,y+cardHeight);
+    background.addColorStop(0,"#fff");background.addColorStop(.8,"#f6f9ff");
+    background.addColorStop(1,"#f1f6ff");
+    ctx.save();rounded(ctx,x,y,cardWidth,cardHeight,23);ctx.clip();
+    ctx.fillStyle=background;ctx.fillRect(x,y,cardWidth,cardHeight);ctx.restore();
+    ctx.strokeStyle=accent;ctx.lineWidth=3;rounded(ctx,x+1.5,y+1.5,cardWidth-3,cardHeight-3,23);ctx.stroke();
+    // Both team names are shown in full, in Brazilian Portuguese.
+    const title=footballTeamNamePtBR(m.home)+" × "+footballTeamNamePtBR(m.away);
+    fitText(ctx,title,cx,y+19,cardWidth-22,21,11,"center","#132342",950);
+    fitText(ctx,(m.league||"FUTEBOL").toUpperCase(),cx,y+39,cardWidth-32,12,9,"center","#58749d",850);
+    const badgeSize=Math.min(65,Math.max(54,Math.round(cardHeight*.46)));
+    const badgeTop=y+50;
+    if(badges[i*2])contain(ctx,badges[i*2]!,x+28,badgeTop,badgeSize,badgeSize);
+    else paintFallbackBadge(ctx,x+28,badgeTop,m.home,m.league,badgeSize);
+    if(badges[i*2+1])contain(ctx,badges[i*2+1]!,x+cardWidth-badgeSize-28,badgeTop,badgeSize,badgeSize);
+    else paintFallbackBadge(ctx,x+cardWidth-badgeSize-28,badgeTop,m.away,m.league,badgeSize);
+    const clock=/^\d{2}:\d{2}$/.test(m.time||"")?(m.time||"").replace(":","H"):"A CONFIRMAR";
+    const clockW=clock==="A CONFIRMAR"?175:150;
+    const top=y+54;
+    const gradient=ctx.createLinearGradient(cx-clockW/2,0,cx+clockW/2,0);
+    gradient.addColorStop(0,"#092d64");gradient.addColorStop(.95,accent);
+    ctx.fillStyle=gradient;rounded(ctx,cx-clockW/2,top,clockW,41,14);ctx.fill();
+    fitText(ctx,clock,cx,top+21,clockW-10,29,16,"center","#ffffff",950);
+    gridBroadcast(ctx,m.broadcasts||[],cx,y+Math.min(cardHeight-17,113),234);
+  }
+}
 /** Native full-resolution artwork, never scaled from a mobile screenshot. */
 export async function drawFootballPngFallback(data:FootballCanvasData):Promise<File>{
   if(typeof document!=="undefined"&&document.fonts?.ready)await document.fonts.ready;
@@ -280,7 +377,7 @@ export async function drawFootballPngFallback(data:FootballCanvasData):Promise<F
   ctx.scale(SCALE,SCALE);
   const {matches,day,accent,logo,contact,filename,playerPhoto}=data;
   const kind=data.kind||"today";
-  const rows=matches.slice(0,kind==="finished"?1:4);
+  const rows=matches.slice(0,kind==="finished"?1:kind==="grid"?12:4);
   if(rows.length===0)throw new Error("Nenhum confronto encontrado para gerar a arte.");
   const finalScore=kind==="finished"&&isVerifiedFinishedFootballMatch(rows[0])
     ?parseFootballFinalScore(rows[0].scoreLabel):null;
@@ -320,6 +417,7 @@ export async function drawFootballPngFallback(data:FootballCanvasData):Promise<F
     ctx.save();ctx.globalAlpha=.40;contain(ctx,player,615,275,460,850);ctx.restore();
   }
 
+  if(kind!=="grid"){
   // Original composition: logo upper-left; italic yellow/white two-line title.
   if(brand)contain(ctx,brand,52,83,332,155);
   ctx.save();
@@ -340,7 +438,10 @@ export async function drawFootballPngFallback(data:FootballCanvasData):Promise<F
   ctx.save();ctx.shadowColor="rgba(167,218,255,.65)";ctx.shadowBlur=13;
   ctx.fillStyle=accent;rounded(ctx,48,342,981,5,3);ctx.fill();ctx.restore();
 
-  if(kind==="finished"&&finalScore){
+  }
+  if(kind==="grid"){
+    drawTwoColumnGrid(ctx,rows,badges,accent,day,brand);
+  }else if(kind==="finished"&&finalScore){
     drawFinalScoreboard(ctx,rows[0],badges[0]||null,badges[1]||null,
       accent,finalScore.home,finalScore.away);
   }else{
@@ -403,7 +504,17 @@ export async function drawFootballPngFallback(data:FootballCanvasData):Promise<F
     textLine(ctx,"FALE PELO WHATSAPP",138,1213,13,"#71edb1","left",900);
     fitText(ctx,phone,138,1241,300,28,21,"left","#ffffff",1000);
   }
-  if(brand)contain(ctx,brand,817,1188,210,76);
+  if(kind==="grid"){
+    // Footer follows the Stream Monitor identity, but is not a second logo.
+    const x=580,y=1187,w=455,h=76;
+    const footer=ctx.createLinearGradient(x,0,x+w,0);
+    footer.addColorStop(0,"#0a2650");footer.addColorStop(1,accent);
+    ctx.fillStyle=footer;rounded(ctx,x,y,w,h,20);ctx.fill();
+    ctx.strokeStyle=gridTitleColor(accent);ctx.lineWidth=2;
+    rounded(ctx,x,y,w,h,20);ctx.stroke();
+    textLine(ctx,"ASSISTA EM",x+w/2,y+27,19,"#ffffff","center",900);
+    textLine(ctx,"QUALQUER DISPOSITIVO",x+w/2,y+53,18,"#ffffff","center",900);
+  }else if(brand)contain(ctx,brand,817,1188,210,76);
   // White torn-paper top and bottom borders are applied LAST, as in the CSS.
   torn(ctx);
   const blob=await new Promise<Blob>((resolve,reject)=>
