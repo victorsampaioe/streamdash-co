@@ -3,6 +3,8 @@ import {Link,useRouteContext} from "@tanstack/react-router";
 import {useQuery} from "@tanstack/react-query";
 import {useServerFn} from "@tanstack/react-start";
 import {checkPremiumFeature} from "@/lib/premium-feature-access";
+import {AppShell} from "@/components/app-shell";
+import {UnpaidPreview} from "@/components/subscription/unpaid-preview";
 
 /** Fail closed: premium content is not mounted until the server authorizes payment. */
 export function PremiumVitrineGate({children}:{children:ReactNode}){
@@ -16,6 +18,7 @@ export function PremiumVitrineGate({children}:{children:ReactNode}){
     refetchOnWindowFocus:true,
   });
   if(state.isPending)return <div className="mx-auto max-w-xl p-8 text-center text-slate-200">Verificando assinatura...</div>;
+  if(state.data?.preview===true)return <AppShell><UnpaidPreview/></AppShell>;
   if(state.isError||state.data?.allowed!==true)return (
     <main className="mx-auto mt-10 max-w-xl rounded-2xl border border-blue-500/30 bg-slate-950 p-7 text-center text-white shadow-2xl">
       <div className="text-4xl">🔒</div>
