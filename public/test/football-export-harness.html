@@ -120,6 +120,49 @@ try{
     throw Error("Fallback Singapura não retornou a bandeira original circular");
   out.push({matches:4,case:"eight true circular flags including Kosovo and Wales",png:true});
   out.push({matches:4,case:"missing Singapore CDN",restored:"round Singapore flag",png:true});
+  // Finished-game banner must be a genuine full-resolution score graphic,
+  // selected only AFTER FTWB confirms both final status and numeric score.
+  const originalText=CanvasRenderingContext2D.prototype.fillText;
+  const drawnLabels=[];
+  CanvasRenderingContext2D.prototype.fillText=function(value,...rest){
+    drawnLabels.push(String(value));
+    return originalText.call(this,value,...rest);
+  };
+  try{
+    const match={...matches[0],status:"encerrado",scoreLabel:"2 × 1",
+      homeBadge:"",awayBadge:""};
+    const final=await drawFootballPngFallback({
+      matches:[match],kind:"finished",day:"2026-11-17",accent:"#146df2",
+      logo,contact:"85998545009",name:"Revenda Exemplo",
+      filename:"fim-de-jogo-2160x2700.png"
+    });
+    const bmp=await createImageBitmap(final);
+    if(bmp.width!==2160||bmp.height!==2700)
+      throw Error("Fim de jogo: PNG com resolução incorreta");
+    const finalCanvas=document.createElement("canvas");
+    finalCanvas.width=2160;finalCanvas.height=2700;
+    const ctx=finalCanvas.getContext("2d",{willReadFrequently:true});
+    ctx.drawImage(bmp,0,0);bmp.close();
+    for(const label of ["FIM DE","JOGO","APITO FINAL","RESULTADO FINAL",
+        "2","1","Brasil","Singapura"]){
+      if(!drawnLabels.includes(label))throw Error("Fim de jogo não exibiu "+label);
+    }
+    if(!existsInRect(ctx,[24,229,170],250,(360+205)*2,330,320))
+      throw Error("Fim de jogo perdeu o escudo mandante");
+    if(!existsInRect(ctx,[244,163,22],1588,(360+205)*2,340,320))
+      throw Error("Fim de jogo perdeu o escudo visitante");
+    out.push({case:"finished",status:"encerrado",score:"2 × 1",width:2160,
+      height:2700,flags:true,header:true,footer:true,bytes:final.size});
+    let rejected=false;
+    try{
+      await drawFootballPngFallback({matches:[{...match,status:"ao_vivo",scoreLabel:"2 × 1"}],
+        kind:"finished",day:"2026-11-17",accent:"#146df2",
+        logo,contact:"85998545009",name:"Revenda Exemplo",filename:"invalid.png"});
+    }catch{rejected=true}
+    if(!rejected)throw Error("Fim de jogo aceitou resultado ainda ao vivo");
+  }finally{
+    CanvasRenderingContext2D.prototype.fillText=originalText;
+  }
   status.textContent="FOOTBALL_RENDER_PASS "+JSON.stringify(out);
   status.dataset.status="pass";
 }catch(e){
