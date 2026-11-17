@@ -11,6 +11,7 @@ import { Download, RefreshCw, Trophy, Send, X, Image as ImageIcon } from "lucide
 import { FootballSchedulePoster, FOOTBALL_POSTER_PALETTES } from "@/components/vitrine/football-schedule-poster";
 import { getVitrineFootballMatches, type FootballMatch } from "@/lib/vitrine-football.functions";
 import { getVitrineFootballExportImages } from "@/lib/vitrine-football-export.functions";
+import { drawFootballPngFallback } from "@/lib/vitrine-football-canvas-fallback";
 
 const today = () => new Intl.DateTimeFormat("sv-SE", {
   timeZone: "America/Fortaleza", year: "numeric", month: "2-digit", day: "2-digit",
@@ -225,19 +226,26 @@ export function VitrineFootballStudio() {
           blob=await (await fetch(data)).blob();
         }catch{/* The user receives an explicit error, never a silently incomplete PNG. */}
       }
-      if(!blob||blob.size<1000)throw new Error("Falha ao capturar o banner completo.");
-      // Fail explicitly instead of silently generating a cropped/small PNG.
-      // Read the PNG IHDR dimensions directly: works even on Safari versions
-      // where createImageBitmap(Blob) is unavailable or unreliable.
-      const head=await blob.slice(0,24).arrayBuffer();
-      const data=new DataView(head);
-      const isPng=head.byteLength>=24 &&
-        data.getUint32(0)===0x89504e47 && data.getUint32(4)===0x0d0a1a0a;
-      if(!isPng||data.getUint32(16)!==baseSize||data.getUint32(20)!==baseSize){
-        throw new Error("O PNG não foi renderizado em 1080 × 1080.");
-      }
       const name="stream-monitor-futebol-"+day+"-arte-"+(index+1)+".png";
-      return {file:new File([blob],name,{type:"image/png"}),degraded:false};
+      // Verify PNG IHDR before use; Safari occasionally produces a truncated image.
+      let valid=false;
+      if(blob && blob.size>1000){
+        const head=await blob.slice(0,24).arrayBuffer();
+        if(head.byteLength===24){
+          const data=new DataView(head);
+          valid=data.getUint32(0)===0x89504e47 &&
+            data.getUint32(4)===0x0d0a1a0a &&
+            data.getUint32(16)===baseSize && data.getUint32(20)===baseSize;
+        }
+      }
+      if(valid && blob)return {file:new File([blob],name,{type:"image/png"}),degraded:false};
+      // Last-resort native Canvas renderer: text, matches, broadcasters and
+      // contacts survive even when WebKit blocks html-to-image foreignObject.
+      const fallback=await drawFootballPngFallback({
+        matches:groups[index]||[],day,accent,logo:transparentLogo,
+        contact:brand.contact,name:brand.name,filename:name
+      });
+      return {file:fallback,degraded:true};
     }finally{restore();}
   }
   function downloadBlob(file:File){
@@ -419,7 +427,7 @@ export function VitrineFootballStudio() {
         <img src={imagePreview.url} alt="Prévia final da arte para salvar"
           className="aspect-square w-full rounded-lg object-contain"/>
         <p className="text-sm text-muted-foreground">
-          No iPhone, toque e segure a imagem para salvar em Fotos. Depois, compartilhe pelo Telegram.
+          No iPhone, toque e segure a imagem e escolha “Salvar em Fotos”. Para enviar ao Telegram, use o botão de compartilhar.
         </p>
         <div className="flex flex-wrap gap-2">
           <a className="inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-primary px-4 text-sm font-semibold text-primary-foreground"
