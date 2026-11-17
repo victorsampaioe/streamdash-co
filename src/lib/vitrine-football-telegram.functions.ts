@@ -46,6 +46,7 @@ export const sendVitrineFootballToRegisteredTelegram=createServerFn({method:"POS
   .inputValidator((raw:unknown)=>z.object({
     pngDataUrl:z.string().min(1000).max(MAX_DATA_URL_CHARS),
     date:z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+    posterKind:z.enum(["today","finished"]).optional().default("today"),
   }).parse(raw))
   .handler(async({data,context})=>{
     await requirePaidFeature(context);
@@ -90,7 +91,9 @@ export const sendVitrineFootballToRegisteredTelegram=createServerFn({method:"POS
     sentRecently.set(key,now);
     const body=new FormData();
     body.append("chat_id",destination.chat);
-    body.append("caption","⚽ Eventos de hoje • Stream Monitor\nConfira os jogos, horários e transmissões.\n📅 "+data.date.split("-").reverse().join("/"));
+    body.append("caption",data.posterKind==="finished"
+      ?"🏆 FIM DE JOGO • Stream Monitor\\nResultado final confirmado.\\n📅 "+data.date.split("-").reverse().join("/")
+      :"⚽ Eventos de hoje • Stream Monitor\\nConfira os jogos, horários e transmissões.\\n📅 "+data.date.split("-").reverse().join("/"));
     body.append("document",new Blob([new Uint8Array(image)],{type:"image/png"}),
       "stream-monitor-futebol-"+data.date+"-2160x2700.png");
 
