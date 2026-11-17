@@ -103,7 +103,7 @@ export async function dispatchAlerts(
     const { notifyServerIptvAlerts } = await import("./iptv-notify.server");
     await notifyServerIptvAlerts(
       serverId,
-      toNotify.map((c) => ({ title: c.title, detail: c.detail ?? "", severity: c.severity })),
+      toNotify.map((c) => ({ kind: c.kind, title: c.title, detail: c.detail ?? "", severity: c.severity })),
     );
   } catch {
     /* notificação é best-effort */
