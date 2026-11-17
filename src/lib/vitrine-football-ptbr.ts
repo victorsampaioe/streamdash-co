@@ -112,7 +112,7 @@ export function footballTeamNamePtBR(original:string):string{
 function isNationalFixture(competition:string):boolean{
   const name=footballTeamKey(competition);
   if(/\b(clubes|clubs|club world cup)\b/.test(name))return false;
-  return /\b(nations league|liga das nacoes|amistos|friendly|friendlies|selec|national team|copa do mundo|world cup|eliminator|qualif|eurocopa|uefa euro|copa america|african cup|afcon|asian cup|copa asiatica|african nations|olimpic|olympic|european championship)\b/.test(name);
+  return /\b(nations league|liga das nacoes|amistos\w*|friendly|friendlies|selecoes|selecao|national team|copa do mundo|world cup|eliminatorias|qualifiers?|eurocopa|uefa euro|copa america|african cup|afcon|asian cup|copa asiatica|african nations|olimpic\w*|olympic\w*|european championship)\b/.test(name);
 }
 /** Only national teams get a country flag fallback. Country flags are not club emblems. */
 export function nationalTeamFlagFallback(team:string,competition:string):string{
