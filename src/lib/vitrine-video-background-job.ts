@@ -1,5 +1,6 @@
 import {renderResellerVideoMp4,type VideoExportProgress,type VideoOverlayBrand} from "./vitrine-video-template-render";
 import {disposeVideoAudioGraph} from "./vitrine-video-audio";
+import type {ResellerVideoQuality} from "./vitrine-video-quality";
 
 export type VideoJobStatus="idle"|"preparing"|"rendering"|"ready"|"error";
 export type VideoJobSnapshot={
@@ -89,7 +90,7 @@ export function dismissVideoJob(){
 }
 type StartArgs={
   ownerId:string;modelId:string;url:string;title:string;filename:string;
-  brand:VideoOverlayBrand;audio:boolean;
+  brand:VideoOverlayBrand;audio:boolean;quality?:ResellerVideoQuality;
 };
 export function startVideoExportInDocument(args:StartArgs){
   if(running)throw new Error("Já existe um MP4 sendo preparado. Aguarde a conclusão.");
@@ -114,7 +115,7 @@ export function startVideoExportInDocument(args:StartArgs){
   void (async()=>{
     try{
       const blob=await renderResellerVideoMp4({
-        source:video,brand:args.brand,audio:args.audio,signal,
+        source:video,brand:args.brand,audio:args.audio,quality:args.quality,signal,
         progress:(progress:VideoExportProgress)=>{
           if(epoch===jobEpoch)updateJob({
             status:"rendering",percent:progress.percent,stage:progress.stage
