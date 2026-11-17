@@ -72,6 +72,32 @@ try{
       document.querySelector("#preview").appendChild(img);
     }
   }
+  // Reproduce the real Safari screenshot: the Singapore crest CDN failed,
+  // but the PNG, preview and Telegram must still have a complete badge.
+  const originalFill=CanvasRenderingContext2D.prototype.fillText;
+  let singaporeFlagDrawn=false;
+  CanvasRenderingContext2D.prototype.fillText=function(label,...args){
+    if(String(label)==="🇸🇬")singaporeFlagDrawn=true;
+    return originalFill.call(this,label,...args);
+  };
+  try{
+    const missingSingapore=[...matches];
+    missingSingapore[0]={...missingSingapore[0],homeBadge:""};
+    const file=await drawFootballPngFallback({
+      matches:missingSingapore,day:"2026-11-17",
+      accent:"#146df2",logo,contact:"85998545009",
+      name:"Revenda Exemplo",filename:"singapore-fallback.png"
+    });
+    const bitmap=await createImageBitmap(file);
+    if(bitmap.width!==2160||bitmap.height!==2700)
+      throw Error("Fallback Singapura: dimensão incorreta");
+    bitmap.close();
+    if(!singaporeFlagDrawn)
+      throw Error("Fallback Singapura: bandeira brasileira? emoji correto não desenhado");
+    out.push({matches:4,case:"missing Singapore CDN",fallbackFlag:"🇸🇬",png:true});
+  }finally{
+    CanvasRenderingContext2D.prototype.fillText=originalFill;
+  }
   status.textContent="FOOTBALL_RENDER_PASS "+JSON.stringify(out);
   status.dataset.status="pass";
 }catch(e){
