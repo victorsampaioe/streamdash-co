@@ -393,10 +393,12 @@ function trimmedBadgeCrop(image:HTMLImageElement,
       }
     }
     if(anyTransparent&&maxX>=minX&&maxY>=minY){
-      const minRatio=.28;
+      const minRatio=.18;
       const visibleW=(maxX-minX+1)/112,visibleH=(maxY-minY+1)/112;
+      // Tighten and center any image whose visible bounds include external
+      // transparent padding. Fully visible circular flags stay untouched.
       if(visibleW>=minRatio&&visibleH>=minRatio &&
-        (visibleW<.86||visibleH<.86)){
+        (visibleW<.98||visibleH<.98)){
         const pad=2;
         const x=Math.max(0,minX-pad),y=Math.max(0,minY-pad);
         const w=Math.min(112-x,maxX+pad-x+1);
@@ -505,11 +507,13 @@ function drawTwoColumnGrid(ctx:CanvasRenderingContext2D,rows:FootballMatch[],
     fitText(ctx,(m.league||"FUTEBOL").toUpperCase(),cx,y+39,cardWidth-32,12,9,"center","#58749d",850);
     // Larger matched emblems, with transparent padding removed when present.
     // Leave the centre of the card clear for the kickoff time & broadcaster.
-    const badgeSize=Math.min(91,Math.max(76,Math.round(cardHeight*.63)));
-    const badgeTop=y+(cardHeight<140?45:51);
+    // Use a common vertical CENTER rather than a shared image top.
+    // Teams with asymmetric transparent padding are trimmed and re-centered.
+    const badgeSize=Math.min(92,Math.max(76,Math.round(cardHeight*.62)));
+    const badgeTop=y+Math.round(cardHeight*.67-badgeSize/2);
     const homeX=x+21,awayX=x+cardWidth-badgeSize-21;
-    ctx.save();ctx.shadowColor="rgba(15,40,90,.20)";
-    ctx.shadowBlur=8;ctx.shadowOffsetY=3;
+    ctx.save();ctx.shadowColor="rgba(15,40,90,.16)";
+    ctx.shadowBlur=7;ctx.shadowOffsetY=1;
     if(badges[i*2])containGridBadge(ctx,badges[i*2]!,homeX,badgeTop,badgeSize,exportCanvas);
     else paintFallbackBadge(ctx,homeX,badgeTop,m.home,m.league,badgeSize);
     if(badges[i*2+1])containGridBadge(ctx,badges[i*2+1]!,awayX,badgeTop,badgeSize,exportCanvas);
@@ -553,30 +557,31 @@ export async function drawFootballPngFallback(data:FootballCanvasData):Promise<F
   ]);
   // RESTORED: the original user-approved "EVENTOS DE HOJE" sports poster
   // design. Native logical 1080×1350, rendered sharply at 2160×2700.
-  const bg=ctx.createRadialGradient(905,350,20,480,650,1160);
-  bg.addColorStop(0,accent);bg.addColorStop(.45,"#092451");bg.addColorStop(1,"#040e22");
-  ctx.fillStyle=bg;ctx.fillRect(0,0,1080,1350);
-  if(stadium){
-    ctx.save();ctx.globalAlpha=.95;
-    const tint=footballBackgroundStyle(accent);
-    ctx.filter="hue-rotate("+tint.rotate+"deg) saturate("+tint.saturation+")";
-    cover(ctx,stadium,0,0,1080,1350);ctx.restore();
-  }
-  const shade=ctx.createLinearGradient(0,0,0,1350);
-  shade.addColorStop(0,"rgba(2,7,22,.50)");
-  shade.addColorStop(.36,"rgba(2,7,22,.30)");
-  shade.addColorStop(.73,"rgba(4,13,36,.39)");
-  shade.addColorStop(1,"rgba(2,6,18,.66)");
-  ctx.fillStyle=shade;ctx.fillRect(0,0,1080,1350);
-  // Blue glow echoes the stadium lighting of the original banner.
-  const glow=ctx.createRadialGradient(850,380,12,770,410,650);
-  glow.addColorStop(0,accent+"22");glow.addColorStop(1,"rgba(0,0,0,0)");
-  ctx.fillStyle=glow;ctx.fillRect(0,0,1080,1350);
-  if(kind==="grid"){
-    // Do not apply the classic poster's fixed blue/green stadium on this
-    // template; recolor its complete backdrop from the selected accent.
+  // Keep the approved classic cards and typography, but share the exact same
+  // color-reactive stadium as Modelo 2. Fim de Jogo retains its own backdrop.
+  if(kind==="today"||kind==="grid"){
     drawAdaptiveGridBackdrop(ctx,stadium,accent);
-  }else if(player){
+  }else{
+    const bg=ctx.createRadialGradient(905,350,20,480,650,1160);
+    bg.addColorStop(0,accent);bg.addColorStop(.45,"#092451");bg.addColorStop(1,"#040e22");
+    ctx.fillStyle=bg;ctx.fillRect(0,0,1080,1350);
+    if(stadium){
+      ctx.save();ctx.globalAlpha=.95;
+      const tint=footballBackgroundStyle(accent);
+      ctx.filter="hue-rotate("+tint.rotate+"deg) saturate("+tint.saturation+")";
+      cover(ctx,stadium,0,0,1080,1350);ctx.restore();
+    }
+    const shade=ctx.createLinearGradient(0,0,0,1350);
+    shade.addColorStop(0,"rgba(2,7,22,.50)");
+    shade.addColorStop(.36,"rgba(2,7,22,.30)");
+    shade.addColorStop(.73,"rgba(4,13,36,.39)");
+    shade.addColorStop(1,"rgba(2,6,18,.66)");
+    ctx.fillStyle=shade;ctx.fillRect(0,0,1080,1350);
+    const glow=ctx.createRadialGradient(850,380,12,770,410,650);
+    glow.addColorStop(0,accent+"22");glow.addColorStop(1,"rgba(0,0,0,0)");
+    ctx.fillStyle=glow;ctx.fillRect(0,0,1080,1350);
+  }
+  if(kind!=="grid"&&player){
     ctx.save();ctx.globalAlpha=.40;contain(ctx,player,615,275,460,850);ctx.restore();
   }
 
