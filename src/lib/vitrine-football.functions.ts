@@ -324,9 +324,19 @@ export const getVitrineFootballMatches = createServerFn({ method: "POST" })
       if(/champions league|liga dos campeoes/.test(league))return 2;
       if(/europa league|conference league|uefa/.test(league))return 3;
       if(/nations league|liga das nacoes/.test(league))return 4;
+      if(/amistos|friendl/.test(league))return 4;
+      if(/paulista feminino|brasileirao feminino|brasileiro feminino/.test(league))return 4;
       return 5;
     };
+    // Senior Brazil national-team fixtures take priority even if they started
+    // earlier. Do not drop ended or live fixtures from the day's posters.
+    const isBrazilNational=(match:FootballMatch)=>{
+      const clubs=[simplify(match.home),simplify(match.away)];
+      return clubs.some(name=>/^(?:brasil|brazil|selecao brasileira)$/.test(name)) &&
+        /amistos|friendly|copa do mundo|eliminatorias/.test(simplify(match.league));
+    };
     matches.sort((a,b)=>
+      Number(!isBrazilNational(a))-Number(!isBrazilNational(b))||
       Number(!(a.broadcasts?.length))-Number(!(b.broadcasts?.length))||
       leaguePriority(a.league)-leaguePriority(b.league)||
       a.time.localeCompare(b.time));
