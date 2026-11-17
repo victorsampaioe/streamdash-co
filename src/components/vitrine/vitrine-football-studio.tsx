@@ -209,9 +209,16 @@ export function VitrineFootballStudio() {
       cacheBust:false,skipAutoScale:true,
     };
     try{
-      let blob=await toBlob(node,options);
-      if(!blob || blob.size<1000){
-        blob=await toBlob(node,{...options,skipFonts:true});
+      let blob:Blob|null=null;
+      try{blob=await toBlob(node,options);}catch{/* Retry without remote font embedding. */}
+      if(!blob||blob.size<1000){
+        try{blob=await toBlob(node,{...options,skipFonts:true});}catch{/* Try data URL fallback. */}
+      }
+      if(!blob||blob.size<1000){
+        try{
+          const data=await toPng(node,{...options,skipFonts:true});
+          blob=await (await fetch(data)).blob();
+        }catch{/* The user receives an explicit error, never a silently incomplete PNG. */}
       }
       if(!blob||blob.size<1000)throw new Error("Falha ao capturar o banner completo.");
       // Fail explicitly instead of silently generating a cropped/small PNG.
