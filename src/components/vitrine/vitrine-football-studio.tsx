@@ -206,8 +206,10 @@ export function VitrineFootballStudio() {
       const localHome=offlineFootballFlag(homeFlag.match(/\/([\w-]+)\.png$/)?.[1]||"");
       const localAway=offlineFootballFlag(awayFlag.match(/\/([\w-]+)\.png$/)?.[1]||"");
       return {...match,
-        homeBadge:crestMedia.images[match.homeBadge]||crestMedia.images[homeFlag]||localHome,
-        awayBadge:crestMedia.images[match.awayBadge]||crestMedia.images[awayFlag]||localAway,
+        // National fixtures use our genuine round SVG flags (original poster
+        // appearance) irrespective of what shape a remote provider sends.
+        homeBadge:localHome||crestMedia.images[match.homeBadge]||crestMedia.images[homeFlag]||"",
+        awayBadge:localAway||crestMedia.images[match.awayBadge]||crestMedia.images[awayFlag]||"",
       };
     });
     const featured=group.find(match=>!!match.playerPhoto&&validatedPhotos[match.playerPhoto]===true);
