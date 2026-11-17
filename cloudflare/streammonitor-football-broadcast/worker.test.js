@@ -67,7 +67,7 @@ describe("Cloudflare pesquisa transmissões por confronto",()=>{
       {id:"3",home:"País de Gales",away:"Portugal",date},
       {id:"4",home:"Singapura",away:"Brasil",date},
     ];
-    const normalized=value=>value.normalize("NFD").replace(/[\\u0300-\\u036f]/g,"")
+    const normalized=value=>value.normalize("NFD").replace(/[\u0300-\u036f]/g,"")
       .toLowerCase().replace(/[^a-z0-9]+/g," ").trim();
     const kv=new Map(lineup.map((m,index)=>[
       "v3:"+date+":"+[normalized(m.home),normalized(m.away)].sort().join(":"),
