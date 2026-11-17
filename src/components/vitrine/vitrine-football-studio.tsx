@@ -138,12 +138,20 @@ export function VitrineFootballStudio() {
   // Preload the same vetted crest bytes for the on-screen preview AND PNG.
   // Previously, only the hidden export copy was inlined, so browser/CORS errors
   // could silently hide shields from the visible cards or exported image.
-  const crestUrls=useMemo(()=>[...new Set(groups.flatMap(group=>group.flatMap(match=>
-    [match.homeBadge,match.awayBadge,
-      nationalTeamFlagFallback(match.home,match.league),
-      nationalTeamFlagFallback(match.away,match.league)
-    ].filter((url):url is string=>!!url&&/^https:\/\//i.test(url))
-  )))].slice(0,80),[groups]);
+  // Local circular flags cover national fixtures without making slow,
+  // failure-prone network requests (particularly on Safari). Proxy only the
+  // emblems which are not already bundled for the selected match.
+  const crestUrls=useMemo(()=>[...new Set(groups.flatMap(group=>group.flatMap(match=>{
+    const choices=[
+      [match.homeBadge,nationalTeamFlagFallback(match.home,match.league)],
+      [match.awayBadge,nationalTeamFlagFallback(match.away,match.league)],
+    ];
+    return choices.flatMap(([source,flag])=>{
+      const code=flag?.match(/\/([\w-]+)\.png$/)?.[1]||"";
+      if(offlineFootballFlag(code))return [] as string[];
+      return [source,flag];
+    });
+  })).filter((url):url is string=>!!url&&/^https:\/\//i.test(url)))].slice(0,80),[groups]);
   const crestKey=JSON.stringify(crestUrls);
   const [crestMedia,setCrestMedia]=useState<{
     key:string;ready:boolean;images:Record<string,string>;unavailable:string[]
