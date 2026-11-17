@@ -56,6 +56,8 @@ export function VideoTemplateLibrary(){
   const [overrideWhatsapp,setOverrideWhatsapp]=useState("");
   const [logo,setLogo]=useState<HTMLImageElement|null>(null);
   const [logoError,setLogoError]=useState("");
+  const [videoError,setVideoError]=useState("");
+  const [videoReady,setVideoReady]=useState(false);
   const [audio,setAudio]=useState(true);
   const [working,setWorking]=useState(false);
   const [progress,setProgress]=useState({percent:0,stage:""});
@@ -81,6 +83,10 @@ export function VideoTemplateLibrary(){
   useEffect(()=>{
     setResult(null);setResultUrl(previous=>{if(previous)URL.revokeObjectURL(previous);return "";});
   },[selectedId,model?.video_url,logoSrc,phone]);
+  useEffect(()=>{
+    setVideoError("");
+    setVideoReady(false);
+  },[model?.id,model?.video_url]);
   useEffect(()=>()=>{
     if(overrideLogo.startsWith("blob:"))URL.revokeObjectURL(overrideLogo);
     if(resultUrl)URL.revokeObjectURL(resultUrl);
@@ -97,6 +103,7 @@ export function VideoTemplateLibrary(){
     if(!model||!effectiveBrand||working)return;
     if(!phone.trim()){toast.error("Cadastre o WhatsApp da revenda.");return;}
     const video=originalVideo.current;
+    if(videoError){toast.error(videoError);return;}
     if(!video||video.readyState<1){
       toast.error("Abra o vídeo e aguarde carregar antes de gerar.");return;
     }
@@ -160,14 +167,26 @@ export function VideoTemplateLibrary(){
           <h2 className="mb-4 text-lg font-bold">Prévia do modelo</h2>
           <div className="mx-auto max-w-[370px] overflow-hidden rounded-2xl border border-blue-500/30 bg-black">
             <div className="relative" style={{aspectRatio:(model?.width||512)+" / "+(model?.height||910)}}>
-              <video key={model?.id} ref={originalVideo} src={model?.video_url}
-                controls playsInline preload="metadata" crossOrigin="anonymous"
+              <video key={(model?.id||"")+":"+(model?.video_url||"")}
+                ref={originalVideo} src={model?.video_url}
+                controls playsInline preload="auto" crossOrigin="anonymous"
+                onLoadedData={()=>{setVideoReady(true);setVideoError("");}}
+                onLoadedMetadata={(event)=>{
+                  // iOS Safari may display a black paused video unless its first
+                  // frame has been decoded. Seek slightly into the clip.
+                  const v=event.currentTarget;
+                  if(v.duration>.3&&v.currentTime<.01){
+                    try{v.currentTime=.15;}catch{/* browser may disallow preseek */}
+                  }
+                }}
+                onError={()=>{setVideoReady(false);
+                  setVideoError("Não foi possível carregar este vídeo. Atualize a biblioteca ou tente outra conexão.");
+                }}
                 className="absolute inset-0 h-full w-full object-contain bg-black"/>
               <div className="pointer-events-none absolute flex items-center justify-center"
                 style={overlayStyle(overlay.logo)}>
-                {logo?<img alt="Logo da revenda sem fundo" src={logo.src}
-                  className="h-full w-full object-contain drop-shadow-md"/>
-                  :<span className="text-[9px] text-white">Sua logo</span>}
+                {logo&&<img alt="Logo da revenda sem fundo" src={logo.src}
+                  className="h-full w-full object-contain drop-shadow-md"/>}
               </div>
               <div className="pointer-events-none absolute flex items-center gap-1.5 overflow-hidden rounded-lg border px-2 shadow-sm"
                 style={{...overlayStyle(overlay.whatsapp),
@@ -183,11 +202,20 @@ export function VideoTemplateLibrary(){
                     style={{color:VIDEO_WHATSAPP_MONO.phone}}>{formatCinematicWhatsApp(phone)||phone||"Configure seu telefone"}</p>
                 </div>
               </div>
+              {videoError&&<div className="absolute inset-x-3 top-1/3 rounded-lg border border-amber-500/60 bg-black/90 p-3 text-center text-xs text-amber-200">
+                {videoError}
+                <Button type="button" size="sm" variant="outline" className="mt-2 w-full"
+                  onClick={()=>void templates.refetch()}>Atualizar link do vídeo</Button>
+              </div>}
             </div>
           </div>
           <p className="mt-3 text-xs text-slate-400">
             Reprodução com a sua marca. A exportação grava a logo e o contato em todos os quadros.
           </p>
+          {!logo&&!logoError&&<p className="mt-2 text-xs text-amber-300">
+            Não encontrei uma logo da revenda nesta conta. Cadastre nas configurações
+            ou envie um PNG abaixo para que apareça na prévia e no MP4.
+          </p>}
         </section>
         <section className={area}>
           <h2 className="text-lg font-bold">Sua marca no vídeo</h2>
