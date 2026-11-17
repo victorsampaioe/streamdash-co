@@ -23,6 +23,8 @@ import { trackPosthogPage } from "@/lib/posthog-analytics";
 import {trackAcquisitionPage} from "@/lib/acquisition-page";
 import { onConsentChange, readChoice } from "@/lib/consent";
 import { AdvertisingConsentBanner } from "@/components/advertising-consent-banner";
+import {VideoExportDock} from "@/components/vitrine/video-export-dock";
+import {clearVideoJobOnSignOut} from "@/lib/vitrine-video-background-job";
 
 
 function NotFoundComponent() {
@@ -225,6 +227,7 @@ function RootComponent() {
   useEffect(() => {
     const { data: sub } = supabase.auth.onAuthStateChange((event) => {
       if (event !== "SIGNED_IN" && event !== "SIGNED_OUT" && event !== "USER_UPDATED") return;
+      if(event==="SIGNED_OUT")clearVideoJobOnSignOut();
       router.invalidate();
       if (event !== "SIGNED_OUT") queryClient.invalidateQueries();
     });
@@ -238,6 +241,7 @@ function RootComponent() {
         <Outlet />
         <Toaster richColors position="top-right" />
         <AdvertisingConsentBanner />
+        <VideoExportDock />
       </ThemeProvider>
     </QueryClientProvider>
   );
