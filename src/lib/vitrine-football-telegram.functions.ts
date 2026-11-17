@@ -92,10 +92,11 @@ export const sendVitrineFootballToRegisteredTelegram=createServerFn({method:"POS
     const body=new FormData();
     body.append("chat_id",destination.chat);
     body.append("caption",data.posterKind==="finished"
-      ?"🏆 FIM DE JOGO • Stream Monitor\\nResultado final confirmado.\\n📅 "+data.date.split("-").reverse().join("/")
-      :"⚽ Eventos de hoje • Stream Monitor\\nConfira os jogos, horários e transmissões.\\n📅 "+data.date.split("-").reverse().join("/"));
+      ?"🏆 FIM DE JOGO • Stream Monitor\nResultado final confirmado.\n📅 "+data.date.split("-").reverse().join("/")
+      :"⚽ Eventos de hoje • Stream Monitor\nConfira os jogos, horários e transmissões.\n📅 "+data.date.split("-").reverse().join("/"));
     body.append("document",new Blob([new Uint8Array(image)],{type:"image/png"}),
-      "stream-monitor-futebol-"+data.date+"-2160x2700.png");
+      (data.posterKind==="finished"?"stream-monitor-fim-de-jogo-":"stream-monitor-futebol-")+
+        data.date+"-2160x2700.png");
 
     try{
       const response=await fetch("https://api.telegram.org/bot"+destination.token+"/sendDocument",{
