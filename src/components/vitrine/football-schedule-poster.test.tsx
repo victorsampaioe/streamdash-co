@@ -63,6 +63,27 @@ describe("Vitrine Futebol — imagens e exportação", () => {
     expect(html).toContain("Canal confirmado");
     expect(html).toContain("#7537ed");
   });
+  it("mostra iniciais identificadas em vez de remover escudos sem imagem da fonte",()=>{
+    const html=renderToStaticMarkup(<FootballSchedulePoster {...base}/>);
+    expect((html.match(/data-testid="football-crest-unavailable"/g)||[]).length).toBe(2);
+    expect(html).toContain("Escudo indisponível: Time da Casa");
+    expect(html).toContain("Escudo indisponível: Time Visitante");
+  });
+  it("usa imagens seguras por mandante e visitante na arte inteira",()=>{
+    const html=renderToStaticMarkup(<FootballSchedulePoster {...base}
+      matches={[{...sample,homeBadge:"https://ftwb.notiffly.com.br/a.png",
+        awayBadge:"https://ftwb.notiffly.com.br/b.png"}]}
+      badgeImages={{
+        ["home:"+sample.id]:"data:image/png;base64,CLUBHOME",
+        ["away:"+sample.id]:"data:image/png;base64,CLUBAWAY",
+      }}/>
+    );
+    expect(html).toContain("data:image/png;base64,CLUBHOME");
+    expect(html).toContain("data:image/png;base64,CLUBAWAY");
+    expect(html).not.toContain("https://ftwb.notiffly.com.br/a.png");
+    expect(html).not.toContain("https://ftwb.notiffly.com.br/b.png");
+    expect(html).not.toContain("football-crest-unavailable");
+  });
   it("não cria quadrados de escudos vazios quando a fonte não oferece imagem",()=>{
     const html=renderToStaticMarkup(<FootballSchedulePoster {...base} />);
     expect(html).not.toContain('src=""');
