@@ -1,7 +1,8 @@
 import type { FootballMatch } from "@/lib/vitrine-football.functions";
 import { formatBrazilianWhatsApp } from "@/lib/vitrine-football-phone";
 import { footballBackgroundStyle } from "@/lib/vitrine-football-color";
-import { footballTeamNamePtBR, nationalTeamFlagEmoji } from "@/lib/vitrine-football-ptbr";
+import { footballTeamNamePtBR, nationalTeamFlagEmoji, nationalTeamFlagFallback } from "@/lib/vitrine-football-ptbr";
+import { offlineFootballFlag } from "@/lib/vitrine-football-offline-flags";
 
 /**
  * ONE renderer used by PNG download, Telegram and on-screen preview.
@@ -57,6 +58,16 @@ async function loadImage(src:string,description:string,essential=true):Promise<H
   }finally{
     if(t)clearTimeout(t);
   }
+}
+/** A genuine bundled circular flag is the fallback when a national crest CDN fails. */
+async function loadTeamBadge(src:string,team:string,league:string):Promise<HTMLImageElement|null>{
+  const description="escudo ou bandeira de "+footballTeamNamePtBR(team);
+  const original=await loadImage(src,description,false);
+  if(original)return original;
+  const url=nationalTeamFlagFallback(team,league);
+  const code=url.match(/\/([\w-]+)\.png$/)?.[1]||"";
+  const local=offlineFootballFlag(code);
+  return local?loadImage(local,description,false):null;
 }
 function contain(ctx:CanvasRenderingContext2D,image:HTMLImageElement,
  x:number,y:number,w:number,h:number){
@@ -223,8 +234,8 @@ export async function drawFootballPngFallback(data:FootballCanvasData):Promise<F
     loadImage(logo,"logo do revendedor"),
     loadImage(playerPhoto||"","foto opcional do jogador",!!playerPhoto),
     ...rows.flatMap(m=>[
-      loadImage(m.homeBadge||"","escudo ou bandeira de "+footballTeamNamePtBR(m.home),false),
-      loadImage(m.awayBadge||"","escudo ou bandeira de "+footballTeamNamePtBR(m.away),false)
+      loadTeamBadge(m.homeBadge||"",m.home,m.league),
+      loadTeamBadge(m.awayBadge||"",m.away,m.league)
     ])
   ]);
   // RESTORED: the original user-approved "EVENTOS DE HOJE" sports poster
