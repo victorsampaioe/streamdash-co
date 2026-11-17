@@ -38,6 +38,42 @@ export type Database = {
         }
         Relationships: []
       }
+      acquisition_page_events: {
+        Row: {
+          ad_id: string | null
+          campaign_id: string | null
+          created_at: string
+          id: string
+          is_qa: boolean
+          platform: string | null
+          qa_reason: string | null
+          source: string
+          stage: string
+        }
+        Insert: {
+          ad_id?: string | null
+          campaign_id?: string | null
+          created_at?: string
+          id: string
+          is_qa?: boolean
+          platform?: string | null
+          qa_reason?: string | null
+          source?: string
+          stage: string
+        }
+        Update: {
+          ad_id?: string | null
+          campaign_id?: string | null
+          created_at?: string
+          id?: string
+          is_qa?: boolean
+          platform?: string | null
+          qa_reason?: string | null
+          source?: string
+          stage?: string
+        }
+        Relationships: []
+      }
       activation_logs: {
         Row: {
           created_at: string | null
@@ -78,6 +114,54 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      ad_spend_daily: {
+        Row: {
+          ad_id: string
+          ad_name: string | null
+          campaign_id: string
+          campaign_name: string | null
+          clicks: number
+          day: string
+          impressions: number
+          landing_page_views: number
+          platform: string
+          provider: string
+          retrieved_at: string
+          source: string
+          spend_cents: number
+        }
+        Insert: {
+          ad_id?: string
+          ad_name?: string | null
+          campaign_id: string
+          campaign_name?: string | null
+          clicks?: number
+          day: string
+          impressions?: number
+          landing_page_views?: number
+          platform?: string
+          provider?: string
+          retrieved_at?: string
+          source?: string
+          spend_cents: number
+        }
+        Update: {
+          ad_id?: string
+          ad_name?: string | null
+          campaign_id?: string
+          campaign_name?: string | null
+          clicks?: number
+          day?: string
+          impressions?: number
+          landing_page_views?: number
+          platform?: string
+          provider?: string
+          retrieved_at?: string
+          source?: string
+          spend_cents?: number
+        }
+        Relationships: []
       }
       alert_channels: {
         Row: {
@@ -1383,6 +1467,53 @@ export type Database = {
           },
         ]
       }
+      cloudflare_dns_probes: {
+        Row: {
+          applied: boolean
+          avg_response_ms: number | null
+          checked_at: string
+          created_at: string
+          details: Json
+          id: number
+          probe_status: string
+          resolved_ok: number
+          resolver_count: number
+          server_id: string
+        }
+        Insert: {
+          applied?: boolean
+          avg_response_ms?: number | null
+          checked_at: string
+          created_at?: string
+          details?: Json
+          id?: number
+          probe_status: string
+          resolved_ok: number
+          resolver_count: number
+          server_id: string
+        }
+        Update: {
+          applied?: boolean
+          avg_response_ms?: number | null
+          checked_at?: string
+          created_at?: string
+          details?: Json
+          id?: number
+          probe_status?: string
+          resolved_ok?: number
+          resolver_count?: number
+          server_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cloudflare_dns_probes_server_id_fkey"
+            columns: ["server_id"]
+            isOneToOne: false
+            referencedRelation: "servers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       content_alert_settings: {
         Row: {
           created_at: string
@@ -1838,6 +1969,74 @@ export type Database = {
           name?: string
         }
         Relationships: []
+      }
+      customer_acquisition: {
+        Row: {
+          ad_id: string | null
+          adset_id: string | null
+          advertising_consent: boolean
+          campaign_id: string | null
+          click_id: string | null
+          created_at: string
+          evidence: string
+          first_access_at: string
+          platform: string | null
+          registered_at: string
+          source: string
+          user_id: string
+          utm_campaign: string | null
+          utm_content: string | null
+          utm_medium: string | null
+          utm_source: string | null
+          utm_term: string | null
+        }
+        Insert: {
+          ad_id?: string | null
+          adset_id?: string | null
+          advertising_consent?: boolean
+          campaign_id?: string | null
+          click_id?: string | null
+          created_at?: string
+          evidence?: string
+          first_access_at?: string
+          platform?: string | null
+          registered_at?: string
+          source?: string
+          user_id: string
+          utm_campaign?: string | null
+          utm_content?: string | null
+          utm_medium?: string | null
+          utm_source?: string | null
+          utm_term?: string | null
+        }
+        Update: {
+          ad_id?: string | null
+          adset_id?: string | null
+          advertising_consent?: boolean
+          campaign_id?: string | null
+          click_id?: string | null
+          created_at?: string
+          evidence?: string
+          first_access_at?: string
+          platform?: string | null
+          registered_at?: string
+          source?: string
+          user_id?: string
+          utm_campaign?: string | null
+          utm_content?: string | null
+          utm_medium?: string | null
+          utm_source?: string | null
+          utm_term?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "customer_acquisition_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       diagnostic_case_memory: {
         Row: {

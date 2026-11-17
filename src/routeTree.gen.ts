@@ -31,8 +31,8 @@ import { Route as Char91DotmcpChar93ListToolsRouteImport } from './routes/[.mcp]
 import { Route as Char91DotwellKnownChar93OauthProtectedResourceRouteImport } from './routes/[.well-known]/oauth-protected-resource'
 import { Route as AuthenticatedAppRouteImport } from './routes/_authenticated/app'
 import { Route as AuthenticatedVitrineAiRouteImport } from './routes/_authenticated/vitrine-ai'
-import { Route as AuthenticatedVitrineFutebolRouteImport } from './routes/_authenticated/vitrine-futebol'
 import { Route as AuthenticatedVitrineBannerRouteImport } from './routes/_authenticated/vitrine-banner'
+import { Route as AuthenticatedVitrineFutebolRouteImport } from './routes/_authenticated/vitrine-futebol'
 import { Route as AuthenticatedVitrineVideoRouteImport } from './routes/_authenticated/vitrine-video'
 import { Route as AjudaSlugRouteImport } from './routes/ajuda.$slug'
 import { Route as ApiOpenapiDotjsonRouteImport } from './routes/api/openapi[.]json'
@@ -90,6 +90,7 @@ import { Route as AuthenticatedAppInteligenciaIndexRouteImport } from './routes/
 import { Route as AuthenticatedAppServersIndexRouteImport } from './routes/_authenticated/app.servers.index'
 import { Route as AuthenticatedAppServersIdRouteImport } from './routes/_authenticated/app.servers.$id'
 import { Route as AuthenticatedAppServersNewRouteImport } from './routes/_authenticated/app.servers.new'
+import { Route as ApiPublicAcquisitionVisitRouteImport } from './routes/api/public/acquisition/visit'
 import { Route as ApiPublicAnalyticsEventRouteImport } from './routes/api/public/analytics/event'
 import { Route as ApiPublicAndroidAssociateRouteImport } from './routes/api/public/android/associate'
 import { Route as ApiPublicAndroidConfigRouteImport } from './routes/api/public/android/config'
@@ -116,6 +117,13 @@ import { Route as ApiPublicCronPerfRouteImport } from './routes/api/public/cron/
 import { Route as ApiPublicCronRadarRouteImport } from './routes/api/public/cron/radar'
 import { Route as ApiPublicCronReferralLaunchRouteImport } from './routes/api/public/cron/referral-launch'
 import { Route as ApiPublicCronServiceUpdate2026RouteImport } from './routes/api/public/cron/service-update-2026'
+import { Route as ApiPublicEdgeBackupEnrollRouteImport } from './routes/api/public/edge-backup/enroll'
+import { Route as ApiPublicEdgeBackupManifestRouteImport } from './routes/api/public/edge-backup/manifest'
+import { Route as ApiPublicEdgeBackupSignRouteImport } from './routes/api/public/edge-backup/sign'
+import { Route as ApiPublicEdgeDnsReportRouteImport } from './routes/api/public/edge-dns/report'
+import { Route as ApiPublicEdgeDnsTargetsRouteImport } from './routes/api/public/edge-dns/targets'
+import { Route as ApiPublicEdgeMetricsRollupsRouteImport } from './routes/api/public/edge-metrics/rollups'
+import { Route as ApiPublicEdgeTelegramDispatchRouteImport } from './routes/api/public/edge-telegram/dispatch'
 import { Route as ApiPublicRegionsHeartbeatRouteImport } from './routes/api/public/regions/heartbeat'
 import { Route as ApiPublicRegionsReportRouteImport } from './routes/api/public/regions/report'
 import { Route as ApiPublicRegionsTargetsRouteImport } from './routes/api/public/regions/targets'
@@ -237,15 +245,16 @@ const AuthenticatedVitrineAiRoute = AuthenticatedVitrineAiRouteImport.update({
   path: '/vitrine-ai',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
-const AuthenticatedVitrineFutebolRoute = AuthenticatedVitrineFutebolRouteImport.update({
-  id: '/vitrine-futebol',
-  path: '/vitrine-futebol',
-  getParentRoute: () => AuthenticatedRouteRoute,
-} as any)
 const AuthenticatedVitrineBannerRoute =
   AuthenticatedVitrineBannerRouteImport.update({
     id: '/vitrine-banner',
     path: '/vitrine-banner',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedVitrineFutebolRoute =
+  AuthenticatedVitrineFutebolRouteImport.update({
+    id: '/vitrine-futebol',
+    path: '/vitrine-futebol',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
 const AuthenticatedVitrineVideoRoute =
@@ -562,6 +571,12 @@ const AuthenticatedAppServersNewRoute =
     path: '/servers/new',
     getParentRoute: () => AuthenticatedAppRoute,
   } as any)
+const ApiPublicAcquisitionVisitRoute =
+  ApiPublicAcquisitionVisitRouteImport.update({
+    id: '/api/public/acquisition/visit',
+    path: '/api/public/acquisition/visit',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiPublicAnalyticsEventRoute = ApiPublicAnalyticsEventRouteImport.update({
   id: '/api/public/analytics/event',
   path: '/api/public/analytics/event',
@@ -701,6 +716,45 @@ const ApiPublicCronServiceUpdate2026Route =
     path: '/api/public/cron/service-update-2026',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiPublicEdgeBackupEnrollRoute =
+  ApiPublicEdgeBackupEnrollRouteImport.update({
+    id: '/api/public/edge-backup/enroll',
+    path: '/api/public/edge-backup/enroll',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const ApiPublicEdgeBackupManifestRoute =
+  ApiPublicEdgeBackupManifestRouteImport.update({
+    id: '/api/public/edge-backup/manifest',
+    path: '/api/public/edge-backup/manifest',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const ApiPublicEdgeBackupSignRoute = ApiPublicEdgeBackupSignRouteImport.update({
+  id: '/api/public/edge-backup/sign',
+  path: '/api/public/edge-backup/sign',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiPublicEdgeDnsReportRoute = ApiPublicEdgeDnsReportRouteImport.update({
+  id: '/api/public/edge-dns/report',
+  path: '/api/public/edge-dns/report',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiPublicEdgeDnsTargetsRoute = ApiPublicEdgeDnsTargetsRouteImport.update({
+  id: '/api/public/edge-dns/targets',
+  path: '/api/public/edge-dns/targets',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiPublicEdgeMetricsRollupsRoute =
+  ApiPublicEdgeMetricsRollupsRouteImport.update({
+    id: '/api/public/edge-metrics/rollups',
+    path: '/api/public/edge-metrics/rollups',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const ApiPublicEdgeTelegramDispatchRoute =
+  ApiPublicEdgeTelegramDispatchRouteImport.update({
+    id: '/api/public/edge-telegram/dispatch',
+    path: '/api/public/edge-telegram/dispatch',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiPublicRegionsHeartbeatRoute =
   ApiPublicRegionsHeartbeatRouteImport.update({
     id: '/api/public/regions/heartbeat',
@@ -774,8 +828,8 @@ export interface FileRoutesByFullPath {
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   '/app': typeof AuthenticatedAppRouteWithChildren
   '/vitrine-ai': typeof AuthenticatedVitrineAiRoute
-  '/vitrine-futebol': typeof AuthenticatedVitrineFutebolRoute
   '/vitrine-banner': typeof AuthenticatedVitrineBannerRoute
+  '/vitrine-futebol': typeof AuthenticatedVitrineFutebolRoute
   '/vitrine-video': typeof AuthenticatedVitrineVideoRoute
   '/ajuda/$slug': typeof AjudaSlugRoute
   '/api/openapi.json': typeof ApiOpenapiDotjsonRoute
@@ -830,6 +884,7 @@ export interface FileRoutesByFullPath {
   '/app/admin/vitrine-futebol': typeof AuthenticatedAppAdminVitrineFutebolRoute
   '/app/servers/$id': typeof AuthenticatedAppServersIdRoute
   '/app/servers/new': typeof AuthenticatedAppServersNewRoute
+  '/api/public/acquisition/visit': typeof ApiPublicAcquisitionVisitRoute
   '/api/public/analytics/event': typeof ApiPublicAnalyticsEventRoute
   '/api/public/android/associate': typeof ApiPublicAndroidAssociateRoute
   '/api/public/android/config': typeof ApiPublicAndroidConfigRoute
@@ -856,6 +911,13 @@ export interface FileRoutesByFullPath {
   '/api/public/cron/radar': typeof ApiPublicCronRadarRoute
   '/api/public/cron/referral-launch': typeof ApiPublicCronReferralLaunchRoute
   '/api/public/cron/service-update-2026': typeof ApiPublicCronServiceUpdate2026Route
+  '/api/public/edge-backup/enroll': typeof ApiPublicEdgeBackupEnrollRoute
+  '/api/public/edge-backup/manifest': typeof ApiPublicEdgeBackupManifestRoute
+  '/api/public/edge-backup/sign': typeof ApiPublicEdgeBackupSignRoute
+  '/api/public/edge-dns/report': typeof ApiPublicEdgeDnsReportRoute
+  '/api/public/edge-dns/targets': typeof ApiPublicEdgeDnsTargetsRoute
+  '/api/public/edge-metrics/rollups': typeof ApiPublicEdgeMetricsRollupsRoute
+  '/api/public/edge-telegram/dispatch': typeof ApiPublicEdgeTelegramDispatchRoute
   '/api/public/regions/heartbeat': typeof ApiPublicRegionsHeartbeatRoute
   '/api/public/regions/report': typeof ApiPublicRegionsReportRoute
   '/api/public/regions/targets': typeof ApiPublicRegionsTargetsRoute
@@ -890,8 +952,8 @@ export interface FileRoutesByTo {
   '/.mcp/list-tools': typeof Char91DotmcpChar93ListToolsRoute
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   '/vitrine-ai': typeof AuthenticatedVitrineAiRoute
-  '/vitrine-futebol': typeof AuthenticatedVitrineFutebolRoute
   '/vitrine-banner': typeof AuthenticatedVitrineBannerRoute
+  '/vitrine-futebol': typeof AuthenticatedVitrineFutebolRoute
   '/vitrine-video': typeof AuthenticatedVitrineVideoRoute
   '/ajuda/$slug': typeof AjudaSlugRoute
   '/api/openapi.json': typeof ApiOpenapiDotjsonRoute
@@ -946,6 +1008,7 @@ export interface FileRoutesByTo {
   '/app/admin/vitrine-futebol': typeof AuthenticatedAppAdminVitrineFutebolRoute
   '/app/servers/$id': typeof AuthenticatedAppServersIdRoute
   '/app/servers/new': typeof AuthenticatedAppServersNewRoute
+  '/api/public/acquisition/visit': typeof ApiPublicAcquisitionVisitRoute
   '/api/public/analytics/event': typeof ApiPublicAnalyticsEventRoute
   '/api/public/android/associate': typeof ApiPublicAndroidAssociateRoute
   '/api/public/android/config': typeof ApiPublicAndroidConfigRoute
@@ -972,6 +1035,13 @@ export interface FileRoutesByTo {
   '/api/public/cron/radar': typeof ApiPublicCronRadarRoute
   '/api/public/cron/referral-launch': typeof ApiPublicCronReferralLaunchRoute
   '/api/public/cron/service-update-2026': typeof ApiPublicCronServiceUpdate2026Route
+  '/api/public/edge-backup/enroll': typeof ApiPublicEdgeBackupEnrollRoute
+  '/api/public/edge-backup/manifest': typeof ApiPublicEdgeBackupManifestRoute
+  '/api/public/edge-backup/sign': typeof ApiPublicEdgeBackupSignRoute
+  '/api/public/edge-dns/report': typeof ApiPublicEdgeDnsReportRoute
+  '/api/public/edge-dns/targets': typeof ApiPublicEdgeDnsTargetsRoute
+  '/api/public/edge-metrics/rollups': typeof ApiPublicEdgeMetricsRollupsRoute
+  '/api/public/edge-telegram/dispatch': typeof ApiPublicEdgeTelegramDispatchRoute
   '/api/public/regions/heartbeat': typeof ApiPublicRegionsHeartbeatRoute
   '/api/public/regions/report': typeof ApiPublicRegionsReportRoute
   '/api/public/regions/targets': typeof ApiPublicRegionsTargetsRoute
@@ -1009,8 +1079,8 @@ export interface FileRoutesById {
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   '/_authenticated/app': typeof AuthenticatedAppRouteWithChildren
   '/_authenticated/vitrine-ai': typeof AuthenticatedVitrineAiRoute
-  '/_authenticated/vitrine-futebol': typeof AuthenticatedVitrineFutebolRoute
   '/_authenticated/vitrine-banner': typeof AuthenticatedVitrineBannerRoute
+  '/_authenticated/vitrine-futebol': typeof AuthenticatedVitrineFutebolRoute
   '/_authenticated/vitrine-video': typeof AuthenticatedVitrineVideoRoute
   '/ajuda/$slug': typeof AjudaSlugRoute
   '/api/openapi.json': typeof ApiOpenapiDotjsonRoute
@@ -1065,6 +1135,7 @@ export interface FileRoutesById {
   '/_authenticated/app/admin_/vitrine-futebol': typeof AuthenticatedAppAdminVitrineFutebolRoute
   '/_authenticated/app/servers/$id': typeof AuthenticatedAppServersIdRoute
   '/_authenticated/app/servers/new': typeof AuthenticatedAppServersNewRoute
+  '/api/public/acquisition/visit': typeof ApiPublicAcquisitionVisitRoute
   '/api/public/analytics/event': typeof ApiPublicAnalyticsEventRoute
   '/api/public/android/associate': typeof ApiPublicAndroidAssociateRoute
   '/api/public/android/config': typeof ApiPublicAndroidConfigRoute
@@ -1091,6 +1162,13 @@ export interface FileRoutesById {
   '/api/public/cron/radar': typeof ApiPublicCronRadarRoute
   '/api/public/cron/referral-launch': typeof ApiPublicCronReferralLaunchRoute
   '/api/public/cron/service-update-2026': typeof ApiPublicCronServiceUpdate2026Route
+  '/api/public/edge-backup/enroll': typeof ApiPublicEdgeBackupEnrollRoute
+  '/api/public/edge-backup/manifest': typeof ApiPublicEdgeBackupManifestRoute
+  '/api/public/edge-backup/sign': typeof ApiPublicEdgeBackupSignRoute
+  '/api/public/edge-dns/report': typeof ApiPublicEdgeDnsReportRoute
+  '/api/public/edge-dns/targets': typeof ApiPublicEdgeDnsTargetsRoute
+  '/api/public/edge-metrics/rollups': typeof ApiPublicEdgeMetricsRollupsRoute
+  '/api/public/edge-telegram/dispatch': typeof ApiPublicEdgeTelegramDispatchRoute
   '/api/public/regions/heartbeat': typeof ApiPublicRegionsHeartbeatRoute
   '/api/public/regions/report': typeof ApiPublicRegionsReportRoute
   '/api/public/regions/targets': typeof ApiPublicRegionsTargetsRoute
@@ -1128,8 +1206,8 @@ export interface FileRouteTypes {
     | '/.well-known/oauth-protected-resource'
     | '/app'
     | '/vitrine-ai'
-    | '/vitrine-futebol'
     | '/vitrine-banner'
+    | '/vitrine-futebol'
     | '/vitrine-video'
     | '/ajuda/$slug'
     | '/api/openapi.json'
@@ -1184,6 +1262,7 @@ export interface FileRouteTypes {
     | '/app/admin/vitrine-futebol'
     | '/app/servers/$id'
     | '/app/servers/new'
+    | '/api/public/acquisition/visit'
     | '/api/public/analytics/event'
     | '/api/public/android/associate'
     | '/api/public/android/config'
@@ -1210,6 +1289,13 @@ export interface FileRouteTypes {
     | '/api/public/cron/radar'
     | '/api/public/cron/referral-launch'
     | '/api/public/cron/service-update-2026'
+    | '/api/public/edge-backup/enroll'
+    | '/api/public/edge-backup/manifest'
+    | '/api/public/edge-backup/sign'
+    | '/api/public/edge-dns/report'
+    | '/api/public/edge-dns/targets'
+    | '/api/public/edge-metrics/rollups'
+    | '/api/public/edge-telegram/dispatch'
     | '/api/public/regions/heartbeat'
     | '/api/public/regions/report'
     | '/api/public/regions/targets'
@@ -1244,8 +1330,8 @@ export interface FileRouteTypes {
     | '/.mcp/list-tools'
     | '/.well-known/oauth-protected-resource'
     | '/vitrine-ai'
-    | '/vitrine-futebol'
     | '/vitrine-banner'
+    | '/vitrine-futebol'
     | '/vitrine-video'
     | '/ajuda/$slug'
     | '/api/openapi.json'
@@ -1300,6 +1386,7 @@ export interface FileRouteTypes {
     | '/app/admin/vitrine-futebol'
     | '/app/servers/$id'
     | '/app/servers/new'
+    | '/api/public/acquisition/visit'
     | '/api/public/analytics/event'
     | '/api/public/android/associate'
     | '/api/public/android/config'
@@ -1326,6 +1413,13 @@ export interface FileRouteTypes {
     | '/api/public/cron/radar'
     | '/api/public/cron/referral-launch'
     | '/api/public/cron/service-update-2026'
+    | '/api/public/edge-backup/enroll'
+    | '/api/public/edge-backup/manifest'
+    | '/api/public/edge-backup/sign'
+    | '/api/public/edge-dns/report'
+    | '/api/public/edge-dns/targets'
+    | '/api/public/edge-metrics/rollups'
+    | '/api/public/edge-telegram/dispatch'
     | '/api/public/regions/heartbeat'
     | '/api/public/regions/report'
     | '/api/public/regions/targets'
@@ -1362,8 +1456,8 @@ export interface FileRouteTypes {
     | '/.well-known/oauth-protected-resource'
     | '/_authenticated/app'
     | '/_authenticated/vitrine-ai'
-    | '/_authenticated/vitrine-futebol'
     | '/_authenticated/vitrine-banner'
+    | '/_authenticated/vitrine-futebol'
     | '/_authenticated/vitrine-video'
     | '/ajuda/$slug'
     | '/api/openapi.json'
@@ -1418,6 +1512,7 @@ export interface FileRouteTypes {
     | '/_authenticated/app/admin_/vitrine-futebol'
     | '/_authenticated/app/servers/$id'
     | '/_authenticated/app/servers/new'
+    | '/api/public/acquisition/visit'
     | '/api/public/analytics/event'
     | '/api/public/android/associate'
     | '/api/public/android/config'
@@ -1444,6 +1539,13 @@ export interface FileRouteTypes {
     | '/api/public/cron/radar'
     | '/api/public/cron/referral-launch'
     | '/api/public/cron/service-update-2026'
+    | '/api/public/edge-backup/enroll'
+    | '/api/public/edge-backup/manifest'
+    | '/api/public/edge-backup/sign'
+    | '/api/public/edge-dns/report'
+    | '/api/public/edge-dns/targets'
+    | '/api/public/edge-metrics/rollups'
+    | '/api/public/edge-telegram/dispatch'
     | '/api/public/regions/heartbeat'
     | '/api/public/regions/report'
     | '/api/public/regions/targets'
@@ -1495,6 +1597,7 @@ export interface RootRouteChildren {
   ApiPublicStreamDoctorVerifyRoute: typeof ApiPublicStreamDoctorVerifyRoute
   ApiPublicTelegramAiVerifyRoute: typeof ApiPublicTelegramAiVerifyRoute
   StatusRevendaSlugRoute: typeof StatusRevendaSlugRoute
+  ApiPublicAcquisitionVisitRoute: typeof ApiPublicAcquisitionVisitRoute
   ApiPublicAnalyticsEventRoute: typeof ApiPublicAnalyticsEventRoute
   ApiPublicAndroidAssociateRoute: typeof ApiPublicAndroidAssociateRoute
   ApiPublicAndroidConfigRoute: typeof ApiPublicAndroidConfigRoute
@@ -1521,6 +1624,13 @@ export interface RootRouteChildren {
   ApiPublicCronRadarRoute: typeof ApiPublicCronRadarRoute
   ApiPublicCronReferralLaunchRoute: typeof ApiPublicCronReferralLaunchRoute
   ApiPublicCronServiceUpdate2026Route: typeof ApiPublicCronServiceUpdate2026Route
+  ApiPublicEdgeBackupEnrollRoute: typeof ApiPublicEdgeBackupEnrollRoute
+  ApiPublicEdgeBackupManifestRoute: typeof ApiPublicEdgeBackupManifestRoute
+  ApiPublicEdgeBackupSignRoute: typeof ApiPublicEdgeBackupSignRoute
+  ApiPublicEdgeDnsReportRoute: typeof ApiPublicEdgeDnsReportRoute
+  ApiPublicEdgeDnsTargetsRoute: typeof ApiPublicEdgeDnsTargetsRoute
+  ApiPublicEdgeMetricsRollupsRoute: typeof ApiPublicEdgeMetricsRollupsRoute
+  ApiPublicEdgeTelegramDispatchRoute: typeof ApiPublicEdgeTelegramDispatchRoute
   ApiPublicRegionsHeartbeatRoute: typeof ApiPublicRegionsHeartbeatRoute
   ApiPublicRegionsReportRoute: typeof ApiPublicRegionsReportRoute
   ApiPublicRegionsTargetsRoute: typeof ApiPublicRegionsTargetsRoute
@@ -1687,18 +1797,18 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedVitrineAiRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
-    '/_authenticated/vitrine-futebol': {
-      id: '/_authenticated/vitrine-futebol'
-      path: '/vitrine-futebol'
-      fullPath: '/vitrine-futebol'
-      preLoaderRoute: typeof AuthenticatedVitrineFutebolRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
-    }
     '/_authenticated/vitrine-banner': {
       id: '/_authenticated/vitrine-banner'
       path: '/vitrine-banner'
       fullPath: '/vitrine-banner'
       preLoaderRoute: typeof AuthenticatedVitrineBannerRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/vitrine-futebol': {
+      id: '/_authenticated/vitrine-futebol'
+      path: '/vitrine-futebol'
+      fullPath: '/vitrine-futebol'
+      preLoaderRoute: typeof AuthenticatedVitrineFutebolRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/vitrine-video': {
@@ -2100,6 +2210,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAppServersNewRouteImport
       parentRoute: typeof AuthenticatedAppRoute
     }
+    '/api/public/acquisition/visit': {
+      id: '/api/public/acquisition/visit'
+      path: '/api/public/acquisition/visit'
+      fullPath: '/api/public/acquisition/visit'
+      preLoaderRoute: typeof ApiPublicAcquisitionVisitRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/analytics/event': {
       id: '/api/public/analytics/event'
       path: '/api/public/analytics/event'
@@ -2282,6 +2399,55 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicCronServiceUpdate2026RouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/edge-backup/enroll': {
+      id: '/api/public/edge-backup/enroll'
+      path: '/api/public/edge-backup/enroll'
+      fullPath: '/api/public/edge-backup/enroll'
+      preLoaderRoute: typeof ApiPublicEdgeBackupEnrollRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/edge-backup/manifest': {
+      id: '/api/public/edge-backup/manifest'
+      path: '/api/public/edge-backup/manifest'
+      fullPath: '/api/public/edge-backup/manifest'
+      preLoaderRoute: typeof ApiPublicEdgeBackupManifestRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/edge-backup/sign': {
+      id: '/api/public/edge-backup/sign'
+      path: '/api/public/edge-backup/sign'
+      fullPath: '/api/public/edge-backup/sign'
+      preLoaderRoute: typeof ApiPublicEdgeBackupSignRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/edge-dns/report': {
+      id: '/api/public/edge-dns/report'
+      path: '/api/public/edge-dns/report'
+      fullPath: '/api/public/edge-dns/report'
+      preLoaderRoute: typeof ApiPublicEdgeDnsReportRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/edge-dns/targets': {
+      id: '/api/public/edge-dns/targets'
+      path: '/api/public/edge-dns/targets'
+      fullPath: '/api/public/edge-dns/targets'
+      preLoaderRoute: typeof ApiPublicEdgeDnsTargetsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/edge-metrics/rollups': {
+      id: '/api/public/edge-metrics/rollups'
+      path: '/api/public/edge-metrics/rollups'
+      fullPath: '/api/public/edge-metrics/rollups'
+      preLoaderRoute: typeof ApiPublicEdgeMetricsRollupsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/edge-telegram/dispatch': {
+      id: '/api/public/edge-telegram/dispatch'
+      path: '/api/public/edge-telegram/dispatch'
+      fullPath: '/api/public/edge-telegram/dispatch'
+      preLoaderRoute: typeof ApiPublicEdgeTelegramDispatchRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/regions/heartbeat': {
       id: '/api/public/regions/heartbeat'
       path: '/api/public/regions/heartbeat'
@@ -2449,16 +2615,16 @@ const AuthenticatedAppRouteWithChildren =
 interface AuthenticatedRouteRouteChildren {
   AuthenticatedAppRoute: typeof AuthenticatedAppRouteWithChildren
   AuthenticatedVitrineAiRoute: typeof AuthenticatedVitrineAiRoute
-  AuthenticatedVitrineFutebolRoute: typeof AuthenticatedVitrineFutebolRoute
   AuthenticatedVitrineBannerRoute: typeof AuthenticatedVitrineBannerRoute
+  AuthenticatedVitrineFutebolRoute: typeof AuthenticatedVitrineFutebolRoute
   AuthenticatedVitrineVideoRoute: typeof AuthenticatedVitrineVideoRoute
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedAppRoute: AuthenticatedAppRouteWithChildren,
   AuthenticatedVitrineAiRoute: AuthenticatedVitrineAiRoute,
-  AuthenticatedVitrineFutebolRoute: AuthenticatedVitrineFutebolRoute,
   AuthenticatedVitrineBannerRoute: AuthenticatedVitrineBannerRoute,
+  AuthenticatedVitrineFutebolRoute: AuthenticatedVitrineFutebolRoute,
   AuthenticatedVitrineVideoRoute: AuthenticatedVitrineVideoRoute,
 }
 
@@ -2539,6 +2705,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPublicStreamDoctorVerifyRoute: ApiPublicStreamDoctorVerifyRoute,
   ApiPublicTelegramAiVerifyRoute: ApiPublicTelegramAiVerifyRoute,
   StatusRevendaSlugRoute: StatusRevendaSlugRoute,
+  ApiPublicAcquisitionVisitRoute: ApiPublicAcquisitionVisitRoute,
   ApiPublicAnalyticsEventRoute: ApiPublicAnalyticsEventRoute,
   ApiPublicAndroidAssociateRoute: ApiPublicAndroidAssociateRoute,
   ApiPublicAndroidConfigRoute: ApiPublicAndroidConfigRoute,
@@ -2566,6 +2733,13 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPublicCronRadarRoute: ApiPublicCronRadarRoute,
   ApiPublicCronReferralLaunchRoute: ApiPublicCronReferralLaunchRoute,
   ApiPublicCronServiceUpdate2026Route: ApiPublicCronServiceUpdate2026Route,
+  ApiPublicEdgeBackupEnrollRoute: ApiPublicEdgeBackupEnrollRoute,
+  ApiPublicEdgeBackupManifestRoute: ApiPublicEdgeBackupManifestRoute,
+  ApiPublicEdgeBackupSignRoute: ApiPublicEdgeBackupSignRoute,
+  ApiPublicEdgeDnsReportRoute: ApiPublicEdgeDnsReportRoute,
+  ApiPublicEdgeDnsTargetsRoute: ApiPublicEdgeDnsTargetsRoute,
+  ApiPublicEdgeMetricsRollupsRoute: ApiPublicEdgeMetricsRollupsRoute,
+  ApiPublicEdgeTelegramDispatchRoute: ApiPublicEdgeTelegramDispatchRoute,
   ApiPublicRegionsHeartbeatRoute: ApiPublicRegionsHeartbeatRoute,
   ApiPublicRegionsReportRoute: ApiPublicRegionsReportRoute,
   ApiPublicRegionsTargetsRoute: ApiPublicRegionsTargetsRoute,
