@@ -1,7 +1,7 @@
 import { createRoot } from "react-dom/client";
 import { FootballSchedulePoster } from "@/components/vitrine/football-schedule-poster";
 import { createFootballArtworkFile } from "@/lib/vitrine-football-dom-export";
-const crest="https://upload.wikimedia.org/wikipedia/commons/thumb/4/43/Flamengo_braz_logo.svg/120px-Flamengo_braz_logo.svg.png";
+const crest="/favicon.ico";
 const blocked="https://example.invalid/x.png";
 const m=(i:number)=>({id:"m"+i,home:"Time Casa "+i,away:"Visitante "+i,homeId:"a",awayId:"b",homeBadge:i===2?blocked:crest,awayBadge:crest,league:"Brasileirão",time:"16:00",iso:"",day:"2026-11-17",broadcasts:["Globo","Premiere"]});
 export async function run(mode:"stage"|"inview"){
