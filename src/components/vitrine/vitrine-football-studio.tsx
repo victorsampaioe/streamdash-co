@@ -10,6 +10,7 @@ import { Card } from "@/components/ui/card";
 import { Download, RefreshCw, Trophy, Send, X, Image as ImageIcon } from "lucide-react";
 import { FootballSchedulePoster, FOOTBALL_POSTER_PALETTES } from "@/components/vitrine/football-schedule-poster";
 import { getVitrineFootballMatches, type FootballMatch } from "@/lib/vitrine-football.functions";
+import { getVitrineFootballExportImages } from "@/lib/vitrine-football-export.functions";
 
 const today = () => new Intl.DateTimeFormat("sv-SE", {
   timeZone: "America/Fortaleza", year: "numeric", month: "2-digit", day: "2-digit",
@@ -18,9 +19,7 @@ type Branding = { name: string; logo: string; contact: string; accent: string };
 const fallbackBrand: Branding = {name:"Stream Monitor",logo:"/favicon.ico",contact:"",accent:"#146df2"};
 const baseSize = 1080;
 /** Measure the actual artwork card rather than the entire dashboard width. */
-function ResponsivePoster({children,onPosterRef}:{
-  children:ReactNode; onPosterRef:(element:HTMLDivElement|null)=>void;
-}) {
+function ResponsivePoster({children}:{children:ReactNode}) {
   const frame = useRef<HTMLDivElement>(null);
   const [size,setSize] = useState(520);
   useEffect(()=>{
@@ -34,7 +33,7 @@ function ResponsivePoster({children,onPosterRef}:{
   },[]);
   return <div ref={frame} className="relative mx-auto aspect-square w-full min-w-0 max-w-[550px] overflow-hidden rounded-xl">
     <div style={{width:baseSize,height:baseSize,transform:"scale("+(size/baseSize)+")",transformOrigin:"top left"}}>
-      <div ref={onPosterRef} style={{width:baseSize,height:baseSize}}>{children}</div>
+      <div style={{width:baseSize,height:baseSize}}>{children}</div>
     </div>
   </div>;
 }
@@ -43,6 +42,7 @@ const safeColor = (input: string | undefined) => /^#[0-9a-f]{6}$/i.test(input||"
 /** Automated posters: four fixtures (eight clubs) per artwork, with automatic pagination. */
 export function VitrineFootballStudio() {
   const load = useServerFn(getVitrineFootballMatches);
+  const inlineAssets = useServerFn(getVitrineFootballExportImages);
   const [brand, setBrand] = useState<Branding>(fallbackBrand);
   const [transparentLogo, setTransparentLogo] = useState(fallbackBrand.logo);
   const [selectedColor, setSelectedColor] = useState<string | null>(null);
@@ -51,7 +51,7 @@ export function VitrineFootballStudio() {
   const [action, setAction] = useState<"download"|"telegram"|null>(null);
   const [imagePreview, setImagePreview] = useState<{url:string;name:string;index:number;file:File}|null>(null);
   const imagePreviewUrl = useRef<string|null>(null);
-  const posterRefs = useRef<(HTMLDivElement | null)[]>([]);
+  const exportRefs = useRef<(HTMLDivElement | null)[]>([]);
   const [day, setDay] = useState(today);
 
   useEffect(() => {
@@ -128,6 +128,22 @@ export function VitrineFootballStudio() {
   },[groups]);
   const haveChannels = (match:FootballMatch) => (match.broadcasts||[]).slice(0,3).join(" • ") || "Sem transmissão";
 
+  const renderArtwork=(group:FootballMatch[])=>{
+    const featured=group.find(match=>!!match.playerPhoto&&validatedPhotos[match.playerPhoto]===true);
+    const badgeImages:Record<string,string>={};
+    for(const match of group){
+      if(match.homeBadge)badgeImages[match.homeBadge]=match.homeBadge;
+      if(match.awayBadge)badgeImages[match.awayBadge]=match.awayBadge;
+    }
+    const channels=Object.fromEntries(group.map(match=>[match.id,haveChannels(match)]));
+    return <FootballSchedulePoster kind="today" format="feed" matches={group} day={day}
+      headline="EVENTOS DE HOJE" brand={brand.name} logo={transparentLogo} contact={brand.contact}
+      badgeImages={badgeImages} broadcastByMatch={channels}
+      playerPhoto={featured?.playerPhoto||""} playerName={featured?.playerName||""}
+      stadium="" accent={accent}/>;
+  };
+
+
 
   useEffect(()=>()=>{if(imagePreviewUrl.current)URL.revokeObjectURL(imagePreviewUrl.current);},[]);
 
@@ -145,49 +161,79 @@ export function VitrineFootballStudio() {
     if(document.fonts?.ready){
       await Promise.race([document.fonts.ready,new Promise<void>(resolve=>setTimeout(resolve,3000))]);
     }
-    const images=[...node.querySelectorAll("img")];
-    await Promise.all(images.map(img=>
-      Promise.race([
-        img.decode ? img.decode().catch(()=>{}) : Promise.resolve(),
-        new Promise<void>(resolve=>setTimeout(resolve,4000))
-      ])
-    ));
+    const images=Array.from(node.querySelectorAll("img"));
+    await Promise.all(images.map(img=>Promise.race([
+      img.decode ? img.decode().catch(()=>{}) : Promise.resolve(),
+      new Promise<void>(resolve=>setTimeout(resolve,4500))
+    ])));
   }
-  async function createPngFile(index:number):Promise<{file:File;degraded:boolean}>{
-    const node=posterRefs.current[index];
-    if(!node)throw new Error("Arte ainda não carregada.");
-    await awaitAssets(node);
-    const options={
-      width:baseSize,height:baseSize,pixelRatio:1,backgroundColor:"#071227",
-      cacheBust:true,skipAutoScale:true
-    };
-    let blob:Blob|null=null;
-    let degraded=false;
+  /** Make the export independent of mobile CSS scaling and avoid external CORS failures.
+   * Only the off-screen copy is altered; the visible poster remains untouched.
+   */
+  async function inlinePosterAssets(node:HTMLElement):Promise<()=>void>{
+    const images=Array.from(node.querySelectorAll("img"));
+    const urls=[...new Set(images.map(img=>img.src).filter(src=>/^https:\/\//i.test(src)))];
+    if(!urls.length)return ()=>{};
+    const oldSources=images.map(img=>[img,img.src] as const);
+    let assets:{images:Record<string,string>};
     try{
-      blob=await toBlob(node,options);
-      if(!blob||blob.size<1000)throw new Error("PNG vazio");
+      assets=await inlineAssets({data:{urls:urls.slice(0,16)}});
     }catch{
-      // Some third-party crests block canvas export via CORS. Export the poster
-      // rather than failing completely; only unsupported remote images are omitted.
-      degraded=true;
-      const safer={
-        ...options,skipFonts:true,
-        filter:(element:HTMLElement)=>{
-          if(element instanceof HTMLImageElement && /^https?:/i.test(element.src))return false;
-          return true;
-        }
-      };
-      try{
-        blob=await toBlob(node,safer);
-        if(!blob||blob.size<1000)throw new Error("PNG vazio");
-      }catch{
-        const png=await toPng(node,safer);
-        blob=await (await fetch(png)).blob();
+      // If the image proxy is temporarily unavailable, attempt the original
+      // export normally instead of blocking all downloads.
+      return ()=>{};
+    }
+    for(const image of images){
+      const replacement=assets.images[image.src];
+      if(replacement){
+        image.style.display="";
+        image.src=replacement;
       }
     }
-    if(!blob||blob.size<1000)throw new Error("Não foi possível gerar o arquivo PNG.");
-    const name="stream-monitor-futebol-"+day+"-arte-"+(index+1)+".png";
-    return {file:new File([blob],name,{type:"image/png"}),degraded};
+    await awaitAssets(node);
+    return ()=>{
+      for(const [image,src] of oldSources){
+        if(image.src!==src)image.src=src;
+      }
+    };
+  }
+  async function createPngFile(index:number):Promise<{file:File;degraded:boolean}>{
+    // The small preview is under a CSS transform; exporting it on Safari crops content.
+    // Always render the independent original-size artwork instead.
+    const node=exportRefs.current[index];
+    if(!node)throw new Error("Arte completa ainda não carregada.");
+    await awaitAssets(node);
+    const restore=await inlinePosterAssets(node);
+    const options={
+      width:baseSize,height:baseSize,pixelRatio:1,backgroundColor:"#071227",
+      cacheBust:false,skipAutoScale:true,
+    };
+    try{
+      let blob:Blob|null=null;
+      try{blob=await toBlob(node,options);}catch{/* Retry without remote font embedding. */}
+      if(!blob||blob.size<1000){
+        try{blob=await toBlob(node,{...options,skipFonts:true});}catch{/* Try data URL fallback. */}
+      }
+      if(!blob||blob.size<1000){
+        try{
+          const data=await toPng(node,{...options,skipFonts:true});
+          blob=await (await fetch(data)).blob();
+        }catch{/* The user receives an explicit error, never a silently incomplete PNG. */}
+      }
+      if(!blob||blob.size<1000)throw new Error("Falha ao capturar o banner completo.");
+      // Fail explicitly instead of silently generating a cropped/small PNG.
+      // Read the PNG IHDR dimensions directly: works even on Safari versions
+      // where createImageBitmap(Blob) is unavailable or unreliable.
+      const head=await blob.slice(0,24).arrayBuffer();
+      const data=new DataView(head);
+      const isPng=head.byteLength>=24 &&
+        data.getUint32(0)===0x89504e47 && data.getUint32(4)===0x0d0a1a0a;
+      if(!isPng||data.getUint32(16)!==baseSize||data.getUint32(20)!==baseSize){
+        throw new Error("O PNG não foi renderizado em 1080 × 1080.");
+      }
+      const name="stream-monitor-futebol-"+day+"-arte-"+(index+1)+".png";
+      return {file:new File([blob],name,{type:"image/png"}),degraded:false};
+    }finally{restore();}
   }
   function downloadBlob(file:File){
     const url=URL.createObjectURL(file);
@@ -279,36 +325,31 @@ export function VitrineFootballStudio() {
     </Card>}
     {games.isSuccess&&groups.length===0&&<Card className="p-8 text-center">Nenhuma partida das principais competições encontrada na FTWB para a data selecionada.</Card>}
     {games.isSuccess&&groups.length>0&&<div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
-      {groups.map((group,index)=>{
-        const featured=group.find(match=>!!match.playerPhoto && validatedPhotos[match.playerPhoto]===true);
-        const badgeImages:Record<string,string>={};
-        for(const match of group) {
-          if(match.homeBadge)badgeImages[match.homeBadge]=match.homeBadge;
-          if(match.awayBadge)badgeImages[match.awayBadge]=match.awayBadge;
-        }
-        const channels=Object.fromEntries(group.map(match=>[match.id,haveChannels(match)]));
-        return <Card className="min-w-0 overflow-hidden p-3 sm:p-4" key={group.map(m=>m.id).join("|")}>
-          <div className="flex flex-wrap items-center justify-between gap-3 pb-4">
-            <strong className="text-base">Arte {index+1} de {groups.length}</strong>
-            <div className="flex flex-wrap gap-2">
-              <Button type="button" size="sm" disabled={saving!==null} onClick={()=>void exportPoster(index,"download")}>
-                <Download size={16} className="mr-2"/>{saving===index&&action==="download"?"Preparando…":"Baixar PNG"}
-              </Button>
-              <Button type="button" size="sm" variant="outline" disabled={saving!==null}
-                onClick={()=>void exportPoster(index,"telegram")}>
-                <Send size={16} className="mr-2"/>{saving===index&&action==="telegram"?"Preparando…":"Enviar ao Telegram"}
-              </Button>
-            </div>
+      {groups.map((group,index)=><Card className="min-w-0 overflow-hidden p-3 sm:p-4"
+        key={group.map(m=>m.id).join("|")}>
+        <div className="flex flex-wrap items-center justify-between gap-3 pb-4">
+          <strong className="text-base">Arte {index+1} de {groups.length}</strong>
+          <div className="flex flex-wrap gap-2">
+            <Button type="button" size="sm" disabled={saving!==null} onClick={()=>void exportPoster(index,"download")}>
+              <Download size={16} className="mr-2"/>{saving===index&&action==="download"?"Preparando…":"Baixar PNG"}
+            </Button>
+            <Button type="button" size="sm" variant="outline" disabled={saving!==null}
+              onClick={()=>void exportPoster(index,"telegram")}>
+              <Send size={16} className="mr-2"/>{saving===index&&action==="telegram"?"Preparando…":"Enviar ao Telegram"}
+            </Button>
           </div>
-          <ResponsivePoster onPosterRef={el=>{posterRefs.current[index]=el}}>
-            <FootballSchedulePoster kind="today" format="feed" matches={group} day={day}
-              headline="EVENTOS DE HOJE" brand={brand.name} logo={transparentLogo} contact={brand.contact}
-              badgeImages={badgeImages} broadcastByMatch={channels}
-              playerPhoto={featured?.playerPhoto||""} playerName={featured?.playerName||""}
-              stadium="" accent={accent}/>
-          </ResponsivePoster>
-        </Card>;
-      })}
+        </div>
+        <ResponsivePoster>{renderArtwork(group)}</ResponsivePoster>
+      </Card>)}
+    </div>}
+    {/* A dedicated, unscaled copy at 1080×1080 for downloads; never inside a clipped card. */}
+    {groups.length>0&&<div data-testid="football-export-stage" aria-hidden="true"
+      style={{position:"fixed",left:-1800,top:0,width:baseSize,pointerEvents:"none",zIndex:-100}}>
+      {groups.map((group,index)=><div key={group.map(m=>m.id).join("|")}
+        ref={el=>{exportRefs.current[index]=el}}
+        style={{width:baseSize,height:baseSize,overflow:"hidden"}}>
+        {renderArtwork(group)}
+      </div>)}
     </div>}
     {imagePreview&&<div role="dialog" aria-modal="true" aria-label="Salvar ou compartilhar arte de futebol"
       className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 p-4"

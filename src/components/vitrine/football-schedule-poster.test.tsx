@@ -103,9 +103,11 @@ describe("Vitrine Futebol — imagens e exportação", () => {
   });
   it("desenha campo de futebol bem discreto e preserva marca d’água da revenda",()=>{
     const html=renderToStaticMarkup(<FootballSchedulePoster {...base} logo="data:image/png;base64,MARCA" />);
+    expect(html).toContain('data-testid="football-stadium-background"');
     expect(html).toContain('viewBox="0 0 1080 1080"');
-    expect(html).toContain('cx="540" cy="665"');
-    expect(html).toContain('opacity:0.12');
+    expect(html).toContain('cx="540" cy="695"');
+    expect(html).toContain('M-75 244 Q540 25 1160 244');
+    expect(html).toContain('opacity=".26"');
     expect(html).toContain('src="data:image/png;base64,MARCA"');
     expect(html).not.toContain("HORÁRIOS E TRANSMISSÕES SUJEITOS");
   });
