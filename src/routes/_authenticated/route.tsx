@@ -8,7 +8,7 @@ import { isChunkLoadError, recoverFromChunkError } from "@/lib/chunk-recovery";
 
 export const Route = createFileRoute("/_authenticated")({
   ssr: false,
-  beforeLoad: async () => {
+  beforeLoad: async ({location}) => {
     try {
       const { data, error } = await supabase.auth.getUser();
       if (!error && data.user) return { user: data.user };
@@ -18,13 +18,13 @@ export const Route = createFileRoute("/_authenticated")({
       const { data: sessionData } = await supabase.auth.getSession();
       if (sessionData.session?.user) return { user: sessionData.session.user };
 
-      throw redirect({ to: "/auth" });
+      throw redirect({ to: "/auth", search: { redirect: location.pathname.startsWith("/app") ? location.pathname : "/app" } });
     } catch (err) {
       if (isRedirect(err)) throw err;
       // Never bubble transient auth/network failures to the root error boundary.
       const { data: sessionData } = await supabase.auth.getSession().catch(() => ({ data: { session: null } }) as never);
       if (sessionData?.session?.user) return { user: sessionData.session.user };
-      throw redirect({ to: "/auth" });
+      throw redirect({ to: "/auth", search: { redirect: location.pathname.startsWith("/app") ? location.pathname : "/app" } });
     }
   },
   component: AuthenticatedOutlet,
