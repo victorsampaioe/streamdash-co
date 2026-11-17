@@ -66,7 +66,7 @@ export async function sendThreeFootballExamplesToRegisteredTelegram(
   }));
   form.append("media",JSON.stringify(media));
   images.forEach((image,index)=>form.append("photo"+index,
-    new Blob([image.bytes],{type:image.mime}),image.filename));
+    new Blob([new Uint8Array(image.bytes)],{type:image.mime}),image.filename));
   const response=await fetch(
     "https://api.telegram.org/bot"+destination.token+"/sendMediaGroup",
     {method:"POST",body:form,signal:AbortSignal.timeout(TELEGRAM_TIMEOUT)}
