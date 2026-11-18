@@ -113,10 +113,20 @@ export const getAdminAcquisitionReport=createServerFn({method:"GET"})
     seg.linkClicks=(seg.linkClicks??0)+Number(c.clicks||0);
     seg.landingPageViews=(seg.landingPageViews??0)+Number(c.landing_page_views||0);
   };
+  // Costs must only be compared to registrations from the SAME campaign.
+  // A historical traffic ad with no matching customer_acquisition campaign_id
+  // must never be divided by the registrations of a newer Leads campaign.
+  const attributedCampaignIds=new Set(leads.filter(x=>
+    x.source==="meta_ads"&&!!x.campaign_id).map(x=>x.campaign_id as string));
+  const linkedCosts=costs.filter(x=>attributedCampaignIds.has(x.campaign_id));
+  const unlinkedCosts=costs.filter(x=>!attributedCampaignIds.has(x.campaign_id));
   for(const c of costs){
+    // Keep both old and new campaigns visible in the campaign detail.
+    totalCost(group(byCampaign,c.campaign_id),c);
+  }
+  for(const c of linkedCosts){
     totalCost(group(bySource,"meta_ads"),c);
     totalCost(group(byPlatform,c.platform||"unknown"),c);
-    totalCost(group(byCampaign,c.campaign_id),c);
   }
   const noAttribution=Math.max(0,Number(totalQ.count??0)-leads.length);
   const attributablePaid=leads.filter(x=>{
@@ -128,14 +138,22 @@ export const getAdminAcquisitionReport=createServerFn({method:"GET"})
     totals:{profiles:Number(totalQ.count??0),newAttributed:leads.length,
       historicalUnattributed:noAttribution,paidKnown:paidByUser.size,
       paidWithFirstTouch:attributablePaid,
-      spendCents:costs.reduce((n,x)=>n+Number(x.spend_cents||0),0),
+      // Linked costs reflect only campaigns recorded at signup, not
+      // unrelated historical ad campaigns.
+      spendCents:linkedCosts.reduce((n,x)=>n+Number(x.spend_cents||0),0),
+      unlinkedSpendCents:unlinkedCosts.reduce((n,x)=>n+Number(x.spend_cents||0),0),
+      allImportedSpendCents:costs.reduce((n,x)=>n+Number(x.spend_cents||0),0),
+      linkedCampaignCount:attributedCampaignIds.size,
+      costCoverageFirstDay:linkedCosts.map(x=>x.day).sort()[0]??null,
+      costCoverageLastDay:linkedCosts.map(x=>x.day).sort().at(-1)??null,
       signupPageVisits:(visitQ.data||[]).length,
-      linkClicks:costs.reduce((n,x)=>n+Number(x.clicks||0),0),
-      landingPageViews:costs.reduce((n,x)=>n+Number(x.landing_page_views||0),0)},
+      linkClicks:linkedCosts.reduce((n,x)=>n+Number(x.clicks||0),0),
+      landingPageViews:linkedCosts.reduce((n,x)=>n+Number(x.landing_page_views||0),0)},
     bySource:[...bySource.values()].map(summarize).sort((a,b)=>b.registrations-a.registrations),
     byPlatform:[...byPlatform.values()].map(summarize).sort((a,b)=>(b.spendCents||0)-(a.spendCents||0)),
     byCampaign:[...byCampaign.values()].map(summarize).sort((a,b)=>(b.spendCents||0)-(a.spendCents||0)),
-    metaCostsLastImported:costs.map(x=>x.retrieved_at).sort().at(-1)??null,
-    note:"Receita atribuída usa primeiro toque informado com consentimento; custo é importação pontual da Meta. Nenhum histórico anterior foi reclassificado.",
+    metaCostsLastImported:linkedCosts.map(x=>x.retrieved_at).sort().at(-1)??null,
+    historicalCostsLastImported:unlinkedCosts.map(x=>x.retrieved_at).sort().at(-1)??null,
+    note:"Gastos agrupados somente por ID de campanha que consta no cadastro consentido. Custos de campanhas antigas sem cadastro correspondente são apresentados em separado. As importações da Meta não são dados em tempo real.",
   };
 });
