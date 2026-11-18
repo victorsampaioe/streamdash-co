@@ -121,7 +121,11 @@ export async function runDueApplicationPartnerChecks(limit=3){
  const {data:partners,error}=await db.from("app_partners")
   .select("id,name,api_url,api_kind,status,broadcast_enabled,consecutive_healthy,consecutive_unhealthy,last_healthy_at")
   .eq("monitor_enabled",true).eq("partnership_status","active")
-  .neq("api_kind","unverified").order("last_check_at",{ascending:true,nullsFirst:true}).limit(Math.min(10,Math.max(1,limit)));
+  // RX Purple is monitored by the database pg_net cron because the app
+  // runtime cannot resolve its DNS. Do not overwrite verified pg_net
+  // samples with failed browser-runtime probes.
+  .neq("api_kind","unverified").neq("api_kind","rx_purple")
+  .order("last_check_at",{ascending:true,nullsFirst:true}).limit(Math.min(10,Math.max(1,limit)));
  if(error)throw new Error("application_partner_query_failed");
  let checked=0,confirmedChanges=0,queued=0;
  for(const partner of (partners||[]) as Partner[]){
