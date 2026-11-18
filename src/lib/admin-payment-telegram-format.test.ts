@@ -10,7 +10,7 @@ describe("Admin payment receipt",()=>{
   };
   it("shows the approved Pix value, account and Fortaleza timestamps",()=>{
     const msg=formatAdminPaymentReceipt(sample);
-    expect(msg).toContain("R$ 25,00".replace(" "," "));
+    expect(msg).toMatch(/R\$\s25,00/);
     expect(msg).toContain("bravohubofc@gmail.com");
     expect(msg).toContain("17/11/2026");
     expect(msg).toContain("17/12/2026");
