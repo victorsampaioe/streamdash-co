@@ -11,6 +11,9 @@ export function verifiedTeamBadge(team:string,league:string,sourceUrl:string,
   const code=flag.match(/\/([\w-]+)\.png$/)?.[1]||"";
   const local=offlineFootballFlag(code);
   if(local)return local;
+  // FTWB can embed the actual crest bytes directly in the day's fixture.
+  // Trust that inline image as-is; do not send it through a URL proxy.
+  if(/^data:image\/(?:png|jpeg|jpg|webp|gif);base64,/i.test(sourceUrl))return sourceUrl;
   const source=proxied[sourceUrl]||proxied[flag]||"";
   // Do not draw third-party URLs with broken CORS or fallback initials.
   return /^data:image\/(?:png|jpeg|jpg|webp|gif|svg\+xml);/i.test(source)?source:"";
