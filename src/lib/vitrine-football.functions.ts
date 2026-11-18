@@ -5,7 +5,6 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { requirePaidFeature } from "@/lib/premium-feature-access";
 import { isFeaturedFootballFixture } from "@/lib/vitrine-football-competitions";
 import { extractFtwbBroadcasts } from "@/lib/vitrine-ftwb-broadcasts";
-import {findGuideChannels} from "@/lib/vitrine-football-broadcast-guide";
 import { isFinishedFootballStatus,matchFinalScore,preferFootballFixture } from "@/lib/vitrine-football-results";
 import { ftwbTeamCrest } from "@/lib/vitrine-ftwb-crests";
 
@@ -272,35 +271,11 @@ export const getVitrineFootballMatches = createServerFn({ method: "POST" })
       unique.set(id,old?preferFootballFixture(old,match):match);
     }
     const matches=[...unique.values()];
-    // The FTWB provides real fixtures. When the fixture payload omits TV
-    // networks, consult a public, DATE-SCOPED Brazilian transmission guide.
-    // Only channels printed beside both teams for this exact day are used.
-    // Neither schedule nor kickoff nor crests are changed by enrichment.
-    const guideMissing=matches.filter(m=>!m.broadcasts?.length);
-    if(guideMissing.length){
-      try{
-        const guideUrl="https://futebol.tv.br/jogos/"+data.date;
-        const guideResponse=await fetch(guideUrl,{
-          headers:{accept:"text/html"},
-          redirect:"error",signal:AbortSignal.timeout(7000),
-        });
-        if(guideResponse.ok&&
-          (guideResponse.headers.get("content-type")||"").includes("text/html")&&
-          Number(guideResponse.headers.get("content-length")||0)<1_500_000){
-          const html=(await guideResponse.text()).slice(0,1_300_000);
-          const verified=findGuideChannels(html,data.date,guideMissing);
-          for(const match of guideMissing){
-            const channels=verified[match.id];
-            if(channels?.length)match.broadcasts=channels;
-          }
-        }
-      }catch(error){
-        console.warn("[Vitrine Futebol] Guide channels unavailable",
-          error instanceof Error?error.name:"unknown");
-      }
-    }
-    // Keep Cloudflare as the second, evidence-only lookup for any remaining
-    // channel gaps. Known records in its KV are returned immediately.
+    // Use the FTWB's verified TV metadata first. Any fixture without
+    // a channel is researched by the Cloudflare Workers AI service;
+    // it collects date-specific press/schedule evidence and caches the
+    // resulting confirmed broadcasters by match and date.
+    // No hardcoded league-to-channel assignment or client-side guesses.
     const missingChannels=matches.filter(m=>!m.broadcasts?.length);
     const auth=getRequest()?.headers.get("authorization")||"";
     const apikey=process.env.SUPABASE_PUBLISHABLE_KEY||"";
