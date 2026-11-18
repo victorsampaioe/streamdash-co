@@ -4,7 +4,7 @@ import {Bell,ChevronRight,X} from "lucide-react";
 import {useSubscription} from "@/hooks/use-subscription";
 import {CONVERSION_REMINDER_MESSAGES,getConversionReminderStep} from "@/lib/onboarding-conversion";
 
-type SavedPreference={seen:number[];disabled:boolean};
+type SavedPreference={seen:number[];disabled:boolean;startedAt?:number};
 const empty:SavedPreference={seen:[],disabled:false};
 function getPreference(key:string):SavedPreference{
   if(typeof window==="undefined")return empty;
@@ -13,7 +13,8 @@ function getPreference(key:string):SavedPreference{
     if(!raw)return empty;
     const parsed=JSON.parse(raw) as Partial<SavedPreference>;
     return {seen:Array.isArray(parsed.seen)?parsed.seen.filter(n=>Number.isInteger(n)&&n>=1&&n<=5):[],
-      disabled:parsed.disabled===true};
+      disabled:parsed.disabled===true,
+      startedAt:typeof parsed.startedAt==="number"&&Number.isFinite(parsed.startedAt)?parsed.startedAt:undefined};
   }catch{return empty;}
 }
 function savePreference(key:string,value:SavedPreference){
@@ -33,6 +34,7 @@ export function ConversionReminders(){
   const key=userId?"streammonitor:conversion-reminders:"+userId:"";
   const [now,setNow]=useState(0);
   const [mounted,setMounted]=useState(false);
+  const [startedAt,setStartedAt]=useState<number|null>(null);
   const [,setRevision]=useState(0);
   useEffect(()=>{
     setNow(Date.now());
@@ -40,13 +42,29 @@ export function ConversionReminders(){
     const timer=setInterval(()=>setNow(Date.now()),60_000);
     return ()=>clearInterval(timer);
   },[]);
-  const step=mounted&&eligible?getConversionReminderStep(createdAt,now):null;
+  // Start the sequence on the first dashboard visit for recent signups.
+  // People registered earlier today still receive their five opportunities,
+  // instead of all five windows having elapsed before they return.
+  useEffect(()=>{
+    if(!mounted||!eligible||!key)return;
+    const age=Date.now()-Date.parse(createdAt);
+    if(!Number.isFinite(age)||age<0||age>7*24*60*60_000){
+      setStartedAt(null);
+      return;
+    }
+    const existing=getPreference(key);
+    const opened=existing.startedAt||Date.now();
+    savePreference(key,{...existing,startedAt:opened});
+    setStartedAt(opened);
+  },[mounted,eligible,key,createdAt]);
+  const step=mounted&&eligible&&startedAt!==null
+    ?getConversionReminderStep(new Date(startedAt).toISOString(),now):null;
   const preference=key?getPreference(key):empty;
   if(!step||preference.disabled||preference.seen.includes(step))return null;
   const item=CONVERSION_REMINDER_MESSAGES[step-1];
   if(!item)return null;
   const remember=(disabled:boolean)=>{
-    savePreference(key,{seen:[...new Set([...preference.seen,step])],disabled});
+    savePreference(key,{...preference,seen:[...new Set([...preference.seen,step])],disabled});
     setRevision(v=>v+1);
   };
   return (
