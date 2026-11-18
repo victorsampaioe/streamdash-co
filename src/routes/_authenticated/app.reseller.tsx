@@ -21,6 +21,7 @@ import {
   UserPlus
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
+import { ResellerCreditRules } from "@/components/subscription/reseller-credit-rules";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -234,6 +235,7 @@ function ResellerDashboard() {
         </div>
       </div>
 
+      <ResellerCreditRules />
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <Card className={cn(
           "bg-gradient-to-br border-primary/20",
