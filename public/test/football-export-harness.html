@@ -330,13 +330,14 @@ try{
   out.push({case:"badge-normalization",badges:20,
     visibleCenters:[homeBounds.y,awayBounds.y],expectedCenter,
     heights:[homeBounds.height,awayBounds.height],bytes:alignedFile.size});
-  // Regression: both types must OMIT missing-club-logo matches, while
-  // keeping every remaining card exactly the same size and position.
+  // Regression: an upstream club crest failure must NOT silently remove a real game.
+  // Keep the actual matchup, show a clearly distinguishable fallback badge,
+  // and preserve the approved card sizes in both PNG models.
   for(const kind of ["today","grid"]){
     const bad={...fixtures10[0],id:"bad-club",
       home:"Sem Emblema",away:"Rival Teste",
       league:"Brasileirão Série A",homeBadge:"",awayBadge:away};
-    const shortlist=[bad,...fixtures10.slice(0,3)];
+    const shortlist=[...fixtures10.slice(0,3),bad];
     const textDrawn=[],saved=CanvasRenderingContext2D.prototype.fillText;
     CanvasRenderingContext2D.prototype.fillText=function(value,...args){
       textDrawn.push(String(value));return saved.call(this,value,...args);
@@ -347,16 +348,16 @@ try{
         day:"2026-11-17",accent:"#146df2",logo,contact:"85998545009",
         name:"Revenda Exemplo",filename:"missing-club-"+kind+".png"});
     }finally{CanvasRenderingContext2D.prototype.fillText=saved}
-    if(textDrawn.some(t=>t.includes("Sem Emblema")))
-      throw Error("Jogo com logo ausente não foi excluído do modelo "+kind);
+    if(!textDrawn.some(t=>t.includes("Sem Emblema")))
+      throw Error("Jogo com escudo ausente foi omitido do modelo "+kind);
     const bmp=await createImageBitmap(file);
     if(bmp.width!==2160||bmp.height!==2700)
-      throw Error("Export "+kind+" com jogos removidos perdeu resolução");
+      throw Error("Export "+kind+" com escudo ausente perdeu resolução");
     const target=document.createElement("canvas");
     target.width=2160;target.height=2700;
     const t=target.getContext("2d",{willReadFrequently:true});
     t.drawImage(bmp,0,0);bmp.close();
-    const count=shortlist.length-1;
+    const count=shortlist.length;
     if(kind==="today"){
       const g=classicCardGeometry(count),full=classicCardGeometry(4);
       if(JSON.stringify(g)!==JSON.stringify(full))
@@ -374,7 +375,7 @@ try{
            g.badgeSize*2,g.badgeSize*2))
         throw Error("Modelo 2 não manteve o escudo na posição fixa");
     }
-    out.push({case:"skip-missing-crest",model:kind,shown:count,hidden:1,
+    out.push({case:"keep-missing-crest",model:kind,shown:count,fallback:1,
       width:2160,height:2700,bytes:file.size});
   }
   const uniqueBackdrops=new Set(backdropSamples.map(v=>v.sample.join(",")));
