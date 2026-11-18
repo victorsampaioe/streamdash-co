@@ -196,3 +196,20 @@ export const markPartnerPayoutPaid=createServerFn({method:"POST"})
   if(error||!updated)throw new Error("Saque já processado ou indisponível.");
   return {ok:true};
  });
+
+
+/** Read-only admin probe. This action never changes incidents or sends Telegram. */
+export const testAppPartnerApi=createServerFn({method:"POST"})
+ .middleware([requireSupabaseAuth])
+ .inputValidator((x:{partnerId:string})=>x)
+ .handler(async({context,data})=>{
+  await verifyAdmin(context.userId);
+  const client=await db();
+  const {data:partner,error}=await client.from("app_partners")
+   .select("api_url,api_kind,name").eq("id",data.partnerId).single();
+  if(error||!partner?.api_url)throw new Error("Nenhuma API configurada para este parceiro.");
+  const {probeApplicationApi}=await import("./app-partner-monitor.server");
+  const result=await probeApplicationApi(partner.api_url,partner.api_kind);
+  return {...result,apiKind:partner.api_kind,verifiedContract:partner.api_kind!=="unverified",
+   warning:"Teste isolado. Não altera o estado público nem dispara Telegram."};
+ });
