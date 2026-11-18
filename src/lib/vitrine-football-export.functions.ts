@@ -34,9 +34,9 @@ function detectImageMime(data:Buffer):string{
   if(data.length>=6&&/^GIF8[79]a$/.test(data.toString("ascii",0,6)))return "image/gif";
   if(data.length>=12&&data.toString("ascii",4,12).startsWith("ftypavif"))return "image/avif";
   const sample=data.subarray(0,500).toString("utf8").trimStart();
-  if(/^(?:<\\?xml[^>]*>\\s*)?<svg[\\s>]/i.test(sample)&&
-     !/<(?:script|foreignObject|iframe|object|embed)\\b/i.test(data.toString("utf8"))&&
-     !/\\bon[a-z]+\\s*=|javascript:|@import|url\\s*\\(\\s*['"]?https?:|<image[^>]+href\\s*=\\s*['"]https?:/i.test(data.toString("utf8")))
+  if(/^(?:<\?xml[^>]*>\s*)?<svg[\s>]/i.test(sample)&&
+     !/<(?:script|foreignObject|iframe|object|embed)\b/i.test(data.toString("utf8"))&&
+     !/\bon[a-z]+\s*=|javascript:|@import|url\s*\(\s*['"]?https?:|<image[^>]+href\s*=\s*['"]https?:/i.test(data.toString("utf8")))
     return "image/svg+xml";
   return "";
 }
