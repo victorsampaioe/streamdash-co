@@ -6,6 +6,8 @@ import { requirePaidFeature } from "@/lib/premium-feature-access";
 import { isFeaturedFootballFixture } from "@/lib/vitrine-football-competitions";
 import { extractFtwbBroadcasts } from "@/lib/vitrine-ftwb-broadcasts";
 import { isFinishedFootballStatus,matchFinalScore,preferFootballFixture } from "@/lib/vitrine-football-results";
+import { ftwbTeamCrest } from "@/lib/vitrine-ftwb-crests";
+import { signFootballCrestUrl } from "@/lib/vitrine-football-crest-proof.server";
 
 /**
  * FTWB is the primary fixture provider for subscribed users.
@@ -160,24 +162,13 @@ function teamLogo(source: unknown): string {
     return parsed.toString();
   }catch{return "";}
 }
-function matchBadge(record:unknown,team:unknown,side:"home"|"away"):string{
-  const embedded=teamLogo(typeof team==="object"?team:undefined);
-  if(embedded)return embedded;
-  const fields=side==="home"
-    ?["escudo_mandante","escudo_casa","logo_mandante","logo_casa","mandante_escudo","mandante_logo","time_casa_escudo","time_casa_logo","home_logo","homeBadge","homeTeamLogo","teamHomeBadge","escudoMandante","logoMandante","mandanteLogo","home_team_badge","home_team_logo","logoA","escudoA","logo_time_a","escudo_time_a","timeA_logo","timeALogo","logo_home"]
-    :["escudo_visitante","escudo_fora","logo_visitante","logo_fora","visitante_escudo","visitante_logo","time_fora_escudo","time_fora_logo","away_logo","awayBadge","awayTeamLogo","teamAwayBadge","escudoVisitante","logoVisitante","visitanteLogo","away_team_badge","away_team_logo","logoB","escudoB","logo_time_b","escudo_time_b","timeB_logo","timeBLogo","logo_away"];
-  const first=pick(record,...fields);
-  const candidates=pick(record,"logos","escudos","badges","images");
-  const nested=pick(candidates,side==="home"?"home":"away",side==="home"?"mandante":"visitante",side==="home"?"casa":"fora");
-  const value=first||nested;
-  return value?teamLogo(typeof value==="string"?value:{image:value}):"";
-}
+
 function apiFixture(record: unknown, index: number, date: string): FootballMatch | null {
   const nested=pick(record,"times","equipes","teams");
-  const homeObj = pick(record,"mandante","time_casa","home_team","casa","home","teamHome","team_home","equipe_mandante","timeA","equipeA")
-    ?? pick(nested,"mandante","casa","home","homeTeam");
-  const awayObj = pick(record,"visitante","time_fora","away_team","fora","away","teamAway","team_away","equipe_visitante","timeB","equipeB")
-    ?? pick(nested,"visitante","fora","away","awayTeam");
+  const homeObj = pick(record,"mandante","time_casa","home_team","casa","home","teamHome","team_home","equipe_mandante","timeA","equipeA","time1","time_1","team1","equipe1","clube1")
+    ?? pick(nested,"mandante","casa","home","homeTeam","time1","team1","timeA");
+  const awayObj = pick(record,"visitante","time_fora","away_team","fora","away","teamAway","team_away","equipe_visitante","timeB","equipeB","time2","time_2","team2","equipe2","clube2")
+    ?? pick(nested,"visitante","fora","away","awayTeam","time2","team2","timeB");
   const home = teamName(homeObj), away = teamName(awayObj);
   if (!home || !away) return null;
   const competition = pick(record,"campeonato","competicao","league","competition","tournament","torneio","nome_campeonato","campeonato_nome","leagueName","competitionName");
@@ -225,7 +216,7 @@ function apiFixture(record: unknown, index: number, date: string): FootballMatch
   const scoreLabel=finalScore?.label||"";
   const player = pick(record,"jogador_destaque","jogador","featured_player");
   const playerPhoto = teamLogo({image:pick(player,"foto","imagem","image","photo")});
-  return {id,home,away,homeId:"",awayId:"",homeBadge:matchBadge(record,homeObj,"home"),awayBadge:matchBadge(record,awayObj,"away"),
+  return {id,home,away,homeId:"",awayId:"",homeBadge:ftwbTeamCrest(record,homeObj,"home"),awayBadge:ftwbTeamCrest(record,awayObj,"away"),
     league,leagueId:simplify(league),...when,broadcasts:extractFtwbBroadcasts(record),
     playerPhoto,playerName:playerPhoto ? teamName(player) : "",status,scoreLabel};
 }
@@ -344,8 +335,19 @@ export const getVitrineFootballMatches = createServerFn({ method: "POST" })
       Number(!(a.broadcasts?.length))-Number(!(b.broadcasts?.length))||
       leaguePriority(a.league)-leaguePriority(b.league)||
       a.time.localeCompare(b.time));
+    // Only the teams actually participating in the requested date receive
+    // image capabilities. No hardcoded club list and no total crest limit;
+    // the browser fetches these trusted URLs in small, reusable batches.
+    const crestProofs:Record<string,string>={};
+    for(const match of matches){
+      for(const url of [match.homeBadge,match.awayBadge]){
+        if(!url||!url.startsWith("https://")||crestProofs[url])continue;
+        const proof=signFootballCrestUrl(url,data.date,key);
+        if(proof)crestProofs[url]=proof;
+      }
+    }
     return {
-      matches,leagues:footballLeagueOptions,source:"FTWB",
+      matches,crestProofs,leagues:footballLeagueOptions,source:"FTWB",
       partial:successful.length<queries.length,sourcesSucceeded:successful.length,
       queriedDate:data.date,checkedAt:new Date().toISOString(),
       timeZone:"America/Fortaleza",
