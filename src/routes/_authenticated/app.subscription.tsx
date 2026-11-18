@@ -14,6 +14,7 @@ import { cn } from "@/lib/utils";
 import { PixDialog } from "@/components/payments/pix-dialog";
 import { getParentResellerPlans } from "@/lib/reseller.functions";
 import { ResellerCreditRules } from "@/components/subscription/reseller-credit-rules";
+import { NewUserTelegramSupport } from "@/components/subscription/new-user-telegram-support";
 import { useQuery } from "@tanstack/react-query";
 
 export const Route = createFileRoute("/_authenticated/app/subscription")({
@@ -153,6 +154,7 @@ function SubscriptionPage() {
         </section>
       )}
       {!isLoading && <ResellerCreditRules compact={false}/>}
+      <NewUserTelegramSupport/>
       {isLoading ? (
         <Card className="p-6"><p className="text-sm text-muted-foreground">Carregando...</p></Card>
       ) : (
