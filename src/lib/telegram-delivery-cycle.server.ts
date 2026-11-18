@@ -25,6 +25,14 @@ export async function runTelegramDeliveryCycle():Promise<TelegramDispatchResult|
       .catch(e=>{console.error("[telegram-core] dns_recovery",e instanceof Error?e.name:"error");return {attempted:0,failed:1};});
     const service=await Promise.resolve().then(()=>retryServerIncidentAlerts(4))
       .catch(e=>{console.error("[telegram-core] server_alert",e instanceof Error?e.name:"error");return {attempted:0,failed:1};});
+    // Recover any post-rollout approved payments whose original queue write
+    // was interrupted. Queue keys are unique by payment + admin destination,
+    // so concurrent Cloudflare and panel cycles cannot duplicate the receipt.
+    await Promise.resolve().then(async()=>{
+      const {reconcileAdminPaymentReceipts}=await import("./admin-payment-telegram.server");
+      return reconcileAdminPaymentReceipts(8);
+    }).catch(e=>{console.error("[telegram-core] admin payment recovery",
+      e instanceof Error?e.name:"error");return null;});
     const outbox=await Promise.resolve().then(()=>processTelegramOutbox(8))
       .catch(e=>{console.error("[telegram-core] outbox",e instanceof Error?e.name:"error");return {picked:0,sent:0,failed:1,dead:0};});
     const deliveryErrors=Number(offline.failed||0)+Number(online.failed||0)+Number(service.failed||0)+Number(outbox.failed||0);
