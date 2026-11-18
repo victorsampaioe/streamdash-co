@@ -1,36 +1,68 @@
 /**
- * Broadcast channels from the FTWB API record, without enrichment, search or
- * guessed TV platforms. Only values present in the payload are returned.
+ * Read official "where to watch" fields from FTWB fixture responses.
+ * Broadcasting metadata may be top-level, nested under jogo/detalhes,
+ * or returned as a provider array. Do not guess a TV channel from a league.
  */
-const pick=(record:unknown,keys:string[]):unknown=>{
- if(!record||typeof record!=="object")return undefined;
- const obj=record as Record<string,unknown>;
- return keys.map(key=>obj[key]).find(value=>value!==undefined&&value!==null&&value!=="");
-};
+type Row=Record<string,unknown>;
+const asRow=(v:unknown):Row|null=>v&&typeof v==="object"&&!Array.isArray(v)?v as Row:null;
+const simplify=(v:string)=>v.normalize("NFD").replace(/[\u0300-\u036f]/g,"")
+  .toLowerCase().replace(/[^a-z0-9]+/g,"");
+function fieldValues(value:unknown,fields:string[]):unknown[]{
+  const record=asRow(value);if(!record)return [];
+  const keys=new Set(fields.map(simplify));
+  return Object.entries(record).filter(([k])=>keys.has(simplify(k)))
+    .map(([,v])=>v).filter(v=>v!==null&&v!==undefined&&v!=="");
+}
+const outer=[
+  "canais","canal","canais_tv","canais_transmissao","canaisTransmissao","tv_canais",
+  "transmissoes","transmissão","transmissao","transmissao_tv","transmissoes_tv",
+  "onde_assistir","ondeAssistir","onde_passar","onde_passa","ondeVer",
+  "broadcast","broadcasts","broadcasters","broadcaster","streaming",
+  "transmission","channels","channel","emissoras","emissora",
+  "plataformas","plataforma","televisao","televisão","tv","watch_on",
+  "watch","where_to_watch","whereToWatch",
+];
+const names=[
+ "nome","name","canal","channel","emissora","plataforma","titulo","title",
+ "label","descricao","description","network","service","provider",
+];
+const wrappers=[
+ "jogo","partida","match","fixture","dados","data","detalhes","details",
+ "informacoes","info","transmissionInfo","broadcast_info",
+];
+const placeholders=/^(?:sem transmiss(?:a|ã)o|transmiss(?:a|ã)o n(?:a|ã)o (?:confirmada|informada)|a confirmar|n(?:a|ã)o informado|tbd|n\/a|null|sim|n(?:a|ã)o|ao vivo|live|tv|streaming|canal|indispon[ií]vel)$/i;
+
 export function extractFtwbBroadcasts(record:unknown):string[]{
- const raw=pick(record,["canais","transmissoes","transmissao","onde_assistir",
-  "broadcast","tv","tvNetworks","ondeAssistir","broadcasts","streaming","transmission",
-  "channels","emissoras","plataformas"]);
  const found:string[]=[];
- const visit=(value:unknown,depth=0):void=>{
-  if(value===null||value===undefined||depth>4)return;
-  if(Array.isArray(value)){for(const part of value)visit(part,depth+1);return;}
-  if(typeof value==="string"){
-   for(const piece of value.split(/[,;|]/)){
-    const name=piece.trim();
-    if(!name||/^(sem transmiss[aã]o|transmiss[aã]o n[aã]o confirmada|a confirmar|n[aã]o informado|tbd|n\/a|null)$/i.test(name))continue;
-    if(!found.includes(name))found.push(name);
+ const visited=new Set<unknown>();
+ const accept=(value:string)=>{
+   for(const part of value.split(/[,;|]/)){
+     const name=part.replace(/\s+/g," ").trim();
+     if(!name||name.length>75||placeholders.test(name))continue;
+     if(!found.some(old=>simplify(old)===simplify(name)))found.push(name);
    }
-   return;
-  }
-  if(typeof value==="object"){
-   const named=pick(value,["nome","name","canal","channel","emissora","plataforma","titulo","title","label"]);
-   if(named!==undefined)visit(named,depth+1);
-   else for(const key of ["canais","channels","transmissoes","transmissao","emissoras","plataformas","tv","streaming"]){
-    const nested=pick(value,[key]);if(nested!==undefined)visit(nested,depth+1);
-   }
-  }
  };
- visit(raw);
+ const visit=(value:unknown,depth=0):void=>{
+   if(value===null||value===undefined||depth>6||found.length>=3)return;
+   if(typeof value==="string"){accept(value);return;}
+   if(typeof value!=="object"||visited.has(value))return;
+   visited.add(value);
+   if(Array.isArray(value)){
+     for(const item of value.slice(0,30))visit(item,depth+1);
+     return;
+   }
+   const row=asRow(value)!;
+   const direct=fieldValues(row,names);
+   if(direct.length)direct.forEach(x=>visit(x,depth+1));
+   else{
+     for(const x of fieldValues(row,outer))visit(x,depth+1);
+   }
+ };
+ const scan=(value:unknown,depth=0):void=>{
+   if(depth>3||!asRow(value))return;
+   for(const v of fieldValues(value,outer))visit(v);
+   for(const nested of fieldValues(value,wrappers))scan(nested,depth+1);
+ };
+ scan(record);
  return found.slice(0,3);
 }
