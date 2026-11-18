@@ -1,7 +1,8 @@
 import {supabaseAdmin} from "@/integrations/supabase/client.server";
 
 type ReportedStatus="online"|"degraded"|"offline"|"unknown";
-type Result={status:ReportedStatus;evidence:string;httpStatus:number|null;latencyMs:number;providerStatus:string|null};
+type ApplicationComponent={id:string;name:string;status:ReportedStatus;uptime30d:number|null};
+type Result={status:ReportedStatus;evidence:string;httpStatus:number|null;latencyMs:number;providerStatus:string|null;components?:ApplicationComponent[];stability30d?:number|null;incidents30d?:number|null;providerUpdatedAt?:string|null};
 const statuses={
  none:"online",operational:"online",healthy:"online",up:"online",online:"online",ok:"online",
  minor:"degraded",major:"degraded",degraded:"degraded",partial_outage:"degraded",
@@ -18,19 +19,42 @@ const validUrl=(uri:string)=>{
    &&host!=="localhost"&&!/^(\d{1,3}\.){3}\d{1,3}$/.test(host)&&!host.includes(":");
  }catch{return false;}
 };
-export function interpretApplicationStatus(json:unknown,kind:string):{status:ReportedStatus;evidence:string;providerStatus:string|null}{
- if(!json||typeof json!=="object"||Array.isArray(json))
-  return {status:"unknown",evidence:"Resposta sem objeto JSON de status",providerStatus:null};
- const o=json as Record<string,any>;
- let raw:string|null=null;
- if(kind==="statuspage_v2"&&typeof o.status?.indicator==="string"){
-  raw=o.status.indicator;
- }else if(kind==="simple_status"&&typeof o.status==="string"){
-  raw=o.status;
+export function interpretApplicationStatus(json:unknown,kind:string):{
+ status:ReportedStatus;evidence:string;providerStatus:string|null;components:ApplicationComponent[];
+ stability30d:number|null;incidents30d:number|null;providerUpdatedAt:string|null
+}{
+ const fail=(message:string)=>({status:"unknown" as ReportedStatus,evidence:message,providerStatus:null,components:[] as ApplicationComponent[],
+  stability30d:null,incidents30d:null,providerUpdatedAt:null});
+ if(!json||typeof json!=="object"||Array.isArray(json))return fail("API não forneceu um objeto JSON de status");
+ const obj=json as Record<string,any>;
+ const raw=kind==="statuspage_v2"?obj.status?.indicator:obj.status;
+ if(typeof raw!=="string")return fail("Campo status ausente no contrato de API");
+ const status=statuses[raw.toLowerCase().trim()]||"unknown";
+ if(kind!=="rx_purple"){
+  return {status,evidence:status==="unknown"?"Indicador não reconhecido":"Status declarado pelo provedor: "+raw,
+   providerStatus:raw.slice(0,64),components:[],stability30d:null,incidents30d:null,providerUpdatedAt:null};
  }
- if(!raw)return {status:"unknown",evidence:"Formato da API não confirmado; nenhum estado inferido",providerStatus:null};
- const state=statuses[raw.toLowerCase().trim()]||"unknown";
- return {status:state,evidence:state==="unknown"?"Indicador não reconhecido na API":("Status explícito informado pelo provedor: "+raw).slice(0,210),providerStatus:raw.slice(0,64)};
+ // API RX Purple verified 2026-11-18: ok,status,stability_30d,incidents_30d,services,updated_at.
+ if(obj.ok!==true||!Array.isArray(obj.services)||obj.services.length<1||obj.services.length>30)
+  return fail("API RX Purple incompleta: ok=true e services[] são necessários");
+ const components:ApplicationComponent[]=[];
+ for(const svc of obj.services){
+  if(!svc||typeof svc!=="object"||typeof svc.id!=="string"||!/^[a-zA-Z0-9_-]{1,48}$/.test(svc.id)||
+   typeof svc.name!=="string"||typeof svc.status!=="string")return fail("Componente RX Purple inválido");
+  const st=statuses[svc.status.toLowerCase().trim()]||"unknown";
+  const uptime=typeof svc.uptime_30d==="number"&&svc.uptime_30d>=0&&svc.uptime_30d<=100?svc.uptime_30d:null;
+  components.push({id:svc.id,name:svc.name.slice(0,80),status:st,uptime30d:uptime});
+ }
+ if(status==="unknown"||components.some(c=>c.status==="unknown"))return fail("Status desconhecido na API; sem alerta global");
+ const affected=components.filter(c=>c.status!=="online");
+ const overall:ReportedStatus=status==="offline"||affected.length===components.length?"offline":
+  status==="degraded"||affected.length?"degraded":"online";
+ const evidence=overall==="online"?"RX Purple confirma operação de: "+components.map(c=>c.name).join(", ").slice(0,150)
+  :"Serviços afetados segundo RX Purple: "+affected.map(c=>c.name+" ("+c.status+")").join(", ").slice(0,155);
+ return {status:overall,evidence:evidence.slice(0,230),providerStatus:raw.slice(0,64),components,
+  stability30d:typeof obj.stability_30d==="number"&&obj.stability_30d>=0&&obj.stability_30d<=100?obj.stability_30d:null,
+  incidents30d:Number.isSafeInteger(obj.incidents_30d)&&obj.incidents_30d>=0?obj.incidents_30d:null,
+  providerUpdatedAt:typeof obj.updated_at==="string"&&Number.isFinite(Date.parse(obj.updated_at))?obj.updated_at:null};
 }
 export async function probeApplicationApi(apiUrl:string,apiKind:string):Promise<Result>{
  const started=Date.now();
@@ -111,10 +135,19 @@ export async function runDueApplicationPartnerChecks(limit=3){
    provider_status:result.providerStatus
   });
   if(checkError)throw new Error("application_health_persist_failed");
+  if(result.components?.length){
+   const {error:componentsError}=await db.from("app_partner_service_statuses").upsert(
+    result.components.map(c=>({partner_id:partner.id,service_id:c.id,name:c.name,status:c.status,
+     uptime_30d:c.uptime30d,checked_at:now})),{onConflict:"partner_id,service_id"});
+   if(componentsError)throw new Error("application_component_update_failed");
+  }
   let healthy= result.status==="online"?(partner.consecutive_healthy+1):0;
   let unhealthy= result.status==="offline"||result.status==="degraded"?(partner.consecutive_unhealthy+1):0;
   const update:any={last_check_at:now,consecutive_healthy:healthy,consecutive_unhealthy:unhealthy,
-   last_error:result.status==="unknown"?result.evidence:null,updated_at:now};
+   last_error:result.status==="unknown"?result.evidence:null,updated_at:now,
+   ...(result.stability30d!=null?{stability_30d:result.stability30d}:{}),
+   ...(result.incidents30d!=null?{incidents_30d:result.incidents30d}:{}),
+   ...(result.providerUpdatedAt?{provider_updated_at:result.providerUpdatedAt}:{})};
   const previous=partner.status;
   let transition:"down"|"up"|null=null;
   if(result.status==="online"&&healthy>=2){
