@@ -12,6 +12,11 @@ export const Route=createFileRoute("/aplicativos")({
   {name:"description",content:"Consulte os estados verificados dos aplicativos integrados ao Stream Monitor."}
  ]})
 });
+type PublicAppService = {id:string;name:string;status:string;uptime30d:number|null};
+type PublicAppStatus = {
+ slug:string;name:string;logoUrl:string|null;status:string;lastCheckAt:string|null;
+ stability30d:number|null;incidents30d:number|null;services:PublicAppService[];
+};
 const info={
  online:{label:"Online",icon:CheckCircle2,color:"text-emerald-400",text:"A API oficial indicou funcionamento normal"},
  degraded:{label:"Instabilidade",icon:AlertTriangle,color:"text-amber-400",text:"A API oficial informou degradação em seus serviços"},
@@ -21,7 +26,7 @@ const info={
 };
 function PublicAppStatuses(){
  const get=useServerFn(getPublicAppStatuses);
- const {data,error,isLoading}=useQuery({queryKey:["public-app-statuses"],queryFn:()=>get(),refetchInterval:90000,staleTime:30000});
+ const {data,error,isLoading}=useQuery<PublicAppStatus[]>({queryKey:["public-app-statuses"],queryFn:async()=>await get() as PublicAppStatus[],refetchInterval:90000,staleTime:30000});
  return <div className="min-h-screen bg-[#081426] px-4 py-8 text-white sm:px-6">
   <div className="mx-auto max-w-5xl space-y-7">
    <a href="/" className="inline-flex items-center gap-2 text-lg font-extrabold"><Activity className="text-blue-400"/>Stream Monitor</a>
