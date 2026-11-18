@@ -67,10 +67,10 @@ export async function getVideoEncodingHints():Promise<VideoDeviceHints>{
   if(result?.supported){
     hints.encoderSmooth=result.smooth;
     hints.encoderPowerEfficient=result.powerEfficient;
-  }else if(result?.supported===false){
-    hints.encoderSmooth=false;
-    hints.encoderPowerEfficient=false;
   }
+  // Some Safari builds reject the codec label in MediaCapabilities even
+  // though MediaRecorder can export this MP4. A 'not supported' probe is
+  // inconclusive; keep the device heuristic rather than forcing 720p.
   return hints;
 }
 
