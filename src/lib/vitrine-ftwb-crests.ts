@@ -20,6 +20,7 @@ const iconKeys=[
  "imagem","imagem_url","image","image_url","imageUrl","img","img_url",
  "badge","badge_url","crest","crest_url","shield","foto","photo",
  "avatar","icon","icone","src","href","original","url",
+ "small","medium","large","thumbnail","default","primary","size150","size300","urlOriginal",
 ];
 export function ftwbCrestUrl(raw:unknown):string{
  if(typeof raw!=="string")return "";
@@ -84,6 +85,8 @@ const homeKeys=[
  "escudo_time1","escudo_time_1","escudoTime1","logo_time1","logo_time_1",
  "logoTime1","time1_logo","team1_logo","team1_badge","home_crest",
  "home_image","img_home","imagem_casa","image_home","img_mandante",
+ "imagem_mandante","mandante_imagem","foto_mandante","logo_mandante_url","escudo_mandante_url",
+ "escudo_home_url","home_logo_url","time1_escudo","time1_imagem","time1_badge",
 ];
 const awayKeys=[
  "escudo_visitante","escudo_fora","logo_visitante","logo_fora","visitante_escudo",
@@ -95,6 +98,8 @@ const awayKeys=[
  "escudo_time2","escudo_time_2","escudoTime2","logo_time2","logo_time_2",
  "logoTime2","time2_logo","team2_logo","team2_badge","away_crest",
  "away_image","img_away","imagem_fora","image_away","img_visitante",
+ "imagem_visitante","visitante_imagem","foto_visitante","logo_visitante_url","escudo_visitante_url",
+ "escudo_away_url","away_logo_url","time2_escudo","time2_imagem","time2_badge",
 ];
 const homeSide=["home","home_team","mandante","casa","time_casa","teamHome","team_home","time1","time_1","equipe1","team1","timeA","equipeA","clube1"];
 const awaySide=["away","away_team","visitante","fora","time_fora","teamAway","team_away","time2","time_2","equipe2","team2","timeB","equipeB","clube2"];
