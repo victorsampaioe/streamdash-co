@@ -3,6 +3,7 @@ import { lazy, Suspense, useState, useRef } from "react";
 import { Activity, ArrowRight, ServerIcon, Bell, Globe, Zap, ShieldCheck, LineChart, Send, BookOpen, UserCheck, TrendingUp, Search, Film, Tv, CheckCircle2, Cpu, PlayCircle, Play, Pause, Volume2, VolumeX } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {NovemberUpdates} from "@/components/landing/november-updates";
+import {RxPurplePartnership} from "@/components/landing/rx-purple-partnership";
 
 import heroVideoAsset from "@/assets/hero-video.mp4.asset.json";
 import { telegramAlertExample, maintenanceNoticeExample } from "@/assets/alert-examples";
@@ -68,7 +69,7 @@ function Landing() {
         </div>
       </header>
 
-      <NovemberUpdates />
+      <RxPurplePartnership />
 
       {/* Novidade pública: Radar Mundial de DNS via Globalping.
           Inspeções DNS distribuídas não comprovam disponibilidade do streaming. */}
@@ -163,6 +164,9 @@ function Landing() {
         </div>
       </section>
 
+
+      {/* Novidade anterior sobre Vitrines e Banners — mantida abaixo do novo destaque RX Purple. */}
+      <NovemberUpdates />
 
       {/* Real-world timing example supplied by a user. DNS status and platform
           availability remain separate signals; never equate DNS failure with
