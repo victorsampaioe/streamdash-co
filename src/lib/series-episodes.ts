@@ -86,7 +86,7 @@ export function parseSeriesEpisodes(raw: unknown): SeriesEpisodeSummary {
       if (Array.isArray(items)) {
         for (const entry of items) addEpisode(entry, season);
       } else if (rec(items)) {
-        for (const entry of Object.values(items)) addEpisode(entry, season);
+        for (const entry of Object.values(rec(items)!)) addEpisode(entry, season);
       }
     }
   }
