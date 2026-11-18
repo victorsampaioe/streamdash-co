@@ -31,13 +31,15 @@ function ContentSearchPage(){
  const [kind,setKind]=useState<CatalogMediaKind>("all");
  const [result,setResult]=useState<CatalogSearchResult|null>(null);
  const [busy,setBusy]=useState(false);
+ const [allowSearch,setAllowSearch]=useState(false);
  const selected=servers.find(s=>s.id===serverId);
  const search=async()=>{
   if(!selected){toast.error("Selecione um servidor reconhecido.");return;}
+  if(!allowSearch){toast.error("Autorize a consulta deste servidor antes de pesquisar.");return;}
   if(title.trim().length<2){toast.error("Digite o nome do conteúdo.");return;}
   setBusy(true);setResult(null);
   try{
-   const r=await searchCatalog({data:{serverId:selected.id,query:title,kind}});
+   const r=await searchCatalog({data:{serverId:selected.id,query:title,kind,authorized:true}});
    setResult(r);
   }catch(e){toast.error(e instanceof Error?e.message:"Pesquisa indisponível.");}
   finally{setBusy(false);}
@@ -51,13 +53,13 @@ function ContentSearchPage(){
     </div>
     <h1 className="text-3xl font-black tracking-tight sm:text-4xl">Conteúdo do Servidor</h1>
     <p className="text-sm leading-7 text-blue-100 sm:text-base">
-     Descubra se um filme, série ou canal já foi reconhecido no catálogo do seu servidor.
-     Pesquise sem informar novamente a senha e sem fazer verificações desnecessárias.
+     Escolha seu servidor e consulte filmes, séries ou canais somente quando quiser.
+     O sistema pesquisa no catálogo já reconhecido, sem pedir sua senha novamente ou carregar a lista inteira a cada busca.
     </p>
     <div className="flex flex-wrap gap-2 text-[11px] font-semibold">
      <span className="rounded-lg border border-blue-300/25 bg-white/5 px-3 py-1.5">🔒 Apenas seus servidores</span>
      <span className="rounded-lg border border-blue-300/25 bg-white/5 px-3 py-1.5">✓ Catálogo reconhecido</span>
-     <span className="rounded-lg border border-blue-300/25 bg-white/5 px-3 py-1.5">⚡ Consulta salva</span>
+     <span className="rounded-lg border border-blue-300/25 bg-white/5 px-3 py-1.5">⚡ Busca só quando você pedir</span>
     </div>
    </div>
   </section>
@@ -66,7 +68,7 @@ function ContentSearchPage(){
     <div className="flex items-center gap-2"><Search size={20} className="text-blue-400"/><h2 className="text-lg font-extrabold">Pesquisar catálogo</h2></div>
     <div className="space-y-2">
      <label htmlFor="catalog-server" className="text-xs font-semibold text-muted-foreground">1. Escolha um dos seus servidores</label>
-     <select id="catalog-server" value={serverId} onChange={e=>{setServerId(e.target.value);setResult(null);}}
+     <select id="catalog-server" value={serverId} onChange={e=>{setServerId(e.target.value);setAllowSearch(false);setResult(null);}}
       className="h-12 w-full rounded-xl border border-border bg-background px-3 text-sm">
       <option value="">Selecionar servidor</option>
       {servers.map(s=><option key={s.id} value={s.id}>{s.name}</option>)}
@@ -85,12 +87,22 @@ function ContentSearchPage(){
       {types.map(t=><Button key={t.value} size="sm" variant={kind===t.value?"default":"outline"} onClick={()=>{setKind(t.value);setResult(null);}}>{t.title}</Button>)}
      </div>
     </div>
+    <div className="rounded-xl border border-blue-500/20 bg-blue-500/5 p-3.5">
+     <label className="flex cursor-pointer items-start gap-3 text-xs leading-6" htmlFor="catalog-opt-in">
+      <input id="catalog-opt-in" type="checkbox" checked={allowSearch} disabled={!selected}
+       onChange={e=>{setAllowSearch(e.target.checked);setResult(null);}}
+       className="mt-1.5 h-4 w-4 shrink-0 accent-blue-500 disabled:opacity-50"/>
+      <span><strong>Autorizo pesquisar o catálogo deste servidor quando eu clicar em Pesquisar.</strong>
+       <span className="mt-1 block text-muted-foreground">Nada é pesquisado antes da sua confirmação. A pesquisa retorna somente títulos encontrados no catálogo previamente reconhecido. Não faz login novo no provedor nem uma sincronização completa.</span>
+      </span>
+     </label>
+    </div>
     <form onSubmit={e=>{e.preventDefault();void search();}} className="space-y-2">
      <label htmlFor="catalog-title" className="text-xs font-semibold text-muted-foreground">3. Digite o nome do conteúdo</label>
      <div className="flex flex-col gap-2 sm:flex-row">
       <Input id="catalog-title" maxLength={120} placeholder="Ex.: Oppenheimer, Stranger Things, Globo…" value={title}
        onChange={e=>{setTitle(e.target.value);setResult(null);}} className="h-12 flex-1"/>
-      <Button type="submit" disabled={busy||!serverId||title.trim().length<2} className="h-12 gap-2 px-6"><Search size={17}/>{busy?"Pesquisando…":"Pesquisar"}</Button>
+      <Button type="submit" disabled={busy||!serverId||!allowSearch||title.trim().length<2} className="h-12 gap-2 px-6"><Search size={17}/>{busy?"Pesquisando…":"Pesquisar"}</Button>
      </div>
     </form>
    </Card>
@@ -100,7 +112,8 @@ function ContentSearchPage(){
      <div className="space-y-3 text-xs leading-6 text-muted-foreground">
       <p>Somente servidores cadastrados na sua conta e aprovados pelo monitoramento aparecem aqui.</p>
       <p>Credenciais continuam criptografadas e não são transmitidas ao navegador ou Telegram.</p>
-      <p>O resultado vem da última sincronização. Um título ausente do catálogo salvo pode ter sido adicionado depois.</p>
+      <p>Escolher o servidor não inicia a busca. O sistema pesquisa apenas quando você autorizar e clicar em Pesquisar.</p>
+      <p>A consulta usa o último catálogo reconhecido e não entra no provedor a cada pesquisa. Um título ausente pode ter sido adicionado depois.</p>
      </div>
     </div>
     <div className="rounded-xl border border-blue-500/20 bg-blue-500/5 p-4">
