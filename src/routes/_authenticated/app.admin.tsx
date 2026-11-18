@@ -47,14 +47,12 @@ import { CircuitBreakerPanel } from "@/components/admin/circuit-breaker-panel";
 import { MonitorHealthPanel } from "@/components/admin/monitor-health-panel";
 import { SignupSecurityPanel } from "@/components/admin/signup-security-panel";
 import { AcquisitionPanel } from "@/components/admin/acquisition-panel";
-import { ApiManagementPanel } from "@/components/admin/api-management-panel";
 
 import { UserCog, History, PlusCircle, UserCheck, UserRoundCog, Settings2, Trash2, ShoppingBag as StoreIcon, Wallet, ExternalLink, Zap } from "lucide-react";
 
 
 
 import { StorageReportCard } from "@/components/storage-report-card";
-import { SyncPaymentsCard } from "@/components/admin/sync-payments-card";
 import { AlertCircle } from "lucide-react";
 
 import { convertToReseller } from "@/lib/reseller-conversion.functions";
@@ -331,7 +329,6 @@ function AdminPage() {
         </div>
       </section>
 
-      <TelegramNoveltiesCampaign />
 
       <div className="sm-workspace-grid">
         <Kpi icon={Users} label="Usuários totais" value={s?.total_users} tone="primary" sub={s ? `+${s.new_users_7d} nos últimos 7 dias` : undefined} />
@@ -368,25 +365,18 @@ function AdminPage() {
           <TabsList className="flex flex-wrap w-full justify-start">
             <TabsTrigger value="overview" className="px-4">Usuários</TabsTrigger>
             <TabsTrigger value="resellers" className="px-4">Revendedores</TabsTrigger>
-            <TabsTrigger value="core-audit" className="px-4">Auditoria Core</TabsTrigger>
             <TabsTrigger value="radar" className="px-4">Radar Inteligente</TabsTrigger>
             <TabsTrigger value="reactivation" className="px-4">Reativação</TabsTrigger>
-            <TabsTrigger value="store" className="px-4">Loja & Vendas</TabsTrigger>
-            <TabsTrigger value="alerts" className="px-4">Alertas</TabsTrigger>
             <TabsTrigger value="diagnostics" className="px-4">Servidores</TabsTrigger>
             <TabsTrigger value="paused" className="px-4">DNS Pausados</TabsTrigger>
-            <TabsTrigger value="android" className="px-4">Android Play</TabsTrigger>
             <TabsTrigger value="storage" className="px-4">Armazenamento</TabsTrigger>
             <TabsTrigger value="acquisition" className="px-4">Aquisição de Clientes</TabsTrigger>
             <TabsTrigger value="signup-security" className="px-4">Segurança de Cadastro</TabsTrigger>
-            <TabsTrigger value="commercial-api" className="px-4">API Comercial</TabsTrigger>
 
           </TabsList>
         </div>
 
-        <TabsContent value="commercial-api" className="space-y-6">
-          <ApiManagementPanel />
-        </TabsContent>
+
 
         <TabsContent value="acquisition" className="space-y-6">
           <AcquisitionPanel />
@@ -396,48 +386,9 @@ function AdminPage() {
           <SignupSecurityPanel />
         </TabsContent>
 
-        <TabsContent value="core-audit" className="space-y-6">
 
-          <Card className="bg-neutral-900/50 border-white/5">
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <div className="space-y-1">
-                <CardTitle className="text-xl font-bold flex items-center gap-2">
-                  <ShieldCheck className="h-5 w-5 text-primary" />
-                  Auditoria Core AWS
-                </CardTitle>
-                <CardDescription>Monitoramento das tarefas delegadas para a infraestrutura VPS.</CardDescription>
-              </div>
-              <Button asChild variant="outline" size="sm" className="gap-2">
-                <Link to="/app/admin/core-logs">
-                  <ExternalLink className="h-4 w-4" /> Ver Todos os Logs
-                </Link>
-              </Button>
-            </CardHeader>
-            <CardContent>
-               <div className="flex items-center gap-8 py-4">
-                  <div className="text-center">
-                    <p className="text-sm text-muted-foreground uppercase font-bold tracking-wider">Sucesso</p>
-                    <p className="text-2xl font-bold text-green-500">{s ? "99.8%" : "..."}</p>
-                  </div>
-                  <div className="text-center">
-                    <p className="text-sm text-muted-foreground uppercase font-bold tracking-wider">Latência Core</p>
-                    <p className="text-2xl font-bold text-blue-500">{s ? "1.2s" : "..."}</p>
-                  </div>
-                  <div className="text-center">
-                    <p className="text-sm text-muted-foreground uppercase font-bold tracking-wider">Tarefas/Min</p>
-                    <p className="text-2xl font-bold text-purple-500">{s ? "124" : "..."}</p>
-                  </div>
-               </div>
-               <p className="text-xs text-muted-foreground border-t border-white/5 pt-4">
-                 Os logs completos mostram payload enviado, resposta JSON e tempo exato de cada verificação DNS, HTTP e IPTV.
-               </p>
-            </CardContent>
-          </Card>
-        </TabsContent>
 
-        <TabsContent value="alerts" className="space-y-6">
-          <AdminAlertsPanel />
-        </TabsContent>
+
 
 
 
@@ -445,30 +396,7 @@ function AdminPage() {
           <PausedServersPanel />
         </TabsContent>
 
-        <TabsContent value="android" className="space-y-6">
-          <Card className="bg-neutral-900/50 border-white/5">
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <div className="space-y-1">
-                <CardTitle className="text-xl font-bold flex items-center gap-2">
-                  <Sparkles className="h-5 w-5 text-primary" />
-                  Stream Monitor Play Android
-                </CardTitle>
-                <CardDescription>Gestão de licenças e ativações do app oficial.</CardDescription>
-              </div>
-              <Button asChild variant="outline" size="sm" className="gap-2">
-                <Link to="/app/admin/android-play" search={{ tab: 'licenses' }}>
-                  <ExternalLink className="h-4 w-4" /> Gerenciar Licenças
-                </Link>
-              </Button>
-            </CardHeader>
-            <CardContent>
-              <div className="text-sm text-muted-foreground">
-                Revendedores ativos no Android: {s ? "12" : "..."} <br/>
-                Solicitações pendentes: {s ? "3" : "..."}
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
+
 
 
         <TabsContent value="diagnostics" className="space-y-6">
@@ -487,7 +415,6 @@ function AdminPage() {
         </TabsContent>
 
         <TabsContent value="overview" className="space-y-6">
-          <SyncPaymentsCard />
           <TelegramBroadcastCard />
           
           <Card className="p-4 space-y-4">
@@ -664,9 +591,7 @@ function AdminPage() {
           <StorageReportCard />
         </TabsContent>
 
-        <TabsContent value="store" className="space-y-6">
-          <StoreManagementSection />
-        </TabsContent>
+
       </Tabs>
 
     </div>
@@ -956,54 +881,7 @@ function ResellerDetailsDialog({ reseller }: { reseller: AdminReseller }) {
 }
 
 
-const NOVELTY_TELEGRAM_MESSAGE = `🛡️ <b>STREAM MONITOR — SENTINEL EDGE 2.0!</b> 💙
 
-Tem novidade importante para quem monitora servidores IPTV e DNS!
-
-🌐 <b>Cloudflare Edge integrado:</b> mais uma fonte de verificação regional.
-📊 <b>Nova Central Sentinel:</b> painel moderno com cobertura das sondas e evidências em tempo real.
-🔎 <b>Diagnóstico mais claro:</b> diferencia quedas confirmadas, DNS offline, divergências e dados insuficientes.
-🔔 <b>Alertas e recuperação:</b> acompanhamento mais transparente de quedas e retornos dos servidores.
-
-✅ <b>Conta ativa?</b> Entre no painel e confira a nova Central Inteligente.
-👋 <b>Conta inativa?</b> As novidades também são para você! Acesse sua conta e conheça a evolução da plataforma.
-
-👉 https://streammonitor.site
-
-💙 <b>Stream Monitor — inteligência para sua operação.</b>
-
-<i>A cobertura depende das sondas disponíveis. Alertas exigem um canal Telegram conectado e habilitado.</i>`
-
-function TelegramNoveltiesCampaign() {
-  const broadcast = useServerFn(broadcastTelegram);
-  const [sending, setSending] = useState(false);
-  const [result, setResult] = useState<string | null>(null);
-  return (
-    <Card className="border-primary/20 bg-primary/5 p-5 sm:p-6">
-      <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-        <div className="space-y-2">
-          <h2 className="flex items-center gap-2 text-lg font-bold"><Send className="h-5 w-5 text-primary" /> Novidade • Sentinel Edge 2.0 no Telegram</h2>
-          <p className="max-w-2xl text-sm text-muted-foreground">Comunicado do Sentinel Edge para clientes com plano ativo ou vencido que mantêm um canal Telegram habilitado. Revise a mensagem antes do envio; contas sem Telegram conectado não recebem.</p>
-        </div>
-        <Button disabled={sending} onClick={async () => {
-          if (!window.confirm("Confirma o envio do comunicado Sentinel Edge 2.0 para todos os canais Telegram habilitados, inclusive contas com assinatura vencida?")) return;
-          setSending(true);
-          setResult(null);
-          try {
-            const r = await broadcast({ data: { message: NOVELTY_TELEGRAM_MESSAGE } });
-            setResult(`Aceitos: ${r.sent} · Falhas: ${r.failed} · Canais: ${r.total}`);
-            if (r.failed > 0) toast.warning("Campanha processada com falhas de entrega."); else toast.success("Campanha enviada aos canais habilitados.");
-          } catch (e: any) {
-            toast.error(e?.message ?? "Falha no envio da campanha");
-          } finally { setSending(false); }
-        }}><Send className="mr-2 h-4 w-4" />{sending ? "Enviando..." : "Avisar todos sobre o Sentinel Edge"}</Button>
-      </div>
-      {result && <p className="mt-4 text-sm font-medium text-primary" role="status">{result}</p>}
-    </Card>
-  );
-}
-
-function VerifyCustomerPixButton({ userId }: { userId: string }) {
   const verify = useServerFn(verifyCustomerPix);
   const qc = useQueryClient();
   const [busy, setBusy] = useState(false);
