@@ -1,6 +1,7 @@
 import {Link,useRouterState} from "@tanstack/react-router";
 import {Activity,ArrowRight,Bell,BookOpen,CheckCircle2,CreditCard,Eye,Film,Globe,Lock,ServerIcon,ShieldCheck,Sparkles,Trophy,Video,Wifi} from "lucide-react";
 import {ResellerCreditRules} from "./reseller-credit-rules";
+import {NewUserTelegramSupport} from "./new-user-telegram-support";
 
 const features=[
  {href:"/app",title:"Visão geral",group:"Painel de controle",description:"Acompanhe o estado da sua operação num só lugar.",icon:Activity},
@@ -53,6 +54,7 @@ export function UnpaidPreview(){
     </Link>
   </div>
   <ResellerCreditRules compact/>
+  <NewUserTelegramSupport/>
   <div className="grid gap-4 md:grid-cols-3">
    {[
     {icon:Globe,label:"DNS + HTTP + SSL",value:"Verificações de disponibilidade",desc:"Acompanhe a saúde de cada servidor com dados da sua própria conta."},
