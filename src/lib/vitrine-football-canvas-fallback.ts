@@ -126,7 +126,7 @@ function fitTwoLines(ctx:CanvasRenderingContext2D,name:string,x:number,y:number,
 }
 function channels(ctx:CanvasRenderingContext2D,entries:string[],y:number){
   const labels=entries.filter(Boolean).slice(0,3);
-  if(!labels.length)labels.push("Sem transmissão");
+  if(!labels.length)labels.push("Canal a confirmar");
   const joined=labels.join(" • ");
   ctx.save();ctx.fillStyle="#23334e";ctx.textAlign="center";ctx.textBaseline="middle";
   for(let font=18;font>=13;font--){
