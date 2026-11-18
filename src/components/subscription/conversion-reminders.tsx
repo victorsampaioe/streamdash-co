@@ -31,21 +31,24 @@ export function ConversionReminders(){
   const eligible=!isLoading&&!isError&&!!userId&&!!createdAt&&data?.isActive===false
     &&data?.profile?.is_reseller!==true;
   const key=userId?"streammonitor:conversion-reminders:"+userId:"";
-  const [now,setNow]=useState(()=>Date.now());
-  const [revision,setRevision]=useState(0);
+  const [now,setNow]=useState(0);
+  const [mounted,setMounted]=useState(false);
+  const [,setRevision]=useState(0);
   useEffect(()=>{
+    setNow(Date.now());
+    setMounted(true);
     const timer=setInterval(()=>setNow(Date.now()),60_000);
     return ()=>clearInterval(timer);
   },[]);
-  const step=eligible?getConversionReminderStep(createdAt,now):null;
+  const step=mounted&&eligible?getConversionReminderStep(createdAt,now):null;
   const preference=key?getPreference(key):empty;
   if(!step||preference.disabled||preference.seen.includes(step))return null;
   const item=CONVERSION_REMINDER_MESSAGES[step-1];
+  if(!item)return null;
   const remember=(disabled:boolean)=>{
     savePreference(key,{seen:[...new Set([...preference.seen,step])],disabled});
     setRevision(v=>v+1);
   };
-  void revision; // Causes a re-render after local preference changes.
   return (
     <section aria-label="Novidades e opções de ativação" className="mx-auto w-full max-w-[1720px] px-4 pt-4 sm:px-6 xl:px-10">
       <div className="relative flex flex-col gap-3 rounded-2xl border border-blue-500/35 bg-gradient-to-r from-blue-950/70 via-slate-900 to-slate-950 px-4 py-4 pr-10 shadow-lg sm:flex-row sm:items-center sm:justify-between sm:p-5 sm:pr-12">
