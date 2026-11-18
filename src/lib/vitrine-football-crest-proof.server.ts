@@ -26,14 +26,14 @@ function hmac(input:string,secret:string){
 export function signFootballCrestUrl(
  url:string,date:string,secret:string,now=Date.now(),
 ):string{
- if(!secret||!isSafeFootballCrestUrl(url)||!/\d{4}-\d{2}-\d{2}/.test(date))return "";
+ if(!secret||!isSafeFootballCrestUrl(url)||!/^\d{4}-\d{2}-\d{2}$/.test(date))return "";
  const expiry=now+3*60*60_000;
  return expiry+"."+hmac(signInput(date,url,expiry),secret);
 }
 export function verifyFootballCrestUrl(
  url:string,date:string,proof:string,secret:string,now=Date.now(),
 ):boolean{
- if(!secret||!isSafeFootballCrestUrl(url)||!/\d{4}-\d{2}-\d{2}/.test(date))return false;
+ if(!secret||!isSafeFootballCrestUrl(url)||!/^\d{4}-\d{2}-\d{2}$/.test(date))return false;
  const match=/^(\d{13})\.([a-f0-9]{64})$/i.exec(proof||"");
  if(!match)return false;
  const expires=Number(match[1]);
