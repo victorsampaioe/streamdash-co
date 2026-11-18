@@ -5,6 +5,9 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { requirePaidFeature } from "@/lib/premium-feature-access";
 import { isFeaturedFootballFixture } from "@/lib/vitrine-football-competitions";
 import { extractFtwbBroadcasts } from "@/lib/vitrine-ftwb-broadcasts";
+import {
+  footballBroadcastFixtureKey,cleanVerifiedBroadcasts,chooseVerifiedBroadcasts
+} from "@/lib/vitrine-football-broadcast-cache";
 import { isFinishedFootballStatus,matchFinalScore,preferFootballFixture } from "@/lib/vitrine-football-results";
 import { ftwbTeamCrest } from "@/lib/vitrine-ftwb-crests";
 
@@ -271,18 +274,66 @@ export const getVitrineFootballMatches = createServerFn({ method: "POST" })
       unique.set(id,old?preferFootballFixture(old,match):match);
     }
     const matches=[...unique.values()];
-    // Use the FTWB's verified TV metadata first. Any fixture without
-    // a channel is researched by the Cloudflare Workers AI service;
-    // it collects date-specific press/schedule evidence and caches the
-    // resulting confirmed broadcasters by match and date.
-    // No hardcoded league-to-channel assignment or client-side guesses.
+    // Persist every positively verified transmission by date + team pair,
+    // independently of the changing FTWB fixture ID and of any Cloudflare KV
+    // cache. Once saved, a temporary provider outage MUST NOT erase channels
+    // or force new AI research each time the reseller revisits the page.
+    const {supabaseAdmin}=await import("@/integrations/supabase/client.server");
+    const store=supabaseAdmin as any;
+    type BroadcastCacheRow={
+      fixture_key:string;channels:string[];verified_source:string;
+    };
+    let cacheReadable=false;
+    const savedByFixture=new Map<string,BroadcastCacheRow>();
+    try{
+      const {data:rows,error:cacheError}=await store.from("football_broadcast_cache")
+        .select("fixture_key,channels,verified_source")
+        .eq("match_day",data.date).limit(400);
+      if(cacheError)throw cacheError;
+      cacheReadable=true;
+      for(const row of (rows||[]) as BroadcastCacheRow[])
+        savedByFixture.set(row.fixture_key,row);
+    }catch(error){
+      // Browsing fixtures must never fail solely because persistence failed.
+      console.warn("[Vitrine Futebol] broadcast cache read unavailable",
+        error instanceof Error?error.name:"unknown");
+    }
+
+    const verifiedToSave=new Map<string,{
+      match_day:string;fixture_key:string;home_name:string;away_name:string;
+      channels:string[];verified_source:"ftwb"|"cloudflare_verified";verified_at:string;updated_at:string;
+    }>();
+    const remember=(match:FootballMatch,source:"ftwb"|"cloudflare_verified")=>{
+      const channels=cleanVerifiedBroadcasts(match.broadcasts);
+      if(!channels.length)return;
+      const fixture_key=footballBroadcastFixtureKey(match);
+      const old=savedByFixture.get(fixture_key);
+      if(old && old.channels.join("|")===channels.join("|") && old.verified_source===source)return;
+      verifiedToSave.set(fixture_key,{
+        match_day:match.day,fixture_key,home_name:match.home,away_name:match.away,
+        channels,verified_source:source,verified_at:new Date().toISOString(),
+        updated_at:new Date().toISOString()
+      });
+    };
+
+    for(const match of matches){
+      const saved=savedByFixture.get(footballBroadcastFixtureKey(match));
+      const fromFeed=cleanVerifiedBroadcasts(match.broadcasts);
+      if(fromFeed.length){
+        match.broadcasts=fromFeed;
+        remember(match,"ftwb");
+      }else{
+        match.broadcasts=chooseVerifiedBroadcasts([],saved?.channels);
+      }
+    }
+    // Research ONLY genuinely unknown games. A match with a saved positive
+    // result never calls Cloudflare/AI again on normal page loads.
+    // No hardcoded broadcaster is ever inferred from a league.
     const missingChannels=matches.filter(m=>!m.broadcasts?.length);
     const auth=getRequest()?.headers.get("authorization")||"";
     const apikey=process.env.SUPABASE_PUBLISHABLE_KEY||"";
     if(missingChannels.length && auth.startsWith("Bearer ") && apikey){
       try{
-        // ONE POST per screen refresh; the Cloudflare Worker runs at most ONE AI inference
-        // for the batch and caches channels by fixture/date in KV.
         const response=await fetch(
           "https://streammonitor-football-broadcast.victorsampaio133.workers.dev/broadcasts",{
             method:"POST",
@@ -296,21 +347,34 @@ export const getVitrineFootballMatches = createServerFn({ method: "POST" })
         if(!response.ok){
           console.warn("[Vitrine Futebol] Cloudflare channel lookup HTTP",response.status);
         }else{
-          const data=await response.json() as {results?:Array<{
+          const payload=await response.json() as {results?:Array<{
             id:string;channels?:string[];verified?:boolean
           }>};
-          const confirmed=new Map((Array.isArray(data.results)?data.results:[])
-            .filter(row=>row?.verified===true && Array.isArray(row.channels))
-            .map(row=>[row.id,[...new Set(row.channels!.filter(name=>
-              typeof name==="string"&&name.trim()))].slice(0,3)]));
+          const confirmed=new Map((Array.isArray(payload.results)?payload.results:[])
+            .filter(row=>row?.verified===true)
+            .map(row=>[row.id,cleanVerifiedBroadcasts(row.channels)]));
           for(const match of missingChannels){
-            const tv=confirmed.get(match.id);
-            if(tv?.length)match.broadcasts=tv;
+            const channels=confirmed.get(match.id);
+            if(channels?.length){
+              match.broadcasts=channels;
+              remember(match,"cloudflare_verified");
+            }
           }
         }
       }catch(error){
-        // Only the channel lookup fails; do not block FTWB matches or expose credentials.
+        // Never discard saved confirmed results due to a research outage.
         console.warn("[Vitrine Futebol] Cloudflare channel lookup unavailable",
+          error instanceof Error?error.name:"unknown");
+      }
+    }
+    if(verifiedToSave.size){
+      try{
+        const values=[...verifiedToSave.values()];
+        const {error:saveError}=await store.from("football_broadcast_cache")
+          .upsert(values,{onConflict:"match_day,fixture_key"});
+        if(saveError)throw saveError;
+      }catch(error){
+        console.warn("[Vitrine Futebol] confirmed channels could not be saved",
           error instanceof Error?error.name:"unknown");
       }
     }
