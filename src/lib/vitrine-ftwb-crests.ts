@@ -24,10 +24,15 @@ const iconKeys=[
 export function ftwbCrestUrl(raw:unknown):string{
  if(typeof raw!=="string")return "";
  const s=raw.trim().replaceAll("&amp;","&");
- if(!s||s.length>2048)return "";
- // FTWB can return a real raster image as an inlined data URL.
+ if(!s)return "";
+ // FTWB may supply an inline image; check it before the URL length cap.
  if(/^data:image\/(?:png|jpeg|jpg|webp|gif);base64,[a-z0-9+/=]+$/i.test(s)&&
     s.length<1_600_000)return s;
+ if(s.length>2048)return "";
+ // A team NAME must never be interpreted as a relative logo path.
+ if(!/^(?:https?:\/\/|\/\/|\/)/i.test(s)&&
+    !/^(?:(?:images?|img|assets?|static|uploads?|escudos?|logos?|teams?|times?)\/)/i.test(s)&&
+    !/\.(?:png|jpe?g|webp|gif|avif|svg)(?:\?|#|$)/i.test(s))return "";
  try{
    const url=new URL(s.startsWith("//")?"https:"+s:s,"https://ftwb.notiffly.com.br");
    // Source logos sometimes come through plain HTTP; prefer TLS.
