@@ -183,7 +183,8 @@ export const Route = createFileRoute("/api/public/telegram/webhook")({
           return Response.json({ok:true,privateOnly:true});
         }
 
-        console.log("[telegram-webhook] update", { chat_id: chatId, text: text.slice(0, 32) });
+        // Do not log arbitrary titles, personal messages or search contents.
+        console.log("[telegram-webhook] update", { chat_id: chatId, command: text.startsWith("/") ? text.split(/\s/)[0].slice(0,24) : "private_text" });
 
         if (text.startsWith("/start")) {
           const { COMMAND_HELP } = await import("@/lib/telegram-commands.server");
