@@ -83,8 +83,11 @@ function AdminApplicationPartners(){
    const change=(input:any)=>perform("save-"+partner.id,()=>update({data:{partnerId:partner.id,...input}}));
    return <section key={partner.id} className="space-y-4 rounded-3xl border border-blue-500/20 bg-card p-4 sm:p-6">
     <div className="flex flex-wrap items-start justify-between gap-3">
-     <div className="flex items-center gap-3"><span className="flex h-12 w-12 items-center justify-center rounded-xl bg-blue-500/10 text-blue-400"><Smartphone size={24}/></span>
-      <div><h2 className="text-xl font-bold">{partner.name}</h2><p className="text-xs text-muted-foreground">/{partner.slug} · {memberCount} usuário(s) vinculado(s)</p></div>
+     <div className="flex items-center gap-3">
+      <span className="flex h-[76px] w-[108px] shrink-0 items-center justify-center overflow-hidden rounded-xl border border-violet-400/20 bg-[#0b1024] p-1 text-blue-400">
+       {partner.logo_url?<img src={partner.logo_url} width={500} height={300} className="h-full w-full object-contain" alt={"Logo oficial "+partner.name}/>:<Smartphone size={27}/>}
+      </span>
+      <div className="min-w-0"><h2 className="text-xl font-bold">{partner.name}</h2><p className="text-xs text-muted-foreground">/{partner.slug} · {memberCount} usuário(s) vinculado(s)</p></div>
      </div>
      <span className="rounded-full border border-blue-400/20 bg-blue-500/10 px-3 py-1 text-xs font-semibold text-blue-400">{partner.partnership_status==="active"?"Parceria ativa":"Parceria pausada"}</span>
     </div>
