@@ -116,7 +116,7 @@ export async function handleCatalogBotCallback(
   return "• "+type+": <b>"+esc(i.name)+"</b>";
  }).join("\n"):"";
  const stamp=new Date(result.server.catalogSyncedAt).toLocaleString("pt-BR",{timeZone:"America/Fortaleza"});
- return fail(
+ const responseText=(
   result.status==="found"
    ?"✅ <b>Encontrado no catálogo!</b>\n\n"+
     "🔎 <b>"+esc(title)+"</b>\n📡 Servidor: <b>"+esc(server.name)+"</b>\n\n"+
@@ -129,4 +129,62 @@ export async function handleCatalogBotCallback(
     "\n\nIsso não confirma ausência definitiva: o catálogo do servidor pode ter mudado."+suffix+
     "\n\n<a href=\""+LINK+"\">Abrir pesquisa no site</a>"
  );
+ const series=result.items.filter(i=>i.kind==="series").slice(0,4);
+ return {text:responseText,
+  ...(series.length?{keyboard:{inline_keyboard:series.map(i=>[{
+   text:"📺 Ver temporadas e episódios · "+channelName(i.name),
+   callback_data:"ce:"+m[2]+":"+m[3]+":"+i.id,
+  }])}}:{})};
 }
+
+/** A dedicated second tap authorizes ONE provider series-info request. */
+export async function handleCatalogSeriesBotCallback(
+ chatId:string|number,callbackData:string
+):Promise<CatalogBotReply>{
+ const m=/^ce:([0-9a-f-]{36}):(\d{1,3}):(\d{1,15})$/.exec(callbackData);
+ if(!m||!SESSION.test(m[1]))return fail("Seleção inválida. Envie /conteudo novamente.");
+ const who=await identity(chatId);
+ if(!who)return fail("🔒 Telegram não vinculado a uma conta válida.");
+ const limiter=await rateLimit({bucket:"telegram_series_tap",limit:8,windowSeconds:60},who.chat);
+ if(!limiter.allowed)return fail("⏳ Muitas consultas. Tente novamente em um minuto.");
+ const {data:session,error}=await supabaseAdmin.from("telegram_catalog_search_sessions" as any)
+  .select("id").eq("id",m[1]).eq("owner_id",who.ownerId)
+  .eq("chat_id",who.chat).gt("expires_at",new Date().toISOString()).maybeSingle();
+ if(error||!session)return fail("⏰ Pesquisa expirada. Envie /conteudo novamente.");
+ const server=(await available(who.ownerId))[Number(m[2])];
+ if(!server)return fail("🔒 Servidor não autorizado ou indisponível.");
+ const itemId=Number(m[3]);
+ if(!Number.isSafeInteger(itemId)||itemId<=0)return fail("Série inválida.");
+ const {getSeriesDetailsForOwner}=await import("@/lib/series-episodes.server");
+ const details=await getSeriesDetailsForOwner(who.ownerId,server.id,itemId);
+ const lines=[
+  "📺 <b>"+esc(details.series.name)+"</b>",
+  "📡 Servidor: <b>"+esc(server.name)+"</b>",
+  "🎞️ Temporadas: <b>"+details.seasons.length+"</b> · Episódios informados: <b>"+details.episodeCount+"</b>",
+  "",
+ ];
+ if(!details.provided){
+  lines.push("⚠️ O provedor não disponibilizou temporadas ou episódios para esta série.");
+ }else if(!details.seasons.length){
+  lines.push("Nenhuma temporada informada pelo provedor.");
+ }else{
+  // Telegram is a brief confirmation. The website can display the full list.
+  for(const season of details.seasons.slice(0,8)){
+   lines.push("📁 <b>"+(season.number===0?"Especiais":"Temporada "+season.number)+"</b>");
+   for(const episode of season.episodes.slice(0,7)){
+    const ep=episode.number!==null?"Episódio "+episode.number:"Episódio sem número";
+    lines.push("• "+ep+(episode.name?" — "+esc(episode.name):""));
+   }
+   if(!season.episodes.length)lines.push("• Lista de episódios não fornecida");
+   if(season.episodes.length>7)lines.push("…e mais "+(season.episodes.length-7)+" episódios nesta temporada.");
+   lines.push("");
+   if(lines.join("\n").length>2800)break;
+  }
+  if(details.seasons.length>8||details.limited)
+   lines.push("Mais temporadas ou episódios podem estar disponíveis na pesquisa completa.");
+ }
+ lines.push("🔒 Consulta pontual, sem compartilhar usuário, senha ou links de vídeo.");
+ lines.push('<a href="'+LINK+'">Ver pesquisa completa no site</a>');
+ return fail(lines.join("\n").slice(0,3900));
+}
+
