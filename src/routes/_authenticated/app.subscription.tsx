@@ -13,6 +13,7 @@ import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { PixDialog } from "@/components/payments/pix-dialog";
 import { getParentResellerPlans } from "@/lib/reseller.functions";
+import { ResellerCreditRules } from "@/components/subscription/reseller-credit-rules";
 import { useQuery } from "@tanstack/react-query";
 
 export const Route = createFileRoute("/_authenticated/app/subscription")({
@@ -124,6 +125,34 @@ function SubscriptionPage() {
         </a>
       </div>
 
+      {!isLoading && useAdminPix && !isReseller && (
+        <section className="grid gap-4 lg:grid-cols-2" aria-label="Como começar no Stream Monitor">
+          <Card className="flex flex-col justify-between rounded-2xl border-blue-500/40 bg-gradient-to-br from-blue-500/15 to-transparent p-5 sm:p-6">
+            <div>
+              <div className="mb-2 text-xs font-bold uppercase tracking-wider text-blue-400">Quero monitorar meus servidores</div>
+              <h2 className="text-xl font-extrabold">Plano mensal</h2>
+              <p className="mt-2 text-3xl font-black">{formatBRL(2500)} <span className="text-sm font-normal text-muted-foreground">/ 30 dias</span></p>
+              <p className="mt-3 text-sm leading-6 text-muted-foreground">DNS, HTTP, SSL, histórico de incidentes, alertas pelo Telegram e acesso às ferramentas disponíveis no plano.</p>
+            </div>
+            <Button className="mt-5 w-full" onClick={()=>handleRenew("monthly")} disabled={loading}>
+              <CreditCard className="mr-2 h-4 w-4"/> Ativar meu monitoramento por Pix
+            </Button>
+          </Card>
+          <Card className="flex flex-col justify-between rounded-2xl border-indigo-500/40 bg-gradient-to-br from-indigo-500/15 to-transparent p-5 sm:p-6">
+            <div>
+              <div className="mb-2 text-xs font-bold uppercase tracking-wider text-indigo-400">Quero trabalhar com revenda</div>
+              <h2 className="text-xl font-extrabold">Começar com 10 créditos</h2>
+              <p className="mt-2 text-3xl font-black">{formatBRL(6000)} <span className="text-sm font-normal text-muted-foreground">/ pacote</span></p>
+              <p className="mt-3 text-sm leading-6 text-muted-foreground">O Pix de créditos converte sua conta em revenda após a confirmação. Cada crédito equivale a um mês de acesso para um cliente.</p>
+              <p className="mt-2 text-xs text-indigo-200">O painel permanece operacional com créditos no saldo — inclusive por quatro meses ou mais, sem mensalidade extra do painel.</p>
+            </div>
+            <Button className="mt-5 w-full bg-indigo-600 hover:bg-indigo-500" onClick={()=>handleRenew("credits_10")} disabled={loading}>
+              <Coins className="mr-2 h-4 w-4"/> Comprar 10 créditos por Pix
+            </Button>
+          </Card>
+        </section>
+      )}
+      {!isLoading && <ResellerCreditRules compact={false}/>}
       {isLoading ? (
         <Card className="p-6"><p className="text-sm text-muted-foreground">Carregando...</p></Card>
       ) : (
@@ -301,7 +330,7 @@ function SubscriptionPage() {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {CREDIT_PACKS.map((pack) => (
+            {CREDIT_PACKS.filter(pack=>[10,30,50].includes(pack.credits??0)).map((pack) => (
               <Card key={pack.id} className={cn("p-6 relative border-2", pack.highlight ? "border-purple-500 ring-1 ring-purple-200" : "border-muted hover:border-purple-300 transition-colors")}>
                 {pack.highlight && (
                   <Badge className="absolute -top-2 right-4 bg-purple-500">Melhor oferta</Badge>
