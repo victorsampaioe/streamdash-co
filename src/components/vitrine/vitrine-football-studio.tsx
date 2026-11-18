@@ -116,10 +116,18 @@ export function VitrineFootballStudio() {
     }
   };
 
+  // Preserve loaded games while navigating; confirmed channels persist on the server.
+  const manualTransmissionRefresh=useRef(false);
   const games = useQuery({
     queryKey:["vitrine-football-ftwb",day],
-    queryFn:()=>load({data:{date:day}}),
-    staleTime:posterMode==="finished"?20_000:5*60_000,
+    queryFn:()=>{
+      const refreshTransmissions=manualTransmissionRefresh.current;
+      manualTransmissionRefresh.current=false;
+      return load({data:{date:day,refreshTransmissions}});
+    },
+    staleTime:posterMode==="finished"?20_000:45*60_000,
+    refetchOnMount:false,
+    refetchOnWindowFocus:false,
     refetchInterval:posterMode==="finished"&&day===today()?60_000:false,
     refetchIntervalInBackground:false,
     retry:1,
@@ -397,7 +405,12 @@ export function VitrineFootballStudio() {
           </p>}
       </div>
       <Button type="button" variant="outline" disabled={games.isFetching}
-        onClick={()=>{if(posterMode==="today")setDay(today());void games.refetch()}}>
+        onClick={()=>{
+          manualTransmissionRefresh.current=true;
+          const currentDate=today();
+          if(posterMode==="today"&&day!==currentDate){setDay(currentDate);return;}
+          void games.refetch();
+        }}>
         <RefreshCw size={16} className={games.isFetching?"mr-2 animate-spin":"mr-2"}/>
         {posterMode==="finished"?"Atualizar resultados":"Atualizar eventos"}
       </Button>
