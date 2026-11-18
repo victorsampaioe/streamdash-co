@@ -50,8 +50,11 @@ export const createPixPayment = createServerFn({ method: "POST" })
         amountCents = effectivePriceCents(standardPlan);
         description = `StreamMonitor — Plano ${standardPlan.name}`;
       } else if (planId.startsWith("credits_")) {
-        const amount = parseInt(planId.replace("credits_", ""));
-        if (isNaN(amount)) throw new Error("Pacote de créditos inválido");
+        // Only packages supported by the SQL plan enum and payment finalizer
+        // may be sold. Unsupported amounts must fail BEFORE a Pix is created.
+        const amount = Number(planId.replace("credits_", ""));
+        if(!["credits_10","credits_30","credits_40","credits_50"].includes(planId))
+          throw new Error("Pacote de créditos indisponível. Escolha 10, 30 ou 50 créditos.");
         
         const pricePerCredit = amount >= 50 ? 5.00 : 6.00;
         amountCents = Math.round(amount * pricePerCredit * 100);
