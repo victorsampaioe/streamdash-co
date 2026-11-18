@@ -2,7 +2,7 @@ import {formatCinematicWhatsApp} from "./vitrine-cinematic-canvas";
 import {supportedMp4Mime} from "./vitrine-cinematic-mp4";
 import {finalizeCinematicMp4} from "./vitrine-cinematic-whatsapp";
 import {connectVideoAudioToStream} from "./vitrine-video-audio";
-import {getResellerEncodingSettings,nextResellerFrameDeadline,type ResellerVideoQuality} from "./vitrine-video-quality";
+import {getResellerEncodingSettings,getVideoEncodingHints,nextResellerFrameDeadline,type ResellerVideoQuality} from "./vitrine-video-quality";
 
 export type VideoOverlayBrand={
   name:string;whatsapp:string;color:string;logo:HTMLImageElement
@@ -102,8 +102,15 @@ export async function renderResellerVideoMp4(opts:{
     throw new Error("Este navegador não permite exportar MP4. Tente no Chrome ou Safari atualizado.");
   if(!Number.isFinite(source.duration)||source.duration<1||source.duration>120)
     throw new Error("O vídeo deve ter entre 1 e 120 segundos.");
-  const settings=getResellerEncodingSettings(source.videoWidth,source.videoHeight,quality);
+  // Auto mode queries the real recording encoder first; manual quality
+  // choices remain authoritative. The probe has a short timeout.
+  const hints=quality==="auto"?await getVideoEncodingHints():undefined;
+  if(signal?.aborted)throw new Error("Exportação cancelada por segurança.");
+  const settings=getResellerEncodingSettings(source.videoWidth,source.videoHeight,quality,hints);
   const {width,height}=settings;
+  const preset= settings.mode==="high"?"Alta definição"
+    :settings.mode==="compatible"?"Compatível (celulares antigos)":"Equilibrada";
+  progress({percent:0,stage:`Preparando ${preset}: ${width}×${height} · ${settings.fps} fps...`});
   const canvas=document.createElement("canvas");canvas.width=width;canvas.height=height;
   const ctx=canvas.getContext("2d",{alpha:false});
   if(!ctx)throw new Error("Não foi possível iniciar o compositor.");
