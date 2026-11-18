@@ -2,6 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { requirePaidFeature } from "@/lib/premium-feature-access";
+import {verifyFootballCrestUrl} from "@/lib/vitrine-football-crest-proof.server";
 
 /** Fetch only well-known image CDNs and the project's hosted brand storage.
  * This is not an unrestricted URL fetch/proxy. Never allow arbitrary hosts.
@@ -50,11 +51,19 @@ async function inlineUrl(url:string):Promise<string|null>{
 export const getVitrineFootballExportImages=createServerFn({method:"POST"})
   .middleware([requireSupabaseAuth])
   .inputValidator((input:unknown)=>z.object({
+    // 16 images is a PER-REQUEST batch size, not a daily team or event limit.
     urls:z.array(z.string().url().max(2048)).max(16),
+    date:z.string().regex(/^\\d{4}-\\d{2}-\\d{2}$/).optional(),
+    crestProofs:z.record(z.string()).optional(),
   }).parse(input))
   .handler(async({data,context})=>{
     await requirePaidFeature(context);
-    const unique=[...new Set(data.urls)].filter(isAllowedPosterImageUrl);
+    const proofKey=process.env.FTWB_API_KEY||"";
+    const unique=[...new Set(data.urls)].filter(url=>
+      isAllowedPosterImageUrl(url) ||
+      (!!data.date&&!!data.crestProofs?.[url]&&
+       verifyFootballCrestUrl(url,data.date,data.crestProofs[url],proofKey))
+    );
     const pairs=await Promise.all(unique.map(async url=>[url,await inlineUrl(url)] as const));
     const images:Record<string,string>={};
     for(const [url,inline] of pairs)if(inline)images[url]=inline;
