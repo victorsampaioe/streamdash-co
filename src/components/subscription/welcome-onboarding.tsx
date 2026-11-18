@@ -2,6 +2,7 @@ import { Link } from "@tanstack/react-router";
 import { Gem, CheckCircle2, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { ResellerCreditRules } from "@/components/subscription/reseller-credit-rules";
 
 /**
  * Tela de boas-vindas exibida no primeiro acesso, quando a conta ainda não
@@ -58,7 +59,21 @@ export function WelcomeOnboarding() {
             Pague via PIX e comece a usar em menos de 1 minuto.
           </p>
         </Card>
+        <Card className="border-indigo-500/30 bg-indigo-500/5 p-6">
+          <div className="text-xs font-bold uppercase tracking-wide text-indigo-400">Mais uma forma de começar</div>
+          <h2 className="mt-2 text-lg font-black">Prefere revender Stream Monitor?</h2>
+          <p className="mt-2 text-sm leading-6 text-muted-foreground">
+            Além do plano de R$ 25 por mês, você pode começar sua revenda com
+            <strong className="text-foreground"> 10 créditos por R$ 60</strong>.
+            Cada crédito libera um mês de acesso para um cliente.
+            Você define o preço dos planos que vende.
+          </p>
+          <Link to="/app/subscription" className="mt-4 inline-flex">
+            <Button variant="outline">Conhecer planos e créditos</Button>
+          </Link>
+        </Card>
       </div>
+      <ResellerCreditRules compact/>
     </div>
   );
 }
