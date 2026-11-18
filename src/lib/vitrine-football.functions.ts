@@ -228,6 +228,7 @@ export const getVitrineFootballMatches = createServerFn({ method: "POST" })
   .inputValidator((input: unknown) => z.object({
     date: dateSchema,
     leagues: z.array(z.string().max(70)).max(16).optional(),
+    refreshTransmissions: z.boolean().optional(),
   }).parse(input))
   .handler(async ({data, context}) => {
     await requirePaidFeature(context);
@@ -283,14 +284,12 @@ export const getVitrineFootballMatches = createServerFn({ method: "POST" })
     type BroadcastCacheRow={
       fixture_key:string;channels:string[];verified_source:string;
     };
-    let cacheReadable=false;
     const savedByFixture=new Map<string,BroadcastCacheRow>();
     try{
       const {data:rows,error:cacheError}=await store.from("football_broadcast_cache")
         .select("fixture_key,channels,verified_source")
         .eq("match_day",data.date).limit(400);
       if(cacheError)throw cacheError;
-      cacheReadable=true;
       for(const row of (rows||[]) as BroadcastCacheRow[])
         savedByFixture.set(row.fixture_key,row);
     }catch(error){
@@ -326,19 +325,45 @@ export const getVitrineFootballMatches = createServerFn({ method: "POST" })
         match.broadcasts=chooseVerifiedBroadcasts([],saved?.channels);
       }
     }
-    // Research ONLY genuinely unknown games. A match with a saved positive
-    // result never calls Cloudflare/AI again on normal page loads.
-    // No hardcoded broadcaster is ever inferred from a league.
-    const missingChannels=matches.filter(m=>!m.broadcasts?.length);
+    // An unconfirmed game should not rerun the same expensive AI research
+    // whenever a user returns to this screen. Negative checks are temporary;
+    // once confirmed, the positive cache above is authoritative.
+    type AttemptRow={fixture_key:string;last_attempt_at:string;result:"no_channels"|"provider_unavailable"};
+    const attemptsByFixture=new Map<string,AttemptRow>();
+    try{
+      const {data:attempts,error:attemptError}=await store
+        .from("football_broadcast_lookup_attempts")
+        .select("fixture_key,last_attempt_at,result")
+        .eq("match_day",data.date).limit(400);
+      if(attemptError)throw attemptError;
+      for(const row of (attempts||[]) as AttemptRow[])attemptsByFixture.set(row.fixture_key,row);
+    }catch(error){
+      console.warn("[Vitrine Futebol] broadcast lookup cooldown unavailable",
+        error instanceof Error?error.name:"unknown");
+    }
+    const researchedRecently=(match:FootballMatch)=>{
+      if(data.refreshTransmissions===true)return false;
+      const saved=attemptsByFixture.get(footballBroadcastFixtureKey(match));
+      if(!saved)return false;
+      const minutes=saved.result==="no_channels"?90:10;
+      const age=Date.now()-Date.parse(saved.last_attempt_at);
+      return Number.isFinite(age)&&age>=0&&age<minutes*60_000;
+    };
+
+    // Research only genuinely unknown games after their cooldown. A fixture
+    // with saved confirmed channels never needs research on a normal visit.
+    const missingChannels=matches.filter(m=>!m.broadcasts?.length&&!researchedRecently(m));
     const auth=getRequest()?.headers.get("authorization")||"";
     const apikey=process.env.SUPABASE_PUBLISHABLE_KEY||"";
     if(missingChannels.length && auth.startsWith("Bearer ") && apikey){
+      let attemptResult:"no_channels"|"provider_unavailable"="provider_unavailable";
+      const requested=missingChannels.slice(0,64);
       try{
         const response=await fetch(
           "https://streammonitor-football-broadcast.victorsampaio133.workers.dev/broadcasts",{
             method:"POST",
             headers:{authorization:auth,apikey,"content-type":"application/json"},
-            body:JSON.stringify({matches:missingChannels.slice(0,64).map(m=>({
+            body:JSON.stringify({matches:requested.map(m=>({
               id:m.id,home:m.home,away:m.away,date:m.day
             }))}),
             cache:"no-store",signal:AbortSignal.timeout(25000)
@@ -350,14 +375,17 @@ export const getVitrineFootballMatches = createServerFn({ method: "POST" })
           const payload=await response.json() as {results?:Array<{
             id:string;channels?:string[];verified?:boolean
           }>};
-          const confirmed=new Map((Array.isArray(payload.results)?payload.results:[])
-            .filter(row=>row?.verified===true)
-            .map(row=>[row.id,cleanVerifiedBroadcasts(row.channels)]));
-          for(const match of missingChannels){
-            const channels=confirmed.get(match.id);
-            if(channels?.length){
-              match.broadcasts=channels;
-              remember(match,"cloudflare_verified");
+          if(Array.isArray(payload.results)){
+            attemptResult="no_channels";
+            const confirmed=new Map(payload.results
+              .filter(row=>row?.verified===true)
+              .map(row=>[row.id,cleanVerifiedBroadcasts(row.channels)]));
+            for(const match of requested){
+              const channels=confirmed.get(match.id);
+              if(channels?.length){
+                match.broadcasts=channels;
+                remember(match,"cloudflare_verified");
+              }
             }
           }
         }
@@ -365,6 +393,23 @@ export const getVitrineFootballMatches = createServerFn({ method: "POST" })
         // Never discard saved confirmed results due to a research outage.
         console.warn("[Vitrine Futebol] Cloudflare channel lookup unavailable",
           error instanceof Error?error.name:"unknown");
+      }
+      // Do not save blank broadcaster lists as verified content.
+      // Store ONLY lookup timestamps, to avoid repeated research per visit.
+      const unresolved=requested.filter(m=>!m.broadcasts?.length);
+      if(unresolved.length){
+        try{
+          const now=new Date().toISOString();
+          const {error:attemptSaveError}=await store.from("football_broadcast_lookup_attempts")
+            .upsert(unresolved.map(match=>({
+              match_day:match.day,fixture_key:footballBroadcastFixtureKey(match),
+              last_attempt_at:now,result:attemptResult
+            })),{onConflict:"match_day,fixture_key"});
+          if(attemptSaveError)throw attemptSaveError;
+        }catch(error){
+          console.warn("[Vitrine Futebol] broadcaster cooldown save unavailable",
+            error instanceof Error?error.name:"unknown");
+        }
       }
     }
     if(verifiedToSave.size){
