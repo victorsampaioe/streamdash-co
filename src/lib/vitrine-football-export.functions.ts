@@ -53,7 +53,7 @@ export const getVitrineFootballExportImages=createServerFn({method:"POST"})
   .inputValidator((input:unknown)=>z.object({
     // 16 images is a PER-REQUEST batch size, not a daily team or event limit.
     urls:z.array(z.string().url().max(2048)).max(16),
-    date:z.string().regex(/^\\d{4}-\\d{2}-\\d{2}$/).optional(),
+    date:z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
     crestProofs:z.record(z.string()).optional(),
   }).parse(input))
   .handler(async({data,context})=>{
