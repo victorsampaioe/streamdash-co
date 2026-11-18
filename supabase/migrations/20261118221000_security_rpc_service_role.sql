@@ -25,3 +25,9 @@ GRANT EXECUTE ON FUNCTION public.get_server_concurrency_limit(uuid,integer) TO s
 -- The already-existing public.api_consume_rate_limit function is restricted
 -- to service_role and uses INSERT .. ON CONFLICT DO UPDATE (atomic counter).
 -- Its permissions were confirmed live; no second function is created.
+
+-- Stream Play Android has been retired by the owner. Existing credentials
+-- are still pending authorized secure removal; deny any browser/client role
+-- access to the old association and session tables immediately.
+REVOKE ALL ON TABLE public.android_client_associations FROM anon,authenticated;
+REVOKE ALL ON TABLE public.android_sessions FROM anon,authenticated;
