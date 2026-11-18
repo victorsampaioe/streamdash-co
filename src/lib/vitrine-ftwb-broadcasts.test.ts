@@ -15,6 +15,24 @@ describe("FTWB - fonte única de transmissões",()=>{
     expect(extractFtwbBroadcasts({canais:"Transmissão não confirmada"})).toEqual([]);
     expect(extractFtwbBroadcasts({canais:null})).toEqual([]);
   });
+  it("lê informações em dados de jogo e formas aninhadas da FTWB",()=>{
+    expect(extractFtwbBroadcasts({
+      dados:{jogo:{transmissao:{canais:[
+        {nome:"Premiere"},{plataforma:"Disney+"}
+      ]}}}
+    })).toEqual(["Premiere","Disney+"]);
+  });
+  it("não perde a transmissão confirmada quando outro campo tem placeholder",()=>{
+    expect(extractFtwbBroadcasts({
+      transmissoes:"Transmissão não informada",
+      canais_tv:["SporTV","Premiere"],
+    })).toEqual(["SporTV","Premiere"]);
+  });
+  it("recupera também canais indicados na estrutura TV + streamings",()=>{
+    expect(extractFtwbBroadcasts({
+      onde_assistir:{tv:"Record",streaming:["CazéTV","Premiere"]}
+    })).toEqual(["Record","CazéTV","Premiere"]);
+  });
   it("deduplica e limita a até três canais",()=>{
     expect(extractFtwbBroadcasts({tv:"ESPN, ESPN, Disney+, Globo, Premiere"}))
       .toEqual(["ESPN","Disney+","Globo"]);
