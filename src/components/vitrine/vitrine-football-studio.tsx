@@ -13,7 +13,7 @@ import { getVitrineFootballExportImages } from "@/lib/vitrine-football-export.fu
 import { drawFootballPngFallback } from "@/lib/vitrine-football-canvas-fallback";
 import { nationalTeamFlagFallback } from "@/lib/vitrine-football-ptbr";
 import { offlineFootballFlag } from "@/lib/vitrine-football-offline-flags";
-import { onlyMatchesWithRealBadges } from "@/lib/vitrine-football-verified-badges";
+import { resolveMatchesWithAvailableBadges } from "@/lib/vitrine-football-verified-badges";
 import { isVerifiedFinishedFootballMatch,parseFootballFinalScore } from "@/lib/vitrine-football-results";
 import { footballTeamNamePtBR } from "@/lib/vitrine-football-ptbr";
 import { sendVitrineFootballToRegisteredTelegram } from "@/lib/vitrine-football-telegram.functions";
@@ -129,8 +129,8 @@ export function VitrineFootballStudio() {
   const selectedFinal=useMemo(()=>finishedMatches.find(match=>
     [match.home,match.away,match.day].join("|")===selectedFinalId
   )||null,[finishedMatches,selectedFinalId]);
-  // Resolve badges on the full source set FIRST. Grouping happens only
-  // after we know which fixtures have two genuine team images.
+  // Preserve all verified FTWB fixtures, even if an image host cannot
+  // serve the real crest. The PNG renders a neutral initials badge instead.
   const sourceMatches=useMemo(()=>posterMode==="finished"
     ?(selectedFinal?[selectedFinal]:[])
     :(games.data?.matches??[]),[games.data,posterMode,selectedFinal]);
@@ -202,8 +202,8 @@ export function VitrineFootballStudio() {
   },[crestKey]);
   const crestsReady=crestMedia.key===crestKey&&crestMedia.ready;
   const selectedBadges=useMemo(()=>crestsReady
-    ?onlyMatchesWithRealBadges(sourceMatches,crestMedia.images)
-    :{visible:[] as FootballMatch[],hidden:[] as FootballMatch[]},
+    ?resolveMatchesWithAvailableBadges(sourceMatches,crestMedia.images)
+    :{visible:[] as FootballMatch[],missingImages:0,matchesWithMissingImages:0},
     [sourceMatches,crestsReady,crestMedia.images]);
   const groups=useMemo(()=>{
     if(posterMode==="finished")return selectedFinal&&selectedBadges.visible.length?[selectedBadges.visible]:[];
@@ -379,9 +379,9 @@ export function VitrineFootballStudio() {
             ?"Modelo Grade de Jogos: até 10 partidas por arte em duas colunas fixas, escudos, horários, transmissões, logo e WhatsApp. PNG em 2160 × 2700."
             :"Modelo Clássico: até 4 confrontos por arte, com identidade Stream Monitor. PNG em 2160 × 2700."}</p>
         {!crestsReady&&sourceMatches.length>0&&<p className="mt-1 text-xs text-blue-300" role="status">Validando escudos reais dos dois times antes de montar as artes…</p>}
-        {crestsReady&&selectedBadges.hidden.length>0&&
+        {crestsReady&&selectedBadges.matchesWithMissingImages>0&&
           <p className="mt-1 text-xs text-amber-400" role="status">
-            {selectedBadges.hidden.length} {selectedBadges.hidden.length===1?"confronto foi ocultado":"confrontos foram ocultados"} por falta de escudos ou bandeiras reais. Os modelos mantêm o tamanho e a posição originais dos cartões.
+            {selectedBadges.visible.length} partida(s) encontrada(s). Em {selectedBadges.matchesWithMissingImages} partida(s), algum escudo oficial não pôde ser carregado; os jogos continuam disponíveis com a sigla do time no lugar da imagem ausente. Nenhum escudo é inventado.
           </p>}
       </div>
       <Button type="button" variant="outline" disabled={games.isFetching}
@@ -485,7 +485,7 @@ export function VitrineFootballStudio() {
       {games.error instanceof Error?games.error.message:"Não foi possível consultar os jogos de hoje."}
     </Card>}
     {games.isSuccess&&crestsReady&&posterMode==="today"&&groups.length===0&&<Card className="p-8 text-center">
-      Não há partidas com escudos ou bandeiras reais dos dois times disponíveis nesta data. Atualize os jogos para tentar novamente.
+      A fonte de jogos não retornou partidas das competições selecionadas para esta data. Toque em “Atualizar eventos” para consultar novamente.
     </Card>}
     {games.isSuccess&&posterMode==="finished"&&finishedMatches.length>0&&!selectedFinal&&
       <Card className="p-8 text-center text-muted-foreground">
