@@ -140,7 +140,7 @@ export const Route = createFileRoute("/api/public/telegram/webhook")({
             method:"POST",headers:{"Content-Type":"application/json"},
             body:JSON.stringify({callback_query_id:callback.id}),
           }).catch(()=>{});
-          if(/^c[sp]:[0-9a-f-]{36}:\\d{1,3}$/.test(String(callback.data||""))){
+          if(/^c[sp]:[0-9a-f-]{36}:\d{1,3}$/.test(String(callback.data||""))){
             // Telegram callback buttons carry only session IDs and array indices.
             // Always verify private-chat identity AND current server ownership.
             if(isPrivate && String(callback.from?.id)===String(callbackChat)){
@@ -178,7 +178,7 @@ export const Route = createFileRoute("/api/public/telegram/webhook")({
         if(msg?.chat?.type!=="private" && /^\/(?:pix|fatura|conteudo|pesquisar)(?:\s|@|$)/.test(text)){
           await send(token,chatId,
             "🔒 <b>Fatura, Pix e busca de conteúdos somente no privado.</b>\n\n"+
-            "Abra uma conversa direta com @MonitordeFluxoBot e envie /pix ou /fatura. "+
+            "Abra uma conversa direta com @MonitordeFluxoBot e envie /conteudo, /pix ou /fatura. "+
             "Não compartilhe dados de pagamento neste grupo.");
           return Response.json({ok:true,privateOnly:true});
         }
@@ -204,10 +204,10 @@ export const Route = createFileRoute("/api/public/telegram/webhook")({
 
         // Interactive catalog search: /conteudo Título, /conteudo (prompt), then
         // private free-text reply, followed by validated per-owner server buttons.
-        if(msg?.chat?.type==="private" && /^\\/(?:conteudo|pesquisar)(?:@\\w+)?(?:\\s|$)/i.test(originalText)){
+        if(msg?.chat?.type==="private" && /^\/(?:conteudo|pesquisar)(?:@\w+)?(?:\s|$)/i.test(originalText)){
           try{
             const {beginCatalogBotSearch}=await import("@/lib/telegram-catalog-search.server");
-            const title=originalText.replace(/^\\/(?:conteudo|pesquisar)(?:@\\w+)?\\s*/i,"");
+            const title=originalText.replace(/^\/(?:conteudo|pesquisar)(?:@\w+)?\s*/i,"");
             const result=await beginCatalogBotSearch(chatId,title);
             await send(token,chatId,result.text,false,result.keyboard);
           }catch(e){
