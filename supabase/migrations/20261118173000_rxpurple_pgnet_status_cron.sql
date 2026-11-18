@@ -52,6 +52,7 @@ BEGIN
    CONTINUE;
   END IF;
   SELECT * INTO _p FROM public.app_partners p WHERE p.id=_job.partner_id;
+  _incident_id:=NULL;_change:=NULL;
   _state:='unknown';_evidence:='O provedor não retornou status utilizável.';
   _raw:=null;_payload:=null;_job_error:=null;_verified:=false;
   _affected_count:=0;_offline_count:=0;_all_count:=0;_affected:='';
