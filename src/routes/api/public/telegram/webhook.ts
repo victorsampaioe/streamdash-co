@@ -20,6 +20,7 @@ function safeEqual(a: string, b: string) {
 const billingKeyboard = {
   inline_keyboard: [
     [{text:"🧾 Minha fatura",callback_data:"billing:invoice"},{text:"💠 Gerar PIX",callback_data:"billing:pix"}],
+    [{text:"🔎 Buscar conteúdo do servidor",callback_data:"catalog:start"}],
     [{text:"🔒 Pagar pelo site",url:"https://streammonitor.site/app/subscription"}],
   ],
 };
@@ -140,6 +141,18 @@ export const Route = createFileRoute("/api/public/telegram/webhook")({
             method:"POST",headers:{"Content-Type":"application/json"},
             body:JSON.stringify({callback_query_id:callback.id}),
           }).catch(()=>{});
+          if(callback.data==="catalog:start"){
+            if(isPrivate && String(callback.from?.id)===String(callbackChat)){
+              try{
+                const {beginCatalogBotSearch}=await import("@/lib/telegram-catalog-search.server");
+                const reply=await beginCatalogBotSearch(callbackChat,"");
+                await send(token,callbackChat,reply.text,false,reply.keyboard);
+              }catch{
+                await send(token,callbackChat,"⚠️ Pesquisa indisponível. Envie /conteudo para tentar novamente.");
+              }
+            }
+            return Response.json({ok:true});
+          }
           if(/^c[sp]:[0-9a-f-]{36}:\d{1,3}$/.test(String(callback.data||""))){
             // Telegram callback buttons carry only session IDs and array indices.
             // Always verify private-chat identity AND current server ownership.
