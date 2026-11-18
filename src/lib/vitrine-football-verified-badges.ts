@@ -30,3 +30,22 @@ export function onlyMatchesWithRealBadges(
   }
   return {visible,hidden};
 }
+
+/** Keep verified FTWB fixtures visible even if the upstream crest image is
+ * missing, blocked by its CDN or cannot be proxied. We never substitute an
+ * invented club crest: an empty URL allows the canvas to draw an explicitly
+ * neutral initials badge. National flags can still be bundled offline.
+ */
+export function resolveMatchesWithAvailableBadges(
+  matches:FootballMatch[],proxied:Record<string,string>
+):{visible:FootballMatch[];missingImages:number;matchesWithMissingImages:number}{
+  let missingImages=0,matchesWithMissingImages=0;
+  const visible=matches.map(match=>{
+    const home=verifiedTeamBadge(match.home,match.league,match.homeBadge||"",proxied);
+    const away=verifiedTeamBadge(match.away,match.league,match.awayBadge||"",proxied);
+    missingImages+=Number(!home)+Number(!away);
+    if(!home||!away)matchesWithMissingImages++;
+    return {...match,homeBadge:home,awayBadge:away};
+  });
+  return {visible,missingImages,matchesWithMissingImages};
+}
