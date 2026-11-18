@@ -91,6 +91,9 @@ export function AcquisitionPanel(){
  const lastImport=data.metaCostsLastImported
   ?new Date(data.metaCostsLastImported).toLocaleString("pt-BR")
   :"ainda não informada";
+ const firstCostDay=totals.costCoverageFirstDay?totals.costCoverageFirstDay.split("-").reverse().join("/"):"—";
+ const lastCostDay=totals.costCoverageLastDay?totals.costCoverageLastDay.split("-").reverse().join("/"):"—";
+ const hasUnlinkedCosts=totals.unlinkedSpendCents>0;
  return <div className="min-w-0 space-y-7 pb-6 sm:space-y-9">
   <header className="flex flex-col gap-4 rounded-2xl border border-blue-500/25 bg-gradient-to-br from-blue-950/45 via-card to-card p-4 sm:flex-row sm:items-center sm:justify-between sm:p-6">
    <div className="space-y-2">
@@ -105,7 +108,7 @@ export function AcquisitionPanel(){
    <button onClick={()=>void refetch()} disabled={isFetching}
     className="inline-flex min-h-11 shrink-0 items-center justify-center gap-2 rounded-xl border border-blue-500/30 bg-blue-500/10 px-4 py-3 text-sm font-bold text-blue-200 transition hover:bg-blue-500/20 disabled:opacity-60">
     <RefreshCw size={16} className={isFetching?"animate-spin":""} aria-hidden="true"/>
-    {isFetching?"Atualizando…":"Atualizar relatório"}
+    {isFetching?"Recarregando…":"Recarregar dados do painel"}
    </button>
   </header>
 
@@ -152,17 +155,21 @@ export function AcquisitionPanel(){
 
   <section className="space-y-3" aria-label="Investimento e custos">
    <Heading eyebrow="03 · Investimento" title="Quanto está custando?"
-    description="Custos calculados somente com os dados atribuídos à Meta que estão disponíveis no sistema; não representam automaticamente o investimento total ou um CAC definitivo."/>
+    description="Valores da Meta copiados para o Stream Monitor. Apenas gastos de campanhas identificadas nos próprios cadastros entram no custo por cliente; campanhas antigas ficam separadas."/>
    <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-    <Metric title="Investimento importado" value={money(totals.spendCents)} detail={"Última importação: "+lastImport} icon={Wallet} tone="amber"/>
-    <Metric title="Custo por cadastro · Meta" value={money(meta?.costPerRegistrationCents)} detail="Gasto Meta importado ÷ cadastros atribuídos à Meta" icon={MousePointerClick} tone="violet"/>
-    <Metric title="Custo por pagante · Meta" value={money(meta?.costPerPaidCustomerCents)} detail="Estimativa: gasto Meta importado ÷ pagantes atribuídos" icon={TrendingUp} tone="emerald"/>
+    <Metric title="Gasto importado · campanhas rastreadas" value={money(totals.spendCents)} detail={"Período do gasto: "+firstCostDay+" a "+lastCostDay+" · Última importação: "+lastImport} icon={Wallet} tone="amber"/>
+    <Metric title="Custo por cadastro · Meta" value={money(meta?.costPerRegistrationCents)} detail="Gasto da mesma campanha ÷ cadastros com origem Meta" icon={MousePointerClick} tone="violet"/>
+    <Metric title="Custo por pagante · Meta" value={money(meta?.costPerPaidCustomerCents)} detail="Gasto da mesma campanha ÷ pagantes atribuídos à Meta" icon={TrendingUp} tone="emerald"/>
+   </div>
+   <div className="rounded-xl border border-blue-500/20 bg-blue-500/5 px-4 py-3 text-xs leading-6 text-muted-foreground">
+    <p><strong className="text-foreground">O que significa “gasto importado”?</strong> É uma fotografia dos valores que a Meta informou na última consulta. Este botão só recarrega o banco do Stream Monitor; não força uma nova importação diretamente da Meta Ads.</p>
+    {hasUnlinkedCosts&&<p className="mt-2 text-amber-300"><strong>Campanhas anteriores:</strong> {money(totals.unlinkedSpendCents)} de gastos importados não entram nos custos por cadastro desta campanha, pois pertencem a anúncios sem cadastros correspondentes.</p>}
    </div>
   </section>
 
   <section className="space-y-3" aria-label="Instagram versus Facebook">
    <Heading eyebrow="04 · Canais de anúncios" title="Instagram × Facebook"
-    description="Compare o gasto importado e os resultados identificados. A participação mostrada é histórica, não uma configuração de orçamento ou uma meta garantida de entrega."/>
+    description="A participação é calculada somente com gastos importados de campanhas ligadas aos cadastros identificados; não representa uma regra de distribuição do orçamento da Meta."/>
    <div className="grid gap-3 md:grid-cols-2">
     {(["instagram","facebook"] as const).map(platform=>{
      const item=byPlatform.find(x=>x.key===platform);
@@ -180,7 +187,7 @@ export function AcquisitionPanel(){
          style={{width:(share??0)+"%"}}/>
        </div>
        <div className="grid grid-cols-2 gap-3 text-sm">
-        <div><p className="text-xs text-muted-foreground">Gasto importado</p><strong className="text-lg tabular-nums">{money(spend)}</strong></div>
+        <div><p className="text-xs text-muted-foreground">Gasto da campanha rastreada</p><strong className="text-lg tabular-nums">{money(spend)}</strong></div>
         <div><p className="text-xs text-muted-foreground">Cadastros</p><strong className="text-lg tabular-nums">{number(item?.registrations??0)}</strong></div>
         <div><p className="text-xs text-muted-foreground">Pagantes identificados</p><strong className="text-lg tabular-nums">{number(item?.paidCustomers??0)}</strong></div>
         <div><p className="text-xs text-muted-foreground">Custo por cadastro</p><strong className="text-lg tabular-nums">{money(item?.costPerRegistrationCents)}</strong></div>
@@ -217,7 +224,10 @@ export function AcquisitionPanel(){
      description="Resultados disponíveis por campanha, sem misturar uma campanha com outra."/>
     <div className="space-y-2">
      {byCampaign.filter(x=>x.spendCents!==null||x.registrations>0).map(item=><div key={item.key} className="flex flex-col gap-3 rounded-xl border border-border/60 bg-card p-4 sm:flex-row sm:items-center sm:justify-between">
-      <p className="min-w-0 break-all text-sm font-semibold">{item.key}</p>
+      <div className="min-w-0 space-y-1">
+       <p className="break-all text-sm font-semibold">{item.key}</p>
+       {item.spendCents!==null&&item.registrations===0&&<p className="text-[11px] font-medium text-amber-400">Gasto histórico sem cadastros vinculados — fora do CAC atual</p>}
+      </div>
       <div className="flex flex-wrap gap-x-5 gap-y-2 text-xs sm:justify-end">
        <SmallStat title="Gasto" value={money(item.spendCents)}/>
        <SmallStat title="Cadastros" value={number(item.registrations)}/>
@@ -235,7 +245,8 @@ export function AcquisitionPanel(){
    <div className="mt-3 space-y-2 text-xs leading-6 text-muted-foreground sm:text-sm">
     <p><strong className="text-foreground">Dados parciais:</strong> {number(totals.historicalUnattributed)} contas sem origem anterior comprovada. Quem recusa cookies de publicidade continua podendo se cadastrar.</p>
     <p><strong className="text-foreground">Pixel Meta:</strong> o recebimento dos eventos ainda não está certificado no Gerenciador de Eventos.</p>
-    <p><strong className="text-foreground">Gastos:</strong> valores importados pontualmente, não em tempo real. Última consulta: {lastImport}.</p>
+    <p><strong className="text-foreground">Gastos:</strong> a última importação de campanhas rastreadas foi em {lastImport} e cobriu {firstCostDay} a {lastCostDay}. O botão “Recarregar” não consulta a Meta.</p>
+    {hasUnlinkedCosts&&<p><strong className="text-foreground">Gastos de campanhas anteriores:</strong> {money(totals.unlinkedSpendCents)} preservados para auditoria, mas excluídos dos cálculos de custo da campanha rastreada.</p>}
     <p>{data.note}</p>
    </div>
   </section>
