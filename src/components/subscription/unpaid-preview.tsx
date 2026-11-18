@@ -1,5 +1,6 @@
 import {Link,useRouterState} from "@tanstack/react-router";
 import {Activity,ArrowRight,Bell,BookOpen,CheckCircle2,CreditCard,Eye,Film,Globe,Lock,ServerIcon,ShieldCheck,Sparkles,Trophy,Video,Wifi} from "lucide-react";
+import {ResellerCreditRules} from "./reseller-credit-rules";
 
 const features=[
  {href:"/app",title:"Visão geral",group:"Painel de controle",description:"Acompanhe o estado da sua operação num só lugar.",icon:Activity},
@@ -37,6 +38,21 @@ export function UnpaidPreview(){
    </div>
    <p className="mt-3 flex items-center gap-2 text-xs text-slate-400"><Lock size={14}/> Adicionar servidores, consultar dados privados, alterar configurações, gerar e baixar conteúdos só após a ativação.</p>
   </div>
+  <div className="grid gap-3 md:grid-cols-2">
+    <Link to="/app/subscription" className="rounded-2xl border border-blue-500/45 bg-blue-500/10 p-5 transition hover:bg-blue-500/15">
+      <div className="text-xs font-bold uppercase tracking-wider text-blue-300">Quero monitorar</div>
+      <h2 className="mt-2 text-xl font-black">R$ 25 por mês</h2>
+      <p className="mt-2 text-sm text-muted-foreground">DNS, HTTP, SSL, alertas no Telegram e diagnósticos inteligentes. Ativação pelo Pix.</p>
+      <div className="mt-3 flex items-center gap-1 text-sm font-bold text-blue-300">Assinar plano mensal <ArrowRight size={16}/></div>
+    </Link>
+    <Link to="/app/subscription" className="rounded-2xl border border-indigo-500/45 bg-indigo-500/10 p-5 transition hover:bg-indigo-500/15">
+      <div className="text-xs font-bold uppercase tracking-wider text-indigo-300">Quero revender</div>
+      <h2 className="mt-2 text-xl font-black">10 créditos por R$ 60</h2>
+      <p className="mt-2 text-sm text-muted-foreground">Crie clientes, defina seus preços e mantenha a revenda operacional enquanto houver créditos.</p>
+      <div className="mt-3 flex items-center gap-1 text-sm font-bold text-indigo-300">Ver pacote de créditos <ArrowRight size={16}/></div>
+    </Link>
+  </div>
+  <ResellerCreditRules compact/>
   <div className="grid gap-4 md:grid-cols-3">
    {[
     {icon:Globe,label:"DNS + HTTP + SSL",value:"Verificações de disponibilidade",desc:"Acompanhe a saúde de cada servidor com dados da sua própria conta."},
