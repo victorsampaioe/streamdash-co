@@ -25,7 +25,9 @@ const channels:[string,RegExp][]=[
  ["ESPN Brasil (YouTube)",/\bespn\s+brasil\s*(?:\(youtube\)|no youtube|youtube)/i],
  ["ESPN 4",/\bespn\s*4\b/i],["ESPN 3",/\bespn\s*3\b/i],
  ["ESPN 2",/\bespn\s*2\b/i],["ESPN",/\bespn\b(?!\s*(?:[234]|brasil))/i],
- ["Premiere",/\bpremiere\b/i],["SporTV",/\bsportv\b/i],
+ ["Premiere",/\bpremiere\b/i],
+ ["SporTV 3",/\bsportv\s*3\b/i],["SporTV 2",/\bsportv\s*2\b/i],
+ ["SporTV",/\bsportv\b(?!\s*[23])/i],
  ["Record",/\b(?:recordtv|record\s*tv|record)\b/i],
  ["CazéTV",/\b(?:caze\s*tv|cazetv)\b/i],
  ["Globo",/\b(?:tv globo|globo\s*tv|rede globo|globo)\b/i],
@@ -34,7 +36,6 @@ const channels:[string,RegExp][]=[
  ["Prime Video",/\b(?:prime video|amazon prime)\b/i],
  ["TNT Sports",/\btnt\s*sports?\b/i],["Max",/\b(?:hbo max|max streaming)\b/i],
  ["SBT",/\bsbt\b/i],["BandSports",/\bbandsports?\b/i],
- ["CazéTV (YouTube)",/\bcazetv youtube\b/i],
  ["DAZN",/\bdazn\b/i],["Apple TV",/\bapple\s*tv\b/i],
  ["Paramount+",/\bparamount\s*\+/i],["FIFA+",/\bfifa\s*\+/i],
 ];
@@ -77,12 +78,11 @@ export function findGuideChannels(
      if(other<0)continue;
      const at=i+other;
      const broadcast:string[]=[];
-     for(let j=at+1;j<Math.min(relevant.length,at+9);j++){
-       if(/^\d{1,2}[:h]\d{2}$/.test(relevant[j])||/\bver mais\b/i.test(relevant[j]))break;
+     for(let j=at;j<Math.min(relevant.length,at+9);j++){
+       if(j>at&&(/^\d{1,2}[:h]\d{2}$/.test(relevant[j])||/\bver mais\b/i.test(relevant[j])))break;
+       const channelLine=relevant[j].normalize("NFD").replace(/[\u0300-\u036f]/g,"");
        for(const [name,regex] of channels){
-         if(regex.test(relevant[j])&&!broadcast.includes(name)&&
-            !(name==="CazéTV (YouTube)"&&broadcast.includes("CazéTV")))
-           broadcast.push(name);
+         if(regex.test(channelLine)&&!broadcast.includes(name))broadcast.push(name);
        }
      }
      if(broadcast.length){output[match.id]=broadcast.slice(0,3);break;}
