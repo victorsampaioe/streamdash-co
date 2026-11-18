@@ -153,13 +153,15 @@ export const Route = createFileRoute("/api/public/telegram/webhook")({
             }
             return Response.json({ok:true});
           }
-          if(/^c[sp]:[0-9a-f-]{36}:\d{1,3}$/.test(String(callback.data||""))){
+          if(/^c(?:[sp]:[0-9a-f-]{36}:\d{1,3}|e:[0-9a-f-]{36}:\d{1,3}:\d{1,15})$/.test(String(callback.data||""))){
             // Telegram callback buttons carry only session IDs and array indices.
             // Always verify private-chat identity AND current server ownership.
             if(isPrivate && String(callback.from?.id)===String(callbackChat)){
               try{
-                const {handleCatalogBotCallback}=await import("@/lib/telegram-catalog-search.server");
-                const result=await handleCatalogBotCallback(callbackChat,String(callback.data));
+                const {handleCatalogBotCallback,handleCatalogSeriesBotCallback}=await import("@/lib/telegram-catalog-search.server");
+                const result=String(callback.data).startsWith("ce:")
+                  ? await handleCatalogSeriesBotCallback(callbackChat,String(callback.data))
+                  : await handleCatalogBotCallback(callbackChat,String(callback.data));
                 await send(token,callbackChat,result.text,false,result.keyboard);
               }catch(e){
                 console.error("[telegram-catalog] callback failed",e instanceof Error?e.name:"unknown");
