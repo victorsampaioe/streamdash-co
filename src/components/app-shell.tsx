@@ -1,5 +1,5 @@
 import { Link, Outlet, useNavigate, useRouterState } from "@tanstack/react-router";
-import { Activity, LayoutDashboard, ServerIcon, Bell, Users, LogOut, Sun, Moon, Search, Plus, CreditCard, Gift, Radio, ShieldAlert, Trophy, Lock, Menu, Send, Bot, Sparkles, BookOpen, Globe, ShoppingBag, Zap, Gauge, Braces } from "lucide-react";
+import { Activity, LayoutDashboard, ServerIcon, Bell, Users, LogOut, Sun, Moon, Search, Plus, CreditCard, Gift, Radio, ShieldAlert, Trophy, Lock, Menu, Send, Bot, Sparkles, BookOpen, Globe, ShoppingBag, Zap, Gauge, Braces, Smartphone, Wallet } from "lucide-react";
 import { SubscriptionBanner } from "@/components/subscription/subscription-banner";
 import { ConversionReminders } from "@/components/subscription/conversion-reminders";
 import { TelegramBanner } from "@/components/telegram-banner";
@@ -23,6 +23,7 @@ import { isAdminMaster } from "@/lib/permissions";
 const ALWAYS_OPEN_PATHS = [
   "/app/subscription",
   "/app/indique",
+  "/app/parceiro-aplicativo",
   "/app/ai-integration",
   "/app/api-integrations",
 ];
@@ -56,13 +57,22 @@ function GatedOutlet() {
       return data?.map((r) => r.role as string) || [];
     },
   });
+  const {data:isPartner=false,isLoading:partnerLoading}=useQuery({
+    queryKey:["app-partner-is-member"],
+    queryFn:async()=>{
+      const {data:{user}}=await supabase.auth.getUser();
+      if(!user)return false;
+      const {data}=await supabase.from("app_partner_members" as any).select("partner_id").eq("user_id",user.id).limit(1);
+      return !!data?.length;
+    },staleTime:60000
+  });
   const allowed = ALWAYS_OPEN_PATHS.some((p) => pathname === p || pathname.startsWith(p + "/")) || pathname === "/app/admin/vitrine-futebol";
 
   // Admin e revendedores nunca dependem de assinatura.
-  const privileged = !!userRoles?.some((r) => r === "admin" || r === "reseller" || r === "sub_reseller");
+  const privileged = isPartner||!!userRoles?.some((r) => r === "admin" || r === "reseller" || r === "sub_reseller");
 
   // On a failed status check, never block the user — just let the app render.
-  if (isLoading || rolesLoading || isError || privileged || data?.isActive || allowed) return <Outlet />;
+  if (isLoading || rolesLoading || partnerLoading || isError || privileged || data?.isActive || allowed) return <Outlet />;
   
   // Resellers are handled by isActive: true in useSubscription, 
   // so if we are here, it's a Client.
@@ -126,14 +136,32 @@ function useNavItems() {
     retry: 1,
     refetchOnWindowFocus: true,
   });
+  const {data:isAppPartner=false}=useQuery({
+    queryKey:["app-partner-is-member"],
+    queryFn:async()=>{
+      const {data:{user}}=await supabase.auth.getUser();
+      if(!user)return false;
+      const {data}=await supabase.from("app_partner_members" as any).select("partner_id").eq("user_id",user.id).limit(1);
+      return !!data?.length;
+    },staleTime:60000
+  });
   const isResellerRole = userRoles?.includes('reseller') || userRoles?.includes('sub_reseller');
   const isResellerOrAdmin = navIsAdmin || isResellerRole || !!subData?.profile?.is_reseller;
-  const isUnpaidPreview = !!subData && !subData.isActive && !isResellerOrAdmin;
+  const isUnpaidPreview = !!subData && !subData.isActive && !isResellerOrAdmin && !isAppPartner;
+
+  if(isAppPartner&&!isResellerOrAdmin){
+    return [
+      {to:"/app/parceiro-aplicativo",label:"Portal do Aplicativo",icon:Smartphone},
+      {to:"/aplicativos",label:"Status dos Aplicativos",icon:Activity},
+      {to:"/app/subscription",label:"Minha Assinatura",icon:CreditCard}
+    ];
+  }
 
   const items = [
     ...(navIsAdmin ? [{ to: "/app/admin", label: "Admin · Central de controle", icon: Users }, { to: "/app/admin/telegram-guard", label: "Admin · Entregas Telegram", icon: Bell }] : []),
     ...(navIsAdmin ? [{ to: "/app/auditoria", label: "Auditoria Visual", icon: ShieldAlert }] : []),
     ...(navIsAdmin ? [{ to: "/app/admin/observabilidade", label: "Admin · Central de Inteligência", icon: Gauge }] : []),
+    ...(navIsAdmin ? [{ to: "/app/admin/aplicativos-parceiros", label: "Admin · Parceiros de Apps", icon: Smartphone }] : []),
 
     ...(navIsAdmin ? [{ to: "/vitrine-video", label: "Admin · Vitrine Vídeo MP4", icon: Sparkles }] : []),
     ...(navIsAdmin ? [{ to: "/app/admin/modelos-video", label: "Admin · Biblioteca de Vídeos", icon: Sparkles }] : []),
@@ -153,6 +181,8 @@ function useNavItems() {
     { to: "/app/performance", label: "Performance", icon: Gauge },
     { to: "/app/achievements", label: "Conquistas", icon: Trophy },
     { to: "/app/indique", label: "Indique e Ganhe · 30%", icon: Gift },
+    { to: "/aplicativos", label: "Status dos Aplicativos", icon: Smartphone },
+    ...(isAppPartner ? [{to:"/app/parceiro-aplicativo",label:"Portal de Parceiros",icon:Wallet}] : []),
 
 
   ];
