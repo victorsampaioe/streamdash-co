@@ -22,6 +22,9 @@ export function WelcomeOnboarding() {
         </p>
       </div>
 
+      {/* Optional official community invite belongs to the registration welcome. */}
+      <NewUserTelegramSupport compact/>
+
       <div className="grid gap-4">
         <Card className="p-8 flex flex-col gap-6 border-primary/60 ring-1 ring-primary/30 shadow-xl bg-gradient-to-b from-primary/5 to-transparent">
           <div className="flex items-center gap-4">
@@ -75,7 +78,6 @@ export function WelcomeOnboarding() {
         </Card>
       </div>
       <ResellerCreditRules compact/>
-      <NewUserTelegramSupport/>
     </div>
   );
 }
