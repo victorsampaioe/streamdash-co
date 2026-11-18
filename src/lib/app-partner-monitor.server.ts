@@ -129,23 +129,21 @@ export async function runDueApplicationPartnerChecks(limit=3){
   const {error:updateError}=await db.from("app_partners").update(update).eq("id",partner.id);
   if(updateError)throw new Error("application_status_save_failed");
   if(transition==="down"){
-   const {data:incident,error:incidentError}=await db.from("app_partner_incidents")
-    .upsert({partner_id:partner.id,severity:result.status,started_evidence:result.evidence,started_at:now},
-      {onConflict:"partner_id",ignoreDuplicates:true}).select("id").maybeSingle();
-   // Partial unique indexes do not support ON CONFLICT (partner_id) directly;
-   // reconcile an existing open incident instead if conflict resolution fails.
-   let incidentId=incident?.id;
-   if(incidentError||!incidentId){
-    const {data:existing}=await db.from("app_partner_incidents").select("id")
-      .eq("partner_id",partner.id).is("recovered_at",null).maybeSingle();
-    incidentId=existing?.id;
-   }
+   const {data:existingIncident}=await db.from("app_partner_incidents")
+    .select("id").eq("partner_id",partner.id).is("recovered_at",null).maybeSingle();
+   let incidentId=existingIncident?.id;
    if(!incidentId){
     const {data:inserted,error:insertError}=await db.from("app_partner_incidents")
-      .insert({partner_id:partner.id,severity:result.status,started_evidence:result.evidence,started_at:now}).select("id").single();
-    if(insertError)throw new Error("application_incident_create_failed");
-    incidentId=inserted.id;
+      .insert({partner_id:partner.id,severity:result.status,started_evidence:result.evidence,started_at:now})
+      .select("id").maybeSingle();
+    if(insertError){
+     const {data:competing}=await db.from("app_partner_incidents").select("id")
+       .eq("partner_id",partner.id).is("recovered_at",null).maybeSingle();
+     if(!competing)throw new Error("application_incident_create_failed");
+     incidentId=competing.id;
+    }else incidentId=inserted?.id;
    }
+   if(!incidentId)throw new Error("application_incident_id_missing");
    confirmedChanges++;
    if(partner.broadcast_enabled){
     const out=await enqueueGlobalApplicationEvent(partner,incidentId,"down",now,result.evidence);
