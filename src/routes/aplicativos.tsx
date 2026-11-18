@@ -48,6 +48,23 @@ function PublicAppStatuses(){
        </div>
       </div>
       <p className="text-xs leading-6 text-slate-300">{x.text}</p>
+      {app.stability30d!==null&&<div className="flex flex-wrap gap-2 text-[11px]">
+       <span className="rounded-lg border border-blue-400/20 bg-blue-500/10 px-2.5 py-1.5">Estabilidade informada · 30 dias: <b>{Number(app.stability30d).toFixed(1)}%</b></span>
+       {app.incidents30d!==null&&<span className="rounded-lg border border-blue-400/20 bg-blue-500/10 px-2.5 py-1.5">Incidentes informados: <b>{app.incidents30d}</b></span>}
+      </div>}
+      {app.services.length>0&&<div className="space-y-2 rounded-xl border border-blue-400/10 bg-white/[0.03] p-3">
+       <p className="text-xs font-semibold text-blue-200">Serviços acompanhados</p>
+       {app.services.map(service=>{
+        const st=info[(service.status as keyof typeof info)]||info.unknown;
+        return <div key={service.id} className="flex flex-wrap items-center justify-between gap-2 text-xs">
+         <span className="text-slate-200">{service.name}</span>
+         <div className="flex items-center gap-2">
+          <span className={st.color}>{st.label}</span>
+          {service.uptime30d!==null&&<span className="text-slate-400">{Number(service.uptime30d).toFixed(1)}% · 30d</span>}
+         </div>
+        </div>;
+       })}
+      </div>}
       <p className="text-[11px] text-slate-400">{app.lastCheckAt?"Última observação: "+new Date(app.lastCheckAt).toLocaleString("pt-BR"):"Aguardando primeira verificação oficial"}</p>
      </div>;
     })}
