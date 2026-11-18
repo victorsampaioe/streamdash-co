@@ -3,6 +3,7 @@ import { Gem, CheckCircle2, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { ResellerCreditRules } from "@/components/subscription/reseller-credit-rules";
+import { NewUserTelegramSupport } from "@/components/subscription/new-user-telegram-support";
 
 /**
  * Tela de boas-vindas exibida no primeiro acesso, quando a conta ainda não
@@ -74,6 +75,7 @@ export function WelcomeOnboarding() {
         </Card>
       </div>
       <ResellerCreditRules compact/>
+      <NewUserTelegramSupport/>
     </div>
   );
 }
