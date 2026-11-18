@@ -167,24 +167,23 @@ export async function rateLimit(rule: RateRule, key: string): Promise<RateResult
   if (!local.allowed) return local;
 
   try {
-    const { data: existing, error: lookupError } = await supabaseAdmin
-      .from("api_rate_limits")
-      .select("id, hits")
-      .eq("bucket", rule.bucket)
-      .eq("key_hash", keyHash)
-      .eq("window_start", windowStart)
-      .maybeSingle();
-    if (lookupError) throw lookupError;
-
-    const hits = (existing?.hits ?? 0) + 1;
-    const { error: writeError } = existing?.id
-      ? await supabaseAdmin.from("api_rate_limits").update({ hits }).eq("id", existing.id)
-      : await supabaseAdmin.from("api_rate_limits")
-          .insert({ bucket: rule.bucket, key_hash: keyHash, window_start: windowStart, hits });
-    if (writeError) throw writeError;
-
+    // Atomic PostgreSQL UPSERT avoids a lost-update race when multiple
+    // requests arrive simultaneously or are handled by separate instances.
+    // This RPC is restricted to service_role and is never exposed to browsers.
+    const { data, error } = await supabaseAdmin.rpc("api_consume_rate_limit", {
+      p_bucket: rule.bucket,
+      p_key_hash: keyHash,
+      p_window_start: windowStart,
+      p_limit: rule.limit,
+    });
+    if (error) throw error;
+    const result = Array.isArray(data) ? data[0] : data;
+    if (!result || !Number.isInteger(result.hits) || typeof result.allowed !== "boolean") {
+      throw new Error("api_rate_limit_bad_result");
+    }
+    const hits = result.hits as number;
     return {
-      allowed: hits <= rule.limit,
+      allowed: !!result.allowed && local.allowed,
       remaining: Math.min(local.remaining, Math.max(0, rule.limit - hits)),
       retryAfter: local.retryAfter,
     };
