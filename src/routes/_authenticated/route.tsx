@@ -38,7 +38,10 @@ function AuthenticatedOutlet(){
   // Account management and reseller top-up must remain available to restore access.
   const accountManagement=pathname==="/app/settings"||pathname.startsWith("/app/settings/")
     ||pathname==="/app/reseller"||pathname.startsWith("/app/reseller/");
-  if(checkout||accountManagement)return <><VerifiedPurchasePixel/><Outlet/></>;
+  const partnerPortal=pathname==="/app/parceiro-aplicativo"||pathname.startsWith("/app/parceiro-aplicativo/");
+  // Application owners receive an independent commission portal; it is not a paid Vitrine feature.
+  // The portal server function validates membership on every private data request.
+  if(checkout||accountManagement||partnerPortal)return <><VerifiedPurchasePixel/><Outlet/></>;
   return <><VerifiedPurchasePixel/><PremiumVitrineGate><Outlet/></PremiumVitrineGate></>;
 }
 
