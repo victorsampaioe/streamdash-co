@@ -89,19 +89,21 @@ describe("Vitrine Futebol: PNG nativo idêntico à prévia e Telegram",()=>{
     expect(labels.filter(t=>t==="SporTV • Globo")).toHaveLength(4);
     expect(canvas.width).toBe(0); // high memory canvas released after PNG
   });
-  it("omite inteiramente confronto sem escudo real, sem desenhar iniciais",async()=>{
+  it("mantém as partidas reais quando um escudo da API estiver temporariamente indisponível",async()=>{
     const blocked="data:image/png;base64,away1";
     const {config,canvas,fillText}=setup(blocked);
     const file=await drawFootballPngFallback(config);
     expect(file.type).toBe("image/png");
     expect(canvas.toBlob).toHaveBeenCalledTimes(1);
     const printed=fillText.mock.calls.map(c=>String(c[0]));
-    expect(printed).not.toContain("A1");
-    expect(printed).not.toContain("Equipe 1");
-    expect(printed).not.toContain("Adversário 1");
+    expect(printed).toContain("Equipe 1");
+    expect(printed).toContain("Adversário 1");
     expect(printed).toContain("Equipe 0");
     expect(printed).toContain("Equipe 2");
     expect(printed).toContain("Equipe 3");
+    // If a CDN is temporarily unavailable, show an honest neutral initials
+    // badge; the official crest remains the preferred path.
+    expect(printed).toContain("A1");
   });
   it("mantém o Modelo 1 e o Modelo 2 rigorosamente fixos com poucos jogos",()=>{
     const classic=classicCardGeometry(4),grid=gridCardGeometry(10);
