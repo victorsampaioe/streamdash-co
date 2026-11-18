@@ -22,6 +22,17 @@ export const Route = createFileRoute("/api/public/cron/monitor")({
           // Five parallel probes bound each cycle. Confirming a real outage
           // can still take longer than a simple successful health check.
           const result = await withCycleLock("cron-monitor", 120, () => runDueChecks(5));
+          // Partner status checks run independently of DNS. No mass alert is
+          // sent unless the official API contract has been validated and two
+          // consecutive provider-reported state changes are confirmed.
+          let applicationPartners: unknown = null;
+          try {
+            const {runDueApplicationPartnerChecks}=await import("@/lib/app-partner-monitor.server");
+            applicationPartners=await withCycleLock("cron-app-partners",90,
+              ()=>runDueApplicationPartnerChecks(3));
+          }catch(e){
+            console.error("[cron/monitor] app partners",e instanceof Error?e.name:"unknown");
+          }
           let telegramOutbox: unknown = null;
           try {
             const { processTelegramOutbox } = await import("@/lib/telegram-outbox.server");
@@ -29,7 +40,7 @@ export const Route = createFileRoute("/api/public/cron/monitor")({
           } catch (e) {
             console.error("[cron/monitor] telegram outbox", e instanceof Error ? e.message : "unknown");
           }
-          return Response.json({ ok: true, ...result, telegramOutbox }, { headers: { "Cache-Control": "no-store" } });
+          return Response.json({ ok: true, ...result, applicationPartners, telegramOutbox }, { headers: { "Cache-Control": "no-store" } });
         } catch (error) {
           console.error("[cron/monitor] failed", error instanceof Error ? error.name : "unknown");
           return Response.json({ ok: false, error: "monitor_cycle_failed" }, { status: 503 });
