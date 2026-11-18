@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { StatusDot } from "@/components/status-dot";
 import { UptimeSparkline } from "@/components/uptime-sparkline";
 import { SearchInput } from "@/components/app-shell";
-import { ArrowRight, Plus, ServerIcon, Bell, HeartPulse, Tv, AlertCircle, CreditCard, RadioTower, Activity, Wifi, WifiOff, ChevronRight } from "lucide-react";
+import { ArrowRight, Plus, ServerIcon, HeartPulse, Tv, AlertCircle, CreditCard, RadioTower, Activity, Wifi, WifiOff, ChevronRight } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useSubscription } from "@/hooks/use-subscription";
 import { effectiveAccessStatus, accessStatusLabel } from "@/lib/dns-state";
@@ -47,36 +47,6 @@ function Dashboard() {
     staleTime: 5_000,
     refetchInterval: 15_000,
     refetchOnWindowFocus: true,
-  });
-
-  const serverIds = useMemo(() => servers.map((s: any) => s.id), [servers]);
-
-  const { data: alerts = [] } = useQuery({
-    queryKey: ["dash-alerts", serverIds.join(",")],
-    enabled: serverIds.length > 0,
-    refetchInterval: 30_000,
-    queryFn: async () => {
-      const nameById = new Map(servers.map((s: any) => [s.id, s.name]));
-      const [dns, iptv, inc] = await Promise.all([
-        supabase.from("dns_alerts").select("id, title, detail, severity, created_at, server_id").in("server_id", serverIds).order("created_at", { ascending: false }).limit(8),
-        supabase.from("iptv_alerts").select("id, title, detail, severity, created_at, server_id").in("server_id", serverIds).order("created_at", { ascending: false }).limit(8),
-        supabase.from("incidents").select("id, started_at, ended_at, reason, server_id").eq("incident_type", "server").in("server_id", serverIds).order("started_at", { ascending: false }).limit(8),
-      ]);
-      const items = [
-        ...(dns.data ?? []).map((a: any) => ({ id: `dns-${a.id}`, kind: "DNS", title: a.title, detail: a.detail, at: a.created_at, severity: a.severity, server: nameById.get(a.server_id) })),
-        ...(iptv.data ?? []).map((a: any) => ({ id: `iptv-${a.id}`, kind: "IPTV", title: a.title, detail: a.detail, at: a.created_at, severity: a.severity, server: nameById.get(a.server_id) })),
-        ...(inc.data ?? []).map((a: any) => ({
-          id: `inc-${a.id}`,
-          kind: "Servidor",
-          title: a.ended_at ? "Servidor voltou ao normal" : "Servidor instável / offline",
-          detail: a.reason,
-          at: a.started_at,
-          severity: a.ended_at ? "info" : "critical",
-          server: nameById.get(a.server_id),
-        })),
-      ];
-      return items.sort((a, b) => +new Date(b.at) - +new Date(a.at)).slice(0, 6);
-    },
   });
 
   // realtime
@@ -206,7 +176,7 @@ function Dashboard() {
         ))}
       </section>
 
-      <div className="grid gap-4 lg:grid-cols-[1.2fr_1fr]">
+      <div className="grid gap-4">
         <Card className="relative overflow-hidden rounded-2xl border-border/70 p-5 sm:p-6">
           <div className="mb-4 flex items-center justify-between gap-3">
             <div><div className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Saúde da infraestrutura</div><p className="mt-1 text-xs text-muted-foreground">Indicadores consolidados da operação</p></div>
@@ -224,50 +194,7 @@ function Dashboard() {
             </div>
           )}
         </Card>
-        <Link to="/app/central" className="group block min-w-0">
-          <Card className="relative flex h-full flex-col justify-between overflow-hidden rounded-2xl border-blue-500/25 bg-gradient-to-br from-blue-500/10 via-card to-card p-5 transition-colors group-hover:border-blue-400/60 sm:p-6">
-            <div className="flex items-start justify-between gap-3">
-              <span className="flex h-12 w-12 items-center justify-center rounded-2xl border border-blue-500/20 bg-blue-500/15 text-blue-400"><RadioTower className="h-6 w-6" /></span>
-              <span className="rounded-full border border-blue-500/20 bg-blue-500/10 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-blue-400">Sentinel Edge 2.0</span>
-            </div>
-            <div className="mt-6">
-              <h2 className="text-xl font-extrabold tracking-tight">Inteligência multi-região</h2>
-              <p className="mt-2 text-sm leading-relaxed text-muted-foreground">Compare evidências da origem e do Cloudflare, investigue falhas de DNS e identifique quedas confirmadas.</p>
-              <div className="mt-5 inline-flex items-center gap-2 text-sm font-semibold text-blue-400">Abrir central de evidências <ArrowRight className="h-4 w-4" /></div>
-            </div>
-          </Card>
-        </Link>
       </div>
-
-      <Card className="p-5">
-        <div className="flex items-center justify-between mb-3">
-          <div className="flex items-center gap-2 text-xs uppercase tracking-wider text-muted-foreground">
-            <Bell className="h-3.5 w-3.5" /> Últimos alertas
-          </div>
-          <Link to="/app/alerts" className="text-xs text-primary hover:underline">Configurar alertas</Link>
-        </div>
-        {alerts.length === 0 ? (
-          <p className="text-sm text-muted-foreground">Nenhum alerta recente. Tudo tranquilo por aqui ✨</p>
-        ) : (
-          <ul className="divide-y divide-border/60">
-            {alerts.map((a: any) => (
-              <li key={a.id} className="py-2.5 flex items-start gap-3">
-                <span className={`mt-1.5 h-2 w-2 rounded-full shrink-0 ${a.severity === "critical" ? "bg-destructive" : a.severity === "warning" ? "bg-warning" : "bg-muted-foreground"}`} />
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <span className="text-sm font-medium truncate">{a.title}</span>
-                    <Badge variant="outline" className="text-[10px]">{a.kind}</Badge>
-                  </div>
-                  <p className="text-xs text-muted-foreground truncate">
-                    {a.server ? `${a.server} · ` : ""}{a.detail || "—"}
-                  </p>
-                </div>
-                <span className="text-[11px] text-muted-foreground whitespace-nowrap">{timeAgo(a.at)}</span>
-              </li>
-            ))}
-          </ul>
-        )}
-      </Card>
 
       <div className="flex items-center justify-between gap-3 flex-wrap">
         <div className="flex gap-1 rounded-md border border-border/60 bg-card/60 p-1 text-xs">
