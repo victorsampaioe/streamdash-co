@@ -1,5 +1,5 @@
 import { Link, Outlet, useNavigate, useRouterState } from "@tanstack/react-router";
-import { Activity, LayoutDashboard, ServerIcon, Bell, Users, LogOut, Sun, Moon, Search, Plus, CreditCard, Gift, Radio, ShieldAlert, Trophy, Lock, Menu, Send, Bot, Sparkles, BookOpen, Globe, ShoppingBag, Zap, Gauge, Braces, Smartphone, Wallet } from "lucide-react";
+import { Activity, LayoutDashboard, ServerIcon, Bell, Users, LogOut, Sun, Moon, Search, Plus, CreditCard, Gift, Radio, ShieldAlert, Trophy, Lock, Menu, Send, Bot, Sparkles, BookOpen, Globe, ShoppingBag, Zap, Gauge, Braces, Smartphone, Wallet, Film } from "lucide-react";
 import { SubscriptionBanner } from "@/components/subscription/subscription-banner";
 import { ConversionReminders } from "@/components/subscription/conversion-reminders";
 import { TelegramBanner } from "@/components/telegram-banner";
@@ -174,6 +174,7 @@ function useNavItems() {
     { to: "/app/stream-doctor", label: "Stream Guardian IA", icon: Sparkles },
     { to: "/app/radar", label: "Radar Brasil", icon: Radio },
     { to: "/app/inteligencia", label: "Inteligência de Conteúdo", icon: Sparkles },
+    { to: "/app/conteudo-servidor", label: "Conteúdo do Servidor", icon: Film },
 
     
     
