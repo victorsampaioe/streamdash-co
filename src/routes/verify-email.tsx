@@ -5,6 +5,7 @@ import { MailCheck, Activity } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { NewUserTelegramSupport } from "@/components/subscription/new-user-telegram-support";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
@@ -68,6 +69,7 @@ function VerifyEmail() {
             Já verificou? <Link to="/auth" className="text-primary hover:underline">Fazer login</Link>
           </p>
         </Card>
+        <div className="mt-4"><NewUserTelegramSupport compact/></div>
       </div>
     </div>
   );
