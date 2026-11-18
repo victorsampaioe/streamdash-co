@@ -2,7 +2,6 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { requirePaidFeature } from "@/lib/premium-feature-access";
-import {verifyFootballCrestUrl} from "@/lib/vitrine-football-crest-proof.server";
 
 /** Fetch only well-known image CDNs and the project's hosted brand storage.
  * This is not an unrestricted URL fetch/proxy. Never allow arbitrary hosts.
@@ -58,6 +57,7 @@ export const getVitrineFootballExportImages=createServerFn({method:"POST"})
   }).parse(input))
   .handler(async({data,context})=>{
     await requirePaidFeature(context);
+    const {verifyFootballCrestUrl}=await import("@/lib/vitrine-football-crest-proof.server");
     const proofKey=process.env.FTWB_API_KEY||"";
     const unique=[...new Set(data.urls)].filter(url=>
       isAllowedPosterImageUrl(url) ||
