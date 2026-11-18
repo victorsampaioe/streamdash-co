@@ -22,3 +22,18 @@ export const searchMyServerCatalog=createServerFn({method:"POST"})
   const {searchCatalogForOwner}=await import("@/lib/server-catalog-search.server");
   return searchCatalogForOwner(context.userId,data.serverId,data.query,data.kind);
  });
+
+
+/** On-demand only: fetch ONE selected series' seasons and episode labels. */
+export const loadMySeriesDetails=createServerFn({method:"POST"})
+ .middleware([requireActiveSubscription])
+ .inputValidator((input:{serverId:string;itemId:number;authorized:boolean})=>
+  z.object({
+   serverId:z.string().uuid(),
+   itemId:z.number().int().positive(),
+   authorized:z.literal(true),
+  }).parse(input))
+ .handler(async({context,data})=>{
+  const {getSeriesDetailsForOwner}=await import("@/lib/series-episodes.server");
+  return getSeriesDetailsForOwner(context.userId,data.serverId,data.itemId);
+ });
