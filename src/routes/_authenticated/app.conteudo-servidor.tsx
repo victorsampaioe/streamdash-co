@@ -1,7 +1,7 @@
 import {createFileRoute} from "@tanstack/react-router";
 import {useServerFn} from "@tanstack/react-start";
 import {useQuery} from "@tanstack/react-query";
-import {useState} from "react";
+import {useRef,useState} from "react";
 import {Film,Search,Server,Clapperboard,ShieldCheck,Clock3,Database,CheckCircle2,AlertCircle,Send,RefreshCcw} from "lucide-react";
 import {Card} from "@/components/ui/card";
 import {Button} from "@/components/ui/button";
@@ -37,7 +37,8 @@ function ContentSearchPage(){
  const [seriesData,setSeriesData]=useState<SeriesDetailsResult|null>(null);
  const [seriesBusy,setSeriesBusy]=useState<number|null>(null);
  const [seriesError,setSeriesError]=useState("");
- const clearSeries=()=>{setSeriesData(null);setSeriesError("");};
+ const seriesRequest=useRef(0);
+ const clearSeries=()=>{seriesRequest.current++;setSeriesData(null);setSeriesError("");setSeriesBusy(null);};
  const selected=servers.find(s=>s.id===serverId);
  const search=async()=>{
   if(!selected){toast.error("Selecione um servidor reconhecido.");return;}
@@ -52,14 +53,14 @@ function ContentSearchPage(){
  };
  const openSeries=async(itemId:number)=>{
   if(!selected||!allowSearch||!result?.items.some(i=>i.id===itemId&&i.kind==="series"))return;
-  clearSeries();setSeriesBusy(itemId);
+  clearSeries();const requestId=seriesRequest.current;setSeriesBusy(itemId);
   try{
    const details=await loadSeries({data:{serverId:selected.id,itemId,authorized:true}});
-   setSeriesData(details);
+   if(requestId===seriesRequest.current)setSeriesData(details);
   }catch(e){
    const message=e instanceof Error?e.message:"Não foi possível carregar os episódios desta série.";
-   setSeriesError(message);toast.error(message);
-  }finally{setSeriesBusy(null);}
+   if(requestId===seriesRequest.current){setSeriesError(message);toast.error(message);}
+  }finally{if(requestId===seriesRequest.current)setSeriesBusy(null);}
  };
  return <div className="mx-auto max-w-6xl space-y-6 pb-10">
   <section className="relative overflow-hidden rounded-3xl border border-blue-500/20 bg-gradient-to-br from-[#12376b] via-[#101e3e] to-[#111128] p-5 text-white sm:p-8">
