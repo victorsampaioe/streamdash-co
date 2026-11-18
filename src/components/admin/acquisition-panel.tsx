@@ -4,7 +4,7 @@ import {getAdminAcquisitionReport} from "@/lib/acquisition-report.functions";
 import {formatBRL} from "@/lib/payments";
 import {Card,CardContent} from "@/components/ui/card";
 import {
-  Activity,ArrowDown,ArrowRight,CheckCircle2,Clock3,Facebook,
+  Activity,CheckCircle2,Facebook,
   Info,Instagram,MousePointerClick,RefreshCw,ShieldCheck,
   Target,TrendingUp,Users,Wallet,
 } from "lucide-react";
