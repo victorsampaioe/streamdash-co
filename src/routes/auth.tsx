@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card } from "@/components/ui/card";
+import { NewUserTelegramSupport } from "@/components/subscription/new-user-telegram-support";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
 import { trackMetaCompleteRegistration } from "@/lib/meta-pixel";
@@ -272,7 +273,7 @@ function AuthPage() {
   </Card></AuthShell>;
 }
 
-function AuthShell({ children }: { children: React.ReactNode }) { return <main className="min-h-screen grid-bg flex items-center justify-center p-4"><div className="w-full max-w-md"><Link to="/" className="flex items-center gap-2 justify-center mb-8 text-foreground"><Activity className="h-6 w-6 text-primary" /><span className="font-bold text-xl">stream<span className="text-primary">monitor</span></span></Link>{children}</div></main>; }
+function AuthShell({ children }: { children: React.ReactNode }) { return <main className="min-h-screen grid-bg flex items-center justify-center p-4"><div className="w-full max-w-md"><Link to="/" className="flex items-center gap-2 justify-center mb-8 text-foreground"><Activity className="h-6 w-6 text-primary" /><span className="font-bold text-xl">stream<span className="text-primary">monitor</span></span></Link>{children}<div className="mt-4"><NewUserTelegramSupport compact/></div></div></main>; }
 function Field({ label, children }: { label: string; children: React.ReactNode }) { return <div className="space-y-2"><Label>{label}</Label>{children}</div>; }
 function PasswordField({ value, setValue, show, setShow, newAccount = false }: { value: string; setValue: (value: string) => void; show: boolean; setShow: (value: boolean) => void; newAccount?: boolean }) { return <Field label="Senha"><div className="relative"><Input required minLength={newAccount ? 8 : 6} type={show ? "text" : "password"} autoComplete={newAccount ? "new-password" : "current-password"} value={value} onChange={(event) => setValue(event.target.value)} className="pr-10" placeholder={newAccount ? "Mínimo de 8 caracteres" : "Sua senha"} /><Button type="button" variant="ghost" size="icon" aria-label={show ? "Ocultar senha" : "Mostrar senha"} onClick={() => setShow(!show)} className="absolute right-0 top-0"><span className="sr-only">{show ? "Ocultar senha" : "Mostrar senha"}</span>{show ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}</Button></div></Field>; }
 function StatusLine({ ok, good, bad }: { ok: boolean; good: string; bad: string }) { return <p className={ok ? "text-xs text-success" : "text-xs text-destructive"}>{ok ? `✓ ${good}` : `✕ ${bad}`}</p>; }
