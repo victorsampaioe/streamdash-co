@@ -569,20 +569,10 @@ export async function drawFootballPngFallback(data:FootballCanvasData):Promise<F
       loadTeamBadge(m.awayBadge||"",m.away,m.league)
     ])
   ]);
-  if(kind==="today"||kind==="grid"){
-    // Last-resort safety: if a source's image is corrupt, remove the complete
-    // fixture instead of drawing fake initials or an empty white circle.
-    const allowed:number[]=[];
-    rows.forEach((match,i)=>{
-      if(badges[i*2]&&badges[i*2+1])allowed.push(i);
-    });
-    if(!allowed.length)throw new Error("Não há confrontos com escudos ou bandeiras reais dos dois times.");
-    if(allowed.length!==rows.length){
-      const retainedBadges=allowed.flatMap(i=>[badges[i*2],badges[i*2+1]]);
-      rows=allowed.map(i=>rows[i]);
-      badges.splice(0,badges.length,...retainedBadges);
-    }
-  }
+  // A missing or blocked official image is not a reason to omit an actual
+  // fixture. Both classic and 2-column layouts already paint a neutral badge
+  // with team initials if loadTeamBadge returns null. This is visibly NOT an
+  // official shield and preserves the real teams, dates and card dimensions.
   // RESTORED: the original user-approved "EVENTOS DE HOJE" sports poster
   // design. Native logical 1080×1350, rendered sharply at 2160×2700.
   // Keep the approved classic cards and typography, but share the exact same
