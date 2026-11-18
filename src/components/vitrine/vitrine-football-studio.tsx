@@ -398,6 +398,7 @@ export function VitrineFootballStudio() {
           :todayLayout==="grid"
             ?"Modelo Grade de Jogos: até 10 partidas por arte em duas colunas fixas, escudos, horários, transmissões, logo e WhatsApp. PNG em 2160 × 2700."
             :"Modelo Clássico: até 4 confrontos por arte, com identidade Stream Monitor. PNG em 2160 × 2700."}</p>
+        {posterMode==="today"&&<p className="mt-2 text-xs leading-5 text-blue-300">Canais já confirmados são salvos automaticamente por jogo e data. Ao voltar à página, eles são recuperados sem uma nova pesquisa. Para consultar canais ainda pendentes, use “Atualizar eventos”.</p>}
         {!crestsReady&&sourceMatches.length>0&&<p className="mt-1 text-xs text-blue-300" role="status">Validando escudos reais dos dois times antes de montar as artes…</p>}
         {crestsReady&&selectedBadges.matchesWithMissingImages>0&&
           <p className="mt-1 text-xs text-amber-400" role="status">
