@@ -113,6 +113,9 @@ function AdminApplicationPartners(){
       <h3 className="flex items-center gap-2 text-sm font-bold"><ShieldCheck size={17} className="text-blue-400"/>API e monitoramento</h3>
       <p className="break-all text-xs text-muted-foreground">Endpoint: {partner.api_url||"Não informado"}</p>
       <p className="text-xs text-muted-foreground">Último estado: <strong>{partner.status}</strong> · Última leitura: {partner.last_check_at?new Date(partner.last_check_at).toLocaleString("pt-BR"):"nunca"}</p>
+      {(report.services as any[]).filter(x=>x.partner_id===partner.id).map(service=><div key={service.service_id} className="flex flex-wrap justify-between gap-2 rounded-lg border border-border/60 px-3 py-2 text-xs">
+       <span>{service.name}</span><strong className={service.status==="online"?"text-emerald-400":service.status==="degraded"?"text-amber-400":"text-red-400"}>{service.status}{service.uptime_30d!=null?" · "+service.uptime_30d+"%":""}</strong>
+      </div>)}
       <button disabled={!!busy} onClick={async()=>{
        setBusy("probe-"+partner.id);
        try{const result=await test({data:{partnerId:partner.id}});setProbe(p=>({...p,[partner.id]:result}));}
@@ -121,13 +124,18 @@ function AdminApplicationPartners(){
       }} className="w-full rounded-lg border border-blue-500/30 bg-blue-500/10 px-3 py-2 text-sm font-bold text-blue-400">
        {busy==="probe-"+partner.id?"Verificando…":"Testar API (sem enviar alertas)"}
       </button>
-      {currentProbe&&<p className="rounded-lg border border-border/70 bg-background/50 p-3 text-xs leading-6">Teste: <strong>{currentProbe.status}</strong> · HTTP {currentProbe.httpStatus??"—"} · {currentProbe.latencyMs} ms. {currentProbe.evidence}</p>}
+      {currentProbe&&<div className="space-y-1 rounded-lg border border-border/70 bg-background/50 p-3 text-xs leading-6">
+       <p>Teste: <strong>{currentProbe.status}</strong> · HTTP {currentProbe.httpStatus??"—"} · {currentProbe.latencyMs} ms. {currentProbe.evidence}</p>
+       {currentProbe.components?.map((svc:any)=><p key={svc.id}>• {svc.name}: {svc.status}{svc.uptime30d!=null?" · "+svc.uptime30d+"% (30d)":""}</p>)}
+       {currentProbe.stability30d!=null&&<p>Estabilidade declarada pelo fornecedor: {currentProbe.stability30d}% · Incidentes: {currentProbe.incidents30d??"—"}</p>}
+      </div>}
       <label className="block space-y-1 text-xs font-semibold">Formato validado da API
        <select value={partner.api_kind} disabled={!!busy} onChange={e=>void change({apiKind:e.target.value,monitorEnabled:false,broadcastEnabled:false})}
         className="mt-1 w-full rounded-lg border border-border bg-background p-2.5 text-sm">
         <option value="unverified">Ainda não verificado</option>
         <option value="statuspage_v2">Statuspage JSON (status.indicator)</option>
         <option value="simple_status">JSON simples (status: online/offline)</option>
+        <option value="rx_purple">RX Purple — API de serviços oficial</option>
        </select>
       </label>
       <label className="flex items-center justify-between gap-3 rounded-lg border border-border/70 p-3 text-xs font-medium">
