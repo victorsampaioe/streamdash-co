@@ -162,6 +162,22 @@ export async function syncMpPayment(paymentId: string | number, expectedPaymentI
           notifyError instanceof Error?notifyError.name:"unknown");
       }
     }
+    // All first-time approval paths arrive here: provider webhook, customer
+    // status polling, Telegram PIX and background reconciliation. Enqueue
+    // the admin receipt here, NOT only from the Mercado Pago webhook.
+    if(finalized?.[0]?.applied===true){
+      try{
+        const {enqueueAdminTelegramPaymentApproved}=await import("./admin-payment-telegram.server");
+        const notice=await enqueueAdminTelegramPaymentApproved(row.id);
+        if(notice.reason==="admin_chat_not_configured")
+          console.error("[mercadopago] admin Telegram chat not configured");
+      }catch(notifyError){
+        // A failed Telegram queue must never roll back a verified payment.
+        // The monitored Telegram cycle independently reconciles these.
+        console.error("[mercadopago] admin Telegram queue failed",
+          notifyError instanceof Error?notifyError.message:"unknown");
+      }
+    }
     return {
       paymentId: row.id,
       status,
