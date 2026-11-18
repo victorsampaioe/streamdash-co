@@ -23,27 +23,82 @@ export function isAllowedPosterImageUrl(raw:string):boolean {
       (host.endsWith(".supabase.co") && host.split(".").length===3);
   }catch{return false;}
 }
-const MAX_ASSET_BYTES=1_100_000;
-const allowedMimes=new Set(["image/png","image/jpeg","image/webp","image/gif"]);
+// One source crest can be 2 MB, but the browser receives a 192px
+// downscaled version after loading. Keep strict per-image/network limits.
+const MAX_ASSET_BYTES=2_000_000;
 const memory=new Map<string,{expires:number,data:string}>();
+function detectImageMime(data:Buffer):string{
+  if(data.length>=8&&data.subarray(0,8).equals(Buffer.from([137,80,78,71,13,10,26,10])))return "image/png";
+  if(data.length>=3&&data[0]===255&&data[1]===216&&data[2]===255)return "image/jpeg";
+  if(data.length>=12&&data.toString("ascii",0,4)==="RIFF"&&data.toString("ascii",8,12)==="WEBP")return "image/webp";
+  if(data.length>=6&&/^GIF8[79]a$/.test(data.toString("ascii",0,6)))return "image/gif";
+  if(data.length>=12&&data.toString("ascii",4,12).startsWith("ftypavif"))return "image/avif";
+  const sample=data.subarray(0,500).toString("utf8").trimStart();
+  if(/^(?:<\\?xml[^>]*>\\s*)?<svg[\\s>]/i.test(sample)&&
+     !/<(?:script|foreignObject|iframe|object|embed)\\b/i.test(data.toString("utf8"))&&
+     !/\\bon[a-z]+\\s*=|javascript:|@import|url\\s*\\(\\s*['"]?https?:|<image[^>]+href\\s*=\\s*['"]https?:/i.test(data.toString("utf8")))
+    return "image/svg+xml";
+  return "";
+}
+/** Strict bounded fetch of actual club emblem bytes. We follow only a
+ * small number of redirects to other public HTTPS image hosts.
+ * FTWB credentials are attached exclusively to FTWB's own hostname.
+ */
+async function requestBadgeImage(initial:string):Promise<Response|null>{
+  let current=initial;
+  const {isSafeFootballCrestUrl}=await import("@/lib/vitrine-football-crest-proof.server");
+  for(let redirects=0;redirects<=2;redirects++){
+    if(!isSafeFootballCrestUrl(current))return null;
+    const host=new URL(current).hostname.toLowerCase();
+    const headers:Record<string,string>={
+      Accept:"image/png,image/jpeg,image/webp,image/gif,image/avif,image/svg+xml",
+    };
+    if(host==="ftwb.notiffly.com.br"&&process.env.FTWB_API_KEY)
+      headers["x-api-key"]=process.env.FTWB_API_KEY;
+    const response=await fetch(current,{
+      headers,redirect:"manual",signal:AbortSignal.timeout(8500),cache:"no-store"
+    });
+    if(response.status>=300&&response.status<400){
+      const location=response.headers.get("location");
+      if(!location)return null;
+      const target=new URL(location,current).toString();
+      if(!isSafeFootballCrestUrl(target))return null;
+      current=target;
+      continue;
+    }
+    return response;
+  }
+  return null;
+}
 async function inlineUrl(url:string):Promise<string|null>{
   const cached=memory.get(url);
   if(cached && cached.expires>Date.now())return cached.data;
   try{
-    const response=await fetch(url,{
-      headers:{Accept:"image/png,image/jpeg,image/webp,image/gif"},
-      redirect:"error",signal:AbortSignal.timeout(6500),cache:"no-store"
-    });
-    if(!response.ok)return null;
-    const mime=(response.headers.get("content-type")||"").split(";")[0].trim().toLowerCase();
-    if(!allowedMimes.has(mime))return null;
+    const response=await requestBadgeImage(url);
+    if(!response?.ok)return null;
     const reported=Number(response.headers.get("content-length")||0);
     if(reported>MAX_ASSET_BYTES)return null;
-    const bytes=await response.arrayBuffer();
-    if(bytes.byteLength<30||bytes.byteLength>MAX_ASSET_BYTES)return null;
-    const data="data:"+mime+";base64,"+Buffer.from(bytes).toString("base64");
+    // Do not allocate an unbounded response when content-length is omitted.
+    const reader=response.body?.getReader();
+    if(!reader)return null;
+    const parts:Uint8Array[]=[];
+    let size=0;
+    try{
+      while(true){
+        const {done,value}=await reader.read();
+        if(done)break;
+        size+=value.byteLength;
+        if(size>MAX_ASSET_BYTES){await reader.cancel();return null;}
+        parts.push(value);
+      }
+    }finally{reader.releaseLock();}
+    if(size<30)return null;
+    const bytes=Buffer.concat(parts.map(part=>Buffer.from(part)),size);
+    const mime=detectImageMime(bytes);
+    if(!mime)return null;
+    const data="data:"+mime+";base64,"+bytes.toString("base64");
     memory.set(url,{expires:Date.now()+15*60_000,data});
-    if(memory.size>90)memory.delete(memory.keys().next().value!);
+    if(memory.size>160)memory.delete(memory.keys().next().value!);
     return data;
   }catch{return null;}
 }
