@@ -113,6 +113,8 @@ type StatsRow = {
   total_users: number;
   new_users_7d: number;
   new_users_30d: number;
+  signups_today: number;
+  new_paid_today: number;
   trial_active: number;
   paid_active: number;
   expired: number;
@@ -329,6 +331,26 @@ function AdminPage() {
         </div>
       </section>
 
+
+      <section aria-label="Resultados de hoje" className="space-y-3">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div>
+            <h2 className="text-lg font-extrabold tracking-tight">Resultados de hoje</h2>
+            <p className="text-xs text-muted-foreground">Contagem do Stream Monitor · dia no horário de Fortaleza (CE)</p>
+          </div>
+          <span className="text-[11px] text-muted-foreground">Atualização automática a cada 30 segundos</span>
+        </div>
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <Kpi icon={UserPlus} label="Cadastros hoje" value={s?.signups_today} tone="primary"
+            sub="Novas contas criadas hoje, de qualquer origem" />
+          <Kpi icon={BadgeCheck} label="Novos assinantes hoje" value={s?.new_paid_today} tone="success"
+            sub="Primeiro pagamento de assinatura aprovado hoje · sem renovações nem créditos" />
+        </div>
+        {statsQ.isError && <p className="text-sm text-destructive">Não foi possível carregar os indicadores de hoje. Atualize o painel para tentar novamente.</p>}
+        <p className="text-xs leading-5 text-muted-foreground">
+          Os números vêm dos cadastros e pagamentos confirmados no site. Não representam somente conversões atribuídas ao Facebook ou Instagram.
+        </p>
+      </section>
 
       <div className="sm-workspace-grid">
         <Kpi icon={Users} label="Usuários totais" value={s?.total_users} tone="primary" sub={s ? `+${s.new_users_7d} nos últimos 7 dias` : undefined} />
