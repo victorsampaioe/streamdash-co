@@ -124,7 +124,24 @@ function AuthPage() {
 
   async function handleSignIn(event: React.FormEvent) {
     event.preventDefault(); setLoading(true);
-    try { await signIn(); void trackPosthogEvent("sm_login_completed"); toast.success("Bem-vindo de volta"); navigate({ to: safeRedirect, replace: true }); }
+    try {
+      await signIn();
+      void trackPosthogEvent("sm_login_completed");
+      toast.success("Bem-vindo de volta");
+      let destination=safeRedirect;
+      if(safeRedirect==="/app"){
+        const {data:{user}}=await supabase.auth.getUser();
+        if(user){
+          const [membership,roles]=await Promise.all([
+            supabase.from("app_partner_members" as any).select("partner_id").eq("user_id",user.id).limit(1),
+            supabase.from("user_roles").select("role").eq("user_id",user.id)
+          ]);
+          const alsoManagesService=(roles.data||[]).some(r=>["admin","reseller","sub_reseller"].includes(r.role));
+          if(membership.data?.length&&!alsoManagesService)destination="/app/parceiro-aplicativo";
+        }
+      }
+      navigate({to:destination,replace:true});
+    }
     catch (error) { toast.error(error instanceof Error ? error.message : "Não conseguimos entrar agora."); }
     finally { setLoading(false); }
   }
