@@ -13,6 +13,7 @@ export interface SignupInput {
   phone?: unknown;
   password?: unknown;
   referralCode?: unknown;
+  partnerSlug?: unknown;
   turnstileToken?: unknown;
   /** honeypot */
   company_website?: unknown;
@@ -169,6 +170,22 @@ export async function handleSignup(input: SignupInput, headers: Headers): Promis
     else sec.log("referral code ignored (not found)");
   }
 
+  // Partner invitations never reuse the ordinary 30% referral code.
+  // Validate against the server-side partner registry, not browser metadata.
+  let appPartnerId:string|null=null;
+  const rawPartnerSlug=str(input.partnerSlug,48).toLowerCase().trim();
+  if(rawPartnerSlug && /^[a-z0-9][a-z0-9-]{1,47}$/.test(rawPartnerSlug)){
+    const {data:appPartner,error:partnerLookupError}=await (supabaseAdmin as any)
+      .from("app_partners").select("id")
+      .eq("slug",rawPartnerSlug).eq("partnership_status","active").maybeSingle();
+    if(partnerLookupError){
+      await sec.closeAttempt(attemptId,"rejected","signup_failed",null,"internal_failure",
+        "partner_link_lookup_failed");
+      return {status:503,body:{error:"Não foi possível validar o convite do parceiro. Tente novamente."}};
+    }
+    if(appPartner){appPartnerId=appPartner.id;referralCode=null;}
+  }
+
   // 8. Criação da conta com e-mail de confirmação
   const publicClient = createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_PUBLISHABLE_KEY!, {
     auth: { persistSession: false, autoRefreshToken: false },
@@ -244,6 +261,18 @@ export async function handleSignup(input: SignupInput, headers: Headers): Promis
       return {status:503,body:{error:"Sua conta foi criada, mas o perfil ainda está sendo preparado. Tente entrar em alguns instantes.",code:"profile_pending"}};
     }
   }
+  // Bind the verified partner BEFORE payment can occur; one user can
+  // never be assigned to two partner campaigns.
+  let appPartnerApplied=false;
+  if(appPartnerId){
+    const {error:partnerBindError}=await (supabaseAdmin as any)
+      .from("app_partner_referrals").insert({partner_id:appPartnerId,referred_user_id:userId});
+    if(partnerBindError){
+      sec.log("partner_referral_link_failed",{reason:partnerBindError.code||"db_error"});
+    }else{
+      appPartnerApplied=true;
+    }
+  }
   // Acquisition is a separate restricted record. Failures do not undo signup.
   try{
     const {recordRegistrationAttribution}=await import("./customer-acquisition.server");
@@ -283,6 +312,7 @@ export async function handleSignup(input: SignupInput, headers: Headers): Promis
       ok: true,
       needsEmailConfirmation: !signUpData.session,
       referralApplied: !!referralCode,
+      appPartnerApplied,
       email,
       username,
       registrationEventId:userId,
