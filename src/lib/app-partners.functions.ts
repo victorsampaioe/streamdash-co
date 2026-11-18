@@ -3,10 +3,10 @@ import {requireSupabaseAuth} from "@/integrations/supabase/auth-middleware";
 
 type PartnerInput={slug:string};
 type AdminPartnerInput={partnerId:string};
-type PartnerUpdate={partnerId:string;name?:string;accentColor?:string;apiKind?:"unverified"|"statuspage_v2"|"simple_status";monitorEnabled?:boolean;broadcastEnabled?:boolean;commissionRateBps?:number;renewals?:boolean};
+type PartnerUpdate={partnerId:string;name?:string;accentColor?:string;apiKind?:"unverified"|"statuspage_v2"|"simple_status"|"rx_purple";monitorEnabled?:boolean;broadcastEnabled?:boolean;commissionRateBps?:number;renewals?:boolean};
 const db=async()=> (await import("@/integrations/supabase/client.server")).supabaseAdmin as any;
 const cleanSlug=(s:string)=>/^[a-z0-9][a-z0-9-]{1,47}$/.test(String(s||""))?s:"";
-const moneyFields="id,slug,name,logo_url,accent_color,website_url,api_url,api_kind,partnership_status,monitor_enabled,broadcast_enabled,status,last_check_at,last_healthy_at,last_error,commission_rate_bps,commission_on_renewals";
+const moneyFields="id,slug,name,logo_url,accent_color,website_url,api_url,api_kind,partnership_status,monitor_enabled,broadcast_enabled,status,last_check_at,last_healthy_at,last_error,stability_30d,incidents_30d,provider_updated_at,commission_rate_bps,commission_on_renewals";
 
 async function verifyAdmin(userId:string){
  const client=await db();
@@ -34,13 +34,21 @@ export const getPublicPartner=createServerFn({method:"GET"})
 export const getPublicAppStatuses=createServerFn({method:"GET"}).handler(async()=>{
  const client=await db();
  const {data,error}=await client.from("app_partners")
-  .select("slug,name,logo_url,status,last_check_at,api_kind,monitor_enabled")
+  .select("id,slug,name,logo_url,status,last_check_at,api_kind,monitor_enabled,stability_30d,incidents_30d,provider_updated_at")
   .eq("partnership_status","active").order("name");
  if(error)throw new Error("Status indisponível");
+ const ids=(data||[]).map((x:any)=>x.id);
+ const {data:services,error:componentsError}=ids.length?
+  await client.from("app_partner_service_statuses").select("partner_id,service_id,name,status,uptime_30d,checked_at").in("partner_id",ids):
+  {data:[],error:null};
+ if(componentsError)throw new Error("Serviços indisponíveis");
  return (data||[]).map((p:any)=>({
   slug:p.slug,name:p.name,logoUrl:p.logo_url,
   status:p.monitor_enabled&&p.api_kind!=="unverified"?p.status:"unverified",
-  lastCheckAt:p.last_check_at
+  lastCheckAt:p.last_check_at,
+  stability30d:p.stability_30d,incidents30d:p.incidents_30d,providerUpdatedAt:p.provider_updated_at,
+  services:(services||[]).filter((s:any)=>s.partner_id===p.id)
+    .map((s:any)=>({id:s.service_id,name:s.name,status:s.status,uptime30d:s.uptime_30d,checkedAt:s.checked_at}))
  }));
 });
 
@@ -53,14 +61,15 @@ export const getAppPartnerDashboard=createServerFn({method:"GET"})
   if(memErr)throw new Error("Não foi possível verificar o acesso do parceiro");
   if(!members?.length)return {partner:null};
   const partnerId=members[0].partner_id;
-  const [partnerResult,referralsResult,commissionsResult,payoutsResult,checksResult]=await Promise.all([
+  const [partnerResult,referralsResult,commissionsResult,payoutsResult,checksResult,servicesResult]=await Promise.all([
    client.from("app_partners").select(moneyFields).eq("id",partnerId).single(),
    client.from("app_partner_referrals").select("id,created_at").eq("partner_id",partnerId).order("created_at",{ascending:false}).limit(5000),
    client.from("app_partner_commissions").select("id,amount_cents,paid_amount_cents,stream_monitor_cents,created_at,reversed_at").eq("partner_id",partnerId).order("created_at",{ascending:false}).limit(5000),
    client.from("app_partner_payout_requests").select("id,amount_cents,status,requested_at,paid_at").eq("partner_id",partnerId).order("requested_at",{ascending:false}).limit(5000),
-   client.from("app_partner_health_checks").select("checked_at,status,evidence,latency_ms").eq("partner_id",partnerId).order("checked_at",{ascending:false}).limit(20)
+   client.from("app_partner_health_checks").select("checked_at,status,evidence,latency_ms").eq("partner_id",partnerId).order("checked_at",{ascending:false}).limit(20),
+   client.from("app_partner_service_statuses").select("service_id,name,status,uptime_30d,checked_at").eq("partner_id",partnerId)
   ]);
-  for(const r of [partnerResult,referralsResult,commissionsResult,payoutsResult,checksResult])safeErr(r);
+  for(const r of [partnerResult,referralsResult,commissionsResult,payoutsResult,checksResult,servicesResult])safeErr(r);
   const partner=partnerResult.data;
   const referrals=referralsResult.data??[];
   const commissions=commissionsResult.data??[];
@@ -81,7 +90,7 @@ export const getAppPartnerDashboard=createServerFn({method:"GET"})
     id:c.id,at:c.created_at,orderCents:c.paid_amount_cents,commissionCents:c.amount_cents,reversed:!!c.reversed_at
    })),
    payouts:payouts.slice(0,30),
-   checks:checksResult.data??[],
+   checks:checksResult.data??[],services:servicesResult.data??[],
    truncated:referrals.length===5000||commissions.length===5000||payouts.length===5000
   };
  });
@@ -105,16 +114,17 @@ export const getAdminAppPartners=createServerFn({method:"GET"})
  .middleware([requireSupabaseAuth]).handler(async({context})=>{
   await verifyAdmin(context.userId);
   const client=await db();
-  const [partners,referrals,commissions,payouts,members]=await Promise.all([
+  const [partners,referrals,commissions,payouts,members,services]=await Promise.all([
    client.from("app_partners").select(moneyFields).order("created_at",{ascending:false}),
    client.from("app_partner_referrals").select("partner_id,created_at").limit(5000),
    client.from("app_partner_commissions").select("partner_id,amount_cents,reversed_at,paid_amount_cents").limit(5000),
    client.from("app_partner_payout_requests").select("id,partner_id,amount_cents,status,requested_at,pix_key,requested_by,payment_reference,paid_at").order("requested_at",{ascending:false}).limit(1000),
-   client.from("app_partner_members").select("partner_id,user_id,role").limit(1000)
+   client.from("app_partner_members").select("partner_id,user_id,role").limit(1000),
+   client.from("app_partner_service_statuses").select("partner_id,service_id,name,status,uptime_30d,checked_at").limit(1000)
   ]);
-  for(const r of [partners,referrals,commissions,payouts,members])safeErr(r);
+  for(const r of [partners,referrals,commissions,payouts,members,services])safeErr(r);
   return {partners:partners.data??[],referrals:referrals.data??[],
-   commissions:commissions.data??[],payouts:payouts.data??[],members:members.data??[]};
+   commissions:commissions.data??[],payouts:payouts.data??[],members:members.data??[],services:services.data??[]};
  });
 
 export const createAppPartner=createServerFn({method:"POST"})
