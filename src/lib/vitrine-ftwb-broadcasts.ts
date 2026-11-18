@@ -52,11 +52,10 @@ export function extractFtwbBroadcasts(record:unknown):string[]{
      return;
    }
    const row=asRow(value)!;
-   const direct=fieldValues(row,names);
-   if(direct.length)direct.forEach(x=>visit(x,depth+1));
-   else{
-     for(const x of fieldValues(row,outer))visit(x,depth+1);
-   }
+   // Mixed structures can include both a primary channel and an array of
+   // additional networks. Read all explicitly labeled broadcaster fields.
+   for(const item of [...fieldValues(row,names),...fieldValues(row,outer)])
+     visit(item,depth+1);
  };
  const scan=(value:unknown,depth=0):void=>{
    if(depth>3||!asRow(value))return;
