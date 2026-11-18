@@ -1,6 +1,6 @@
 import { describe,expect,it } from "vitest";
 import type { FootballMatch } from "./vitrine-football.functions";
-import { onlyMatchesWithRealBadges,verifiedTeamBadge } from "./vitrine-football-verified-badges";
+import { onlyMatchesWithRealBadges,resolveMatchesWithAvailableBadges,verifiedTeamBadge } from "./vitrine-football-verified-badges";
 
 const item=(id:string,home:string,away:string,league="Brasileirão Série A")=>({
  id,home,away,league,day:"2026-11-17",time:"18:00",
@@ -54,4 +54,31 @@ describe("Modelos 1 e 2: apenas imagens reais e verificadas",()=>{
   expect(Math.ceil(result.visible.length/4)).toBe(2);
   expect(Math.ceil(result.visible.length/12)).toBe(1);
  });
+ it("preserva todos os jogos retornados pela FTWB, com escudos oficiais quando disponíveis",()=>{
+  const a=item("a","Flamengo","Palmeiras");
+  const b=item("b","Corinthians","Grêmio");
+  const c=item("c","Santos","Bahia");
+  const actual={
+    [a.homeBadge]:inlined,[a.awayBadge]:inlined,
+    [c.homeBadge]:inlined,
+  };
+  const result=resolveMatchesWithAvailableBadges([a,b,c],actual);
+  expect(result.visible.map(x=>x.id)).toEqual(["a","b","c"]);
+  expect(result.visible[0].homeBadge).toBe(inlined);
+  expect(result.visible[0].awayBadge).toBe(inlined);
+  expect(result.visible[1].homeBadge).toBe("");
+  expect(result.visible[1].awayBadge).toBe("");
+  expect(result.visible[2].homeBadge).toBe(inlined);
+  expect(result.matchesWithMissingImages).toBe(2);
+  expect(result.missingImages).toBe(3);
+ });
+ it("aceita as imagens inline enviadas pela própria FTWB sem proxy extra",()=>{
+  const live=item("inline","São Paulo","Fortaleza");
+  live.homeBadge=inlined;live.awayBadge=inlined;
+  const result=resolveMatchesWithAvailableBadges([live],{});
+  expect(result.visible[0].homeBadge).toBe(inlined);
+  expect(result.visible[0].awayBadge).toBe(inlined);
+  expect(result.missingImages).toBe(0);
+ });
+
 });
