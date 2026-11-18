@@ -39,15 +39,16 @@ function PublicAppStatuses(){
      const x=info[(app.status as keyof typeof info)]||info.unknown;
      const Icon=x.icon;
      return <div key={app.slug} className="space-y-3 rounded-2xl border border-blue-400/15 bg-[#121f37] p-5">
-      <div className="flex items-center gap-3">
-       <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-blue-500/10 text-blue-300">
-        {app.logoUrl?<img src={app.logoUrl} className="h-full w-full object-contain" alt=""/>:<Smartphone size={23}/>}
+      <div className="flex flex-wrap items-center gap-3">
+       <div className="flex h-[82px] w-[126px] shrink-0 items-center justify-center overflow-hidden rounded-2xl border border-violet-300/20 bg-[#0b1024] p-1.5 text-blue-300 sm:h-[94px] sm:w-[142px]">
+        {app.logoUrl?<img src={app.logoUrl} width={500} height={300} loading="lazy" className="h-full w-full object-contain" alt={"Logo oficial "+app.name}/>:<Smartphone size={31}/>}
        </div>
-       <div><h2 className="font-bold">{app.name}</h2>
-        <p className={"flex items-center gap-1 text-xs font-semibold "+x.color}><Icon size={13}/>{x.label}</p>
+       <div className="min-w-0 flex-1"><h2 className="text-lg font-extrabold">{app.name}</h2>
+        <p className={"mt-1 flex items-center gap-1.5 text-xs font-semibold "+x.color}><Icon size={14}/>{x.label}</p>
+        <span className="mt-2 inline-flex rounded-md border border-blue-400/20 bg-blue-500/10 px-2 py-1 text-[10px] font-semibold text-blue-200">Parceiro integrado</span>
        </div>
       </div>
-      <p className="text-xs leading-6 text-slate-300">{x.text}</p>
+            <p className="text-xs leading-6 text-slate-300">{x.text}</p>
       {app.stability30d!==null&&<div className="flex flex-wrap gap-2 text-[11px]">
        <span className="rounded-lg border border-blue-400/20 bg-blue-500/10 px-2.5 py-1.5">Estabilidade informada · 30 dias: <b>{Number(app.stability30d).toFixed(1)}%</b></span>
        {app.incidents30d!==null&&<span className="rounded-lg border border-blue-400/20 bg-blue-500/10 px-2.5 py-1.5">Incidentes informados: <b>{app.incidents30d}</b></span>}
