@@ -128,7 +128,7 @@ function FixtureRibbon({ match, badgeImages, broadcast, accent, width, height }:
       fontSize:short?13:16,fontWeight:850,color:"#263349"
     }}><span style={{whiteSpace:"normal",overflowWrap:"break-word",
       lineHeight:1.1,textAlign:"center"}}>
-      {broadcast.trim()||"Canal a confirmar"}
+      {broadcast.trim()||"Sem transmissão"}
     </span></div>
     <div className="absolute flex items-center justify-center text-white" style={{
       right:0,bottom:0,width:"38%",height:short?37:51,
