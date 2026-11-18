@@ -51,6 +51,7 @@ export const COMMAND_HELP =
   `/filmes — últimos filmes adicionados\n` +
   `/series — últimas séries adicionadas\n` +
   `/canais — últimos canais adicionados\n` +
+  `/conteudo Nome — buscar filme, série ou canal em um dos seus servidores\n` +
   `/ranking — sua posição no ranking IPTV\n` +
   `/resumo — enviar agora o relatório inteligente completo\n` +
   `/fatura — consultar vencimento, status e valores\n` +
