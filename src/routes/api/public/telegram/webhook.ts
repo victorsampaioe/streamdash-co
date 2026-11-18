@@ -72,7 +72,8 @@ async function sendPixCodeOnly(token:string,chatId:number|string,code:string) {
   }
 }
 
-async function send(token: string, chatId: number | string, text: string, withBillingKeyboard=false) {
+async function send(token: string, chatId: number | string, text: string, withBillingKeyboard=false,
+  optionalKeyboard?:{inline_keyboard:Array<Array<{text:string;callback_data:string}>>}) {
   const pixMatch=PIX_CODE_PATTERN.exec(text);
   if(pixMatch){
     const code=decodePixCode(pixMatch[1]);
@@ -91,7 +92,7 @@ async function send(token: string, chatId: number | string, text: string, withBi
   const r = await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ chat_id: chatId, text, parse_mode: "HTML", disable_web_page_preview: true, ...(withBillingKeyboard?{reply_markup:text.includes("Escolha um pacote de créditos")?creditKeyboard:billingKeyboard}:{}) }),
+    body: JSON.stringify({ chat_id: chatId, text, parse_mode: "HTML", disable_web_page_preview: true, ...(optionalKeyboard?{reply_markup:optionalKeyboard}:withBillingKeyboard?{reply_markup:text.includes("Escolha um pacote de créditos")?creditKeyboard:billingKeyboard}:{}) }),
   });
   if(!r.ok){
     // A malformed Telegram HTML response must not swallow a valid PIX code.
@@ -139,6 +140,21 @@ export const Route = createFileRoute("/api/public/telegram/webhook")({
             method:"POST",headers:{"Content-Type":"application/json"},
             body:JSON.stringify({callback_query_id:callback.id}),
           }).catch(()=>{});
+          if(/^c[sp]:[0-9a-f-]{36}:\\d{1,3}$/.test(String(callback.data||""))){
+            // Telegram callback buttons carry only session IDs and array indices.
+            // Always verify private-chat identity AND current server ownership.
+            if(isPrivate && String(callback.from?.id)===String(callbackChat)){
+              try{
+                const {handleCatalogBotCallback}=await import("@/lib/telegram-catalog-search.server");
+                const result=await handleCatalogBotCallback(callbackChat,String(callback.data));
+                await send(token,callbackChat,result.text,false,result.keyboard);
+              }catch(e){
+                console.error("[telegram-catalog] callback failed",e instanceof Error?e.name:"unknown");
+                await send(token,callbackChat,"⚠️ Pesquisa indisponível. Tente /conteudo novamente.");
+              }
+            }
+            return Response.json({ok:true});
+          }
           if(isPrivate && command){
             const {handleTelegramCommand}=await import("@/lib/telegram-commands.server");
             try{
@@ -154,13 +170,14 @@ export const Route = createFileRoute("/api/public/telegram/webhook")({
         const chatId = msg?.chat?.id;
         if (!chatId) return Response.json({ ok: true, ignored: true });
 
-        const text = String(msg?.text ?? "").trim().toLowerCase();
+        const originalText=String(msg?.text??"").trim();
+        const text=originalText.toLowerCase();
         const first = String(msg?.from?.first_name ?? "").trim();
         // Personal payments and invoice details are never handled inside
         // Telegram groups, supergroups or public channels.
-        if(msg?.chat?.type!=="private" && /^\/(?:pix|fatura)(?:\s|@|$)/.test(text)){
+        if(msg?.chat?.type!=="private" && /^\/(?:pix|fatura|conteudo|pesquisar)(?:\s|@|$)/.test(text)){
           await send(token,chatId,
-            "🔒 <b>Fatura e Pix somente no privado.</b>\n\n"+
+            "🔒 <b>Fatura, Pix e busca de conteúdos somente no privado.</b>\n\n"+
             "Abra uma conversa direta com @MonitordeFluxoBot e envie /pix ou /fatura. "+
             "Não compartilhe dados de pagamento neste grupo.");
           return Response.json({ok:true,privateOnly:true});
@@ -185,6 +202,34 @@ export const Route = createFileRoute("/api/public/telegram/webhook")({
           return Response.json({ ok: true });
         }
 
+        // Interactive catalog search: /conteudo Título, /conteudo (prompt), then
+        // private free-text reply, followed by validated per-owner server buttons.
+        if(msg?.chat?.type==="private" && /^\\/(?:conteudo|pesquisar)(?:@\\w+)?(?:\\s|$)/i.test(originalText)){
+          try{
+            const {beginCatalogBotSearch}=await import("@/lib/telegram-catalog-search.server");
+            const title=originalText.replace(/^\\/(?:conteudo|pesquisar)(?:@\\w+)?\\s*/i,"");
+            const result=await beginCatalogBotSearch(chatId,title);
+            await send(token,chatId,result.text,false,result.keyboard);
+          }catch(e){
+            console.error("[telegram-catalog] search start failed",e instanceof Error?e.name:"unknown");
+            await send(token,chatId,"⚠️ Não foi possível iniciar a pesquisa agora. Tente novamente em instantes.");
+          }
+          return Response.json({ok:true});
+        }
+        if(msg?.chat?.type==="private" && originalText && !originalText.startsWith("/")){
+          try{
+            const {finishPendingCatalogBotSearch}=await import("@/lib/telegram-catalog-search.server");
+            const pending=await finishPendingCatalogBotSearch(chatId,originalText);
+            if(pending){
+              await send(token,chatId,pending.text,false,pending.keyboard);
+              return Response.json({ok:true});
+            }
+          }catch(e){
+            console.error("[telegram-catalog] pending query failed",e instanceof Error?e.name:"unknown");
+            await send(token,chatId,"⚠️ Falha na pesquisa. Envie /conteudo novamente.");
+            return Response.json({ok:true});
+          }
+        }
         const { handleTelegramCommand, COMMAND_HELP } = await import("@/lib/telegram-commands.server");
         let reply: string | null = null;
         try {
