@@ -20,7 +20,7 @@ import { readAttribution, readAttributionPlatform, readAttributionSource } from 
 import {trackAcquisitionPage} from "@/lib/acquisition-page";
 import {onConsentChange,readChoice} from "@/lib/consent";
 
-const searchSchema = z.object({ redirect: z.string().optional(), ref: z.string().regex(/^[A-Za-z0-9]{4,16}$/).optional(), tab: z.enum(["signin","signup"]).optional() }).partial();
+const searchSchema = z.object({ redirect: z.string().optional(), ref: z.string().regex(/^[A-Za-z0-9]{4,16}$/).optional(), partner: z.string().regex(/^[a-z0-9][a-z0-9-]{1,47}$/).optional(), tab: z.enum(["signin","signup"]).optional() }).partial();
 
 export const Route = createFileRoute("/auth")({
   validateSearch: searchSchema,
@@ -47,9 +47,9 @@ function generatePassword() {
 
 function AuthPage() {
   const navigate = useNavigate();
-  const { redirect, ref, tab: initialTab } = useSearch({ from: "/auth" });
+  const { redirect, ref, partner, tab: initialTab } = useSearch({ from: "/auth" });
   const safeRedirect = redirect && /^\/app(?:\/|$)/.test(redirect) ? redirect : "/app";
-  const [tab, setTab] = useState(ref || initialTab === "signup" ? "signup" : "signin");
+  const [tab, setTab] = useState(ref || partner || initialTab === "signup" ? "signup" : "signin");
   const [loading, setLoading] = useState(false);
   const [identity, setIdentity] = useState("");
   const [email, setEmail] = useState("");
@@ -155,7 +155,7 @@ function AuthPage() {
       const requestId = crypto.randomUUID();
       const response = await fetch("/api/public/signup", {
         method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ username: usernameCheck.value, email: emailCheck.value, password, referralCode: ref?.toUpperCase(), turnstileToken, company_website: honeypot, requestId, attribution: readAttribution() }),
+        body: JSON.stringify({ username: usernameCheck.value, email: emailCheck.value, password, referralCode: partner ? undefined : ref?.toUpperCase(), partnerSlug: partner, turnstileToken, company_website: honeypot, requestId, attribution: readAttribution() }),
       });
       const result = await response.json() as { ok?: boolean; error?: string; code?: string; registrationEventId?: string; needsEmailConfirmation?: boolean };
       if (!response.ok) {
