@@ -164,7 +164,10 @@ export function VitrineFootballStudio() {
       return [source,flag];
     });
   }).filter((url):url is string=>!!url&&/^https:\/\//i.test(url)))],[sourceMatches]);
-  const crestKey=JSON.stringify(crestUrls);
+  // Server authorizes the official crest URLs returned for THIS fixture date.
+  // There is no fixed team list or overall badge limit, only per-call batches.
+  const crestProofs:Record<string,string>=games.data?.crestProofs||{};
+  const crestKey=JSON.stringify({crestUrls,day,crestProofs});
   const [crestMedia,setCrestMedia]=useState<{
     key:string;ready:boolean;images:Record<string,string>;unavailable:string[]
   }>({key:"[]",ready:true,images:{},unavailable:[]});
@@ -180,14 +183,23 @@ export function VitrineFootballStudio() {
     void (async()=>{
       const chunks:string[][]=[];
       for(let i=0;i<crestUrls.length;i+=16)chunks.push(crestUrls.slice(i,i+16));
-      const results=await Promise.allSettled(chunks.map(urls=>
-        inlineAssetsRef.current({data:{urls}})
-      ));
-      if(cancelled)return;
+      // Load ONLY today's teams, three small 16-image requests at a time.
+      // Never truncate the league list and never run an unbounded burst of
+      // CDN downloads that can overwhelm iPhones or the fixture provider.
       const received:Record<string,string>={};
-      for(const result of results){
-        if(result.status==="fulfilled")Object.assign(received,result.value.images||{});
+      for(let i=0;i<chunks.length&&!cancelled;i+=3){
+        const results=await Promise.allSettled(chunks.slice(i,i+3).map(urls=>
+          inlineAssetsRef.current({data:{
+            urls,date:day,
+            crestProofs:Object.fromEntries(urls.filter(url=>crestProofs[url])
+              .map(url=>[url,crestProofs[url]])),
+          }})
+        ));
+        for(const result of results){
+          if(result.status==="fulfilled")Object.assign(received,result.value.images||{});
+        }
       }
+      if(cancelled)return;
       // Rasterise on the client only after the authenticated server has vetted
       // the URL and inlined its image. No cross-origin drawing or unknown hosts.
       const images:Record<string,string>={};
