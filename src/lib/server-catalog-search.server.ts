@@ -15,10 +15,6 @@ export type CatalogSearchResult={
  limited:boolean;
 };
 const ID=/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-const selectable=(s:any)=>!!s?.catalog_synced_at &&
-  !!s?.iptv_username && !!s?.iptv_password &&
-  (s.iptv_detected==="xtream"||s.iptv_detected==="both") &&
-  !s.monitoring_paused;
 function normQuery(query:string){
  const raw=String(query||"").trim().replace(/\s+/g," ");
  const key=titleKey(raw);
@@ -27,13 +23,11 @@ function normQuery(query:string){
 }
 export async function listCatalogServers(ownerId:string):Promise<SearchableServer[]>{
  if(!ID.test(ownerId)||!(await isServiceActive(ownerId)))return [];
- const {data,error}=await supabaseAdmin.from("servers")
-  .select("id,name,iptv_detected,iptv_username,iptv_password,catalog_synced_at,monitoring_paused")
-  .eq("owner_id",ownerId).not("catalog_synced_at","is",null)
-  .in("iptv_detected",["xtream","both"]).order("name").limit(300);
- if(error)throw new Error("Não foi possível carregar seus servidores.");
- return (data||[]).filter(selectable).map(s=>({
-  id:s.id,name:String(s.name).slice(0,95),catalogSyncedAt:String(s.catalog_synced_at)
+ const {data,error}=await (supabaseAdmin as any)
+  .rpc("get_searchable_catalog_servers",{_owner_id:ownerId});
+ if(error)throw new Error("Não foi possível verificar seus catálogos autorizados.");
+ return ((data||[]) as Array<{id:string;name:string;catalog_synced_at:string}>).map(s=>({
+  id:s.id,name:String(s.name).slice(0,95),catalogSyncedAt:s.catalog_synced_at
  }));
 }
 export async function searchCatalogForOwner(
