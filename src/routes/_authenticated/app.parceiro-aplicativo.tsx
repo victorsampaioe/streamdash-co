@@ -112,6 +112,19 @@ function AppPartnerPage(){
    <div className="flex items-center gap-2"><ShieldCheck className="text-blue-400"/><h2 className="text-lg font-bold">Status do seu aplicativo</h2></div>
    <p className="mt-2 text-sm text-muted-foreground">Situação: <strong>{badge(partner.status)}</strong>. A integração monitora apenas componentes informados pela API. Sem formato validado, nenhum incidente será anunciado como confirmado.</p>
    {partner.last_check_at&&<p className="mt-2 text-xs text-muted-foreground">Última verificação: {when(partner.last_check_at)}</p>}
+   {partner.stability_30d!==null&&<div className="mt-3 flex flex-wrap gap-2 text-xs">
+    <span className="rounded-lg border border-blue-500/20 bg-blue-500/5 p-2.5">Estabilidade informada (30 dias): <b>{partner.stability_30d}%</b></span>
+    {partner.incidents_30d!==null&&<span className="rounded-lg border border-blue-500/20 bg-blue-500/5 p-2.5">Incidentes informados: <b>{partner.incidents_30d}</b></span>}
+   </div>}
+   {info.services?.length>0&&<div className="mt-3 space-y-2 rounded-xl border border-border/70 p-3">
+    <h3 className="text-sm font-bold">Serviços monitorados</h3>
+    {info.services.map((service:any)=><div key={service.service_id} className="flex flex-wrap items-center justify-between gap-2 border-t border-border/50 py-2 text-xs">
+     <span>{service.name}</span>
+     <span className={service.status==="online"?"font-semibold text-emerald-400":service.status==="degraded"?"font-semibold text-amber-400":"font-semibold text-red-400"}>
+      {badge(service.status)} {service.uptime_30d!=null?" · "+service.uptime_30d+"% (30d)":""}
+     </span>
+    </div>)}
+   </div>}
    <div className="mt-4 space-y-2">{info.checks.map((x:any,i:number)=><div key={i} className="flex flex-wrap justify-between gap-2 border-b border-border/50 py-2 text-xs">
     <span>{badge(x.status)} · {x.evidence}</span><span className="text-muted-foreground">{when(x.checked_at)} · {x.latency_ms??"—"} ms</span>
    </div>)}</div>
