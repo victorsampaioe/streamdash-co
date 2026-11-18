@@ -880,8 +880,7 @@ function ResellerDetailsDialog({ reseller }: { reseller: AdminReseller }) {
   );
 }
 
-
-
+function VerifyCustomerPixButton({ userId }: { userId: string }) {
   const verify = useServerFn(verifyCustomerPix);
   const qc = useQueryClient();
   const [busy, setBusy] = useState(false);
