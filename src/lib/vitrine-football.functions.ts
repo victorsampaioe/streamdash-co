@@ -7,7 +7,6 @@ import { isFeaturedFootballFixture } from "@/lib/vitrine-football-competitions";
 import { extractFtwbBroadcasts } from "@/lib/vitrine-ftwb-broadcasts";
 import { isFinishedFootballStatus,matchFinalScore,preferFootballFixture } from "@/lib/vitrine-football-results";
 import { ftwbTeamCrest } from "@/lib/vitrine-ftwb-crests";
-import { signFootballCrestUrl } from "@/lib/vitrine-football-crest-proof.server";
 
 /**
  * FTWB is the primary fixture provider for subscribed users.
@@ -338,6 +337,7 @@ export const getVitrineFootballMatches = createServerFn({ method: "POST" })
     // Only the teams actually participating in the requested date receive
     // image capabilities. No hardcoded club list and no total crest limit;
     // the browser fetches these trusted URLs in small, reusable batches.
+    const {signFootballCrestUrl}=await import("@/lib/vitrine-football-crest-proof.server");
     const crestProofs:Record<string,string>={};
     for(const match of matches){
       for(const url of [match.homeBadge,match.awayBadge]){
