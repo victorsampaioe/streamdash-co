@@ -193,8 +193,12 @@ function ServerDetail() {
 
   async function handleRun() {
     try {
-      await runNow({ data: { serverId: id } });
-      toast.success("Verificação executada");
+      const result = await runNow({ data: { serverId: id } });
+      if (result && "provider" in result && result.provider === "cloudflare-regional-edge") {
+        toast.info("As checagens agora são feitas automaticamente pela Cloudflare. O status foi atualizado com os dados disponíveis.");
+      } else {
+        toast.success("Verificação executada");
+      }
       refetch(); refetchChecks();
     } catch (e: any) { toast.error(e?.message ?? "Falha"); }
   }
