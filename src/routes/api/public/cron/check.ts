@@ -85,7 +85,10 @@ async function run() {
   // A reconciliação percorre toda a base e pode fazer sondagens de rede.
   // Rodá-la a cada minuto sufoca a fila principal. Execute no máximo em
   // uma janela de 10 minutos; a checagem normal segue em todo ciclo.
-  const shouldSweep = Math.floor(Date.now() / 60_000) % 10 === 0;
+  // The former AWS-origin sweep must not overwrite fresh Cloudflare probes.
+  const { isCloudflareHttpPrimary } = await import("@/lib/cloudflare-http-mode.server");
+  const shouldSweep = !(await isCloudflareHttpPrimary())
+    && Math.floor(Date.now() / 60_000) % 10 === 0;
   const sweep = shouldSweep
     ? await safe(
         "sweep",
