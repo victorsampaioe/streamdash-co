@@ -34,7 +34,7 @@ async function recordInventory(env){
   let added=0;
   const now=new Date().toISOString();
   for(const file of manifest.files){
-    if(!["database_export_15_11_26","promo-arts"].includes(file.bucket))continue;
+    if(!["database_export_15_11_26","database_export_19_11_26","promo-arts"].includes(file.bucket))continue;
     if(!file.path||typeof file.path!=="string"||file.path.length>1024
       ||!Number.isSafeInteger(file.size)||file.size<=0||file.size>2_000_000_000)continue;
     const version=String(file.updated_at||"");
@@ -180,7 +180,7 @@ async function run(env){
   }
   if(!object){
     object=await env.BACKUP_STATE.prepare(
-      "SELECT * FROM backup_objects WHERE status IN ('pending','retry','uploading') ORDER BY CASE WHEN bucket='database_export_15_11_26' THEN 0 ELSE 1 END,source_size ASC LIMIT 1"
+      "SELECT * FROM backup_objects WHERE status IN ('pending','retry','uploading') ORDER BY CASE WHEN bucket='database_export_19_11_26' THEN 0 WHEN bucket='database_export_15_11_26' THEN 1 ELSE 2 END,source_size ASC LIMIT 1"
     ).first();
   }
   if(!object){
