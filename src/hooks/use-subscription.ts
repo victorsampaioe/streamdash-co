@@ -107,7 +107,7 @@ export function useSubscription() {
         supabase.rpc("has_role", { _user_id: userData.user.id, _role: "sub_reseller" })
       ]);
 
-      if (subError) console.error("Sub error:", subError);
+      // Never interpret a transient database/RLS failure as an unpaid customer.\n      // React Query keeps the last successful subscription while retrying.\n      if (subError) throw new Error("Falha temporária ao consultar assinatura: "+subError.message);
       if (profileError) console.error("Profile error:", profileError);
       if (rolesError) console.error("Roles error:", rolesError);
       const now = Date.now();
@@ -173,7 +173,6 @@ export function useSubscription() {
         profile: prof
       };
     },
-    staleTime: 5_000,
-    refetchOnWindowFocus: true,
+    staleTime: 30_000,\n    retry: 3,\n    retryDelay: (attempt) => Math.min(1000 * 2 ** attempt, 8000),\n    refetchOnWindowFocus: true,
   });
 }
