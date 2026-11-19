@@ -345,7 +345,7 @@ export const getVitrineFootballMatches = createServerFn({ method: "POST" })
       if(data.refreshTransmissions===true)return false;
       const saved=attemptsByFixture.get(footballBroadcastFixtureKey(match));
       if(!saved)return false;
-      const minutes=saved.result==="no_channels"?90:10;
+      const minutes=saved.result==="no_channels"?5:1;
       const age=Date.now()-Date.parse(saved.last_attempt_at);
       return Number.isFinite(age)&&age>=0&&age<minutes*60_000;
     };
