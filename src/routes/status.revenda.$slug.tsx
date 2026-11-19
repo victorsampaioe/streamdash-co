@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card } from "@/components/ui/card";
 import { Activity, Clock, ShieldCheck } from "lucide-react";
+import { DNS_STALE_AFTER_MS } from "@/lib/dns-state";
 
 type PublicServer = {
   id: string; name: string; description: string | null;
@@ -25,7 +26,7 @@ export const Route = createFileRoute("/status/revenda/$slug")({
 
 function state(s: PublicServer): {label:string;tone:string;symbol:string} {
   const freshHttp = !!s.last_checked_at && Date.now()-new Date(s.last_checked_at).getTime() <= 15*60_000;
-  const freshDns = s.dns_enabled === false || (!!s.last_dns_check_at && Date.now()-new Date(s.last_dns_check_at).getTime() <= 15*60_000);
+  const freshDns = s.dns_enabled === false || (!!s.last_dns_check_at && Date.now()-new Date(s.last_dns_check_at).getTime() <= DNS_STALE_AFTER_MS);
   if (s.monitoring_paused || !freshHttp || !freshDns)
     return {label:"Dados insuficientes",tone:"text-amber-400",symbol:"🟡"};
   if (s.dns_enabled !== false && s.dns_status==="offline")
@@ -35,7 +36,7 @@ function state(s: PublicServer): {label:string;tone:string;symbol:string} {
   if (s.dns_status==="unstable" || s.current_status==="degraded")
     return {label:"Instabilidade em análise",tone:"text-amber-400",symbol:"🟡"};
   if (s.current_status==="up" && (s.dns_enabled===false || s.dns_status==="online"))
-    return {label:"Respondendo",tone:"text-emerald-400",symbol:"🟢"};
+    return {label:"HTTP/DNS respondendo · IPTV não confirmado",tone:"text-emerald-400",symbol:"🟢"};
   return {label:"Sem conclusão",tone:"text-amber-400",symbol:"⚪"};
 }
 function ResellerStatusPage() {
@@ -52,7 +53,7 @@ function ResellerStatusPage() {
   });
   const page=query.data;
   const items=page?.servers??[];
-  const good=items.filter(s=>state(s).label==="Respondendo").length;
+  const good=items.filter(s=>state(s).symbol==="🟢").length;
   const bad=items.filter(s=>state(s).symbol==="🔴").length;
   const remaining=items.length-good-bad;
   return <div className="min-h-screen bg-[#080f20] text-slate-100">
