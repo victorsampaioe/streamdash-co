@@ -91,6 +91,11 @@ export const runMonitorSweepNow = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
     await assertAdmin(context);
+    const { isCloudflareHttpPrimary } = await import("./cloudflare-http-mode.server");
+    if (await isCloudflareHttpPrimary()) {
+      // A legacy local sweep can overwrite fresh signed Cloudflare results.
+      return {processed:0,fixed:0,requeued:0,skipped:true,provider:"cloudflare-regional-edge"};
+    }
     const { runMonitorSweep } = await import("./monitor-sweep.server");
     return await runMonitorSweep("manual");
   });
@@ -101,6 +106,12 @@ export const prioritizeStaleServersNow = createServerFn({ method: "POST" })
   .handler(async ({ context }) => {
     await assertAdmin(context);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { isCloudflareHttpPrimary } = await import("./cloudflare-http-mode.server");
+    if (await isCloudflareHttpPrimary()) {
+      // The legacy check_priority/next_check_at queue is not the Cloudflare
+      // regional-edge scheduler and must not be presented as a forced check.
+      return {prioritized:0,remainingMayExist:false,skipped:true,provider:"cloudflare-regional-edge"};
+    }
     const cutoff = new Date(Date.now() - 15 * 60_000).toISOString();
     let prioritized = 0;
     let cursor = "";
