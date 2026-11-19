@@ -28,14 +28,14 @@ export async function pullAndImportAuthHashBatch(
   if (url.protocol !== "https:" || url.hostname !== allowedHost ||
       !/^[a-z0-9.-]+$/.test(allowedHost) || url.port || url.username || url.password ||
       url.search || url.hash || url.hostname === "localhost" ||
-      /^(?:0\\.|10\\.|127\\.|169\\.254\\.|172\\.|192\\.168\\.)/.test(url.hostname))
+      /^(?:0\.|10\.|127\.|169\.254\.|172\.|192\.168\.)/.test(url.hostname))
     throw new Error("Invalid private auth source URL");
   const response = await fetchSource(url.toString(), {
     method: "GET", redirect: "error", cache: "no-store",
     headers: { Authorization: `Bearer ${token}`, Accept: "application/json", "Cache-Control": "no-store" },
     signal: AbortSignal.timeout(15000),
   });
-  if (!response.ok || !/^application\\/json(?:\\s*;|$)/i.test(response.headers.get("content-type") || ""))
+  if (!response.ok || !/^application\/json(?:\s*;|$)/i.test(response.headers.get("content-type") || ""))
     throw new Error("Invalid private auth source response");
   if (Number(response.headers.get("content-length") || 0) > 512000)
     throw new Error("Private auth source response too large");
