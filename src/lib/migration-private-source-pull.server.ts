@@ -13,14 +13,17 @@ export type PrivateMigrationEnv = {
   STREAMMONITOR_DATA_KEY_V1: string;
   MIGRATION_SOURCE_TOKEN?: string;
   MIGRATION_SOURCE_URL?: string;
+  /** Separately configured exact host allowlist; never infer from source URL. */
+  MIGRATION_SOURCE_ALLOWED_HOST?: string;
 };
 
 type SourceRow = SourceServerCredential & { sourceSnapshotId: string };
 type SourceResponse = { records: SourceRow[] };
 
-function sourceUrl(value: string): URL {
+function sourceUrl(value: string, allowedHost: string): URL {
   const url = new URL(value);
   if (url.protocol !== "https:" || url.username || url.password || url.search || url.hash ||
+      !allowedHost || url.hostname !== allowedHost || !/^[a-z0-9.-]+$/.test(allowedHost) ||
       !url.hostname || url.hostname === "localhost" || url.hostname.endsWith(".localhost") ||
       /^(?:127\.|10\.|192\.168\.|169\.254\.|0\.)/.test(url.hostname) ||
       url.hostname === "::1" || url.hostname.startsWith("172.")) {
@@ -40,8 +43,9 @@ export async function pullAndImportServerCredentialBatch(
 ): Promise<{ processed: number; persisted: boolean }> {
   if (!options.authorized) throw new Error("Migration authorization required");
   if (!options.expectedSnapshot || !env.MIGRATION_SOURCE_TOKEN || !env.MIGRATION_SOURCE_URL ||
+      !env.MIGRATION_SOURCE_ALLOWED_HOST ||
       !env.STREAMMONITOR_DATA_KEY_V1) throw new Error("Private migration configuration incomplete");
-  const url = sourceUrl(env.MIGRATION_SOURCE_URL);
+  const url = sourceUrl(env.MIGRATION_SOURCE_URL, env.MIGRATION_SOURCE_ALLOWED_HOST);
   const response = await fetchSource(url.toString(), {
     method: "GET",
     headers: {
@@ -54,6 +58,8 @@ export async function pullAndImportServerCredentialBatch(
     signal: AbortSignal.timeout(15000),
   });
   if (!response.ok) throw new Error("Migration source request failed");
+  if (!/^application\/json(?:\s*;|$)/i.test(response.headers.get("content-type") || ""))
+    throw new Error("Invalid migration source content type");
   const contentLength = Number(response.headers.get("content-length") || "0");
   if (contentLength > 512_000) throw new Error("Migration source response too large");
   const body = await response.text();
