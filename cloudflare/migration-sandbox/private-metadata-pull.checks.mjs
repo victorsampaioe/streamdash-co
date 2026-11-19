@@ -60,3 +60,33 @@ test("writes allowed profile metadata to staging only", async () => {
   assert.equal(batched, 1);
   assert.match(prepared[0], /migration_users_stage/);
 });
+
+
+for (const [module, row, table] of [
+  ["servers", { id:"00000000-0000-0000-0000-000000000001", owner_id:"00000000-0000-0000-0000-000000000002", name:"Sample" }, "migration_servers_stage"],
+  ["subscriptions", { id:"00000000-0000-0000-0000-000000000003", user_id:"00000000-0000-0000-0000-000000000002", plan:"monthly", status:"active", updated_at:"2026-11-19T00:00:00Z" }, "migration_subscriptions_stage"],
+  ["payments", { id:"00000000-0000-0000-0000-000000000004", user_id:"00000000-0000-0000-0000-000000000002", status:"paid", amount_cents:2500, updated_at:"2026-11-19T00:00:00Z" }, "migration_payments_stage"],
+]) {
+  test("stages allowlisted " + module + " without production writes", async () => {
+    const sqls = [];
+    let batches = 0;
+    globalThis.fetch = async () => Response.json({ module, offset:0, contains_secrets:false, records:[row] });
+    const env = { ...baseEnv, PILOT_DB: {
+      prepare(sql) { sqls.push(sql); return { bind(...values) { return { values }; } }; },
+      async batch(items) { batches += items.length; },
+    } };
+    const res = await worker.fetch(request({module,offset:0,limit:10}),env);
+    assert.equal(res.status,200);
+    assert.equal((await res.json()).persisted,true);
+    assert.equal(batches,1);
+    assert.match(sqls[0],new RegExp(table));
+  });
+  test("rejects secret-bearing " + module + " payload", async () => {
+    let writes = 0;
+    globalThis.fetch = async () => Response.json({module,offset:0,contains_secrets:false,records:[{...row,password:"unsafe"}]});
+    const env = {...baseEnv,PILOT_DB:{prepare(){writes++;throw Error("unexpected write");},batch(){writes++;}}};
+    const res = await worker.fetch(request({module,offset:0,limit:10}),env);
+    assert.equal(res.status,502);
+    assert.equal(writes,0);
+  });
+}
