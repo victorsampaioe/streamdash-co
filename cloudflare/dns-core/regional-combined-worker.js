@@ -6,9 +6,9 @@
  * Env: ENDPOINT_BASE, REGION_CODE and one Cloudflare secret binding:
  * REGION_WORKER_SECRET (same existing Lovable environment value) OR
  * SIGNING_KEY_JWK (private ECDSA key; public JWK in Lovable app_settings).
- * Cron: every minute; limit 20 targets, 1 targets call, 1 report call.
+ * Cron: every minute; 30 rotating HTTP targets, 1 targets call, 1 report call.
  */
-const MAX_TARGETS = 20;
+const MAX_TARGETS = 30;
 const CONCURRENCY = 5;
 const TIMEOUT = 6500;
 
