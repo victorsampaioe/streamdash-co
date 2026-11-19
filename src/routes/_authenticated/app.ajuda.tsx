@@ -35,6 +35,15 @@ type Item = {
 type Category = { id: string; label: string; icon: LucideIcon; items: Item[] };
 
 const CATEGORIES: Category[] = [
+ {id:"revenda-pratica",label:"Guia prático do revendedor",icon:Rocket,items:[
+ {id:"comece",title:"Primeiros passos: ativar e cadastrar",icon:Rocket,body:"1. Entre em Minha Assinatura. 2. Escolha R$ 25 por mês para monitorar ou 10 créditos por R$ 60 para revender. 3. Gere o Pix e aguarde a confirmação. 4. Clique em Novo servidor, informe nome e DNS/host. 5. Aguarde as primeiras verificações."},
+ {id:"alerta-telegram",title:"Configurar alertas no Telegram",icon:Send,body:"Abra a seção Alertas, configure o Telegram e confira as notificações. Os avisos de queda e recuperação ajudam a agir rapidamente. Consulte Diagnóstico e histórico antes de concluir que o servidor inteiro caiu."},
+ {id:"criar-artes",title:"Criar artes com sua marca",icon:Trophy,body:"Abra Vitrine Banner, Vitrine IA ou Vitrine IA Futebol. Selecione conteúdo e modelo, personalize logo PNG, cores e WhatsApp, revise a prévia e baixe o PNG ou envie ao Telegram. Confira informações dos jogos antes de publicar."},
+ {id:"pesquisa-servidor",title:"Pesquisar conteúdo de um servidor",icon:Tv,body:"Abra Conteúdo do Servidor, selecione um servidor da sua conta autorizado e pesquise filmes ou séries. A consulta depende das permissões e credenciais ativas do provedor. Nunca compartilhe sua senha."},
+ {id:"revenda-creditos",title:"Créditos e indicação",icon:BookOpen,body:"No menu Minha Assinatura você encontra os pacotes de créditos. O saldo permite liberar clientes conforme as regras da revenda. Em Indique e Ganhe, compartilhe seu código para obter desconto quando uma indicação pagar."},
+ {id:"solucionar",title:"Pix, DNS ou download com problema?",icon:HelpCircle,body:"Pix: confira se o código foi gerado e se o pagamento foi confirmado; se pagou e não ativou, contate o suporte. DNS: confira host, porta e histórico de falhas. Artes: revise a prévia e tente novamente. Nunca envie senhas ou tokens ao suporte público."}
+ ]},
+
   {
     id: "start", label: "Primeiros passos", icon: Rocket,
     items: [
