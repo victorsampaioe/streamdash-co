@@ -45,6 +45,7 @@ export default {
     if (!MODULES.has(input?.module) || !Number.isSafeInteger(input?.offset) ||
         input.offset < 0 || !Number.isSafeInteger(input?.limit) ||
         input.limit < 1 || input.limit > 50) return reply({ error: "invalid_request" }, 400);
+    if (input.module === 'profiles' && (!env.PILOT_DB || typeof env.PILOT_DB.prepare !== 'function')) return reply({ error: 'staging_database_unavailable' }, 503);
     try {
       const upstream = await fetch(endpoint.toString(), {
         method: "POST",
@@ -62,10 +63,44 @@ export default {
       if (payload?.module !== input.module || payload?.offset !== input.offset ||
           payload?.contains_secrets !== false || !Array.isArray(payload?.records) ||
           payload.records.length > input.limit) return reply({ error: "invalid_source_response" }, 502);
+      let persisted = false;
+      if (input.module === "profiles") {
+        // Validate entire batch before any write. Never log profile PII.
+        const seen = new Set();
+        const rows = payload.records;
+        for (const row of rows) {
+          if (!row || typeof row.id !== "string" ||
+              !/^[0-9a-f]{8}-[0-9a-f-]{27,}$/.test(row.id) || seen.has(row.id) ||
+              typeof row.created_at !== "string" ||
+              !Number.isSafeInteger(row.credits ?? 0) || (row.credits ?? 0) < 0) {
+            return reply({ error: "invalid_profile_batch" }, 502);
+          }
+          seen.add(row.id);
+        }
+        const snapshot = "private-metadata-profile-" + new Date().toISOString().slice(0, 10);
+        // Stage only. Existing rows retain their IDs; no deletion or production writes.
+        const sql = `INSERT INTO migration_users_stage
+          (user_id,username,email,display_name,parent_id,owner_account_id,credits,source_updated_at,imported_at,source_snapshot_id)
+          VALUES (?,?,?,?,?,?,?,?,datetime('now'),?)
+          ON CONFLICT(user_id) DO UPDATE SET
+          username=excluded.username,email=excluded.email,display_name=excluded.display_name,
+          parent_id=excluded.parent_id,owner_account_id=excluded.owner_account_id,
+          credits=excluded.credits,source_updated_at=excluded.source_updated_at,
+          imported_at=excluded.imported_at,source_snapshot_id=excluded.source_snapshot_id`;
+        if (rows.length) {
+          const statements = rows.map(row => env.PILOT_DB.prepare(sql).bind(
+            row.id, row.username ?? null, row.email ?? null, row.full_name ?? null,
+            row.parent_id ?? null, row.owner_account_id ?? null,
+            row.credits ?? 0, row.created_at, snapshot
+          ));
+          await env.PILOT_DB.batch(statements);
+        }
+        persisted = true;
+      }
       // Do not return PII through the Worker control endpoint.
       return reply({ ok: true, module: input.module, offset: input.offset,
         records_received: payload.records.length, next_offset: input.offset + payload.records.length,
-        complete: payload.records.length < input.limit, persisted: false });
+        complete: payload.records.length < input.limit, persisted });
     } catch {
       return reply({ error: "source_unavailable" }, 502);
     }
