@@ -1,4 +1,4 @@
-import test from "node:test";
+import { test, afterAll } from "vitest";
 import assert from "node:assert/strict";
 import worker from "./private-metadata-pull.mjs";
 
@@ -15,7 +15,7 @@ const request = (body, auth = token) => new Request("https://isolated.example/mi
   body: JSON.stringify(body),
 });
 const originalFetch = globalThis.fetch;
-test.after(() => { globalThis.fetch = originalFetch; });
+afterAll(() => { globalThis.fetch = originalFetch; });
 
 test("rejects unauthenticated requests without source calls", async () => {
   globalThis.fetch = () => { throw Error("must not call source"); };
