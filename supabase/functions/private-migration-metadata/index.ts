@@ -46,7 +46,7 @@ Deno.serve(async (request) => {
     return respond({ error: "invalid_pagination" }, 400);
   }
   const fields: Record<string, string> = {
-    profiles: "id,username,email,full_name,created_at",
+    profiles: "id,username,email,full_name,parent_id,owner_account_id,credits,updated_at,created_at",
     servers: "id,owner_id,name,host,category,current_status,dns_status,created_at,updated_at",
     subscriptions: "id,user_id,plan,status,started_at,expires_at,cancelled_at,updated_at",
     payments: "id,user_id,subscription_id,provider,status,amount_cents,paid_at,updated_at",
