@@ -40,13 +40,24 @@ export function classifyDnsAvailability(input: DnsProbeSummary): {
 }
 
 export type AccessStatus = "up" | "degraded" | "down" | "unknown";
+/** Nenhum status HTTP antigo pode continuar sendo mostrado como "online".
+ * A função só aplica o controle quando a data foi incluída na consulta; assim
+ * outros consumidores antigos (apenas DNS) mantêm sua semântica atual. */
+export const HTTP_STALE_AFTER_MS = 15 * 60_000;
+export function isHttpCheckStale(s: {last_checked_at?: string | null}): boolean {
+  if (!("last_checked_at" in s)) return false;
+  const stamp=s.last_checked_at ? Date.parse(s.last_checked_at) : NaN;
+  return !Number.isFinite(stamp) || Date.now()-stamp>HTTP_STALE_AFTER_MS;
+}
+
 export function effectiveAccessStatus(s: {
   dns_enabled?: boolean | null;
   dns_status?: string | null;
   current_status?: string | null;
   monitoring_paused?: boolean | null;
+  last_checked_at?: string | null;
 }): AccessStatus {
-  if (s.monitoring_paused) return "unknown";
+  if (s.monitoring_paused || isHttpCheckStale(s)) return "unknown";
   if (s.dns_enabled !== false && s.dns_status === "offline") return "down";
   if (s.current_status === "down") return "down";
   if (s.dns_enabled !== false && s.dns_status === "unstable") return "degraded";
@@ -59,8 +70,10 @@ export function accessStatusLabel(s: {
   dns_status?: string | null;
   current_status?: string | null;
   monitoring_paused?: boolean | null;
+  last_checked_at?: string | null;
 }): string {
   if (s.monitoring_paused) return "Monitoramento pausado";
+  if (isHttpCheckStale(s)) return "Verificação HTTP atrasada — disponibilidade não confirmada";
   if (s.dns_enabled !== false && s.dns_status === "offline") return "DNS OFFLINE — acesso pelo domínio indisponível";
   if (s.current_status === "down") return "Servidor OFFLINE confirmado";
   if (s.dns_enabled !== false && s.dns_status === "unstable") return "DNS instável — verificando";
