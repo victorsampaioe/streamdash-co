@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { classifyDnsAvailability, effectiveAccessStatus, accessStatusLabel } from "./dns-state";
+import { classifyDnsAvailability, effectiveAccessStatus, accessStatusLabel, dnsDisplayState } from "./dns-state";
 
 describe("DNS availability and customer access", () => {
   const probe = (successCount: number, previousFailureCount = 0, previousStatus = "online") =>
@@ -44,5 +44,23 @@ describe("DNS availability and customer access", () => {
   it("keeps paused and never-checked servers unconfirmed", () => {
     expect(effectiveAccessStatus({current_status:"up",last_checked_at:null})).toBe("unknown");
     expect(effectiveAccessStatus({current_status:"up",monitoring_paused:true,last_checked_at:new Date().toISOString()})).toBe("unknown");
+  });
+  it("marks paused Aura DNS as paused despite an old online database value", () => {
+    const paused = {dns_enabled:true,dns_status:"online",monitoring_paused:true,
+      last_dns_check_at:"2026-09-01T00:52:04Z",current_status:"up",
+      last_checked_at:"2026-08-31T19:57:54Z"};
+    expect(dnsDisplayState(paused)).toBe("paused");
+    expect(effectiveAccessStatus(paused)).toBe("unknown");
+  });
+  it("does not claim historical DNS online or offline as current", () => {
+    const sample={dns_enabled:true,dns_status:"online",current_status:"up",
+      last_checked_at:new Date().toISOString(),
+      last_dns_check_at:new Date(Date.now()-12*60_000).toISOString()};
+    expect(dnsDisplayState(sample)).toBe("stale");
+    expect(accessStatusLabel(sample)).toMatch(/DNS sem checagem recente/);
+    expect(effectiveAccessStatus({...sample,dns_status:"offline"})).toBe("up");
+    const updated={...sample,last_dns_check_at:new Date().toISOString()};
+    expect(dnsDisplayState(updated)).toBe("online");
+    expect(effectiveAccessStatus({...updated,dns_status:"offline"})).toBe("down");
   });
 });
