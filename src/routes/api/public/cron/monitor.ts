@@ -18,10 +18,17 @@ export const Route = createFileRoute("/api/public/cron/monitor")({
         }
         try {
           const { withCycleLock } = await import("@/lib/job-lock.server");
-          const { runDueChecks } = await import("@/lib/monitoring.server");
-          // Five parallel probes bound each cycle. Confirming a real outage
-          // can still take longer than a simple successful health check.
-          const result = await withCycleLock("cron-monitor", 120, () => runDueChecks(5));
+          const { isCloudflareHttpPrimary } = await import("@/lib/cloudflare-http-mode.server");
+          // Cloudflare regional-edge + DB reconcile now own uptime. Never
+          // send scheduled probes to the retired AWS Core.
+          const cloudflarePrimary = await isCloudflareHttpPrimary();
+          const result = cloudflarePrimary
+            ? { checked: 0, ok: 0, errors: 0, queued: 0, skipped: true,
+                provider: "cloudflare-regional-edge" }
+            : await withCycleLock("cron-monitor", 120, async () => {
+                const { runDueChecks } = await import("@/lib/monitoring.server");
+                return runDueChecks(5);
+              });
           // Partner status checks run independently of DNS. No mass alert is
           // sent unless the official API contract has been validated and two
           // consecutive provider-reported state changes are confirmed.
