@@ -6,7 +6,7 @@ import { StatusDot, StatusLabel } from "@/components/status-dot";
 import { UptimeSparkline } from "@/components/uptime-sparkline";
 import { Card } from "@/components/ui/card";
 import { GlobalCheckMap } from "@/components/global-check-map";
-import { effectiveAccessStatus, accessStatusLabel } from "@/lib/dns-state";
+import { effectiveAccessStatus, accessStatusLabel, DNS_STALE_AFTER_MS } from "@/lib/dns-state";
 
 
 export const Route = createFileRoute("/status/$slug")({
@@ -49,7 +49,7 @@ function PublicStatus() {
   const uptimePct = checks.length ? (upCount / checks.length) * 100 : null;
   const lastIncident = checks.find((c: any) => c.status !== "up") ?? null;
   const recentHttp = !!server?.last_checked_at && Date.now() - new Date(server.last_checked_at).getTime() <= 15 * 60_000;
-  const recentDns = !!server?.last_dns_check_at && Date.now() - new Date(server.last_dns_check_at).getTime() <= 15 * 60_000;
+  const recentDns = !!server?.last_dns_check_at && Date.now() - new Date(server.last_dns_check_at).getTime() <= DNS_STALE_AFTER_MS;
   const monitored = !!server && !server.monitoring_paused;
   const staleStatus = !monitored || !recentHttp || (server?.dns_enabled && !recentDns);
   const accessState = server ? effectiveAccessStatus(server) : "unknown";
