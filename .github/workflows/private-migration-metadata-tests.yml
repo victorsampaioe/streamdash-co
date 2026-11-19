@@ -17,4 +17,4 @@ jobs:
         with:
           node-version: '22'
       - name: Run isolated Worker tests
-        run: npx vitest run cloudflare/migration-sandbox/private-metadata-pull.test.mjs
+        run: node --test cloudflare/migration-sandbox/private-metadata-pull.checks.mjs
