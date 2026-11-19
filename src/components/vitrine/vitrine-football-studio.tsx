@@ -140,7 +140,7 @@ export function VitrineFootballStudio() {
   const manualTransmissionRefresh=useRef(false);
   const games = useQuery({
     queryKey:["vitrine-football-ftwb",day],
-    queryFn:()=>{
+    queryFn:async()=>{
       const refreshTransmissions=manualTransmissionRefresh.current;
       manualTransmissionRefresh.current=false;
       const response=await load({data:{date:day,refreshTransmissions}});
