@@ -56,8 +56,8 @@ export async function pullAndImportAuthHashBatch(
     seen.add(item.userId);
     const envelope = await encryptExistingBcryptHash(item.userId, item.bcryptHash, key);
     rows.push({
-      user_id: item.userId, ciphertext_b64: envelope.ciphertext_b64,
-      iv_b64: envelope.iv_b64, key_version: 1, algorithm: "AES-256-GCM",
+      user_id: item.userId, ciphertext_b64: envelope.ciphertext,
+      iv_b64: envelope.iv, key_version: 1, algorithm: "AES-256-GCM",
       source_hash_algorithm: "bcrypt_2a", source_snapshot_id: item.sourceSnapshotId,
       imported_at: now,
     });
