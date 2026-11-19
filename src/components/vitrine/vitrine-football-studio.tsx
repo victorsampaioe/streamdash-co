@@ -439,8 +439,8 @@ export function VitrineFootballStudio() {
       </Button>
     </div>
     <div className="flex flex-wrap gap-2" role="tablist" aria-label="Tipo de arte de futebol">
-      <Button type="button" role="tab" aria-selected={posterMode==="today"}
-        variant={posterMode==="today"?"default":"outline"}
+      <Button type="button" role="tab" aria-selected={posterMode==="today"&&day===today()}
+        variant={posterMode==="today"&&day===today()?"default":"outline"}
         onClick={()=>{setPosterMode("today");setDay(today());setSelectedFinalId("");}}>
         ⚽ Jogos de hoje
       </Button>
