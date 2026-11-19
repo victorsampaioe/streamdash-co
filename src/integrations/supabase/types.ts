@@ -3054,6 +3054,50 @@ export type Database = {
         }
         Relationships: []
       }
+      globalping_auto_confirmations: {
+        Row: {
+          created_at: string
+          finished_at: string | null
+          id: string
+          measurement_id: string
+          probes: Json
+          server_id: string
+          status: string
+          target_host: string
+          verdict: string
+        }
+        Insert: {
+          created_at?: string
+          finished_at?: string | null
+          id?: string
+          measurement_id: string
+          probes?: Json
+          server_id: string
+          status?: string
+          target_host: string
+          verdict?: string
+        }
+        Update: {
+          created_at?: string
+          finished_at?: string | null
+          id?: string
+          measurement_id?: string
+          probes?: Json
+          server_id?: string
+          status?: string
+          target_host?: string
+          verdict?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "globalping_auto_confirmations_server_id_fkey"
+            columns: ["server_id"]
+            isOneToOne: false
+            referencedRelation: "servers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       globalping_dns_runs: {
         Row: {
           created_at: string
