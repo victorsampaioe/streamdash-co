@@ -33,4 +33,16 @@ describe("DNS availability and customer access", () => {
   it("never claims healthy DNS without actual resolver results", () => {
     expect(classifyDnsAvailability({successCount:0,resolverCount:0,reportStatus:"ok",previousFailureCount:0}).status).toBe("unstable");
   });
+
+  it("does not display a server as online when the HTTP check is older than 15 minutes", () => {
+    const stale={dns_enabled:true,dns_status:"online",current_status:"up",
+      last_checked_at:new Date(Date.now()-20*60_000).toISOString()};
+    expect(effectiveAccessStatus(stale)).toBe("unknown");
+    expect(accessStatusLabel(stale)).toMatch(/atrasada/);
+    expect(effectiveAccessStatus({...stale,last_checked_at:new Date().toISOString()})).toBe("up");
+  });
+  it("keeps paused and never-checked servers unconfirmed", () => {
+    expect(effectiveAccessStatus({current_status:"up",last_checked_at:null})).toBe("unknown");
+    expect(effectiveAccessStatus({current_status:"up",monitoring_paused:true,last_checked_at:new Date().toISOString()})).toBe("unknown");
+  });
 });
