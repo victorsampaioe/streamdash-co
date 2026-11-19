@@ -7,6 +7,7 @@ const base = {
   STREAMMONITOR_DATA_KEY_V1: key,
   MIGRATION_SOURCE_TOKEN: "synthetic-service-token",
   MIGRATION_SOURCE_URL: "https://migration.example.com/internal/export",
+  MIGRATION_SOURCE_ALLOWED_HOST: "migration.example.com",
   PILOT_DB: { prepare: vi.fn(), batch: vi.fn() } as unknown as MigrationD1,
 } satisfies PrivateMigrationEnv;
 const source = (records: unknown[]) => vi.fn(async () => new Response(JSON.stringify({ records }), {
@@ -51,6 +52,22 @@ describe("private source pull", () => {
     await expect(pullAndImportServerCredentialBatch(base, {
       authorized: true, expectedSnapshot: "synthetic-snapshot", dryRun: true,
     }, source([record, record]))).rejects.toThrow("metadata");
+  });
+  it("rejects a different HTTPS hostname before sending the service token", async () => {
+    const fetcher = source([record]);
+    await expect(pullAndImportServerCredentialBatch({
+      ...base, MIGRATION_SOURCE_URL: "https://other.example.com/internal/export",
+    }, { authorized: true, expectedSnapshot: "synthetic-snapshot", dryRun: true }, fetcher))
+      .rejects.toThrow("URL");
+    expect(fetcher).not.toHaveBeenCalled();
+  });
+  it("rejects missing pinned source hostname", async () => {
+    const fetcher = source([record]);
+    await expect(pullAndImportServerCredentialBatch({
+      ...base, MIGRATION_SOURCE_ALLOWED_HOST: undefined,
+    }, { authorized: true, expectedSnapshot: "synthetic-snapshot", dryRun: true }, fetcher))
+      .rejects.toThrow("configuration");
+    expect(fetcher).not.toHaveBeenCalled();
   });
   it("rejects missing private source token", async () => {
     const fetcher = source([record]);
