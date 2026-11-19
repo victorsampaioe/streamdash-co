@@ -17,7 +17,7 @@ function fromBase64(value: string): Uint8Array {
   return Uint8Array.from(binary, (char) => char.charCodeAt(0));
 }
 async function importKey(base64Key: string): Promise<CryptoKey> {
-  const raw = fromBase64(base64Key);
+  const raw = new Uint8Array(fromBase64(base64Key));
   if (raw.length !== 32) throw new Error("Encryption key must be 32 bytes");
   return crypto.subtle.importKey("raw", raw, { name: "AES-GCM" }, false, ["encrypt", "decrypt"]);
 }
@@ -52,13 +52,13 @@ export async function decryptSecret(
 ): Promise<string> {
   if (envelope.algorithm !== "AES-256-GCM" || envelope.keyVersion !== 1) throw new Error("Unsupported envelope");
   if (!recordId) throw new Error("Missing record identifier");
-  const iv = fromBase64(envelope.iv);
+  const iv = new Uint8Array(fromBase64(envelope.iv));
   if (iv.length !== 12) throw new Error("Invalid IV");
   const key = await importKey(base64Key);
   const plaintext = await crypto.subtle.decrypt(
     { name: "AES-GCM", iv, additionalData: encoder.encode(recordId) },
     key,
-    fromBase64(envelope.ciphertext),
+    new Uint8Array(fromBase64(envelope.ciphertext)),
   );
   return decoder.decode(plaintext);
 }
