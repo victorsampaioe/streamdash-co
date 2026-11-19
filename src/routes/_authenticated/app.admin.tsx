@@ -131,6 +131,7 @@ type StatsRow = {
   servers_online: number;
   servers_warning: number;
   servers_offline: number;
+  servers_unverified: number;
   servers_paused: number;
   paused_owners: number;
 };
@@ -360,13 +361,14 @@ function AdminPage() {
         <Kpi icon={Wallet} label="Créditos disponíveis" value="∞" tone="primary" sub="Créditos ilimitados" />
         <Kpi icon={CircleDollarSign} label="Receita 30 dias" value={s ? formatBRL(s.revenue_cents_30d) : undefined} tone="success" sub={s ? `${formatBRL(s.revenue_cents_7d)} nos últimos 7d` : undefined} />
         <Kpi icon={TrendingUp} label="Receita total" value={s ? formatBRL(s.revenue_cents_total) : undefined} tone="primary" sub={s ? `${s.payments_approved_total} pagamentos` : undefined} />
-        <Kpi icon={ServerCog} label="✅ Monitorando agora" value={s ? (s.servers_online + s.servers_warning + s.servers_offline) : 0} tone="success" sub="Apenas servidores ativos" />
+        <Kpi icon={ServerCog} label="✅ Monitorando agora" value={s ? (s.servers_online + s.servers_warning + s.servers_offline) : undefined} tone="success" sub="Com verificação HTTP nos últimos 15 minutos" />
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         <Kpi icon={ServerCog} label="🟢 Online" value={s?.servers_online} tone="success" />
         <Kpi icon={ServerCog} label="🟡 Atenção" value={s?.servers_warning} tone="warning" />
         <Kpi icon={ServerCog} label="🔴 Offline" value={s?.servers_offline} tone="destructive" />
+        <Kpi icon={AlertCircle} label="⚪ Sem verificação HTTP recente" value={s?.servers_unverified} tone="warning" sub="Última checagem há mais de 15 minutos · não contabilizados como online" />
         <Kpi
           icon={ServerCog}
           label="⚪ DNS Pausados"
