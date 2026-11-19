@@ -358,42 +358,48 @@ export const getVitrineFootballMatches = createServerFn({ method: "POST" })
     if(missingChannels.length && auth.startsWith("Bearer ") && apikey){
       let attemptResult:"no_channels"|"provider_unavailable"="provider_unavailable";
       const requested=missingChannels.slice(0,64);
-      try{
+      // Small independent batches prevent one slow fixture or a 64-match AI call
+      // from losing the verified results for every other fixture.
+      const batches:typeof requested[]=[];
+      for(let i=0;i<requested.length;i+=8)batches.push(requested.slice(i,i+8));
+      const completed=new Set<string>();
+      const batchResults=await Promise.allSettled(batches.map(async batch=>{
         const response=await fetch(
           "https://streammonitor-football-broadcast.victorsampaio133.workers.dev/broadcasts",{
             method:"POST",
             headers:{authorization:auth,apikey,"content-type":"application/json"},
-            body:JSON.stringify({matches:requested.map(m=>({
+            body:JSON.stringify({matches:batch.map(m=>({
               id:m.id,home:m.home,away:m.away,date:m.day
             }))}),
-            cache:"no-store",signal:AbortSignal.timeout(25000)
+            cache:"no-store",signal:AbortSignal.timeout(30000)
           }
         );
-        if(!response.ok){
-          console.warn("[Vitrine Futebol] Cloudflare channel lookup HTTP",response.status);
-        }else{
-          const payload=await response.json() as {results?:Array<{
-            id:string;channels?:string[];verified?:boolean
-          }>};
-          if(Array.isArray(payload.results)){
-            attemptResult="no_channels";
-            const confirmed=new Map(payload.results
-              .filter(row=>row?.verified===true)
-              .map(row=>[row.id,cleanVerifiedBroadcasts(row.channels)]));
-            for(const match of requested){
-              const channels=confirmed.get(match.id);
-              if(channels?.length){
-                match.broadcasts=channels;
-                remember(match,"cloudflare_verified");
-              }
-            }
+        if(!response.ok)throw new Error("Cloudflare HTTP "+response.status);
+        const payload=await response.json() as {results?:Array<{
+          id:string;channels?:string[];verified?:boolean
+        }>};
+        if(!Array.isArray(payload.results))throw new Error("Cloudflare invalid results");
+        return {batch,rows:payload.results};
+      }));
+      for(const result of batchResults){
+        if(result.status==="rejected"){
+          console.warn("[Vitrine Futebol] channel batch unavailable",
+            result.reason instanceof Error?result.reason.message:"unknown");
+          continue;
+        }
+        for(const match of result.value.batch)completed.add(match.id);
+        const confirmed=new Map(result.value.rows
+          .filter(row=>row?.verified===true)
+          .map(row=>[row.id,cleanVerifiedBroadcasts(row.channels)]));
+        for(const match of result.value.batch){
+          const channels=confirmed.get(match.id);
+          if(channels?.length){
+            match.broadcasts=channels;
+            remember(match,"cloudflare_verified");
           }
         }
-      }catch(error){
-        // Never discard saved confirmed results due to a research outage.
-        console.warn("[Vitrine Futebol] Cloudflare channel lookup unavailable",
-          error instanceof Error?error.name:"unknown");
       }
+      if(completed.size)attemptResult="no_channels";
       // Do not save blank broadcaster lists as verified content.
       // Store ONLY lookup timestamps, to avoid repeated research per visit.
       const unresolved=requested.filter(m=>!m.broadcasts?.length);
