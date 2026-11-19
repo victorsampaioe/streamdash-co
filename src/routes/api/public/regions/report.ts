@@ -103,8 +103,13 @@ export const Route = createFileRoute("/api/public/regions/report")({
         );
         if (error) return new Response(`DB error: ${error.message}`, { status: 500 });
 
-        // Fire alerts on state transitions (down / recovery).
-        for (const i of items) {
+        // The Cloudflare HTTP observer must never send directly from a raw
+        // regional transition. A lone failed edge probe is not an outage.
+        // maintenance.reconcile_cf_http() confirms repeated failures/recoveries,
+        // opens/closes incidents, and the existing cron/check retry pipeline
+        // sends only undelivered incident messages per Telegram destination.
+        // Legacy non-Cloudflare regions retain their own consensus path.
+        if (!cfEdge) for (const i of items) {
           const prevStatus = prevMap.get(`${i.server_id}|${i.region_code}`) ?? null;
           const goingDown = i.status === "down" && prevStatus !== "down";
           const stillDown = i.status === "down" && prevStatus === "down";
