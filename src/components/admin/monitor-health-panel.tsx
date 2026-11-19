@@ -26,9 +26,13 @@ export function MonitorHealthPanel() {
   const sweep = useMutation({
     mutationFn: () => sweepNow(),
     onSuccess: (r: any) => {
-      toast.success(
-        `Varredura concluída: ${r.processed} verificados, ${r.fixed} corrigidos, ${r.requeued} reenfileirados`,
-      );
+      if (r?.skipped && r?.provider === "cloudflare-regional-edge") {
+        toast.info("A Cloudflare já verifica os servidores automaticamente. Os resultados são atualizados a cada minuto.");
+      } else {
+        toast.success(
+          `Varredura concluída: ${r.processed} verificados, ${r.fixed} corrigidos, ${r.requeued} reenfileirados`,
+        );
+      }
       void qc.invalidateQueries({ queryKey: ["monitor-health"] });
     },
     onError: (e: any) => toast.error(e?.message ?? "Falha na varredura"),
@@ -76,7 +80,7 @@ export function MonitorHealthPanel() {
       <Card>
         <CardHeader>
           <CardTitle className="text-base">Servidores esquecidos na fila</CardTitle>
-          <CardDescription>Sem verificação há mais de 15 minutos — reenfileirados na próxima varredura.</CardDescription>
+          <CardDescription>Sem verificação HTTP recente — a disponibilidade não está confirmada. A Cloudflare continuará tentando automaticamente.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-2">
           {!data?.stale.length ? (
@@ -86,7 +90,7 @@ export function MonitorHealthPanel() {
               <div key={s.id} className="flex flex-wrap items-center justify-between gap-2 rounded-lg border p-3">
                 <span className="font-mono text-sm">{s.host}</span>
                 <div className="flex items-center gap-2">
-                  <Badge variant="outline">servidor: {s.current_status ?? "?"}</Badge>
+                  <Badge variant="outline">HTTP: sem confirmação recente (último: {s.current_status ?? "desconhecido"})</Badge>
                   <Badge variant="outline">dns: {s.dns_status ?? "?"}</Badge>
                   <span className="text-xs text-muted-foreground">{fmt(s.last_checked_at)}</span>
                 </div>
