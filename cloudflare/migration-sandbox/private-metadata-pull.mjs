@@ -46,7 +46,7 @@ export default {
     if (!MODULES.has(input?.module) || !Number.isSafeInteger(input?.offset) ||
         input.offset < 0 || !Number.isSafeInteger(input?.limit) ||
         input.limit < 1 || input.limit > 50) return reply({ error: "invalid_request" }, 400);
-    if (input.module === 'profiles' && (!env.PILOT_DB || typeof env.PILOT_DB.prepare !== 'function')) return reply({ error: 'staging_database_unavailable' }, 503);
+    if (!env.PILOT_DB || typeof env.PILOT_DB.prepare !== 'function' || typeof env.PILOT_DB.batch !== 'function') return reply({ error: 'staging_database_unavailable' }, 503);
     try {
       const upstream = await fetch(endpoint.toString(), {
         method: "POST",
@@ -97,6 +97,68 @@ export default {
             row.id, row.username ?? null, row.email ?? null, row.full_name ?? null,
             row.parent_id ?? null, row.owner_account_id ?? null,
             row.credits ?? 0, row.created_at, snapshot
+          ));
+          await env.PILOT_DB.batch(statements);
+        }
+        persisted = true;
+      }
+      if (input.module !== "profiles") {
+        // Allowlisted metadata only. Reject unexpected columns before any staging writes.
+        const definitions = {
+          servers: {
+            fields: ["id","owner_id","name","host","category","current_status","dns_status","created_at","updated_at"],
+            required: ["id","owner_id"],
+            sql: `INSERT INTO migration_servers_stage
+              (server_id,owner_id,name,host,category,current_status,dns_status,created_at,updated_at,source_snapshot_id)
+              VALUES (?,?,?,?,?,?,?,?,?,?)
+              ON CONFLICT(server_id) DO UPDATE SET owner_id=excluded.owner_id,name=excluded.name,
+              host=excluded.host,category=excluded.category,current_status=excluded.current_status,
+              dns_status=excluded.dns_status,created_at=excluded.created_at,
+              updated_at=excluded.updated_at,source_snapshot_id=excluded.source_snapshot_id`,
+          },
+          subscriptions: {
+            fields: ["id","user_id","plan","status","started_at","expires_at","cancelled_at","updated_at"],
+            required: ["id","user_id","plan","status","updated_at"],
+            sql: `INSERT INTO migration_subscriptions_stage
+              (subscription_id,user_id,plan,status,started_at,expires_at,cancelled_at,source_updated_at,source_snapshot_id)
+              VALUES (?,?,?,?,?,?,?,?,?)
+              ON CONFLICT(subscription_id) DO UPDATE SET user_id=excluded.user_id,plan=excluded.plan,
+              status=excluded.status,started_at=excluded.started_at,expires_at=excluded.expires_at,
+              cancelled_at=excluded.cancelled_at,source_updated_at=excluded.source_updated_at,
+              source_snapshot_id=excluded.source_snapshot_id`,
+          },
+          payments: {
+            fields: ["id","user_id","subscription_id","provider","status","amount_cents","paid_at","updated_at"],
+            required: ["id","user_id","status","amount_cents","updated_at"],
+            sql: `INSERT INTO migration_payments_stage
+              (payment_id,user_id,subscription_id,provider,status,amount_cents,paid_at,source_updated_at,source_snapshot_id)
+              VALUES (?,?,?,?,?,?,?,?,?)
+              ON CONFLICT(payment_id) DO UPDATE SET user_id=excluded.user_id,
+              subscription_id=excluded.subscription_id,provider=excluded.provider,
+              status=excluded.status,amount_cents=excluded.amount_cents,paid_at=excluded.paid_at,
+              source_updated_at=excluded.source_updated_at,source_snapshot_id=excluded.source_snapshot_id`,
+          },
+        };
+        const def = definitions[input.module];
+        const seen = new Set();
+        const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+        for (const row of payload.records) {
+          if (!row || typeof row !== "object" || Array.isArray(row) ||
+              Object.keys(row).some(key => !def.fields.includes(key)) ||
+              def.required.some(key => row[key] === null || row[key] === undefined) ||
+              !uuid.test(row.id) || seen.has(row.id) ||
+              !uuid.test(row[input.module === "servers" ? "owner_id" : "user_id"]) ||
+              (input.module === "payments" && (!Number.isSafeInteger(row.amount_cents) || row.amount_cents < 0)) ||
+              def.fields.some(key => key !== "amount_cents" &&
+                row[key] != null && (typeof row[key] !== "string" || row[key].length > 2048))) {
+            return reply({ error: "invalid_metadata_batch" }, 502);
+          }
+          seen.add(row.id);
+        }
+        const snapshot = "private-metadata-" + input.module + "-" + new Date().toISOString().slice(0, 10);
+        if (payload.records.length) {
+          const statements = payload.records.map(row => env.PILOT_DB.prepare(def.sql).bind(
+            ...def.fields.map(key => row[key] ?? null), snapshot
           ));
           await env.PILOT_DB.batch(statements);
         }
