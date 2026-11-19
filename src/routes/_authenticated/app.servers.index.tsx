@@ -13,7 +13,7 @@ import { SearchInput } from "@/components/app-shell";
 import { useSubscription } from "@/hooks/use-subscription";
 import { Plus, ServerIcon, Trash2, ExternalLink, Loader2 } from "lucide-react";
 import { toast } from "sonner";
-import { effectiveAccessStatus, accessStatusLabel } from "@/lib/dns-state";
+import { effectiveAccessStatus, accessStatusLabel, dnsDisplayState } from "@/lib/dns-state";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
@@ -145,13 +145,15 @@ function ServersList() {
                 <td className="p-3 font-medium">
                   <Link to="/app/servers/$id" params={{ id: s.id }} className="hover:text-primary">{s.name}</Link>
                   <div className="mt-2 flex flex-wrap items-center gap-2 text-[11px]">
-                    <span className={s.dns_status === "offline" ? "text-red-400 font-semibold"
-                      : s.dns_status === "unstable" ? "text-amber-400 font-semibold" : "text-primary"}>
-                      DNS: {s.dns_enabled === false ? "Desativado"
-                        : s.last_dns_check_at && Date.now() - new Date(s.last_dns_check_at).getTime() > 3 * 60_000 ? "Atrasado"
-                        : s.dns_status === "offline" ? "Offline"
-                        : s.dns_status === "unstable" ? "Instável"
-                        : s.dns_status === "online" ? "Respondendo" : "Aguardando"}
+                    <span className={dnsDisplayState(s) === "offline" ? "text-red-400 font-semibold"
+                      : ["stale","unstable"].includes(dnsDisplayState(s)) ? "text-amber-400 font-semibold"
+                      : dnsDisplayState(s) === "paused" ? "text-muted-foreground" : "text-primary"}>
+                      DNS: {dnsDisplayState(s) === "paused" ? "Pausado · último estado não confirmado"
+                        : dnsDisplayState(s) === "disabled" ? "Desativado"
+                        : dnsDisplayState(s) === "stale" ? "Sem verificação recente"
+                        : dnsDisplayState(s) === "offline" ? "Offline"
+                        : dnsDisplayState(s) === "unstable" ? "Instável"
+                        : dnsDisplayState(s) === "online" ? "Resolvendo (não confirma IPTV)" : "Aguardando"}
                     </span>
                     <span className="text-muted-foreground">
                       {s.last_dns_check_at ? `· ${new Date(s.last_dns_check_at).toLocaleTimeString("pt-BR", {hour:"2-digit", minute:"2-digit"})}` : ""}
