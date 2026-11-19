@@ -40,6 +40,16 @@ export const Route = createFileRoute("/api/public/cron/monitor")({
           }catch(e){
             console.error("[cron/monitor] app partners",e instanceof Error?e.name:"unknown");
           }
+          // Independent Globalping DNS corroboration runs in shadow mode:
+          // never changes live uptime or emits alerts without further validation.
+          let globalpingAuto: unknown = null;
+          try {
+            const { runAutomaticGlobalpingConfirmation } = await import("@/lib/globalping-auto-sweep.server");
+            globalpingAuto = await withCycleLock("globalping-auto-confirm", 90,
+              () => runAutomaticGlobalpingConfirmation(1));
+          } catch (e) {
+            console.error("[cron/monitor] globalping auto", e instanceof Error ? e.name : "unknown");
+          }
           let telegramOutbox: unknown = null;
           try {
             const { processTelegramOutbox } = await import("@/lib/telegram-outbox.server");
@@ -47,7 +57,7 @@ export const Route = createFileRoute("/api/public/cron/monitor")({
           } catch (e) {
             console.error("[cron/monitor] telegram outbox", e instanceof Error ? e.message : "unknown");
           }
-          return Response.json({ ok: true, ...result, applicationPartners, telegramOutbox }, { headers: { "Cache-Control": "no-store" } });
+          return Response.json({ ok: true, ...result, applicationPartners, globalpingAuto, telegramOutbox }, { headers: { "Cache-Control": "no-store" } });
         } catch (error) {
           console.error("[cron/monitor] failed", error instanceof Error ? error.name : "unknown");
           return Response.json({ ok: false, error: "monitor_cycle_failed" }, { status: 503 });
