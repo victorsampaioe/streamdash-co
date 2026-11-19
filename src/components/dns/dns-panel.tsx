@@ -13,6 +13,7 @@ import {
   LineChart, Line, ResponsiveContainer, XAxis, YAxis, Tooltip, CartesianGrid, AreaChart, Area,
 } from "recharts";
 import { runDnsCheckNow, acknowledgeDnsAlert } from "@/lib/dns.functions";
+import {dnsDisplayState} from "@/lib/dns-state";
 
 type ResolverResult = {
   code: string; name: string; country: string; ok: boolean;
@@ -126,6 +127,7 @@ export function DnsPanel({ serverId }: { serverId: string }) {
   const propagation = (latest?.propagation ?? []) as unknown as PropagationRegion[];
   const records = (latest?.records ?? {}) as Record<string, string[]>;
   const tone = scoreTone(latest?.health_score ?? 0);
+  const liveState = dnsDisplayState(dnsLive ?? {});
 
   return (
     <div className="space-y-5">
@@ -133,12 +135,15 @@ export function DnsPanel({ serverId }: { serverId: string }) {
         <div className="flex items-center gap-2 text-sm">
           <span className="h-2.5 w-2.5 rounded-full bg-primary" />
           <span className="font-medium">Estado do DNS</span>
-          <span className={dnsLive?.dns_status === "offline" ? "font-bold text-red-400"
-            : dnsLive?.dns_status === "unstable" ? "font-bold text-amber-400" : "font-semibold text-primary"}>
-            {dnsLive?.dns_enabled === false ? "Desativado"
-              : dnsLive?.dns_status === "offline" ? "Offline confirmado"
-              : dnsLive?.dns_status === "unstable" ? "Instável · aguardando confirmação"
-              : dnsLive?.dns_status === "online" ? "Respondendo" : "Aguardando"}
+          <span className={liveState === "offline" ? "font-bold text-red-400"
+            : liveState === "stale" || liveState === "unstable" ? "font-bold text-amber-400"
+            : liveState === "paused" ? "font-semibold text-muted-foreground" : "font-semibold text-primary"}>
+            {liveState === "paused" ? "Monitoramento pausado · último estado não é atual"
+              : liveState === "disabled" ? "Desativado"
+              : liveState === "stale" ? "Sem verificação DNS recente"
+              : liveState === "offline" ? "DNS offline confirmado"
+              : liveState === "unstable" ? "DNS instável · aguardando confirmação"
+              : liveState === "online" ? "DNS resolve · não confirma funcionamento do IPTV" : "Aguardando"}
           </span>
         </div>
         <span className="text-xs text-muted-foreground">
@@ -156,7 +161,7 @@ export function DnsPanel({ serverId }: { serverId: string }) {
               Fila de Recuperação Inteligente
             </span>
             <Badge variant="outline" className="border-blue-400/30 text-blue-300">
-              Prioridade alta · cerca de 30s
+              Prioridade alta · próximo ciclo disponível
             </Badge>
           </div>
           <p className="mt-2 text-xs text-muted-foreground">
@@ -178,7 +183,7 @@ export function DnsPanel({ serverId }: { serverId: string }) {
             {latest ? `Última análise: ${new Date(latest.checked_at).toLocaleString()}` : "Ainda não analisado"}
           </p>
         </div>
-        <Button size="sm" variant="outline" onClick={handleRun} disabled={checking} aria-busy={checking}>
+        <Button size="sm" variant="outline" onClick={handleRun} disabled={checking || liveState === "paused" || liveState === "disabled"} aria-busy={checking}>
           <RefreshCw className={`h-4 w-4 mr-1 ${checking ? "animate-spin" : ""}`} />
           {checking ? "Verificando DNS..." : "Verificar DNS agora"}
         </Button>
