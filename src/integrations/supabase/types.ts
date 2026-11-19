@@ -1162,6 +1162,407 @@ export type Database = {
           },
         ]
       }
+      app_partner_commissions: {
+        Row: {
+          amount_cents: number
+          created_at: string
+          id: string
+          paid_amount_cents: number
+          partner_id: string
+          payment_id: string
+          rate_bps: number
+          referred_user_id: string
+          reversed_at: string | null
+          stream_monitor_cents: number
+        }
+        Insert: {
+          amount_cents: number
+          created_at?: string
+          id?: string
+          paid_amount_cents: number
+          partner_id: string
+          payment_id: string
+          rate_bps: number
+          referred_user_id: string
+          reversed_at?: string | null
+          stream_monitor_cents: number
+        }
+        Update: {
+          amount_cents?: number
+          created_at?: string
+          id?: string
+          paid_amount_cents?: number
+          partner_id?: string
+          payment_id?: string
+          rate_bps?: number
+          referred_user_id?: string
+          reversed_at?: string | null
+          stream_monitor_cents?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "app_partner_commissions_partner_id_fkey"
+            columns: ["partner_id"]
+            isOneToOne: false
+            referencedRelation: "app_partners"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "app_partner_commissions_payment_id_fkey"
+            columns: ["payment_id"]
+            isOneToOne: true
+            referencedRelation: "payments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      app_partner_health_checks: {
+        Row: {
+          checked_at: string
+          evidence: string
+          http_status: number | null
+          id: string
+          latency_ms: number | null
+          partner_id: string
+          probe_source: string
+          provider_status: string | null
+          status: string
+        }
+        Insert: {
+          checked_at?: string
+          evidence: string
+          http_status?: number | null
+          id?: string
+          latency_ms?: number | null
+          partner_id: string
+          probe_source?: string
+          provider_status?: string | null
+          status: string
+        }
+        Update: {
+          checked_at?: string
+          evidence?: string
+          http_status?: number | null
+          id?: string
+          latency_ms?: number | null
+          partner_id?: string
+          probe_source?: string
+          provider_status?: string | null
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "app_partner_health_checks_partner_id_fkey"
+            columns: ["partner_id"]
+            isOneToOne: false
+            referencedRelation: "app_partners"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      app_partner_incidents: {
+        Row: {
+          alert_enqueued_at: string | null
+          id: string
+          partner_id: string
+          recovered_at: string | null
+          recovered_evidence: string | null
+          recovery_enqueued_at: string | null
+          severity: string
+          started_at: string
+          started_evidence: string
+        }
+        Insert: {
+          alert_enqueued_at?: string | null
+          id?: string
+          partner_id: string
+          recovered_at?: string | null
+          recovered_evidence?: string | null
+          recovery_enqueued_at?: string | null
+          severity: string
+          started_at?: string
+          started_evidence: string
+        }
+        Update: {
+          alert_enqueued_at?: string | null
+          id?: string
+          partner_id?: string
+          recovered_at?: string | null
+          recovered_evidence?: string | null
+          recovery_enqueued_at?: string | null
+          severity?: string
+          started_at?: string
+          started_evidence?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "app_partner_incidents_partner_id_fkey"
+            columns: ["partner_id"]
+            isOneToOne: false
+            referencedRelation: "app_partners"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      app_partner_members: {
+        Row: {
+          created_at: string
+          partner_id: string
+          role: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          partner_id: string
+          role?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          partner_id?: string
+          role?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "app_partner_members_partner_id_fkey"
+            columns: ["partner_id"]
+            isOneToOne: false
+            referencedRelation: "app_partners"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      app_partner_payout_requests: {
+        Row: {
+          amount_cents: number
+          id: string
+          paid_at: string | null
+          partner_id: string
+          payment_reference: string | null
+          pix_key: string
+          requested_at: string
+          requested_by: string
+          reviewed_at: string | null
+          reviewed_by: string | null
+          status: string
+        }
+        Insert: {
+          amount_cents: number
+          id?: string
+          paid_at?: string | null
+          partner_id: string
+          payment_reference?: string | null
+          pix_key: string
+          requested_at?: string
+          requested_by: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+        }
+        Update: {
+          amount_cents?: number
+          id?: string
+          paid_at?: string | null
+          partner_id?: string
+          payment_reference?: string | null
+          pix_key?: string
+          requested_at?: string
+          requested_by?: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "app_partner_payout_requests_partner_id_fkey"
+            columns: ["partner_id"]
+            isOneToOne: false
+            referencedRelation: "app_partners"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      app_partner_probe_jobs: {
+        Row: {
+          error_code: string | null
+          id: number
+          partner_id: string
+          processed_at: string | null
+          request_id: number
+          requested_at: string
+        }
+        Insert: {
+          error_code?: string | null
+          id?: never
+          partner_id: string
+          processed_at?: string | null
+          request_id: number
+          requested_at?: string
+        }
+        Update: {
+          error_code?: string | null
+          id?: never
+          partner_id?: string
+          processed_at?: string | null
+          request_id?: number
+          requested_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "app_partner_probe_jobs_partner_id_fkey"
+            columns: ["partner_id"]
+            isOneToOne: false
+            referencedRelation: "app_partners"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      app_partner_referrals: {
+        Row: {
+          created_at: string
+          id: string
+          partner_id: string
+          referred_user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          partner_id: string
+          referred_user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          partner_id?: string
+          referred_user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "app_partner_referrals_partner_id_fkey"
+            columns: ["partner_id"]
+            isOneToOne: false
+            referencedRelation: "app_partners"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      app_partner_service_statuses: {
+        Row: {
+          checked_at: string
+          name: string
+          partner_id: string
+          service_id: string
+          status: string
+          uptime_30d: number | null
+        }
+        Insert: {
+          checked_at?: string
+          name: string
+          partner_id: string
+          service_id: string
+          status?: string
+          uptime_30d?: number | null
+        }
+        Update: {
+          checked_at?: string
+          name?: string
+          partner_id?: string
+          service_id?: string
+          status?: string
+          uptime_30d?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "app_partner_service_statuses_partner_id_fkey"
+            columns: ["partner_id"]
+            isOneToOne: false
+            referencedRelation: "app_partners"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      app_partners: {
+        Row: {
+          accent_color: string
+          api_kind: string
+          api_url: string | null
+          broadcast_enabled: boolean
+          commission_on_renewals: boolean
+          commission_rate_bps: number
+          consecutive_healthy: number
+          consecutive_unhealthy: number
+          created_at: string
+          id: string
+          incidents_30d: number | null
+          last_check_at: string | null
+          last_error: string | null
+          last_healthy_at: string | null
+          logo_url: string | null
+          monitor_enabled: boolean
+          name: string
+          partnership_status: string
+          provider_updated_at: string | null
+          slug: string
+          stability_30d: number | null
+          status: string
+          updated_at: string
+          website_url: string | null
+        }
+        Insert: {
+          accent_color?: string
+          api_kind?: string
+          api_url?: string | null
+          broadcast_enabled?: boolean
+          commission_on_renewals?: boolean
+          commission_rate_bps?: number
+          consecutive_healthy?: number
+          consecutive_unhealthy?: number
+          created_at?: string
+          id?: string
+          incidents_30d?: number | null
+          last_check_at?: string | null
+          last_error?: string | null
+          last_healthy_at?: string | null
+          logo_url?: string | null
+          monitor_enabled?: boolean
+          name: string
+          partnership_status?: string
+          provider_updated_at?: string | null
+          slug: string
+          stability_30d?: number | null
+          status?: string
+          updated_at?: string
+          website_url?: string | null
+        }
+        Update: {
+          accent_color?: string
+          api_kind?: string
+          api_url?: string | null
+          broadcast_enabled?: boolean
+          commission_on_renewals?: boolean
+          commission_rate_bps?: number
+          consecutive_healthy?: number
+          consecutive_unhealthy?: number
+          created_at?: string
+          id?: string
+          incidents_30d?: number | null
+          last_check_at?: string | null
+          last_error?: string | null
+          last_healthy_at?: string | null
+          logo_url?: string | null
+          monitor_enabled?: boolean
+          name?: string
+          partnership_status?: string
+          provider_updated_at?: string | null
+          slug?: string
+          stability_30d?: number | null
+          status?: string
+          updated_at?: string
+          website_url?: string | null
+        }
+        Relationships: []
+      }
       app_releases: {
         Row: {
           created_at: string
@@ -2596,6 +2997,60 @@ export type Database = {
           source_url?: string | null
           started_at?: string
           status?: string
+        }
+        Relationships: []
+      }
+      football_broadcast_cache: {
+        Row: {
+          away_name: string
+          channels: string[]
+          fixture_key: string
+          home_name: string
+          match_day: string
+          updated_at: string
+          verified_at: string
+          verified_source: string
+        }
+        Insert: {
+          away_name: string
+          channels?: string[]
+          fixture_key: string
+          home_name: string
+          match_day: string
+          updated_at?: string
+          verified_at?: string
+          verified_source: string
+        }
+        Update: {
+          away_name?: string
+          channels?: string[]
+          fixture_key?: string
+          home_name?: string
+          match_day?: string
+          updated_at?: string
+          verified_at?: string
+          verified_source?: string
+        }
+        Relationships: []
+      }
+      football_broadcast_lookup_attempts: {
+        Row: {
+          fixture_key: string
+          last_attempt_at: string
+          match_day: string
+          result: string
+        }
+        Insert: {
+          fixture_key: string
+          last_attempt_at?: string
+          match_day: string
+          result: string
+        }
+        Update: {
+          fixture_key?: string
+          last_attempt_at?: string
+          match_day?: string
+          result?: string
         }
         Relationships: []
       }
@@ -6257,6 +6712,47 @@ export type Database = {
         }
         Relationships: []
       }
+      signup_payment_email_log: {
+        Row: {
+          created_at: string
+          email: string
+          error_code: string | null
+          message_id: string | null
+          sent_at: string | null
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          email: string
+          error_code?: string | null
+          message_id?: string | null
+          sent_at?: string | null
+          status: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          email?: string
+          error_code?: string | null
+          message_id?: string | null
+          sent_at?: string | null
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "signup_payment_email_log_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       store_products: {
         Row: {
           created_at: string | null
@@ -6307,6 +6803,47 @@ export type Database = {
           value?: Json
         }
         Relationships: []
+      }
+      subscription_expiry_email_log: {
+        Row: {
+          created_at: string
+          email: string
+          error_code: string | null
+          message_id: string | null
+          sent_at: string | null
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          email: string
+          error_code?: string | null
+          message_id?: string | null
+          sent_at?: string | null
+          status: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          email?: string
+          error_code?: string | null
+          message_id?: string | null
+          sent_at?: string | null
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "subscription_expiry_email_log_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       subscriptions: {
         Row: {
@@ -6359,6 +6896,33 @@ export type Database = {
           enabled?: boolean
           updated_at?: string
           user_id?: string
+        }
+        Relationships: []
+      }
+      telegram_catalog_search_sessions: {
+        Row: {
+          chat_id: string
+          created_at: string
+          expires_at: string
+          id: string
+          owner_id: string
+          title: string | null
+        }
+        Insert: {
+          chat_id: string
+          created_at?: string
+          expires_at?: string
+          id?: string
+          owner_id: string
+          title?: string | null
+        }
+        Update: {
+          chat_id?: string
+          created_at?: string
+          expires_at?: string
+          id?: string
+          owner_id?: string
+          title?: string | null
         }
         Relationships: []
       }
@@ -6733,6 +7297,51 @@ export type Database = {
         }
         Relationships: []
       }
+      vitrine_video_templates: {
+        Row: {
+          active: boolean
+          created_at: string
+          created_by: string
+          description: string
+          duration_seconds: number
+          height: number
+          id: string
+          size_bytes: number
+          sort_order: number
+          storage_path: string
+          title: string
+          width: number
+        }
+        Insert: {
+          active?: boolean
+          created_at?: string
+          created_by: string
+          description?: string
+          duration_seconds: number
+          height: number
+          id?: string
+          size_bytes: number
+          sort_order?: number
+          storage_path: string
+          title: string
+          width: number
+        }
+        Update: {
+          active?: boolean
+          created_at?: string
+          created_by?: string
+          description?: string
+          duration_seconds?: number
+          height?: number
+          id?: string
+          size_bytes?: number
+          sort_order?: number
+          storage_path?: string
+          title?: string
+          width?: number
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
@@ -6830,6 +7439,7 @@ export type Database = {
         }
         Returns: undefined
       }
+      app_partner_pgnet_tick: { Args: never; Returns: Json }
       check_circuit_breaker: { Args: { p_server_id: string }; Returns: string }
       claim_telegram_outbox: {
         Args: { _limit?: number }
@@ -7157,6 +7767,14 @@ export type Database = {
         }[]
       }
       get_reseller_page: { Args: { _slug: string }; Returns: Json }
+      get_searchable_catalog_servers: {
+        Args: { _owner_id: string }
+        Returns: {
+          catalog_synced_at: string
+          id: string
+          name: string
+        }[]
+      }
       get_sentinel_edge_summary: { Args: never; Returns: Json }
       get_server_concurrency_limit: {
         Args: { p_base_limit: number; p_server_id: string }
@@ -7409,6 +8027,10 @@ export type Database = {
       release_diagnostic_slot: {
         Args: { p_server_id: string; p_user_id: string }
         Returns: undefined
+      }
+      request_app_partner_payout: {
+        Args: { _amount_cents: number; _partner_id: string; _pix_key: string }
+        Returns: string
       }
       request_payout: {
         Args: { _pix_key: string; _pix_name: string; _pix_type: string }
