@@ -173,6 +173,9 @@ export function useSubscription() {
         profile: prof
       };
     },
-    staleTime: 30_000,\n    retry: 3,\n    retryDelay: (attempt) => Math.min(1000 * 2 ** attempt, 8000),\n    refetchOnWindowFocus: true,
+    staleTime: 30_000,
+    retry: 3,
+    retryDelay: (attempt) => Math.min(1000 * 2 ** attempt, 8000),
+    refetchOnWindowFocus: true,
   });
 }
