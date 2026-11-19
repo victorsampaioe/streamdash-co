@@ -22,6 +22,9 @@ import { sendVitrineFootballToRegisteredTelegram } from "@/lib/vitrine-football-
 const today = () => new Intl.DateTimeFormat("sv-SE", {
   timeZone: "America/Fortaleza", year: "numeric", month: "2-digit", day: "2-digit",
 }).format(new Date());
+const tomorrow = () => new Intl.DateTimeFormat("sv-SE", {
+  timeZone: "America/Fortaleza", year: "numeric", month: "2-digit", day: "2-digit",
+}).format(new Date(Date.now()+24*60*60*1000));
 type Branding = { name: string; logo: string; contact: string; accent: string };
 const fallbackBrand: Branding = {name:"Stream Monitor",logo:"/favicon.ico",contact:"",accent:"#146df2"};
 /** Keep crest data URLs small, to avoid Safari's large SVG/foreignObject memory limit. */
@@ -413,7 +416,7 @@ export function VitrineFootballStudio() {
       <div>
         <div className="flex items-center gap-2 text-xs font-bold tracking-[.18em] text-blue-400"><Trophy size={17}/> STREAM MONITOR</div>
         <h1 className="mt-2 text-3xl font-black tracking-tight">{posterMode==="finished"
-          ?"Fim de jogo · Placar final":"Eventos de hoje · Artes automáticas"}</h1>
+          ?"Fim de jogo · Placar final":day===tomorrow()?"Eventos de amanhã · Artes automáticas":"Eventos de hoje · Artes automáticas"}</h1>
         <p className="mt-2 text-sm text-muted-foreground">{posterMode==="finished"
           ?"Selecione uma partida encerrada com placar confirmado pela FTWB. A arte inclui os dois times, resultado, sua logo e WhatsApp."
           :todayLayout==="grid"
@@ -429,8 +432,6 @@ export function VitrineFootballStudio() {
       <Button type="button" variant="outline" disabled={games.isFetching}
         onClick={()=>{
           manualTransmissionRefresh.current=true;
-          const currentDate=today();
-          if(posterMode==="today"&&day!==currentDate){setDay(currentDate);return;}
           void games.refetch();
         }}>
         <RefreshCw size={16} className={games.isFetching?"mr-2 animate-spin":"mr-2"}/>
@@ -443,6 +444,11 @@ export function VitrineFootballStudio() {
         onClick={()=>{setPosterMode("today");setDay(today());setSelectedFinalId("");}}>
         ⚽ Jogos de hoje
       </Button>
+      {posterMode==="today"&&<Button type="button" role="tab" aria-selected={day===tomorrow()}
+        variant={day===tomorrow()?"default":"outline"}
+        onClick={()=>{setDay(tomorrow());setSelectedFinalId("");}}>
+        📅 Jogos de amanhã
+      </Button>}
       <Button type="button" role="tab" aria-selected={posterMode==="finished"}
         variant={posterMode==="finished"?"default":"outline"}
         onClick={()=>{setPosterMode("finished");setDay(today());setSelectedFinalId("");}}>
