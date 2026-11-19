@@ -12,3 +12,5 @@
 - PIX confirmation must validate provider amount, internal reference and charge identity through the shared validator before activation; this prevents cross-account crediting.
 - Recover unlinked PIX charges through the provider's exact external-reference search and reuse the internal payment ID as the provider idempotency key; this makes retries recoverable without guessing ownership.
 - Use literal typed table names for generated database queries; casting relation names to any prevents correct select-result inference.
+- Monitoring guard uses a single D1 compare-and-set batch for state, incident and event; keep it shadow-only until the existing public-state and Telegram bridge handoff is verified, to avoid two authoritative writers.
+- Monitoring Telegram sends must persist in the unique outbox before network delivery; cron and Queue share the atomic claim to prevent concurrent direct sends.

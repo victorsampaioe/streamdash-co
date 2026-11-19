@@ -1,5 +1,10 @@
 # STREAM MONITOR API
 
+## DNS/HTTP flapping (19/11/2026)
+- [ ] Implementar controlador D1 atômico, recuperação de 5 minutos e fila de eventos
+- [ ] Integrar Worker com prioridade por minuto e ponte existente sem envio de teste
+- [ ] Testar flapping, concorrência e documentar bloqueios de ativação
+
 ## Correção PIX solicitada
 
 - [ ] Confirmar pagamento real do primeiro cliente da imagem e liberar o acesso comprado

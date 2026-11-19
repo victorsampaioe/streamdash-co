@@ -203,7 +203,7 @@ function formatAlertMessage(server: any, data: AlertData): string {
 async function sendToTelegram(
   target:string,text:string,meta:import("./telegram-outbox.server").TelegramRetryMeta
 ) {
-  const { rawTelegramSend,enqueueTelegramRetry }=await import("./telegram-outbox.server");
+  const {enqueueTelegramRetry}=await import("./telegram-outbox.server");
   // An already scheduled delivery must not be sent again by the old retry cycle.
   if(meta.idempotencyKey){
     const {data:existing,error}=await supabaseAdmin.from("telegram_outbox")
@@ -214,13 +214,11 @@ async function sendToTelegram(
       throw new Error("telegram_delivery_queued");
     if(existing?.status==="dead")throw new Error("telegram_delivery_dead_letter");
   }
-  try{
-    await rawTelegramSend(target,text);
-  }catch(err){
-    const {queued}=await enqueueTelegramRetry(target,text,err,"monitor_alert",meta);
-    // Being queued is not a delivered alert; do not mark the incident notified.
-    throw new Error(queued?"telegram_delivery_queued":"telegram_delivery_dead_letter");
-  }
+  // Persist BEFORE any network send. The unique key and atomic claim are
+  // shared by regional reports, legacy cron and Cloudflare Queue retries.
+  const {queued}=await enqueueTelegramRetry(target,text,null,"monitor_alert",meta);
+  // Being queued is not delivered. Only the outbox worker marks success.
+  throw new Error(queued?"telegram_delivery_queued":"telegram_delivery_dead_letter");
 }
 
 async function notifyAdminAlert(server: any, data: AlertData, userMessage: string) {

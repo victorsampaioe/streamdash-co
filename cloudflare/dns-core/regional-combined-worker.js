@@ -8,6 +8,9 @@
  * SIGNING_KEY_JWK (private ECDSA key; public JWK in Lovable app_settings).
  * Cron: every minute; 30 rotating HTTP targets, 1 targets call, 1 report call.
  */
+import { recordSample } from "./monitor-store.mjs";
+import { targetLanes } from "./monitor-state.mjs";
+
 const MAX_TARGETS = 30;
 const CONCURRENCY = 5;
 const TIMEOUT = 6500;
@@ -85,7 +88,7 @@ async function check(target, region) {
       : http_status === 401 || http_status === 403 || http_status === 404 || http_status === 429
         ? "degraded" : http_status >= 500 ? "down" : "unknown";
   } catch (e) {
-    status = "down";
+    status = "unknown";
     error = e?.name === "TimeoutError" ? "Timeout de conexão" : "Falha de conexão HTTP";
   }
   return { server_id: target.server_id, region_code: region, status,
@@ -113,10 +116,31 @@ async function tick(env) {
   if (all.length === 0) {
     return { ok: true, targets: 0, checked: 0, reported: 0 };
   }
+  // D1 guard is opt-in until schema and public-state handoff are verified.
+  if (env.MONITOR_GUARD_MODE === "shadow" && env.DNS_DB) {
+    const rows = await env.DNS_DB.prepare("SELECT server_id,state_json FROM monitor_state WHERE json_extract(state_json,'$.incident.id') IS NOT NULL").all();
+    const priority = new Set((rows.results ?? []).map(row => row.server_id));
+    const lanes = targetLanes(all.map(t => ({ ...t, priority: priority.has(t.server_id) })), Math.floor(Date.now() / 60000), MAX_TARGETS);
+    if (lanes.priority.length && !env.TELEGRAM_DELIVERY_QUEUE) throw new Error("monitor_priority_queue_missing");
+    for (let i = 0; i < lanes.priority.length; i += 5) {
+      await env.TELEGRAM_DELIVERY_QUEUE.send({ action: "monitor-priority", id: crypto.randomUUID(), ts: Date.now(), targets: lanes.priority.slice(i, i + 5) });
+    }
+    return reportHttpTargets(env, lanes.normal);
+  }
   const totalSlots = Math.ceil(all.length / MAX_TARGETS);
   const slot = Math.floor(Date.now() / 60000) % totalSlots;
   const targets = all.slice(slot * MAX_TARGETS, (slot + 1) * MAX_TARGETS);
+  return reportHttpTargets(env, targets);
+}
+async function reportHttpTargets(env, targets) {
+  if (!targets.length) return { ok: true, checked: 0 };
   const reports = await pool(targets, env.REGION_CODE);
+  if (env.MONITOR_GUARD_MODE === "shadow" && env.DNS_DB) {
+    for (const report of reports) await recordSample(env.DNS_DB, report.server_id, {
+      kind: "http", at: Date.now(), proofs: [{ source: env.REGION_CODE,
+        verdict: report.status === "up" ? "ok" : report.status === "down" ? "down" : "unknown" }]
+    });
+  }
   const body = JSON.stringify({ reports });
   const authHeaders = await signatureHeaders(env, body);
   const reply = await jsonOrFail(await fetch(`${env.ENDPOINT_BASE}/api/public/regions/report`, {
@@ -124,7 +148,7 @@ async function tick(env) {
     headers: { "content-type": "application/json", ...authHeaders },
     body, signal: AbortSignal.timeout(15000),
   }));
-  return { ok: true, targets: all.length, checked: targets.length, reported: reply.inserted ?? 0, slot: slot + 1, totalSlots };
+  return { ok: true, checked: targets.length, reported: reply.inserted ?? 0 };
 }
 
 const regionalWorker = {
@@ -303,6 +327,13 @@ async function gather(targets){
   return checked;
 }
 async function keepResults(env,checks){
+  if (env.MONITOR_GUARD_MODE === "shadow") {
+    for (const check of checks) await recordSample(env.DNS_DB, check.server_id, {
+      kind: "dns", at: Date.parse(check.checked_at), proofs: check.resolvers.map(r => ({
+        source: r.code, verdict: r.ok ? "ok" : r.error === "transport_error" || r.error === "invalid_host" ? "unknown" : "down"
+      }))
+    });
+  }
   const stmts=[];
   for(const x of checks){
     const t=Date.parse(x.checked_at);
@@ -431,6 +462,19 @@ const telegramQueueWorker={
     for(const msg of batch.messages){
       const task=msg.body;
       try{
+        if (task?.action === "monitor-priority") {
+          if (env.MONITOR_GUARD_MODE !== "shadow" || !Array.isArray(task.targets) || task.targets.length > 5
+            || !Number.isFinite(task.ts) || Date.now() - task.ts > 90_000) {
+            msg.ack();
+            continue;
+          }
+          // Re-read authorized inventory: a queued host is never trusted.
+          const allowed = await getTargets(env);
+          const ids = new Set(task.targets.map(t => t.server_id));
+          await reportHttpTargets(env, allowed.filter(t => ids.has(t.server_id)));
+          msg.ack();
+          continue;
+        }
         if(!task||!["health","run"].includes(task.action)
           ||typeof task.id!=="string"||!/^[-a-f0-9]{36}$/i.test(task.id))
           throw new Error("telegram_queue_invalid_task");

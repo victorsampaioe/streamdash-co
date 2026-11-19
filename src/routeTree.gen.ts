@@ -14,6 +14,7 @@ import { Route as SlugRouteImport } from './routes/$slug'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as AdminRouteImport } from './routes/admin'
 import { Route as AlertasTelegramRouteImport } from './routes/alertas-telegram'
+import { Route as AplicativosRouteImport } from './routes/aplicativos'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as BlogRouteImport } from './routes/blog'
 import { Route as DevelopersRouteImport } from './routes/developers'
@@ -34,6 +35,7 @@ import { Route as AuthenticatedVitrineAiRouteImport } from './routes/_authentica
 import { Route as AuthenticatedVitrineBannerRouteImport } from './routes/_authenticated/vitrine-banner'
 import { Route as AuthenticatedVitrineFutebolRouteImport } from './routes/_authenticated/vitrine-futebol'
 import { Route as AuthenticatedVitrineVideoRouteImport } from './routes/_authenticated/vitrine-video'
+import { Route as AuthenticatedVitrineVideoModelosRouteImport } from './routes/_authenticated/vitrine-video-modelos'
 import { Route as AjudaSlugRouteImport } from './routes/ajuda.$slug'
 import { Route as ApiOpenapiDotjsonRouteImport } from './routes/api/openapi[.]json'
 import { Route as ApiOpenapiDotyamlRouteImport } from './routes/api/openapi[.]yaml'
@@ -41,6 +43,7 @@ import { Route as ApiV1RouteImport } from './routes/api/v1'
 import { Route as BlogComoEvitarQuedaIptvRouteImport } from './routes/blog.como-evitar-queda-iptv'
 import { Route as BlogComoSaberSeServidorIptvCaiuRouteImport } from './routes/blog.como-saber-se-servidor-iptv-caiu'
 import { Route as BlogDnsIptvNaoResolveRouteImport } from './routes/blog.dns-iptv-nao-resolve'
+import { Route as ConviteSlugRouteImport } from './routes/convite.$slug'
 import { Route as DevelopersChangelogRouteImport } from './routes/developers.changelog'
 import { Route as DownloadAndroidRouteImport } from './routes/download.android'
 import { Route as StatusSlugRouteImport } from './routes/status.$slug'
@@ -56,6 +59,7 @@ import { Route as AuthenticatedAppApiIntegrationsRouteImport } from './routes/_a
 import { Route as AuthenticatedAppAuditoriaRouteImport } from './routes/_authenticated/app.auditoria'
 import { Route as AuthenticatedAppCentralRouteImport } from './routes/_authenticated/app.central'
 import { Route as AuthenticatedAppCentralClientesRouteImport } from './routes/_authenticated/app.central-clientes'
+import { Route as AuthenticatedAppConteudoServidorRouteImport } from './routes/_authenticated/app.conteudo-servidor'
 import { Route as AuthenticatedAppDetectorRouteImport } from './routes/_authenticated/app.detector'
 import { Route as AuthenticatedAppDivulgacaoRouteImport } from './routes/_authenticated/app.divulgacao'
 import { Route as AuthenticatedAppEvidenciasRouteImport } from './routes/_authenticated/app.evidencias'
@@ -63,6 +67,7 @@ import { Route as AuthenticatedAppFalhasRouteImport } from './routes/_authentica
 import { Route as AuthenticatedAppIndiqueRouteImport } from './routes/_authenticated/app.indique'
 import { Route as AuthenticatedAppMemoriaRouteImport } from './routes/_authenticated/app.memoria'
 import { Route as AuthenticatedAppPaginaRouteImport } from './routes/_authenticated/app.pagina'
+import { Route as AuthenticatedAppParceiroAplicativoRouteImport } from './routes/_authenticated/app.parceiro-aplicativo'
 import { Route as AuthenticatedAppPerformanceRouteImport } from './routes/_authenticated/app.performance'
 import { Route as AuthenticatedAppRadarRouteImport } from './routes/_authenticated/app.radar'
 import { Route as AuthenticatedAppRankingRouteImport } from './routes/_authenticated/app.ranking'
@@ -82,7 +87,9 @@ import { Route as StatusRevendaSlugRouteImport } from './routes/status.revenda.$
 import { Route as AuthenticatedAppAdminAndroidPlayRouteImport } from './routes/_authenticated/app.admin.android-play'
 import { Route as AuthenticatedAppAdminStreamPlayVersionsRouteImport } from './routes/_authenticated/app.admin.stream-play-versions'
 import { Route as AuthenticatedAppAdminTelegramGuardRouteImport } from './routes/_authenticated/app.admin.telegram-guard'
+import { Route as AuthenticatedAppAdminAplicativosParceirosRouteImport } from './routes/_authenticated/app.admin_.aplicativos-parceiros'
 import { Route as AuthenticatedAppAdminCoreLogsRouteImport } from './routes/_authenticated/app.admin_.core-logs'
+import { Route as AuthenticatedAppAdminModelosVideoRouteImport } from './routes/_authenticated/app.admin_.modelos-video'
 import { Route as AuthenticatedAppAdminObservabilidadeRouteImport } from './routes/_authenticated/app.admin_.observabilidade'
 import { Route as AuthenticatedAppAdminVitrineFutebolRouteImport } from './routes/_authenticated/app.admin_.vitrine-futebol'
 import { Route as AuthenticatedAppDiagnosticoIndexRouteImport } from './routes/_authenticated/app.diagnostico.index'
@@ -156,6 +163,11 @@ const AdminRoute = AdminRouteImport.update({
 const AlertasTelegramRoute = AlertasTelegramRouteImport.update({
   id: '/alertas-telegram',
   path: '/alertas-telegram',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AplicativosRoute = AplicativosRouteImport.update({
+  id: '/aplicativos',
+  path: '/aplicativos',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AuthRoute = AuthRouteImport.update({
@@ -263,6 +275,12 @@ const AuthenticatedVitrineVideoRoute =
     path: '/vitrine-video',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const AuthenticatedVitrineVideoModelosRoute =
+  AuthenticatedVitrineVideoModelosRouteImport.update({
+    id: '/vitrine-video-modelos',
+    path: '/vitrine-video-modelos',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AjudaSlugRoute = AjudaSlugRouteImport.update({
   id: '/ajuda/$slug',
   path: '/ajuda/$slug',
@@ -298,6 +316,11 @@ const BlogDnsIptvNaoResolveRoute = BlogDnsIptvNaoResolveRouteImport.update({
   id: '/dns-iptv-nao-resolve',
   path: '/dns-iptv-nao-resolve',
   getParentRoute: () => BlogRoute,
+} as any)
+const ConviteSlugRoute = ConviteSlugRouteImport.update({
+  id: '/convite/$slug',
+  path: '/convite/$slug',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const DevelopersChangelogRoute = DevelopersChangelogRouteImport.update({
   id: '/changelog',
@@ -380,6 +403,12 @@ const AuthenticatedAppCentralClientesRoute =
     path: '/central-clientes',
     getParentRoute: () => AuthenticatedAppRoute,
   } as any)
+const AuthenticatedAppConteudoServidorRoute =
+  AuthenticatedAppConteudoServidorRouteImport.update({
+    id: '/conteudo-servidor',
+    path: '/conteudo-servidor',
+    getParentRoute: () => AuthenticatedAppRoute,
+  } as any)
 const AuthenticatedAppDetectorRoute =
   AuthenticatedAppDetectorRouteImport.update({
     id: '/detector',
@@ -418,6 +447,12 @@ const AuthenticatedAppPaginaRoute = AuthenticatedAppPaginaRouteImport.update({
   path: '/pagina',
   getParentRoute: () => AuthenticatedAppRoute,
 } as any)
+const AuthenticatedAppParceiroAplicativoRoute =
+  AuthenticatedAppParceiroAplicativoRouteImport.update({
+    id: '/parceiro-aplicativo',
+    path: '/parceiro-aplicativo',
+    getParentRoute: () => AuthenticatedAppRoute,
+  } as any)
 const AuthenticatedAppPerformanceRoute =
   AuthenticatedAppPerformanceRouteImport.update({
     id: '/performance',
@@ -523,10 +558,22 @@ const AuthenticatedAppAdminTelegramGuardRoute =
     path: '/telegram-guard',
     getParentRoute: () => AuthenticatedAppAdminRoute,
   } as any)
+const AuthenticatedAppAdminAplicativosParceirosRoute =
+  AuthenticatedAppAdminAplicativosParceirosRouteImport.update({
+    id: '/admin_/aplicativos-parceiros',
+    path: '/admin/aplicativos-parceiros',
+    getParentRoute: () => AuthenticatedAppRoute,
+  } as any)
 const AuthenticatedAppAdminCoreLogsRoute =
   AuthenticatedAppAdminCoreLogsRouteImport.update({
     id: '/admin_/core-logs',
     path: '/admin/core-logs',
+    getParentRoute: () => AuthenticatedAppRoute,
+  } as any)
+const AuthenticatedAppAdminModelosVideoRoute =
+  AuthenticatedAppAdminModelosVideoRouteImport.update({
+    id: '/admin_/modelos-video',
+    path: '/admin/modelos-video',
     getParentRoute: () => AuthenticatedAppRoute,
   } as any)
 const AuthenticatedAppAdminObservabilidadeRoute =
@@ -811,6 +858,7 @@ export interface FileRoutesByFullPath {
   '/$slug': typeof SlugRoute
   '/admin': typeof AdminRoute
   '/alertas-telegram': typeof AlertasTelegramRoute
+  '/aplicativos': typeof AplicativosRoute
   '/auth': typeof AuthRoute
   '/blog': typeof BlogRouteWithChildren
   '/developers': typeof DevelopersRouteWithChildren
@@ -831,6 +879,7 @@ export interface FileRoutesByFullPath {
   '/vitrine-banner': typeof AuthenticatedVitrineBannerRoute
   '/vitrine-futebol': typeof AuthenticatedVitrineFutebolRoute
   '/vitrine-video': typeof AuthenticatedVitrineVideoRoute
+  '/vitrine-video-modelos': typeof AuthenticatedVitrineVideoModelosRoute
   '/ajuda/$slug': typeof AjudaSlugRoute
   '/api/openapi.json': typeof ApiOpenapiDotjsonRoute
   '/api/openapi.yaml': typeof ApiOpenapiDotyamlRoute
@@ -838,6 +887,7 @@ export interface FileRoutesByFullPath {
   '/blog/como-evitar-queda-iptv': typeof BlogComoEvitarQuedaIptvRoute
   '/blog/como-saber-se-servidor-iptv-caiu': typeof BlogComoSaberSeServidorIptvCaiuRoute
   '/blog/dns-iptv-nao-resolve': typeof BlogDnsIptvNaoResolveRoute
+  '/convite/$slug': typeof ConviteSlugRoute
   '/developers/changelog': typeof DevelopersChangelogRoute
   '/download/android': typeof DownloadAndroidRoute
   '/status/$slug': typeof StatusSlugRoute
@@ -852,6 +902,7 @@ export interface FileRoutesByFullPath {
   '/app/auditoria': typeof AuthenticatedAppAuditoriaRoute
   '/app/central': typeof AuthenticatedAppCentralRoute
   '/app/central-clientes': typeof AuthenticatedAppCentralClientesRoute
+  '/app/conteudo-servidor': typeof AuthenticatedAppConteudoServidorRoute
   '/app/detector': typeof AuthenticatedAppDetectorRoute
   '/app/divulgacao': typeof AuthenticatedAppDivulgacaoRoute
   '/app/evidencias': typeof AuthenticatedAppEvidenciasRoute
@@ -859,6 +910,7 @@ export interface FileRoutesByFullPath {
   '/app/indique': typeof AuthenticatedAppIndiqueRoute
   '/app/memoria': typeof AuthenticatedAppMemoriaRoute
   '/app/pagina': typeof AuthenticatedAppPaginaRoute
+  '/app/parceiro-aplicativo': typeof AuthenticatedAppParceiroAplicativoRoute
   '/app/performance': typeof AuthenticatedAppPerformanceRoute
   '/app/radar': typeof AuthenticatedAppRadarRoute
   '/app/ranking': typeof AuthenticatedAppRankingRoute
@@ -879,7 +931,9 @@ export interface FileRoutesByFullPath {
   '/app/admin/android-play': typeof AuthenticatedAppAdminAndroidPlayRoute
   '/app/admin/stream-play-versions': typeof AuthenticatedAppAdminStreamPlayVersionsRoute
   '/app/admin/telegram-guard': typeof AuthenticatedAppAdminTelegramGuardRoute
+  '/app/admin/aplicativos-parceiros': typeof AuthenticatedAppAdminAplicativosParceirosRoute
   '/app/admin/core-logs': typeof AuthenticatedAppAdminCoreLogsRoute
+  '/app/admin/modelos-video': typeof AuthenticatedAppAdminModelosVideoRoute
   '/app/admin/observabilidade': typeof AuthenticatedAppAdminObservabilidadeRoute
   '/app/admin/vitrine-futebol': typeof AuthenticatedAppAdminVitrineFutebolRoute
   '/app/servers/$id': typeof AuthenticatedAppServersIdRoute
@@ -936,6 +990,7 @@ export interface FileRoutesByTo {
   '/$slug': typeof SlugRoute
   '/admin': typeof AdminRoute
   '/alertas-telegram': typeof AlertasTelegramRoute
+  '/aplicativos': typeof AplicativosRoute
   '/auth': typeof AuthRoute
   '/blog': typeof BlogRouteWithChildren
   '/developers': typeof DevelopersRouteWithChildren
@@ -955,6 +1010,7 @@ export interface FileRoutesByTo {
   '/vitrine-banner': typeof AuthenticatedVitrineBannerRoute
   '/vitrine-futebol': typeof AuthenticatedVitrineFutebolRoute
   '/vitrine-video': typeof AuthenticatedVitrineVideoRoute
+  '/vitrine-video-modelos': typeof AuthenticatedVitrineVideoModelosRoute
   '/ajuda/$slug': typeof AjudaSlugRoute
   '/api/openapi.json': typeof ApiOpenapiDotjsonRoute
   '/api/openapi.yaml': typeof ApiOpenapiDotyamlRoute
@@ -962,6 +1018,7 @@ export interface FileRoutesByTo {
   '/blog/como-evitar-queda-iptv': typeof BlogComoEvitarQuedaIptvRoute
   '/blog/como-saber-se-servidor-iptv-caiu': typeof BlogComoSaberSeServidorIptvCaiuRoute
   '/blog/dns-iptv-nao-resolve': typeof BlogDnsIptvNaoResolveRoute
+  '/convite/$slug': typeof ConviteSlugRoute
   '/developers/changelog': typeof DevelopersChangelogRoute
   '/download/android': typeof DownloadAndroidRoute
   '/status/$slug': typeof StatusSlugRoute
@@ -976,6 +1033,7 @@ export interface FileRoutesByTo {
   '/app/auditoria': typeof AuthenticatedAppAuditoriaRoute
   '/app/central': typeof AuthenticatedAppCentralRoute
   '/app/central-clientes': typeof AuthenticatedAppCentralClientesRoute
+  '/app/conteudo-servidor': typeof AuthenticatedAppConteudoServidorRoute
   '/app/detector': typeof AuthenticatedAppDetectorRoute
   '/app/divulgacao': typeof AuthenticatedAppDivulgacaoRoute
   '/app/evidencias': typeof AuthenticatedAppEvidenciasRoute
@@ -983,6 +1041,7 @@ export interface FileRoutesByTo {
   '/app/indique': typeof AuthenticatedAppIndiqueRoute
   '/app/memoria': typeof AuthenticatedAppMemoriaRoute
   '/app/pagina': typeof AuthenticatedAppPaginaRoute
+  '/app/parceiro-aplicativo': typeof AuthenticatedAppParceiroAplicativoRoute
   '/app/performance': typeof AuthenticatedAppPerformanceRoute
   '/app/radar': typeof AuthenticatedAppRadarRoute
   '/app/ranking': typeof AuthenticatedAppRankingRoute
@@ -1003,7 +1062,9 @@ export interface FileRoutesByTo {
   '/app/admin/android-play': typeof AuthenticatedAppAdminAndroidPlayRoute
   '/app/admin/stream-play-versions': typeof AuthenticatedAppAdminStreamPlayVersionsRoute
   '/app/admin/telegram-guard': typeof AuthenticatedAppAdminTelegramGuardRoute
+  '/app/admin/aplicativos-parceiros': typeof AuthenticatedAppAdminAplicativosParceirosRoute
   '/app/admin/core-logs': typeof AuthenticatedAppAdminCoreLogsRoute
+  '/app/admin/modelos-video': typeof AuthenticatedAppAdminModelosVideoRoute
   '/app/admin/observabilidade': typeof AuthenticatedAppAdminObservabilidadeRoute
   '/app/admin/vitrine-futebol': typeof AuthenticatedAppAdminVitrineFutebolRoute
   '/app/servers/$id': typeof AuthenticatedAppServersIdRoute
@@ -1062,6 +1123,7 @@ export interface FileRoutesById {
   '/$slug': typeof SlugRoute
   '/admin': typeof AdminRoute
   '/alertas-telegram': typeof AlertasTelegramRoute
+  '/aplicativos': typeof AplicativosRoute
   '/auth': typeof AuthRoute
   '/blog': typeof BlogRouteWithChildren
   '/developers': typeof DevelopersRouteWithChildren
@@ -1082,6 +1144,7 @@ export interface FileRoutesById {
   '/_authenticated/vitrine-banner': typeof AuthenticatedVitrineBannerRoute
   '/_authenticated/vitrine-futebol': typeof AuthenticatedVitrineFutebolRoute
   '/_authenticated/vitrine-video': typeof AuthenticatedVitrineVideoRoute
+  '/_authenticated/vitrine-video-modelos': typeof AuthenticatedVitrineVideoModelosRoute
   '/ajuda/$slug': typeof AjudaSlugRoute
   '/api/openapi.json': typeof ApiOpenapiDotjsonRoute
   '/api/openapi.yaml': typeof ApiOpenapiDotyamlRoute
@@ -1089,6 +1152,7 @@ export interface FileRoutesById {
   '/blog/como-evitar-queda-iptv': typeof BlogComoEvitarQuedaIptvRoute
   '/blog/como-saber-se-servidor-iptv-caiu': typeof BlogComoSaberSeServidorIptvCaiuRoute
   '/blog/dns-iptv-nao-resolve': typeof BlogDnsIptvNaoResolveRoute
+  '/convite/$slug': typeof ConviteSlugRoute
   '/developers/changelog': typeof DevelopersChangelogRoute
   '/download/android': typeof DownloadAndroidRoute
   '/status/$slug': typeof StatusSlugRoute
@@ -1103,6 +1167,7 @@ export interface FileRoutesById {
   '/_authenticated/app/auditoria': typeof AuthenticatedAppAuditoriaRoute
   '/_authenticated/app/central': typeof AuthenticatedAppCentralRoute
   '/_authenticated/app/central-clientes': typeof AuthenticatedAppCentralClientesRoute
+  '/_authenticated/app/conteudo-servidor': typeof AuthenticatedAppConteudoServidorRoute
   '/_authenticated/app/detector': typeof AuthenticatedAppDetectorRoute
   '/_authenticated/app/divulgacao': typeof AuthenticatedAppDivulgacaoRoute
   '/_authenticated/app/evidencias': typeof AuthenticatedAppEvidenciasRoute
@@ -1110,6 +1175,7 @@ export interface FileRoutesById {
   '/_authenticated/app/indique': typeof AuthenticatedAppIndiqueRoute
   '/_authenticated/app/memoria': typeof AuthenticatedAppMemoriaRoute
   '/_authenticated/app/pagina': typeof AuthenticatedAppPaginaRoute
+  '/_authenticated/app/parceiro-aplicativo': typeof AuthenticatedAppParceiroAplicativoRoute
   '/_authenticated/app/performance': typeof AuthenticatedAppPerformanceRoute
   '/_authenticated/app/radar': typeof AuthenticatedAppRadarRoute
   '/_authenticated/app/ranking': typeof AuthenticatedAppRankingRoute
@@ -1130,7 +1196,9 @@ export interface FileRoutesById {
   '/_authenticated/app/admin/android-play': typeof AuthenticatedAppAdminAndroidPlayRoute
   '/_authenticated/app/admin/stream-play-versions': typeof AuthenticatedAppAdminStreamPlayVersionsRoute
   '/_authenticated/app/admin/telegram-guard': typeof AuthenticatedAppAdminTelegramGuardRoute
+  '/_authenticated/app/admin_/aplicativos-parceiros': typeof AuthenticatedAppAdminAplicativosParceirosRoute
   '/_authenticated/app/admin_/core-logs': typeof AuthenticatedAppAdminCoreLogsRoute
+  '/_authenticated/app/admin_/modelos-video': typeof AuthenticatedAppAdminModelosVideoRoute
   '/_authenticated/app/admin_/observabilidade': typeof AuthenticatedAppAdminObservabilidadeRoute
   '/_authenticated/app/admin_/vitrine-futebol': typeof AuthenticatedAppAdminVitrineFutebolRoute
   '/_authenticated/app/servers/$id': typeof AuthenticatedAppServersIdRoute
@@ -1189,6 +1257,7 @@ export interface FileRouteTypes {
     | '/$slug'
     | '/admin'
     | '/alertas-telegram'
+    | '/aplicativos'
     | '/auth'
     | '/blog'
     | '/developers'
@@ -1209,6 +1278,7 @@ export interface FileRouteTypes {
     | '/vitrine-banner'
     | '/vitrine-futebol'
     | '/vitrine-video'
+    | '/vitrine-video-modelos'
     | '/ajuda/$slug'
     | '/api/openapi.json'
     | '/api/openapi.yaml'
@@ -1216,6 +1286,7 @@ export interface FileRouteTypes {
     | '/blog/como-evitar-queda-iptv'
     | '/blog/como-saber-se-servidor-iptv-caiu'
     | '/blog/dns-iptv-nao-resolve'
+    | '/convite/$slug'
     | '/developers/changelog'
     | '/download/android'
     | '/status/$slug'
@@ -1230,6 +1301,7 @@ export interface FileRouteTypes {
     | '/app/auditoria'
     | '/app/central'
     | '/app/central-clientes'
+    | '/app/conteudo-servidor'
     | '/app/detector'
     | '/app/divulgacao'
     | '/app/evidencias'
@@ -1237,6 +1309,7 @@ export interface FileRouteTypes {
     | '/app/indique'
     | '/app/memoria'
     | '/app/pagina'
+    | '/app/parceiro-aplicativo'
     | '/app/performance'
     | '/app/radar'
     | '/app/ranking'
@@ -1257,7 +1330,9 @@ export interface FileRouteTypes {
     | '/app/admin/android-play'
     | '/app/admin/stream-play-versions'
     | '/app/admin/telegram-guard'
+    | '/app/admin/aplicativos-parceiros'
     | '/app/admin/core-logs'
+    | '/app/admin/modelos-video'
     | '/app/admin/observabilidade'
     | '/app/admin/vitrine-futebol'
     | '/app/servers/$id'
@@ -1314,6 +1389,7 @@ export interface FileRouteTypes {
     | '/$slug'
     | '/admin'
     | '/alertas-telegram'
+    | '/aplicativos'
     | '/auth'
     | '/blog'
     | '/developers'
@@ -1333,6 +1409,7 @@ export interface FileRouteTypes {
     | '/vitrine-banner'
     | '/vitrine-futebol'
     | '/vitrine-video'
+    | '/vitrine-video-modelos'
     | '/ajuda/$slug'
     | '/api/openapi.json'
     | '/api/openapi.yaml'
@@ -1340,6 +1417,7 @@ export interface FileRouteTypes {
     | '/blog/como-evitar-queda-iptv'
     | '/blog/como-saber-se-servidor-iptv-caiu'
     | '/blog/dns-iptv-nao-resolve'
+    | '/convite/$slug'
     | '/developers/changelog'
     | '/download/android'
     | '/status/$slug'
@@ -1354,6 +1432,7 @@ export interface FileRouteTypes {
     | '/app/auditoria'
     | '/app/central'
     | '/app/central-clientes'
+    | '/app/conteudo-servidor'
     | '/app/detector'
     | '/app/divulgacao'
     | '/app/evidencias'
@@ -1361,6 +1440,7 @@ export interface FileRouteTypes {
     | '/app/indique'
     | '/app/memoria'
     | '/app/pagina'
+    | '/app/parceiro-aplicativo'
     | '/app/performance'
     | '/app/radar'
     | '/app/ranking'
@@ -1381,7 +1461,9 @@ export interface FileRouteTypes {
     | '/app/admin/android-play'
     | '/app/admin/stream-play-versions'
     | '/app/admin/telegram-guard'
+    | '/app/admin/aplicativos-parceiros'
     | '/app/admin/core-logs'
+    | '/app/admin/modelos-video'
     | '/app/admin/observabilidade'
     | '/app/admin/vitrine-futebol'
     | '/app/servers/$id'
@@ -1439,6 +1521,7 @@ export interface FileRouteTypes {
     | '/$slug'
     | '/admin'
     | '/alertas-telegram'
+    | '/aplicativos'
     | '/auth'
     | '/blog'
     | '/developers'
@@ -1459,6 +1542,7 @@ export interface FileRouteTypes {
     | '/_authenticated/vitrine-banner'
     | '/_authenticated/vitrine-futebol'
     | '/_authenticated/vitrine-video'
+    | '/_authenticated/vitrine-video-modelos'
     | '/ajuda/$slug'
     | '/api/openapi.json'
     | '/api/openapi.yaml'
@@ -1466,6 +1550,7 @@ export interface FileRouteTypes {
     | '/blog/como-evitar-queda-iptv'
     | '/blog/como-saber-se-servidor-iptv-caiu'
     | '/blog/dns-iptv-nao-resolve'
+    | '/convite/$slug'
     | '/developers/changelog'
     | '/download/android'
     | '/status/$slug'
@@ -1480,6 +1565,7 @@ export interface FileRouteTypes {
     | '/_authenticated/app/auditoria'
     | '/_authenticated/app/central'
     | '/_authenticated/app/central-clientes'
+    | '/_authenticated/app/conteudo-servidor'
     | '/_authenticated/app/detector'
     | '/_authenticated/app/divulgacao'
     | '/_authenticated/app/evidencias'
@@ -1487,6 +1573,7 @@ export interface FileRouteTypes {
     | '/_authenticated/app/indique'
     | '/_authenticated/app/memoria'
     | '/_authenticated/app/pagina'
+    | '/_authenticated/app/parceiro-aplicativo'
     | '/_authenticated/app/performance'
     | '/_authenticated/app/radar'
     | '/_authenticated/app/ranking'
@@ -1507,7 +1594,9 @@ export interface FileRouteTypes {
     | '/_authenticated/app/admin/android-play'
     | '/_authenticated/app/admin/stream-play-versions'
     | '/_authenticated/app/admin/telegram-guard'
+    | '/_authenticated/app/admin_/aplicativos-parceiros'
     | '/_authenticated/app/admin_/core-logs'
+    | '/_authenticated/app/admin_/modelos-video'
     | '/_authenticated/app/admin_/observabilidade'
     | '/_authenticated/app/admin_/vitrine-futebol'
     | '/_authenticated/app/servers/$id'
@@ -1566,6 +1655,7 @@ export interface RootRouteChildren {
   SlugRoute: typeof SlugRoute
   AdminRoute: typeof AdminRoute
   AlertasTelegramRoute: typeof AlertasTelegramRoute
+  AplicativosRoute: typeof AplicativosRoute
   AuthRoute: typeof AuthRoute
   BlogRoute: typeof BlogRouteWithChildren
   DevelopersRoute: typeof DevelopersRouteWithChildren
@@ -1585,6 +1675,7 @@ export interface RootRouteChildren {
   ApiOpenapiDotjsonRoute: typeof ApiOpenapiDotjsonRoute
   ApiOpenapiDotyamlRoute: typeof ApiOpenapiDotyamlRoute
   ApiV1Route: typeof ApiV1RouteWithChildren
+  ConviteSlugRoute: typeof ConviteSlugRoute
   DownloadAndroidRoute: typeof DownloadAndroidRoute
   StatusSlugRoute: typeof StatusSlugRoute
   DotlovableOauthConsentRoute: typeof DotlovableOauthConsentRoute
@@ -1676,6 +1767,13 @@ declare module '@tanstack/react-router' {
       path: '/alertas-telegram'
       fullPath: '/alertas-telegram'
       preLoaderRoute: typeof AlertasTelegramRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/aplicativos': {
+      id: '/aplicativos'
+      path: '/aplicativos'
+      fullPath: '/aplicativos'
+      preLoaderRoute: typeof AplicativosRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/auth': {
@@ -1818,6 +1916,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedVitrineVideoRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/vitrine-video-modelos': {
+      id: '/_authenticated/vitrine-video-modelos'
+      path: '/vitrine-video-modelos'
+      fullPath: '/vitrine-video-modelos'
+      preLoaderRoute: typeof AuthenticatedVitrineVideoModelosRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/ajuda/$slug': {
       id: '/ajuda/$slug'
       path: '/ajuda/$slug'
@@ -1866,6 +1971,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/blog/dns-iptv-nao-resolve'
       preLoaderRoute: typeof BlogDnsIptvNaoResolveRouteImport
       parentRoute: typeof BlogRoute
+    }
+    '/convite/$slug': {
+      id: '/convite/$slug'
+      path: '/convite/$slug'
+      fullPath: '/convite/$slug'
+      preLoaderRoute: typeof ConviteSlugRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/developers/changelog': {
       id: '/developers/changelog'
@@ -1972,6 +2084,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAppCentralClientesRouteImport
       parentRoute: typeof AuthenticatedAppRoute
     }
+    '/_authenticated/app/conteudo-servidor': {
+      id: '/_authenticated/app/conteudo-servidor'
+      path: '/conteudo-servidor'
+      fullPath: '/app/conteudo-servidor'
+      preLoaderRoute: typeof AuthenticatedAppConteudoServidorRouteImport
+      parentRoute: typeof AuthenticatedAppRoute
+    }
     '/_authenticated/app/detector': {
       id: '/_authenticated/app/detector'
       path: '/detector'
@@ -2019,6 +2138,13 @@ declare module '@tanstack/react-router' {
       path: '/pagina'
       fullPath: '/app/pagina'
       preLoaderRoute: typeof AuthenticatedAppPaginaRouteImport
+      parentRoute: typeof AuthenticatedAppRoute
+    }
+    '/_authenticated/app/parceiro-aplicativo': {
+      id: '/_authenticated/app/parceiro-aplicativo'
+      path: '/parceiro-aplicativo'
+      fullPath: '/app/parceiro-aplicativo'
+      preLoaderRoute: typeof AuthenticatedAppParceiroAplicativoRouteImport
       parentRoute: typeof AuthenticatedAppRoute
     }
     '/_authenticated/app/performance': {
@@ -2154,11 +2280,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAppAdminTelegramGuardRouteImport
       parentRoute: typeof AuthenticatedAppAdminRoute
     }
+    '/_authenticated/app/admin_/aplicativos-parceiros': {
+      id: '/_authenticated/app/admin_/aplicativos-parceiros'
+      path: '/admin/aplicativos-parceiros'
+      fullPath: '/app/admin/aplicativos-parceiros'
+      preLoaderRoute: typeof AuthenticatedAppAdminAplicativosParceirosRouteImport
+      parentRoute: typeof AuthenticatedAppRoute
+    }
     '/_authenticated/app/admin_/core-logs': {
       id: '/_authenticated/app/admin_/core-logs'
       path: '/admin/core-logs'
       fullPath: '/app/admin/core-logs'
       preLoaderRoute: typeof AuthenticatedAppAdminCoreLogsRouteImport
+      parentRoute: typeof AuthenticatedAppRoute
+    }
+    '/_authenticated/app/admin_/modelos-video': {
+      id: '/_authenticated/app/admin_/modelos-video'
+      path: '/admin/modelos-video'
+      fullPath: '/app/admin/modelos-video'
+      preLoaderRoute: typeof AuthenticatedAppAdminModelosVideoRouteImport
       parentRoute: typeof AuthenticatedAppRoute
     }
     '/_authenticated/app/admin_/observabilidade': {
@@ -2543,6 +2683,7 @@ interface AuthenticatedAppRouteChildren {
   AuthenticatedAppAuditoriaRoute: typeof AuthenticatedAppAuditoriaRoute
   AuthenticatedAppCentralRoute: typeof AuthenticatedAppCentralRoute
   AuthenticatedAppCentralClientesRoute: typeof AuthenticatedAppCentralClientesRoute
+  AuthenticatedAppConteudoServidorRoute: typeof AuthenticatedAppConteudoServidorRoute
   AuthenticatedAppDetectorRoute: typeof AuthenticatedAppDetectorRoute
   AuthenticatedAppDivulgacaoRoute: typeof AuthenticatedAppDivulgacaoRoute
   AuthenticatedAppEvidenciasRoute: typeof AuthenticatedAppEvidenciasRoute
@@ -2550,6 +2691,7 @@ interface AuthenticatedAppRouteChildren {
   AuthenticatedAppIndiqueRoute: typeof AuthenticatedAppIndiqueRoute
   AuthenticatedAppMemoriaRoute: typeof AuthenticatedAppMemoriaRoute
   AuthenticatedAppPaginaRoute: typeof AuthenticatedAppPaginaRoute
+  AuthenticatedAppParceiroAplicativoRoute: typeof AuthenticatedAppParceiroAplicativoRoute
   AuthenticatedAppPerformanceRoute: typeof AuthenticatedAppPerformanceRoute
   AuthenticatedAppRadarRoute: typeof AuthenticatedAppRadarRoute
   AuthenticatedAppRankingRoute: typeof AuthenticatedAppRankingRoute
@@ -2558,7 +2700,9 @@ interface AuthenticatedAppRouteChildren {
   AuthenticatedAppStreamDoctorRoute: typeof AuthenticatedAppStreamDoctorRoute
   AuthenticatedAppSubscriptionRoute: typeof AuthenticatedAppSubscriptionRoute
   AuthenticatedAppIndexRoute: typeof AuthenticatedAppIndexRoute
+  AuthenticatedAppAdminAplicativosParceirosRoute: typeof AuthenticatedAppAdminAplicativosParceirosRoute
   AuthenticatedAppAdminCoreLogsRoute: typeof AuthenticatedAppAdminCoreLogsRoute
+  AuthenticatedAppAdminModelosVideoRoute: typeof AuthenticatedAppAdminModelosVideoRoute
   AuthenticatedAppAdminObservabilidadeRoute: typeof AuthenticatedAppAdminObservabilidadeRoute
   AuthenticatedAppAdminVitrineFutebolRoute: typeof AuthenticatedAppAdminVitrineFutebolRoute
   AuthenticatedAppServersIdRoute: typeof AuthenticatedAppServersIdRoute
@@ -2579,6 +2723,7 @@ const AuthenticatedAppRouteChildren: AuthenticatedAppRouteChildren = {
   AuthenticatedAppAuditoriaRoute: AuthenticatedAppAuditoriaRoute,
   AuthenticatedAppCentralRoute: AuthenticatedAppCentralRoute,
   AuthenticatedAppCentralClientesRoute: AuthenticatedAppCentralClientesRoute,
+  AuthenticatedAppConteudoServidorRoute: AuthenticatedAppConteudoServidorRoute,
   AuthenticatedAppDetectorRoute: AuthenticatedAppDetectorRoute,
   AuthenticatedAppDivulgacaoRoute: AuthenticatedAppDivulgacaoRoute,
   AuthenticatedAppEvidenciasRoute: AuthenticatedAppEvidenciasRoute,
@@ -2586,6 +2731,8 @@ const AuthenticatedAppRouteChildren: AuthenticatedAppRouteChildren = {
   AuthenticatedAppIndiqueRoute: AuthenticatedAppIndiqueRoute,
   AuthenticatedAppMemoriaRoute: AuthenticatedAppMemoriaRoute,
   AuthenticatedAppPaginaRoute: AuthenticatedAppPaginaRoute,
+  AuthenticatedAppParceiroAplicativoRoute:
+    AuthenticatedAppParceiroAplicativoRoute,
   AuthenticatedAppPerformanceRoute: AuthenticatedAppPerformanceRoute,
   AuthenticatedAppRadarRoute: AuthenticatedAppRadarRoute,
   AuthenticatedAppRankingRoute: AuthenticatedAppRankingRoute,
@@ -2594,7 +2741,11 @@ const AuthenticatedAppRouteChildren: AuthenticatedAppRouteChildren = {
   AuthenticatedAppStreamDoctorRoute: AuthenticatedAppStreamDoctorRoute,
   AuthenticatedAppSubscriptionRoute: AuthenticatedAppSubscriptionRoute,
   AuthenticatedAppIndexRoute: AuthenticatedAppIndexRoute,
+  AuthenticatedAppAdminAplicativosParceirosRoute:
+    AuthenticatedAppAdminAplicativosParceirosRoute,
   AuthenticatedAppAdminCoreLogsRoute: AuthenticatedAppAdminCoreLogsRoute,
+  AuthenticatedAppAdminModelosVideoRoute:
+    AuthenticatedAppAdminModelosVideoRoute,
   AuthenticatedAppAdminObservabilidadeRoute:
     AuthenticatedAppAdminObservabilidadeRoute,
   AuthenticatedAppAdminVitrineFutebolRoute:
@@ -2618,6 +2769,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedVitrineBannerRoute: typeof AuthenticatedVitrineBannerRoute
   AuthenticatedVitrineFutebolRoute: typeof AuthenticatedVitrineFutebolRoute
   AuthenticatedVitrineVideoRoute: typeof AuthenticatedVitrineVideoRoute
+  AuthenticatedVitrineVideoModelosRoute: typeof AuthenticatedVitrineVideoModelosRoute
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
@@ -2626,6 +2778,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedVitrineBannerRoute: AuthenticatedVitrineBannerRoute,
   AuthenticatedVitrineFutebolRoute: AuthenticatedVitrineFutebolRoute,
   AuthenticatedVitrineVideoRoute: AuthenticatedVitrineVideoRoute,
+  AuthenticatedVitrineVideoModelosRoute: AuthenticatedVitrineVideoModelosRoute,
 }
 
 const AuthenticatedRouteRouteWithChildren =
@@ -2673,6 +2826,7 @@ const rootRouteChildren: RootRouteChildren = {
   SlugRoute: SlugRoute,
   AdminRoute: AdminRoute,
   AlertasTelegramRoute: AlertasTelegramRoute,
+  AplicativosRoute: AplicativosRoute,
   AuthRoute: AuthRoute,
   BlogRoute: BlogRouteWithChildren,
   DevelopersRoute: DevelopersRouteWithChildren,
@@ -2693,6 +2847,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiOpenapiDotjsonRoute: ApiOpenapiDotjsonRoute,
   ApiOpenapiDotyamlRoute: ApiOpenapiDotyamlRoute,
   ApiV1Route: ApiV1RouteWithChildren,
+  ConviteSlugRoute: ConviteSlugRoute,
   DownloadAndroidRoute: DownloadAndroidRoute,
   StatusSlugRoute: StatusSlugRoute,
   DotlovableOauthConsentRoute: DotlovableOauthConsentRoute,
