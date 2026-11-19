@@ -1,5 +1,5 @@
 import { Link, Outlet, useNavigate, useRouterState } from "@tanstack/react-router";
-import { Activity, LayoutDashboard, ServerIcon, Bell, Users, LogOut, Sun, Moon, Search, Plus, CreditCard, Gift, Radio, ShieldAlert, Trophy, Lock, Menu, Send, Bot, Sparkles, BookOpen, Globe, ShoppingBag, Zap, Gauge, Braces, Smartphone, Wallet, Film } from "lucide-react";
+import { Activity, LayoutDashboard, ServerIcon, Bell, Users, LogOut, Sun, Moon, Search, Plus, CreditCard, Gift, Radio, ShieldAlert, Trophy, Lock, Menu, Send, Bot, Sparkles, BookOpen, Globe, ShoppingBag, Zap, Gauge, Braces, Smartphone, Wallet, Film, ChevronDown, ChevronRight, Settings2 } from "lucide-react";
 import { SubscriptionBanner } from "@/components/subscription/subscription-banner";
 import { ConversionReminders } from "@/components/subscription/conversion-reminders";
 import { TelegramBanner } from "@/components/telegram-banner";
@@ -221,31 +221,31 @@ function useNavItems() {
   return items;
 }
 
+const NAV_GROUPS = [
+ {name:"Visão geral", labels:["Dashboard"]},
+ {name:"Servidores e monitoramento",labels:["Servidores","Radar de Falhas","Alertas","Diagnóstico","Ranking","Performance","Status dos Aplicativos","Memória de Diagnósticos","Biblioteca de Evidências","Evidências"]},
+ {name:"Inteligência e conteúdo",labels:["Central Inteligente","Stream Guardian IA","Radar Brasil","Inteligência de Conteúdo","Conteúdo do Servidor"]},
+ {name:"Vitrine e artes",labels:["Vitrine IA Futebol","Vitrine Banner","Vitrine IA","Vitrine Vídeos","Admin · Vitrine Vídeo MP4","Admin · Biblioteca de Vídeos"]},
+ {name:"Revenda e assinatura",labels:["Minha Assinatura","Painel Revendedor","Minha Página","Indique e Ganhe","Conquistas","Portal de Parceiros","Portal do Aplicativo"]},
+ {name:"Ajuda e suporte",labels:["Central de Ajuda","Ajuda para Clientes"]},
+ {name:"Administração e configurações",labels:["Admin ·","Auditoria Visual"]},
+] as const;
 function NavList({ onNavigate }: { onNavigate?: () => void }) {
-  const pathname = useRouterState({ select: (r) => r.location.pathname });
-  const items = useNavItems();
-  return (
-    <nav className="sm-command-nav px-3 py-5 space-y-1 flex-1" aria-label="Navegação principal">
-      {items.map((it) => {
-        const active = (it as any).exact ? pathname === it.to : pathname.startsWith(it.to);
-        return (
-          <Link
-            key={it.to}
-            to={it.to}
-            aria-current={active ? "page" : undefined}
-            onClick={onNavigate}
-            className={cn(
-              "sm-command-nav-item group relative flex items-center gap-3 rounded-xl px-3 py-2.5 text-[13px] font-medium transition-colors duration-150 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary",
-              active ? "bg-primary/15 text-primary font-semibold before:absolute before:left-0 before:top-2 before:bottom-2 before:w-[3px] before:rounded-full before:bg-primary" : "text-sidebar-foreground/65 hover:bg-sidebar-accent/65 hover:text-sidebar-foreground"
-            )}
-          >
-            <it.icon className="h-4 w-4" />
-            {it.label}
-          </Link>
-        );
-      })}
-    </nav>
-  );
+ const pathname = useRouterState({ select: r => r.location.pathname });
+ const items = useNavItems();
+ const groups = NAV_GROUPS.map(group=>({...group,items:items.filter(it=>group.labels.some(label=>it.label===label||it.label.startsWith(label+" ·")||it.label.startsWith(label+" ")))}));
+ const used=new Set(groups.flatMap(g=>g.items.map(i=>i.to)));
+ const other=items.filter(i=>!used.has(i.to));
+ if(other.length)groups.push({name:"Outras ferramentas",labels:[],items:other} as any);
+ const activeGroup=groups.find(g=>g.items.some(i=>i.to==="/app"?pathname==="/app":pathname===i.to||pathname.startsWith(i.to+"/")))?.name||"Visão geral";
+ const [open,setOpen]=useState<string[]>(()=>[activeGroup]);
+ useEffect(()=>{setOpen(prev=>prev.includes(activeGroup)?prev:[...prev,activeGroup]);},[activeGroup]);
+ return <nav className="sm-command-nav px-3 py-5 space-y-2 flex-1" aria-label="Navegação principal">
+ {groups.filter(g=>g.items.length).map(group=><div key={group.name} className="rounded-lg">
+ <button type="button" aria-expanded={open.includes(group.name)} onClick={()=>setOpen(v=>v.includes(group.name)?v.filter(x=>x!==group.name):[...v,group.name])} className="w-full flex items-center justify-between rounded-lg px-3 py-2 text-xs font-bold text-sidebar-foreground/75 hover:bg-sidebar-accent/60 focus-visible:outline-2 focus-visible:outline-primary">
+ <span>{group.name}</span>{open.includes(group.name)?<ChevronDown size={15}/>:<ChevronRight size={15}/>}</button>
+ {open.includes(group.name)&&<div className="space-y-0.5 pl-1">{group.items.map(it=>{const active=it.to==="/app"?pathname==="/app":pathname===it.to||pathname.startsWith(it.to+"/");return <Link key={it.to} to={it.to} aria-current={active?"page":undefined} onClick={onNavigate} className={cn("sm-command-nav-item group relative flex items-center gap-3 rounded-xl px-3 py-2.5 text-[13px] font-medium transition-colors focus-visible:outline-2 focus-visible:outline-primary",active?"bg-primary/15 text-primary font-semibold":"text-sidebar-foreground/65 hover:bg-sidebar-accent/65 hover:text-sidebar-foreground")}><it.icon className="h-4 w-4 shrink-0"/><span>{it.label}</span></Link>})}</div>}
+ </div>)}</nav>;
 }
 
 function Sidebar() {
