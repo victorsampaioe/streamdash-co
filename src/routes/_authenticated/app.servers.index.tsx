@@ -170,10 +170,10 @@ function ServersList() {
                       </div>
                     </div>
                   ) : (
-                    <div className="flex items-center gap-2"><StatusDot status={effectiveAccessStatus(s)} /><span className="text-xs font-medium">{s.dns_enabled !== false && s.dns_status === "offline" ? accessStatusLabel(s) : <StatusLabel status={s.current_status} />}</span></div>
+                    <div className="flex items-center gap-2"><StatusDot status={effectiveAccessStatus(s)} /><span className="text-xs font-medium">{accessStatusLabel(s)}</span></div>
                   )}
                 </td>
-                <td className="p-3 font-mono text-xs">{s.last_latency_ms ?? "—"} ms</td>
+                <td className="p-3 font-mono text-xs">{effectiveAccessStatus(s) === "unknown" ? "—" : `${s.last_latency_ms ?? "—"} ms`}</td>
                 <td className="p-3 font-mono text-xs">{s.ssl_days_remaining != null ? `${s.ssl_days_remaining}d` : "—"}</td>
                 <td className="p-3 text-right">
                   {s.is_public && s.public_slug && (
