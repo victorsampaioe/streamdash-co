@@ -6,7 +6,7 @@ const db = supabaseAdmin as any;
 const COUNTRY = new Set(["BR", "US", "DE"]);
 function hostname(raw: string): string | null {
   try {
-    const url = new URL(/^https?:\\/\\//i.test(raw) ? raw : `https://${raw}`);
+    const url = new URL(raw.startsWith("https://") || raw.startsWith("http://") ? raw : `https://${raw}`);
     const host = url.hostname.toLowerCase();
     return url.username || url.password || !/^[a-z0-9.-]{4,253}$/.test(host) || !host.includes(".") ||
       host.endsWith(".local") || host.endsWith(".localhost") ? null : host;
