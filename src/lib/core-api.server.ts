@@ -38,13 +38,22 @@ function normalize(url: string | undefined | null): string | null {
   return raw.replace(/\/+$/, "");
 }
 
-/** URL do Core AWS (server-side ou inlinada no build). */
+/** The AWS Core was retired. Never send requests to CORE_API_URL or the
+ * bundled VITE_CORE_API_URL (which may still point at its obsolete address).
+ * A future Cloudflare-only task API must be opted in explicitly and secured. */
 export function coreApiUrl(): string | null {
-  return (
-    normalize(process.env.CORE_API_URL) ??
-    normalize(process.env.VITE_CORE_API_URL) ??
-    normalize(import.meta.env?.VITE_CORE_API_URL as string | undefined)
-  );
+  const raw = normalize(process.env.CLOUDFLARE_CORE_API_URL);
+  if (!raw) return null;
+  try {
+    const url = new URL(raw);
+    if (url.protocol !== "https:" || url.hostname === "core.streammonitor.site")
+      return null;
+    if (!url.hostname.endsWith(".workers.dev") && url.hostname !== "edge.streammonitor.site")
+      return null;
+    return raw;
+  } catch {
+    return null;
+  }
 }
 
 /** true quando este processo É o Core (evita o Core chamar a si mesmo). */
