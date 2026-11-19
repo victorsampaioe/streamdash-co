@@ -15,6 +15,7 @@ import { Label } from "@/components/ui/label";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { useSubscription } from "@/hooks/use-subscription";
 import { StatusDot, StatusLabel } from "@/components/status-dot";
+import {effectiveAccessStatus,accessStatusLabel,isHttpCheckStale} from "@/lib/dns-state";
 import { UptimeSparkline } from "@/components/uptime-sparkline";
 import { LineChart, Line, ResponsiveContainer, XAxis, YAxis, Tooltip, CartesianGrid } from "recharts";
 import { ArrowLeft, Download, Play, Trash2, RefreshCw, Globe, Loader2 } from "lucide-react";
@@ -61,7 +62,7 @@ function ServerDetail() {
         supabase
           .from("servers")
           .select(
-            "id, name, description, category, server_group, current_status, last_latency_ms, last_checked_at, ssl_days_remaining, consecutive_failures, health_score, dns_health_score, interval_seconds, failure_threshold, is_public, public_slug, iptv_detected, iptv_mode, iptv_interval_minutes, iptv_sample_size, iptv_stream_tests, dns_enabled, kuma_enabled, created_at",
+            "id, name, description, category, server_group, current_status, last_latency_ms, last_checked_at, ssl_days_remaining, consecutive_failures, health_score, dns_health_score, interval_seconds, failure_threshold, is_public, public_slug, iptv_detected, iptv_mode, iptv_interval_minutes, iptv_sample_size, iptv_stream_tests, dns_enabled, dns_status, last_dns_check_at, monitoring_paused, kuma_enabled, created_at",
           )
 
           .eq("id", id)
@@ -223,11 +224,12 @@ function ServerDetail() {
       <div data-section="Infraestrutura" className="sm-section-hero flex flex-col sm:flex-row sm:items-start justify-between gap-4">
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2 sm:gap-3 mb-1 flex-wrap">
-            <StatusDot status={server.current_status} />
+            <StatusDot status={effectiveAccessStatus(server)} />
             <h1 className="text-xl sm:text-2xl font-semibold tracking-tight break-words min-w-0">{server.name}</h1>
-            <StatusLabel status={server.current_status} />
+            <span className="text-sm font-medium">{accessStatusLabel(server)}</span>
           </div>
           {server.description && <p className="text-sm text-muted-foreground mt-1 break-words">{server.description}</p>}
+          {isHttpCheckStale(server) && <p role="status" className="mt-2 text-xs font-semibold text-amber-500">⚠️ Sem checagem HTTP recente. O último status registrado não comprova que o serviço está funcionando agora.</p>}
         </div>
         <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
           <Button variant="outline" size="sm" onClick={handleRun} className="flex-1 sm:flex-initial"><Play className="h-4 w-4 mr-1" />Verificar</Button>
