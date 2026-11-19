@@ -40,6 +40,25 @@ export function classifyDnsAvailability(input: DnsProbeSummary): {
 }
 
 export type AccessStatus = "up" | "degraded" | "down" | "unknown";
+export type DnsDisplayState = "paused" | "disabled" | "stale" | "online" | "offline" | "unstable" | "unknown";
+export const DNS_STALE_AFTER_MS = 10 * 60_000;
+
+/** The last stored DNS state is historical, not evidence of current reachability. */
+export function isDnsCheckStale(s: {last_dns_check_at?: string | null}): boolean {
+  if (!("last_dns_check_at" in s)) return false;
+  const stamp = s.last_dns_check_at ? Date.parse(s.last_dns_check_at) : NaN;
+  return !Number.isFinite(stamp) || Date.now() - stamp > DNS_STALE_AFTER_MS;
+}
+export function dnsDisplayState(s: {
+  dns_enabled?: boolean | null; dns_status?: string | null;
+  monitoring_paused?: boolean | null; last_dns_check_at?: string | null;
+}): DnsDisplayState {
+  if (s.monitoring_paused) return "paused";
+  if (s.dns_enabled === false) return "disabled";
+  if (isDnsCheckStale(s)) return "stale";
+  return s.dns_status === "online" || s.dns_status === "offline" || s.dns_status === "unstable"
+    ? s.dns_status : "unknown";
+}
 /** Nenhum status HTTP antigo pode continuar sendo mostrado como "online".
  * A função só aplica o controle quando a data foi incluída na consulta; assim
  * outros consumidores antigos (apenas DNS) mantêm sua semântica atual. */
@@ -56,11 +75,12 @@ export function effectiveAccessStatus(s: {
   current_status?: string | null;
   monitoring_paused?: boolean | null;
   last_checked_at?: string | null;
+  last_dns_check_at?: string | null;
 }): AccessStatus {
   if (s.monitoring_paused || isHttpCheckStale(s)) return "unknown";
-  if (s.dns_enabled !== false && s.dns_status === "offline") return "down";
+  if (s.dns_enabled !== false && !isDnsCheckStale(s) && s.dns_status === "offline") return "down";
   if (s.current_status === "down") return "down";
-  if (s.dns_enabled !== false && s.dns_status === "unstable") return "degraded";
+  if (s.dns_enabled !== false && !isDnsCheckStale(s) && s.dns_status === "unstable") return "degraded";
   if (s.current_status === "up" || s.current_status === "degraded") return s.current_status;
   return "unknown";
 }
@@ -71,11 +91,14 @@ export function accessStatusLabel(s: {
   current_status?: string | null;
   monitoring_paused?: boolean | null;
   last_checked_at?: string | null;
+  last_dns_check_at?: string | null;
 }): string {
   if (s.monitoring_paused) return "Monitoramento pausado";
   if (isHttpCheckStale(s)) return "Verificação HTTP atrasada — disponibilidade não confirmada";
+  if (s.dns_enabled !== false && isDnsCheckStale(s))
+    return s.current_status === "up" ? "HTTP respondendo · DNS sem checagem recente" : "DNS sem checagem recente";
   if (s.dns_enabled !== false && s.dns_status === "offline") return "DNS OFFLINE — acesso pelo domínio indisponível";
   if (s.current_status === "down") return "Servidor OFFLINE confirmado";
   if (s.dns_enabled !== false && s.dns_status === "unstable") return "DNS instável — verificando";
-  return s.current_status === "up" ? "Respondendo" : s.current_status === "degraded" ? "Serviço degradado" : "Aguardando verificação";
+  return s.current_status === "up" ? "HTTP respondendo (IPTV não confirmado)" : s.current_status === "degraded" ? "Serviço degradado" : "Aguardando verificação";
 }
