@@ -149,11 +149,12 @@ export function VitrineFootballStudio() {
       const response=await load({data:{date:day,refreshTransmissions}});
       return preserveFootballChannels(response,day);
     },
-    staleTime:posterMode==="finished"?20_000:45*60_000,
-    refetchOnMount:false,
-    refetchOnWindowFocus:false,
-    refetchInterval:posterMode==="finished"&&day===today()?60_000:false,
-    refetchIntervalInBackground:false,
+    // Keep searching automatically; artwork/model switches must not reset the results.
+    staleTime:posterMode==="finished"?20_000:60_000,
+    refetchOnMount:true,
+    refetchOnWindowFocus:true,
+    refetchInterval:posterMode==="finished"?60_000:120_000,
+    refetchIntervalInBackground:true,
     retry:1,
   });
   const finishedMatches=useMemo(()=>(games.data?.matches??[])
