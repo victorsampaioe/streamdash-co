@@ -15,12 +15,13 @@ const reply = (body, status = 200) => new Response(JSON.stringify(body), {
 });
 
 const MODULES = new Set(["profiles", "servers", "subscriptions", "payments"]);
+const PROFILE_FIELDS = new Set(["id", "username", "email", "full_name", "parent_id", "owner_account_id", "credits", "created_at"]);
 
 function sourceEndpoint(value) {
   if (typeof value !== "string") return null;
   try {
     const url = new URL(value);
-    if (url.protocol !== "https:" || !url.hostname.endsWith(".supabase.co") ||
+    if (url.protocol !== "https:" || !/^[a-z0-9]{20}\.supabase\.co$/.test(url.hostname) ||
         url.username || url.password || url.search || url.hash ||
         !/^\/functions\/v1\/private-migration-metadata\/?$/.test(url.pathname)) return null;
     return url;
@@ -69,9 +70,13 @@ export default {
         const seen = new Set();
         const rows = payload.records;
         for (const row of rows) {
-          if (!row || typeof row.id !== "string" ||
-              !/^[0-9a-f]{8}-[0-9a-f-]{27,}$/.test(row.id) || seen.has(row.id) ||
-              typeof row.created_at !== "string" ||
+          if (!row || typeof row !== "object" || Array.isArray(row) ||
+              Object.keys(row).some(key => !PROFILE_FIELDS.has(key)) ||
+              typeof row.id !== "string" ||
+              !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/.test(row.id) || seen.has(row.id) ||
+              typeof row.created_at !== "string" || !Number.isFinite(Date.parse(row.created_at)) ||
+              ["username","email","full_name","parent_id","owner_account_id"].some(key =>
+                row[key] != null && (typeof row[key] !== "string" || row[key].length > 320)) ||
               !Number.isSafeInteger(row.credits ?? 0) || (row.credits ?? 0) < 0) {
             return reply({ error: "invalid_profile_batch" }, 502);
           }
