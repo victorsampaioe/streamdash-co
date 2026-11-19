@@ -14,6 +14,12 @@ async function run() {
   if (process.env.IS_CORE === "true") {
     return { ok: true, skipped: true, reason: "worker mode: ciclo roda no Painel" };
   }
+  const { isCloudflareHttpPrimary } = await import("@/lib/cloudflare-http-mode.server");
+  if (await isCloudflareHttpPrimary()) {
+    // Cloudflare already records edge HTTP latency in region_checks; do not
+    // start the old AWS-dependent player/performance probe pipeline.
+    return {ok:true,skipped:true,provider:"cloudflare-edge",reason:"legacy_perf_retired"};
+  }
   const { runPerfBatch } = await import("@/lib/perf.server");
   const batch = Number(process.env.PERF_BATCH_SIZE ?? 5);
   const { tested, ok: succeeded, errors } = await runPerfBatch(
