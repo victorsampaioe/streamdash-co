@@ -16,6 +16,7 @@ import { offlineFootballFlag } from "@/lib/vitrine-football-offline-flags";
 import { resolveMatchesWithAvailableBadges } from "@/lib/vitrine-football-verified-badges";
 import { isVerifiedFinishedFootballMatch,parseFootballFinalScore } from "@/lib/vitrine-football-results";
 import { footballTeamNamePtBR } from "@/lib/vitrine-football-ptbr";
+import { footballBroadcastFixtureKey,cleanVerifiedBroadcasts } from "@/lib/vitrine-football-broadcast-cache";
 import { sendVitrineFootballToRegisteredTelegram } from "@/lib/vitrine-football-telegram.functions";
 
 const today = () => new Intl.DateTimeFormat("sv-SE", {
@@ -47,6 +48,25 @@ async function compactCrest(input:string):Promise<string>{
 }
 
 const safeColor = (input: string | undefined) => /^#[0-9a-f]{6}$/i.test(input||"") ? input! : "#146df2";
+
+/** Keep verified channels across poster/model changes and temporary API/cache failures. */
+function preserveFootballChannels<T extends {matches:FootballMatch[]}>(data:T,day:string):T {
+  if(typeof window==="undefined")return data;
+  const storageKey="streammonitor:verified-football-channels:"+day;
+  try {
+    const stored=JSON.parse(window.localStorage.getItem(storageKey)||"{}") as Record<string,string[]>;
+    const verified:Record<string,string[]>={...stored};
+    const matches=data.matches.map(match=>{
+      const key=footballBroadcastFixtureKey(match);
+      const current=cleanVerifiedBroadcasts(match.broadcasts);
+      if(current.length){verified[key]=current;return match;}
+      const previous=cleanVerifiedBroadcasts(stored[key]);
+      return previous.length?{...match,broadcasts:previous}:match;
+    });
+    window.localStorage.setItem(storageKey,JSON.stringify(verified));
+    return {...data,matches};
+  }catch{return data;}
+}
 
 /** Automated posters: four fixtures (eight clubs) per artwork, with automatic pagination. */
 export function VitrineFootballStudio() {
@@ -123,7 +143,8 @@ export function VitrineFootballStudio() {
     queryFn:()=>{
       const refreshTransmissions=manualTransmissionRefresh.current;
       manualTransmissionRefresh.current=false;
-      return load({data:{date:day,refreshTransmissions}});
+      const response=await load({data:{date:day,refreshTransmissions}});
+      return preserveFootballChannels(response,day);
     },
     staleTime:posterMode==="finished"?20_000:45*60_000,
     refetchOnMount:false,
