@@ -152,7 +152,7 @@ const regionalWorker = {
  * No IPTV credentials and no plaintext API tokens in source/D1.
  */
 const ORIGIN="https://streammonitor.site";
-const MAX_NORMAL=15,MAX_PRIORITY=4,MAX_THIRD=6;
+const MAX_NORMAL=34,MAX_PRIORITY=8,MAX_THIRD=10;
 const DNS_TIMEOUT_MS=5500,HTTP_TIMEOUT_MS=18000;
 const RESOLVERS=[
   {code:"cloudflare",base:"https://cloudflare-dns.com/dns-query"},
@@ -281,8 +281,13 @@ function chooseTargets(rows){
   const picked=new Set(priority.map(x=>x.server_id));
   // Reserve normal slots even when many domains remain offline.
   const normal=ordered.filter(x=>!picked.has(x.server_id)
-    &&x.source_status!=="offline"&&x.source_status!=="unstable"&&x.last_status!=="down");
-  return [...priority,...normal.slice(0,MAX_NORMAL)];
+    &&x.source_status!=="offline"&&x.source_status!=="unstable"&&x.last_status!=="down").slice(0,MAX_NORMAL);
+  const alreadyPicked=new Set([...priority,...normal].map(x=>x.server_id));
+  // Previously, low-priority OFFLINE records could be excluded forever.
+  // Always fill spare slots with the oldest unchecked records, even if down.
+  const remaining=ordered.filter(x=>!alreadyPicked.has(x.server_id))
+    .slice(0,MAX_NORMAL-normal.length);
+  return [...priority,...normal,...remaining];
 }
 async function gather(targets){
   const checked=new Array(targets.length);
@@ -312,15 +317,19 @@ async function keepResults(env,checks){
       "INSERT INTO dns_samples(server_id,checked_at_ms,status,successes,resolvers,avg_response_ms,error_kind) VALUES(?,?,?,?,?,?,?)"
     ).bind(x.server_id,t,x.status,success,x.resolvers.length,average,err));
   }
-  // Check results survive even when the Lovable REST endpoint is temporarily down.
-  const batch={checks};
-  stmts.push(env.DNS_DB.prepare(
-    "INSERT INTO dns_pending_reports(id,payload,created_at_ms,attempts) VALUES(?,?,?,0)"
-  ).bind(crypto.randomUUID(),JSON.stringify(batch),Date.now()));
+  // The authenticated report endpoint accepts at most 25 probes and applies
+  // at most 20 in a pass. Split into 20-row durable chunks to avoid 400/429.
+  // Never discard the batch if the app is briefly unavailable.
+  for(let i=0;i<checks.length;i+=20){
+    const batch={checks:checks.slice(i,i+20)};
+    stmts.push(env.DNS_DB.prepare(
+      "INSERT INTO dns_pending_reports(id,payload,created_at_ms,attempts) VALUES(?,?,?,0)"
+    ).bind(crypto.randomUUID(),JSON.stringify(batch),Date.now()));
+  }
   await env.DNS_DB.batch(stmts);
 }
 async function flushReports(env){
-  const {results}=await env.DNS_DB.prepare("SELECT id,payload,created_at_ms,attempts FROM dns_pending_reports ORDER BY created_at_ms LIMIT 2").all();
+  const {results}=await env.DNS_DB.prepare("SELECT id,payload,created_at_ms,attempts FROM dns_pending_reports ORDER BY created_at_ms LIMIT 4").all();
   let sent=0,failed=0;
   for(const item of results??[]){
     if(Date.now()-Number(item.created_at_ms)>3*60_000){
@@ -361,7 +370,7 @@ async function runCycle(env){
     origin_error:fetchError,reported:delivered.sent,delivery_errors:delivered.failed}));
   if(Date.now()%1440000<60000)
     await env.DNS_DB.prepare("DELETE FROM dns_samples WHERE checked_at_ms < ?")
-      .bind(Date.now()-7*86400000).run();
+      .bind(Date.now()-5*86400000).run();
   return {processed:results.length,delivered};
 }
 const dnsWorker = {
