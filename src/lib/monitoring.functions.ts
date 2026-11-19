@@ -15,6 +15,12 @@ export const runCheckNow = createServerFn({ method: "POST" })
       .eq("id", data.serverId)
       .maybeSingle();
     if (error || !srv) throw new Error("Servidor não encontrado ou sem permissão");
+    const { isCloudflareHttpPrimary } = await import("./cloudflare-http-mode.server");
+    if (await isCloudflareHttpPrimary()) {
+      // A manual browser action must not reintroduce probes from the
+      // retired AWS Core or overwrite signed Cloudflare monitoring data.
+      return {checked:false,provider:"cloudflare-regional-edge",scheduled:true};
+    }
     const { runOnCore } = await import("./core-api.server");
     return await runOnCore("check", { serverId: data.serverId }, () => runCheckForServer(data.serverId));
   });
