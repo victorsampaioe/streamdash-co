@@ -11,7 +11,7 @@ import { SearchInput } from "@/components/app-shell";
 import { ArrowRight, Plus, ServerIcon, HeartPulse, Tv, AlertCircle, CreditCard, RadioTower, Activity, Wifi, WifiOff, ChevronRight } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useSubscription } from "@/hooks/use-subscription";
-import { effectiveAccessStatus, accessStatusLabel } from "@/lib/dns-state";
+import { effectiveAccessStatus, accessStatusLabel, isHttpCheckStale } from "@/lib/dns-state";
 
 export const Route = createFileRoute("/_authenticated/app/")({
   component: Dashboard,
@@ -76,10 +76,13 @@ function Dashboard() {
       up: active.filter((s) => effectiveAccessStatus(s) === "up").length,
       down: active.filter((s) => effectiveAccessStatus(s) === "down").length,
       degraded: active.filter((s) => effectiveAccessStatus(s) === "degraded").length,
+      unknown: active.filter((s) => effectiveAccessStatus(s) === "unknown").length,
     };
   }, [servers]);
 
-  const health = useMemo(() => scoreOf(servers), [servers]);
+  const freshForHealth = useMemo(() => servers.filter(s => !s.monitoring_paused && !isHttpCheckStale(s)), [servers]);
+  const health = useMemo(() => freshForHealth.length ? scoreOf(freshForHealth) : null, [freshForHealth]);
+  const healthReliable = freshForHealth.length > 0 && freshForHealth.length >= counts.total * 0.8;
   const iptvHealth = useMemo(() => {
     const list = servers.filter((s: any) => s.health_score != null);
     if (!list.length) return null;
@@ -147,7 +150,7 @@ function Dashboard() {
             </p>
             <div className="mt-5 flex flex-wrap gap-2 text-xs text-slate-300">
               <span className="rounded-lg border border-white/10 bg-white/5 px-3 py-2"><Activity className="mr-1.5 inline h-3.5 w-3.5 text-blue-400" />Monitorando <b className="text-white">{counts.total}</b></span>
-              <span className="rounded-lg border border-white/10 bg-white/5 px-3 py-2"><HeartPulse className="mr-1.5 inline h-3.5 w-3.5 text-blue-400" />Saúde geral <b className="text-white">{health}%</b></span>
+              <span className="rounded-lg border border-white/10 bg-white/5 px-3 py-2"><HeartPulse className="mr-1.5 inline h-3.5 w-3.5 text-blue-400" />Saúde geral <b className="text-white">{healthReliable ? `${health}%` : "Dados insuficientes"}</b></span>
             </div>
           </div>
           <div className="flex shrink-0 flex-col gap-2 sm:flex-row lg:flex-col">
@@ -157,12 +160,13 @@ function Dashboard() {
         </div>
       </section>
 
-      <section aria-label="Resumo de monitoramento" className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+      <section aria-label="Resumo de monitoramento" className="grid grid-cols-2 gap-3 lg:grid-cols-5">
         {[
           { label: "Monitorando", value: counts.total, icon: ServerIcon, accent: "text-blue-400", bg: "bg-blue-500/10", line: "bg-blue-500", detail: "Servidores ativos" },
           { label: "Online", value: counts.up, icon: Wifi, accent: "text-emerald-400", bg: "bg-emerald-500/10", line: "bg-emerald-500", detail: "Em funcionamento" },
           { label: "Atenção", value: counts.degraded, icon: Activity, accent: "text-amber-400", bg: "bg-amber-500/10", line: "bg-amber-500", detail: "Precisam de análise" },
           { label: "Offline", value: counts.down, icon: WifiOff, accent: "text-red-400", bg: "bg-red-500/10", line: "bg-red-500", detail: "Falhas identificadas" },
+          { label: "Sem dados recentes", value: counts.unknown, icon: AlertCircle, accent: "text-slate-400", bg: "bg-slate-500/10", line: "bg-slate-500", detail: "HTTP atrasado ou sem confirmação" },
         ].map((item) => (
           <Card key={item.label} className="relative overflow-hidden rounded-2xl border-border/60 p-4 sm:p-5">
             <span className={"absolute inset-x-0 top-0 h-[2px] " + item.line} />
@@ -183,10 +187,10 @@ function Dashboard() {
             <HeartPulse className="h-5 w-5 text-blue-400" />
           </div>
           <div className="flex items-baseline gap-3">
-            <span className={"text-5xl font-extrabold tracking-tighter tabular-nums " + healthTone(health)}>{health}%</span>
-            <span className="text-sm text-muted-foreground">{healthLabel(health)}</span>
+            <span className={"text-5xl font-extrabold tracking-tighter tabular-nums " + (healthReliable && health != null ? healthTone(health) : "text-amber-400")}>{healthReliable ? `${health}%` : "—"}</span>
+            <span className="text-sm text-muted-foreground">{healthReliable && health != null ? healthLabel(health) : "Dados insuficientes para calcular saúde geral"}</span>
           </div>
-          <div className="mt-5"><HealthBar value={health} /></div>
+          <div className="mt-5">{healthReliable && health != null ? <HealthBar value={health} /> : <p className="text-xs text-amber-400">Há muitos servidores sem verificação HTTP recente. Não é possível afirmar que a saúde geral está boa.</p>}</div>
           {iptvHealth != null && (
             <div className="mt-5 flex items-center justify-between rounded-xl border border-border/60 bg-muted/25 px-3 py-3 text-xs">
               <span className="inline-flex items-center gap-2 text-muted-foreground"><Tv className="h-4 w-4 text-blue-400" />IPTV Health Score</span>
@@ -297,6 +301,7 @@ function ServerCard({ server }: { server: any }) {
     refetchInterval: 15000,
   });
 
+  const delayed = isHttpCheckStale(server);
   const score = scoreOf([server]);
 
   return (
@@ -308,7 +313,8 @@ function ServerCard({ server }: { server: any }) {
               <StatusDot status={effectiveAccessStatus(server)} />
               <h3 className="font-semibold truncate">{server.name}</h3>
             </div>
-            <div className={`text-xs ${healthTone(score)}`}>Saúde {score}% · {healthLabel(score)}</div>
+            {delayed ? <p className="text-xs font-semibold text-amber-400" role="status">⚠️ Verificação HTTP atrasada — disponibilidade não confirmada</p>
+              : <div className={`text-xs ${healthTone(score)}`}>Saúde {score}% · {healthLabel(score)}</div>}
             {server.dns_enabled !== false && server.dns_status === "offline" && <p className="mt-1 text-xs font-semibold text-red-400" role="status">{accessStatusLabel(server)}</p>}
             <div className="mt-2 flex flex-wrap items-center gap-2 text-[11px]">
               <span className={server.dns_status === "offline"
