@@ -82,7 +82,8 @@ async function sendActivationQrPhoto(token:string,chatId:string|number,base64:st
      decoded[0]!==137 || decoded[1]!==80 || decoded[2]!==78 || decoded[3]!==71)return;
   const form=new FormData();
   form.append("chat_id",String(chatId));
-  form.append("photo",new Blob([new Uint8Array(decoded)],{type:"image/png"}),"pix-ativacao.png");
+  const pngBytes=new Uint8Array(decoded.length);pngBytes.set(decoded);
+  form.append("photo",new Blob([pngBytes.buffer],{type:"image/png"}),"pix-ativacao.png");
   const res=await fetch(`https://api.telegram.org/bot${token}/sendPhoto`,{
     method:"POST",body:form,signal:AbortSignal.timeout(10000)
   });
