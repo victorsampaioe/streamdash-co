@@ -174,9 +174,9 @@ function AppActivationAdmin(){
         Não usa a conta antiga nem o Pix das assinaturas. Backend e registros exclusivos na Cloudflare.
       </p>
       <p className="text-xs font-semibold">Integração isolada, com credenciais protegidas na Cloudflare.</p>
-      <label htmlFor="new-asaas-webhook" className="block text-xs font-semibold">Webhook para cadastrar na nova conta Asaas</label>
+      <label htmlFor="new-payments-webhook" className="block text-xs font-semibold">Webhook para cadastrar na nova conta de recebimentos</label>
       <div className="flex flex-col gap-2 sm:flex-row">
-        <Input id="new-asaas-webhook" readOnly value="https://pagamentos.streammonitor.site/eventos/pagamentos"
+        <Input id="new-payments-webhook" readOnly value="https://pagamentos.streammonitor.site/eventos/pagamentos"
           className="min-w-0 flex-1 rounded-xl font-mono text-xs"/>
         <Button type="button" variant="outline" className="rounded-xl" onClick={() => {
           void navigator.clipboard.writeText("https://pagamentos.streammonitor.site/eventos/pagamentos")
