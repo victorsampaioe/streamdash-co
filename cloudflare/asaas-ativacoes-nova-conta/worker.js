@@ -22,7 +22,7 @@ const json = (body,status=200) => new Response(JSON.stringify(body),{
 });
 function safeStr(v,max=128) {
   return typeof v==="string" && v.length>0 && v.length<=max &&
-    /^[A-Za-z0-9_:-]+$/.test(v) ? v : null;
+    /^[A-Za-z0-9_:.&-]+$/.test(v) ? v : null;
 }
 async function secureEquals(received, expected) {
   if(typeof received!=="string"||typeof expected!=="string"||expected.length<32) return false;
