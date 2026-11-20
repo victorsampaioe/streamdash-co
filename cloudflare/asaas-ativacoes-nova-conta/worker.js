@@ -16,7 +16,9 @@
  */
 const json = (body,status=200) => new Response(JSON.stringify(body),{
   status, headers:{"content-type":"application/json; charset=utf-8","cache-control":"no-store",
-    "x-content-type-options":"nosniff"}
+    "x-content-type-options":"nosniff",
+    "x-frame-options":"DENY","referrer-policy":"no-referrer",
+    "content-security-policy":"default-src 'none'; frame-ancestors 'none'"}
 });
 function safeStr(v,max=128) {
   return typeof v==="string" && v.length>0 && v.length<=max &&
@@ -111,11 +113,27 @@ export default {
         return json({error:"unauthorized"},401);
       const len=Number(request.headers.get("content-length"));
       if(Number.isFinite(len) && len>32000)return json({error:"payload_too_large"},413);
-      let text;
-      try{text=await request.text()}catch{return json({error:"invalid_body"},400)}
-      if(text.length>32000)return json({error:"payload_too_large"},413);
+      // Enforce a byte limit before buffering any untrusted webhook payload.
       let data;
-      try{data=JSON.parse(text)}catch{return json({error:"invalid_json"},400)}
+      try{
+        if(!request.body)return json({error:"invalid_body"},400);
+        const reader=request.body.getReader(), chunks=[];
+        let length=0;
+        while(true){
+          const next=await reader.read();
+          if(next.done)break;
+          length+=next.value.byteLength;
+          if(length>32000){
+            await reader.cancel().catch(()=>{});
+            return json({error:"payload_too_large"},413);
+          }
+          chunks.push(next.value);
+        }
+        const body=new Uint8Array(length);
+        let offset=0;
+        for(const chunk of chunks){body.set(chunk,offset);offset+=chunk.byteLength;}
+        data=JSON.parse(new TextDecoder("utf-8",{fatal:true}).decode(body));
+      }catch{return json({error:"invalid_json"},400)}
       const eventId=safeStr(data?.id,120);
       const eventType=safeStr(data?.event,100);
       const paymentId=safeStr(data?.payment?.id,120);
