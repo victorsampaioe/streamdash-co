@@ -184,7 +184,7 @@ export default {
       const q = String(url.searchParams.get("q") || "").trim().slice(0, 65).toLowerCase().replace(/[%_]/g, "");
       const limit = 8;
       const rows = await env.APP_DB.prepare(
-        "SELECT app_id AS id,name,module,sale_price_cents AS priceCents " +
+        "SELECT app_id AS id,name,module,COALESCE(sale_price_cents,provider_store_price_cents) AS priceCents " +
         "FROM app_catalog WHERE is_active=1 AND lower(name) LIKE ? ORDER BY name,app_id LIMIT ? OFFSET ?"
       ).bind("%" + q + "%", limit + 1, (page - 1) * limit).all();
       const matches = rows.results || [];
@@ -196,7 +196,7 @@ export default {
       const id = url.searchParams.get("id") || "";
       if (!appIdOk(id)) return respond({ error: "invalid_app" }, 400, origin);
       const app = await env.APP_DB.prepare(
-        "SELECT app_id AS id,name,module,sale_price_cents AS priceCents FROM app_catalog " +
+        "SELECT app_id AS id,name,module,COALESCE(sale_price_cents,provider_store_price_cents) AS priceCents FROM app_catalog " +
         "WHERE app_id=? AND is_active=1"
       ).bind(id).first();
       return app ? respond({ app, live: false }, 200, origin)
@@ -214,7 +214,7 @@ export default {
         if (request.method === "GET" && url.pathname === "/v1/admin/catalog") {
           const rows = await env.APP_DB.prepare(
             "SELECT app_id AS id,name,module,provider_cost_cents AS providerValue,provider_store_price_cents AS storePriceCents, " +
-            "sale_price_cents AS priceCents,logo_url AS logoUrl,is_active AS active,updated_at_ms AS updatedAt " +
+            "sale_price_cents AS priceCents,COALESCE(custom_logo_url,logo_url) AS logoUrl,is_active AS active,updated_at_ms AS updatedAt " +
             "FROM app_catalog ORDER BY name LIMIT 500"
           ).all();
           const meta = await env.APP_DB.prepare(
@@ -240,13 +240,13 @@ export default {
           if (logoChanged && data.logoUrl && !logo)
             return respond({error:"A imagem precisa ter um endereço HTTPS válido."},400,origin);
           const sql = logoChanged
-            ? "UPDATE app_catalog SET sale_price_cents=?,logo_url=? WHERE app_id=?"
+            ? "UPDATE app_catalog SET sale_price_cents=?,custom_logo_url=? WHERE app_id=?"
             : "UPDATE app_catalog SET sale_price_cents=? WHERE app_id=?";
           const args = logoChanged ? [price,logo,data.appId] : [price,data.appId];
           const update = await env.APP_DB.prepare(sql).bind(...args).run();
           if (!update.meta?.changes) return respond({error:"Aplicativo não localizado."},404,origin);
           const saved = await env.APP_DB.prepare(
-            "SELECT app_id AS id,sale_price_cents AS priceCents,logo_url AS logoUrl FROM app_catalog WHERE app_id=?"
+            "SELECT app_id AS id,sale_price_cents AS priceCents,COALESCE(custom_logo_url,logo_url) AS logoUrl FROM app_catalog WHERE app_id=?"
           ).bind(data.appId).first();
           return respond({ saved },200,origin);
         }
@@ -259,7 +259,7 @@ export default {
         const sync = await refreshCatalog(env);
         const q = String(url.searchParams.get("q") || "").trim().slice(0,80).toLowerCase();
         const rows = await env.APP_DB.prepare(
-          "SELECT app_id AS id,name,module,logo_url AS logoUrl,sale_price_cents AS priceCents " +
+          "SELECT app_id AS id,name,module,COALESCE(custom_logo_url,logo_url) AS logoUrl,COALESCE(sale_price_cents,provider_store_price_cents) AS priceCents " +
           "FROM app_catalog WHERE is_active=1 AND lower(name) LIKE ? ORDER BY name LIMIT 300"
         ).bind("%" + q.replace(/[%_]/g, "") + "%").all();
         return respond({ items: rows.results || [], configured: sync.configured === true,
