@@ -84,6 +84,8 @@ function releaseSource(){
 }
 export function dismissVideoJob(){
   if(running)return;
+  if(snapshot.status==="ready"&&snapshot.ownerId&&snapshot.finishedAt)
+    markDismissed(snapshot.ownerId,snapshot.filename,snapshot.finishedAt);
   finishedFile=null;
   updateJob(idle);
   releaseSource();
@@ -102,6 +104,7 @@ export function startVideoExportInDocument(args:StartArgs){
   if(!video||video.readyState<1||video.error)
     throw new Error("O vídeo ainda não está pronto. Aguarde o carregamento e tente novamente.");
   finishedFile=null;
+  clearDismissed(args.ownerId);
   running=true;
   const epoch=++jobEpoch;
   activeAbort=new AbortController();
@@ -126,9 +129,10 @@ export function startVideoExportInDocument(args:StartArgs){
       if(blob.type!=="video/mp4"||blob.size<4096)
         throw new Error("O navegador não concluiu o arquivo MP4.");
       finishedFile=blob;
+      const completedAt=Date.now();
       updateJob({status:"ready",percent:100,stage:"MP4 pronto para baixar",
-        finishedAt:Date.now()});
-      try{await saveCompletedVideo(args.ownerId,args.filename,blob);}catch{
+        finishedAt:completedAt});
+      try{await saveCompletedVideo(args.ownerId,args.filename,blob,completedAt);}catch{
         // IndexedDB is optional (private browsing / quota). The completed MP4
         // remains downloadable until this tab is closed.
       }
@@ -157,6 +161,26 @@ export function downloadVideoJob(){
   return true;
 }
 
+/** A dismissed ready banner stays hidden after navigation/reload for that exact export. */
+function dismissalKey(ownerId:string){return "sm:video-ready-dismissed:"+ownerId;}
+function exportIdentity(filename:string,savedAt:number){return filename+":"+savedAt;}
+function markDismissed(ownerId:string,filename:string,savedAt:number){
+  try{
+    if(typeof localStorage!=="undefined")
+      localStorage.setItem(dismissalKey(ownerId),exportIdentity(filename,savedAt));
+  }catch{/* localStorage can be disabled in private browser mode */}
+}
+function wasDismissed(ownerId:string,filename:string,savedAt:number){
+  try{
+    return typeof localStorage!=="undefined"&&
+      localStorage.getItem(dismissalKey(ownerId))===exportIdentity(filename,savedAt);
+  }catch{return false;}
+}
+function clearDismissed(ownerId:string){
+  try{if(typeof localStorage!=="undefined")localStorage.removeItem(dismissalKey(ownerId));}
+  catch{/* no persistence available */}
+}
+
 const DB_NAME="streammonitor-custom-videos";
 const STORE_NAME="completed";
 type SavedVideo={ownerId:string;filename:string;title:string;blob:Blob;savedAt:number};
@@ -171,13 +195,13 @@ function openCompletedDb():Promise<IDBDatabase>{
     request.onerror=()=>reject(request.error);
   });
 }
-async function saveCompletedVideo(ownerId:string,filename:string,blob:Blob){
+async function saveCompletedVideo(ownerId:string,filename:string,blob:Blob,savedAt:number){
   if(typeof indexedDB==="undefined")return;
   const db=await openCompletedDb();
   await new Promise<void>((resolve,reject)=>{
     const tx=db.transaction(STORE_NAME,"readwrite");
     tx.objectStore(STORE_NAME).put({
-      ownerId,filename,title:snapshot.title,blob,savedAt:Date.now()
+      ownerId,filename,title:snapshot.title,blob,savedAt
     } satisfies SavedVideo);
     tx.oncomplete=()=>resolve();
     tx.onerror=()=>reject(tx.error);
@@ -195,6 +219,7 @@ export async function restoreCompletedVideo(ownerId:string){
   });
   db.close();
   if(!entry||!entry.blob||entry.blob.type!=="video/mp4")return false;
+  if(wasDismissed(ownerId,entry.filename,entry.savedAt))return false;
   // Do not overwrite a more recent successful render in the same tab.
   if(snapshot.status==="ready"&&snapshot.finishedAt&&snapshot.finishedAt>=entry.savedAt)return false;
   if(snapshot.status==="rendering"||snapshot.status==="preparing")return false;
