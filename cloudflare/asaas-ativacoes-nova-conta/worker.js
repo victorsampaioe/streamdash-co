@@ -398,6 +398,15 @@ export default {
         const result=await createCheckout(env,userId,data,adminCanary);
         return checkoutReply(result.body,result.status,origin);
       }
+      if(request.method==="GET"&&url.pathname==="/v1/pix/orders"){
+        const rows=await env.NEW_ASAAS_DB.prepare(
+          "SELECT order_id AS orderId,app_id AS appId,mac_normalized AS mac,"+
+          "amount_cents AS amountCents,status,supplier_state AS supplierState,"+
+          "created_at_ms AS createdAt FROM pix_orders WHERE owner_user_id=?"+
+          " ORDER BY created_at_ms DESC LIMIT 30"
+        ).bind(userId).all();
+        return checkoutReply({items:rows.results||[]},200,origin);
+      }
       if(request.method==="GET"&&url.pathname==="/v1/pix/status"){
         const id=url.searchParams.get("orderId");
         if(!uuid(id))return checkoutReply({error:"Pedido inválido."},400,origin);
@@ -416,7 +425,7 @@ export default {
         const fresh=await env.NEW_ASAAS_DB.prepare(
           "SELECT * FROM pix_orders WHERE order_id=? AND owner_user_id=?"
         ).bind(id,userId).first();
-        return checkoutReply(await summarizeOrder(env,fresh,false),200,origin);
+        return checkoutReply(await summarizeOrder(env,fresh,true),200,origin);
       }
       return checkoutReply({error:"not_found"},404,origin);
     }
