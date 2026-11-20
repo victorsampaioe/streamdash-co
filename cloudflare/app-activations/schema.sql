@@ -2,7 +2,7 @@ PRAGMA foreign_keys = ON;
 CREATE TABLE IF NOT EXISTS app_catalog (
   app_id TEXT PRIMARY KEY, name TEXT NOT NULL, module TEXT,
   provider_cost_cents INTEGER, provider_store_price_cents INTEGER,
-  sale_price_cents INTEGER, logo_url TEXT,
+  sale_price_cents INTEGER, logo_url TEXT, custom_logo_url TEXT,
   is_active INTEGER NOT NULL DEFAULT 1 CHECK(is_active IN(0,1)),
   updated_at_ms INTEGER NOT NULL
 );
