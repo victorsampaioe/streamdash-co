@@ -63,7 +63,7 @@ export async function beginActivationBot(
   if (!Array.isArray(catalog.items) || !catalog.items.length) {
     return { text: "📱 <b>Ativação de Aplicativos</b>\n\n"
       + (search ? "Nenhum aplicativo encontrado para <b>" + esc(search) + "</b>.\n\n"
-        : "Nenhum aplicativo com preço definido pelo administrador está disponível. Consulte novamente quando mais aplicativos forem liberados.\n\n")
+        : "Nenhum aplicativo com preço válido foi recebido na última atualização da API. Consulte novamente após a sincronização.\n\n")
       + '🌐 <a href="' + SITE + '">Abrir a central no site</a>\n\n'
       + "⚠️ Sempre confira o MAC. Não há estorno por dados incorretos." };
   }
