@@ -57,14 +57,14 @@ function validLogoUrl(value) {
     ? (value.url || value.src || value.imagem || value.logo) : "";
   if (typeof str !== "string" || str.length > 1024) return null;
   try {
-    const u = new URL(str);
+    const u = new URL(str.trim().startsWith("//") ? "https:" + str.trim() : str.trim());
     if (u.protocol !== "https:" || u.username || u.password || !u.hostname || /(?:^|\.)(?:localhost|local|internal)$/.test(u.hostname)) return null;
     if (/^(?:127\.|0\.|10\.|192\.168\.|169\.254\.)/.test(u.hostname)) return null;
     return u.toString();
   } catch { return null; }
 }
 function providerLogo(app) {
-  for (const key of ["logo_url","logoUrl","imagem_url","image_url","icon_url","foto_url",
+  for (const key of ["logo_do_app","tumbnail_telegram","logo_url","logoUrl","imagem_url","image_url","icon_url","foto_url",
     "logo","imagem","image","icon","icone","foto","logotipo","imagem_app","foto_app","img"]) {
     const value = validLogoUrl(app?.[key]);
     if (value) return value;
@@ -82,9 +82,13 @@ const parseApps = (body) => {
     const name = String(app?.aplicativos ?? app?.nome ?? app?.name ?? "").trim();
     if (!appIdOk(id) || !name || name.length > 150) return [];
     const cost = Number(app?.valor);
+    const storeRaw = app?.valor_da_loja;
+    const store = typeof storeRaw === "number" ? storeRaw :
+      (typeof storeRaw === "string" ? Number(storeRaw.trim().replace(",", ".")) : NaN);
     return [{
       id, name, module: String(app?.modulo ?? app?.module ?? "").slice(0,80),
       cost: Number.isFinite(cost) && cost >= 0 ? Math.round(cost * 100) : null,
+      storePrice: Number.isFinite(store) && store >= 0 && store <= 100000 ? Math.round(store * 100) : null,
       logoUrl: providerLogo(app),
     }];
   });
@@ -119,11 +123,11 @@ async function refreshCatalog(env) {
         ).bind(JSON.stringify(keys),now).run();
       }
       await env.APP_DB.batch(apps.map(a => env.APP_DB.prepare(
-        "INSERT INTO app_catalog (app_id,name,module,provider_cost_cents,logo_url,updated_at_ms) VALUES (?,?,?,?,?,?) " +
+        "INSERT INTO app_catalog (app_id,name,module,provider_cost_cents,provider_store_price_cents,logo_url,updated_at_ms) VALUES (?,?,?,?,?,?,?) " +
         "ON CONFLICT(app_id) DO UPDATE SET name=excluded.name,module=excluded.module," +
-        "provider_cost_cents=excluded.provider_cost_cents," +
+        "provider_cost_cents=excluded.provider_cost_cents,provider_store_price_cents=excluded.provider_store_price_cents," +
         "logo_url=COALESCE(excluded.logo_url,app_catalog.logo_url),updated_at_ms=excluded.updated_at_ms"
-      ).bind(a.id, a.name, a.module, a.cost, a.logoUrl, now)));
+      ).bind(a.id, a.name, a.module, a.cost, a.storePrice, a.logoUrl, now)));
       imported += apps.length;
       if (body?.has_more === false || apps.length < 200) break;
     }
@@ -209,7 +213,7 @@ export default {
         if (!(await verifyAdminRole(request,userId))) return respond({ error: "Apenas administradores podem alterar preços." },403,origin);
         if (request.method === "GET" && url.pathname === "/v1/admin/catalog") {
           const rows = await env.APP_DB.prepare(
-            "SELECT app_id AS id,name,module,provider_cost_cents AS providerValue, " +
+            "SELECT app_id AS id,name,module,provider_cost_cents AS providerValue,provider_store_price_cents AS storePriceCents, " +
             "sale_price_cents AS priceCents,logo_url AS logoUrl,is_active AS active,updated_at_ms AS updatedAt " +
             "FROM app_catalog ORDER BY name LIMIT 500"
           ).all();
