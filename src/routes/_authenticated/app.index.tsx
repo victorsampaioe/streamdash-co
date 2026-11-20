@@ -308,9 +308,10 @@ function timeAgo(iso: string) {
 }
 
 
-function LatencyTrend({ checks, color }: {
+function LatencyTrend({ checks, color, source = "HTTP" }: {
   checks: Array<{ status: string; checked_at: string; latency_ms: number | null }>;
   color: string;
+  source?: "HTTP" | "DNS";
 }) {
   const values = checks.filter(c => c.latency_ms != null &&
     Number.isFinite(c.latency_ms) && c.latency_ms >= 0).slice(-16).map(c => Number(c.latency_ms));
@@ -318,7 +319,7 @@ function LatencyTrend({ checks, color }: {
   const min = Math.min(...values), max = Math.max(...values), span = Math.max(max - min, 15);
   const points = values.map((v, i) => [4 + 152 * i / (values.length - 1), 37 - 27 * (v - min) / span]);
   const line = points.map(([x,y],i) => (i ? "L" : "M") + x.toFixed(1) + "," + y.toFixed(1)).join(" ");
-  return <svg viewBox="0 0 160 48" fill="none" role="img" aria-label="Tendência real de latência HTTP"
+  return <svg viewBox="0 0 160 48" fill="none" role="img" aria-label={`Tendência real de latência ${source}`}
     className="h-10 w-24 shrink-0 opacity-80 sm:w-32" preserveAspectRatio="none">
     <path d={line + " L156,45 L4,45 Z"} fill={color} opacity=".12"/>
     <path d={line} stroke={color} strokeWidth="2" strokeLinecap="round"
@@ -338,6 +339,48 @@ function ServerCard({ server }: { server: any }) {
     },
     refetchInterval: 15000,
   });
+  // HTTP checks stopped updating after the monitoring migration. Cloudflare D1
+  // continues recording real DNS history, so show that as a DISTINCT source
+  // rather than drawing fake HTTP uptime bars.
+  type HistoryPoint = {status: string; checked_at: string; latency_ms: number | null};
+  const { data: dnsRecent = [] } = useQuery<HistoryPoint[]>({
+    queryKey: ["cloudflare-dns-history", server.id],
+    enabled: !server.monitoring_paused && server.dns_enabled !== false,
+    queryFn: async () => {
+      const { data: auth } = await supabase.auth.getSession();
+      const accessToken = auth.session?.access_token;
+      const publicKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+      if (!accessToken || !publicKey) return [];
+      const response = await fetch(
+        "https://streammonitor-dns-history.victorsampaio133.workers.dev/v1/history?serverId="
+          + encodeURIComponent(String(server.id)),
+        {
+          headers: { Authorization: `Bearer ${accessToken}`, "x-sm-public-key": publicKey },
+          cache: "no-store",
+          signal: AbortSignal.timeout(10000),
+        },
+      );
+      if (!response.ok) return [];
+      const result: unknown = await response.json();
+      const items = (result as {items?: unknown})?.items;
+      if (!Array.isArray(items)) return [];
+      return items.filter((item: any): item is HistoryPoint =>
+        item && ["up", "down", "degraded", "unknown"].includes(item.status)
+        && typeof item.checked_at === "string"
+        && Number.isFinite(Date.parse(item.checked_at))
+        && (item.latency_ms === null || (typeof item.latency_ms === "number" && Number.isFinite(item.latency_ms)))
+      ).slice(-40);
+    },
+    staleTime: 120000,
+    refetchInterval: 180000,
+    refetchOnWindowFocus: false,
+    retry: false,
+  });
+  const httpLastChecked = recent.length ? Date.parse(recent[recent.length - 1].checked_at) : NaN;
+  const httpFresh = Number.isFinite(httpLastChecked) && Date.now() - httpLastChecked < 60 * 60 * 1000;
+  const hasDnsHistory = dnsRecent.length > 0;
+  const displayedChecks = httpFresh ? recent : hasDnsHistory ? dnsRecent : recent;
+  const sparkSource = httpFresh ? "HTTP" : hasDnsHistory ? "DNS" : recent.length ? "HTTP antigo" : null;
   const delayed = isHttpCheckStale(server);
   const status = effectiveAccessStatus(server);
   const score = scoreOf([server]);
@@ -411,15 +454,18 @@ function ServerCard({ server }: { server: any }) {
               {latency === null ? "—" : latency + " ms"}
             </strong>
           </span>
-          <LatencyTrend checks={recent} color={palette.line}/>
+          <LatencyTrend checks={displayedChecks} color={palette.line} source={sparkSource === "DNS" ? "DNS" : "HTTP"}/>
         </div>
         {server.ssl_days_remaining != null &&
           <div className="relative mt-2 text-right"><Badge variant="outline" className="border-white/15 text-[10px] text-slate-300">SSL {server.ssl_days_remaining}d</Badge></div>}
         <div className="relative mt-3 border-t border-white/[0.07] pt-3">
-          <UptimeSparkline checks={recent}/>
+          <UptimeSparkline checks={displayedChecks} source={sparkSource === "DNS" ? "DNS" : "HTTP"}/>
           <div className="mt-1.5 flex items-center justify-between text-[10px] text-slate-500">
-            <span>{recent.length ? "Histórico HTTP real" : "Aguardando histórico HTTP"}</span>
-            <span>Últimas {Math.min(recent.length,40)}</span>
+            <span>{sparkSource === "DNS" ? "Histórico DNS real · não confirma IPTV"
+              : sparkSource === "HTTP" ? "Histórico HTTP real"
+              : sparkSource === "HTTP antigo" ? "Histórico HTTP antigo"
+              : "Aguardando medições DNS/HTTP"}</span>
+            <span>Últimas {Math.min(displayedChecks.length,40)}</span>
           </div>
         </div>
       </Card>
