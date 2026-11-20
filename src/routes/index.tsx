@@ -2,7 +2,6 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { lazy, Suspense, useState, useRef } from "react";
 import { Activity, ArrowRight, ServerIcon, Bell, Globe, Zap, ShieldCheck, LineChart, Send, BookOpen, UserCheck, TrendingUp, Search, Film, Tv, CheckCircle2, Cpu, PlayCircle, Play, Pause, Volume2, VolumeX } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import {NovemberUpdates} from "@/components/landing/november-updates";
 import {RxPurplePartnership} from "@/components/landing/rx-purple-partnership";
 
 import heroVideoAsset from "@/assets/hero-video.mp4.asset.json";
@@ -71,49 +70,6 @@ function Landing() {
 
       <RxPurplePartnership />
 
-      {/* Novidade pública: Radar Mundial de DNS via Globalping.
-          Inspeções DNS distribuídas não comprovam disponibilidade do streaming. */}
-      <section id="novidade-radar-mundial" aria-labelledby="novidade-radar-mundial-titulo" className="relative overflow-hidden border-b border-blue-400/20 bg-[#071426] py-5 text-white sm:py-7">
-        <div aria-hidden="true" className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_80%_0%,rgba(59,130,246,.22),transparent_55%)]" />
-        <div className="relative mx-auto max-w-7xl px-4 sm:px-6">
-          <div className="flex flex-col gap-5 rounded-2xl border border-blue-400/35 bg-gradient-to-r from-[#112a50] via-[#09182e] to-[#091327] p-5 shadow-[0_20px_55px_rgba(0,0,0,.22)] sm:flex-row sm:items-center sm:justify-between sm:gap-8 sm:p-6">
-            <div className="flex min-w-0 flex-1 items-start gap-3 sm:gap-4">
-              <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-cyan-300/25 bg-blue-500/20 shadow-inner shadow-blue-300/10">
-                <Globe className="h-6 w-6 text-cyan-300" aria-hidden="true" />
-              </span>
-              <div className="min-w-0">
-                <span className="inline-flex items-center gap-2 rounded-full border border-cyan-400/30 bg-cyan-400/10 px-2.5 py-1 text-[10px] font-black uppercase tracking-[.14em] text-cyan-200">
-                  <span aria-hidden="true" className="h-1.5 w-1.5 rounded-full bg-cyan-300" /> Nova ferramenta disponível
-                </span>
-                <h2 id="novidade-radar-mundial-titulo" className="mt-3 text-xl font-black tracking-tight sm:text-2xl">
-                  🌍 Radar Mundial de DNS <span className="text-blue-300">chegou ao Stream Monitor!</span>
-                </h2>
-                <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-200 sm:text-base">
-                  Agora você pode verificar a resolução da sua DNS em sondas de cinco países:
-                  <strong className="text-white"> Brasil, Estados Unidos, Alemanha, Japão e Austrália.</strong>
-                  Veja onde o domínio responde e investigue falhas regionais com tecnologia Globalping.
-                </p>
-                <p className="mt-2 text-xs leading-5 text-slate-400">
-                  Para contas com acesso ativo · Consulte em Servidores → DNS → Radar Mundial. Os testes verificam resolução DNS, não a reprodução de vídeo.
-                </p>
-              </div>
-            </div>
-            <div className="flex shrink-0 flex-col gap-2 sm:w-[225px]">
-              <Link to="/app/servers" className="block">
-                <Button size="lg" className="h-12 w-full rounded-xl bg-blue-500 px-4 text-sm font-extrabold text-white hover:bg-blue-400">
-                  Experimentar novidade <ArrowRight className="ml-1.5 h-4 w-4"/>
-                </Button>
-              </Link>
-              <Link to="/auth" search={{tab:"signup"}} className="block">
-                <Button size="sm" variant="outline" className="h-10 w-full rounded-xl border-blue-300/30 bg-transparent text-slate-100 hover:bg-white/10">
-                  Ainda não tem conta? Cadastre-se
-                </Button>
-              </Link>
-            </div>
-          </div>
-        </div>
-      </section>
-
       <section className="sm-hero sm-landing-hero relative isolate overflow-hidden border-b border-blue-400/10">
         <div aria-hidden="true" className="sm-hero-grid pointer-events-none absolute inset-0" />
         <div aria-hidden="true" className="pointer-events-none absolute -right-32 -top-28 h-[500px] w-[500px] rounded-full bg-blue-500/15 blur-[110px]" />
@@ -165,8 +121,37 @@ function Landing() {
       </section>
 
 
-      {/* Novidade anterior sobre Vitrines e Banners — mantida abaixo do novo destaque RX Purple. */}
-      <NovemberUpdates />
+      {/* Novidade: ativação de reprodutores por Pix — posicionada após a apresentação principal. */}
+      <section id="novidade-ativacao-aplicativos" aria-labelledby="novidade-ativacao-aplicativos-titulo" className="relative isolate overflow-hidden border-y border-blue-400/20 bg-gradient-to-b from-[#050c1c] via-[#0a1e3c] to-[#07152c] py-14 text-white sm:py-20">
+        <div aria-hidden="true" className="pointer-events-none absolute -right-24 -top-28 h-[420px] w-[420px] rounded-full bg-blue-500/15 blur-[110px]" />
+        <div aria-hidden="true" className="pointer-events-none absolute -bottom-32 left-12 h-72 w-72 rounded-full bg-cyan-400/10 blur-[100px]" />
+        <div className="relative mx-auto max-w-7xl px-4 sm:px-6">
+          <div className="mx-auto max-w-3xl text-center">
+            <span className="inline-flex items-center gap-2 rounded-full border border-cyan-300/30 bg-cyan-300/10 px-4 py-2 text-xs font-extrabold uppercase tracking-[.16em] text-cyan-200"><Zap size={15} /> Novidade no Stream Monitor</span>
+            <h2 id="novidade-ativacao-aplicativos-titulo" className="mt-5 text-3xl font-black leading-tight tracking-tight sm:text-4xl lg:text-5xl">Ative seus aplicativos com <span className="bg-gradient-to-r from-cyan-300 to-blue-400 bg-clip-text text-transparent">Pix direto no painel.</span></h2>
+            <p className="mt-4 text-sm leading-7 text-slate-300 sm:text-base">Escolha o reprodutor, informe o MAC do dispositivo e gere seu Pix no Stream Monitor. Após a confirmação do pagamento, a solicitação de ativação é enviada automaticamente.</p>
+          </div>
+          <div className="mt-10 grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+            {[{name:"IBO PLAYER",price:"R$ 10,00",subtitle:"Licença do aplicativo",abbrev:"IBO",featured:true},{name:"BOB PLAYER",price:"R$ 9,90",subtitle:"Licença do aplicativo",abbrev:"BOB",featured:false},{name:"SMARTONE IPTV",price:"R$ 13,50",subtitle:"Licença do aplicativo",abbrev:"S1",featured:false},{name:"9XTREAM 4K PLAYER",price:"R$ 9,90",subtitle:"Licença do aplicativo",abbrev:"9X",featured:false},{name:"A PLUS PLAYER",price:"R$ 8,90",subtitle:"Licença do aplicativo",abbrev:"A+",featured:false}].map((app) => (
+              <article key={app.name} className="group flex flex-col rounded-2xl border border-blue-300/20 bg-white/[.045] p-5 shadow-[0_18px_35px_rgba(0,0,0,.2)] transition-all hover:-translate-y-1 hover:border-cyan-300/50 hover:bg-blue-400/[.08]">
+                <div className="flex items-start justify-between gap-2">
+                  <span className="flex h-12 w-12 items-center justify-center rounded-xl border border-blue-300/20 bg-gradient-to-br from-blue-500/30 to-cyan-300/10 text-sm font-black tracking-tight text-cyan-100">{app.abbrev}</span>
+                  {app.featured && <span className="rounded-full border border-cyan-300/25 bg-cyan-300/10 px-2 py-1 text-[10px] font-black uppercase tracking-widest text-cyan-200">Destaque</span>}
+                </div>
+                <h3 className="mt-5 min-h-12 text-base font-extrabold leading-snug">{app.name}</h3>
+                <p className="mt-1 text-xs text-slate-400">{app.subtitle}</p>
+                <p className="mt-auto pt-6 text-2xl font-black tracking-tight text-white">{app.price}</p>
+              </article>
+            ))}
+          </div>
+          <div className="mt-8 flex flex-col items-center justify-center gap-4 text-center">
+            <Link to="/app/ativacao-aplicativos" className="inline-flex min-h-12 w-full max-w-xs items-center justify-center gap-2 rounded-xl bg-blue-500 px-6 py-3 text-sm font-extrabold text-white shadow-lg shadow-blue-500/20 transition-colors hover:bg-blue-400 sm:w-auto">
+              Ativar meu aplicativo <ArrowRight size={18} />
+            </Link>
+            <p className="max-w-2xl text-xs leading-5 text-slate-400">Mais aplicativos com preços configurados estão disponíveis na central de ativações. Licenças dos reprodutores não incluem canais, filmes, séries ou assinatura de conteúdo. Confira o valor vigente no painel.</p>
+          </div>
+        </div>
+      </section>
 
       {/* Real-world timing example supplied by a user. DNS status and platform
           availability remain separate signals; never equate DNS failure with
