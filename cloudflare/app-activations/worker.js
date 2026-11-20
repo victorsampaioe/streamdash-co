@@ -106,6 +106,10 @@ async function getConfig(db) {
   return Object.fromEntries((result.results || []).map(r => [r.key, r.value === "true"]));
 }
 export default {
+  async scheduled(_event, env, ctx) {
+    if (!env.APP_DB || !env.ATIVEAPP_API_KEY) return;
+    ctx.waitUntil(refreshCatalog(env).catch(() => {}));
+  },
   async fetch(request, env) {
     const url = new URL(request.url);
     const origin = request.headers.get("origin") || "";
@@ -117,6 +121,33 @@ export default {
     if (url.pathname === "/health" && request.method === "GET") {
       return respond({ service: "Stream Monitor - Ativação de aplicativos", runtime: "Cloudflare",
         safe_mode: true }, 200, origin);
+    }
+    // Public, read-only and sanitized storefront catalog for the linked Telegram bot.
+    // No user IDs, provider purchase costs, MACs, API secrets or write operations.
+    // Inventory is refreshed only by an authenticated site request or the Cron.
+    if (request.method === "GET" && url.pathname === "/v1/telegram/catalog") {
+      if (!env.APP_DB) return respond({ error: "database_unavailable" }, 503, origin);
+      const page = Math.max(1, Math.min(40, Number.parseInt(url.searchParams.get("page") || "1", 10) || 1));
+      const q = String(url.searchParams.get("q") || "").trim().slice(0, 65).toLowerCase().replace(/[%_]/g, "");
+      const limit = 8;
+      const rows = await env.APP_DB.prepare(
+        "SELECT app_id AS id,name,module,sale_price_cents AS priceCents " +
+        "FROM app_catalog WHERE is_active=1 AND lower(name) LIKE ? ORDER BY name,app_id LIMIT ? OFFSET ?"
+      ).bind("%" + q + "%", limit + 1, (page - 1) * limit).all();
+      const matches = rows.results || [];
+      return respond({ items: matches.slice(0,limit), page, hasMore: matches.length > limit,
+        configured: !!env.ATIVEAPP_API_KEY, live: false }, 200, origin);
+    }
+    if (request.method === "GET" && url.pathname === "/v1/telegram/app") {
+      if (!env.APP_DB) return respond({ error: "database_unavailable" }, 503, origin);
+      const id = url.searchParams.get("id") || "";
+      if (!appIdOk(id)) return respond({ error: "invalid_app" }, 400, origin);
+      const app = await env.APP_DB.prepare(
+        "SELECT app_id AS id,name,module,sale_price_cents AS priceCents FROM app_catalog " +
+        "WHERE app_id=? AND is_active=1"
+      ).bind(id).first();
+      return app ? respond({ app, live: false }, 200, origin)
+        : respond({ error: "not_found" }, 404, origin);
     }
     if (!url.pathname.startsWith("/v1/")) return respond({ error: "not_found" }, 404, origin);
     let userId;
