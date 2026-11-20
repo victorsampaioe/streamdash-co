@@ -1,7 +1,7 @@
 import {createFileRoute} from "@tanstack/react-router";
 import {z} from "zod";
 const bodySchema=z.object({
- bucket:z.enum(["database_export_15_11_26","database_export_19_11_26","promo-arts"]),
+ bucket:z.enum(["database_export_15_11_26","database_export_19_11_26","promo-arts","vitrine-video-modelos"]),
  path:z.string().min(1).max(1024),
 });
 export const Route=createFileRoute("/api/public/edge-backup/sign")({
