@@ -287,7 +287,7 @@ function MobileNav() {
   return (
     <Sheet open={open} onOpenChange={setOpen}>
       <SheetTrigger asChild>
-        <Button variant="ghost" size="icon" className="lg:hidden" aria-label="Abrir menu">
+        <Button variant="ghost" size="icon" className="lg:hidden h-10 w-10 rounded-xl border border-sky-400/20 bg-sky-400/[0.06] text-sky-100 hover:bg-sky-400/15" aria-label="Abrir menu">
           <Menu className="h-5 w-5" />
         </Button>
       </SheetTrigger>
@@ -325,27 +325,27 @@ function Topbar() {
     retry: 1,
   });
   return (
-    <header className="sm-command-topbar min-h-[68px] border-b border-border/60 flex items-center gap-2 px-4 lg:px-8 bg-background/95 supports-[backdrop-filter]:bg-background/85 backdrop-blur-md sticky top-0 z-30">
+    <header className={["sm-command-topbar sticky top-0 z-30 flex min-h-[72px] items-center gap-2 border-b px-4 backdrop-blur-xl lg:px-8", theme === "dark" ? "border-sky-400/15 bg-[#071326]/95 text-slate-100 shadow-[0_12px_35px_-25px_rgba(14,165,233,.35)]" : "border-border/60 bg-background/95"].join(" ")}>
       <MobileNav />
-      <div className="flex items-center gap-2 lg:hidden min-w-0">
-        <Activity className="h-5 w-5 text-primary shrink-0" />
-        <span className="font-bold truncate">streammonitor</span>
+      <div className="flex min-w-0 items-center gap-2 lg:hidden">
+        <Activity className="h-6 w-6 shrink-0 text-sky-400 drop-shadow-[0_0_9px_rgba(56,189,248,.45)]" />
+        <span className="truncate text-sm font-extrabold tracking-tight min-[390px]:text-base">Stream <span className="font-semibold text-sky-400">Monitor</span></span>
       </div>
       <div className="hidden lg:flex flex-1 items-center gap-2 text-xs font-medium text-muted-foreground"><span className="h-2 w-2 rounded-full bg-primary" /> Centro de operações <span className="mx-2 text-border">/</span> Stream Monitor</div>
       <div className="flex-1 lg:hidden" />
       <div className="flex items-center gap-1 sm:gap-2">
         {canOpenAdmin && <Link to="/app/admin" aria-label="Abrir painel administrativo">
-          <Button size="sm" variant="outline" className="gap-1.5 border-primary/25 text-primary">
+          <Button size="sm" variant="outline" className="h-10 gap-1.5 rounded-xl border-sky-400/25 bg-sky-400/[0.06] text-sky-300 hover:bg-sky-400/15">
             <ShieldAlert className="h-4 w-4" /><span className="hidden sm:inline">Admin</span>
           </Button>
         </Link>}
         <Link to="/app/servers/new">
-          <Button size="sm" className="px-2 sm:px-3">
+          <Button size="sm" className="h-10 rounded-xl border border-sky-300/30 bg-gradient-to-br from-blue-500 to-blue-700 px-2.5 text-white shadow-[0_7px_25px_-10px_rgba(37,99,235,.85)] hover:from-blue-400 hover:to-blue-600 sm:px-3">
             <Plus className="h-4 w-4 sm:mr-1" />
             <span className="hidden sm:inline">Novo servidor</span>
           </Button>
         </Link>
-        <Button variant="ghost" size="icon" onClick={toggle} aria-label="Alternar tema">
+        <Button variant="ghost" size="icon" onClick={toggle} aria-label="Alternar tema" className="h-10 w-10 rounded-xl border border-sky-400/15 bg-sky-400/[0.04] text-slate-300 hover:bg-sky-400/15">
           {theme === "dark" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
         </Button>
       </div>
