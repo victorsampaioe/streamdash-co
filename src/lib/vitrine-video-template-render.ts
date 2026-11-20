@@ -257,7 +257,7 @@ export async function renderResellerVideoMp4(opts:{
     if(frames<source.duration*6)
       throw new Error("O navegador não processou quadros suficientes para gerar o vídeo inteiro. Tente novamente com a aba aberta.");
     progress({percent:99,stage:"Finalizando MP4 para WhatsApp..."});
-    const output=await finalizeCinematicMp4(blob);
+    const output=await finalizeCinematicMp4(blob,undefined,source.duration);
     progress({percent:100,stage:"MP4 pronto"});
     return output;
   }finally{
