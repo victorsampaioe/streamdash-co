@@ -32,29 +32,78 @@ async function secureEquals(received, expected) {
   for(let i=0;i<aa.length;i++) diff|=aa[i]^bb[i];
   return diff===0;
 }
+async function probeProviderReadOnly(env) {
+  if(!env.NEW_ASAAS_DB)return;
+  const key=env.ASAAS_ATIVACOES_NOVA_API_KEY;
+  const prefix=typeof key==="string" && key.startsWith("$aact_prod_")?"production":
+    typeof key==="string" && key.startsWith("$aact_hmlg_")?"sandbox":"unknown";
+  const base=prefix==="production"?"https://api.asaas.com/v3":
+    prefix==="sandbox"?"https://api-sandbox.asaas.com/v3":null;
+  const now=Date.now();
+  // Never log or persist the key, body of account response or sensitive webhook fields.
+  let apiStatus=0, webhookStatus=0, match=false, enabled=false, error="none";
+  if(!base||!key)error="invalid_key_format";
+  else{
+    const headers={"access_token":key,"User-Agent":"StreamMonitor-Integracoes/1.0",
+      "Accept":"application/json"};
+    try{
+      const [account,webhooks]=await Promise.all([
+        fetch(base+"/myAccount/status/",{method:"GET",headers,signal:AbortSignal.timeout(9500),
+          cf:{cacheTtl:0,cacheEverything:false}}),
+        fetch(base+"/webhooks?limit=100",{method:"GET",headers,signal:AbortSignal.timeout(9500),
+          cf:{cacheTtl:0,cacheEverything:false}})
+      ]);
+      apiStatus=account.status;
+      webhookStatus=webhooks.status;
+      if(webhooks.ok){
+        const data=await webhooks.json().catch(()=>null);
+        const rows=Array.isArray(data?.data)?data.data:
+          Array.isArray(data?.items)?data.items:Array.isArray(data)?data:[];
+        const targets=new Set([
+          "https://streammonitor-asaas-ativacoes-nova-conta.victorsampaio133.workers.dev/webhooks/asaas/ativacoes",
+          "https://pagamentos.streammonitor.site/eventos/pagamentos"
+        ]);
+        for(const row of rows){
+          if(typeof row?.url==="string" && targets.has(row.url.trim())){
+            match=true;
+            enabled=enabled || row.enabled===true || row.enabled==="true";
+          }
+        }
+      }
+      if(!account.ok)error=account.status===401?"invalid_key":"account_api_error";
+      else if(!webhooks.ok)error=webhooks.status===401?"invalid_key":"webhook_query_failed";
+    }catch{error="connection_failed";}
+  }
+  const info={
+    "provider_key_env_detected":prefix,
+    "provider_account_http_status":String(apiStatus),
+    "provider_webhook_list_http_status":String(webhookStatus),
+    "provider_webhook_url_present":String(match),
+    "provider_webhook_enabled":String(enabled),
+    "provider_probe_result":error,
+    "provider_checked_at_ms":String(now)
+  };
+  const statements=Object.entries(info).map(([k,v])=>
+    env.NEW_ASAAS_DB.prepare(
+      "INSERT INTO merchant_config(key,value,updated_at_ms) VALUES(?,?,?) "+
+      "ON CONFLICT(key) DO UPDATE SET value=excluded.value,updated_at_ms=excluded.updated_at_ms"
+    ).bind(k,v,now)
+  );
+  await env.NEW_ASAAS_DB.batch(statements);
+}
 export default {
+  async scheduled(_event,env,ctx){
+    ctx.waitUntil(probeProviderReadOnly(env).catch(()=>{}));
+  },
   async fetch(request,env){
     const url=new URL(request.url);
     if(url.pathname==="/health"&&request.method==="GET"){
-      // Status only; do not reveal the merchant's identity, funds, key or payment details.
-      let flags={};
-      try{
-        if(env.NEW_ASAAS_DB){
-          const config=await env.NEW_ASAAS_DB.prepare(
-            "SELECT key,value FROM merchant_config WHERE key IN ('environment','merchant_verified',"+
-            "'merchant_authorized','payment_creation_enabled','activation_auto_delivery_enabled')"
-          ).all();
-          flags=Object.fromEntries((config.results||[]).map(r=>[r.key,r.value]));
-        }
-      }catch{}
-      return json({service:"Stream Monitor - Pix de ativações / nova conta Asaas",
-        environment:flags.environment||"sandbox",
-        credentials_ready:!!env.ASAAS_ATIVACOES_NOVA_API_KEY,
-        webhook_auth_ready:!!env.ASAAS_ATIVACOES_NOVA_WEBHOOK_TOKEN,
-        merchant_verified:flags.merchant_verified==="true" && flags.merchant_authorized==="true",
-        payment_creation_enabled:false, auto_activation_enabled:false});
+      // Public probe must not reveal provider, credential status, environment or merchant data.
+      return json({status:"ok"});
     }
-    if(url.pathname==="/webhooks/asaas/ativacoes"&&request.method==="POST"){
+    const isWebhook=url.pathname==="/webhooks/asaas/ativacoes" ||
+      url.pathname==="/eventos/pagamentos";
+    if(isWebhook&&request.method==="POST"){
       if(!env.NEW_ASAAS_DB || !env.ASAAS_ATIVACOES_NOVA_WEBHOOK_TOKEN)
         return json({error:"webhook_not_configured"},503);
       const auth=request.headers.get("asaas-access-token")||"";
@@ -90,11 +139,11 @@ export default {
         return json({error:"temporary_storage_unavailable"},503);
       }
     }
-    if(url.pathname==="/webhooks/asaas/ativacoes")return json({error:"method_not_allowed"},405);
+    if(isWebhook)return json({error:"method_not_allowed"},405);
     if(url.pathname==="/v1/pix/create"&&request.method==="POST"){
       // Must not contact a merchant nor consume funds until authorized, tested
       // and reconciled with the separate payment ledger.
-      return json({error:"nova_conta_asaas_em_configuracao",charged:false},503);
+      return json({error:"servico_temporariamente_indisponivel",charged:false},503);
     }
     return json({error:"not_found"},404);
   }
