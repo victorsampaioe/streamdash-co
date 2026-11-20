@@ -1,7 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { selectHttpTargets } from "../../cloudflare/dns-core/regional-combined-worker.js";
+// @ts-expect-error The Cloudflare Worker source is JavaScript outside tsconfig allowJs.
+import { selectHttpTargets as importScheduler } from "../../cloudflare/dns-core/regional-combined-worker.js";
+type HttpTarget = { server_id: string; last_checked_at: string | null; host: string };
+const selectHttpTargets = importScheduler as (list: HttpTarget[], now?: number, capacity?: number) => HttpTarget[];
 
-function sample(size = 228, timestamp = "2026-11-20T16:00:00Z") {
+function sample(size = 228, timestamp = "2026-11-20T16:00:00Z"): HttpTarget[] {
   return Array.from({length:size}, (_,i)=>({
     server_id: String(i).padStart(4,"0"),
     last_checked_at: timestamp,
