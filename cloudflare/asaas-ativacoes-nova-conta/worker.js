@@ -42,6 +42,10 @@ async function probeProviderReadOnly(env) {
   const base=prefix==="production"?"https://api.asaas.com/v3":
     prefix==="sandbox"?"https://api-sandbox.asaas.com/v3":null;
   const now=Date.now();
+  const digest=typeof key==="string"&&key.length>30?
+    await crypto.subtle.digest("SHA-256",new TextEncoder().encode(key)):null;
+  const fingerprint=digest?
+    [...new Uint8Array(digest)].slice(0,12).map(x=>x.toString(16).padStart(2,"0")).join(""):"unverified";
   // Never log or persist the key, body of account response or sensitive webhook fields.
   let apiStatus=0, webhookStatus=0, match=false, enabled=false, error="none";
   if(!base||!key)error="invalid_key_format";
@@ -83,7 +87,8 @@ async function probeProviderReadOnly(env) {
     "provider_webhook_url_present":String(match),
     "provider_webhook_enabled":String(enabled),
     "provider_probe_result":error,
-    "provider_checked_at_ms":String(now)
+    "provider_checked_at_ms":String(now),
+    "merchant_fingerprint":fingerprint
   };
   const statements=Object.entries(info).map(([k,v])=>
     env.NEW_ASAAS_DB.prepare(
@@ -157,7 +162,7 @@ async function merchantReady(env){
     "SELECT key,value FROM merchant_config WHERE key IN ("+
     "'merchant_authorized','merchant_verified','payment_creation_enabled',"+
     "'activation_auto_delivery_enabled','environment','provider_key_env_detected',"+
-    "'provider_account_http_status','provider_webhook_url_present','provider_webhook_enabled')"
+    "'provider_account_http_status','provider_webhook_url_present','provider_webhook_enabled','merchant_fingerprint')"
   ).all();
   const flags=Object.fromEntries((r.results||[]).map(x=>[x.key,x.value]));
   return flags.merchant_authorized==="true"&&flags.merchant_verified==="true"&&
@@ -165,7 +170,8 @@ async function merchantReady(env){
     flags.environment===flags.provider_key_env_detected&&
     flags.provider_account_http_status==="200"&&
     flags.provider_webhook_url_present==="true"&&
-    flags.provider_webhook_enabled==="true";
+    flags.provider_webhook_enabled==="true"&&
+    !!flags.merchant_fingerprint&&flags.merchant_fingerprint!=="unverified";
 }
 function safeCents(v){return Number.isSafeInteger(v)&&v>=100&&v<=999999;}
 function dueDate(){
@@ -188,6 +194,12 @@ async function createCheckout(env,userId,input){
     !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)||![11,14].includes(cpfCnpj.length))
     return {status:400,body:{error:"Confira nome, CPF/CNPJ, e-mail, aplicativo e MAC.",charged:false}};
   const db=env.NEW_ASAAS_DB;
+  const merchant=await db.prepare(
+    "SELECT value FROM merchant_config WHERE key='merchant_fingerprint'"
+  ).first();
+  const fingerprint=merchant?.value;
+  if(!/^[0-9a-f]{24}$/.test(fingerprint||""))
+    return{status:503,body:{error:"Recebedor não verificado.",charged:false}};
   let order=await db.prepare(
     "SELECT * FROM pix_orders WHERE owner_user_id=? AND idempotency_token=?"
   ).bind(userId,token).first();
@@ -220,13 +232,13 @@ async function createCheckout(env,userId,input){
     "status,created_at_ms,updated_at_ms,idempotency_token) "+
     "VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?)"
   ).bind(orderId,orderId,userId,appId,mac,app.cents,environment,
-    "merchant_verified",orderId,"prepared",now,now,token).run();
+    fingerprint,orderId,"prepared",now,now,token).run();
   if(!write.meta?.changes)return{status:409,body:{error:"Pedido em andamento.",charged:false}};
   try{
     let customer=await db.prepare(
       "SELECT asaas_customer_id FROM customer_bindings WHERE owner_user_id=? AND environment=?"+
-      " AND merchant_fingerprint='merchant_verified'"
-    ).bind(userId,environment).first();
+      " AND merchant_fingerprint=?"
+    ).bind(userId,environment,fingerprint).first();
     let customerId=customer?.asaas_customer_id;
     if(!customerId){
       await db.prepare("UPDATE pix_orders SET status='creating_customer',updated_at_ms=? WHERE order_id=?")
@@ -239,7 +251,7 @@ async function createCheckout(env,userId,input){
       customerId=created.id;
       await db.prepare(
         "INSERT OR IGNORE INTO customer_bindings(owner_user_id,asaas_customer_id,environment,merchant_fingerprint,created_at_ms) VALUES(?,?,?,?,?)"
-      ).bind(userId,customerId,environment,"merchant_verified",Date.now()).run();
+      ).bind(userId,customerId,environment,fingerprint,Date.now()).run();
     }
     // From here on any timeout has an uncertain charge creation outcome.
     await db.prepare("UPDATE pix_orders SET status='creating_payment',asaas_customer_id=?,updated_at_ms=? WHERE order_id=?")
@@ -289,7 +301,11 @@ async function reconcilePaidPayment(env,orderId){
   if(!o||!o.asaas_payment_id||!o.asaas_customer_id)return;
   if(["activated","cancelled","refunded"].includes(o.status))return;
   const p=await paymentCall(env,"/payments/"+encodeURIComponent(o.asaas_payment_id));
-  if(p?.id!==o.asaas_payment_id||p?.externalReference!==o.external_reference||
+  const currentMerchant=await db.prepare(
+    "SELECT value FROM merchant_config WHERE key='merchant_fingerprint'"
+  ).first();
+  if(currentMerchant?.value!==o.merchant_fingerprint||
+    p?.id!==o.asaas_payment_id||p?.externalReference!==o.external_reference||
     p?.customer!==o.asaas_customer_id||p?.billingType!=="PIX"||
     Math.round(Number(p?.value)*100)!==o.amount_cents){
     await db.prepare(
