@@ -57,10 +57,11 @@ export function repairMp4DurationHeaders(
 
   function readTimeScale(box: Box): number {
     const p = box.offset + box.header;
-    if (p + 28 > box.end) throw new Error("Cabeçalho de duração incompleto.");
+    if (p + 4 > box.end) throw new Error("Cabeçalho de duração incompleto.");
     const version = view.getUint8(p);
     if (version !== 0 && version !== 1) throw new Error("Versão MP4 não suportada.");
     const where = p + (version === 1 ? 20 : 12);
+    if (where + 4 > box.end) throw new Error("Escala de tempo MP4 incompleta.");
     const scale = view.getUint32(where);
     if (!scale || scale > 1_000_000_000) throw new Error("Escala de tempo do MP4 inválida.");
     return scale;
@@ -69,7 +70,7 @@ export function repairMp4DurationHeaders(
 
   function inspectAndRepair(box: Box) {
     const p = box.offset + box.header;
-    if (p + 32 > box.end) return;
+    if (p + 4 > box.end) return;
     const version = view.getUint8(p);
     if (version !== 0 && version !== 1) return;
     const scale = box.name === "mdhd" ? readTimeScale(box) : movieScale;
