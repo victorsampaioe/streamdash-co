@@ -75,8 +75,8 @@ function Landing() {
         <div className="relative mx-auto max-w-7xl px-4 sm:px-6">
           <div className="mx-auto max-w-3xl text-center">
             <span className="inline-flex items-center gap-2 rounded-full border border-cyan-300/30 bg-cyan-300/10 px-4 py-2 text-xs font-extrabold uppercase tracking-[.16em] text-cyan-200"><Zap size={15} /> Novidade no Stream Monitor</span>
-            <h2 id="novidade-ativacao-aplicativos-titulo" className="mt-5 text-3xl font-black leading-tight tracking-tight sm:text-4xl lg:text-5xl">Ative seus aplicativos com <span className="bg-gradient-to-r from-cyan-300 to-blue-400 bg-clip-text text-transparent">Pix direto no painel.</span></h2>
-            <p className="mt-4 text-sm leading-7 text-slate-300 sm:text-base">Escolha o reprodutor, informe o MAC do dispositivo e gere seu Pix no Stream Monitor. Após a confirmação do pagamento, a solicitação de ativação é enviada automaticamente.</p>
+            <h2 id="novidade-ativacao-aplicativos-titulo" className="mt-5 text-3xl font-black leading-tight tracking-tight sm:text-4xl lg:text-5xl">Ative seus aplicativos com <span className="bg-gradient-to-r from-cyan-300 to-blue-400 bg-clip-text text-transparent">Pix pelo site ou Telegram.</span></h2>
+            <p className="mt-4 text-sm leading-7 text-slate-300 sm:text-base">Escolha o reprodutor, informe o MAC do dispositivo e solicite o Pix pelo site ou diretamente no bot do Telegram. Após a confirmação do pagamento, a solicitação de ativação é enviada automaticamente.</p>
           </div>
           <div className="mt-10 grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
             {[{name:"IBO PLAYER",logo:"https://eelbsrenwvjazertgdok.supabase.co/storage/v1/object/public/ativeapp/app-details1704893631925x176586575932592640_app_1785258747787.jpg",price:"R$ 10,00",subtitle:"Licença do aplicativo",abbrev:"IBO",featured:true},{name:"BOB PLAYER",logo:"https://eelbsrenwvjazertgdok.supabase.co/storage/v1/object/public/ativeapp/app-details1704894163703x920138830586853900_app_1785276600409.jpg",price:"R$ 9,90",subtitle:"Licença do aplicativo",abbrev:"BOB",featured:false},{name:"SMARTONE IPTV",logo:"https://6a9bd0424edabae5e843df4b48b6f4c6.cdn.bubble.io/f1721052735413x517835630117172740/SMARTONE%20IPTV.png",price:"R$ 13,50",subtitle:"Licença do aplicativo",abbrev:"S1",featured:false},{name:"9XTREAM 4K PLAYER",logo:"https://d690eca1cc598e984c14889e63f8a117.cdn.bubble.io/f1747326312055x149432657602591700/logo%209xtream%204k%20player.png",price:"R$ 9,90",subtitle:"Licença do aplicativo",abbrev:"9X",featured:false},{name:"A PLUS PLAYER",logo:"https://6a9bd0424edabae5e843df4b48b6f4c6.cdn.bubble.io/f1721051046457x611743274930799900/A%20plus%20Player.png",price:"R$ 8,90",subtitle:"Licença do aplicativo",abbrev:"A+",featured:false}].map((app) => (
@@ -95,9 +95,14 @@ function Landing() {
             ))}
           </div>
           <div className="mt-8 flex flex-col items-center justify-center gap-4 text-center">
-            <Link to="/app/ativacao-aplicativos" className="inline-flex min-h-12 w-full max-w-xs items-center justify-center gap-2 rounded-xl bg-blue-500 px-6 py-3 text-sm font-extrabold text-white shadow-lg shadow-blue-500/20 transition-colors hover:bg-blue-400 sm:w-auto">
-              Ativar meu aplicativo <ArrowRight size={18} />
-            </Link>
+            <div className="flex w-full flex-col items-center justify-center gap-3 sm:flex-row">
+              <Link to="/app/ativacao-aplicativos" className="inline-flex min-h-12 w-full max-w-xs items-center justify-center gap-2 rounded-xl bg-blue-500 px-6 py-3 text-sm font-extrabold text-white shadow-lg shadow-blue-500/20 transition-colors hover:bg-blue-400 sm:w-auto">
+                Ativar pelo site <ArrowRight size={18} />
+              </Link>
+              <a href="https://t.me/MonitordeFluxoBot" target="_blank" rel="noopener noreferrer" className="inline-flex min-h-12 w-full max-w-xs items-center justify-center gap-2 rounded-xl border border-blue-300/35 bg-blue-500/10 px-6 py-3 text-sm font-extrabold text-white transition-colors hover:bg-blue-500/20 sm:w-auto">
+                <Send size={18}/> Ativar pelo Telegram
+              </a>
+            </div>
             <p className="max-w-2xl text-xs leading-5 text-slate-400">Mais aplicativos com preços configurados estão disponíveis na central de ativações. Licenças dos reprodutores não incluem canais, filmes, séries ou assinatura de conteúdo. Confira o valor vigente no painel.</p>
           </div>
         </div>
