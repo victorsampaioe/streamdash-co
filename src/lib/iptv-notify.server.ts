@@ -1,5 +1,6 @@
 // Envio de alertas IPTV pelos canais do dono do servidor (Telegram/Discord/Webhook/Email).
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
+import { createHash } from "node:crypto";
 import { formatIptvAlertMessage, type IptvNoticeItem } from "./iptv-telegram-format";
 
 export type IptvAlertItem = IptvNoticeItem;
@@ -10,7 +11,7 @@ export async function notifyServerIptvAlert(serverId: string, title: string, det
 }
 
 /** Envia UMA mensagem consolidada com todos os problemas detectados no servidor. */
-export async function notifyServerIptvAlerts(serverId: string, items: IptvAlertItem[]) {
+export async function notifyServerIptvAlerts(serverId: string, items: IptvAlertItem[], deliveryKey?: string) {
   if (!items.length) return;
   const { data: server } = await supabaseAdmin
     .from("servers").select("id, owner_id, name, host, iptv_username, iptv_password").eq("id", serverId).maybeSingle();
@@ -42,36 +43,66 @@ export async function notifyServerIptvAlerts(serverId: string, items: IptvAlertI
     .from("alert_channels").select("*").eq("owner_id", server.owner_id).eq("enabled", true);
   if (!channels?.length) return;
 
-  await Promise.allSettled(channels.map(async (ch: { id: string; kind: string; target: string }) => {
-    try {
-      if (ch.kind === "telegram") {
-        const token = process.env.TELEGRAM_BOT_TOKEN;
-        let botToken = token ?? "";
-        let chatId = ch.target?.trim() ?? "";
-        if (chatId.includes(":")) { const [t, c] = chatId.split(":"); botToken = t; chatId = c; }
-        if (!botToken || !chatId) return;
-        await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ chat_id: chatId, text: message, parse_mode: "HTML", disable_web_page_preview: true }),
-        });
-      } else if (ch.kind === "discord") {
-        await fetch(ch.target, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ username: "StreamMonitor IPTV", content: plainMessage }),
-        });
-      } else if (ch.kind === "webhook") {
-        await fetch(ch.target, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            type: "iptv_alert", server_id: serverId, items, at: new Date().toISOString(),
-          }),
-        });
-      }
-    } catch { /* best-effort */ }
+  // Only a verified Telegram API response may mark a message delivered.
+  // Persisting the outbox before sending lets the Cloudflare Queue retry on
+  // transport failures; a unique event+channel key prevents duplicate alerts.
+  const eventFingerprint = createHash("sha256").update(
+    deliveryKey ?? items.map(i => [i.kind ?? "", i.title, i.detail ?? ""].join("|")).sort().join("\\n")
+  ).digest("hex");
+
+  let telegramQueued = 0;
+  const results = await Promise.allSettled(channels.map(async (ch: { id: string; kind: string; target: string }) => {
+    if (ch.kind === "telegram") {
+      const digest = createHash("sha256")
+        .update(["iptv", serverId, ch.id, eventFingerprint].join(":")).digest("hex");
+      const { error } = await supabaseAdmin.from("telegram_outbox" as any).upsert({
+        idempotency_key: "iptv:" + digest,
+        target: ch.target, text: message, source: "iptv_alert",
+        status: "pending", attempts: 0, max_attempts: 7,
+        next_attempt_at: new Date().toISOString(),
+        server_id: serverId, channel_id: ch.id,
+        alert_event: "iptv_" + (items[0]?.kind ?? "alert"),
+      }, { onConflict: "idempotency_key", ignoreDuplicates: true });
+      if (error) throw new Error("iptv_telegram_queue_insert_failed");
+      telegramQueued++;
+    } else if (ch.kind === "discord") {
+      const response = await fetch(ch.target, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ username: "StreamMonitor IPTV", content: plainMessage }),
+        signal: AbortSignal.timeout(8000),
+      });
+      if (!response.ok) throw new Error("iptv_discord_http_" + response.status);
+    } else if (ch.kind === "webhook") {
+      const response = await fetch(ch.target, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ type: "iptv_alert", server_id: serverId, items, at: new Date().toISOString() }),
+        signal: AbortSignal.timeout(8000),
+      });
+      if (!response.ok) throw new Error("iptv_webhook_http_" + response.status);
+    }
   }));
+  for (const result of results) {
+    if (result.status === "rejected") {
+      console.warn("[iptv-alert] channel delivery enqueue failed",
+        result.reason instanceof Error ? result.reason.message.slice(0, 100) : "unknown");
+    }
+  }
+  if (telegramQueued) {
+    // Fast lane: send immediately through the same atomic outbox claim used
+    // by Cloudflare Queue. A second dispatcher cannot send the same row.
+    const { processTelegramOutbox } = await import("./telegram-outbox.server");
+    try {
+      await processTelegramOutbox(5);
+    } catch (error) {
+      console.warn("[iptv-alert] immediate delivery deferred to queue",
+        error instanceof Error ? error.message : "unknown");
+    }
+  }
+  if (results.some(r => r.status === "rejected")) {
+    throw new Error("iptv_alert_one_or_more_channels_failed");
+  }
 }
 
 /** Notifica sobre novos conteúdos detectados no catálogo. */
