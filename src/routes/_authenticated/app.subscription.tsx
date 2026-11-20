@@ -13,6 +13,7 @@ import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { PixDialog } from "@/components/payments/pix-dialog";
 import { getParentResellerPlans } from "@/lib/reseller.functions";
+import { getAnnualPromo } from "@/lib/annual-promo.functions";
 import { ResellerCreditRules } from "@/components/subscription/reseller-credit-rules";
 import { NewUserTelegramSupport } from "@/components/subscription/new-user-telegram-support";
 import { useQuery } from "@tanstack/react-query";
@@ -43,6 +44,14 @@ function SubscriptionPage() {
   const [openPlan, setOpenPlan] = useState<PlanId | null>(null);
   const [pix, setPix] = useState<any>(null);
   const getParentPlans = useServerFn(getParentResellerPlans);
+  const readAnnualPromo = useServerFn(getAnnualPromo);
+  const { data: annualPromo } = useQuery({
+    queryKey: ["annual-promo-20261119"],
+    queryFn: () => readAnnualPromo(),
+    enabled: !!data,
+    staleTime: 10_000,
+    refetchInterval: 15_000,
+  });
   const { data: parentPlans } = useQuery({ 
     queryKey: ["parent-plans", data?.parentId || data?.ownerId || "admin"], 
     queryFn: () => getParentPlans(),
@@ -153,7 +162,18 @@ function SubscriptionPage() {
           </Card>
         </section>
       )}
-      {!isLoading && <ResellerCreditRules compact={false}/>}
+      {!isLoading && annualPromo && (
+        <Card className="relative overflow-hidden rounded-2xl border-2 border-amber-400/70 bg-gradient-to-br from-amber-400/20 via-orange-500/10 to-transparent p-5 sm:p-7">
+          <div className="absolute right-5 top-4 rounded-full bg-amber-400 px-3 py-1 text-xs font-extrabold text-black">🔥 SÓ HOJE</div>
+          <div className="max-w-xl space-y-3">
+            <p className="text-sm font-semibold text-amber-500">Oferta especial Stream Monitor para todos os clientes e revendedores</p>
+            <h2 className="text-2xl sm:text-3xl font-black">Plano anual por {formatBRL(annualPromo.priceCents)}</h2>
+            <p className="text-sm text-muted-foreground">12 meses de acesso com pagamento via Pix e ativação automática após confirmação. Promoção válida até 23h59 de hoje (horário de Brasília), inclusive para assinaturas vencidas.</p>
+            <Button size="lg" className="w-full sm:w-auto" onClick={() => handleRenew("yearly")} disabled={loading}>Aproveitar plano anual por {formatBRL(annualPromo.priceCents)}</Button>
+          </div>
+        </Card>
+      )}
+      {!isLoading && <ResellerCreditRules compact={false}/>
       <NewUserTelegramSupport/>
       {isLoading ? (
         <Card className="p-6"><p className="text-sm text-muted-foreground">Carregando...</p></Card>
@@ -205,9 +225,9 @@ function SubscriptionPage() {
           </h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {useAdminPix ? PLANS.map((plan) => {
-            const isPromo = plan.id === "monthly" ? isMonthlyPromoActive() : plan.id === "yearly" ? isYearlyPromoActive() : false;
+            const isPromo = plan.id === "monthly" ? isMonthlyPromoActive() : plan.id === "yearly" ? !!annualPromo : false;
             const promoLabel = plan.id === "monthly" ? "🔥 Só hoje" : "🔥 Só hoje";
-            const price = effectivePriceCents(plan);
+            const price = plan.id === "yearly" && annualPromo ? annualPromo.priceCents : effectivePriceCents(plan);
             return (
             <Card key={plan.id} className={cn("p-6 relative", plan.highlight && !isPromo && "border-primary/60 ring-1 ring-primary/30", isPromo && "border-warning/60 ring-1 ring-warning/30")}>
               {isPromo ? (
