@@ -80,7 +80,7 @@ export async function createTelegramActivationPix(
     if (!Number.isSafeInteger(amount) || amount < 100)
       return errorReply("O preço retornado é inválido. Não efetue pagamento.");
     if (typeof order.pix !== "string" || order.pix.length < 40 || order.pix.length > 4096) {
-      return {text: "🧾 <b>Pedido localizado</b>\n\nValor: <b>" + asBRL(amount)
+      return {text: "📺 <b>Ativação localizada</b>\n\nMAC: <code>" + esc(mac) + "</code>\nValor: <b>" + asBRL(amount)
         + "</b>\nSituação: <b>" + esc(String(order.status ?? "em análise")) + "</b>\n"
         + "⚠️ Não foi apresentado um Pix para este pedido. Não gere outra cobrança antes de conferir o status.",
         keyboard: {inline_keyboard: [[{text: "🔎 Verificar pagamento", callback_data: "aa:status:" + order.orderId}]]}};
@@ -89,7 +89,6 @@ export async function createTelegramActivationPix(
       + "📱 Aplicativo: <b>" + esc((/^Aplicativo:\s*(.+)$/m.exec(messageText)?.[1] ?? "selecionado").slice(0, 80)) + "</b>\n"
       + "📺 MAC: <code>" + mac + "</code>\n"
       + "💰 Valor: <b>" + asBRL(amount) + "</b>\n"
-      + "🧾 Pedido: <code>" + order.orderId + "</code>\n\n"
       + "<b>Pix copia e cola:</b>\n<code>" + esc(order.pix) + "</code>\n\n"
       + "✅ O pagamento será confirmado pela Asaas antes da solicitação de ativação. "
       + "Não envie comprovantes nem efetue um segundo pagamento para este pedido.";
@@ -119,8 +118,10 @@ export async function checkTelegramActivationPix(chatId: string | number, orderI
       cancelled: "Cancelado",
     };
     const state = names[String(o?.status)] || "Em processamento";
+    const mac = typeof o?.mac === "string" && /^[0-9A-F]{2}(?::[0-9A-F]{2}){5}$/.test(o.mac)
+      ? o.mac : null;
     return {text: "🔎 <b>Status da ativação</b>\n\n"
-      + "Pedido: <code>" + esc(orderId) + "</code>\n"
+      + (mac ? "📺 MAC: <code>" + esc(mac) + "</code>\n" : "")
       + "Situação: <b>" + state + "</b>\n\n"
       + (String(o?.status) === "awaiting_payment"
           ? "⚠️ O pagamento ainda não foi confirmado. Não gere outra cobrança para o mesmo MAC."
