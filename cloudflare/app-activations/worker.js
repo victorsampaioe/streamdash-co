@@ -416,8 +416,22 @@ export default {
         return respond({error:"not_found"},404,origin);
       }
       const settings = await getConfig(env.APP_DB);
+      let financialEnabled=false;
+      if(env.PAYMENTS_DB){
+        const financial=await env.PAYMENTS_DB.prepare(
+          "SELECT key,value FROM merchant_config WHERE key IN ("+
+          "'merchant_authorized','merchant_verified','payment_creation_enabled',"+
+          "'activation_auto_delivery_enabled','environment','provider_key_env_detected',"+
+          "'provider_account_http_status','provider_webhook_enabled')"
+        ).all();
+        const cfg=Object.fromEntries((financial.results||[]).map(x=>[x.key,x.value]));
+        financialEnabled=cfg.merchant_authorized==="true"&&cfg.merchant_verified==="true"&&
+          cfg.payment_creation_enabled==="true"&&cfg.activation_auto_delivery_enabled==="true"&&
+          cfg.environment===cfg.provider_key_env_detected&&
+          cfg.provider_account_http_status==="200"&&cfg.provider_webhook_enabled==="true";
+      }
       const enabled = settings.live_activations_enabled === true &&
-        settings.sale_prices_approved === true && !!env.ATIVEAPP_API_KEY;
+        settings.sale_prices_approved === true && !!env.ATIVEAPP_API_KEY && financialEnabled;
       if (request.method === "GET" && url.pathname === "/v1/catalog") {
         const sync = await refreshCatalog(env);
         const q = String(url.searchParams.get("q") || "").trim().slice(0,80).toLowerCase();
