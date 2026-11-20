@@ -226,7 +226,7 @@ async function createCheckout(env,userId,input,adminCanary=false){
     return {status:200,body:await summarizeOrder(env,order,true)};
   }
   const app=await env.APP_DB.prepare(
-    "SELECT app_id,name,sale_price_cents AS cents FROM app_catalog WHERE app_id=? AND is_active=1 AND sale_price_cents>=100"
+    "SELECT app_id,name,provider_store_price_cents AS cents FROM app_catalog WHERE app_id=? AND is_active=1 AND provider_store_price_cents>=100"
   ).bind(appId).first();
   if(!app||!safeCents(app.cents))
     return{status:404,body:{error:"Aplicativo sem preço válido.",charged:false}};
