@@ -1,5 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
+import { useServerFn } from "@tanstack/react-start";
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card } from "@/components/ui/card";
@@ -11,6 +12,8 @@ import { SearchInput } from "@/components/app-shell";
 import { ArrowRight, Plus, ServerIcon, HeartPulse, Tv, AlertCircle, CreditCard, RadioTower, Activity, Wifi, WifiOff, ChevronRight } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useSubscription } from "@/hooks/use-subscription";
+import { getAnnualPromo } from "@/lib/annual-promo.functions";
+import { formatBRL } from "@/lib/payments";
 import { effectiveAccessStatus, accessStatusLabel, isHttpCheckStale, dnsDisplayState, isDnsCheckStale } from "@/lib/dns-state";
 
 export const Route = createFileRoute("/_authenticated/app/")({
@@ -95,9 +98,27 @@ function Dashboard() {
   const isReseller = sub?.profile?.is_reseller;
   const credits = sub?.profile?.credits ?? 0;
   const isExpired = sub?.isExpired;
+  const readAnnualPromo = useServerFn(getAnnualPromo);
+  const { data: annualPromo } = useQuery({
+    queryKey: ["annual-promo-20261119"],
+    queryFn: () => readAnnualPromo(),
+    enabled: !!sub,
+    refetchInterval: 15_000,
+    staleTime: 10_000,
+  });
 
   return (
     <div className="space-y-6">
+      {annualPromo && (
+        <Card className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 rounded-2xl border-2 border-amber-400/70 bg-gradient-to-r from-amber-400/20 to-orange-600/10 p-5">
+          <div className="space-y-1">
+            <div className="text-xs font-extrabold uppercase tracking-wide text-amber-500">🔥 Promoção relâmpago — somente hoje até 23h59</div>
+            <h2 className="text-xl font-black">Plano anual Stream Monitor por {formatBRL(annualPromo.priceCents)}</h2>
+            <p className="text-sm text-muted-foreground">Oferta para todos os clientes e revendedores, inclusive com assinatura expirada.</p>
+          </div>
+          <Link to="/app/subscription" className="shrink-0"><Button className="w-full sm:w-auto">Aproveitar com Pix <ArrowRight className="ml-2 h-4 w-4" /></Button></Link>
+        </Card>
+      )}
       {isReseller && credits === 0 && (
         <Alert variant="destructive" className="bg-destructive/10 border-destructive/20 mb-6">
           <AlertCircle className="h-4 w-4" />
