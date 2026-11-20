@@ -26,14 +26,6 @@ const API = "https://streammonitor-app-activations.victorsampaio133.workers.dev"
 type CatalogApp = { id: string; name: string; module: string | null; logoUrl: string | null; priceCents: number | null };
 type Catalog = { items: CatalogApp[]; configured: boolean; live: boolean; supplierUnavailable?: boolean };
 type Item = { id: string; appName: string; mac: string; status: string; createdAt: number; providerId: string | null; expiresAt: string | null };
-const preview: CatalogApp[] = [
-  { id: "preview-a-plus", name: "A PLUS PLAYER", module: null, logoUrl: null, priceCents: null },
-  { id: "preview-ai-player", name: "AI PLAYER", module: null, logoUrl: null, priceCents: null },
-  { id: "preview-fast", name: "FAST PLAYER", module: null, logoUrl: null, priceCents: null },
-  { id: "preview-flix", name: "FLIX PRO PLAYER", module: null, logoUrl: null, priceCents: null },
-  { id: "preview-fenix", name: "FENIX PLAYER", module: null, logoUrl: null, priceCents: null },
-  { id: "preview-family", name: "FAMILY 4K", module: null, logoUrl: null, priceCents: null },
-];
 const money = (cents: number | null) => cents != null && cents > 0
   ? (cents / 100).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })
   : "Preço em configuração";
@@ -90,10 +82,9 @@ function AppActivationPage() {
     retry: 1,
   });
   const live = catalog?.live === true;
-  const showPreview = !catalog?.items?.length;
-  const list = showPreview ? preview : catalog!.items;
+  const list = catalog?.items ?? [];
   const filtered = list.filter(a => a.name.toLowerCase().includes(search.trim().toLowerCase()));
-  const ready = !!selected && !showPreview && validMac(mac) && ack && live &&
+  const ready = !!selected && validMac(mac) && ack && live &&
     Number(selected.priceCents) > 0;
   async function submit() {
     if (!ready || sending || !selected) return;
@@ -158,7 +149,7 @@ function AppActivationPage() {
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h2 className="text-xl font-bold tracking-tight">Escolha seu aplicativo</h2>
-          <p className="mt-1 text-xs text-muted-foreground">{showPreview ? "Exemplos de aplicativos — catálogo real disponível após conectar o fornecedor" : catalog?.items.length + " aplicativos disponíveis no catálogo"}</p>
+          <p className="mt-1 text-xs text-muted-foreground">{!catalog?.configured ? "Catálogo disponível após conexão com o fornecedor" : list.length + " aplicativos com preço definido pelo Stream Monitor"}</p>
         </div>
         <div className="flex gap-2">
           <div className="relative min-w-0 flex-1 sm:w-72">
@@ -188,12 +179,12 @@ function AppActivationPage() {
             <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Valor da ativação</p>
             <p className="mt-1 text-lg font-black">{money(app.priceCents)}</p>
           </div>
-          <Button type="button" disabled={showPreview || !live || !app.priceCents} className="mt-4 w-full gap-2 rounded-xl" onClick={() => { setSelected(app); setMac(""); setAck(false); setReviewing(false); }}>
+          <Button type="button" disabled={!live || !app.priceCents} className="mt-4 w-full gap-2 rounded-xl" onClick={() => { setSelected(app); setMac(""); setAck(false); setReviewing(false); }}>
             <Zap size={16}/> Selecionar <ArrowRight size={15}/>
           </Button>
         </Card>)}
       </div>
-      {!filtered.length && <div className="rounded-2xl border border-dashed p-12 text-center text-sm text-muted-foreground">Nenhum aplicativo encontrado com esse nome.</div>}
+      {!filtered.length && <div className="rounded-2xl border border-dashed p-12 text-center text-sm text-muted-foreground">Nenhum aplicativo liberado com preço definido. Outros aplicativos aparecerão aqui quando o administrador cadastrar seus valores.</div>}
     </> : <section className="space-y-4">
       <div><h2 className="text-xl font-bold">Histórico de ativações</h2><p className="mt-1 text-xs text-muted-foreground">Resultados da sua conta, sem mostrar ativações de outros usuários.</p></div>
       {historyLoading ? <p className="text-sm text-muted-foreground">Consultando histórico...</p> :
