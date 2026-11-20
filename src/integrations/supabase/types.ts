@@ -5353,6 +5353,50 @@ export type Database = {
         }
         Relationships: []
       }
+      promo_campaigns: {
+        Row: {
+          campaign_key: string
+          created_at: string
+          ends_at: string
+          owner_id: string
+          plan_code: string
+          promo_price_cents: number
+          starts_at: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          campaign_key: string
+          created_at?: string
+          ends_at: string
+          owner_id: string
+          plan_code: string
+          promo_price_cents: number
+          starts_at: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          campaign_key?: string
+          created_at?: string
+          ends_at?: string
+          owner_id?: string
+          plan_code?: string
+          promo_price_cents?: number
+          starts_at?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "promo_campaigns_owner_id_fkey"
+            columns: ["owner_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       promo_generations: {
         Row: {
           caption: string | null
