@@ -29,6 +29,12 @@ export const Route=createFileRoute("/_authenticated/app/admin_/ativacoes")({
 const API="https://streammonitor-app-activations.victorsampaio133.workers.dev";
 type App={id:string;name:string;module:string|null;providerValue:number|null;storePriceCents:number|null;priceCents:number|null;logoUrl:string|null;active:number;updatedAt:number};
 type Catalog={items:App[];logoCount:number;supplierFields:string[];note:string};
+type FlowCheck={
+  steps:Record<string,string>;
+  catalog:{total:number;published:number;logos:number};
+  financial:{databaseConnected:boolean;providerConnected:boolean;webhookRegistered:boolean;accountAuthorized:boolean;environmentMatched:boolean;orderCount:number|null;eventCount:number|null;lastProbeAt:number|null;paymentEnabled:boolean};
+  supplierLiveEnabled:boolean;pricesApproved:boolean;dryRunOnly:boolean;
+};
 type Edit={price?:string;logo?:string};
 async function cf<T>(path:string,method:"GET"|"POST"="GET",body?:unknown):Promise<T>{
   const {data:{session},error}=await supabase.auth.getSession();
@@ -104,6 +110,11 @@ function AdminRow({app,save,isSaving}:{app:App;save:(app:App,edit:Edit)=>Promise
 }
 function AppActivationAdmin(){
   const query=useQuery({queryKey:["admin-ativeapp-prices"],queryFn:()=>cf<Catalog>("/v1/admin/catalog"),retry:1,staleTime:30000});
+  const readiness=useQuery({
+    queryKey:["admin-activations-flow-check"],
+    queryFn:()=>cf<FlowCheck>("/v1/admin/flow-check"),
+    staleTime:30000,retry:1,
+  });
   const qc=useQueryClient();
   const [search,setSearch]=useState("");
   const [filter,setFilter]=useState<"all"|"missing"|"withLogo">("all");
@@ -164,6 +175,44 @@ function AppActivationAdmin(){
           <p className="mt-1 text-xl font-black tabular-nums">{metric.value}</p></div>
       </Card>)}
     </div>
+    <Card className="space-y-4 rounded-2xl border-border/70 p-5" id="audit-activation-flow">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div><h2 className="text-base font-extrabold">Diagnóstico do fluxo de ativação</h2>
+          <p className="mt-1 text-xs text-muted-foreground">Leitura da Cloudflare, sem criar Pix ou ativação</p></div>
+        <Button type="button" size="sm" variant="outline" className="gap-2 rounded-xl"
+          disabled={readiness.isFetching} onClick={()=>void readiness.refetch()}>
+          <RefreshCcw size={14} className={readiness.isFetching?"animate-spin":""}/>Verificar agora
+        </Button>
+      </div>
+      {readiness.isLoading?<p className="text-xs text-muted-foreground">Consultando etapas...</p>:
+        readiness.isError?<p role="alert" className="text-xs text-destructive">Não foi possível conferir o fluxo. Atualize a sessão e tente novamente.</p>:
+        readiness.data&&<div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          {[
+            ["Catálogo precificado",readiness.data.catalog.published>0,
+              readiness.data.catalog.published+" de "+readiness.data.catalog.total+" aplicativos"],
+            ["Fotos recebidas",readiness.data.catalog.logos>0,
+              String(readiness.data.catalog.logos)+" logos"],
+            ["API do recebedor",readiness.data.financial.providerConnected,
+              readiness.data.financial.providerConnected?"Conexão de leitura confirmada":"Aguardando teste"],
+            ["Webhook cadastrado",readiness.data.financial.webhookRegistered,
+              readiness.data.financial.webhookRegistered?"Habilitado no recebedor":"Não confirmado"],
+            ["Ambiente da conta",readiness.data.financial.environmentMatched,
+              readiness.data.financial.environmentMatched?"Configuração compatível":"Rever produção/sandbox"],
+            ["Conta autorizada",readiness.data.financial.accountAuthorized,
+              readiness.data.financial.accountAuthorized?"Aprovada":"Validação pendente"],
+            ["Emissão de Pix",readiness.data.financial.paymentEnabled,
+              readiness.data.financial.paymentEnabled?"Liberada":"Bloqueada por segurança"],
+            ["Ativação após pagamento",readiness.data.supplierLiveEnabled,
+              readiness.data.supplierLiveEnabled?"Liberada":"Bloqueada por segurança"],
+            ["Pedidos registrados",true,
+              String(readiness.data.financial.orderCount??0)+" Pix / "+String(readiness.data.financial.eventCount??0)+" eventos"],
+          ].map(([label,ok,detail])=><div key={String(label)} className="rounded-xl border border-border/50 bg-muted/20 p-3">
+            <p className="text-xs font-bold">{String(label)}</p>
+            <p className={"mt-1 text-xs "+(ok?"text-emerald-500":"text-amber-500")}>{String(detail)}</p>
+          </div>)}
+        </div>}
+      <p className="text-xs text-muted-foreground">Essa verificação não envia MAC ao fornecedor, não cobra valores e não altera cadastros. O checkout real permanece indisponível até validação financeira completa.</p>
+    </Card>
     <Card className="space-y-3 rounded-2xl border-blue-400/25 p-5">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <h2 className="flex items-center gap-2 text-base font-extrabold"><Wallet size={18} className="text-blue-400"/> Pix de ativações — conta separada</h2>
