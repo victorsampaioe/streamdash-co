@@ -73,6 +73,22 @@ async function sendPixCodeOnly(token:string,chatId:number|string,code:string) {
   }
 }
 
+/** Optional Asaas-provided PNG QR image. Pix text is always sent separately. */
+async function sendActivationQrPhoto(token:string,chatId:string|number,base64:string) {
+  const image=base64.replace(/^data:image\/png;base64,/i,"");
+  if(image.length<100 || image.length>140000 || !/^[A-Za-z0-9+/=]+$/.test(image))return;
+  const decoded=Buffer.from(image,"base64");
+  if(decoded.length<150 || decoded.length>100000 ||
+     decoded[0]!==137 || decoded[1]!==80 || decoded[2]!==78 || decoded[3]!==71)return;
+  const form=new FormData();
+  form.append("chat_id",String(chatId));
+  form.append("photo",new Blob([new Uint8Array(decoded)],{type:"image/png"}),"pix-ativacao.png");
+  const res=await fetch(`https://api.telegram.org/bot${token}/sendPhoto`,{
+    method:"POST",body:form,signal:AbortSignal.timeout(10000)
+  });
+  if(!res.ok)console.warn("[telegram-activation] QR image not delivered",res.status);
+}
+
 async function send(token: string, chatId: number | string, text: string, withBillingKeyboard=false,
   optionalKeyboard?:{inline_keyboard:Array<Array<{text:string;callback_data?:string;url?:string}>>}|{force_reply:true;selective:false;input_field_placeholder:string}) {
   const pixMatch=PIX_CODE_PATTERN.exec(text);
@@ -86,7 +102,7 @@ async function send(token: string, chatId: number | string, text: string, withBi
         ? "Toque em <b>Copiar código Pix</b> na próxima mensagem para copiar com um toque."
         : "A próxima mensagem contém <b>somente o código Pix</b>. Segure a mensagem e selecione <b>Copiar</b> para copiar tudo.")
     );
-    await send(token,chatId,overview,withBillingKeyboard);
+    await send(token,chatId,overview,withBillingKeyboard,optionalKeyboard);
     await sendPixCodeOnly(token,chatId,code);
     return;
   }
@@ -141,15 +157,39 @@ export const Route = createFileRoute("/api/public/telegram/webhook")({
             method:"POST",headers:{"Content-Type":"application/json"},
             body:JSON.stringify({callback_query_id:callback.id}),
           }).catch(()=>{});
-          if(/^aa:(?:page:[0-9]{1,2}|app:[A-Za-z0-9_-]{5,48}|confirm:[A-Za-z0-9_-]{5,45})$/.test(String(callback.data||""))){
+          if(/^aa:(?:page:[0-9]{1,2}|app:[A-Za-z0-9_-]{5,48}|confirm:[A-Za-z0-9_-]{5,45}|pix:[A-Za-z0-9_-]{5,43}:[A-F0-9]{12}|status:[a-f0-9-]{36})$/i.test(String(callback.data||""))){
             if(isPrivate && String(callback.from?.id)===String(callbackChat)){
               try{
-                const {activationBotCallback}=await import("@/lib/telegram-activations.server");
-                const response=await activationBotCallback(callbackChat,String(callback.data),String(callback.message?.text??""));
-                await send(token,callbackChat,response.text,false,response.keyboard);
+                const data=String(callback.data);
+                let response;
+                if(data.startsWith("aa:pix:") || data.startsWith("aa:status:")){
+                  // Payment callbacks must originate from a real, readable message
+                  // sent by THIS bot, not an inaccessible/forwarded message.
+                  const botId=token.split(":")[0];
+                  if(String(callback.message?.from?.id)!==botId || !callback.message?.text)
+                    throw new Error("telegram_pix_confirmation_invalid");
+                  const pix=await import("@/lib/telegram-activation-pix.server");
+                  if(data.startsWith("aa:pix:")){
+                    const match=/^aa:pix:([A-Za-z0-9_-]{5,43}):([A-F0-9]{12})$/.exec(data);
+                    if(!match)throw new Error("telegram_pix_callback_invalid");
+                    response=await pix.createTelegramActivationPix(
+                      callbackChat,Number(callback.message.message_id),String(callback.message.text),match[1],match[2]
+                    );
+                  }else{
+                    const match=/^aa:status:([a-f0-9-]{36})$/i.exec(data);
+                    if(!match)throw new Error("telegram_pix_status_invalid");
+                    response=await pix.checkTelegramActivationPix(callbackChat,match[1]);
+                  }
+                  await send(token,callbackChat,response.text,false,response.keyboard);
+                  if(response.qrImage)await sendActivationQrPhoto(token,callbackChat,response.qrImage);
+                }else{
+                  const {activationBotCallback}=await import("@/lib/telegram-activations.server");
+                  response=await activationBotCallback(callbackChat,data,String(callback.message?.text??""));
+                  await send(token,callbackChat,response.text,false,response.keyboard);
+                }
               }catch(e){
                 console.error("[telegram-activations] callback failed",e instanceof Error?e.name:"unknown");
-                await send(token,callbackChat,"⚠️ Não foi possível consultar a ativação agora. Envie /ativacaoAplicativo.");
+                await send(token,callbackChat,"⚠️ Não foi possível concluir essa etapa agora. Confira seus pedidos antes de tentar novamente.");
               }
             }
             return Response.json({ok:true});
