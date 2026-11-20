@@ -71,9 +71,6 @@ function AppActivationPage() {
   const [ack, setAck] = useState(false);
   const [sending, setSending] = useState(false);
   const [reviewing, setReviewing] = useState(false);
-  const [payerName,setPayerName]=useState("");
-  const [payerEmail,setPayerEmail]=useState("");
-  const [cpfCnpj,setCpfCnpj]=useState("");
   const [purchaseId,setPurchaseId]=useState("");
   const [pixOrder,setPixOrder]=useState<PixOrder|null>(null);
   const [checkingPix,setCheckingPix]=useState(false);
@@ -98,10 +95,7 @@ function AppActivationPage() {
   const live = catalog?.live === true;
   const list = catalog?.items ?? [];
   const filtered = list.filter(a => a.name.toLowerCase().includes(search.trim().toLowerCase()));
-  const cpfDigits=cpfCnpj.replace(/\D/g,"");
-  const payerReady=payerName.trim().length>=3 && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(payerEmail.trim()) &&
-    (cpfDigits.length===11||cpfDigits.length===14);
-  const ready = !!selected && validMac(mac) && ack && live && payerReady &&
+  const ready = !!selected && validMac(mac) && ack && live &&
     Number(selected.priceCents) > 0;
   async function submit() {
     if (!ready || sending || !selected) return;
@@ -110,13 +104,12 @@ function AppActivationPage() {
     setSending(true);
     try {
       const data=await edge<PixOrder>("/v1/pix/create",{
-        method:"POST",body:JSON.stringify({appId:selected.id,mac,requestId,
-          payerName:payerName.trim(),payerEmail:payerEmail.trim(),cpfCnpj:cpfDigits,acknowledged:true})
+        method:"POST",body:JSON.stringify({appId:selected.id,mac,requestId,acknowledged:true})
       },PAYMENTS_API);
       setPixOrder(data);
       toast.success("Pedido recebido. Confira o Pix antes de pagar.");
     }catch(error){
-      toast.error(error instanceof Error?error.message:"Não foi possível gerar o Pix.");
+      toast.error(error instanceof Error?error.message+" Nenhuma cobrança foi gerada.":"Pix indisponível no momento. Nenhuma cobrança foi gerada.");
     }finally{setSending(false);}
   }
   async function verifyPix() {
@@ -278,16 +271,6 @@ function AppActivationPage() {
           <input type="checkbox" checked={ack} onChange={e => setAck(e.target.checked)} className="mt-1 h-4 w-4 accent-blue-500"/>
           <span>Conferi o MAC e o aplicativo e estou ciente de que <strong>não haverá estorno por dados incorretos</strong>.</span>
         </label>
-        {reviewing && live && !pixOrder && <div className="mt-5 space-y-3 rounded-2xl border border-border/60 p-4">
-          <p className="text-sm font-bold">Dados do pagador para emitir o Pix</p>
-          <p className="text-xs text-muted-foreground">Os dados serão enviados com segurança ao intermediador de pagamentos. Não ficam armazenados no catálogo do Stream Monitor.</p>
-          <div><label htmlFor="app-payer-name" className="text-xs font-medium">Nome completo</label>
-            <Input id="app-payer-name" autoComplete="name" className="mt-1" value={payerName} onChange={e=>setPayerName(e.target.value)} maxLength={100}/></div>
-          <div><label htmlFor="app-payer-email" className="text-xs font-medium">E-mail</label>
-            <Input id="app-payer-email" type="email" autoComplete="email" className="mt-1" value={payerEmail} onChange={e=>setPayerEmail(e.target.value)}/></div>
-          <div><label htmlFor="app-payer-document" className="text-xs font-medium">CPF ou CNPJ</label>
-            <Input id="app-payer-document" inputMode="numeric" autoComplete="off" className="mt-1" value={cpfCnpj} onChange={e=>setCpfCnpj(e.target.value.replace(/[^0-9.\/-]/g,"").slice(0,18))} placeholder="Somente números"/></div>
-        </div>}
         {pixOrder && <div className="mt-5 space-y-3 rounded-2xl border border-blue-400/25 bg-blue-500/5 p-4">
           <p className="text-sm font-bold">Seu pedido — {statusLabel(pixOrder.status)}</p>
           <p className="text-xs text-muted-foreground">Valor: <strong>{money(pixOrder.amountCents)}</strong> • MAC: <code>{pixOrder.mac}</code></p>
