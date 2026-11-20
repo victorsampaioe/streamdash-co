@@ -8,7 +8,7 @@
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 
 type RemoteOrder = {
-  orderId: string; ownerId: string; appId: string; status: string;
+  orderId: string; ownerId: string; appId: string; mac: string; status: string;
   supplierState: string; paidAtMs: number; updatedAtMs: number;
 };
 type Channel = { id: string; owner_id: string; target: string };
@@ -28,17 +28,18 @@ function esc(value: string): string {
 function statusMessage(o: RemoteOrder): string | null {
   if (!Number.isSafeInteger(o.paidAtMs) || o.paidAtMs <= 0) return null;
   const name = APP_NAMES[o.appId] || "Aplicativo solicitado";
-  const base = "🧾 Pedido: <code>" + esc(o.orderId) + "</code>\n"
-    + "📱 Aplicativo: <b>" + esc(name) + "</b>\n\n";
+  // Display only the device MAC; order ID is used internally for reconciliation/deduplication.
+  const base = "📱 Aplicativo: <b>" + esc(name) + "</b>\n"
+    + "📺 MAC: <code>" + esc(o.mac) + "</code>\n\n";
   if (o.status === "activated")
     return "✅ <b>STREAM MONITOR — ATIVAÇÃO CONFIRMADA</b>\n\n"
-      + base + "A ativação foi confirmada pelo fornecedor. Consulte os detalhes e a validade no painel.";
+      + base + "✅ Seu aplicativo foi ativado com sucesso!";
   if (o.status === "needs_review" || o.status === "failed")
     return "⚠️ <b>STREAM MONITOR — ATIVAÇÃO EM ANÁLISE</b>\n\n"
       + base + "💰 Pagamento Pix registrado. A ativação não foi confirmada pelo fornecedor.\n"
       + "Nossa equipe precisa analisar este pedido. Não pague nem ative novamente o mesmo MAC enquanto ele estiver em análise.";
   if (o.status === "paid_pending_activation" && o.supplierState === "accepted")
-    return "📨 <b>STREAM MONITOR — PEDIDO ENVIADO</b>\n\n"
+    return "📨 <b>STREAM MONITOR — SOLICITAÇÃO ENVIADA</b>\n\n"
       + base + "💰 Pix confirmado. O fornecedor recebeu a solicitação de ativação.\n"
       + "Aguardando resultado definitivo. Não efetue outro pagamento.";
   if (o.status === "paid_pending_activation")
@@ -65,6 +66,7 @@ async function readOrderFeed(): Promise<RemoteOrder[]> {
   return data.items.filter((x: any): x is RemoteOrder =>
     x && UUID.test(x.orderId) && UUID.test(x.ownerId) &&
     typeof x.appId==="string" && x.appId.length<=100 &&
+    typeof x.mac==="string" && /^[0-9A-F]{2}(?::[0-9A-F]{2}){5}$/.test(x.mac) &&
     typeof x.status==="string" && typeof x.supplierState==="string" &&
     Number.isSafeInteger(x.paidAtMs)
   ).slice(0,200);
