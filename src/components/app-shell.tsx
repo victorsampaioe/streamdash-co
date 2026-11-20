@@ -26,6 +26,7 @@ const ALWAYS_OPEN_PATHS = [
   "/app/parceiro-aplicativo",
   "/app/ai-integration",
   "/app/api-integrations",
+  "/app/ativacao-aplicativos",
 ];
 
 export function AppShell({ children }: { children: ReactNode }) {
@@ -166,6 +167,7 @@ function useNavItems() {
     ...(navIsAdmin ? [{ to: "/vitrine-video", label: "Admin · Vitrine Vídeo MP4", icon: Sparkles }] : []),
     ...(navIsAdmin ? [{ to: "/app/admin/modelos-video", label: "Admin · Biblioteca de Vídeos", icon: Sparkles }] : []),
     { to: "/app", label: "Dashboard", icon: LayoutDashboard, exact: true },
+    { to: "/app/ativacao-aplicativos", label: "Ativação de Aplicativos", icon: Smartphone },
     { to: "/app/servers", label: "Servidores", icon: ServerIcon },
     { to: "/app/central", label: "Central Inteligente", icon: ShieldAlert },
     { to: "/app/falhas", label: "Radar de Falhas", icon: Gauge },
@@ -226,7 +228,7 @@ const NAV_GROUPS = [
  {name:"Servidores e monitoramento",labels:["Servidores","Radar de Falhas","Alertas","Diagnóstico","Ranking","Performance","Status dos Aplicativos","Memória de Diagnósticos","Biblioteca de Evidências","Evidências"]},
  {name:"Inteligência e conteúdo",labels:["Central Inteligente","Stream Guardian IA","Radar Brasil","Inteligência de Conteúdo","Conteúdo do Servidor"]},
  {name:"Vitrine e artes",labels:["Vitrine IA Futebol","Vitrine Banner","Vitrine IA","Vitrine Vídeos","Admin · Vitrine Vídeo MP4","Admin · Biblioteca de Vídeos"]},
- {name:"Revenda e assinatura",labels:["Minha Assinatura","Painel Revendedor","Minha Página","Indique e Ganhe","Conquistas","Portal de Parceiros","Portal do Aplicativo"]},
+ {name:"Revenda e assinatura",labels:["Ativação de Aplicativos","Minha Assinatura","Painel Revendedor","Minha Página","Indique e Ganhe","Conquistas","Portal de Parceiros","Portal do Aplicativo"]},
  {name:"Ajuda e suporte",labels:["Central de Ajuda","Ajuda para Clientes"]},
  {name:"Administração e configurações",labels:["Admin ·","Auditoria Visual"]},
 ] as const;
