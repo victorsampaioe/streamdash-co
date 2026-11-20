@@ -28,7 +28,7 @@ export const Route=createFileRoute("/_authenticated/app/admin_/ativacoes")({
 
 const API="https://streammonitor-app-activations.victorsampaio133.workers.dev";
 type App={id:string;name:string;module:string|null;providerValue:number|null;storePriceCents:number|null;priceCents:number|null;logoUrl:string|null;active:number;updatedAt:number};
-type Catalog={items:App[];logoCount:number;supplierFields:string[];note:string};
+type Catalog={items:App[];logoCount:number;supplierFields:string[];note:string;sync?:Record<string,string>};
 type FlowCheck={
   steps:Record<string,string>;
   catalog:{total:number;published:number;logos:number};
@@ -119,6 +119,7 @@ function AppActivationAdmin(){
   const [search,setSearch]=useState("");
   const [filter,setFilter]=useState<"all"|"missing"|"withLogo">("all");
   const [busy,setBusy]=useState("");
+  const [syncing,setSyncing]=useState(false);
   const apps=query.data?.items||[];
   const priced=apps.filter(a=>a.priceCents!==null).length;
   const filtered=apps.filter(a=>{
@@ -126,6 +127,21 @@ function AppActivationAdmin(){
     if(filter==="withLogo"&&!a.logoUrl)return false;
     return a.name.toLowerCase().includes(search.toLowerCase().trim());
   });
+  async function syncCatalog(){
+    if(syncing)return;
+    setSyncing(true);
+    try{
+      const result=await cf<{refreshed:boolean;imported?:number;pages?:number;error?:string;failedPage?:number}>(
+        "/v1/admin/refresh-catalog","POST",{});
+      if(!result.refreshed)throw new Error("O fornecedor não completou a atualização.");
+      toast.success("Importação concluída: "+result.imported+" aplicativos em "+result.pages+" páginas.");
+      await Promise.all([
+        qc.invalidateQueries({queryKey:["admin-ativeapp-prices"]}),
+        qc.invalidateQueries({queryKey:["ativeapp-catalog"]}),
+      ]);
+    }catch(e){toast.error(e instanceof Error?e.message:"Erro ao consultar fornecedor.");}
+    finally{setSyncing(false);}
+  }
   async function save(app:App,edit:Edit){
     if(busy)return;
     setBusy(app.id);
@@ -248,8 +264,13 @@ function AppActivationAdmin(){
       <div className="flex flex-col gap-4 border-b border-border/70 p-4 sm:flex-row sm:items-center sm:justify-between sm:p-5">
         <div><h2 className="text-lg font-extrabold">Catálogo e preços de venda</h2>
           <p className="mt-1 text-xs text-muted-foreground">Cadastre o preço dos aplicativos que deseja disponibilizar. Sem preço próprio, o app fica oculto • Cloudflare D1</p></div>
-        <Button variant="outline" onClick={()=>void query.refetch()} disabled={query.isFetching}
-          className="gap-2 rounded-xl"><RefreshCcw size={16} className={query.isFetching?"animate-spin":""}/>Atualizar</Button>
+        <div className="flex flex-wrap gap-2">
+          <Button variant="outline" onClick={()=>void query.refetch()} disabled={query.isFetching}
+            className="gap-2 rounded-xl"><RefreshCcw size={16} className={query.isFetching?"animate-spin":""}/>Recarregar tela</Button>
+          <Button onClick={()=>void syncCatalog()} disabled={syncing}
+            className="gap-2 rounded-xl"><RefreshCcw size={16} className={syncing?"animate-spin":""}/>
+            {syncing?"Importando...":"Sincronizar API agora"}</Button>
+        </div>
       </div>
       <div className="flex flex-wrap items-center gap-3 border-b border-border/70 p-4">
         <div className="relative min-w-[210px] flex-1">
@@ -273,6 +294,11 @@ function AppActivationAdmin(){
         <div>{filtered.map(a=><AdminRow key={a.id} app={a} save={save} isSaving={busy===a.id}/>)}</div>}
       <div className="border-t border-border/70 p-4 text-xs text-muted-foreground">
         Mostrando {filtered.length} de {apps.length} aplicativos. *O valor bruto da API pode ser expresso em créditos; o campo “Loja” representa o preço divulgado pelo fornecedor.
+        {query.data?.sync?.catalog_last_complete_sync_ms && <p className="mt-2">
+          Última importação completa: {new Date(Number(query.data.sync.catalog_last_complete_sync_ms)).toLocaleString("pt-BR")} —
+          {" "+(query.data.sync.catalog_last_complete_import_count||"0")+" aplicativos"}
+          {" • "+(query.data.sync.catalog_last_complete_pages||"?")+" páginas"}
+        </p>}
       </div>
     </Card>
     <Link to="/app" className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground"><ArrowLeft size={16}/>Voltar ao painel</Link>
