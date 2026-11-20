@@ -141,6 +141,19 @@ export const Route = createFileRoute("/api/public/telegram/webhook")({
             method:"POST",headers:{"Content-Type":"application/json"},
             body:JSON.stringify({callback_query_id:callback.id}),
           }).catch(()=>{});
+          if(/^aa:(?:page:[0-9]{1,2}|app:[A-Za-z0-9_-]{5,48}|confirm:[A-Za-z0-9_-]{5,45})$/.test(String(callback.data||""))){
+            if(isPrivate && String(callback.from?.id)===String(callbackChat)){
+              try{
+                const {activationBotCallback}=await import("@/lib/telegram-activations.server");
+                const response=await activationBotCallback(callbackChat,String(callback.data),String(callback.message?.text??""));
+                await send(token,callbackChat,response.text,false,response.keyboard);
+              }catch(e){
+                console.error("[telegram-activations] callback failed",e instanceof Error?e.name:"unknown");
+                await send(token,callbackChat,"⚠️ Não foi possível consultar a ativação agora. Envie /ativacaoAplicativo.");
+              }
+            }
+            return Response.json({ok:true});
+          }
           if(callback.data==="catalog:start"){
             if(isPrivate && String(callback.from?.id)===String(callbackChat)){
               try{
@@ -190,7 +203,7 @@ export const Route = createFileRoute("/api/public/telegram/webhook")({
         const first = String(msg?.from?.first_name ?? "").trim();
         // Personal payments and invoice details are never handled inside
         // Telegram groups, supergroups or public channels.
-        if(msg?.chat?.type!=="private" && /^\/(?:pix|fatura|conteudo|pesquisar)(?:\s|@|$)/.test(text)){
+        if(msg?.chat?.type!=="private" && /^\/(?:pix|fatura|conteudo|pesquisar|ativacaoaplicativo|ativacao_app)(?:\s|@|$)/.test(text)){
           await send(token,chatId,
             "🔒 <b>Fatura, Pix e busca de conteúdos somente no privado.</b>\n\n"+
             "Abra uma conversa direta com @MonitordeFluxoBot e envie /conteudo, /pix ou /fatura. "+
@@ -218,6 +231,38 @@ export const Route = createFileRoute("/api/public/telegram/webhook")({
           return Response.json({ ok: true });
         }
 
+        // Native Telegram app-activation chooser: names, buttons, MAC-only confirmation.
+        // Backed by Cloudflare D1; no paid supplier request until billing is live.
+        if(msg?.chat?.type==="private" && /^\/(?:ativacaoaplicativo|ativacao_app)(?:@\w+)?(?:\s|$)/i.test(originalText)){
+          try{
+            const {beginActivationBot}=await import("@/lib/telegram-activations.server");
+            const params=originalText.replace(/^\/(?:ativacaoaplicativo|ativacao_app)(?:@\w+)?\s*/i,"").trim();
+            const search=params.toLowerCase().startsWith("buscar ")?params.slice(7):params;
+            const reply=await beginActivationBot(chatId,search);
+            await send(token,chatId,reply.text,false,reply.keyboard);
+          }catch(e){
+            console.error("[telegram-activations] catalog failed",e instanceof Error?e.name:"unknown");
+            await send(token,chatId,"⚠️ Não foi possível carregar os aplicativos agora. Tente novamente.");
+          }
+          return Response.json({ok:true});
+        }
+        // A MAC is accepted only as a reply to the genuine bot's selection message.
+        const botUserId=token.split(":")[0];
+        if(msg?.chat?.type==="private" && originalText && !originalText.startsWith("/")
+           && msg.reply_to_message && String(msg.reply_to_message.from?.id)===botUserId){
+          try{
+            const {reviewActivationMacReply}=await import("@/lib/telegram-activations.server");
+            const result=await reviewActivationMacReply(chatId,originalText,String(msg.reply_to_message.text||""));
+            if(result){
+              await send(token,chatId,result.text,false,result.keyboard);
+              return Response.json({ok:true});
+            }
+          }catch(e){
+            console.error("[telegram-activations] mac validation failed",e instanceof Error?e.name:"unknown");
+            await send(token,chatId,"⚠️ Não foi possível validar o MAC agora. Escolha novamente em /ativacaoAplicativo.");
+            return Response.json({ok:true});
+          }
+        }
         // Interactive catalog search: /conteudo Título, /conteudo (prompt), then
         // private free-text reply, followed by validated per-owner server buttons.
         if(msg?.chat?.type==="private" && /^\/(?:conteudo|pesquisar)(?:@\w+)?(?:\s|$)/i.test(originalText)){
