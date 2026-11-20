@@ -2,6 +2,7 @@ import {
   ALL_FORMATS, BlobSource, BufferTarget, Conversion,
   Input, Mp4OutputFormat, Output,
 } from "mediabunny";
+import {repairMp4DurationHeaders} from "./vitrine-mp4-duration";
 
 /**
  * Convert browser-recorded fragmented MP4 (ftyp/moov/moof/mdat)
@@ -17,6 +18,7 @@ import {
 export async function finalizeCinematicMp4(
   source: Blob,
   progress?: (ratio: number) => void,
+  expectedSeconds?: number,
 ): Promise<Blob> {
   if(source.size < 1024 || source.size > 150 * 1024 * 1024)
     throw new Error("Escolha um vídeo MP4 entre 1 KB e 150 MB para corrigir.");
@@ -66,6 +68,25 @@ export async function finalizeCinematicMp4(
     if(boxes[0] !== "ftyp" || !boxes.includes("moov") || !boxes.includes("mdat") ||
        boxes.indexOf("moov") >= boxes.indexOf("mdat") || boxes.includes("moof"))
       throw new Error("O MP4 final não passou na verificação de compatibilidade. Nenhum arquivo incompatível foi baixado.");
+    // Some iPhone Safari recordings leave movie/track durations set to the
+    // MP4 "unknown" sentinel (0xffffffff); Quick Look displays ~1988 hours.
+    // Correct header metadata in the FINAL MP4, not just the source file.
+    // Never overwrite valid duration fields and never alter encoded frames.
+    if (expectedSeconds !== undefined) {
+      const {movieDuration,repaired}=repairMp4DurationHeaders(buffer,expectedSeconds);
+      const tolerance=Math.max(2,expectedSeconds*0.10);
+      if(movieDuration===null||Math.abs(movieDuration-expectedSeconds)>tolerance)
+        throw new Error("O vídeo ficou com duração incorreta no MP4. Exporte novamente.");
+      if(repaired.length) {
+        // Header-only repair must not disguise a malformed packet timeline.
+        const checkInput=new Input({formats:ALL_FORMATS,source:new BlobSource(new Blob([buffer],{type:"video/mp4"}))});
+        try{
+          const actual=await checkInput.computeDuration();
+          if(!Number.isFinite(actual)||Math.abs(actual-expectedSeconds)>Math.max(2.5,expectedSeconds*0.12))
+            throw new Error("O Safari gravou quadros com tempo incorreto. Refaça a exportação com a aba aberta.");
+        }finally{checkInput.dispose();}
+      }
+    }
     const result = new Blob([buffer],{type:"video/mp4"});
     progress?.(1);
     return result;
