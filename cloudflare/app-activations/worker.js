@@ -93,48 +93,76 @@ const parseApps = (body) => {
     }];
   });
 };
-async function refreshCatalog(env) {
-  if (!env.ATIVEAPP_API_KEY) return { configured: false, refreshed: false };
-  const last = await env.APP_DB.prepare("SELECT MAX(updated_at_ms) AS updated FROM app_catalog").first();
-  if (last?.updated && Date.now() - last.updated < 30 * 60_000) return { configured: true, refreshed: false };
-  let imported = 0;
+async function catalogSyncMeta(db, fields) {
+  const stamp = Date.now();
+  const statements = Object.entries(fields).map(([key,value]) =>
+    db.prepare("INSERT INTO activation_config(key,value,updated_at_ms) VALUES (?,?,?) " +
+      "ON CONFLICT(key) DO UPDATE SET value=excluded.value,updated_at_ms=excluded.updated_at_ms")
+      .bind(key,String(value),stamp)
+  );
+  if (statements.length) await db.batch(statements);
+}
+async function refreshCatalog(env, options = {}) {
+  if (!env.ATIVEAPP_API_KEY || !env.APP_DB) return { configured: false, refreshed: false };
+  // Only a complete multi-page scan is considered fresh. The previous version
+  // used MAX(app_catalog.updated_at_ms), which masked partial failures on page 2.
+  const recent = await env.APP_DB.prepare(
+    "SELECT value FROM activation_config WHERE key='catalog_last_complete_sync_ms'"
+  ).first();
+  const lastComplete = Number(recent?.value || 0);
+  if (!options.force && lastComplete && Date.now()-lastComplete < 15*60_000)
+    return {configured:true,refreshed:false,skipped:"already_fresh"};
+  let imported=0,page=0,lastPageItems=0;
   try {
-    for (let page = 1; page <= 6; page++) {
-      const response = await fetch(PROVIDER + "/api/listar-aplicativos?page=" + page + "&limit=200", {
-        headers: { "X-API-Key": env.ATIVEAPP_API_KEY, "Accept": "application/json" },
-        signal: AbortSignal.timeout(8000),
-        cf: { cacheTtl: 0, cacheEverything: false },
+    for (page=1;page<=25;page++) {
+      const response=await fetch(PROVIDER+"/api/listar-aplicativos?page="+page+"&limit=200",{
+        headers:{"X-API-Key":env.ATIVEAPP_API_KEY,"Accept":"application/json"},
+        signal:AbortSignal.timeout(12000),
+        cf:{cacheTtl:0,cacheEverything:false},
       });
-      if (!response.ok) throw new Error("provider_unavailable_" + response.status);
-      const body = await response.json();
-      const apps = parseApps(body);
-      if (!apps.length) break;
-      const now = Date.now();
-      if (page === 1) {
-        const sample = Array.isArray(body?.items) ? body.items[0] :
-          Array.isArray(body?.data) ? body.data[0] :
-          Array.isArray(body?.aplicativos) ? body.aplicativos[0] :
-          Array.isArray(body?.results) ? body.results[0] : null;
-        const keys = sample && typeof sample === "object" && !Array.isArray(sample)
-          ? Object.keys(sample).filter(k => /^[a-zA-Z0-9_]{1,80}$/.test(k)).slice(0,65) : [];
-        await env.APP_DB.prepare(
-          "INSERT INTO activation_config(key,value,updated_at_ms) VALUES ('supplier_catalog_fields',?,?) " +
-          "ON CONFLICT(key) DO UPDATE SET value=excluded.value,updated_at_ms=excluded.updated_at_ms"
-        ).bind(JSON.stringify(keys),now).run();
+      if(!response.ok) throw new Error("upstream_http_"+response.status);
+      const body=await response.json();
+      const apps=parseApps(body);
+      if(page===1 && apps.length===0)throw new Error("empty_upstream_catalog");
+      if(page===1){
+        const sample = Array.isArray(body?.items)?body.items[0]:
+          Array.isArray(body?.data)?body.data[0]:
+          Array.isArray(body?.aplicativos)?body.aplicativos[0]:
+          Array.isArray(body?.results)?body.results[0]:
+          Array.isArray(body)?body[0]:null;
+        const keys=sample&&typeof sample==="object"&&!Array.isArray(sample)?
+          Object.keys(sample).filter(k=>/^[a-zA-Z0-9_]{1,80}$/.test(k)).slice(0,65):[];
+        await catalogSyncMeta(env.APP_DB,{supplier_catalog_fields:JSON.stringify(keys)});
       }
-      await env.APP_DB.batch(apps.map(a => env.APP_DB.prepare(
+      lastPageItems=apps.length;
+      if(apps.length===0)break;
+      const now=Date.now();
+      // upsert metadata only; never replace a reseller's sale_price_cents.
+      await env.APP_DB.batch(apps.map(a=>env.APP_DB.prepare(
         "INSERT INTO app_catalog (app_id,name,module,provider_cost_cents,provider_store_price_cents,logo_url,updated_at_ms) VALUES (?,?,?,?,?,?,?) " +
         "ON CONFLICT(app_id) DO UPDATE SET name=excluded.name,module=excluded.module," +
         "provider_cost_cents=excluded.provider_cost_cents,provider_store_price_cents=excluded.provider_store_price_cents," +
         "logo_url=COALESCE(excluded.logo_url,app_catalog.logo_url),updated_at_ms=excluded.updated_at_ms"
-      ).bind(a.id, a.name, a.module, a.cost, a.storePrice, a.logoUrl, now)));
-      imported += apps.length;
-      if (body?.has_more === false || apps.length < 200) break;
+      ).bind(a.id,a.name,a.module,a.cost,a.storePrice,a.logoUrl,now)));
+      imported+=apps.length;
+      // The provider may report has_more=false even on a full page.
+      // Stop on actual page length instead; this includes newly added apps.
+      if(apps.length<200)break;
     }
-    return { configured: true, refreshed: imported > 0 };
-  } catch {
-    // Cached inventory can still be browsed. Supplier activation stays locked.
-    return { configured: true, refreshed: false, supplierUnavailable: true };
+    if(page>25 && lastPageItems===200)throw new Error("page_cap_reached");
+    await catalogSyncMeta(env.APP_DB,{
+      catalog_last_complete_sync_ms:Date.now(),
+      catalog_last_complete_import_count:imported,
+      catalog_last_complete_pages:page,
+      catalog_last_sync_error:"none",
+    });
+    return {configured:true,refreshed:true,imported,pages:page};
+  }catch(e){
+    await catalogSyncMeta(env.APP_DB,{
+      catalog_last_sync_error:String(e?.message||"unknown").slice(0,100),
+      catalog_last_failed_page:page,
+    }).catch(()=>{});
+    return {configured:true,refreshed:false,supplierUnavailable:true,imported,failedPage:page};
   }
 }
 async function verifyAdminRole(request, userId) {
@@ -266,6 +294,10 @@ export default {
             pricesApproved: activeFlags.sale_prices_approved === true,
             dryRunOnly: true,
           }, 200, origin);
+        }
+        if (request.method === "POST" && url.pathname === "/v1/admin/refresh-catalog") {
+          const result=await refreshCatalog(env,{force:true});
+          return respond(result, result.supplierUnavailable ? 503 : 200,origin);
         }
         if (request.method === "GET" && url.pathname === "/v1/admin/catalog") {
           const rows = await env.APP_DB.prepare(
