@@ -51,6 +51,26 @@ function cleanMac(value) {
   if (/^[0-9A-F]{12}$/.test(raw)) return raw.match(/.{2}/g).join(":");
   return /^([0-9A-F]{2}:){5}[0-9A-F]{2}$/.test(raw) ? raw : null;
 }
+// Logos are optional in the upstream API. Do not invent image links.
+function validLogoUrl(value) {
+  const str = typeof value === "string" ? value : value && typeof value === "object"
+    ? (value.url || value.src || value.imagem || value.logo) : "";
+  if (typeof str !== "string" || str.length > 1024) return null;
+  try {
+    const u = new URL(str);
+    if (u.protocol !== "https:" || u.username || u.password || !u.hostname || /(?:^|\.)(?:localhost|local|internal)$/.test(u.hostname)) return null;
+    if (/^(?:127\.|0\.|10\.|192\.168\.|169\.254\.)/.test(u.hostname)) return null;
+    return u.toString();
+  } catch { return null; }
+}
+function providerLogo(app) {
+  for (const key of ["logo_url","logoUrl","imagem_url","image_url","icon_url","foto_url",
+    "logo","imagem","image","icon","icone","foto","logotipo","imagem_app","foto_app","img"]) {
+    const value = validLogoUrl(app?.[key]);
+    if (value) return value;
+  }
+  return null;
+}
 const parseApps = (body) => {
   const candidates = Array.isArray(body) ? body :
     [body?.items, body?.aplicativos, body?.data, body?.results, body?.lista]
@@ -65,6 +85,7 @@ const parseApps = (body) => {
     return [{
       id, name, module: String(app?.modulo ?? app?.module ?? "").slice(0,80),
       cost: Number.isFinite(cost) && cost >= 0 ? Math.round(cost * 100) : null,
+      logoUrl: providerLogo(app),
     }];
   });
 };
@@ -85,11 +106,24 @@ async function refreshCatalog(env) {
       const apps = parseApps(body);
       if (!apps.length) break;
       const now = Date.now();
+      if (page === 1) {
+        const sample = Array.isArray(body?.items) ? body.items[0] :
+          Array.isArray(body?.data) ? body.data[0] :
+          Array.isArray(body?.aplicativos) ? body.aplicativos[0] :
+          Array.isArray(body?.results) ? body.results[0] : null;
+        const keys = sample && typeof sample === "object" && !Array.isArray(sample)
+          ? Object.keys(sample).filter(k => /^[a-zA-Z0-9_]{1,80}$/.test(k)).slice(0,65) : [];
+        await env.APP_DB.prepare(
+          "INSERT INTO activation_config(key,value,updated_at_ms) VALUES ('supplier_catalog_fields',?,?) " +
+          "ON CONFLICT(key) DO UPDATE SET value=excluded.value,updated_at_ms=excluded.updated_at_ms"
+        ).bind(JSON.stringify(keys),now).run();
+      }
       await env.APP_DB.batch(apps.map(a => env.APP_DB.prepare(
-        "INSERT INTO app_catalog (app_id,name,module,provider_cost_cents,updated_at_ms) VALUES (?,?,?,?,?) " +
+        "INSERT INTO app_catalog (app_id,name,module,provider_cost_cents,logo_url,updated_at_ms) VALUES (?,?,?,?,?,?) " +
         "ON CONFLICT(app_id) DO UPDATE SET name=excluded.name,module=excluded.module," +
-        "provider_cost_cents=excluded.provider_cost_cents,updated_at_ms=excluded.updated_at_ms"
-      ).bind(a.id, a.name, a.module, a.cost, now)));
+        "provider_cost_cents=excluded.provider_cost_cents," +
+        "logo_url=COALESCE(excluded.logo_url,app_catalog.logo_url),updated_at_ms=excluded.updated_at_ms"
+      ).bind(a.id, a.name, a.module, a.cost, a.logoUrl, now)));
       imported += apps.length;
       if (body?.has_more === false || apps.length < 200) break;
     }
@@ -98,6 +132,21 @@ async function refreshCatalog(env) {
     // Cached inventory can still be browsed. Supplier activation stays locked.
     return { configured: true, refreshed: false, supplierUnavailable: true };
   }
+}
+async function verifyAdminRole(request, userId) {
+  const bearer = request.headers.get("authorization") || "";
+  const key = request.headers.get("x-sm-public-key") || "";
+  if (!userId || !bearer.startsWith("Bearer ") || !key) return false;
+  try {
+    const response = await fetch(AUTH_BASE + "/rest/v1/rpc/has_role", {
+      method: "POST",
+      headers: { "authorization": bearer, "apikey": key, "content-type": "application/json" },
+      body: JSON.stringify({ _user_id: userId, _role: "admin" }),
+      signal: AbortSignal.timeout(6500),
+      cf: { cacheTtl: 0, cacheEverything: false },
+    });
+    return response.ok && (await response.json()) === true;
+  } catch { return false; }
 }
 async function getConfig(db) {
   const result = await db.prepare(
@@ -156,6 +205,49 @@ export default {
     if (!userId) return respond({ error: genericError(401) }, 401, origin);
     if (!env.APP_DB) return respond({ error: "database_unavailable" }, 503, origin);
     try {
+      if (url.pathname.startsWith("/v1/admin/")) {
+        if (!(await verifyAdminRole(request,userId))) return respond({ error: "Apenas administradores podem alterar preços." },403,origin);
+        if (request.method === "GET" && url.pathname === "/v1/admin/catalog") {
+          const rows = await env.APP_DB.prepare(
+            "SELECT app_id AS id,name,module,provider_cost_cents AS providerValue, " +
+            "sale_price_cents AS priceCents,logo_url AS logoUrl,is_active AS active,updated_at_ms AS updatedAt " +
+            "FROM app_catalog ORDER BY name LIMIT 500"
+          ).all();
+          const meta = await env.APP_DB.prepare(
+            "SELECT value FROM activation_config WHERE key='supplier_catalog_fields'"
+          ).first();
+          let supplierFields = [];
+          try { supplierFields = JSON.parse(meta?.value || "[]"); } catch {}
+          return respond({
+            items:rows.results || [], supplierFields,
+            logoCount:(rows.results||[]).filter(x => !!x.logoUrl).length,
+            note: "O valor do fornecedor é bruto da API, com unidade não confirmada; não é automaticamente preço em reais.",
+          },200,origin);
+        }
+        if (request.method === "POST" && url.pathname === "/v1/admin/price") {
+          const data = await request.json().catch(() => null);
+          if (!appIdOk(data?.appId)) return respond({error:"Aplicativo inválido."},400,origin);
+          const price = data?.priceCents;
+          if (price !== null && (!Number.isSafeInteger(price) || price < 100 || price > 999999))
+            return respond({error:"Informe um preço entre R$ 1,00 e R$ 9.999,99 ou deixe sem preço."},400,origin);
+          const logoChanged = data && Object.prototype.hasOwnProperty.call(data,"logoUrl");
+          const logo = logoChanged && data.logoUrl !== null && data.logoUrl !== ""
+            ? validLogoUrl(data.logoUrl) : null;
+          if (logoChanged && data.logoUrl && !logo)
+            return respond({error:"A imagem precisa ter um endereço HTTPS válido."},400,origin);
+          const sql = logoChanged
+            ? "UPDATE app_catalog SET sale_price_cents=?,logo_url=? WHERE app_id=?"
+            : "UPDATE app_catalog SET sale_price_cents=? WHERE app_id=?";
+          const args = logoChanged ? [price,logo,data.appId] : [price,data.appId];
+          const update = await env.APP_DB.prepare(sql).bind(...args).run();
+          if (!update.meta?.changes) return respond({error:"Aplicativo não localizado."},404,origin);
+          const saved = await env.APP_DB.prepare(
+            "SELECT app_id AS id,sale_price_cents AS priceCents,logo_url AS logoUrl FROM app_catalog WHERE app_id=?"
+          ).bind(data.appId).first();
+          return respond({ saved },200,origin);
+        }
+        return respond({error:"not_found"},404,origin);
+      }
       const settings = await getConfig(env.APP_DB);
       const enabled = settings.live_activations_enabled === true &&
         settings.sale_prices_approved === true && !!env.ATIVEAPP_API_KEY;
