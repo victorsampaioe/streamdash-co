@@ -41,6 +41,15 @@ export async function runTelegramDeliveryCycle():Promise<TelegramDispatchResult|
       return reconcileAdminPaymentReceipts(8);
     }).catch(e=>{console.error("[telegram-core] admin payment recovery",
       e instanceof Error?e.name:"error");return null;});
+    // Read-only Cloudflare Asaas event feed; enqueue payment and activation
+    // changes once per order/status/chat. Never retries financial transactions.
+    await Promise.resolve().then(async()=>{
+      const {enqueueActivationStatusNotifications}=await import("./telegram-activation-status-cycle.server");
+      return enqueueActivationStatusNotifications();
+    }).catch(e=>{
+      console.error("[telegram-core] app activation notifications",
+        e instanceof Error?e.message:"unknown");
+    });
     const outbox=await Promise.resolve().then(()=>processTelegramOutbox(8))
       .catch(e=>{console.error("[telegram-core] outbox",e instanceof Error?e.name:"error");return {picked:0,sent:0,failed:1,dead:0};});
     const deliveryErrors=Number(offline.failed||0)+Number(online.failed||0)+Number(service.failed||0)+Number(outbox.failed||0);
