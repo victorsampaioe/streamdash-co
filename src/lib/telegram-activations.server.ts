@@ -138,17 +138,25 @@ export async function activationBotCallback(chatId: string | number, data: strin
     const mac = /^MAC:\s*([A-F0-9:]{17})$/m.exec(messageText)?.[1];
     if (!app || msgId !== app.id || !mac || !MAC.test(mac))
       return { text: "⚠️ Os dados desta solicitação não puderam ser confirmados. Reinicie com /ativacaoAplicativo." };
-    // CPF and payment details must only be entered in the protected site checkout.
-    // Never ask users to send tax identifiers or financial data to the Telegram bot.
+    // The actual Pix is emitted only on the user's next explicit button tap.
+    // Callback data is restricted to <64 bytes (Telegram limit).
+    const macHex = mac.replace(/:/g,"");
+    const callbackData = "aa:pix:" + app.id + ":" + macHex;
+    const inline = callbackData.length <= 64
+      ? [[{text:"💠 Gerar Pix aqui no Telegram",callback_data:callbackData}],
+         [{text:"🌐 Alternativa: abrir o site",url:SITE}]]
+      : [[{text:"🌐 Abrir pagamento no Stream Monitor",url:SITE}]];
     return {
       text:"✅ <b>Dados conferidos</b>\n\n"+
         "📱 Aplicativo: <b>"+esc(app.name)+"</b>\n"+
         "📺 MAC: <code>"+mac+"</code>\n"+
         "💰 Preço: <b>"+esc(price(app.priceCents))+"</b>\n\n"+
-        "💳 <b>O Pix é gerado com segurança no site do Stream Monitor.</b> "+
-        "Entre na sua conta e confirme o app e MAC novamente.\n"+
-        "⚠️ Não há cobrança por esta mensagem. Confira os dados antes de pagar.",
-      keyboard:{inline_keyboard:[[{text:"🌐 Abrir pagamento no Stream Monitor",url:SITE}]]}
+        "💠 <b>Para gerar o Pix no próprio Telegram, toque no botão abaixo.</b>\n"+
+        "A cobrança será vinculada à sua conta do Stream Monitor.\n"+
+        "⚠️ Confira o MAC antes de pagar. Dados errados não têm estorno.\n\n"+
+        "APP-ID: "+esc(app.id)+"\n"+
+        "MAC: "+mac,
+      keyboard:{inline_keyboard:inline}
     };
   }
   return { text: "Menu expirado ou inválido. Envie /ativacaoAplicativo para consultar os aplicativos." };
@@ -171,7 +179,7 @@ export async function reviewActivationMacReply(
       + "📺 MAC: <code>" + mac + "</code>\n"
       + "💰 Preço: <b>" + esc(price(app.priceCents)) + "</b>\n\n"
       + "⚠️ <b>ATENÇÃO: MAC incorreto não tem estorno.</b>\n\n"
-      + "🔒 Ainda não será feita nenhuma cobrança nem ativação enquanto a integração financeira estiver pendente.\n\n"
+      + "🔒 Nenhum Pix foi gerado. Confirme o MAC e toque em Gerar Pix para solicitar a cobrança.\n\n"
       + "APP-ID: " + esc(app.id) + "\n"
       + "MAC: " + mac,
     keyboard: row.length ? { inline_keyboard: [row] } : undefined,
