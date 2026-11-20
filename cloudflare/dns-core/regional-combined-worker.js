@@ -127,9 +127,24 @@ async function tick(env) {
     }
     return reportHttpTargets(env, lanes.normal);
   }
-  const totalSlots = Math.ceil(all.length / MAX_TARGETS);
-  const slot = Math.floor(Date.now() / 60000) % totalSlots;
-  const targets = all.slice(slot * MAX_TARGETS, (slot + 1) * MAX_TARGETS);
+  // Newly registered targets and HTTP checks overdue by 15 minutes have a
+  // small dedicated lane. The rest always rotate: no backlog can starve them.
+  // Old target endpoints without last_checked_at remain safe (normal rotation).
+  const now = Date.now();
+  const overdue = all.filter(t =>
+    Object.prototype.hasOwnProperty.call(t, "last_checked_at") &&
+    (t.last_checked_at === null ||
+      (Number.isFinite(Date.parse(t.last_checked_at)) &&
+        now - Date.parse(t.last_checked_at) > 15 * 60_000)))
+    .sort((a, b) => (Date.parse(a.last_checked_at || "1970-01-01") || 0) -
+      (Date.parse(b.last_checked_at || "1970-01-01") || 0));
+  const urgent = overdue.slice(0, Math.min(6, MAX_TARGETS - 1));
+  const urgentIds = new Set(urgent.map(t => t.server_id));
+  const regular = all.filter(t => !urgentIds.has(t.server_id));
+  const regularSize = MAX_TARGETS - urgent.length;
+  const totalSlots = Math.max(1, Math.ceil(regular.length / regularSize));
+  const slot = Math.floor(now / 60_000) % totalSlots;
+  const targets = [...urgent, ...regular.slice(slot * regularSize, (slot + 1) * regularSize)];
   return reportHttpTargets(env, targets);
 }
 async function reportHttpTargets(env, targets) {
