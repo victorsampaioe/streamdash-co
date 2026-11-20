@@ -53,7 +53,7 @@ function rawCost(cents:number|null){return cents===null?"Não informado":
 function AdminRow({app,save,isSaving}:{app:App;save:(app:App,edit:Edit)=>Promise<void>;isSaving:boolean}){
   const [edit,setEdit]=useState<Edit>({});
   const [showLogo,setShowLogo]=useState(false);
-  const price=edit.price??(app.priceCents===null?"":(app.priceCents/100).toFixed(2));
+  const price=edit.price??((app.priceCents??app.storePriceCents)===null?"":((app.priceCents??app.storePriceCents)!/100).toFixed(2));
   const logo=edit.logo??(app.logoUrl||"");
   const changed=Object.prototype.hasOwnProperty.call(edit,"price")||Object.prototype.hasOwnProperty.call(edit,"logo");
   async function submit(){
@@ -84,6 +84,7 @@ function AdminRow({app,save,isSaving}:{app:App;save:(app:App,edit:Edit)=>Promise
       <span className="text-sm font-medium tabular-nums">{rawCost(app.providerValue)}</span>
       <p className="text-[10px] text-muted-foreground">Valor bruto da API</p>
       {app.storePriceCents!==null&&<p className="mt-1 text-[11px] font-semibold text-blue-400" title="Preço informado no campo valor_da_loja do fornecedor">Loja: {toMoney(app.storePriceCents)}</p>}
+      <p className="mt-1 text-[10px] text-muted-foreground">{app.priceCents===null?"Usando preço da loja como padrão":"Preço próprio definido"}</p>
     </div>
     <div>
       <label htmlFor={"price-"+app.id} className="mb-1 block text-[10px] font-bold uppercase tracking-wide text-muted-foreground lg:hidden">Seu preço de venda (R$)</label>
@@ -148,14 +149,14 @@ function AppActivationAdmin(){
         </div>
         <h1 className="text-2xl font-black tracking-tight sm:text-4xl">Preços de ativação</h1>
         <p className="mt-3 max-w-2xl text-sm text-blue-100/70">
-          Controle o valor de venda de cada aplicativo, confira o custo informado pelo fornecedor e cadastre imagens. Valores salvos diretamente na Cloudflare, sem alterar a API da AtiveAPP.
+          Controle o valor de venda de cada aplicativo e personalize as fotos. Por padrão, exibimos o preço da loja AtiveAPP; seu preço manual tem prioridade e fica salvo na Cloudflare.
         </p>
       </div>
     </div>
     <div className="grid gap-3 sm:grid-cols-3">
       {[
         {label:"Aplicativos recebidos",value:String(apps.length),icon:Smartphone},
-        {label:"Preços configurados",value:String(priced)+" / "+String(apps.length),icon:Wallet},
+        {label:"Preços personalizados",value:String(priced)+" / "+String(apps.length),icon:Wallet},
         {label:"Imagens disponíveis",value:String(query.data?.logoCount??0),icon:ImageIcon},
       ].map(metric=><Card key={metric.label} className="flex items-center gap-3 rounded-2xl border-border/60 p-4">
         <div className="rounded-xl bg-blue-500/10 p-3 text-blue-400"><metric.icon className="h-5 w-5"/></div>
@@ -167,13 +168,13 @@ function AppActivationAdmin(){
       <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-amber-500"/>
       <div><p className="text-sm font-bold">Confira seu preço antes de liberar as ativações</p>
         <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
-          O campo de valor do fornecedor vem da AtiveAPP e pode representar créditos, não reais. O preço configurado aqui é em R$. O pagamento e as ativações reais seguem bloqueados até a conciliação financeira.
+          O valor bruto da API pode representar créditos. O preço da loja (campo valor_da_loja) é usado apenas quando você não definiu um preço personalizado em reais. O pagamento e as ativações reais seguem bloqueados até a conciliação financeira.
         </p></div>
     </div>
     <Card className="overflow-hidden rounded-2xl border-border/70">
       <div className="flex flex-col gap-4 border-b border-border/70 p-4 sm:flex-row sm:items-center sm:justify-between sm:p-5">
         <div><h2 className="text-lg font-extrabold">Catálogo e preços de venda</h2>
-          <p className="mt-1 text-xs text-muted-foreground">Editar cada aplicativo individualmente • Todos os dados no Cloudflare D1</p></div>
+          <p className="mt-1 text-xs text-muted-foreground">O preço da loja é o padrão. Altere somente os aplicativos em que deseja cobrar outro valor • Cloudflare D1</p></div>
         <Button variant="outline" onClick={()=>void query.refetch()} disabled={query.isFetching}
           className="gap-2 rounded-xl"><RefreshCcw size={16} className={query.isFetching?"animate-spin":""}/>Atualizar</Button>
       </div>
@@ -198,7 +199,7 @@ function AppActivationAdmin(){
         !filtered.length?<p className="p-10 text-center text-sm text-muted-foreground">Nenhum aplicativo encontrado.</p>:
         <div>{filtered.map(a=><AdminRow key={a.id} app={a} save={save} isSaving={busy===a.id}/>)}</div>}
       <div className="border-t border-border/70 p-4 text-xs text-muted-foreground">
-        Mostrando {filtered.length} de {apps.length} aplicativos. *A unidade do valor da API ainda precisa ser confirmada com o fornecedor.
+        Mostrando {filtered.length} de {apps.length} aplicativos. *O valor bruto da API pode ser expresso em créditos; o campo “Loja” representa o preço divulgado pelo fornecedor.
       </div>
     </Card>
     <Link to="/app" className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground"><ArrowLeft size={16}/>Voltar ao painel</Link>
