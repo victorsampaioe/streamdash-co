@@ -155,23 +155,40 @@ async function paymentCall(env, path, options={}){
   if(!res.ok)throw new Error("gateway_http_"+res.status);
   return data;
 }
-async function merchantReady(env){
+async function isAuthorizedAdmin(request,userId){
+  const jwt=request.headers.get("authorization")||"";
+  const key=request.headers.get("x-sm-public-key")||"";
+  if(!userId||!jwt.startsWith("Bearer ")||!key)return false;
+  try{
+    const res=await fetch("https://yiwyfiaqehhmngqngxvx.supabase.co/rest/v1/rpc/has_role",{
+      method:"POST",headers:{"authorization":jwt,"apikey":key,"content-type":"application/json"},
+      body:JSON.stringify({_user_id:userId,_role:"admin"}),
+      signal:AbortSignal.timeout(6500),cf:{cacheTtl:0,cacheEverything:false},
+    });
+    return res.ok&&(await res.json())===true;
+  }catch{return false;}
+}
+async function merchantReady(env,adminCanary=false){
   if(!env.NEW_ASAAS_DB||!env.APP_DB||!env.ASAAS_ATIVACOES_NOVA_API_KEY||
      !env.ACTIVATION_SERVICE)return false;
   const r=await env.NEW_ASAAS_DB.prepare(
     "SELECT key,value FROM merchant_config WHERE key IN ("+
     "'merchant_authorized','merchant_verified','payment_creation_enabled',"+
     "'activation_auto_delivery_enabled','environment','provider_key_env_detected',"+
-    "'provider_account_http_status','provider_webhook_url_present','provider_webhook_enabled','merchant_fingerprint')"
+    "'provider_account_http_status','provider_webhook_url_present','provider_webhook_enabled','merchant_fingerprint','pix_canary_enabled')"
   ).all();
   const flags=Object.fromEntries((r.results||[]).map(x=>[x.key,x.value]));
-  return flags.merchant_authorized==="true"&&flags.merchant_verified==="true"&&
-    flags.payment_creation_enabled==="true"&&flags.activation_auto_delivery_enabled==="true"&&
-    flags.environment===flags.provider_key_env_detected&&
-    flags.provider_account_http_status==="200"&&
-    flags.provider_webhook_url_present==="true"&&
+  const gatewayHealthy=flags.environment===flags.provider_key_env_detected&&
+    flags.provider_account_http_status==="200"&&flags.provider_webhook_url_present==="true"&&
     flags.provider_webhook_enabled==="true"&&
     !!flags.merchant_fingerprint&&flags.merchant_fingerprint!=="unverified";
+  if(!gatewayHealthy)return false;
+  // The admin-only canary permits testing the new Pix flow before activating
+  // paid checkout for all customers. It still uses a REAL production merchant:
+  // the admin must enter their own valid payment details.
+  if(adminCanary&&flags.pix_canary_enabled==="true")return true;
+  return flags.merchant_authorized==="true"&&flags.merchant_verified==="true"&&
+    flags.payment_creation_enabled==="true"&&flags.activation_auto_delivery_enabled==="true";
 }
 function safeCents(v){return Number.isSafeInteger(v)&&v>=100&&v<=999999;}
 function dueDate(){
@@ -181,8 +198,8 @@ function dueDate(){
   const part=k=>fields.find(p=>p.type===k)?.value||"";
   return part("year")+"-"+part("month")+"-"+part("day");
 }
-async function createCheckout(env,userId,input){
-  if(!await merchantReady(env))return{status:503,body:{error:"checkout_indisponivel",charged:false}};
+async function createCheckout(env,userId,input,adminCanary=false){
+  if(!await merchantReady(env,adminCanary))return{status:503,body:{error:"checkout_indisponivel",charged:false}};
   const appId=typeof input?.appId==="string"&&/^[A-Za-z0-9_-]{5,90}$/.test(input.appId)?
     input.appId:null;
   const mac=macAddress(input?.mac);
@@ -371,9 +388,14 @@ export default {
       let userId;
       try{userId=await authenticatedOwner(request)}catch{return checkoutReply({error:"auth_unavailable"},503,origin)}
       if(!userId)return checkoutReply({error:"Entre novamente na sua conta."},401,origin);
+      if(request.method==="GET"&&url.pathname==="/v1/pix/ready"){
+        const admin=await isAuthorizedAdmin(request,userId);
+        return checkoutReply({ready:await merchantReady(env,admin),canary:admin},200,origin);
+      }
       if(request.method==="POST"&&url.pathname==="/v1/pix/create"){
         const data=await request.json().catch(()=>null);
-        const result=await createCheckout(env,userId,data);
+        const adminCanary=await isAuthorizedAdmin(request,userId);
+        const result=await createCheckout(env,userId,data,adminCanary);
         return checkoutReply(result.body,result.status,origin);
       }
       if(request.method==="GET"&&url.pathname==="/v1/pix/status"){
