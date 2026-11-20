@@ -59,7 +59,7 @@ function rawCost(cents:number|null){return cents===null?"Não informado":
 function AdminRow({app,save,isSaving}:{app:App;save:(app:App,edit:Edit)=>Promise<void>;isSaving:boolean}){
   const [edit,setEdit]=useState<Edit>({});
   const [showLogo,setShowLogo]=useState(false);
-  const price=edit.price??((app.priceCents??app.storePriceCents)===null?"":((app.priceCents??app.storePriceCents)!/100).toFixed(2));
+  const price=edit.price??(app.priceCents===null?"":(app.priceCents/100).toFixed(2));
   const logo=edit.logo??(app.logoUrl||"");
   const changed=Object.prototype.hasOwnProperty.call(edit,"price")||Object.prototype.hasOwnProperty.call(edit,"logo");
   async function submit(){
