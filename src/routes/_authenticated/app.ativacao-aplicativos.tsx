@@ -179,8 +179,8 @@ function AppActivationPage() {
             <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Valor da ativação</p>
             <p className="mt-1 text-lg font-black">{money(app.priceCents)}</p>
           </div>
-          <Button type="button" disabled={!live || !app.priceCents} className="mt-4 w-full gap-2 rounded-xl" onClick={() => { setSelected(app); setMac(""); setAck(false); setReviewing(false); }}>
-            <Zap size={16}/> Selecionar <ArrowRight size={15}/>
+          <Button type="button" disabled={!app.priceCents} className="mt-4 w-full gap-2 rounded-xl" onClick={() => { setSelected(app); setMac(""); setAck(false); setReviewing(false); }}>
+            <Zap size={16}/>{live ? "Selecionar" : "Conferir MAC (prévia)"} <ArrowRight size={15}/>
           </Button>
         </Card>)}
       </div>
@@ -199,7 +199,7 @@ function AppActivationPage() {
     {selected && <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 p-4" role="dialog" aria-modal="true" aria-label="Confirmar ativação">
       <Card className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-[26px] border border-blue-400/25 p-6 shadow-2xl sm:p-8">
         <div className="mb-5 flex h-12 w-12 items-center justify-center rounded-2xl bg-blue-500/15"><Smartphone size={24} className="text-blue-400"/></div>
-        <h2 className="text-2xl font-extrabold">Confirmar ativação</h2>
+        <h2 className="text-2xl font-extrabold">{live ? "Confirmar ativação" : "Prévia da ativação"}</h2>
         <p className="mt-2 text-sm text-muted-foreground">Aplicativo: <strong className="text-foreground">{selected.name}</strong></p>
         <div className="mt-5 space-y-2">
           <label htmlFor="activation-mac" className="text-xs font-bold uppercase tracking-wider">MAC do dispositivo</label>
@@ -216,11 +216,12 @@ function AppActivationPage() {
         </label>
         {reviewing && <div className="mt-4 rounded-xl border border-blue-400/30 bg-blue-400/5 p-3 text-xs">
           <p className="font-bold">Última conferência</p><p className="mt-1">App: {selected.name}</p><p>MAC: <span className="font-mono font-bold">{mac}</span></p><p>Preço: {money(selected.priceCents)}</p>
+          {!live && <p className="mt-2 font-semibold text-amber-500">Somente conferência: nenhum Pix será gerado e nenhuma ativação será enviada.</p>}
         </div>}
         <div className="mt-6 flex flex-col gap-2 sm:flex-row">
           <Button variant="outline" onClick={() => {setSelected(null);setReviewing(false);}} disabled={sending} className="rounded-xl sm:flex-1">Cancelar</Button>
           {!reviewing ? <Button disabled={!validMac(mac) || !ack} className="gap-2 rounded-xl sm:flex-1" onClick={() => setReviewing(true)}><ShieldCheck size={16}/> Revisar dados</Button> :
-          <Button disabled={!ready || sending} onClick={() => void submit()} className="gap-2 rounded-xl sm:flex-1"><CreditCard size={16}/>{sending ? "Enviando..." : "Confirmar ativação"}</Button>}
+          <Button disabled={!ready || sending} onClick={() => void submit()} className="gap-2 rounded-xl sm:flex-1"><CreditCard size={16}/>{!live ? "Pix ainda indisponível" : sending ? "Enviando..." : "Confirmar ativação"}</Button>}
         </div>
       </Card>
     </div>}
