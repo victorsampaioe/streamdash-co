@@ -233,6 +233,78 @@ async function processPaidActivation(request,env,origin) {
     return respond({error:"unknown_supplier_outcome"},503,origin);
   }
 }
+/**
+ * Pulls definitive activation outcomes from the provider's authenticated
+ * history endpoint. Webhook data alone cannot authorize an activation or
+ * overwrite a user's order. Never infer completion from payment status.
+ */
+async function reconcileActivationResults(env) {
+  if (!env.APP_DB || !env.PAYMENTS_DB || !env.ATIVEAPP_API_KEY) return;
+  const pending = await env.APP_DB.prepare(
+    "SELECT request_id, provider_id, owner_user_id FROM activation_requests " +
+    "WHERE status='submitted' AND provider_id IS NOT NULL ORDER BY updated_at_ms ASC LIMIT 60"
+  ).all();
+  const requests = pending.results || [];
+  if (!requests.length) return;
+  const byProvider = new Map(requests.map(x => [String(x.provider_id), x]));
+  let checked = 0;
+  try {
+    for (let page=1;page<=5 && byProvider.size;page++) {
+      const res = await fetch(PROVIDER + "/api/historico?page="+page+"&limit=100",{
+        headers:{"X-API-Key":env.ATIVEAPP_API_KEY,"Accept":"application/json"},
+        signal:AbortSignal.timeout(12000),cf:{cacheTtl:0,cacheEverything:false}
+      });
+      if (!res.ok) throw new Error("history_http_"+res.status);
+      const body=await res.json();
+      const rows=Array.isArray(body?.items)?body.items:
+        Array.isArray(body?.data?.items)?body.data.items:
+        Array.isArray(body?.data)?body.data:
+        Array.isArray(body?.historico)?body.historico:
+        Array.isArray(body?.results)?body.results:Array.isArray(body)?body:[];
+      for (const item of rows) {
+        const key=String(item?.id??item?.historico_id??"");
+        const target=byProvider.get(key);
+        if(!target) continue;
+        const state=String(item?.status_transacao??item?.status??"").toLowerCase();
+        const status=state==="ativado"||state==="activated"?"activated":
+          state==="incorreto"||state==="incorrect"?"incorrect":null;
+        if(!status) continue;
+        const now=Date.now();
+        const expiration=typeof item?.data_expiracao==="string" &&
+          item.data_expiracao.length<=60 ? item.data_expiracao:null;
+        const update=await env.APP_DB.prepare(
+          "UPDATE activation_requests SET status=?,expires_at=?,updated_at_ms=? " +
+          "WHERE request_id=? AND provider_id=? AND status='submitted'"
+        ).bind(status,expiration,now,target.request_id,key).run();
+        if(update.meta?.changes){
+          checked++;
+          if(status==="activated"){
+            await env.PAYMENTS_DB.prepare(
+              "UPDATE pix_orders SET status='activated',updated_at_ms=? " +
+              "WHERE order_id=? AND owner_user_id=? AND supplier_state='accepted' AND status='paid_pending_activation'"
+            ).bind(now,target.request_id,target.owner_user_id).run();
+          }else{
+            await env.PAYMENTS_DB.prepare(
+              "UPDATE pix_orders SET status='needs_review',supplier_state='needs_review'," +
+              "last_error_code='provider_incorrect',updated_at_ms=? WHERE order_id=? AND owner_user_id=? AND supplier_state='accepted'"
+            ).bind(now,target.request_id,target.owner_user_id).run();
+          }
+        }
+        byProvider.delete(key);
+      }
+      if(rows.length<100)break;
+    }
+    await catalogSyncMeta(env.APP_DB,{
+      activation_status_last_checked_ms:Date.now(),
+      activation_status_updates:checked,
+      activation_status_sync_error:"none",
+    });
+  }catch(e){
+    await catalogSyncMeta(env.APP_DB,{
+      activation_status_sync_error:String(e?.message||"unknown").slice(0,80),
+    }).catch(()=>{});
+  }
+}
 async function verifyAdminRole(request, userId) {
   const bearer = request.headers.get("authorization") || "";
   const key = request.headers.get("x-sm-public-key") || "";
@@ -255,9 +327,13 @@ async function getConfig(db) {
   return Object.fromEntries((result.results || []).map(r => [r.key, r.value === "true"]));
 }
 export default {
-  async scheduled(_event, env, ctx) {
+  async scheduled(event, env, ctx) {
     if (!env.APP_DB || !env.ATIVEAPP_API_KEY) return;
-    ctx.waitUntil(refreshCatalog(env).catch(() => {}));
+    if(event?.cron === "*/2 * * * *"){
+      ctx.waitUntil(reconcileActivationResults(env).catch(()=>{}));
+    }else{
+      ctx.waitUntil(refreshCatalog(env).catch(()=>{}));
+    }
   },
   async fetch(request, env) {
     const url = new URL(request.url);
