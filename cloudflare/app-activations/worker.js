@@ -378,10 +378,15 @@ export default {
           const meta = await env.APP_DB.prepare(
             "SELECT value FROM activation_config WHERE key='supplier_catalog_fields'"
           ).first();
+          const syncRows=await env.APP_DB.prepare(
+            "SELECT key,value FROM activation_config WHERE key IN ("+
+              "'catalog_last_complete_sync_ms','catalog_last_complete_import_count','catalog_last_complete_pages','catalog_last_sync_error')"
+          ).all();
+          const sync=Object.fromEntries((syncRows.results||[]).map(x=>[x.key,x.value]));
           let supplierFields = [];
           try { supplierFields = JSON.parse(meta?.value || "[]"); } catch {}
           return respond({
-            items:rows.results || [], supplierFields,
+            items:rows.results || [], supplierFields, sync,
             logoCount:(rows.results||[]).filter(x => !!x.logoUrl).length,
             note: "O valor do fornecedor é bruto da API, com unidade não confirmada; não é automaticamente preço em reais.",
           },200,origin);
