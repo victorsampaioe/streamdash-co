@@ -166,28 +166,26 @@ function AppActivationAdmin(){
     </div>
     <Card className="space-y-3 rounded-2xl border-blue-400/25 p-5">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <h2 className="flex items-center gap-2 text-base font-extrabold"><Wallet size={18} className="text-blue-400"/> Pix Asaas — nova conta de ativações</h2>
+        <h2 className="flex items-center gap-2 text-base font-extrabold"><Wallet size={18} className="text-blue-400"/> Pix de ativações — conta separada</h2>
         <Badge variant="outline" className="border-amber-400/30 text-amber-500">Cobranças desativadas</Badge>
       </div>
       <p className="text-xs leading-relaxed text-muted-foreground">
-        Integração independente para uma nova conta Asaas, autorizada pelo titular.
+        Integração independente para uma nova conta de recebimentos, autorizada pelo titular.
         Não usa a conta antiga nem o Pix das assinaturas. Backend e registros exclusivos na Cloudflare.
       </p>
-      <p className="text-xs font-semibold">Worker: <code className="rounded bg-muted px-1.5 py-0.5">streammonitor-asaas-ativacoes-nova-conta</code></p>
+      <p className="text-xs font-semibold">Integração isolada, com credenciais protegidas na Cloudflare.</p>
       <label htmlFor="new-asaas-webhook" className="block text-xs font-semibold">Webhook para cadastrar na nova conta Asaas</label>
       <div className="flex flex-col gap-2 sm:flex-row">
-        <Input id="new-asaas-webhook" readOnly value="https://streammonitor-asaas-ativacoes-nova-conta.victorsampaio133.workers.dev/webhooks/asaas/ativacoes"
+        <Input id="new-asaas-webhook" readOnly value="https://pagamentos.streammonitor.site/eventos/pagamentos"
           className="min-w-0 flex-1 rounded-xl font-mono text-xs"/>
         <Button type="button" variant="outline" className="rounded-xl" onClick={() => {
-          void navigator.clipboard.writeText("https://streammonitor-asaas-ativacoes-nova-conta.victorsampaio133.workers.dev/webhooks/asaas/ativacoes")
+          void navigator.clipboard.writeText("https://pagamentos.streammonitor.site/eventos/pagamentos")
             .then(() => toast.success("URL do webhook copiada."))
             .catch(() => toast.error("Copie a URL manualmente."));
         }}>Copiar URL</Button>
       </div>
       <p className="text-xs text-muted-foreground">
-        Configure no Worker as secrets <code>ASAAS_ATIVACOES_NOVA_API_KEY</code> e
-        <code> ASAAS_ATIVACOES_NOVA_WEBHOOK_TOKEN</code> com credenciais exclusivamente dessa nova conta.
-        A chave de API e o token do webhook são diferentes.
+        As credenciais da nova conta já devem estar protegidas como secrets no Worker correspondente. Não compartilhe a chave de API ou o token do webhook.
       </p>
     </Card>
     <div className="flex gap-3 rounded-2xl border border-amber-400/25 bg-amber-400/5 p-4">
