@@ -74,7 +74,7 @@ async function sendPixCodeOnly(token:string,chatId:number|string,code:string) {
 }
 
 async function send(token: string, chatId: number | string, text: string, withBillingKeyboard=false,
-  optionalKeyboard?:{inline_keyboard:Array<Array<{text:string;callback_data?:string;url?:string}>>}|{force_reply:true;selective:true;input_field_placeholder:string}) {
+  optionalKeyboard?:{inline_keyboard:Array<Array<{text:string;callback_data?:string;url?:string}>>}|{force_reply:true;selective:false;input_field_placeholder:string}) {
   const pixMatch=PIX_CODE_PATTERN.exec(text);
   if(pixMatch){
     const code=decodePixCode(pixMatch[1]);

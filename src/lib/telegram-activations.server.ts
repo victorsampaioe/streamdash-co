@@ -15,9 +15,12 @@ const ID = /^[A-Za-z0-9_-]{5,90}$/;
 const MAC = /^([0-9A-F]{2}:){5}[0-9A-F]{2}$/;
 type App = { id: string; name: string; module: string | null; priceCents: number | null };
 type Keyboard = { inline_keyboard: Array<Array<{ text: string; callback_data?: string; url?: string }>> };
-type ForceReply = { force_reply: true; selective: true; input_field_placeholder: string };
+type ForceReply = { force_reply: true; selective: false; input_field_placeholder: string };
 export type ActivationBotReply = { text: string; keyboard?: Keyboard | ForceReply };
-export const MAC_FORCE_REPLY: ForceReply = { force_reply: true, selective: true, input_field_placeholder: "Informe o MAC: AA:BB:CC:DD:EE:FF" };
+// selective=false: the selection message is a new message with no mention and no
+// reply-to target, so a selective prompt would never open the Reply UI for the
+// private-chat user.
+export const MAC_FORCE_REPLY: ForceReply = { force_reply: true, selective: false, input_field_placeholder: "Informe o MAC: AA:BB:CC:DD:EE:FF" };
 /** Text that the user probably meant as a MAC (6 pairs or 12 chars), valid or not. */
 export function looksLikeMacAttempt(text: string): boolean {
   const t = text.trim();

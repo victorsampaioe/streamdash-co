@@ -22,6 +22,9 @@ describe("telegram activation MAC flow", () => {
   it("selection asks MAC via ForceReply", async () => {
     const r = await activationBotCallback(123456, "aa:app:abe_player");
     expect(r.keyboard).toEqual(MAC_FORCE_REPLY);
+    // selective=false is required: the selection message mentions nobody and
+    // replies to nothing, so a selective prompt would not open the Reply UI.
+    expect(MAC_FORCE_REPLY.selective).toBe(false);
     expect(r.text).toContain("APP-ID: abe_player");
   });
   it("valid reply MAC gets confirmation; invalid rejected", async () => {
