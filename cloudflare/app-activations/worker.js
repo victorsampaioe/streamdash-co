@@ -165,27 +165,20 @@ async function refreshCatalog(env, options = {}) {
     return {configured:true,refreshed:false,supplierUnavailable:true,imported,failedPage:page};
   }
 }
-async function privateBridgeAuthorized(request, env) {
-  const expected=env.INTERNAL_FULFILL_SECRET,received=request.headers.get("x-internal-fulfill-secret")||"";
-  if(typeof expected!=="string"||expected.length<32||received.length!==expected.length)return false;
-  const enc=new TextEncoder();
-  const [a,b]=await Promise.all([crypto.subtle.digest("SHA-256",enc.encode(received)),
-    crypto.subtle.digest("SHA-256",enc.encode(expected))]);
-  return new Uint8Array(a).every((v,i)=>v===new Uint8Array(b)[i]);
-}
 async function processPaidActivation(request,env,origin) {
   if(!env.APP_DB||!env.PAYMENTS_DB||!env.ATIVEAPP_API_KEY)return respond({error:"unavailable"},503,origin);
-  if(!(await privateBridgeAuthorized(request,env)))return respond({error:"unauthorized"},401,origin);
   const input=await request.json().catch(()=>null);
   const orderId=typeof input?.orderId==="string"&&/^[a-f0-9-]{36}$/i.test(input.orderId)?input.orderId:null;
-  if(!orderId)return respond({error:"invalid_order"},400,origin);
+  const nonce=typeof input?.nonce==="string"&&/^[a-f0-9-]{36}$/i.test(input.nonce)?input.nonce:null;
+  if(!orderId||!nonce)return respond({error:"invalid_order"},400,origin);
   // Payment metadata must have been marked verified by the independent,
   // authenticated Asaas payment worker. Do not trust the POST body.
   const order=await env.PAYMENTS_DB.prepare(
     "SELECT order_id,owner_user_id,app_id,mac_normalized,amount_cents,paid_at_ms,"+
-    "status,supplier_state,last_payment_check_at_ms FROM pix_orders WHERE order_id=?"
+    "status,supplier_state,last_payment_check_at_ms,fulfill_nonce FROM pix_orders WHERE order_id=?"
   ).bind(orderId).first();
-  if(!order||order.status!=="paid_pending_activation"||order.supplier_state!=="submitting"||
+  if(!order||order.fulfill_nonce!==nonce||order.status!=="paid_pending_activation"||
+    order.supplier_state!=="submitting"||
     !Number.isInteger(order.paid_at_ms)||Date.now()-Number(order.last_payment_check_at_ms)>300000)
     return respond({error:"payment_not_verified"},403,origin);
   const app=await env.APP_DB.prepare(
