@@ -78,13 +78,23 @@ function Landing() {
             <h2 id="novidade-ativacao-aplicativos-titulo" className="mt-5 text-3xl font-black leading-tight tracking-tight sm:text-4xl lg:text-5xl">Ative seus aplicativos com <span className="bg-gradient-to-r from-cyan-300 to-blue-400 bg-clip-text text-transparent">Pix pelo site ou Telegram.</span></h2>
             <p className="mt-4 text-sm leading-7 text-slate-300 sm:text-base">Escolha o reprodutor, informe o MAC do dispositivo e solicite o Pix pelo site ou diretamente no bot do Telegram. Após a confirmação do pagamento, a solicitação de ativação é enviada automaticamente.</p>
           </div>
-          <div className="mt-10 grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+          <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
             {[{name:"IBO PLAYER",logo:"https://eelbsrenwvjazertgdok.supabase.co/storage/v1/object/public/ativeapp/app-details1704893631925x176586575932592640_app_1785258747787.jpg",price:"R$ 10,00",subtitle:"Licença do aplicativo",abbrev:"IBO",featured:true},{name:"BOB PLAYER",logo:"https://eelbsrenwvjazertgdok.supabase.co/storage/v1/object/public/ativeapp/app-details1704894163703x920138830586853900_app_1785276600409.jpg",price:"R$ 9,90",subtitle:"Licença do aplicativo",abbrev:"BOB",featured:false},{name:"SMARTONE IPTV",logo:"https://6a9bd0424edabae5e843df4b48b6f4c6.cdn.bubble.io/f1721052735413x517835630117172740/SMARTONE%20IPTV.png",price:"R$ 13,50",subtitle:"Licença do aplicativo",abbrev:"S1",featured:false},{name:"9XTREAM 4K PLAYER",logo:"https://d690eca1cc598e984c14889e63f8a117.cdn.bubble.io/f1747326312055x149432657602591700/logo%209xtream%204k%20player.png",price:"R$ 9,90",subtitle:"Licença do aplicativo",abbrev:"9X",featured:false},{name:"A PLUS PLAYER",logo:"https://6a9bd0424edabae5e843df4b48b6f4c6.cdn.bubble.io/f1721051046457x611743274930799900/A%20plus%20Player.png",price:"R$ 8,90",subtitle:"Licença do aplicativo",abbrev:"A+",featured:false}].map((app) => (
               <article key={app.name} className="group flex flex-col rounded-2xl border border-blue-300/20 bg-white/[.045] p-5 shadow-[0_18px_35px_rgba(0,0,0,.2)] transition-all hover:-translate-y-1 hover:border-cyan-300/50 hover:bg-blue-400/[.08]">
-                <div className="flex items-start justify-between gap-2">
-                  <span className="relative flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-blue-300/20 bg-gradient-to-br from-blue-500/30 to-cyan-300/10 text-sm font-black tracking-tight text-cyan-100">
-                    <span aria-hidden="true">{app.abbrev}</span>
-                    <img src={app.logo} alt={`Logo do aplicativo ${app.name}`} width={64} height={64} loading="lazy" referrerPolicy="no-referrer" className="absolute inset-0 h-full w-full bg-[#08162d] object-contain p-1.5" onError={(e) => { e.currentTarget.style.display = "none"; }} />
+                <div className="flex items-start justify-between gap-3">
+                  <span className="flex h-[86px] w-[86px] shrink-0 items-center justify-center rounded-2xl border border-blue-300/20 bg-[#0a1730] p-2 shadow-inner shadow-black/20">
+                    <span className="flex h-full w-full items-center justify-center overflow-hidden rounded-xl bg-white p-1.5">
+                      <img
+                        src={app.logo}
+                        alt={`Logo do aplicativo ${app.name}`}
+                        width={72}
+                        height={72}
+                        loading="lazy"
+                        referrerPolicy="no-referrer"
+                        className="h-full w-full object-contain"
+                        onError={(e) => { e.currentTarget.style.display = "none"; }}
+                      />
+                    </span>
                   </span>
                   {app.featured && <span className="rounded-full border border-cyan-300/25 bg-cyan-300/10 px-2 py-1 text-[10px] font-black uppercase tracking-widest text-cyan-200">Destaque</span>}
                 </div>
