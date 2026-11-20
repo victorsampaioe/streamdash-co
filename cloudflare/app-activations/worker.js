@@ -305,6 +305,22 @@ async function reconcileActivationResults(env) {
     }).catch(()=>{});
   }
 }
+async function publicCommerceReady(env) {
+  if(!env.APP_DB||!env.PAYMENTS_DB||!env.ATIVEAPP_API_KEY)return false;
+  const site=await getConfig(env.APP_DB);
+  if(!site.live_activations_enabled||!site.sale_prices_approved)return false;
+  const r=await env.PAYMENTS_DB.prepare(
+    "SELECT key,value FROM merchant_config WHERE key IN ("+
+    "'merchant_authorized','merchant_verified','payment_creation_enabled',"+
+    "'activation_auto_delivery_enabled','environment','provider_key_env_detected',"+
+    "'provider_account_http_status','provider_webhook_enabled')"
+  ).all();
+  const m=Object.fromEntries((r.results||[]).map(x=>[x.key,x.value]));
+  return m.merchant_authorized==="true"&&m.merchant_verified==="true"&&
+    m.payment_creation_enabled==="true"&&m.activation_auto_delivery_enabled==="true"&&
+    m.environment===m.provider_key_env_detected&&
+    m.provider_account_http_status==="200"&&m.provider_webhook_enabled==="true";
+}
 async function verifyAdminRole(request, userId) {
   const bearer = request.headers.get("authorization") || "";
   const key = request.headers.get("x-sm-public-key") || "";
@@ -361,7 +377,7 @@ export default {
       ).bind("%" + q + "%", limit + 1, (page - 1) * limit).all();
       const matches = rows.results || [];
       return respond({ items: matches.slice(0,limit), page, hasMore: matches.length > limit,
-        configured: !!env.ATIVEAPP_API_KEY, live: false }, 200, origin);
+        configured: !!env.ATIVEAPP_API_KEY, live: await publicCommerceReady(env) }, 200, origin);
     }
     if (request.method === "GET" && url.pathname === "/v1/telegram/app") {
       if (!env.APP_DB) return respond({ error: "database_unavailable" }, 503, origin);
@@ -371,7 +387,7 @@ export default {
         "SELECT app_id AS id,name,module,provider_store_price_cents AS priceCents FROM app_catalog " +
         "WHERE app_id=? AND is_active=1 AND provider_store_price_cents>=100"
       ).bind(id).first();
-      return app ? respond({ app, live: false }, 200, origin)
+      return app ? respond({ app, live: await publicCommerceReady(env) }, 200, origin)
         : respond({ error: "not_found" }, 404, origin);
     }
     if(url.pathname==="/internal/paid-activation"&&request.method==="POST")
