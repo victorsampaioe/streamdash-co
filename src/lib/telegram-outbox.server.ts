@@ -86,6 +86,15 @@ export async function processTelegramOutbox(limit=12){
   let sent=0,failed=0,dead=0;
   for(const item of messages){
     try{
+      // Never send a time-sensitive offer after its advertised deadline.
+      if(item.source==="promo_annual_20261119" && Date.now()>=Date.parse("2026-11-20T03:00:00Z")){
+        const {error:expireError}=await supabaseAdmin.from("telegram_outbox" as any)
+          .update({status:"dead",last_error:"promotion_expired",updated_at:new Date().toISOString()})
+          .eq("id",item.id);
+        if(expireError)throw new Error("telegram_promotion_expiry_write_failed");
+        dead++;
+        continue;
+      }
       if(item.source===BANNER_RELEASE_EVENT){
         await sendBannerReleasePhoto(item.target,item.text);
       }else{
