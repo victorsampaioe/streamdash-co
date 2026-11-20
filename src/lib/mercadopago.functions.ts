@@ -2,6 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { PLANS, effectivePriceCents, type PlanId } from "./payments";
+import { getActiveAnnualPromo } from "./annual-promo.server";
 
 export const createPixPayment = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
@@ -19,6 +20,7 @@ export const createPixPayment = createServerFn({ method: "POST" })
     const apiPlanCode = data.apiPlanCode || undefined;
     let apiPlanId: string | undefined;
     let paymentType = data.paymentType || (apiPlanCode ? "api_subscription" : storeProductId ? "store" : "subscription");
+    let annualPromoEndsAt: string | null = null;
 
     if (apiPlanCode) {
       const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
@@ -47,8 +49,12 @@ export const createPixPayment = createServerFn({ method: "POST" })
     } else if (planId) {
       const standardPlan = PLANS.find((p) => p.id === planId);
       if (standardPlan) {
-        amountCents = effectivePriceCents(standardPlan);
-        description = `StreamMonitor — Plano ${standardPlan.name}`;
+        const annualPromo = planId === "yearly" && paymentType === "subscription"
+          ? await getActiveAnnualPromo()
+          : null;
+        amountCents = annualPromo?.priceCents ?? effectivePriceCents(standardPlan);
+        annualPromoEndsAt = annualPromo?.endsAt ?? null;
+        description = `StreamMonitor — Plano ${standardPlan.name}${annualPromo ? " (Promoção até 23h59)" : ""}`;
       } else if (planId.startsWith("credits_")) {
         // Only packages supported by the SQL plan enum and payment finalizer
         // may be sold. Unsupported amounts must fail BEFORE a Pix is created.
@@ -77,7 +83,11 @@ export const createPixPayment = createServerFn({ method: "POST" })
     }
 
     const { supabase, userId, claims } = context;
-    const expiresAt = new Date(Date.now() + 30 * 60 * 1000).toISOString(); // PIX 30min
+    // Promotional PIX must not stay payable after the campaign finishes.
+    const expiresAt = new Date(Math.min(
+      Date.now() + 30 * 60 * 1000,
+      annualPromoEndsAt ? new Date(annualPromoEndsAt).getTime() : Number.POSITIVE_INFINITY,
+    )).toISOString();
     const eligibleReferralDiscount = paymentType === "subscription" && ["monthly", "quarterly", "yearly"].includes(planId ?? "");
     const grossAmountCents = amountCents;
     let referralDiscountCents = 0;
