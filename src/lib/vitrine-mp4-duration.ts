@@ -55,7 +55,7 @@ export function repairMp4DurationHeaders(
   const movie = boxes.find(b => b.name === "mvhd");
   if (!movie) throw new Error("O MP4 não contém cabeçalho de duração (moov/mvhd).");
 
-  function readTimeScale(box: Box, kind: "mvhd" | "mdhd"): number {
+  function readTimeScale(box: Box): number {
     const p = box.offset + box.header;
     if (p + 28 > box.end) throw new Error("Cabeçalho de duração incompleto.");
     const version = view.getUint8(p);
@@ -65,14 +65,14 @@ export function repairMp4DurationHeaders(
     if (!scale || scale > 1_000_000_000) throw new Error("Escala de tempo do MP4 inválida.");
     return scale;
   }
-  movieScale = readTimeScale(movie, "mvhd");
+  movieScale = readTimeScale(movie);
 
   function inspectAndRepair(box: Box) {
     const p = box.offset + box.header;
     if (p + 32 > box.end) return;
     const version = view.getUint8(p);
     if (version !== 0 && version !== 1) return;
-    const scale = box.name === "mdhd" ? readTimeScale(box, "mdhd") : movieScale;
+    const scale = box.name === "mdhd" ? readTimeScale(box) : movieScale;
     const position = p + (
       box.name === "tkhd"
         ? (version === 1 ? 28 : 20)
