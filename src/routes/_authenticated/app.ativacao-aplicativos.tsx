@@ -139,7 +139,7 @@ function AppActivationPage() {
     </div>
     {!live && <div className="flex flex-col gap-2 rounded-2xl border border-blue-400/20 bg-blue-400/5 p-4 sm:flex-row sm:items-center sm:justify-between">
       <div><p className="text-sm font-bold">Integração em preparação</p>
-        <p className="mt-1 text-xs text-muted-foreground">Ativações desabilitadas até configurar a API, os preços e o pagamento. Nenhum crédito será consumido.</p>
+        <p className="mt-1 text-xs text-muted-foreground">O catálogo está disponível para conferir aplicativos e MAC. O Pix e a ativação automática estão em validação. Nenhum valor será cobrado nesta prévia.</p>
       </div><Badge variant="outline" className="w-fit border-blue-400/30 text-blue-400">Sem cobranças</Badge>
     </div>}
     <div className="flex flex-wrap items-center gap-2 border-b border-border/70 pb-3">
