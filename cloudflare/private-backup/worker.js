@@ -34,7 +34,7 @@ async function recordInventory(env){
   let added=0;
   const now=new Date().toISOString();
   for(const file of manifest.files){
-    if(!["database_export_15_11_26","database_export_19_11_26","promo-arts"].includes(file.bucket))continue;
+    if(!["database_export_15_11_26","database_export_19_11_26","promo-arts","vitrine-video-modelos"].includes(file.bucket))continue;
     if(!file.path||typeof file.path!=="string"||file.path.length>1024
       ||!Number.isSafeInteger(file.size)||file.size<=0||file.size>2_000_000_000)continue;
     const version=String(file.updated_at||"");
