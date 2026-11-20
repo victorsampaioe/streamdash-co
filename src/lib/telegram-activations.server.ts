@@ -14,7 +14,7 @@ const SITE = "https://streammonitor.site/app/ativacao-aplicativos";
 const ID = /^[A-Za-z0-9_-]{5,90}$/;
 const MAC = /^([0-9A-F]{2}:){5}[0-9A-F]{2}$/;
 type App = { id: string; name: string; module: string | null; priceCents: number | null };
-type Keyboard = { inline_keyboard: Array<Array<{ text: string; callback_data: string }>> };
+type Keyboard = { inline_keyboard: Array<Array<{ text: string; callback_data?: string; url?: string }>> };
 export type ActivationBotReply = { text: string; keyboard?: Keyboard };
 type CatalogReply = { items: App[]; page: number; hasMore: boolean; configured: boolean; live: boolean };
 const price = (n: number | null) => Number.isSafeInteger(n) && n! > 0
@@ -117,14 +117,18 @@ export async function activationBotCallback(chatId: string | number, data: strin
     const mac = /^MAC:\s*([A-F0-9:]{17})$/m.exec(messageText)?.[1];
     if (!app || msgId !== app.id || !mac || !MAC.test(mac))
       return { text: "⚠️ Os dados desta solicitação não puderam ser confirmados. Reinicie com /ativacaoAplicativo." };
-    // No provider call: money handling, idempotency, refund policy and
-    // webhook reconciliation are still being configured by the account owner.
-    return { text: "🔒 <b>Dados conferidos, ativação ainda não enviada.</b>\n\n"
-      + "📱 App: <b>" + esc(app.name) + "</b>\n"
-      + "📺 MAC: <code>" + mac + "</code>\n\n"
-      + "⏳ As ativações estão temporariamente bloqueadas até a configuração da API e da cobrança no Stream Monitor. "
-      + "<b>Nenhum pagamento foi feito e nenhum crédito foi consumido.</b>\n\n"
-      + '🌐 <a href="' + SITE + '">Acompanhar liberação no site</a>' };
+    // CPF and payment details must only be entered in the protected site checkout.
+    // Never ask users to send tax identifiers or financial data to the Telegram bot.
+    return {
+      text:"✅ <b>Dados conferidos</b>\n\n"+
+        "📱 Aplicativo: <b>"+esc(app.name)+"</b>\n"+
+        "📺 MAC: <code>"+mac+"</code>\n"+
+        "💰 Preço: <b>"+esc(price(app.priceCents))+"</b>\n\n"+
+        "💳 <b>O Pix é gerado com segurança no site do Stream Monitor.</b> "+
+        "Entre na sua conta e confirme o app e MAC novamente.\n"+
+        "⚠️ Não há cobrança por esta mensagem. Confira os dados antes de pagar.",
+      keyboard:{inline_keyboard:[[{text:"🌐 Abrir pagamento no Stream Monitor",url:SITE}]]}
+    };
   }
   return { text: "Menu expirado ou inválido. Envie /ativacaoAplicativo para consultar os aplicativos." };
 }
