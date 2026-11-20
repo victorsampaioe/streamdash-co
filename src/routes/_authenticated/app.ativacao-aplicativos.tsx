@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -57,10 +57,71 @@ async function edge<T>(path: string, init?: RequestInit, base = API): Promise<T>
 }
 function statusLabel(status: string) {
   return ({
-    awaiting_payment: "Aguardando pagamento", submitting: "Em processamento",
-    submitted: "Solicitada", activated: "Ativado", incorrect: "Dados incorretos",
-    failed: "Falha", needs_review: "Em análise",
+    awaiting_payment: "Aguardando pagamento", paid_pending_activation: "Pagamento confirmado",
+    submitting: "Em processamento", submitted: "Aguardando ativação",
+    activated: "Ativado", incorrect: "Dados incorretos",
+    failed: "Falha", needs_review: "Em análise", refunded: "Estornado",
+    cancelled: "Cancelado",
   } as Record<string, string>)[status] || "Em análise";
+}
+function PixLiveProgress({order, refreshing, hasError}: {
+  order: PixOrder; refreshing: boolean; hasError: boolean;
+}) {
+  const review = ["needs_review", "incorrect", "failed"].includes(order.status);
+  const finished = ["activated", "refunded", "cancelled"].includes(order.status);
+  const activated = order.status === "activated";
+  const supplierAccepted = activated || order.status === "submitted";
+  const paid = supplierAccepted || order.status === "paid_pending_activation";
+  const phase = activated ? 3 : supplierAccepted ? 2 : paid ? 1 : 0;
+  const steps = [
+    { title: "Pix gerado", detail: "Pedido registrado com segurança" },
+    { title: paid ? "Pagamento confirmado" : "Aguardando pagamento", detail: paid ? "A Asaas reconheceu o pagamento" : "Reconhecimento automático da Asaas" },
+    { title: supplierAccepted ? "Solicitação enviada" : "Aguardando envio para ativação", detail: supplierAccepted ? "Fornecedor recebeu seu pedido" : "Enviado somente após confirmar o Pix" },
+    { title: activated ? "Aplicativo ativado!" : "Aguardando ativação", detail: activated ? "Licença confirmada pelo fornecedor" : "Consultando o resultado da licença" },
+  ];
+  return <div className="rounded-2xl border border-blue-400/20 bg-slate-950/30 p-4">
+    <div className="flex items-center justify-between gap-3">
+      <p className="text-sm font-extrabold">Acompanhamento automático</p>
+      {activated ? <span className="inline-flex items-center gap-1.5 text-xs font-bold text-emerald-500"><CheckCircle2 size={15}/> Ativado</span>
+      : finished ? <span className="text-xs font-semibold text-amber-500">{statusLabel(order.status)}</span>
+      : <span className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-blue-400">
+          <span className="h-2 w-2 rounded-full bg-blue-400 motion-safe:animate-pulse"/>
+          {refreshing ? "Conferindo..." : "Atualização automática"}
+        </span>}
+    </div>
+    {review ? <div role="status" className="mt-3 rounded-lg border border-amber-400/30 bg-amber-400/10 p-3 text-xs text-amber-500">
+      <span className="font-bold">Pedido em análise.</span> O resultado precisa de conferência. Não gere outro Pix nem solicite outra ativação para o mesmo MAC.
+    </div> : null}
+    <div className="mt-4 space-y-3" aria-label="Etapas da ativação">
+      {steps.map((step, index) => {
+        const done = !review && (index === 0 || index <= phase);
+        const active = !review && !finished && index === phase + 1;
+        return <div key={index} className="flex items-start gap-3">
+          <div className={"flex h-8 w-8 shrink-0 items-center justify-center rounded-full border transition-colors " +
+            (done ? "border-emerald-500/40 bg-emerald-500/15 text-emerald-500"
+              : active ? "border-blue-400/40 bg-blue-400/15 text-blue-400"
+              : "border-border/70 bg-muted/30 text-muted-foreground")}>
+            {done ? <CheckCircle2 size={17}/> : active
+              ? <RefreshCw size={16} className="motion-safe:animate-spin"/>
+              : <Clock3 size={16}/>}
+          </div>
+          <div className="min-w-0 pt-0.5">
+            <p className={"text-xs font-bold " + (done ? "text-emerald-500" : active ? "text-foreground" : "text-muted-foreground")}>{step.title}</p>
+            <p className="mt-0.5 text-[11px] leading-relaxed text-muted-foreground">{step.detail}</p>
+          </div>
+        </div>;
+      })}
+    </div>
+    {activated && <div role="status" className="mt-4 rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-3 text-sm font-bold text-emerald-500">
+      <CheckCircle2 size={17} className="mr-1.5 inline"/> Sua licença foi confirmada como ativada.
+    </div>}
+    {hasError && !activated && <p role="status" className="mt-3 text-xs text-amber-500">
+      A consulta automática falhou agora. O pedido continua salvo e a próxima consulta tentará novamente.
+    </p>}
+    <p className="mt-4 text-[11px] leading-relaxed text-muted-foreground">
+      A tela consulta o pedido automaticamente enquanto estiver aberta. Você não precisa atualizar a página, pagar de novo ou reenviar o MAC.
+    </p>
+  </div>;
 }
 function AppActivationPage() {
   const cache = useQueryClient();
@@ -73,7 +134,51 @@ function AppActivationPage() {
   const [reviewing, setReviewing] = useState(false);
   const [purchaseId,setPurchaseId]=useState("");
   const [pixOrder,setPixOrder]=useState<PixOrder|null>(null);
-  const [checkingPix,setCheckingPix]=useState(false);
+  const lastNotifiedStatus = useRef("");
+  const orderId = pixOrder?.orderId ?? "";
+  const {data: livePixStatus, isFetching: checkingPix, isError: pixPollingError, refetch: refetchPixStatus} = useQuery({
+    queryKey: ["activation-pix-auto-status", orderId],
+    queryFn: () => edge<PixOrder>("/v1/pix/status?orderId=" + encodeURIComponent(orderId), undefined, PAYMENTS_API),
+    enabled: Boolean(selected && orderId),
+    staleTime: 0,
+    retry: false,
+    refetchOnWindowFocus: true,
+    refetchIntervalInBackground: false,
+    refetchInterval: (query) => {
+      const data = query.state.data;
+      const status = data?.status ?? pixOrder?.status;
+      if (["activated", "refunded", "cancelled", "incorrect", "failed"].includes(status ?? "")) return false;
+      if (status === "needs_review") return 30_000;
+      return ["submitted", "paid_pending_activation"].includes(status ?? "") ? 12_000 : 10_000;
+    },
+  });
+  useEffect(() => {
+    if (!livePixStatus || !orderId || livePixStatus.orderId !== orderId) return;
+    const signature = [orderId, livePixStatus.status, livePixStatus.supplierState ?? ""].join(":");
+    const previousStatus = pixOrder?.status;
+    const previousSupplier = pixOrder?.supplierState;
+    setPixOrder(current => {
+      if (!current || current.orderId !== livePixStatus.orderId) return current;
+      if (current.status === livePixStatus.status && current.supplierState === livePixStatus.supplierState) return current;
+      return {...current, ...livePixStatus, pix: livePixStatus.pix ?? current.pix,
+        qrImage: livePixStatus.qrImage ?? current.qrImage};
+    });
+    if (lastNotifiedStatus.current === signature) return;
+    lastNotifiedStatus.current = signature;
+    if (previousStatus === livePixStatus.status && previousSupplier === livePixStatus.supplierState) return;
+    if (livePixStatus.status === "activated") {
+      toast.success("Aplicativo ativado! O fornecedor confirmou a licença.");
+    } else if (livePixStatus.status === "submitted") {
+      toast.success("Pix confirmado. A solicitação foi recebida pelo fornecedor.");
+    } else if (livePixStatus.status === "paid_pending_activation") {
+      toast.success("Pix confirmado! Aguardando envio ao fornecedor.");
+    } else if (livePixStatus.status === "needs_review") {
+      toast.warning("Pedido em análise. Não gere outro Pix para o mesmo MAC.");
+    }
+    void cache.invalidateQueries({queryKey: ["activation-pix-orders"]});
+    void cache.invalidateQueries({queryKey: ["ativeapp-history"]});
+  }, [livePixStatus, orderId, pixOrder?.status, pixOrder?.supplierState, cache]);
+
   const { data: catalog, isLoading, error, refetch, isFetching } = useQuery({
     queryKey: ["ativeapp-catalog"],
     queryFn: () => edge<Catalog>("/v1/catalog"),
@@ -106,28 +211,21 @@ function AppActivationPage() {
       const data=await edge<PixOrder>("/v1/pix/create",{
         method:"POST",body:JSON.stringify({appId:selected.id,mac,requestId,acknowledged:true})
       },PAYMENTS_API);
+      lastNotifiedStatus.current = [data.orderId, data.status, data.supplierState ?? ""].join(":");
       setPixOrder(data);
-      toast.success("Pedido recebido. Confira o Pix antes de pagar.");
+      toast.success("Pix gerado. A verificação automática está ativa.");
     }catch(error){
       toast.error(error instanceof Error?error.message:"Não foi possível confirmar o Pix. Confira Meus pedidos antes de tentar novamente.");
     }finally{setSending(false);}
   }
   async function verifyPix() {
-    if(!pixOrder||checkingPix)return;
-    setCheckingPix(true);
-    try{
-      const data=await edge<PixOrder>("/v1/pix/status?orderId="+encodeURIComponent(pixOrder.orderId),undefined,PAYMENTS_API);
-      setPixOrder(previous=>({...previous,...data}));
-      if(["submitted","activated"].includes(data.status)){
-        toast.success("Pagamento identificado. Solicitação enviada para ativação.");
-        void cache.invalidateQueries({queryKey:["ativeapp-history"]});
-      }else if(data.status==="needs_review"){
-        toast.error("Pedido em análise. Não gere outro Pix para o mesmo MAC.");
-      }else{
-        toast.info("Ainda aguardando confirmação do pagamento.");
-      }
-    }catch(error){toast.error(error instanceof Error?error.message:"Não foi possível verificar o Pix.");}
-    finally{setCheckingPix(false);}
+    if (!pixOrder || checkingPix) return;
+    const result = await refetchPixStatus();
+    if (result.error) {
+      toast.error("Não foi possível consultar o pedido agora. A atualização automática continuará tentando.");
+    } else if (result.data?.status === pixOrder.status && result.data?.supplierState === pixOrder.supplierState) {
+      toast.info("Nenhuma mudança até agora. O acompanhamento automático continua ativo.");
+    }
   }
   return <div className="mx-auto max-w-7xl space-y-7 pb-16">
     <header className="relative overflow-hidden rounded-[28px] border border-blue-400/20 bg-gradient-to-br from-[#091427] via-[#102345] to-[#151d4d] px-6 py-8 text-white shadow-xl sm:px-9 sm:py-11">
@@ -260,7 +358,7 @@ function AppActivationPage() {
         <p className="mt-2 text-sm text-muted-foreground">Aplicativo: <strong className="text-foreground">{selected.name}</strong></p>
         <div className="mt-5 space-y-2">
           <label htmlFor="activation-mac" className="text-xs font-bold uppercase tracking-wider">MAC do dispositivo</label>
-          <Input id="activation-mac" placeholder="AA:BB:CC:DD:EE:FF" autoComplete="off" className="h-12 font-mono text-base tracking-wider" value={mac} onChange={e => { setMac(macFormat(e.target.value)); setReviewing(false); }}/>
+          <Input id="activation-mac" placeholder="AA:BB:CC:DD:EE:FF" autoComplete="off" className="h-12 font-mono text-base tracking-wider" value={mac} disabled={!!pixOrder} onChange={e => { setMac(macFormat(e.target.value)); setReviewing(false); }}/>
           <p className="text-xs text-muted-foreground">Informe somente o MAC exibido no aplicativo. Não é necessária Device KEY.</p>
         </div>
         <div className="mt-5 rounded-xl border border-amber-500/30 bg-amber-500/10 p-4 text-sm">
@@ -268,15 +366,16 @@ function AppActivationPage() {
           <p className="mt-1.5 text-xs leading-relaxed text-muted-foreground">Confira cuidadosamente o aplicativo e cada caractere do MAC. Não envie informações incorretas.</p>
         </div>
         <label className="mt-5 flex cursor-pointer items-start gap-3 text-sm">
-          <input type="checkbox" checked={ack} onChange={e => setAck(e.target.checked)} className="mt-1 h-4 w-4 accent-blue-500"/>
+          <input type="checkbox" checked={ack} disabled={!!pixOrder} onChange={e => setAck(e.target.checked)} className="mt-1 h-4 w-4 accent-blue-500"/>
           <span>Conferi o MAC e o aplicativo e estou ciente de que <strong>não haverá estorno por dados incorretos</strong>.</span>
         </label>
         {pixOrder && <div className="mt-5 space-y-3 rounded-2xl border border-blue-400/25 bg-blue-500/5 p-4">
           <p className="text-sm font-bold">Seu pedido — {statusLabel(pixOrder.status)}</p>
+          <PixLiveProgress order={pixOrder} refreshing={checkingPix} hasError={pixPollingError}/>
           <p className="text-xs text-muted-foreground">Valor: <strong>{money(pixOrder.amountCents)}</strong> • MAC: <code>{pixOrder.mac}</code></p>
-          {pixOrder.qrImage&&<img className="mx-auto h-48 w-48 bg-white p-2" alt="QR Code Pix da cobrança"
+          {pixOrder.status === "awaiting_payment" && pixOrder.qrImage&&<img className="mx-auto h-48 w-48 bg-white p-2" alt="QR Code Pix da cobrança"
             src={"data:image/png;base64,"+pixOrder.qrImage}/>}
-          {pixOrder.pix&&<div className="space-y-2">
+          {pixOrder.status === "awaiting_payment" && pixOrder.pix&&<div className="space-y-2">
             <label className="text-xs font-semibold">Pix Copia e Cola</label>
             <Input readOnly aria-label="Código Pix Copia e Cola" value={pixOrder.pix} className="font-mono text-xs"/>
             <Button type="button" variant="outline" className="w-full" onClick={()=>{
@@ -285,10 +384,12 @@ function AppActivationPage() {
                 .catch(()=>toast.error("Copie o código manualmente."));
             }}>Copiar Pix</Button>
           </div>}
-          <Button type="button" variant="outline" disabled={checkingPix}
-            onClick={()=>void verifyPix()} className="w-full gap-2"><RefreshCw size={16}/>
-            {checkingPix?"Conferindo...":"Verificar pagamento"}</Button>
-          <p className="text-xs text-amber-500">Não pague novamente se o pedido estiver em análise. A licença só é solicitada após confirmação do pagamento.</p>
+          {pixOrder.status !== "activated" && <Button type="button" variant="outline" disabled={checkingPix}
+            onClick={()=>void verifyPix()} className="w-full gap-2">
+            <RefreshCw size={16} className={checkingPix ? "motion-safe:animate-spin" : ""}/>
+            {checkingPix?"Conferindo automaticamente...":"Atualizar status agora (opcional)"}
+          </Button>}
+          <p className="text-xs text-amber-500">Não gere outro Pix para este pedido. A licença só é solicitada após confirmação do pagamento.</p>
         </div>}
         {reviewing && <div className="mt-4 rounded-xl border border-blue-400/30 bg-blue-400/5 p-3 text-xs">
           <p className="font-bold">Última conferência</p><p className="mt-1">App: {selected.name}</p><p>MAC: <span className="font-mono font-bold">{mac}</span></p><p>Preço: {money(selected.priceCents)}</p>
