@@ -63,7 +63,7 @@ export async function beginActivationBot(
   if (!Array.isArray(catalog.items) || !catalog.items.length) {
     return { text: "📱 <b>Ativação de Aplicativos</b>\n\n"
       + (search ? "Nenhum aplicativo encontrado para <b>" + esc(search) + "</b>.\n\n"
-        : "O catálogo ainda não está disponível. O administrador precisa configurar a API Key do fornecedor na Cloudflare.\n\n")
+        : "Nenhum aplicativo com preço definido pelo administrador está disponível. Consulte novamente quando mais aplicativos forem liberados.\n\n")
       + '🌐 <a href="' + SITE + '">Abrir a central no site</a>\n\n'
       + "⚠️ Sempre confira o MAC. Não há estorno por dados incorretos." };
   }
