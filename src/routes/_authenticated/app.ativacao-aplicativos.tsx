@@ -109,7 +109,7 @@ function AppActivationPage() {
       setPixOrder(data);
       toast.success("Pedido recebido. Confira o Pix antes de pagar.");
     }catch(error){
-      toast.error(error instanceof Error?error.message+" Nenhuma cobrança foi gerada.":"Pix indisponível no momento. Nenhuma cobrança foi gerada.");
+      toast.error(error instanceof Error?error.message:"Não foi possível confirmar o Pix. Confira Meus pedidos antes de tentar novamente.");
     }finally{setSending(false);}
   }
   async function verifyPix() {
