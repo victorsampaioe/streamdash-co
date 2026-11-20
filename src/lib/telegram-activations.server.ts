@@ -7,6 +7,7 @@
  * until the independent auth service has been migrated to Cloudflare.
  */
 import { resolveUserByChatId, esc } from "@/lib/telegram-commands.server";
+import { normalizeActivationMac } from "@/lib/activation-mac";
 
 const EDGE = "https://streammonitor-app-activations.victorsampaio133.workers.dev";
 const SITE = "https://streammonitor.site/app/ativacao-aplicativos";
@@ -19,12 +20,7 @@ type CatalogReply = { items: App[]; page: number; hasMore: boolean; configured: 
 const price = (n: number | null) => Number.isSafeInteger(n) && n! > 0
   ? (n! / 100).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })
   : "A definir";
-function cleanMac(v: string): string | null {
-  const hex = v.trim().toUpperCase().replace(/[:-]/g, "");
-  if (!/^[0-9A-F]{12}$/.test(hex)) return null;
-  const formatted = (hex.match(/.{2}/g) || []).join(":");
-  return MAC.test(formatted) ? formatted : null;
-}
+const cleanMac = normalizeActivationMac;
 async function requestJSON(path: string): Promise<any> {
   const r = await fetch(EDGE + path, {
     headers: { Accept: "application/json" },
