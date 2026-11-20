@@ -56,6 +56,7 @@ import { Route as AuthenticatedAppAiIntegrationRouteImport } from './routes/_aut
 import { Route as AuthenticatedAppAjudaRouteImport } from './routes/_authenticated/app.ajuda'
 import { Route as AuthenticatedAppAlertsRouteImport } from './routes/_authenticated/app.alerts'
 import { Route as AuthenticatedAppApiIntegrationsRouteImport } from './routes/_authenticated/app.api-integrations'
+import { Route as AuthenticatedAppAtivacaoAplicativosRouteImport } from './routes/_authenticated/app.ativacao-aplicativos'
 import { Route as AuthenticatedAppAuditoriaRouteImport } from './routes/_authenticated/app.auditoria'
 import { Route as AuthenticatedAppCentralRouteImport } from './routes/_authenticated/app.central'
 import { Route as AuthenticatedAppCentralClientesRouteImport } from './routes/_authenticated/app.central-clientes'
@@ -88,6 +89,7 @@ import { Route as AuthenticatedAppAdminAndroidPlayRouteImport } from './routes/_
 import { Route as AuthenticatedAppAdminStreamPlayVersionsRouteImport } from './routes/_authenticated/app.admin.stream-play-versions'
 import { Route as AuthenticatedAppAdminTelegramGuardRouteImport } from './routes/_authenticated/app.admin.telegram-guard'
 import { Route as AuthenticatedAppAdminAplicativosParceirosRouteImport } from './routes/_authenticated/app.admin_.aplicativos-parceiros'
+import { Route as AuthenticatedAppAdminAtivacoesRouteImport } from './routes/_authenticated/app.admin_.ativacoes'
 import { Route as AuthenticatedAppAdminCoreLogsRouteImport } from './routes/_authenticated/app.admin_.core-logs'
 import { Route as AuthenticatedAppAdminModelosVideoRouteImport } from './routes/_authenticated/app.admin_.modelos-video'
 import { Route as AuthenticatedAppAdminObservabilidadeRouteImport } from './routes/_authenticated/app.admin_.observabilidade'
@@ -386,6 +388,12 @@ const AuthenticatedAppApiIntegrationsRoute =
     path: '/api-integrations',
     getParentRoute: () => AuthenticatedAppRoute,
   } as any)
+const AuthenticatedAppAtivacaoAplicativosRoute =
+  AuthenticatedAppAtivacaoAplicativosRouteImport.update({
+    id: '/ativacao-aplicativos',
+    path: '/ativacao-aplicativos',
+    getParentRoute: () => AuthenticatedAppRoute,
+  } as any)
 const AuthenticatedAppAuditoriaRoute =
   AuthenticatedAppAuditoriaRouteImport.update({
     id: '/auditoria',
@@ -562,6 +570,12 @@ const AuthenticatedAppAdminAplicativosParceirosRoute =
   AuthenticatedAppAdminAplicativosParceirosRouteImport.update({
     id: '/admin_/aplicativos-parceiros',
     path: '/admin/aplicativos-parceiros',
+    getParentRoute: () => AuthenticatedAppRoute,
+  } as any)
+const AuthenticatedAppAdminAtivacoesRoute =
+  AuthenticatedAppAdminAtivacoesRouteImport.update({
+    id: '/admin_/ativacoes',
+    path: '/admin/ativacoes',
     getParentRoute: () => AuthenticatedAppRoute,
   } as any)
 const AuthenticatedAppAdminCoreLogsRoute =
@@ -899,6 +913,7 @@ export interface FileRoutesByFullPath {
   '/app/ajuda': typeof AuthenticatedAppAjudaRoute
   '/app/alerts': typeof AuthenticatedAppAlertsRoute
   '/app/api-integrations': typeof AuthenticatedAppApiIntegrationsRoute
+  '/app/ativacao-aplicativos': typeof AuthenticatedAppAtivacaoAplicativosRoute
   '/app/auditoria': typeof AuthenticatedAppAuditoriaRoute
   '/app/central': typeof AuthenticatedAppCentralRoute
   '/app/central-clientes': typeof AuthenticatedAppCentralClientesRoute
@@ -932,6 +947,7 @@ export interface FileRoutesByFullPath {
   '/app/admin/stream-play-versions': typeof AuthenticatedAppAdminStreamPlayVersionsRoute
   '/app/admin/telegram-guard': typeof AuthenticatedAppAdminTelegramGuardRoute
   '/app/admin/aplicativos-parceiros': typeof AuthenticatedAppAdminAplicativosParceirosRoute
+  '/app/admin/ativacoes': typeof AuthenticatedAppAdminAtivacoesRoute
   '/app/admin/core-logs': typeof AuthenticatedAppAdminCoreLogsRoute
   '/app/admin/modelos-video': typeof AuthenticatedAppAdminModelosVideoRoute
   '/app/admin/observabilidade': typeof AuthenticatedAppAdminObservabilidadeRoute
@@ -1030,6 +1046,7 @@ export interface FileRoutesByTo {
   '/app/ajuda': typeof AuthenticatedAppAjudaRoute
   '/app/alerts': typeof AuthenticatedAppAlertsRoute
   '/app/api-integrations': typeof AuthenticatedAppApiIntegrationsRoute
+  '/app/ativacao-aplicativos': typeof AuthenticatedAppAtivacaoAplicativosRoute
   '/app/auditoria': typeof AuthenticatedAppAuditoriaRoute
   '/app/central': typeof AuthenticatedAppCentralRoute
   '/app/central-clientes': typeof AuthenticatedAppCentralClientesRoute
@@ -1063,6 +1080,7 @@ export interface FileRoutesByTo {
   '/app/admin/stream-play-versions': typeof AuthenticatedAppAdminStreamPlayVersionsRoute
   '/app/admin/telegram-guard': typeof AuthenticatedAppAdminTelegramGuardRoute
   '/app/admin/aplicativos-parceiros': typeof AuthenticatedAppAdminAplicativosParceirosRoute
+  '/app/admin/ativacoes': typeof AuthenticatedAppAdminAtivacoesRoute
   '/app/admin/core-logs': typeof AuthenticatedAppAdminCoreLogsRoute
   '/app/admin/modelos-video': typeof AuthenticatedAppAdminModelosVideoRoute
   '/app/admin/observabilidade': typeof AuthenticatedAppAdminObservabilidadeRoute
@@ -1164,6 +1182,7 @@ export interface FileRoutesById {
   '/_authenticated/app/ajuda': typeof AuthenticatedAppAjudaRoute
   '/_authenticated/app/alerts': typeof AuthenticatedAppAlertsRoute
   '/_authenticated/app/api-integrations': typeof AuthenticatedAppApiIntegrationsRoute
+  '/_authenticated/app/ativacao-aplicativos': typeof AuthenticatedAppAtivacaoAplicativosRoute
   '/_authenticated/app/auditoria': typeof AuthenticatedAppAuditoriaRoute
   '/_authenticated/app/central': typeof AuthenticatedAppCentralRoute
   '/_authenticated/app/central-clientes': typeof AuthenticatedAppCentralClientesRoute
@@ -1197,6 +1216,7 @@ export interface FileRoutesById {
   '/_authenticated/app/admin/stream-play-versions': typeof AuthenticatedAppAdminStreamPlayVersionsRoute
   '/_authenticated/app/admin/telegram-guard': typeof AuthenticatedAppAdminTelegramGuardRoute
   '/_authenticated/app/admin_/aplicativos-parceiros': typeof AuthenticatedAppAdminAplicativosParceirosRoute
+  '/_authenticated/app/admin_/ativacoes': typeof AuthenticatedAppAdminAtivacoesRoute
   '/_authenticated/app/admin_/core-logs': typeof AuthenticatedAppAdminCoreLogsRoute
   '/_authenticated/app/admin_/modelos-video': typeof AuthenticatedAppAdminModelosVideoRoute
   '/_authenticated/app/admin_/observabilidade': typeof AuthenticatedAppAdminObservabilidadeRoute
@@ -1298,6 +1318,7 @@ export interface FileRouteTypes {
     | '/app/ajuda'
     | '/app/alerts'
     | '/app/api-integrations'
+    | '/app/ativacao-aplicativos'
     | '/app/auditoria'
     | '/app/central'
     | '/app/central-clientes'
@@ -1331,6 +1352,7 @@ export interface FileRouteTypes {
     | '/app/admin/stream-play-versions'
     | '/app/admin/telegram-guard'
     | '/app/admin/aplicativos-parceiros'
+    | '/app/admin/ativacoes'
     | '/app/admin/core-logs'
     | '/app/admin/modelos-video'
     | '/app/admin/observabilidade'
@@ -1429,6 +1451,7 @@ export interface FileRouteTypes {
     | '/app/ajuda'
     | '/app/alerts'
     | '/app/api-integrations'
+    | '/app/ativacao-aplicativos'
     | '/app/auditoria'
     | '/app/central'
     | '/app/central-clientes'
@@ -1462,6 +1485,7 @@ export interface FileRouteTypes {
     | '/app/admin/stream-play-versions'
     | '/app/admin/telegram-guard'
     | '/app/admin/aplicativos-parceiros'
+    | '/app/admin/ativacoes'
     | '/app/admin/core-logs'
     | '/app/admin/modelos-video'
     | '/app/admin/observabilidade'
@@ -1562,6 +1586,7 @@ export interface FileRouteTypes {
     | '/_authenticated/app/ajuda'
     | '/_authenticated/app/alerts'
     | '/_authenticated/app/api-integrations'
+    | '/_authenticated/app/ativacao-aplicativos'
     | '/_authenticated/app/auditoria'
     | '/_authenticated/app/central'
     | '/_authenticated/app/central-clientes'
@@ -1595,6 +1620,7 @@ export interface FileRouteTypes {
     | '/_authenticated/app/admin/stream-play-versions'
     | '/_authenticated/app/admin/telegram-guard'
     | '/_authenticated/app/admin_/aplicativos-parceiros'
+    | '/_authenticated/app/admin_/ativacoes'
     | '/_authenticated/app/admin_/core-logs'
     | '/_authenticated/app/admin_/modelos-video'
     | '/_authenticated/app/admin_/observabilidade'
@@ -2063,6 +2089,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAppApiIntegrationsRouteImport
       parentRoute: typeof AuthenticatedAppRoute
     }
+    '/_authenticated/app/ativacao-aplicativos': {
+      id: '/_authenticated/app/ativacao-aplicativos'
+      path: '/ativacao-aplicativos'
+      fullPath: '/app/ativacao-aplicativos'
+      preLoaderRoute: typeof AuthenticatedAppAtivacaoAplicativosRouteImport
+      parentRoute: typeof AuthenticatedAppRoute
+    }
     '/_authenticated/app/auditoria': {
       id: '/_authenticated/app/auditoria'
       path: '/auditoria'
@@ -2285,6 +2318,13 @@ declare module '@tanstack/react-router' {
       path: '/admin/aplicativos-parceiros'
       fullPath: '/app/admin/aplicativos-parceiros'
       preLoaderRoute: typeof AuthenticatedAppAdminAplicativosParceirosRouteImport
+      parentRoute: typeof AuthenticatedAppRoute
+    }
+    '/_authenticated/app/admin_/ativacoes': {
+      id: '/_authenticated/app/admin_/ativacoes'
+      path: '/admin/ativacoes'
+      fullPath: '/app/admin/ativacoes'
+      preLoaderRoute: typeof AuthenticatedAppAdminAtivacoesRouteImport
       parentRoute: typeof AuthenticatedAppRoute
     }
     '/_authenticated/app/admin_/core-logs': {
@@ -2680,6 +2720,7 @@ interface AuthenticatedAppRouteChildren {
   AuthenticatedAppAjudaRoute: typeof AuthenticatedAppAjudaRoute
   AuthenticatedAppAlertsRoute: typeof AuthenticatedAppAlertsRoute
   AuthenticatedAppApiIntegrationsRoute: typeof AuthenticatedAppApiIntegrationsRoute
+  AuthenticatedAppAtivacaoAplicativosRoute: typeof AuthenticatedAppAtivacaoAplicativosRoute
   AuthenticatedAppAuditoriaRoute: typeof AuthenticatedAppAuditoriaRoute
   AuthenticatedAppCentralRoute: typeof AuthenticatedAppCentralRoute
   AuthenticatedAppCentralClientesRoute: typeof AuthenticatedAppCentralClientesRoute
@@ -2701,6 +2742,7 @@ interface AuthenticatedAppRouteChildren {
   AuthenticatedAppSubscriptionRoute: typeof AuthenticatedAppSubscriptionRoute
   AuthenticatedAppIndexRoute: typeof AuthenticatedAppIndexRoute
   AuthenticatedAppAdminAplicativosParceirosRoute: typeof AuthenticatedAppAdminAplicativosParceirosRoute
+  AuthenticatedAppAdminAtivacoesRoute: typeof AuthenticatedAppAdminAtivacoesRoute
   AuthenticatedAppAdminCoreLogsRoute: typeof AuthenticatedAppAdminCoreLogsRoute
   AuthenticatedAppAdminModelosVideoRoute: typeof AuthenticatedAppAdminModelosVideoRoute
   AuthenticatedAppAdminObservabilidadeRoute: typeof AuthenticatedAppAdminObservabilidadeRoute
@@ -2720,6 +2762,8 @@ const AuthenticatedAppRouteChildren: AuthenticatedAppRouteChildren = {
   AuthenticatedAppAjudaRoute: AuthenticatedAppAjudaRoute,
   AuthenticatedAppAlertsRoute: AuthenticatedAppAlertsRoute,
   AuthenticatedAppApiIntegrationsRoute: AuthenticatedAppApiIntegrationsRoute,
+  AuthenticatedAppAtivacaoAplicativosRoute:
+    AuthenticatedAppAtivacaoAplicativosRoute,
   AuthenticatedAppAuditoriaRoute: AuthenticatedAppAuditoriaRoute,
   AuthenticatedAppCentralRoute: AuthenticatedAppCentralRoute,
   AuthenticatedAppCentralClientesRoute: AuthenticatedAppCentralClientesRoute,
@@ -2743,6 +2787,7 @@ const AuthenticatedAppRouteChildren: AuthenticatedAppRouteChildren = {
   AuthenticatedAppIndexRoute: AuthenticatedAppIndexRoute,
   AuthenticatedAppAdminAplicativosParceirosRoute:
     AuthenticatedAppAdminAplicativosParceirosRoute,
+  AuthenticatedAppAdminAtivacoesRoute: AuthenticatedAppAdminAtivacoesRoute,
   AuthenticatedAppAdminCoreLogsRoute: AuthenticatedAppAdminCoreLogsRoute,
   AuthenticatedAppAdminModelosVideoRoute:
     AuthenticatedAppAdminModelosVideoRoute,

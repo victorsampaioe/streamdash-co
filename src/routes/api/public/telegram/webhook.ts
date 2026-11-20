@@ -74,7 +74,7 @@ async function sendPixCodeOnly(token:string,chatId:number|string,code:string) {
 }
 
 async function send(token: string, chatId: number | string, text: string, withBillingKeyboard=false,
-  optionalKeyboard?:{inline_keyboard:Array<Array<{text:string;callback_data?:string;url?:string}>>}) {
+  optionalKeyboard?:{inline_keyboard:Array<Array<{text:string;callback_data?:string;url?:string}>>}|{force_reply:true;selective:true;input_field_placeholder:string}) {
   const pixMatch=PIX_CODE_PATTERN.exec(text);
   if(pixMatch){
     const code=decodePixCode(pixMatch[1]);
@@ -278,6 +278,13 @@ export const Route = createFileRoute("/api/public/telegram/webhook")({
           return Response.json({ok:true});
         }
         if(msg?.chat?.type==="private" && originalText && !originalText.startsWith("/")){
+          const act=await import("@/lib/telegram-activations.server");
+          if(act.looksLikeMacAttempt(originalText)){
+            await send(token,chatId,act.activationLooseTextReply(originalText).text);
+            return Response.json({ok:true});
+          }
+        }
+        if(msg?.chat?.type==="private" && originalText && !originalText.startsWith("/")){
           try{
             const {finishPendingCatalogBotSearch}=await import("@/lib/telegram-catalog-search.server");
             const pending=await finishPendingCatalogBotSearch(chatId,originalText);
@@ -290,6 +297,14 @@ export const Route = createFileRoute("/api/public/telegram/webhook")({
             await send(token,chatId,"⚠️ Falha na pesquisa. Envie /conteudo novamente.");
             return Response.json({ok:true});
           }
+        }
+        // Loose private text (e.g. a MAC typed without replying) must never
+        // fall back to the link-code message.
+        if(msg?.chat?.type==="private" && originalText && !originalText.startsWith("/")){
+          const {activationLooseTextReply}=await import("@/lib/telegram-activations.server");
+          const loose=activationLooseTextReply(originalText);
+          await send(token,chatId,loose.text);
+          return Response.json({ok:true});
         }
         const { handleTelegramCommand, COMMAND_HELP } = await import("@/lib/telegram-commands.server");
         let reply: string | null = null;

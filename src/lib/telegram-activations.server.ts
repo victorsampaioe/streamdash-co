@@ -15,7 +15,24 @@ const ID = /^[A-Za-z0-9_-]{5,90}$/;
 const MAC = /^([0-9A-F]{2}:){5}[0-9A-F]{2}$/;
 type App = { id: string; name: string; module: string | null; priceCents: number | null };
 type Keyboard = { inline_keyboard: Array<Array<{ text: string; callback_data?: string; url?: string }>> };
-export type ActivationBotReply = { text: string; keyboard?: Keyboard };
+type ForceReply = { force_reply: true; selective: true; input_field_placeholder: string };
+export type ActivationBotReply = { text: string; keyboard?: Keyboard | ForceReply };
+export const MAC_FORCE_REPLY: ForceReply = { force_reply: true, selective: true, input_field_placeholder: "Informe o MAC: AA:BB:CC:DD:EE:FF" };
+/** Text that the user probably meant as a MAC (6 pairs or 12 chars), valid or not. */
+export function looksLikeMacAttempt(text: string): boolean {
+  const t = text.trim();
+  return t.length <= 32 && (/^([0-9A-Za-z]{2}[:\-\s.]?){5}[0-9A-Za-z]{2}$/.test(t));
+}
+/** Guidance for loose text outside the reply flow. Never returns the link code. */
+export function activationLooseTextReply(text: string): ActivationBotReply {
+  if (looksLikeMacAttempt(text)) {
+    const valid = normalizeActivationMac(text);
+    return { text: (valid ? "📺 Recebi um MAC, mas ele não está vinculado a nenhum aplicativo.\n\n"
+        : "⚠️ <b>MAC inválido.</b> O MAC aceita apenas números <b>0-9</b> e letras <b>A-F</b> (12 caracteres). Ex.: <code>24:FC:E5:0B:03:36</code>.\n\n")
+      + "Para ativar: envie /ativacaoAplicativo, toque no aplicativo e <b>responda à mensagem do aplicativo</b> com o MAC." };
+  }
+  return { text: "ℹ️ Não entendi esta mensagem.\n\nPara ativar um aplicativo envie /ativacaoAplicativo e responda à mensagem do aplicativo com o MAC. Para ver os comandos, envie /ajuda." };
+}
 type CatalogReply = { items: App[]; page: number; hasMore: boolean; configured: boolean; live: boolean };
 const price = (n: number | null) => Number.isSafeInteger(n) && n! > 0
   ? (n! / 100).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })
@@ -108,6 +125,7 @@ export async function activationBotCallback(chatId: string | number, data: strin
         + "↩️ <b>Responda a ESTA mensagem apenas com o MAC do dispositivo.</b>\n"
         + "Exemplo: <code>24:FC:E5:0B:03:36</code>\n\n"
         + "APP-ID: " + esc(a.id),
+      keyboard: MAC_FORCE_REPLY,
     };
   }
   const confirm = /^aa:confirm:([A-Za-z0-9_-]{5,45})$/.exec(data);
@@ -142,7 +160,7 @@ export async function reviewActivationMacReply(
   const app = await appById(match[1]);
   if (!app) return { text: "⚠️ Aplicativo inválido. Envie /ativacaoAplicativo para escolher novamente." };
   const mac = cleanMac(macText);
-  if (!mac) return { text: "⚠️ <b>MAC inválido.</b>\n\nResponda novamente à mensagem do aplicativo com 12 caracteres hexadecimais. Ex.: <code>24:FC:E5:0B:03:36</code>." };
+  if (!mac) return { text: "⚠️ <b>MAC inválido.</b>\n\nO MAC aceita apenas números 0-9 e letras A-F (12 caracteres). Envie /ativacaoAplicativo, escolha o aplicativo e responda à mensagem dele. Ex.: <code>24:FC:E5:0B:03:36</code>." };
   const row = app.id.length <= 45 ? [{ text: "✅ Conferi o MAC", callback_data: "aa:confirm:" + app.id }] : [];
   return {
     text: "🔍 <b>Confira antes de ativar</b>\n\n"
