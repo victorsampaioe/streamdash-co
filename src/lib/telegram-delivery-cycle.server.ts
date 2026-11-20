@@ -19,6 +19,14 @@ export type TelegramDispatchResult={
  */
 export async function runTelegramDeliveryCycle():Promise<TelegramDispatchResult|{skipped:true;reason:string;lock:string}> {
   return withCycleLock("cron-dns-alerts",55,async()=>{
+    // One-time launch: enqueue eligible Telegram channels without requiring an
+    // active subscription. Unique campaign keys prevent duplicate messages.
+    await Promise.resolve().then(async () => {
+      const { enqueueAppActivationLaunchOnce } = await import("./app-activation-launch-announcement.server");
+      return enqueueAppActivationLaunchOnce();
+    }).catch(e => {
+      console.error("[telegram-core] activation launch", e instanceof Error ? e.name : "error");
+    });
     const offline=await Promise.resolve().then(()=>retryConfirmedDnsAlerts(5))
       .catch(e=>{console.error("[telegram-core] dns_offline",e instanceof Error?e.name:"error");return {attempted:0,failed:1};});
     const online=await Promise.resolve().then(()=>retryRecoveredDnsAlerts(5))
