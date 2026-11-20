@@ -1,4 +1,9 @@
-/** One-day, owner-scoped annual offer. Server-side enforcement only. */
+/**
+ * Flash promotion for the Stream Monitor annual subscription.
+ * Campaign status and date are checked on every request in the database.
+ * This promotion is global, for active and expired accounts, resellers and clients.
+ * Other resellers' saved prices remain untouched.
+ */
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 
 const ADMIN_OWNER_ID = "ce0adb32-7f35-42cb-9605-539d0ef2e2dd";
@@ -10,17 +15,7 @@ export type AnnualPromotion = {
   endsAt: string;
 };
 
-export async function getAdminAnnualPromo(userId: string): Promise<AnnualPromotion | null> {
-  if (!userId) return null;
-  // Only the administrator's actual tree; never trust a client-supplied owner.
-  const { data: tree, error: treeError } = await supabaseAdmin
-    .from("reseller_tree")
-    .select("owner_id")
-    .eq("user_id", userId)
-    .maybeSingle();
-  if (treeError) throw new Error("Não foi possível verificar a elegibilidade da promoção.");
-  if (tree?.owner_id !== ADMIN_OWNER_ID) return null;
-
+export async function getActiveAnnualPromo(): Promise<AnnualPromotion | null> {
   const now = new Date().toISOString();
   const { data: campaign, error } = await (supabaseAdmin as any)
     .from("promo_campaigns")
@@ -35,7 +30,7 @@ export async function getAdminAnnualPromo(userId: string): Promise<AnnualPromoti
   if (error) throw new Error("Não foi possível validar a promoção anual.");
   if (!campaign) return null;
   return {
-    campaignKey: campaign.campaign_key,
+    campaignKey: String(campaign.campaign_key),
     priceCents: Number(campaign.promo_price_cents),
     endsAt: String(campaign.ends_at),
   };
