@@ -211,6 +211,62 @@ export default {
     try {
       if (url.pathname.startsWith("/v1/admin/")) {
         if (!(await verifyAdminRole(request,userId))) return respond({ error: "Apenas administradores podem alterar preços." },403,origin);
+        if (request.method === "GET" && url.pathname === "/v1/admin/flow-check") {
+          // Readiness dashboard: no payment, activation, supplier or secret write.
+          const stats = await env.APP_DB.prepare(
+            "SELECT COUNT(*) AS apps,COUNT(*) FILTER (WHERE is_active=1 AND sale_price_cents>=100) AS listed," +
+            "COUNT(logo_url) AS logos FROM app_catalog"
+          ).first();
+          const activeFlags = await getConfig(env.APP_DB);
+          const current = {
+            catalog: (stats?.listed || 0) > 0 ? "ready" : "blocked",
+            macReview: "preview",
+            pix: "blocked",
+            reconciliation: "blocked",
+            supplierActivation: "blocked",
+            telegram: "preview",
+            notification: "blocked",
+          };
+          let financial = { databaseConnected: false, providerConnected: false,
+            webhookRegistered: false, accountAuthorized: false,
+            environmentMatched: false, orderCount: null, eventCount: null,
+            lastProbeAt: null, paymentEnabled: false };
+          if (env.PAYMENTS_DB) {
+            const flags = await env.PAYMENTS_DB.prepare(
+              "SELECT key,value FROM merchant_config WHERE key IN (" +
+              "'provider_account_http_status','provider_webhook_list_http_status','provider_webhook_url_present'," +
+              "'provider_webhook_enabled','provider_key_env_detected','provider_checked_at_ms','merchant_authorized'," +
+              "'merchant_verified','environment','payment_creation_enabled')"
+            ).all();
+            const config = Object.fromEntries((flags.results || []).map(r => [r.key, r.value]));
+            const counts = await env.PAYMENTS_DB.prepare(
+              "SELECT (SELECT COUNT(*) FROM pix_orders) AS orders," +
+              "(SELECT COUNT(*) FROM pix_webhook_events) AS events"
+            ).first();
+            financial = {
+              databaseConnected: true,
+              providerConnected: config.provider_account_http_status === "200" &&
+                config.provider_webhook_list_http_status === "200",
+              webhookRegistered: config.provider_webhook_url_present === "true" &&
+                config.provider_webhook_enabled === "true",
+              accountAuthorized: config.merchant_authorized === "true" &&
+                config.merchant_verified === "true",
+              environmentMatched: !!config.environment &&
+                config.environment === config.provider_key_env_detected,
+              orderCount: counts?.orders ?? 0,
+              eventCount: counts?.events ?? 0,
+              lastProbeAt: config.provider_checked_at_ms ? Number(config.provider_checked_at_ms) : null,
+              paymentEnabled: config.payment_creation_enabled === "true",
+            };
+          }
+          return respond({
+            steps: current,
+            catalog: {total: stats?.apps || 0, published: stats?.listed || 0, logos: stats?.logos || 0},
+            financial, supplierLiveEnabled: activeFlags.live_activations_enabled === true,
+            pricesApproved: activeFlags.sale_prices_approved === true,
+            dryRunOnly: true,
+          }, 200, origin);
+        }
         if (request.method === "GET" && url.pathname === "/v1/admin/catalog") {
           const rows = await env.APP_DB.prepare(
             "SELECT app_id AS id,name,module,provider_cost_cents AS providerValue,provider_store_price_cents AS storePriceCents, " +
