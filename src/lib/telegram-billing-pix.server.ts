@@ -8,6 +8,7 @@ import { PLANS, CREDIT_PACKS, effectivePriceCents, formatBRL } from "./payments"
 import { getBillingState } from "./telegram-billing.server";
 import { createMpPixCharge, getMpToken } from "./mercadopago.server";
 import { withCycleLock } from "./job-lock.server";
+import { getActiveAnnualPromo } from "./annual-promo.server";
 
 type PixOutcome =
   | { type:"pix";code:string;expiresAt:string;amountCents:number;discountCents:number;planName:string }
@@ -15,11 +16,11 @@ type PixOutcome =
   | { type:"wallet" }
   | { type:"retry" };
 
-async function buildPix(userId:string, requestedPackage?:string):Promise<PixOutcome> {
+async function buildPix(userId:string, requestedPackage?:string, requestedPlan?: "yearly"):Promise<PixOutcome> {
   const { wallet,subscription } = await getBillingState(userId);
   const hasPaidPlan=!!subscription && ["monthly","quarterly","yearly"].includes(subscription.plan);
   // Present package selection before creating any Mercado Pago charge.
-  if(wallet!==null && !hasPaidPlan && !requestedPackage)return {type:"wallet"};
+  if(wallet!==null && !hasPaidPlan && !requestedPackage && !requestedPlan)return {type:"wallet"};
   const packageId=requestedPackage && /^credits_(10|30|50)$/.test(requestedPackage)
     ? requestedPackage : null;
   if(requestedPackage && (!packageId || wallet===null)){
@@ -29,19 +30,23 @@ async function buildPix(userId:string, requestedPackage?:string):Promise<PixOutc
   // This only prepares a Mercado Pago charge for the account that owns
   // the linked private Telegram chat; it never changes admin privileges.
   // The actual subscription remains activated only after provider approval.
-  const selectedPlan=packageId ?? (hasPaidPlan && subscription ? subscription.plan : "monthly");
+  const selectedPlan=packageId ?? requestedPlan ?? (hasPaidPlan && subscription ? subscription.plan : "monthly");
+  const annualPromo = selectedPlan === "yearly" ? await getActiveAnnualPromo() : null;
+  if (requestedPlan === "yearly" && !annualPromo) throw new Error("A promoção anual de R$ 150 terminou. Confira os planos no painel.");
   const plan=PLANS.find(p=>p.id===selectedPlan) || CREDIT_PACKS.find(p=>p.id===selectedPlan);
   if(!plan)throw new Error("Plano ou pacote não configurado.");
   // Match the existing website's published credit-pack calculation.
   const amountCents=packageId
     ? (plan.credits??0) * ((plan.credits??0)>=50 ? 500 : 600)
-    : effectivePriceCents(plan);
+    : annualPromo?.priceCents ?? effectivePriceCents(plan);
   const discountEligible=!packageId;
-  const expiresAt=new Date(Date.now()+30*60*1000).toISOString();
+  const expiresAt=new Date(Math.min(Date.now()+30*60*1000,
+    annualPromo ? new Date(annualPromo.endsAt).getTime() : Number.POSITIVE_INFINITY)).toISOString();
 
   let {data:pending,error:findError}=await supabaseAdmin.from("payments")
     .select("id,amount_cents,gross_amount_cents,referral_discount_cents,expires_at,pix_copy_paste,pix_qr_code,status")
     .eq("user_id",userId).eq("status","pending").eq("payment_type","subscription").eq("plan",selectedPlan)
+    .eq(packageId ? "amount_cents" : "gross_amount_cents",amountCents)
     .gt("expires_at",new Date().toISOString()).order("created_at",{ascending:false}).limit(1).maybeSingle();
   if(findError)throw new Error("Não foi possível consultar cobranças pendentes.");
   if(pending?.pix_copy_paste||pending?.pix_qr_code){
@@ -105,10 +110,10 @@ async function buildPix(userId:string, requestedPackage?:string):Promise<PixOutc
     discountCents:pending.referral_discount_cents??0,expiresAt:String(pending.expires_at)};
 }
 
-export async function generateTelegramPix(userId:string, packageAmount?:number):Promise<string> {
+export async function generateTelegramPix(userId:string, packageAmount?:number, annualPromoRequested=false):Promise<string> {
   if(!/^[0-9a-f-]{36}$/i.test(userId))throw new Error("Usuário inválido.");
   const pack = packageAmount == null ? undefined : "credits_" + packageAmount;
-  const result=await withCycleLock(`tg-pix-${userId}`,60,()=>buildPix(userId,pack));
+  const result=await withCycleLock(`tg-pix-${userId}`,60,()=>buildPix(userId,pack,annualPromoRequested ? "yearly" : undefined));
   if("skipped" in result)return "⏳ Já estamos gerando seu Pix. Tente /pix novamente em alguns segundos.";
   if(result.type==="wallet"){
     const small=CREDIT_PACKS.filter(p=>[10,30,50].includes(p.credits??0));
@@ -117,6 +122,7 @@ export async function generateTelegramPix(userId:string, packageAmount?:number):
       `Sua revenda utiliza créditos sem vencimento mensal.\n`+
       `Escolha um pacote para gerar o Pix:\n\n${prices}\n\n`+
       `Outras quantidades devem ser consultadas diretamente no painel.\n`+
+      `🔥 Promoção do anual: use /pix anual (somente até 23h59 de 19/11).\n`+
       `Também é possível pagar em https://streammonitor.site/app/subscription`;
   }
   if(result.type==="credited")return "✅ <b>Renovação confirmada!</b>\n\nSeu saldo de indicações cobriu integralmente a assinatura. Consulte /fatura.";
