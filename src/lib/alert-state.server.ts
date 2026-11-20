@@ -88,7 +88,7 @@ export async function dispatchAlerts(
   if (!toNotify.length) return { notified: 0, resolved: resolvedKinds.length };
 
   // Histórico continua individual (usado no painel).
-  await supabaseAdmin.from("iptv_alerts").insert(
+  const { data: recorded, error: recordError } = await supabaseAdmin.from("iptv_alerts").insert(
     toNotify.map((c) => ({
       server_id: serverId,
       kind: c.kind,
@@ -96,7 +96,10 @@ export async function dispatchAlerts(
       title: c.title,
       detail: c.detail ?? null,
     })),
-  );
+  ).select("id");
+  if (recordError || !recorded?.length) {
+    throw new Error("iptv_alert_history_write_failed");
+  }
 
   // Uma única mensagem consolidada por servidor.
   try {
@@ -104,9 +107,13 @@ export async function dispatchAlerts(
     await notifyServerIptvAlerts(
       serverId,
       toNotify.map((c) => ({ kind: c.kind, title: c.title, detail: c.detail ?? "", severity: c.severity })),
+      recorded.map(r => r.id).sort().join(":"),
     );
-  } catch {
-    /* notificação é best-effort */
+  } catch (error) {
+    // The incident is still in the dashboard; never claim Telegram delivery
+    // when a transport or queue write failed.
+    console.warn("[iptv-alert] failed to enqueue delivery",
+      error instanceof Error ? error.message.slice(0, 100) : "unknown");
   }
 
   return { notified: toNotify.length, resolved: resolvedKinds.length };
