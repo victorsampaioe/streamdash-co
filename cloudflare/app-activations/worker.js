@@ -422,7 +422,8 @@ export default {
           "SELECT key,value FROM merchant_config WHERE key IN ("+
           "'merchant_authorized','merchant_verified','payment_creation_enabled',"+
           "'activation_auto_delivery_enabled','environment','provider_key_env_detected',"+
-          "'provider_account_http_status','provider_webhook_enabled')"
+          "'provider_account_http_status','provider_webhook_enabled','pix_canary_enabled',"+
+          "'merchant_fingerprint')"
         ).all();
         const cfg=Object.fromEntries((financial.results||[]).map(x=>[x.key,x.value]));
         financialEnabled=cfg.merchant_authorized==="true"&&cfg.merchant_verified==="true"&&
@@ -430,8 +431,24 @@ export default {
           cfg.environment===cfg.provider_key_env_detected&&
           cfg.provider_account_http_status==="200"&&cfg.provider_webhook_enabled==="true";
       }
-      const enabled = settings.live_activations_enabled === true &&
+      const liveForEveryone=settings.live_activations_enabled === true &&
         settings.sale_prices_approved === true && !!env.ATIVEAPP_API_KEY && financialEnabled;
+      let canaryReady=false;
+      if(!liveForEveryone&&env.PAYMENTS_DB&&env.ATIVEAPP_API_KEY){
+        const rows=await env.PAYMENTS_DB.prepare(
+          "SELECT key,value FROM merchant_config WHERE key IN ("+
+          "'pix_canary_enabled','environment','provider_key_env_detected',"+
+          "'provider_account_http_status','provider_webhook_url_present',"+
+          "'provider_webhook_enabled','merchant_fingerprint')"
+        ).all();
+        const m=Object.fromEntries((rows.results||[]).map(x=>[x.key,x.value]));
+        canaryReady=m.pix_canary_enabled==="true"&&m.environment===m.provider_key_env_detected&&
+          m.provider_account_http_status==="200"&&m.provider_webhook_url_present==="true"&&
+          m.provider_webhook_enabled==="true"&&
+          /^[a-f0-9]{24}$/.test(m.merchant_fingerprint||"")&&
+          await verifyAdminRole(request,userId);
+      }
+      const enabled=liveForEveryone||canaryReady;
       if (request.method === "GET" && url.pathname === "/v1/catalog") {
         const sync = await refreshCatalog(env);
         const q = String(url.searchParams.get("q") || "").trim().slice(0,80).toLowerCase();
@@ -440,7 +457,7 @@ export default {
           "FROM app_catalog WHERE is_active=1 AND sale_price_cents>=100 AND lower(name) LIKE ? ORDER BY name LIMIT 300"
         ).bind("%" + q.replace(/[%_]/g, "") + "%").all();
         return respond({ items: rows.results || [], configured: sync.configured === true,
-          live: enabled, requiresPayment: true, supplierUnavailable: !!sync.supplierUnavailable }, 200, origin);
+          live: enabled, canary:canaryReady, requiresPayment: true, supplierUnavailable: !!sync.supplierUnavailable }, 200, origin);
       }
       if (request.method === "GET" && url.pathname === "/v1/history") {
         const rows = await env.APP_DB.prepare(
