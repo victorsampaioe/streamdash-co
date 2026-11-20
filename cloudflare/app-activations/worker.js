@@ -280,8 +280,8 @@ export default {
       const q = String(url.searchParams.get("q") || "").trim().slice(0, 65).toLowerCase().replace(/[%_]/g, "");
       const limit = 8;
       const rows = await env.APP_DB.prepare(
-        "SELECT app_id AS id,name,module,sale_price_cents AS priceCents " +
-        "FROM app_catalog WHERE is_active=1 AND sale_price_cents>=100 AND lower(name) LIKE ? ORDER BY name,app_id LIMIT ? OFFSET ?"
+        "SELECT app_id AS id,name,module,provider_store_price_cents AS priceCents " +
+        "FROM app_catalog WHERE is_active=1 AND provider_store_price_cents>=100 AND lower(name) LIKE ? ORDER BY name,app_id LIMIT ? OFFSET ?"
       ).bind("%" + q + "%", limit + 1, (page - 1) * limit).all();
       const matches = rows.results || [];
       return respond({ items: matches.slice(0,limit), page, hasMore: matches.length > limit,
@@ -292,8 +292,8 @@ export default {
       const id = url.searchParams.get("id") || "";
       if (!appIdOk(id)) return respond({ error: "invalid_app" }, 400, origin);
       const app = await env.APP_DB.prepare(
-        "SELECT app_id AS id,name,module,sale_price_cents AS priceCents FROM app_catalog " +
-        "WHERE app_id=? AND is_active=1 AND sale_price_cents>=100"
+        "SELECT app_id AS id,name,module,provider_store_price_cents AS priceCents FROM app_catalog " +
+        "WHERE app_id=? AND is_active=1 AND provider_store_price_cents>=100"
       ).bind(id).first();
       return app ? respond({ app, live: false }, 200, origin)
         : respond({ error: "not_found" }, 404, origin);
@@ -312,7 +312,7 @@ export default {
         if (request.method === "GET" && url.pathname === "/v1/admin/flow-check") {
           // Readiness dashboard: no payment, activation, supplier or secret write.
           const stats = await env.APP_DB.prepare(
-            "SELECT COUNT(*) AS apps,COUNT(*) FILTER (WHERE is_active=1 AND sale_price_cents>=100) AS listed," +
+            "SELECT COUNT(*) AS apps,COUNT(*) FILTER (WHERE is_active=1 AND provider_store_price_cents>=100) AS listed," +
             "COUNT(logo_url) AS logos FROM app_catalog"
           ).first();
           const activeFlags = await getConfig(env.APP_DB);
@@ -453,8 +453,8 @@ export default {
         const sync = await refreshCatalog(env);
         const q = String(url.searchParams.get("q") || "").trim().slice(0,80).toLowerCase();
         const rows = await env.APP_DB.prepare(
-          "SELECT app_id AS id,name,module,COALESCE(custom_logo_url,logo_url) AS logoUrl,sale_price_cents AS priceCents " +
-          "FROM app_catalog WHERE is_active=1 AND sale_price_cents>=100 AND lower(name) LIKE ? ORDER BY name LIMIT 300"
+          "SELECT app_id AS id,name,module,COALESCE(custom_logo_url,logo_url) AS logoUrl,provider_store_price_cents AS priceCents " +
+          "FROM app_catalog WHERE is_active=1 AND provider_store_price_cents>=100 AND lower(name) LIKE ? ORDER BY name LIMIT 300"
         ).bind("%" + q.replace(/[%_]/g, "") + "%").all();
         return respond({ items: rows.results || [], configured: sync.configured === true,
           live: enabled, canary:canaryReady, requiresPayment: true, supplierUnavailable: !!sync.supplierUnavailable }, 200, origin);
