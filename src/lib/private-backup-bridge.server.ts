@@ -18,7 +18,7 @@ export async function authorizePrivateBackup(request:Request){
 }
 
 export const PRIVATE_BACKUP_BUCKETS=new Set([
- "database_export_15_11_26","database_export_19_11_26","promo-arts"
+ "database_export_15_11_26","database_export_19_11_26","promo-arts","vitrine-video-modelos"
 ]);
 
 export async function listPrivateBackupObjects(){
