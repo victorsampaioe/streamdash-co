@@ -26,7 +26,7 @@ export const Route = createFileRoute("/_authenticated/app/ativacao-aplicativos")
 const API = "https://streammonitor-app-activations.victorsampaio133.workers.dev";
 const PAYMENTS_API = "https://pagamentos.streammonitor.site";
 type CatalogApp = { id: string; name: string; module: string | null; logoUrl: string | null; priceCents: number | null };
-type Catalog = { items: CatalogApp[]; configured: boolean; live: boolean; supplierUnavailable?: boolean };
+type Catalog = { items: CatalogApp[]; configured: boolean; live: boolean; canary?: boolean; supplierUnavailable?: boolean };
 type Item = { id: string; appName: string; mac: string; status: string; createdAt: number; providerId: string | null; expiresAt: string | null };
 type PixOrder = {orderId:string;appId:string;mac:string;amountCents:number;status:string;supplierState?:string;pix?:string|null;qrImage?:string|null;expiresAt?:string|null};
 const money = (cents: number | null) => cents != null && cents > 0
@@ -166,6 +166,14 @@ function AppActivationPage() {
         </p>
       </div>
     </div>
+    {catalog?.canary && <div className="rounded-2xl border border-amber-500/40 bg-amber-500/10 p-4 text-sm">
+      <p className="font-extrabold text-amber-500">Teste restrito ao administrador — Pix real</p>
+      <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
+        O checkout está aberto apenas para homologação. Gerar um Pix cria uma cobrança real na conta vinculada.
+        Não pague nem compartilhe o código antes de confirmar o recebedor, o valor e a entrega da licença.
+        Clientes comuns ainda não podem comprar.
+      </p>
+    </div>}
     {!live && <div className="flex flex-col gap-2 rounded-2xl border border-blue-400/20 bg-blue-400/5 p-4 sm:flex-row sm:items-center sm:justify-between">
       <div><p className="text-sm font-bold">Integração em preparação</p>
         <p className="mt-1 text-xs text-muted-foreground">O catálogo está disponível para conferir aplicativos e MAC. O Pix e a ativação automática estão em validação. Nenhum valor será cobrado nesta prévia.</p>
