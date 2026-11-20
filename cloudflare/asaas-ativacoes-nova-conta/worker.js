@@ -152,7 +152,7 @@ async function paymentCall(env, path, options={}){
 }
 async function merchantReady(env){
   if(!env.NEW_ASAAS_DB||!env.APP_DB||!env.ASAAS_ATIVACOES_NOVA_API_KEY||
-     !env.INTERNAL_FULFILL_SECRET||!env.ACTIVATION_SERVICE)return false;
+     !env.ACTIVATION_SERVICE)return false;
   const r=await env.NEW_ASAAS_DB.prepare(
     "SELECT key,value FROM merchant_config WHERE key IN ("+
     "'merchant_authorized','merchant_verified','payment_creation_enabled',"+
@@ -309,18 +309,17 @@ async function reconcilePaidPayment(env,orderId){
     " WHERE order_id=? AND status IN('awaiting_payment','confirmed','received') AND supplier_state='not_submitted'"
   ).bind(now,now,now,orderId).run();
   // Claim the one-and-only supplier submission before the external API call.
+  const nonce=crypto.randomUUID();
   const claim=await db.prepare(
-    "UPDATE pix_orders SET supplier_state='submitting',updated_at_ms=?"+
+    "UPDATE pix_orders SET supplier_state='submitting',fulfill_nonce=?,updated_at_ms=?"+
     " WHERE order_id=? AND status='paid_pending_activation' AND supplier_state='not_submitted'"
-  ).bind(Date.now(),orderId).run();
+  ).bind(nonce,Date.now(),orderId).run();
   if(!claim.meta?.changes)return;
   try{
-    const res=await env.ACTIVATION_SERVICE.fetch("https://internal/ internal".replace(" ","")+
-      "/paid-activation",{
+    const res=await env.ACTIVATION_SERVICE.fetch("https://private.internal/internal/paid-activation",{
       method:"POST",
-      headers:{"content-type":"application/json",
-        "x-internal-fulfill-secret":env.INTERNAL_FULFILL_SECRET},
-      body:JSON.stringify({orderId}),
+      headers:{"content-type":"application/json"},
+      body:JSON.stringify({orderId,nonce}),
     });
     const body=await res.json().catch(()=>null);
     if(res.status===202 && body?.accepted===true){
