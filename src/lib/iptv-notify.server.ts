@@ -26,22 +26,48 @@ export async function notifyServerIptvAlerts(serverId: string, items: IptvAlertI
   // Both versions share the exact same clear, HTML-escaped alert details.
   const message = formatIptvAlertMessage(displayServer, items, { observedAt, mode: "html" });
   const plainMessage = formatIptvAlertMessage(displayServer, items, { observedAt, mode: "plain" });
+  // Admin and reseller copies must use the SAME audited Telegram outbox.
+  // The old direct notifyAdmin() return status was ignored, so a missing
+  // ADMIN_TELEGRAM_CHAT_ID or a rejected Telegram response was invisible.
+  let adminMessage = message;
   try {
-    const { notifyAdmin } = await import("./admin-telegram.server");
-    const { data: prof } = await supabaseAdmin
-      .from("profiles").select("full_name, email").eq("id", server.owner_id).maybeSingle();
-    const adminMessage = formatIptvAlertMessage(displayServer, items, {
+    const { data: prof } = await supabaseAdmin.from("profiles")
+      .select("full_name, email").eq("id", server.owner_id).maybeSingle();
+    adminMessage = formatIptvAlertMessage(displayServer, items, {
       observedAt, mode: "html", admin: true,
       owner: { name: prof?.full_name, email: prof?.email },
     });
-    await notifyAdmin(adminMessage);
   } catch (error) {
-    console.warn("[iptv-alert] Admin notification unavailable", error instanceof Error ? error.name : "unknown");
+    console.warn("[iptv-alert] failed to format admin alert",
+      error instanceof Error ? error.name : "unknown");
   }
 
-  const { data: channels } = await supabaseAdmin
-    .from("alert_channels").select("*").eq("owner_id", server.owner_id).eq("enabled", true);
-  if (!channels?.length) return;
+  const { data: channels, error: channelsError } = await supabaseAdmin
+    .from("alert_channels").select("id,kind,target,owner_id")
+    .eq("owner_id", server.owner_id).eq("enabled", true);
+  if (channelsError) throw new Error("iptv_reseller_channels_unavailable");
+
+  // Admin recipients are identified by the official roles table, not by a
+  // hard-coded chat id. Each receives their own auditable delivery record.
+  const { data: admins, error: adminRolesError } = await supabaseAdmin
+    .from("user_roles").select("user_id").eq("role", "admin");
+  if (adminRolesError) throw new Error("iptv_admin_roles_unavailable");
+  const adminIds = [...new Set((admins ?? []).map(a => a.user_id))];
+  const { data: adminChannels, error: adminChannelError } = adminIds.length
+    ? await supabaseAdmin.from("alert_channels")
+        .select("id,kind,target,owner_id")
+        .in("owner_id", adminIds).eq("kind", "telegram").eq("enabled", true)
+    : { data: [], error: null };
+  if (adminChannelError) throw new Error("iptv_admin_channels_unavailable");
+
+  const recipients = new Map<string, { id: string; kind: string; target: string; admin: boolean }>();
+  for (const ch of channels ?? []) {
+    if (ch.target) recipients.set(ch.id, { id: ch.id, kind: ch.kind, target: ch.target, admin: false });
+  }
+  for (const ch of adminChannels ?? []) {
+    if (ch.target) recipients.set(ch.id, { id: ch.id, kind: ch.kind, target: ch.target, admin: true });
+  }
+  if (!recipients.size) return;
 
   // Only a verified Telegram API response may mark a message delivered.
   // Persisting the outbox before sending lets the Cloudflare Queue retry on
@@ -51,13 +77,14 @@ export async function notifyServerIptvAlerts(serverId: string, items: IptvAlertI
   ).digest("hex");
 
   let telegramQueued = 0;
-  const results = await Promise.allSettled(channels.map(async (ch: { id: string; kind: string; target: string }) => {
+  const results = await Promise.allSettled([...recipients.values()].map(async ch => {
     if (ch.kind === "telegram") {
       const digest = createHash("sha256")
         .update(["iptv", serverId, ch.id, eventFingerprint].join(":")).digest("hex");
       const { error } = await supabaseAdmin.from("telegram_outbox" as any).upsert({
         idempotency_key: "iptv:" + digest,
-        target: ch.target, text: message, source: "iptv_alert",
+        target: ch.target, text: ch.admin ? adminMessage : message,
+        source: ch.admin ? "iptv_admin_alert" : "iptv_alert",
         status: "pending", attempts: 0, max_attempts: 7,
         next_attempt_at: new Date().toISOString(),
         server_id: serverId, channel_id: ch.id,
