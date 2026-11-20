@@ -2737,6 +2737,39 @@ export type Database = {
           },
         ]
       }
+      dns_live_snapshot_pointers: {
+        Row: {
+          created_at: string
+          server_id: string
+          snapshot_id: string
+        }
+        Insert: {
+          created_at?: string
+          server_id: string
+          snapshot_id: string
+        }
+        Update: {
+          created_at?: string
+          server_id?: string
+          snapshot_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "dns_live_snapshot_pointers_server_id_fkey"
+            columns: ["server_id"]
+            isOneToOne: true
+            referencedRelation: "servers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "dns_live_snapshot_pointers_snapshot_id_fkey"
+            columns: ["snapshot_id"]
+            isOneToOne: true
+            referencedRelation: "dns_snapshots"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       dns_snapshots: {
         Row: {
           asn: string | null
