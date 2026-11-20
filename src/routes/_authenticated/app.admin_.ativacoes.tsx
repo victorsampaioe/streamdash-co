@@ -90,10 +90,10 @@ function AdminRow({app,save,isSaving}:{app:App;save:(app:App,edit:Edit)=>Promise
       <span className="text-sm font-medium tabular-nums">{rawCost(app.providerValue)}</span>
       <p className="text-[10px] text-muted-foreground">Valor bruto da API</p>
       {app.storePriceCents!==null&&<p className="mt-1 text-[11px] font-semibold text-blue-400" title="Preço informado no campo valor_da_loja do fornecedor">Loja: {toMoney(app.storePriceCents)}</p>}
-      <p className="mt-1 text-[10px] text-muted-foreground">{app.priceCents===null?"Usando preço da loja como padrão":"Preço próprio definido"}</p>
+      <p className="mt-1 text-[10px] text-emerald-400">Preço ativo: {toMoney(app.storePriceCents)}</p>
     </div>
     <div>
-      <label htmlFor={"price-"+app.id} className="mb-1 block text-[10px] font-bold uppercase tracking-wide text-muted-foreground lg:hidden">Seu preço de venda (R$)</label>
+      <label htmlFor={"price-"+app.id} className="mb-1 block text-[10px] font-bold uppercase tracking-wide text-muted-foreground lg:hidden">Valor manual arquivado (R$)</label>
       <div className="relative">
         <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-xs font-semibold text-muted-foreground">R$</span>
         <Input id={"price-"+app.id} type="text" inputMode="decimal"
@@ -176,14 +176,14 @@ function AppActivationAdmin(){
         </div>
         <h1 className="text-2xl font-black tracking-tight sm:text-4xl">Preços de ativação</h1>
         <p className="mt-3 max-w-2xl text-sm text-blue-100/70">
-          Defina os valores e personalize as fotos. Apenas aplicativos com preço cadastrado por você aparecem para clientes no site e no Telegram. Os dados ficam na Cloudflare.
+          Preços e fotos da API são importados pela Cloudflare. Os valores da loja são usados nas ativações; seus preços manuais antigos continuam registrados apenas como referência.
         </p>
       </div>
     </div>
     <div className="grid gap-3 sm:grid-cols-3">
       {[
         {label:"Aplicativos recebidos",value:String(apps.length),icon:Smartphone},
-        {label:"Preços personalizados",value:String(priced)+" / "+String(apps.length),icon:Wallet},
+        {label:"Preços manuais salvos",value:String(priced)+" / "+String(apps.length),icon:Wallet},
         {label:"Imagens disponíveis",value:String(query.data?.logoCount??0),icon:ImageIcon},
       ].map(metric=><Card key={metric.label} className="flex items-center gap-3 rounded-2xl border-border/60 p-4">
         <div className="rounded-xl bg-blue-500/10 p-3 text-blue-400"><metric.icon className="h-5 w-5"/></div>
@@ -257,13 +257,13 @@ function AppActivationAdmin(){
       <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-amber-500"/>
       <div><p className="text-sm font-bold">Confira seu preço antes de liberar as ativações</p>
         <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
-          O valor bruto do fornecedor pode representar créditos. O preço da loja é apenas referência; só o preço cadastrado por você libera a exibição no catálogo. O Pix e as ativações reais permanecem bloqueados até validação.
+          O valor bruto do fornecedor pode representar créditos. O preço da loja exibido abaixo é o valor de venda ao cliente no site e Telegram. O Pix só será liberado depois da verificação da integração financeira.
         </p></div>
     </div>
     <Card className="overflow-hidden rounded-2xl border-border/70">
       <div className="flex flex-col gap-4 border-b border-border/70 p-4 sm:flex-row sm:items-center sm:justify-between sm:p-5">
         <div><h2 className="text-lg font-extrabold">Catálogo e preços de venda</h2>
-          <p className="mt-1 text-xs text-muted-foreground">Cadastre o preço dos aplicativos que deseja disponibilizar. Sem preço próprio, o app fica oculto • Cloudflare D1</p></div>
+          <p className="mt-1 text-xs text-muted-foreground">Todos os aplicativos com preço válido da API aparecem no catálogo. Valores manuais ficam guardados para consultas futuras • Cloudflare D1</p></div>
         <div className="flex flex-wrap gap-2">
           <Button variant="outline" onClick={()=>void query.refetch()} disabled={query.isFetching}
             className="gap-2 rounded-xl"><RefreshCcw size={16} className={query.isFetching?"animate-spin":""}/>Recarregar tela</Button>
@@ -285,7 +285,7 @@ function AppActivationAdmin(){
         </div>
       </div>
       <div className="hidden grid-cols-[minmax(200px,1fr)_145px_190px_150px] gap-3 border-b bg-muted/30 px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-muted-foreground lg:grid">
-        <span>Aplicativo</span><span>Valor na API*</span><span>Seu preço em reais</span><span className="text-right">Salvar</span>
+        <span>Aplicativo</span><span>Valor na API*</span><span>Valor manual (inativo)</span><span className="text-right">Salvar</span>
       </div>
       {query.isLoading?<p className="p-8 text-center text-sm text-muted-foreground">Carregando aplicativos diretamente da Cloudflare...</p>:
         query.isError?<div className="space-y-3 p-6 text-center"><p className="text-sm text-destructive">Não foi possível consultar os aplicativos. Verifique sua sessão de administrador.</p>
