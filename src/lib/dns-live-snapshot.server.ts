@@ -10,13 +10,17 @@ import { supabaseAdmin } from "@/integrations/supabase/client.server";
  * Legacy/fallback/manual probes deliberately keep their original INSERT
  * behaviour. An explicit app_settings gate makes rollout and rollback safe.
  */
-async function rollingEdgeHistoryEnabled(): Promise<boolean> {
+async function rollingEdgeHistoryEnabled(serverId: string): Promise<boolean> {
   try {
     const { data, error } = await supabaseAdmin.from("app_settings")
       .select("value").eq("key", "cf_dns_history_storage").maybeSingle();
     if (error) return false;
-    const value = data?.value as { mode?: string } | null;
-    return value?.mode === "rolling_edge_snapshot";
+    const value = data?.value as { mode?: string; canary_server_ids?: string[] } | null;
+    if (value?.mode !== "rolling_edge_snapshot") return false;
+    // Optional canary: limit the storage transition to explicitly selected
+    // servers before enabling it for the whole installation.
+    return !Array.isArray(value.canary_server_ids) ||
+      value.canary_server_ids.includes(serverId);
   } catch {
     return false;
   }
@@ -45,7 +49,7 @@ export async function storeDnsSnapshot(
   snapshot: Snapshot,
   fromCloudflareEdge: boolean,
 ): Promise<void> {
-  if (!fromCloudflareEdge || !(await rollingEdgeHistoryEnabled())) {
+  if (!fromCloudflareEdge || !(await rollingEdgeHistoryEnabled(snapshot.server_id))) {
     await appendSnapshot(snapshot);
     return;
   }
