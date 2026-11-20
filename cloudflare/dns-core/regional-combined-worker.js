@@ -109,6 +109,39 @@ async function pool(targets, region) {
 }
 
 
+/**
+ * Fair HTTP probe scheduling:
+ * - Up to 27 oldest checked / never-checked targets
+ * - At least 3 stable rotating targets for eventual progress even if reports fail
+ * - No simultaneous target duplication, no private IPTV credentials
+ *
+ * `last_checked_at` is sourced from the signed inventory; the origin remains the
+ * only authoritative writer of health and incident transitions.
+ */
+export function selectHttpTargets(all, now=Date.now(), maxTargets=MAX_TARGETS) {
+  if (!Array.isArray(all) || maxTargets <= 0) return [];
+  if (all.length <= maxTargets) return [...all];
+  const stamp = t => {
+    const date = t?.last_checked_at ? Date.parse(t.last_checked_at) : NaN;
+    return Number.isFinite(date) ? date : 0;
+  };
+  const byId = (a,b) => String(a.server_id).localeCompare(String(b.server_id));
+  const oldest = [...all].sort((a,b) => stamp(a)-stamp(b) || byId(a,b));
+  const rotatingSlots = Math.min(3, Math.max(1, Math.floor(maxTargets/6)));
+  const priority = oldest.slice(0,maxTargets-rotatingSlots);
+  const used = new Set(priority.map(x => x.server_id));
+  // The rotation uses the unchanged complete inventory, not an array
+  // shortened by dynamic priority selections (which caused repeated gaps).
+  const fixed = [...all].sort(byId);
+  const start = (Math.floor(now/60000)*rotatingSlots) % fixed.length;
+  const rest = [];
+  for (let i=0;i<fixed.length && rest.length<rotatingSlots;i++){
+    const item = fixed[(start+i)%fixed.length];
+    if (!used.has(item.server_id)){rest.push(item);used.add(item.server_id);}
+  }
+  return [...priority,...rest];
+}
+
 async function tick(env) {
   config(env);
   const all = await getTargets(env);
@@ -127,24 +160,11 @@ async function tick(env) {
     }
     return reportHttpTargets(env, lanes.normal);
   }
-  // Newly registered targets and HTTP checks overdue by 15 minutes have a
-  // small dedicated lane. The rest always rotate: no backlog can starve them.
-  // Old target endpoints without last_checked_at remain safe (normal rotation).
-  const now = Date.now();
-  const overdue = all.filter(t =>
-    Object.prototype.hasOwnProperty.call(t, "last_checked_at") &&
-    (t.last_checked_at === null ||
-      (Number.isFinite(Date.parse(t.last_checked_at)) &&
-        now - Date.parse(t.last_checked_at) > 15 * 60_000)))
-    .sort((a, b) => (Date.parse(a.last_checked_at || "1970-01-01") || 0) -
-      (Date.parse(b.last_checked_at || "1970-01-01") || 0));
-  const urgent = overdue.slice(0, Math.min(6, MAX_TARGETS - 1));
-  const urgentIds = new Set(urgent.map(t => t.server_id));
-  const regular = all.filter(t => !urgentIds.has(t.server_id));
-  const regularSize = MAX_TARGETS - urgent.length;
-  const totalSlots = Math.max(1, Math.ceil(regular.length / regularSize));
-  const slot = Math.floor(now / 60_000) % totalSlots;
-  const targets = [...urgent, ...regular.slice(slot * regularSize, (slot + 1) * regularSize)];
+  // Oldest HTTP result always wins. A position-based modulo slice may skip
+  // servers when the overdue priority lane changes length between minutes.
+  // Keep a small independent ID-rotation lane so a permanently unreportable
+  // target cannot occupy the whole budget and starve healthy targets.
+  const targets = selectHttpTargets(all, Date.now(), MAX_TARGETS);
   return reportHttpTargets(env, targets);
 }
 async function reportHttpTargets(env, targets) {
