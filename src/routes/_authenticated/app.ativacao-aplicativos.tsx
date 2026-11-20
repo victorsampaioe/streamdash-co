@@ -90,6 +90,11 @@ function AppActivationPage() {
     staleTime: 30_000,
     retry: 1,
   });
+  const {data:previousOrders,isLoading:ordersLoading}=useQuery({
+    queryKey:["activation-pix-orders"],
+    queryFn:()=>edge<{items:Array<PixOrder & {createdAt:number}>}>("/v1/pix/orders",undefined,PAYMENTS_API),
+    enabled:tab==="historico",staleTime:30_000,retry:1,
+  });
   const live = catalog?.live === true;
   const list = catalog?.items ?? [];
   const filtered = list.filter(a => a.name.toLowerCase().includes(search.trim().toLowerCase()));
@@ -225,6 +230,27 @@ function AppActivationPage() {
       {!filtered.length && <div className="rounded-2xl border border-dashed p-12 text-center text-sm text-muted-foreground">Nenhum aplicativo liberado com preço definido. Outros aplicativos aparecerão aqui quando o administrador cadastrar seus valores.</div>}
     </> : <section className="space-y-4">
       <div><h2 className="text-xl font-bold">Histórico de ativações</h2><p className="mt-1 text-xs text-muted-foreground">Resultados da sua conta, sem mostrar ativações de outros usuários.</p></div>
+      <Card className="space-y-3 rounded-2xl p-4">
+        <h3 className="font-bold">Meus pedidos Pix</h3>
+        {ordersLoading?<p className="text-xs text-muted-foreground">Consultando pedidos...</p>:
+          !previousOrders?.items?.length?<p className="text-xs text-muted-foreground">Nenhum Pix gerado ainda.</p>:
+          previousOrders.items.map(order=><div key={order.orderId}
+            className="flex flex-wrap items-center justify-between gap-3 border-t border-border/50 py-3">
+            <div className="text-xs">
+              <p><strong>{money(order.amountCents)}</strong> — <code>{order.mac}</code></p>
+              <p className="mt-1 text-muted-foreground">{statusLabel(order.supplierState==="accepted"?"submitted":order.status)} • {new Date(order.createdAt).toLocaleString("pt-BR")}</p>
+            </div>
+            <Button size="sm" variant="outline" onClick={async()=>{
+              try{
+                const updated=await edge<PixOrder>("/v1/pix/status?orderId="+encodeURIComponent(order.orderId),
+                  undefined,PAYMENTS_API);
+                const match=list.find(x=>x.id===order.appId);
+                setSelected(match||{id:order.appId,name:"Aplicativo",module:null,logoUrl:null,priceCents:order.amountCents});
+                setMac(order.mac);setReviewing(true);setAck(true);setPixOrder(updated);
+              }catch(e){toast.error(e instanceof Error?e.message:"Não foi possível abrir o pedido.");}
+            }}>Ver pedido</Button>
+          </div>)}
+      </Card>
       {historyLoading ? <p className="text-sm text-muted-foreground">Consultando histórico...</p> :
         !history?.items?.length ? <Card className="flex flex-col items-center gap-3 rounded-2xl border-dashed p-12 text-center">
           <History size={32} className="text-muted-foreground"/><p className="font-semibold">Nenhuma ativação solicitada</p><p className="text-xs text-muted-foreground">Quando suas ativações começarem, o acompanhamento aparecerá aqui.</p>
