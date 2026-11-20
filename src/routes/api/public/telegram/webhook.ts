@@ -90,6 +90,30 @@ async function sendActivationQrPhoto(token:string,chatId:string|number,base64:st
   if(!res.ok)console.warn("[telegram-activation] QR image not delivered",res.status);
 }
 
+/**
+ * Keep a single Telegram status message updated in place.
+ * Repeated taps should not create an endless chain of identical messages.
+ */
+async function editActivationStatusMessage(
+  token: string, chatId: string | number, messageId: number, text: string,
+  keyboard?: {inline_keyboard:Array<Array<{text:string;callback_data?:string;url?:string}>>}
+) {
+  if(!Number.isSafeInteger(messageId)||messageId<=0)
+    throw new Error("telegram_status_message_invalid");
+  const r=await fetch(`https://api.telegram.org/bot${token}/editMessageText`,{
+    method:"POST",
+    headers:{"content-type":"application/json"},
+    body:JSON.stringify({
+      chat_id:chatId,message_id:messageId,text,parse_mode:"HTML",
+      disable_web_page_preview:true,...(keyboard?{reply_markup:keyboard}:{})
+    }),
+    signal:AbortSignal.timeout(10000),
+  });
+  if(r.ok)return;
+  const body=await r.json().catch(()=>null);
+  if(r.status===400 && String(body?.description||"").toLowerCase().includes("message is not modified"))return;
+  throw new Error("telegram_activation_status_edit_failed");
+}
 async function send(token: string, chatId: number | string, text: string, withBillingKeyboard=false,
   optionalKeyboard?:{inline_keyboard:Array<Array<{text:string;callback_data?:string;url?:string}>>}|{force_reply:true;selective:false;input_field_placeholder:string}) {
   const pixMatch=PIX_CODE_PATTERN.exec(text);
@@ -181,8 +205,15 @@ export const Route = createFileRoute("/api/public/telegram/webhook")({
                     if(!match)throw new Error("telegram_pix_status_invalid");
                     response=await pix.checkTelegramActivationPix(callbackChat,match[1]);
                   }
-                  await send(token,callbackChat,response.text,false,response.keyboard);
-                  if(response.qrImage)await sendActivationQrPhoto(token,callbackChat,response.qrImage);
+                  if(data.startsWith("aa:status:")){
+                    await editActivationStatusMessage(
+                      token,callbackChat,Number(callback.message.message_id),
+                      response.text,response.keyboard
+                    );
+                  }else{
+                    await send(token,callbackChat,response.text,false,response.keyboard);
+                    if(response.qrImage)await sendActivationQrPhoto(token,callbackChat,response.qrImage);
+                  }
                 }else{
                   const {activationBotCallback}=await import("@/lib/telegram-activations.server");
                   response=await activationBotCallback(callbackChat,data,String(callback.message?.text??""));
