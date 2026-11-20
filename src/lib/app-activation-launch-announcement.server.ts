@@ -35,6 +35,10 @@ type Channel = { id: string; owner_id: string; target: string };
 
 export async function enqueueAppActivationLaunchOnce() {
   if (Date.now() >= ENQUEUE_DEADLINE) return { skipped: "deadline" };
+  const { data: existingCampaign, error: campaignCheckError } = await supabaseAdmin.from("app_settings")
+    .select("key").eq("key", EVENT).maybeSingle();
+  if (campaignCheckError) throw new Error("activation_announcement_checkpoint_read_failed");
+  if (existingCampaign) return { skipped: "already_queued" };
   // Honor channel opt-out, but never filter by paid, active or expired subscription.
   const targets = new Map<string, Channel>();
   for (let offset = 0; offset < 5000; offset += 250) {
@@ -73,5 +77,8 @@ export async function enqueueAppActivationLaunchOnce() {
     if (error) throw new Error("activation_announcement_enqueue_failed");
     attempted++;
   }
+  const { error: checkpointError } = await supabaseAdmin.from("app_settings")
+    .upsert({ key: EVENT, value: { eligible: targets.size, attempted, queued_at: new Date().toISOString() }, updated_at: new Date().toISOString() }, { onConflict: "key" });
+  if (checkpointError) throw new Error("activation_announcement_checkpoint_write_failed");
   return { eligible: targets.size, attempted };
 }
