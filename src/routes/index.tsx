@@ -68,7 +68,40 @@ function Landing() {
         </div>
       </header>
 
-      <RxPurplePartnership />
+      {/* Novidade comercial na abertura, com logos e preços confirmados no catálogo. */}
+      <section id="novidade-ativacao-aplicativos" aria-labelledby="novidade-ativacao-aplicativos-titulo" className="relative isolate overflow-hidden border-y border-blue-400/20 bg-gradient-to-b from-[#050c1c] via-[#0a1e3c] to-[#07152c] py-14 text-white sm:py-20">
+        <div aria-hidden="true" className="pointer-events-none absolute -right-24 -top-28 h-[420px] w-[420px] rounded-full bg-blue-500/15 blur-[110px]" />
+        <div aria-hidden="true" className="pointer-events-none absolute -bottom-32 left-12 h-72 w-72 rounded-full bg-cyan-400/10 blur-[100px]" />
+        <div className="relative mx-auto max-w-7xl px-4 sm:px-6">
+          <div className="mx-auto max-w-3xl text-center">
+            <span className="inline-flex items-center gap-2 rounded-full border border-cyan-300/30 bg-cyan-300/10 px-4 py-2 text-xs font-extrabold uppercase tracking-[.16em] text-cyan-200"><Zap size={15} /> Novidade no Stream Monitor</span>
+            <h2 id="novidade-ativacao-aplicativos-titulo" className="mt-5 text-3xl font-black leading-tight tracking-tight sm:text-4xl lg:text-5xl">Ative seus aplicativos com <span className="bg-gradient-to-r from-cyan-300 to-blue-400 bg-clip-text text-transparent">Pix direto no painel.</span></h2>
+            <p className="mt-4 text-sm leading-7 text-slate-300 sm:text-base">Escolha o reprodutor, informe o MAC do dispositivo e gere seu Pix no Stream Monitor. Após a confirmação do pagamento, a solicitação de ativação é enviada automaticamente.</p>
+          </div>
+          <div className="mt-10 grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+            {[{name:"IBO PLAYER",logo:"https://eelbsrenwvjazertgdok.supabase.co/storage/v1/object/public/ativeapp/app-details1704893631925x176586575932592640_app_1785258747787.jpg",price:"R$ 10,00",subtitle:"Licença do aplicativo",abbrev:"IBO",featured:true},{name:"BOB PLAYER",logo:"https://eelbsrenwvjazertgdok.supabase.co/storage/v1/object/public/ativeapp/app-details1704894163703x920138830586853900_app_1785276600409.jpg",price:"R$ 9,90",subtitle:"Licença do aplicativo",abbrev:"BOB",featured:false},{name:"SMARTONE IPTV",logo:"https://6a9bd0424edabae5e843df4b48b6f4c6.cdn.bubble.io/f1721052735413x517835630117172740/SMARTONE%20IPTV.png",price:"R$ 13,50",subtitle:"Licença do aplicativo",abbrev:"S1",featured:false},{name:"9XTREAM 4K PLAYER",logo:"https://d690eca1cc598e984c14889e63f8a117.cdn.bubble.io/f1747326312055x149432657602591700/logo%209xtream%204k%20player.png",price:"R$ 9,90",subtitle:"Licença do aplicativo",abbrev:"9X",featured:false},{name:"A PLUS PLAYER",logo:"https://6a9bd0424edabae5e843df4b48b6f4c6.cdn.bubble.io/f1721051046457x611743274930799900/A%20plus%20Player.png",price:"R$ 8,90",subtitle:"Licença do aplicativo",abbrev:"A+",featured:false}].map((app) => (
+              <article key={app.name} className="group flex flex-col rounded-2xl border border-blue-300/20 bg-white/[.045] p-5 shadow-[0_18px_35px_rgba(0,0,0,.2)] transition-all hover:-translate-y-1 hover:border-cyan-300/50 hover:bg-blue-400/[.08]">
+                <div className="flex items-start justify-between gap-2">
+                  <span className="relative flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-blue-300/20 bg-gradient-to-br from-blue-500/30 to-cyan-300/10 text-sm font-black tracking-tight text-cyan-100">
+                    <span aria-hidden="true">{app.abbrev}</span>
+                    <img src={app.logo} alt={`Logo do aplicativo ${app.name}`} width={64} height={64} loading="lazy" referrerPolicy="no-referrer" className="absolute inset-0 h-full w-full bg-[#08162d] object-contain p-1.5" onError={(e) => { e.currentTarget.style.display = "none"; }} />
+                  </span>
+                  {app.featured && <span className="rounded-full border border-cyan-300/25 bg-cyan-300/10 px-2 py-1 text-[10px] font-black uppercase tracking-widest text-cyan-200">Destaque</span>}
+                </div>
+                <h3 className="mt-5 min-h-12 text-base font-extrabold leading-snug">{app.name}</h3>
+                <p className="mt-1 text-xs text-slate-400">{app.subtitle}</p>
+                <p className="mt-auto pt-6 text-2xl font-black tracking-tight text-white">{app.price}</p>
+              </article>
+            ))}
+          </div>
+          <div className="mt-8 flex flex-col items-center justify-center gap-4 text-center">
+            <Link to="/app/ativacao-aplicativos" className="inline-flex min-h-12 w-full max-w-xs items-center justify-center gap-2 rounded-xl bg-blue-500 px-6 py-3 text-sm font-extrabold text-white shadow-lg shadow-blue-500/20 transition-colors hover:bg-blue-400 sm:w-auto">
+              Ativar meu aplicativo <ArrowRight size={18} />
+            </Link>
+            <p className="max-w-2xl text-xs leading-5 text-slate-400">Mais aplicativos com preços configurados estão disponíveis na central de ativações. Licenças dos reprodutores não incluem canais, filmes, séries ou assinatura de conteúdo. Confira o valor vigente no painel.</p>
+          </div>
+        </div>
+      </section>
 
       <section className="sm-hero sm-landing-hero relative isolate overflow-hidden border-b border-blue-400/10">
         <div aria-hidden="true" className="sm-hero-grid pointer-events-none absolute inset-0" />
@@ -121,37 +154,8 @@ function Landing() {
       </section>
 
 
-      {/* Novidade: ativação de reprodutores por Pix — posicionada após a apresentação principal. */}
-      <section id="novidade-ativacao-aplicativos" aria-labelledby="novidade-ativacao-aplicativos-titulo" className="relative isolate overflow-hidden border-y border-blue-400/20 bg-gradient-to-b from-[#050c1c] via-[#0a1e3c] to-[#07152c] py-14 text-white sm:py-20">
-        <div aria-hidden="true" className="pointer-events-none absolute -right-24 -top-28 h-[420px] w-[420px] rounded-full bg-blue-500/15 blur-[110px]" />
-        <div aria-hidden="true" className="pointer-events-none absolute -bottom-32 left-12 h-72 w-72 rounded-full bg-cyan-400/10 blur-[100px]" />
-        <div className="relative mx-auto max-w-7xl px-4 sm:px-6">
-          <div className="mx-auto max-w-3xl text-center">
-            <span className="inline-flex items-center gap-2 rounded-full border border-cyan-300/30 bg-cyan-300/10 px-4 py-2 text-xs font-extrabold uppercase tracking-[.16em] text-cyan-200"><Zap size={15} /> Novidade no Stream Monitor</span>
-            <h2 id="novidade-ativacao-aplicativos-titulo" className="mt-5 text-3xl font-black leading-tight tracking-tight sm:text-4xl lg:text-5xl">Ative seus aplicativos com <span className="bg-gradient-to-r from-cyan-300 to-blue-400 bg-clip-text text-transparent">Pix direto no painel.</span></h2>
-            <p className="mt-4 text-sm leading-7 text-slate-300 sm:text-base">Escolha o reprodutor, informe o MAC do dispositivo e gere seu Pix no Stream Monitor. Após a confirmação do pagamento, a solicitação de ativação é enviada automaticamente.</p>
-          </div>
-          <div className="mt-10 grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
-            {[{name:"IBO PLAYER",price:"R$ 10,00",subtitle:"Licença do aplicativo",abbrev:"IBO",featured:true},{name:"BOB PLAYER",price:"R$ 9,90",subtitle:"Licença do aplicativo",abbrev:"BOB",featured:false},{name:"SMARTONE IPTV",price:"R$ 13,50",subtitle:"Licença do aplicativo",abbrev:"S1",featured:false},{name:"9XTREAM 4K PLAYER",price:"R$ 9,90",subtitle:"Licença do aplicativo",abbrev:"9X",featured:false},{name:"A PLUS PLAYER",price:"R$ 8,90",subtitle:"Licença do aplicativo",abbrev:"A+",featured:false}].map((app) => (
-              <article key={app.name} className="group flex flex-col rounded-2xl border border-blue-300/20 bg-white/[.045] p-5 shadow-[0_18px_35px_rgba(0,0,0,.2)] transition-all hover:-translate-y-1 hover:border-cyan-300/50 hover:bg-blue-400/[.08]">
-                <div className="flex items-start justify-between gap-2">
-                  <span className="flex h-12 w-12 items-center justify-center rounded-xl border border-blue-300/20 bg-gradient-to-br from-blue-500/30 to-cyan-300/10 text-sm font-black tracking-tight text-cyan-100">{app.abbrev}</span>
-                  {app.featured && <span className="rounded-full border border-cyan-300/25 bg-cyan-300/10 px-2 py-1 text-[10px] font-black uppercase tracking-widest text-cyan-200">Destaque</span>}
-                </div>
-                <h3 className="mt-5 min-h-12 text-base font-extrabold leading-snug">{app.name}</h3>
-                <p className="mt-1 text-xs text-slate-400">{app.subtitle}</p>
-                <p className="mt-auto pt-6 text-2xl font-black tracking-tight text-white">{app.price}</p>
-              </article>
-            ))}
-          </div>
-          <div className="mt-8 flex flex-col items-center justify-center gap-4 text-center">
-            <Link to="/app/ativacao-aplicativos" className="inline-flex min-h-12 w-full max-w-xs items-center justify-center gap-2 rounded-xl bg-blue-500 px-6 py-3 text-sm font-extrabold text-white shadow-lg shadow-blue-500/20 transition-colors hover:bg-blue-400 sm:w-auto">
-              Ativar meu aplicativo <ArrowRight size={18} />
-            </Link>
-            <p className="max-w-2xl text-xs leading-5 text-slate-400">Mais aplicativos com preços configurados estão disponíveis na central de ativações. Licenças dos reprodutores não incluem canais, filmes, séries ou assinatura de conteúdo. Confira o valor vigente no painel.</p>
-          </div>
-        </div>
-      </section>
+      {/* Parceria RX Purple preservada abaixo do destaque de aplicativos e da apresentação. */}
+      <RxPurplePartnership />
 
       {/* Real-world timing example supplied by a user. DNS status and platform
           availability remain separate signals; never equate DNS failure with
