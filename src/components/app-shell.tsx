@@ -163,6 +163,7 @@ function useNavItems() {
     ...(navIsAdmin ? [{ to: "/app/auditoria", label: "Auditoria Visual", icon: ShieldAlert }] : []),
     ...(navIsAdmin ? [{ to: "/app/admin/observabilidade", label: "Admin · Central de Inteligência", icon: Gauge }] : []),
     ...(navIsAdmin ? [{ to: "/app/admin/aplicativos-parceiros", label: "Admin · Parceiros de Apps", icon: Smartphone }] : []),
+    ...(navIsAdmin ? [{ to: "/app/admin/ativacoes", label: "Admin · Preços de Ativação", icon: Wallet }] : []),
 
     ...(navIsAdmin ? [{ to: "/vitrine-video", label: "Admin · Vitrine Vídeo MP4", icon: Sparkles }] : []),
     ...(navIsAdmin ? [{ to: "/app/admin/modelos-video", label: "Admin · Biblioteca de Vídeos", icon: Sparkles }] : []),
