@@ -27,7 +27,7 @@ export const Route=createFileRoute("/_authenticated/app/admin_/ativacoes")({
 });
 
 const API="https://streammonitor-app-activations.victorsampaio133.workers.dev";
-type App={id:string;name:string;module:string|null;providerValue:number|null;priceCents:number|null;logoUrl:string|null;active:number;updatedAt:number};
+type App={id:string;name:string;module:string|null;providerValue:number|null;storePriceCents:number|null;priceCents:number|null;logoUrl:string|null;active:number;updatedAt:number};
 type Catalog={items:App[];logoCount:number;supplierFields:string[];note:string};
 type Edit={price?:string;logo?:string};
 async function cf<T>(path:string,method:"GET"|"POST"="GET",body?:unknown):Promise<T>{
@@ -82,7 +82,8 @@ function AdminRow({app,save,isSaving}:{app:App;save:(app:App,edit:Edit)=>Promise
     <div className="lg:pl-2">
       <p className="text-[10px] font-bold uppercase tracking-wide text-muted-foreground lg:hidden">Valor informado pela API</p>
       <span className="text-sm font-medium tabular-nums">{rawCost(app.providerValue)}</span>
-      <p className="text-[10px] text-muted-foreground">Unidade não confirmada</p>
+      <p className="text-[10px] text-muted-foreground">Valor bruto da API</p>
+      {app.storePriceCents!==null&&<p className="mt-1 text-[11px] font-semibold text-blue-400" title="Preço informado no campo valor_da_loja do fornecedor">Loja: {toMoney(app.storePriceCents)}</p>}
     </div>
     <div>
       <label htmlFor={"price-"+app.id} className="mb-1 block text-[10px] font-bold uppercase tracking-wide text-muted-foreground lg:hidden">Seu preço de venda (R$)</label>
