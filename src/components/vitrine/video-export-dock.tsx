@@ -1,10 +1,10 @@
 import {useEffect,useRef,useSyncExternalStore} from "react";
 import {Link} from "@tanstack/react-router";
-import {Download,LoaderCircle,CheckCircle2,AlertTriangle,Video} from "lucide-react";
+import {Download,LoaderCircle,CheckCircle2,AlertTriangle,Video,X} from "lucide-react";
 import {Button} from "@/components/ui/button";
 import {
   subscribeToVideoJob,getVideoJobSnapshot,isVideoJobRunning,downloadVideoJob,
-  attachVideoJobPreviewHost,
+  attachVideoJobPreviewHost,dismissVideoJob,
 } from "@/lib/vitrine-video-background-job";
 
 /**
@@ -50,6 +50,11 @@ export function VideoExportDock(){
         <p className="truncate text-xs text-slate-300">{job.title}</p>
       </div>
       <span className="text-xs font-bold text-blue-200">{job.percent}%</span>
+      {!running&&<button type="button" aria-label="Fechar aviso do vídeo"
+        title="Fechar este aviso" onClick={()=>dismissVideoJob()}
+        className="ml-1 flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-white/30 text-white transition-colors hover:bg-white/15 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-300">
+        <X aria-hidden="true" className="h-5 w-5"/>
+      </button>}
     </div>
     {running&&<div ref={previewHost}
       className="mt-3 h-[118px] overflow-hidden rounded-lg border border-white/15 bg-black"
