@@ -165,6 +165,81 @@ async function refreshCatalog(env, options = {}) {
     return {configured:true,refreshed:false,supplierUnavailable:true,imported,failedPage:page};
   }
 }
+async function privateBridgeAuthorized(request, env) {
+  const expected=env.INTERNAL_FULFILL_SECRET,received=request.headers.get("x-internal-fulfill-secret")||"";
+  if(typeof expected!=="string"||expected.length<32||received.length!==expected.length)return false;
+  const enc=new TextEncoder();
+  const [a,b]=await Promise.all([crypto.subtle.digest("SHA-256",enc.encode(received)),
+    crypto.subtle.digest("SHA-256",enc.encode(expected))]);
+  return new Uint8Array(a).every((v,i)=>v===new Uint8Array(b)[i]);
+}
+async function processPaidActivation(request,env,origin) {
+  if(!env.APP_DB||!env.PAYMENTS_DB||!env.ATIVEAPP_API_KEY)return respond({error:"unavailable"},503,origin);
+  if(!(await privateBridgeAuthorized(request,env)))return respond({error:"unauthorized"},401,origin);
+  const input=await request.json().catch(()=>null);
+  const orderId=typeof input?.orderId==="string"&&/^[a-f0-9-]{36}$/i.test(input.orderId)?input.orderId:null;
+  if(!orderId)return respond({error:"invalid_order"},400,origin);
+  // Payment metadata must have been marked verified by the independent,
+  // authenticated Asaas payment worker. Do not trust the POST body.
+  const order=await env.PAYMENTS_DB.prepare(
+    "SELECT order_id,owner_user_id,app_id,mac_normalized,amount_cents,paid_at_ms,"+
+    "status,supplier_state,last_payment_check_at_ms FROM pix_orders WHERE order_id=?"
+  ).bind(orderId).first();
+  if(!order||order.status!=="paid_pending_activation"||order.supplier_state!=="submitting"||
+    !Number.isInteger(order.paid_at_ms)||Date.now()-Number(order.last_payment_check_at_ms)>300000)
+    return respond({error:"payment_not_verified"},403,origin);
+  const app=await env.APP_DB.prepare(
+    "SELECT name FROM app_catalog WHERE app_id=?"
+  ).bind(order.app_id).first();
+  const mac=cleanMac(order.mac_normalized);
+  if(!app||!mac||mac==="00:00:00:00:00:00"||mac==="FF:FF:FF:FF:FF:FF")
+    return respond({error:"invalid_activation_details"},400,origin);
+  const requestId=order.order_id;
+  const now=Date.now();
+  const insert=await env.APP_DB.prepare(
+    "INSERT OR IGNORE INTO activation_requests "+
+    "(request_id,owner_user_id,app_id,app_name,mac,sale_price_cents,idempotency_key,"+
+    "status,channel,confirmed_at_ms,created_at_ms,updated_at_ms) VALUES(?,?,?,?,?,?,?,?,?,?,?,?)"
+  ).bind(requestId,order.owner_user_id,order.app_id,app.name,mac,
+    order.amount_cents,requestId,"submitting","web",now,now,now).run();
+  if(!insert.meta?.changes){
+    // A supplier call may have reached them before our network timed out.
+    // Never send a second activation for the same paid order.
+    const recorded=await env.APP_DB.prepare(
+      "SELECT status,provider_id FROM activation_requests WHERE request_id=?"
+    ).bind(requestId).first();
+    return respond({error:"already_submitted_or_in_review",status:recorded?.status,
+      providerId:recorded?.provider_id},409,origin);
+  }
+  try{
+    const upstream=await fetch(PROVIDER+"/api/solicitar-ativacao",{
+      method:"POST",
+      headers:{"X-API-Key":env.ATIVEAPP_API_KEY,"content-type":"application/json"},
+      body:JSON.stringify({app_uuid:order.app_id,mac_app:mac}),
+      signal:AbortSignal.timeout(15000),cf:{cacheTtl:0,cacheEverything:false},
+    });
+    const body=await upstream.json().catch(()=>null);
+    const providerId=body?.id||body?.success_case?.body?.id||body?.data?.id;
+    if(!upstream.ok||!providerId){
+      const code=upstream.status===429?"supplier_429":
+        upstream.status===400?"supplier_validation_or_balance":"supplier_error";
+      await env.APP_DB.prepare(
+        "UPDATE activation_requests SET status='needs_review',provider_http_status=?,provider_error_code=?,updated_at_ms=? WHERE request_id=?"
+      ).bind(upstream.status,code,Date.now(),requestId).run();
+      return respond({error:code,accepted:false},502,origin);
+    }
+    await env.APP_DB.prepare(
+      "UPDATE activation_requests SET status='submitted',provider_id=?,provider_http_status=?,updated_at_ms=? WHERE request_id=?"
+    ).bind(String(providerId).slice(0,120),upstream.status,Date.now(),requestId).run();
+    return respond({accepted:true,requestId},202,origin);
+  }catch{
+    // Unknown network outcome: hold for manual reconciliation; no repeat.
+    await env.APP_DB.prepare(
+      "UPDATE activation_requests SET status='needs_review',provider_error_code='unknown_supplier_outcome',updated_at_ms=? WHERE request_id=?"
+    ).bind(Date.now(),requestId).run();
+    return respond({error:"unknown_supplier_outcome"},503,origin);
+  }
+}
 async function verifyAdminRole(request, userId) {
   const bearer = request.headers.get("authorization") || "";
   const key = request.headers.get("x-sm-public-key") || "";
@@ -230,6 +305,8 @@ export default {
       return app ? respond({ app, live: false }, 200, origin)
         : respond({ error: "not_found" }, 404, origin);
     }
+    if(url.pathname==="/internal/paid-activation"&&request.method==="POST")
+      return processPaidActivation(request,env,origin);
     if (!url.pathname.startsWith("/v1/")) return respond({ error: "not_found" }, 404, origin);
     let userId;
     try { userId = await userFromRequest(request); }
