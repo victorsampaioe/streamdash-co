@@ -19,8 +19,9 @@ export const Route = createFileRoute("/api/public/regions/targets")({
 
         const { data: servers } = await supabaseAdmin
           .from("servers")
-          .select("id, host, owner_id, iptv_username, iptv_password, iptv_detected")
-          .eq("monitoring_paused", false);
+          .select("id, host, owner_id, iptv_username, iptv_password, iptv_detected, last_checked_at")
+          .eq("monitoring_paused", false)
+          .order("id", { ascending: true });
 
         // Só entrega alvos de contas ativas (assinatura válida ou créditos).
         const { getActiveOwnerIds } = await import("@/lib/service-status.server");
@@ -35,7 +36,7 @@ export const Route = createFileRoute("/api/public/regions/targets")({
                   ? { username: s.iptv_username, password: s.iptv_password, kind: s.iptv_detected }
                   : null,
               }
-            : { server_id: s.id, host: s.host }));
+            : { server_id: s.id, host: s.host, last_checked_at: s.last_checked_at ?? null }));
 
         return Response.json({ region: cfEdge ? "cf-edge" : (agent?.region_code ?? null), targets, count: targets.length }, {
           headers: { "cache-control": "no-store" },
