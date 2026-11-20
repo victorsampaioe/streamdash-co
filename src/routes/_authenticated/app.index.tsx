@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { StatusDot } from "@/components/status-dot";
 import { UptimeSparkline } from "@/components/uptime-sparkline";
 import { SearchInput } from "@/components/app-shell";
-import { ArrowRight, Plus, ServerIcon, HeartPulse, Tv, AlertCircle, CreditCard, RadioTower, Activity, Wifi, WifiOff, ChevronRight } from "lucide-react";
+import { ArrowRight, Plus, ServerIcon, HeartPulse, Tv, AlertCircle, CreditCard, RadioTower, Activity, Wifi, WifiOff, ChevronRight, Gauge, Globe2, Clock3 } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useSubscription } from "@/hooks/use-subscription";
 import { getAnnualPromo } from "@/lib/annual-promo.functions";
@@ -243,7 +243,7 @@ function Dashboard() {
           <Link to="/app/servers/new"><Button>Cadastrar primeiro servidor</Button></Link>
         </Card>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3 sm:gap-5">
           {filtered.map((s) => (
             <ServerCard key={s.id} server={s} />
           ))}
@@ -307,67 +307,121 @@ function timeAgo(iso: string) {
   return `${Math.floor(h / 24)}d`;
 }
 
+
+function LatencyTrend({ checks, color }: {
+  checks: Array<{ status: string; checked_at: string; latency_ms: number | null }>;
+  color: string;
+}) {
+  const values = checks.filter(c => c.latency_ms != null &&
+    Number.isFinite(c.latency_ms) && c.latency_ms >= 0).slice(-16).map(c => Number(c.latency_ms));
+  if (values.length < 3) return null;
+  const min = Math.min(...values), max = Math.max(...values), span = Math.max(max - min, 15);
+  const points = values.map((v, i) => [4 + 152 * i / (values.length - 1), 37 - 27 * (v - min) / span]);
+  const line = points.map(([x,y],i) => (i ? "L" : "M") + x.toFixed(1) + "," + y.toFixed(1)).join(" ");
+  return <svg viewBox="0 0 160 48" fill="none" role="img" aria-label="Tendência real de latência HTTP"
+    className="h-10 w-24 shrink-0 opacity-80 sm:w-32" preserveAspectRatio="none">
+    <path d={line + " L156,45 L4,45 Z"} fill={color} opacity=".12"/>
+    <path d={line} stroke={color} strokeWidth="2" strokeLinecap="round"
+      strokeLinejoin="round" vectorEffect="non-scaling-stroke"/>
+    <circle cx={points[points.length-1][0]} cy={points[points.length-1][1]} r="2.5" fill={color}/>
+  </svg>;
+}
 function ServerCard({ server }: { server: any }) {
   const { data: recent = [] } = useQuery({
     queryKey: ["recent-checks", server.id],
     queryFn: async () => {
-      const { data } = await supabase
-        .from("checks")
+      const { data } = await supabase.from("checks")
         .select("status, checked_at, latency_ms")
         .eq("server_id", server.id)
-        .order("checked_at", { ascending: false })
-        .limit(40);
+        .order("checked_at", { ascending: false }).limit(40);
       return (data ?? []).reverse();
     },
     refetchInterval: 15000,
   });
-
   const delayed = isHttpCheckStale(server);
+  const status = effectiveAccessStatus(server);
   const score = scoreOf([server]);
-
+  const dns = dnsDisplayState(server);
+  const danger = !delayed && (status === "down" || score < 70);
+  const caution = !danger && (delayed || status === "degraded" || status === "unknown" || score < 90);
+  const palette = danger ? {
+    border: "border-rose-400/40 hover:border-rose-400/70",
+    icon: "border-rose-400/25 bg-rose-500/15 text-rose-200",
+    ink: "text-rose-300", glow: "bg-rose-500/20", line: "#fb7185",
+  } : caution ? {
+    border: "border-amber-400/30 hover:border-amber-400/60",
+    icon: "border-amber-400/25 bg-amber-500/15 text-amber-200",
+    ink: "text-amber-300", glow: "bg-amber-500/15", line: "#fbbf24",
+  } : {
+    border: "border-emerald-400/30 hover:border-emerald-400/60",
+    icon: "border-emerald-400/25 bg-emerald-500/10 text-emerald-200",
+    ink: "text-emerald-300", glow: "bg-emerald-500/15", line: "#34d399",
+  };
+  const dnsText = dns === "paused" ? "Pausado"
+    : dns === "disabled" ? "Desativado"
+    : dns === "stale" ? "Sem checagem recente"
+    : dns === "offline" ? "OFFLINE · acesso pelo domínio"
+    : dns === "unstable" ? "Instável"
+    : dns === "online" ? "Resolvido (IPTV não confirmado)" : "Aguardando";
+  const latency = server.last_latency_ms != null && Number.isFinite(Number(server.last_latency_ms))
+    ? Number(server.last_latency_ms) : null;
   return (
-    <Link to="/app/servers/$id" params={{ id: server.id }}>
-      <Card className="group p-5 sm:p-6 border-border/70 hover:border-primary/50 hover:bg-primary/[0.025] transition-colors">
-        <div className="flex items-start justify-between mb-3">
-          <div className="min-w-0">
-            <div className="flex items-center gap-2 mb-1">
-              <StatusDot status={effectiveAccessStatus(server)} />
-              <h3 className="font-semibold truncate">{server.name}</h3>
-            </div>
-            {delayed ? <p className="text-xs font-semibold text-amber-400" role="status">⚠️ Verificação HTTP atrasada — disponibilidade não confirmada</p>
-              : <div className={`text-xs ${healthTone(score)}`}>Saúde {score}% · {healthLabel(score)}</div>}
-            {dnsDisplayState(server) === "offline" && <p className="mt-1 text-xs font-semibold text-red-400" role="status">{accessStatusLabel(server)}</p>}
-            <div className="mt-2 flex flex-wrap items-center gap-2 text-[11px]">
-              <span className={dnsDisplayState(server) === "offline"
-                ? "rounded-md bg-red-500/15 px-2 py-1 font-semibold text-red-400"
-                : ["stale","unstable"].includes(dnsDisplayState(server))
-                  ? "rounded-md bg-amber-500/15 px-2 py-1 font-semibold text-amber-400"
-                  : dnsDisplayState(server) === "paused"
-                    ? "rounded-md bg-muted/40 px-2 py-1 text-muted-foreground"
-                    : "rounded-md bg-primary/10 px-2 py-1 font-semibold text-primary"}>
-                DNS: {dnsDisplayState(server) === "paused" ? "Pausado"
-                  : dnsDisplayState(server) === "disabled" ? "Desativado"
-                  : dnsDisplayState(server) === "stale" ? "Sem checagem recente"
-                  : dnsDisplayState(server) === "offline" ? "OFFLINE · acesso pelo domínio"
-                  : dnsDisplayState(server) === "unstable" ? "Instável"
-                  : dnsDisplayState(server) === "online" ? "Resolvido (IPTV não confirmado)" : "Aguardando"}
-              </span>
-              <span className="text-muted-foreground">
-                {server.last_dns_check_at ? `Verificado há ${timeAgo(server.last_dns_check_at)}` : "Sem checagem DNS"}
-              </span>
-            </div>
+    <Link to="/app/servers/$id" params={{ id: server.id }} className="group block h-full rounded-[26px] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-blue-400">
+      <Card className={["relative isolate flex h-full min-h-[200px] flex-col overflow-hidden rounded-[26px] border bg-[#081425] p-4 text-white shadow-[0_18px_50px_-28px_rgba(3,12,28,0.9)] transition-[transform,border-color,box-shadow] duration-300 hover:-translate-y-0.5 hover:shadow-[0_22px_55px_-24px_rgba(22,101,255,0.3)] motion-reduce:transform-none motion-reduce:transition-none sm:p-5",palette.border].join(" ")}>
+        <div className={["pointer-events-none absolute -right-12 -top-20 h-44 w-44 rounded-full blur-[60px]",palette.glow].join(" ")} aria-hidden="true"/>
+        <div className="relative flex min-w-0 items-start gap-3">
+          <div className={["flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border shadow-inner shadow-white/[0.05]",palette.icon].join(" ")}>
+            <ServerIcon className="h-5 w-5" aria-hidden="true"/>
           </div>
-          <ArrowRight className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors" />
+          <div className="min-w-0 flex-1">
+            <div className="flex min-w-0 items-center gap-2">
+              <h3 className="truncate text-base font-extrabold tracking-tight sm:text-lg">{server.name}</h3>
+              <StatusDot status={status}/>
+            </div>
+            <p className={["mt-0.5 text-xs font-semibold",palette.ink].join(" ")} role={delayed ? "status" : undefined}>
+              {delayed ? "HTTP atrasado · disponibilidade não confirmada"
+                : "Saúde " + score + "% · " +
+                  (status === "down" ? "Indisponível" : status === "unknown" ? "Em análise"
+                    : status === "degraded" ? "Atenção" : healthLabel(score))}
+            </p>
+          </div>
+          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-white/10 bg-white/[0.05] text-slate-300 transition-colors group-hover:border-blue-400/40 group-hover:text-blue-300">
+            <ChevronRight className="h-4 w-4" aria-hidden="true"/>
+          </div>
         </div>
-        <div className="flex items-center justify-between text-xs mb-3">
-          <span className="text-muted-foreground">
-            Latência: <span className="font-mono text-foreground">{server.last_latency_ms ?? "—"} ms</span>
+        {dns === "offline" && <p className="relative mt-2 text-[11px] font-semibold text-rose-300" role="status">{accessStatusLabel(server)}</p>}
+        <div className="relative mt-4 flex flex-wrap items-center gap-x-2 gap-y-2 text-[11px]">
+          <span className={["inline-flex max-w-full items-center gap-1.5 rounded-full border px-2.5 py-1.5 font-semibold",
+              dns === "offline" ? "border-rose-500/30 bg-rose-500/10 text-rose-300" :
+              ["stale","unstable","unknown"].includes(dns) ? "border-amber-400/25 bg-amber-400/10 text-amber-200" :
+              "border-sky-400/25 bg-sky-400/10 text-sky-300"].join(" ")}>
+            <Globe2 className="h-3.5 w-3.5 shrink-0" aria-hidden="true"/>
+            <span className="leading-snug">DNS: {dnsText}</span>
           </span>
-          {server.ssl_days_remaining != null && (
-            <Badge variant="outline" className="font-mono">SSL {server.ssl_days_remaining}d</Badge>
-          )}
+          <span className="inline-flex items-center gap-1.5 text-slate-400">
+            <Clock3 className="h-3.5 w-3.5" aria-hidden="true"/>
+            {server.last_dns_check_at ? "Há " + timeAgo(server.last_dns_check_at) : "DNS sem checagem"}
+          </span>
         </div>
-        <UptimeSparkline checks={recent} />
+        <div className="relative mt-auto flex items-end justify-between gap-3 pt-3">
+          <span className="inline-flex min-w-0 items-center gap-1.5 rounded-xl border border-white/10 bg-white/[0.045] px-2.5 py-2 text-xs text-slate-300">
+            <Gauge className="h-4 w-4 shrink-0 text-slate-400" aria-hidden="true"/>
+            Latência:
+            <strong className={["font-mono tabular-nums",latency != null && latency >= 3000 ? "text-amber-300" : "text-white"].join(" ")}>
+              {latency === null ? "—" : latency + " ms"}
+            </strong>
+          </span>
+          <LatencyTrend checks={recent} color={palette.line}/>
+        </div>
+        {server.ssl_days_remaining != null &&
+          <div className="relative mt-2 text-right"><Badge variant="outline" className="border-white/15 text-[10px] text-slate-300">SSL {server.ssl_days_remaining}d</Badge></div>}
+        <div className="relative mt-3 border-t border-white/[0.07] pt-3">
+          <UptimeSparkline checks={recent}/>
+          <div className="mt-1.5 flex items-center justify-between text-[10px] text-slate-500">
+            <span>{recent.length ? "Histórico HTTP real" : "Aguardando histórico HTTP"}</span>
+            <span>Últimas {Math.min(recent.length,40)}</span>
+          </div>
+        </div>
       </Card>
     </Link>
   );
