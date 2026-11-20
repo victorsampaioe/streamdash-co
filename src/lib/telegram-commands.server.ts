@@ -54,6 +54,7 @@ export const COMMAND_HELP =
   `/conteudo Nome — buscar filme, série ou canal em um dos seus servidores\n` +
   `/ranking — sua posição no ranking IPTV\n` +
   `/resumo — enviar agora o relatório inteligente completo\n` +
+  `/ativacaoAplicativo — abrir central de ativação de apps (somente MAC)\n` +
   `/fatura — consultar vencimento, status e valores\n` +
   `/pix — gerar PIX ou escolher pacotes para revenda\n` +
   `/pix anual — promoção anual R$ 150, somente em 19/11\n` +
@@ -210,7 +211,7 @@ export async function handleTelegramCommand(
   if (cmd === "/id") return `Seu código de vinculação é:\n\n<code>${chatId}</code>`;
   if (cmd === "/ajuda" || cmd === "/help" || cmd === "/comandos") return COMMAND_HELP;
 
-  const known = ["/status", "/offline", "/health", "/saude", "/novidades", "/filmes", "/series", "/canais", "/ranking", "/resumo", "/fatura", "/pix", "/avisos_off", "/avisos_on"];
+  const known = ["/status", "/offline", "/health", "/saude", "/novidades", "/filmes", "/series", "/canais", "/ranking", "/resumo", "/fatura", "/pix", "/ativacaoaplicativo", "/ativacao_app", "/avisos_off", "/avisos_on"];
   if (!known.includes(cmd)) return null;
 
   const userId = await resolveUserByChatId(chatId);
@@ -222,6 +223,16 @@ export async function handleTelegramCommand(
   }
 
   switch (cmd) {
+    case "/ativacaoaplicativo":
+    case "/ativacao_app":
+      return (
+        "📱 <b>Ativação de Aplicativos — Stream Monitor</b>\n\n" +
+        "✅ Escolha um aplicativo e informe somente o <b>MAC</b> da sua TV.\n" +
+        "🔒 Não é necessário informar Device KEY.\n\n" +
+        "⚠️ <b>ATENÇÃO: Confira o MAC com cuidado. Ativações com dados incorretos não têm estorno.</b>\n\n" +
+        "🛠️ O sistema está sendo integrado ao Cloudflare. Ativações pagas ficam bloqueadas até a API e os valores serem habilitados.\n\n" +
+        '🌐 <a href="https://streammonitor.site/app/ativacao-aplicativos">Abrir central de ativações</a>'
+      );
     case "/fatura": {
       const { formatTelegramInvoice } = await import("./telegram-billing.server");
       return await formatTelegramInvoice(userId);
