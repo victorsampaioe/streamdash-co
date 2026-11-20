@@ -525,7 +525,8 @@ export async function runDnsCheck(serverId: string, opts: { quick?: boolean; edg
     alerts.push({ kind: "propagating", severity: "info", title: "⚠ O domínio está propagando.", detail: `Propagação em ${report.propagation_pct}%.` });
   }
 
-  const { error: snapshotError } = await supabaseAdmin.from("dns_snapshots").insert({
+  const { storeDnsSnapshot } = await import("./dns-live-snapshot.server");
+  await storeDnsSnapshot({
     server_id: serverId,
     checked_at: report.checked_at,
     health_score: report.health_score,
@@ -555,8 +556,7 @@ export async function runDnsCheck(serverId: string, opts: { quick?: boolean; edg
     registrar: report.registrar,
     status: report.status,
     diagnosis: report.diagnosis,
-  });
-  if (snapshotError) throw new Error(`Não foi possível salvar análise DNS: ${snapshotError.message}`);
+  }, Boolean(opts.edgeReport));
 
   // ESTADO DO DNS — independente do estado do servidor.
   const { data: dnsState } = await (supabaseAdmin as any)
