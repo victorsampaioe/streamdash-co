@@ -173,7 +173,7 @@ function SubscriptionPage() {
           </div>
         </Card>
       )}
-      {!isLoading && <ResellerCreditRules compact={false}/>
+      {!isLoading && <ResellerCreditRules compact={false}/>}
       <NewUserTelegramSupport/>
       {isLoading ? (
         <Card className="p-6"><p className="text-sm text-muted-foreground">Carregando...</p></Card>
