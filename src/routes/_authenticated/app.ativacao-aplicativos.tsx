@@ -11,6 +11,7 @@ import {
   CheckCircle2, RefreshCw, History, CreditCard, Tv2, LockKeyhole, Zap
 } from "lucide-react";
 import { toast } from "sonner";
+import { isNormalizedActivationMac } from "@/lib/activation-mac";
 
 export const Route = createFileRoute("/_authenticated/app/ativacao-aplicativos")({
   head: () => ({
@@ -33,7 +34,7 @@ const macFormat = (value: string) => {
   const hex = value.toUpperCase().replace(/[^0-9A-F]/g, "").slice(0, 12);
   return (hex.match(/.{1,2}/g) || []).join(":");
 };
-const validMac = (value: string) => /^([0-9A-F]{2}:){5}[0-9A-F]{2}$/.test(value);
+const validMac = isNormalizedActivationMac;
 async function edge<T>(path: string, init?: RequestInit): Promise<T> {
   const { data: { session }, error } = await supabase.auth.getSession();
   if (error || !session?.access_token) throw new Error("Entre na sua conta para continuar.");
