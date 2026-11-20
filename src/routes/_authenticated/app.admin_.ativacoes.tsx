@@ -149,7 +149,7 @@ function AppActivationAdmin(){
         </div>
         <h1 className="text-2xl font-black tracking-tight sm:text-4xl">Preços de ativação</h1>
         <p className="mt-3 max-w-2xl text-sm text-blue-100/70">
-          Controle o valor de venda de cada aplicativo e personalize as fotos. Por padrão, exibimos o preço da loja AtiveAPP; seu preço manual tem prioridade e fica salvo na Cloudflare.
+          Defina os valores e personalize as fotos. Apenas aplicativos com preço cadastrado por você aparecem para clientes no site e no Telegram. Os dados ficam na Cloudflare.
         </p>
       </div>
     </div>
@@ -164,17 +164,43 @@ function AppActivationAdmin(){
           <p className="mt-1 text-xl font-black tabular-nums">{metric.value}</p></div>
       </Card>)}
     </div>
+    <Card className="space-y-3 rounded-2xl border-blue-400/25 p-5">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <h2 className="flex items-center gap-2 text-base font-extrabold"><Wallet size={18} className="text-blue-400"/> Pix Asaas — nova conta de ativações</h2>
+        <Badge variant="outline" className="border-amber-400/30 text-amber-500">Cobranças desativadas</Badge>
+      </div>
+      <p className="text-xs leading-relaxed text-muted-foreground">
+        Integração independente para uma nova conta Asaas, autorizada pelo titular.
+        Não usa a conta antiga nem o Pix das assinaturas. Backend e registros exclusivos na Cloudflare.
+      </p>
+      <p className="text-xs font-semibold">Worker: <code className="rounded bg-muted px-1.5 py-0.5">streammonitor-asaas-ativacoes-nova-conta</code></p>
+      <label htmlFor="new-asaas-webhook" className="block text-xs font-semibold">Webhook para cadastrar na nova conta Asaas</label>
+      <div className="flex flex-col gap-2 sm:flex-row">
+        <Input id="new-asaas-webhook" readOnly value="https://streammonitor-asaas-ativacoes-nova-conta.victorsampaio133.workers.dev/webhooks/asaas/ativacoes"
+          className="min-w-0 flex-1 rounded-xl font-mono text-xs"/>
+        <Button type="button" variant="outline" className="rounded-xl" onClick={() => {
+          void navigator.clipboard.writeText("https://streammonitor-asaas-ativacoes-nova-conta.victorsampaio133.workers.dev/webhooks/asaas/ativacoes")
+            .then(() => toast.success("URL do webhook copiada."))
+            .catch(() => toast.error("Copie a URL manualmente."));
+        }}>Copiar URL</Button>
+      </div>
+      <p className="text-xs text-muted-foreground">
+        Configure no Worker as secrets <code>ASAAS_ATIVACOES_NOVA_API_KEY</code> e
+        <code> ASAAS_ATIVACOES_NOVA_WEBHOOK_TOKEN</code> com credenciais exclusivamente dessa nova conta.
+        A chave de API e o token do webhook são diferentes.
+      </p>
+    </Card>
     <div className="flex gap-3 rounded-2xl border border-amber-400/25 bg-amber-400/5 p-4">
       <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-amber-500"/>
       <div><p className="text-sm font-bold">Confira seu preço antes de liberar as ativações</p>
         <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
-          O valor bruto da API pode representar créditos. O preço da loja (campo valor_da_loja) é usado apenas quando você não definiu um preço personalizado em reais. O pagamento e as ativações reais seguem bloqueados até a conciliação financeira.
+          O valor bruto do fornecedor pode representar créditos. O preço da loja é apenas referência; só o preço cadastrado por você libera a exibição no catálogo. O Pix e as ativações reais permanecem bloqueados até validação.
         </p></div>
     </div>
     <Card className="overflow-hidden rounded-2xl border-border/70">
       <div className="flex flex-col gap-4 border-b border-border/70 p-4 sm:flex-row sm:items-center sm:justify-between sm:p-5">
         <div><h2 className="text-lg font-extrabold">Catálogo e preços de venda</h2>
-          <p className="mt-1 text-xs text-muted-foreground">O preço da loja é o padrão. Altere somente os aplicativos em que deseja cobrar outro valor • Cloudflare D1</p></div>
+          <p className="mt-1 text-xs text-muted-foreground">Cadastre o preço dos aplicativos que deseja disponibilizar. Sem preço próprio, o app fica oculto • Cloudflare D1</p></div>
         <Button variant="outline" onClick={()=>void query.refetch()} disabled={query.isFetching}
           className="gap-2 rounded-xl"><RefreshCcw size={16} className={query.isFetching?"animate-spin":""}/>Atualizar</Button>
       </div>
