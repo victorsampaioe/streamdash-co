@@ -52,23 +52,18 @@ async function compactCrest(input:string):Promise<string>{
 
 const safeColor = (input: string | undefined) => /^#[0-9a-f]{6}$/i.test(input||"") ? input! : "#146df2";
 
-/** Keep verified channels across poster/model changes and temporary API/cache failures. */
-function preserveFootballChannels<T extends {matches:FootballMatch[]}>(data:T,day:string):T {
-  if(typeof window==="undefined")return data;
-  const storageKey="streammonitor:verified-football-channels:"+day;
-  try {
-    const stored=JSON.parse(window.localStorage.getItem(storageKey)||"{}") as Record<string,string[]>;
-    const verified:Record<string,string[]>={...stored};
-    const matches=data.matches.map(match=>{
-      const key=footballBroadcastFixtureKey(match);
-      const current=cleanVerifiedBroadcasts(match.broadcasts);
-      if(current.length){verified[key]=current;return match;}
-      const previous=cleanVerifiedBroadcasts(stored[key]);
-      return previous.length?{...match,broadcasts:previous}:match;
-    });
-    window.localStorage.setItem(storageKey,JSON.stringify(verified));
-    return {...data,matches};
-  }catch{return data;}
+/** Remove legacy browser cache; retain brand, color and other preferences. */
+function preserveFootballChannels<T extends {matches:FootballMatch[]}>(data:T,_day:string):T {
+  if(typeof window!=="undefined"){
+    try{
+      for(let i=window.localStorage.length-1;i>=0;i--){
+        const key=window.localStorage.key(i);
+        if(key?.startsWith("streammonitor:verified-football-channels:"))
+          window.localStorage.removeItem(key);
+      }
+    }catch{/* Private browsing must not block the Vitrine. */}
+  }
+  return data;
 }
 
 /** Automated posters: four fixtures (eight clubs) per artwork, with automatic pagination. */
@@ -144,7 +139,7 @@ export function VitrineFootballStudio() {
   // Preserve loaded games while navigating; confirmed channels persist on the server.
   const manualTransmissionRefresh=useRef(false);
   const games = useQuery({
-    queryKey:["vitrine-football-ftwb",day],
+    queryKey:["vitrine-football-ftwb",day,"reset-football-channels-20261121"],
     queryFn:async()=>{
       const refreshTransmissions=manualTransmissionRefresh.current;
       manualTransmissionRefresh.current=false;
