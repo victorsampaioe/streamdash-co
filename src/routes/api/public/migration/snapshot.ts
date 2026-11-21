@@ -67,7 +67,7 @@ async function getCounts(): Promise<Record<(typeof KEYS)[number], number>> {
   }
   return result;
 }
-export const Route = createFileRoute(PATH)({
+export const Route = createFileRoute("/api/public/migration/snapshot")({
   server: { handlers: {
     GET: async ({ request }) => {
       if (!await verifyMigrationSigner(request)) return blocked();
