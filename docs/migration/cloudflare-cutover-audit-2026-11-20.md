@@ -36,3 +36,15 @@ R2 backup ledger now contains **38 / 38 copied objects, 1,100,867,587 bytes**. T
 10. Canary with verified parity, tested rollback, then explicit production cutover.
 
 Never disable the original Supabase Auth, PostgreSQL, Storage, pg_cron or financial webhooks while these gates are unmet. D1 is SQLite, not PostgreSQL; large DBs require schema conversion and capacity/retention planning.
+
+
+## Additional verified work (20 Nov, 22:22 BRT)
+
+- Created Cloudflare Pages project `streammonitor-cloudflare-preview`, linked to GitHub `main` with `npm run build` and build output `.output/public`. Its first automatic GitHub-triggered deploy succeeded.
+- Cloudflare Browser Rendering loaded `/`, `/login`, `/app` and `/app/ativacao-aplicativos` from the new `pages.dev` preview without an internal-server error. **This proves frontend hosting only**, not a database migration. The production `streammonitor.site` DNS remains unchanged.
+- Protected `streammonitor-signup-email` against the empty-token/empty-secret authentication bypass. It now fails closed if the incoming token or its configured secret is missing/too short; the email binding was preserved. Reconfigure or verify the secret before using that webhook in production.
+- Refreshed D1 staging from live Lovable PostgreSQL to 194 profiles, 194 Auth *identity metadata* records, 253 role memberships, 419 server metadata records, 118 subscriptions, 101 payments, 52 alert-channel metadata records and 829 Telegram outbox metadata records.
+- Server data: 149 credentialed active servers, but **zero credential values** transferred. No Auth hashes or sessions, Telegram recipients, Telegram message bodies or payment secrets transferred.
+- The Cloudflare regional DNS Worker runs each minute and writes fresh D1 samples, but **still calls Lovable** as `ENDPOINT_BASE` to obtain target lists and report results. Do not switch it to D1 as system of record before continuous data propagation and notification parity are tested.
+- Source PostgreSQL still runs 20 cron jobs. The D1 staging is explicitly `PILOT_ONLY` and the production cutover control remains `enabled=0`.
+- Required work remains: validated full PostgreSQL restore, dedicated secure Auth transition, protected IPTV credential transfer, recurring billing/wallet/credits cutover, Telegram Queue consumer and webhook parity, replacing the 20 Postgres jobs, continuous CDC or a reliable source-to-D1 event stream, and confirmed functional parity before DNS cutover.
