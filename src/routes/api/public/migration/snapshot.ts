@@ -27,7 +27,7 @@ async function verifyMigrationSigner(request: Request) {
   if (!/^\\d{13}$/.test(timestamp) || !/^[0-9a-f]{128}$/i.test(signature)) return false;
   const value = Number(timestamp), now = Date.now();
   if (!Number.isSafeInteger(value) || Math.abs(now - value) > 120_000) return false;
-  const message = ["streammonitor-migration-snapshot-v2", timestamp, "GET", PATH].join("\\n");
+  const message = ["streammonitor-migration-snapshot-v2", timestamp, "GET", PATH].join("\n");
   try {
     const { createPublicKey, verify } = await import("node:crypto");
     const key = createPublicKey({ key: PUBLIC_KEY as any, format: "jwk" });
