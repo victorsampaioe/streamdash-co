@@ -90,6 +90,8 @@ export function VitrineFootballStudio() {
   const [day, setDay] = useState(today);
   const [posterMode,setPosterMode]=useState<"today"|"finished">("today");
   const [todayLayout,setTodayLayout]=useState<"classic"|"grid">("classic");
+  // Only a presentation filter: no fixture or cached channel is deleted.
+  const [onlyWithBroadcast,setOnlyWithBroadcast]=useState(false);
   const [selectedFinalId,setSelectedFinalId]=useState("");
 
   useEffect(() => {
@@ -246,10 +248,13 @@ export function VitrineFootballStudio() {
     return ()=>{cancelled=true};
   },[crestKey]);
   const crestsReady=crestMedia.key===crestKey&&crestMedia.ready;
+  const matchesToShow=useMemo(()=>posterMode==="today"&&onlyWithBroadcast
+    ?sourceMatches.filter(match=>cleanVerifiedBroadcasts(match.broadcasts).length>0)
+    :sourceMatches,[sourceMatches,onlyWithBroadcast,posterMode]);
   const selectedBadges=useMemo(()=>crestsReady
-    ?resolveMatchesWithAvailableBadges(sourceMatches,crestMedia.images)
+    ?resolveMatchesWithAvailableBadges(matchesToShow,crestMedia.images)
     :{visible:[] as FootballMatch[],missingImages:0,matchesWithMissingImages:0},
-    [sourceMatches,crestsReady,crestMedia.images]);
+    [matchesToShow,crestsReady,crestMedia.images]);
   const groups=useMemo(()=>{
     if(posterMode==="finished")return selectedFinal&&selectedBadges.visible.length?[selectedBadges.visible]:[];
     const chunkSize=todayLayout==="grid"?10:4;
@@ -474,6 +479,13 @@ export function VitrineFootballStudio() {
           <span className="mt-1 block text-xs text-muted-foreground">Até 10 jogos em duas colunas, sem alterar o tamanho dos cartões.</span>
         </button>
       </div>
+      <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-blue-500/20 bg-blue-500/5 p-3 text-sm">
+        <input type="checkbox" checked={onlyWithBroadcast} onChange={event=>setOnlyWithBroadcast(event.target.checked)}
+          className="mt-1 h-4 w-4 accent-blue-500" aria-label="Mostrar somente jogos com transmissão informada"/>
+        <span><strong className="block">Mostrar somente jogos com canal identificado</strong>
+          <span className="block text-xs text-muted-foreground">Oculta da arte as partidas sem transmissão informada. Desative para ver todos os jogos, mesmo sem canal confirmado.</span>
+        </span>
+      </label>
       <p className="text-xs text-muted-foreground">
         Os dois modelos usam os jogos reais, a cor escolhida abaixo e a marca da sua revenda.
         Ao mudar de modelo ou cor, a prévia e o PNG são gerados novamente.
@@ -539,7 +551,9 @@ export function VitrineFootballStudio() {
       {games.error instanceof Error?games.error.message:"Não foi possível consultar os jogos de hoje."}
     </Card>}
     {games.isSuccess&&crestsReady&&posterMode==="today"&&groups.length===0&&<Card className="p-8 text-center">
-      A fonte de jogos não retornou partidas das competições selecionadas para esta data. Toque em “Atualizar eventos” para consultar novamente.
+      {onlyWithBroadcast && sourceMatches.length>0
+        ?"Não há partidas com canal identificado para este filtro. Desmarque a opção para mostrar todos os confrontos ou toque em Atualizar eventos."
+        :"A fonte de jogos não retornou partidas das competições selecionadas para esta data. Toque em Atualizar eventos para consultar novamente."}
     </Card>}
     {games.isSuccess&&posterMode==="finished"&&finishedMatches.length>0&&!selectedFinal&&
       <Card className="p-8 text-center text-muted-foreground">
