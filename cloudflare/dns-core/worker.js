@@ -63,13 +63,17 @@ async function inventory(env){
     }
     if(!dedup.size)throw new Error("empty_valid_inventory");
     const targets=[...dedup.values()].sort((a,b)=>a.server_id.localeCompare(b.server_id));
+    // Reject unexpectedly truncated inventories; do not de-register monitored DNS on a partial origin response.
+    const previous=await env.DNS_DB.prepare("SELECT COUNT(*) AS n FROM dns_targets WHERE active=1").first();
+    if(Number(previous?.n||0)>=40 && targets.length<Number(previous.n)*0.5)
+      throw new Error("suspicious_inventory_shrink");
     const digest=await sha256(targets.map(t=>[t.server_id,t.host,t.status].join("|")).join("\n"));
     if(digest!==await readMeta(env,"inventory_hash")){
       const ms=Date.now();
       const stmts=targets.map(t=>env.DNS_DB.prepare(
-        "INSERT INTO dns_targets(server_id,host,source_status,updated_at_ms) VALUES(?,?,?,?) ON CONFLICT(server_id) DO UPDATE SET host=excluded.host,source_status=excluded.source_status,updated_at_ms=excluded.updated_at_ms"
+        "INSERT INTO dns_targets(server_id,host,source_status,updated_at_ms,active) VALUES(?,?,?,?,1) ON CONFLICT(server_id) DO UPDATE SET host=excluded.host,source_status=excluded.source_status,updated_at_ms=excluded.updated_at_ms,active=1"
       ).bind(t.server_id,t.host,t.status,ms));
-      stmts.push(env.DNS_DB.prepare("DELETE FROM dns_targets WHERE updated_at_ms < ?").bind(ms));
+      stmts.push(env.DNS_DB.prepare("UPDATE dns_targets SET active=0 WHERE updated_at_ms < ? AND active=1").bind(ms));
       // D1 batches are atomic; skip a partial inventory on transient failures.
       await env.DNS_DB.batch(stmts);
       await putMeta(env,"inventory_hash",digest);
@@ -81,7 +85,7 @@ async function inventory(env){
   if(!freshAt||Date.now()-freshAt>6*3600000)
     throw new Error("Inventory unavailable; stale targets refused: "+(fetchError??"unknown"));
   const rows=await env.DNS_DB.prepare(
-    "SELECT t.server_id,t.host,t.source_status,c.checked_at_ms,c.status AS last_status FROM dns_targets t LEFT JOIN dns_current c ON c.server_id=t.server_id"
+    "SELECT t.server_id,t.host,t.source_status,c.checked_at_ms,c.status AS last_status FROM dns_targets t LEFT JOIN dns_current c ON c.server_id=t.server_id WHERE t.active=1"
   ).all();
   return {targets:rows.results??[],refreshed,fetchError};
 }
@@ -228,7 +232,7 @@ export default{
     const url=new URL(request.url);
     if(request.method==="GET"&&url.pathname==="/health"){
       const last=await readMeta(env,"last_cycle").catch(()=>null);
-      const count=await env.DNS_DB.prepare("SELECT COUNT(*) AS total FROM dns_targets").first().catch(()=>({total:0}));
+      const count=await env.DNS_DB.prepare("SELECT COUNT(*) AS total FROM dns_targets WHERE active=1").first().catch(()=>({total:0}));
       return Response.json({service:"streammonitor-dns-core",cloudflare_dns_engine:true,
         configured:!!env.DNS_DB&&!!env.DNS_BRIDGE_TOKEN,targets:Number(count?.total||0),
         last_cycle:last?JSON.parse(last):null},{headers:{"cache-control":"no-store"}});
