@@ -42,7 +42,7 @@ const hex=bytes=>[...new Uint8Array(bytes)].map(x=>x.toString(16).padStart(2,"0"
  * cross this bridge.
  */
 async function refreshSignedSourceCounts(env) {
- if(!env.MIGRATION_DB||!env.MIGRATION_SNAPSHOT_SIGNING_JWK)return;
+ if(!env.MIGRATION_DB||!env.MIGRATION_SNAPSHOT_SIGNING_JWK)throw Error("snapshot_signer_not_configured");
  const control=await env.MIGRATION_DB.prepare(
    "SELECT (SELECT enabled FROM migration_cutover_control WHERE id=1) AS cutover,"+
    "(SELECT enabled FROM migration_alert_dispatch_control WHERE id=1) AS dispatch"
@@ -158,8 +158,24 @@ async function internalGateScan(env){
 export default {
  async scheduled(_event,env,ctx){
   ctx.waitUntil(internalGateScan(env).catch(()=>{}));
-  ctx.waitUntil(refreshSignedSourceCounts(env).catch(e=>
-    console.warn("migration_signed_snapshot_failed",String(e?.message||e).slice(0,90))));
+  ctx.waitUntil((async()=>{
+    try {
+      await refreshSignedSourceCounts(env);
+      await env.MIGRATION_DB?.prepare(
+        "INSERT INTO migration_module_audit(module,status,source_count,edge_count,blocker) "+
+        "VALUES('signed_counts_connector','snapshot_recorded',0,0,'Source counts received; Auth and finance remain blocked') "+
+        "ON CONFLICT(module) DO UPDATE SET status=excluded.status,blocker=excluded.blocker,last_checked_at=datetime('now')"
+      ).run();
+    } catch(e) {
+      const reason=String(e?.message||e?.name||"unknown").slice(0,110);
+      console.warn("migration_signed_snapshot_failed",reason);
+      await env.MIGRATION_DB?.prepare(
+        "INSERT INTO migration_module_audit(module,status,source_count,edge_count,blocker) "+
+        "VALUES('signed_counts_connector','snapshot_failed',0,0,?) "+
+        "ON CONFLICT(module) DO UPDATE SET status=excluded.status,blocker=excluded.blocker,last_checked_at=datetime('now')"
+      ).bind(reason).run().catch(()=>{});
+    }
+  })());
  },
  async fetch(request,env){
   const url=new URL(request.url);
