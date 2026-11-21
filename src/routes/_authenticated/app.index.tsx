@@ -499,7 +499,8 @@ function ServerCard({ server }: { server: any }) {
           <UptimeSparkline checks={displayedChecks} source={sparkSource === "DNS" ? "DNS" : "HTTP"}/>
           <div className="mt-1.5 flex items-center justify-between text-[10px] text-slate-500">
             <span>{sparkSource === "DNS" ? "Histórico DNS real · não confirma IPTV"
-              : sparkSource === "HTTP Cloudflare" ? "Histórico HTTP real · Cloudflare"\n              : sparkSource === "HTTP" ? "Histórico HTTP real"
+              : sparkSource === "HTTP Cloudflare" ? "Histórico HTTP real · Cloudflare"
+              : sparkSource === "HTTP" ? "Histórico HTTP real"
               : sparkSource === "HTTP antigo" ? "Histórico HTTP antigo"
               : "Aguardando medições DNS/HTTP"}</span>
             <span>Últimas {Math.min(displayedChecks.length,40)}</span>
