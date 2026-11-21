@@ -70,7 +70,7 @@ export function RadarBloqueiosDashboard({
   const available=Boolean(snapshot?.verifiedOwnership);
   const servers=available?snapshot!.servers:[];
   const counts=useMemo(()=>({
-    total:servers.length,
+    total:servers.filter(s=>s.status!=="unknown").length,
     normal:servers.filter(s=>s.status==="normal").length,
     possible:servers.filter(s=>s.status==="possible").length,
     confirmed:servers.filter(s=>s.status==="confirmed").length,
@@ -112,6 +112,7 @@ export function RadarBloqueiosDashboard({
     </div>
     <div className="rounded-2xl border border-blue-500/15 bg-slate-900/50 p-4 sm:p-5">
       <h2 className="mb-4 text-base font-bold">DNS monitoradas</h2>
+      {available && servers.some(s=>s.status==="unknown") && <p className="mb-4 text-xs text-amber-300">Aguardando evidências suficientes para {servers.filter(s=>s.status==="unknown").length} DNS. Falhas isoladas não são classificadas como bloqueio.</p>}
       <div className="mb-4 flex flex-wrap gap-2">
         <div className="relative min-w-[190px] flex-1">
           <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500"/>
