@@ -15,7 +15,7 @@ export function footballBroadcastFixtureKey(match:{home:string;away:string}):str
 export function cleanVerifiedBroadcasts(value:unknown):string[]{
   if(!Array.isArray(value))return [];
   const seen=new Set<string>(),names:string[]=[];
-  const placeholders=/^(?:sem transmiss(?:a|ã)o|transmiss(?:a|ã)o n(?:a|ã)o (?:confirmada|informada)|a confirmar|n(?:a|ã)o informado|tbd|n\/a|indispon[ií]vel)$/i;
+  const placeholders=/^(?:sem transmiss(?:a|ã)o|transmiss(?:a|ã)o n(?:a|ã)o (?:confirmada|informada)|a confirmar|canal a confirmar|aguardando confirma(?:ç|c)(?:ã|a)o|n(?:a|ã)o informado|tbd|n\/a|indispon[ií]vel)$/i;
   for(const entry of value){
     if(typeof entry!=="string")continue;
     const name=entry.replace(/\s+/g," ").trim();
