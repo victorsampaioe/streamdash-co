@@ -49,7 +49,9 @@ export async function evaluateQuietTargets(db,targets,now=Date.now()){
   }
   // A verified successful DNS response cancels a *watching* row. A quiet row
   // requires two successful spaced probes (handled by recordQuietProbes).
-  if(t.last_status==="ok" && !isQuiet(previous)){
+  if(t.last_status!=="down" && !isQuiet(previous)){
+   // A degraded, healthy or inconclusive DNS check interrupts the proof
+   // of five continuous days of confirmed failure.
    if(previous)work.push(db.prepare("DELETE FROM dns_quiet_policy WHERE server_id=?").bind(t.server_id));
    normal.push(t);continue;
   }
@@ -63,6 +65,7 @@ export async function evaluateQuietTargets(db,targets,now=Date.now()){
      now-Number(previous.offline_since_ms)>=FIVE_DAYS_MS){
    work.push(db.prepare("UPDATE dns_quiet_policy SET quieted_at_ms=?,next_probe_at_ms=?,updated_ms=? WHERE server_id=? AND quieted_at_ms IS NULL")
     .bind(now,now+RECHECK_ERROR_MS,now,t.server_id));
+   work.push(db.prepare("INSERT INTO dns_quiet_events(server_id,event,occurred_ms,source) VALUES(?,'quieted',?,'cloudflare')").bind(t.server_id,now));
    quietCount++;
    // Due probe will be executed in a later cycle; don't probe at promotion.
    continue;
@@ -104,6 +107,7 @@ export async function recordQuietProbes(db,checks,now=Date.now()){
     const count=Number(row.success_streak||0);
     if(count>=1 && now-previousAt>=RECONFIRM_MS){
       work.push(db.prepare("DELETE FROM dns_quiet_policy WHERE server_id=?").bind(x.server_id));
+      work.push(db.prepare("INSERT INTO dns_quiet_events(server_id,event,occurred_ms,source) VALUES(?,'restored',?,'cloudflare')").bind(x.server_id,now));
       released++;
       continue;
     }
