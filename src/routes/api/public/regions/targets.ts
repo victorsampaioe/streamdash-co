@@ -20,8 +20,9 @@ export const Route = createFileRoute("/api/public/regions/targets")({
 
         const { data: servers } = await supabaseAdmin
           .from("servers")
-          .select("id, host, owner_id, iptv_username, iptv_password, iptv_detected, last_checked_at, monitoring_paused, dns_enabled, dns_status, dns_state_changed_at, dns_last_success_at, dns_last_failure_at, host_changed_at")
+          .select("id, host, owner_id, iptv_username, iptv_password, iptv_detected, last_checked_at, monitoring_paused, dns_enabled, dns_status, current_status, dns_state_changed_at, dns_last_success_at, dns_last_failure_at, last_dns_check_at, host_changed_at")
           .eq("monitoring_paused", false)
+          .is("auto_excluded_at", null)
           .order("id", { ascending: true });
 
         // Só entrega alvos de contas ativas (assinatura válida ou créditos).
