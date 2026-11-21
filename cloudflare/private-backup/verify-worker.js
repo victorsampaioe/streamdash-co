@@ -62,9 +62,65 @@ async function verifyArchive(env){
   return {ok:matched,matched,bytes:readBytes};
 }
 
+
+/**
+ * Compute the full streaming SHA-256 of the 19 November R2 PostgreSQL
+ * archive. This only proves the R2 copy is completely readable, NOT that the
+ * PostgreSQL archive can be restored or is identical to the source.
+ * The source checksum is intentionally not inferred from multipart ETags.
+ */
+async function verifyRecentArchive(env) {
+ const state=await env.BACKUP_STATE.prepare(
+   "SELECT value FROM backup_control WHERE key='archive_recent_integrity_status'"
+ ).first();
+ if(state?.value==="hashed_without_origin_reference")return {ok:true,already:true};
+ const item=await env.BACKUP_STATE.prepare(
+   "SELECT r2_key,source_size FROM backup_objects WHERE bucket='database_export_19_11_26' "+
+   "AND status='copied_size_verified' LIMIT 1"
+ ).first();
+ if(!item)return {ok:false,reason:"recent_archive_not_available"};
+ const object=await env.BACKUP_BUCKET.get(item.r2_key);
+ if(!object?.body||object.size!==item.source_size)
+   return {ok:false,reason:"recent_archive_missing_or_size_mismatch"};
+ const hash=createHash("sha256");
+ const reader=object.body.getReader();
+ let bytes=0;
+ try {
+   for(;;) {
+     const part=await reader.read();
+     if(part.done)break;
+     if(!(part.value instanceof Uint8Array))throw Error("r2_stream_invalid");
+     hash.update(part.value);
+     bytes+=part.value.byteLength;
+   }
+ }finally{reader.releaseLock();}
+ const full=bytes===item.source_size;
+ const digest=hash.digest("hex");
+ await env.BACKUP_STATE.batch([
+   env.BACKUP_STATE.prepare(
+     "INSERT INTO backup_control(key,value) VALUES('archive_recent_integrity_status',?) "+
+     "ON CONFLICT(key) DO UPDATE SET value=excluded.value"
+   ).bind(full?"hashed_without_origin_reference":"short_read"),
+   env.BACKUP_STATE.prepare(
+     "INSERT INTO backup_control(key,value) VALUES('archive_recent_actual_sha256',?) "+
+     "ON CONFLICT(key) DO UPDATE SET value=excluded.value"
+   ).bind(digest),
+   env.BACKUP_STATE.prepare(
+     "INSERT INTO backup_control(key,value) VALUES('archive_recent_checked_at',?) "+
+     "ON CONFLICT(key) DO UPDATE SET value=excluded.value"
+   ).bind(new Date().toISOString()),
+   env.BACKUP_STATE.prepare(
+     "INSERT INTO backup_control(key,value) VALUES('archive_recent_read_bytes',?) "+
+     "ON CONFLICT(key) DO UPDATE SET value=excluded.value"
+   ).bind(String(bytes))
+ ]);
+ return {ok:full,bytes,sourceChecksumVerified:false,restored:false};
+}
+
 export default {
   async fetch(){return new Response("Not Found",{status:404});}
 };
 export class BackupVerify extends WorkerEntrypoint{
   async verifyArchive(){return await verifyArchive(this.env);}
+  async verifyRecentArchive(){return await verifyRecentArchive(this.env);}
 }
