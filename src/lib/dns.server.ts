@@ -424,7 +424,7 @@ type PrevSnapshot = {
 
 export async function runDnsCheck(serverId: string, opts: { quick?: boolean; edgeReport?: DnsReport } = {}): Promise<{ ok: boolean; score: number; status: string; dnsStatus: string; severeFailure: boolean; alerts: number }> {
   const { data: srv } = await (supabaseAdmin as any)
-    .from("servers").select("id, host, owner_id, host_changed_at").eq("id", serverId).maybeSingle();
+    .from("servers").select("id, host, owner_id, host_changed_at").eq("id", serverId).is("auto_excluded_at",null).maybeSingle();
   if (!srv) throw new Error("Servidor não encontrado");
 
   const { getActiveOwnerIds, MONITORING_PAUSED_MESSAGE, syncServersPauseState } = await import("./service-status.server");
@@ -689,6 +689,7 @@ export async function runDueDnsChecks(limit = 40): Promise<{ checked: number; er
       .select("id, owner_id, dns_status, last_dns_check_at")
       .eq("dns_enabled", true)
       .eq("monitoring_paused", false)
+      .is("auto_excluded_at", null)
       .order("last_dns_check_at", { ascending: true, nullsFirst: true })
       .order("id", { ascending: true })
       .range(offset, offset + pageSize - 1);
@@ -759,6 +760,7 @@ export async function runDueDnsRecoveryChecks(limit = 16): Promise<{
     .select("id,owner_id,dns_status,last_dns_check_at,dns_recovery_last_probe_at")
     .eq("dns_enabled", true)
     .eq("monitoring_paused", false)
+    .is("auto_excluded_at", null)
     .in("dns_status", ["offline", "unstable"])
     .order("dns_recovery_last_probe_at", { ascending: true, nullsFirst: true })
     .limit(200);
