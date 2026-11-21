@@ -13,6 +13,7 @@ export const runCheckNow = createServerFn({ method: "POST" })
       .from("servers")
       .select("id")
       .eq("id", data.serverId)
+      .is("auto_excluded_at", null)
       .maybeSingle();
     if (error || !srv) throw new Error("Servidor não encontrado ou sem permissão");
     const { isCloudflareHttpPrimary } = await import("./cloudflare-http-mode.server");
