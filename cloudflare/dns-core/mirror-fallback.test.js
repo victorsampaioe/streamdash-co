@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { MAX_MIRROR_AGE_MS, mirrorFresh, readMirrorTargets } from "./mirror-fallback.mjs";
+import { MAX_MIRROR_AGE_MS, mirrorFresh, readMirrorTargets, readCachedDnsTargets } from "./mirror-fallback.mjs";
 
 const now=1_800_000_000_000;
 const id="11111111-2222-4333-8444-555555555555";
@@ -39,5 +39,29 @@ describe("Cloudflare inventory emergency fallback",()=>{
   it("never resurrects a deleted/disabled target in the fallback",async()=>{
     const db=mock({...snapshot,target_count:0},[]);
     await expect(readMirrorTargets(db,now)).rejects.toThrow("mirror_missing_or_expired");
+  });
+});
+
+describe("independent DNS inventory fallback",()=>{
+  function dnsDb(last,rows) {
+    return {prepare(sql) {
+      if(sql.includes("dns_worker_meta"))return {first:async()=>({value:String(last)})};
+      if(sql.includes("FROM dns_targets"))return {all:async()=>({results:rows})};
+      throw Error("unexpected_sql");
+    }};
+  }
+  it("retains all signed DNS targets even if the HTTP mirror is smaller",async()=>{
+    const dnsRows=[rows[0],{...rows[0],server_id:"aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee"}];
+    expect((await readCachedDnsTargets(dnsDb(now-60_000,dnsRows),now)).length).toBe(2);
+  });
+  it("never uses expired DNS inventories",async()=>{
+    await expect(readCachedDnsTargets(dnsDb(now-MAX_MIRROR_AGE_MS-1,rows),now))
+      .rejects.toThrow("dns_cache_missing_or_expired");
+  });
+  it("rejects duplicate IDs and zero targets",async()=>{
+    await expect(readCachedDnsTargets(dnsDb(now-60_000,[rows[0],rows[0]]),now))
+      .rejects.toThrow("dns_cache_invalid_target");
+    await expect(readCachedDnsTargets(dnsDb(now-60_000,[]),now))
+      .rejects.toThrow("dns_cache_invalid_count");
   });
 });
