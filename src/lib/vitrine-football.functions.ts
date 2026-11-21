@@ -316,7 +316,8 @@ export const getVitrineFootballMatches = createServerFn({ method: "POST" })
     };
 
     for(const match of matches){
-      const saved=savedByFixture.get(footballBroadcastFixtureKey(match));
+      // A manual refresh ignores previously saved broadcaster lists.
+      const saved=data.refreshTransmissions===true?undefined:savedByFixture.get(footballBroadcastFixtureKey(match));
       const fromFeed=cleanVerifiedBroadcasts(match.broadcasts);
       if(fromFeed.length){
         match.broadcasts=fromFeed;
@@ -352,7 +353,7 @@ export const getVitrineFootballMatches = createServerFn({ method: "POST" })
 
     // Research only genuinely unknown games after their cooldown. A fixture
     // with saved confirmed channels never needs research on a normal visit.
-    const missingChannels=matches.filter(m=>!m.broadcasts?.length&&!researchedRecently(m));
+    const missingChannels=matches.filter(m=>(data.refreshTransmissions===true||!m.broadcasts?.length)&&!researchedRecently(m));
     const auth=getRequest()?.headers.get("authorization")||"";
     const apikey=process.env.SUPABASE_PUBLISHABLE_KEY||"";
     if(missingChannels.length && auth.startsWith("Bearer ") && apikey){
@@ -368,7 +369,7 @@ export const getVitrineFootballMatches = createServerFn({ method: "POST" })
           "https://streammonitor-football-broadcast.victorsampaio133.workers.dev/broadcasts",{
             method:"POST",
             headers:{authorization:auth,apikey,"content-type":"application/json"},
-            body:JSON.stringify({matches:batch.map(m=>({
+            body:JSON.stringify({forceRefresh:data.refreshTransmissions===true,matches:batch.map(m=>({
               id:m.id,home:m.home,away:m.away,date:m.day,
               time:m.time,league:m.league
             }))}),
