@@ -10,7 +10,7 @@
  */
 import { recordSample } from "./monitor-store.mjs";
 import { targetLanes } from "./monitor-state.mjs";
-import { readMirrorTargets } from "./mirror-fallback.mjs";
+import { readMirrorTargets, readCachedDnsTargets } from "./mirror-fallback.mjs";
 
 const MAX_TARGETS = 30;
 const CONCURRENCY = 5;
@@ -318,8 +318,14 @@ async function inventory(env){
   }catch(e){fetchError=String(e?.message??e).slice(0,100);}
   if(fetchError) {
     try {
+      const cached=await readCachedDnsTargets(env.DNS_DB);
+      return {targets:cached,refreshed:false,fetchError,inventorySource:"cloudflare_dns_cache"};
+    } catch(error) {
+      console.warn("edge_dns_cache_unavailable",String(error?.message??error).slice(0,100));
+    }
+    try {
       const mirror = await readMirrorTargets(env.DNS_DB);
-      return {targets:mirror,refreshed:false,fetchError,inventorySource:"cloudflare_mirror"};
+      return {targets:mirror,refreshed:false,fetchError,inventorySource:"cloudflare_http_mirror"};
     } catch(error) {
       console.warn("edge_dns_mirror_fallback_unavailable",String(error?.message??error).slice(0,100));
     }
@@ -468,7 +474,7 @@ async function runCycle(env){
     throw new Error("Missing D1 or DNS bridge secret");
   const {targets,refreshed,fetchError,inventorySource}=await inventory(env);
   if(!targets.length)throw new Error("No active DNS targets");
-  const localOnly=inventorySource==="cloudflare_mirror";
+  const localOnly=!!fetchError;
   const selected=chooseTargets(targets);
   const results=await gather(selected);
   await keepResults(env,results,!localOnly);
