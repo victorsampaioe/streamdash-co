@@ -748,7 +748,17 @@ async function backupRecentArchiveVerifyControl(env){
     "SELECT value FROM dns_worker_meta WHERE key='backup_recent_archive_verify_requested'"
   ).first();
   if(requested?.value!=="true")return;
-  const result=await env.BACKUP_VERIFY.verifyRecentArchive();
+  let result;
+  try {
+    result=await env.BACKUP_VERIFY.verifyRecentArchive();
+  } catch (error) {
+    // Store only an error class. Never log archive metadata, keys or bytes.
+    await env.DNS_DB.prepare(
+      "INSERT INTO dns_worker_meta(key,value) VALUES('backup_recent_archive_verify_error',?) "+
+      "ON CONFLICT(key) DO UPDATE SET value=excluded.value"
+    ).bind(String(error?.name||"error").slice(0,70)).run();
+    return;
+  }
   if(result?.reason==="recent_archive_not_available")return;
   const status=result?.ok===true
     ?"r2_full_sha256_computed_source_comparison_pending"
