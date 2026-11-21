@@ -33,6 +33,7 @@ export async function runCheckForServer(serverId: string) {
     .eq("id", serverId)
     .maybeSingle();
   if (error || !server) throw new Error("Servidor não encontrado");
+  if ((server as any).auto_excluded_at) throw new Error("DNS excluída após cinco dias offline. Cadastre novamente para monitorar.");
 
   const { getActiveOwnerIds, MONITORING_PAUSED_MESSAGE, syncServersPauseState } = await import("./service-status.server");
   const active = await getActiveOwnerIds([(server as any).owner_id]);
@@ -46,7 +47,7 @@ export async function runCheckForServer(serverId: string) {
 
 export async function runDueChecks(limit = 20) {
   const now = Date.now();
-  const { data: servers, error } = await supabaseAdmin.from("servers").select("*").eq("monitoring_paused", false);
+  const { data: servers, error } = await supabaseAdmin.from("servers").select("*").eq("monitoring_paused", false).is("auto_excluded_at", null);
   if (error) throw error;
 
   // Só monitora servidores de contas ativas:
