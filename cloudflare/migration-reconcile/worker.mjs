@@ -28,6 +28,77 @@ function valid(body){
    Object.keys(body.counts).sort().join(",")!==KEYS.slice().sort().join(","))return false;
  return KEYS.every(k=>Number.isSafeInteger(body.counts[k])&&body.counts[k]>=0&&body.counts[k]<=1e10);
 }
+const SNAPSHOT_V2_KEYS=[
+  "profiles","auth_users","roles","servers","subscriptions","payments",
+  "alert_channels","telegram_outbox","credentialed_servers",
+];
+const SNAPSHOT_V2_PATH="/api/public/migration/snapshot";
+const SNAPSHOT_V2_ORIGIN="https://project--53f0eb67-2e35-46bc-9ab5-dc7ffc20dcbd.lovable.app";
+const hex=bytes=>[...new Uint8Array(bytes)].map(x=>x.toString(16).padStart(2,"0")).join("");
+/**
+ * Periodic read-only count reconciliation. Dedicated ECDSA private key lives
+ * ONLY in Cloudflare Worker secret binding. The source route knows only its
+ * public key. No row-level customer data, hashes, Pix tokens or IPTV credentials
+ * cross this bridge.
+ */
+async function refreshSignedSourceCounts(env) {
+ if(!env.MIGRATION_DB||!env.MIGRATION_SNAPSHOT_SIGNING_JWK)return;
+ const control=await env.MIGRATION_DB.prepare(
+   "SELECT (SELECT enabled FROM migration_cutover_control WHERE id=1) AS cutover,"+
+   "(SELECT enabled FROM migration_alert_dispatch_control WHERE id=1) AS dispatch"
+ ).first();
+ if(control?.cutover!==0||control?.dispatch!==0)throw Error("staging_gate_locked");
+ const timestamp=String(Date.now());
+ const message=["streammonitor-migration-snapshot-v2",timestamp,"GET",SNAPSHOT_V2_PATH].join("\n");
+ const jwk=JSON.parse(env.MIGRATION_SNAPSHOT_SIGNING_JWK);
+ if(jwk.kty!=="EC"||jwk.crv!=="P-256"||!jwk.d)throw Error("signing_key_invalid");
+ const key=await crypto.subtle.importKey(
+   "jwk",jwk,{name:"ECDSA",namedCurve:"P-256"},false,["sign"]
+ );
+ const signed=await crypto.subtle.sign(
+   {name:"ECDSA",hash:"SHA-256"},key,new TextEncoder().encode(message)
+ );
+ const res=await fetch(SNAPSHOT_V2_ORIGIN+SNAPSHOT_V2_PATH,{
+   method:"GET",redirect:"error",cache:"no-store",
+   headers:{
+     "accept":"application/json",
+     "x-sm-migration-time":timestamp,
+     "x-sm-migration-signature":hex(signed),
+   },
+   signal:AbortSignal.timeout(15000),
+ });
+ if(!res.ok)throw Error("source_unavailable_"+res.status);
+ if(!(res.headers.get("content-type")||"").toLowerCase().startsWith("application/json"))
+   throw Error("source_content_type_invalid");
+ const body=await res.text();
+ if(body.length>3200)throw Error("source_response_too_large");
+ const parsed=JSON.parse(body);
+ if(parsed?.ok!==true||parsed.schema_version!==2||
+    parsed.authority!=="lovable-cloud"||parsed.migration_mode!=="READ_ONLY"||
+    !Number.isSafeInteger(parsed.source_time_ms)||
+    Math.abs(Date.now()-parsed.source_time_ms)>120000||
+    !parsed.counts||typeof parsed.counts!=="object"||Array.isArray(parsed.counts)||
+    Object.keys(parsed.counts).sort().join(",")!==SNAPSHOT_V2_KEYS.slice().sort().join(",")||
+    !SNAPSHOT_V2_KEYS.every(k=>Number.isSafeInteger(parsed.counts[k])&&parsed.counts[k]>=0&&parsed.counts[k]<=10_000_000))
+    throw Error("invalid_source_counts");
+ const stage=await stageCounts(env.MIGRATION_DB);
+ const drift={};
+ for(const key of SNAPSHOT_V2_KEYS)drift[key]=parsed.counts[key]-stage[key];
+ drift.auth_password_envelopes_missing=parsed.counts.auth_users-stage.auth_secrets;
+ drift.encrypted_server_credentials_missing=parsed.counts.credentialed_servers-stage.encrypted_server_credentials;
+ const critical=Object.values(drift).some(v=>v!==0);
+ const saved=await env.MIGRATION_DB.prepare(
+   "INSERT OR IGNORE INTO migration_readonly_source_counts(source_time_ms,received_at_ms,source_counts_json,"+
+   "stage_counts_json,drift_json,has_critical_drift,mode) VALUES(?,?,?,?,?,?,'READ_ONLY')"
+ ).bind(parsed.source_time_ms,Date.now(),JSON.stringify(parsed.counts),
+   JSON.stringify(stage),JSON.stringify(drift),critical?1:0).run();
+ if(saved?.meta?.changes===0)throw Error("source_snapshot_duplicate");
+ await env.MIGRATION_DB.prepare("DELETE FROM migration_readonly_source_counts WHERE received_at_ms<?")
+   .bind(Date.now()-30*86400_000).run();
+ // The migration remains blocked until encrypted secrets, payments, storage,
+ // auth and restore checks are all independently verified.
+}
+
 async function stageCounts(db){
  const q=await db.prepare(
   "SELECT "+
@@ -63,8 +134,12 @@ async function internalGateScan(env){
  ).first();
  if(flags?.cutover_enabled!==0||flags?.historical_alerts_enabled!==0)
   throw Error("safety_gate_unexpected_enabled");
+ const latest=await env.MIGRATION_DB.prepare(
+   "SELECT received_at_ms FROM migration_readonly_source_counts ORDER BY received_at_ms DESC LIMIT 1"
+ ).first();
+ const sourceFresh=Number(latest?.received_at_ms||0)>Date.now()-30*60_000;
  const report={
-  source_counts_fresh:false,auth_accounts:stage.auth_users,
+  source_counts_fresh:sourceFresh,auth_accounts:stage.auth_users,
   auth_encrypted_hashes:stage.auth_secrets,encrypted_server_credentials:stage.encrypted_server_credentials,
   profiles:stage.profiles,roles:stage.roles,servers:stage.servers,
   subscriptions:stage.subscriptions,payments:stage.payments,
@@ -83,6 +158,8 @@ async function internalGateScan(env){
 export default {
  async scheduled(_event,env,ctx){
   ctx.waitUntil(internalGateScan(env).catch(()=>{}));
+  ctx.waitUntil(refreshSignedSourceCounts(env).catch(e=>
+    console.warn("migration_signed_snapshot_failed",String(e?.message||e).slice(0,90))));
  },
  async fetch(request,env){
   const url=new URL(request.url);
