@@ -1,0 +1,91 @@
+/**
+ * Stream Monitor migration read-only drift monitor.
+ * This Worker DOES NOT perform database cutover, authenticate customers,
+ * decrypt credentials, submit payments, or deliver notifications.
+ */
+const HEADERS={"content-type":"application/json; charset=utf-8","cache-control":"no-store","x-content-type-options":"nosniff","referrer-policy":"no-referrer"};
+const KEYS=["profiles","auth_users","roles","servers","subscriptions","payments","alert_channels","telegram_outbox","credentialed_servers","active_pg_cron","storage_objects"];
+const json=(value,status=200)=>new Response(JSON.stringify(value),{status,headers:HEADERS});
+async function authorized(request,env){
+ const auth=/^Bearer ([a-f0-9]{64})$/.exec(request.headers.get("authorization")||"");
+ if(!auth||!/^[a-f0-9]{64}$/.test(env.MIGRATION_RECONCILE_TOKEN||""))return false;
+ const enc=new TextEncoder();
+ const [a,b]=await Promise.all([
+  crypto.subtle.digest("SHA-256",enc.encode(auth[1])),
+  crypto.subtle.digest("SHA-256",enc.encode(env.MIGRATION_RECONCILE_TOKEN))
+ ]);
+ let mismatch=0;
+ const x=new Uint8Array(a),y=new Uint8Array(b);
+ for(let i=0;i<32;i++)mismatch|=x[i]^y[i];
+ return mismatch===0;
+}
+function valid(body){
+ if(!body||typeof body!=="object"||Array.isArray(body))return false;
+ if(Object.keys(body).sort().join(",")!=="counts,schema_version,source_time_ms")return false;
+ if(body.schema_version!==1||!Number.isSafeInteger(body.source_time_ms)||
+  Math.abs(Date.now()-body.source_time_ms)>600_000)return false;
+ if(!body.counts||typeof body.counts!=="object"||Array.isArray(body.counts)||
+   Object.keys(body.counts).sort().join(",")!==KEYS.slice().sort().join(","))return false;
+ return KEYS.every(k=>Number.isSafeInteger(body.counts[k])&&body.counts[k]>=0&&body.counts[k]<=1e10);
+}
+async function stageCounts(db){
+ const q=await db.prepare(
+  "SELECT "+
+  "(SELECT COUNT(*) FROM migration_users_stage) AS profiles,"+
+  "(SELECT COUNT(*) FROM migration_auth_accounts_stage) AS auth_users,"+
+  "(SELECT COUNT(*) FROM migration_roles_stage) AS roles,"+
+  "(SELECT COUNT(*) FROM migration_servers_stage WHERE server_id NOT IN "+
+  "(SELECT source_id FROM migration_shadow_tombstones WHERE source_table='servers')) AS servers,"+
+  "(SELECT COUNT(*) FROM migration_subscriptions_stage) AS subscriptions,"+
+  "(SELECT COUNT(*) FROM migration_payments_stage) AS payments,"+
+  "(SELECT COUNT(*) FROM migration_alert_channels_stage) AS alert_channels,"+
+  "(SELECT COUNT(*) FROM migration_telegram_outbox_stage) AS telegram_outbox,"+
+  "(SELECT COUNT(*) FROM migration_servers_stage WHERE credentials_present=1 AND server_id NOT IN "+
+  "(SELECT source_id FROM migration_shadow_tombstones WHERE source_table='servers')) AS credentialed_servers,"+
+  "(SELECT COUNT(*) FROM migration_auth_secret_envelopes) AS auth_secrets,"+
+  "(SELECT COUNT(*) FROM migration_server_credentials_encrypted_stage) AS encrypted_server_credentials"
+ ).first();
+ if(!q)throw Error("staging_unavailable");
+ return q;
+}
+export default {
+ async fetch(request,env){
+  const url=new URL(request.url);
+  if(url.pathname==="/health"&&request.method==="GET")return json({ok:true,mode:"READ_ONLY"});
+  if(url.pathname!=="/source/snapshot"||request.method!=="POST")return json({error:"not_found"},404);
+  if(!env.MIGRATION_RECONCILE_TOKEN||!env.MIGRATION_DB)return json({error:"service_not_configured"},503);
+  if(!await authorized(request,env))return json({error:"unauthorized"},401);
+  if((request.headers.get("content-type")||"").split(";")[0].trim()!=="application/json")
+   return json({error:"invalid_media_type"},415);
+  const length=Number(request.headers.get("content-length")||"0");
+  if(length>3500)return json({error:"payload_too_large"},413);
+  const raw=await request.text();
+  if(raw.length>3500)return json({error:"payload_too_large"},413);
+  let body;
+  try{body=JSON.parse(raw)}catch{return json({error:"invalid_json"},400)}
+  if(!valid(body))return json({error:"invalid_counts"},400);
+  try{
+   const stage=await stageCounts(env.MIGRATION_DB);
+   const drift={};
+   for(const key of KEYS){
+    if(key in stage)drift[key]=body.counts[key]-stage[key];
+   }
+   drift.auth_password_envelopes_missing=body.counts.auth_users-stage.auth_secrets;
+   drift.encrypted_server_credentials_missing=body.counts.credentialed_servers-stage.encrypted_server_credentials;
+   const critical=Object.values(drift).some(v=>v!==0);
+   // Single-key timestamp makes retries idempotent.
+   const insert=await env.MIGRATION_DB.prepare(
+    "INSERT OR IGNORE INTO migration_readonly_source_counts("+
+    "source_time_ms,received_at_ms,source_counts_json,stage_counts_json,drift_json,has_critical_drift,mode) "+
+    "VALUES(?,?,?,?,?,?,'READ_ONLY')"
+   ).bind(body.source_time_ms,Date.now(),JSON.stringify(body.counts),JSON.stringify(stage),JSON.stringify(drift),critical?1:0).run();
+   // Only purge records produced by this read-only monitor.
+   await env.MIGRATION_DB.prepare(
+    "DELETE FROM migration_readonly_source_counts WHERE received_at_ms<?"
+   ).bind(Date.now()-30*86400_000).run();
+   return json({ok:true,accepted:!!insert.meta?.changes,has_critical_drift:critical,mode:"READ_ONLY"});
+  }catch{
+   return json({error:"read_only_reconciliation_unavailable"},503);
+  }
+ }
+};
