@@ -369,7 +369,8 @@ export const getVitrineFootballMatches = createServerFn({ method: "POST" })
             method:"POST",
             headers:{authorization:auth,apikey,"content-type":"application/json"},
             body:JSON.stringify({matches:batch.map(m=>({
-              id:m.id,home:m.home,away:m.away,date:m.day
+              id:m.id,home:m.home,away:m.away,date:m.day,
+              time:m.time,league:m.league
             }))}),
             cache:"no-store",signal:AbortSignal.timeout(30000)
           }
