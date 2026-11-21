@@ -24,7 +24,7 @@ function blocked() {
 async function verifyMigrationSigner(request: Request) {
   const timestamp = request.headers.get("x-sm-migration-time") ?? "";
   const signature = request.headers.get("x-sm-migration-signature") ?? "";
-  if (!/^\\d{13}$/.test(timestamp) || !/^[0-9a-f]{128}$/i.test(signature)) return false;
+  if (!/^\d{13}$/.test(timestamp) || !/^[0-9a-f]{128}$/i.test(signature)) return false;
   const value = Number(timestamp), now = Date.now();
   if (!Number.isSafeInteger(value) || Math.abs(now - value) > 120_000) return false;
   const message = ["streammonitor-migration-snapshot-v2", timestamp, "GET", PATH].join("\n");
