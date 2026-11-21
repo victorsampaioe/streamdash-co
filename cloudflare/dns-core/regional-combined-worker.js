@@ -742,6 +742,31 @@ async function backupArchiveVerifyControl(env){
   ).run();
   console.log("backup_archive_verification_completed",JSON.stringify({sha256Matched:result.matched===true,bytes:result.bytes||null,reason:result.reason||null}));
 }
+async function backupRecentArchiveVerifyControl(env){
+  if(!env.BACKUP_VERIFY||!env.DNS_DB)return;
+  const requested=await env.DNS_DB.prepare(
+    "SELECT value FROM dns_worker_meta WHERE key='backup_recent_archive_verify_requested'"
+  ).first();
+  if(requested?.value!=="true")return;
+  const result=await env.BACKUP_VERIFY.verifyRecentArchive();
+  if(result?.reason==="recent_archive_not_available")return;
+  const status=result?.ok===true
+    ?"r2_full_sha256_computed_source_comparison_pending"
+    :"r2_archive_read_failed";
+  await env.DNS_DB.batch([
+    env.DNS_DB.prepare(
+      "INSERT INTO dns_worker_meta(key,value) VALUES('backup_recent_archive_verify_status',?) "+
+      "ON CONFLICT(key) DO UPDATE SET value=excluded.value"
+    ).bind(status),
+    env.DNS_DB.prepare(
+      "INSERT INTO dns_worker_meta(key,value) VALUES('backup_recent_archive_verify_requested','false') "+
+      "ON CONFLICT(key) DO UPDATE SET value='false'"
+    )
+  ]);
+  console.log("backup_recent_archive_stream_finished",
+    JSON.stringify({r2_read_ok:result?.ok===true,bytes:result?.bytes??null}));
+}
+
 export default {
   scheduled(event,env,ctx){
     regionalWorker.scheduled(event,env,ctx);
@@ -751,6 +776,7 @@ export default {
     if(env.BACKUP_ENROLLMENT)ctx.waitUntil(enrollmentControl(env).catch(e=>console.warn("backup_enroll_control_failed",String(e?.message||e).slice(0,130))));
     if(env.BACKUP_ENROLLMENT)ctx.waitUntil(backupBulkControl(env).catch(e=>console.error("backup_bulk_service_failed",String(e?.message||e).slice(0,130))));
     if(env.BACKUP_VERIFY)ctx.waitUntil(backupArchiveVerifyControl(env).catch(e=>console.error("backup_sha256_check_failed",String(e?.name||"error"))));
+    if(env.BACKUP_VERIFY)ctx.waitUntil(backupRecentArchiveVerifyControl(env).catch(e=>console.error("backup_recent_sha256_check_failed",String(e?.name||"error"))));
   },
   queue(batch,env,ctx){
     return telegramQueueWorker.queue(batch,env,ctx);
