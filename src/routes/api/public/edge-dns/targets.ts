@@ -14,7 +14,7 @@ export const Route=createFileRoute("/api/public/edge-dns/targets")({
     const {getActiveOwnerIds}=await import("@/lib/service-status.server");
     const {data,error}=await supabaseAdmin.from("servers")
       .select("id,owner_id,host,dns_status,dns_enabled,monitoring_paused")
-      .eq("dns_enabled",true).eq("monitoring_paused",false)
+      .eq("dns_enabled",true).eq("monitoring_paused",false).is("auto_excluded_at",null)
       .order("id",{ascending:true}).limit(5000);
     if(error)return Response.json({error:"targets_unavailable"},{status:503});
     const active=await getActiveOwnerIds((data??[]).map(s=>s.owner_id));
