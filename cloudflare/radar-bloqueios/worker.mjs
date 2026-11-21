@@ -42,6 +42,7 @@ function classify(dns,http,ev,old,now){
   const sources=new Set(blocked.map(x=>x.source_id));
   const hasDifferentReachableNetwork=reachable.some(x=>!blockedNetworks.has(x.network_id));
   const repeated=blocked.length>=2&&Math.max(...blocked.map(x=>x.observed_ms))-Math.min(...blocked.map(x=>x.observed_ms))>=300000;
+  const recoveredNetworks=new Set(reachable.map(x=>x.network_id));
   const signatures=blocked.filter(x=>{
     try{return ["dns_intercept","explicit_block_page","isp_tls_reset"].includes(JSON.parse(x.record_json).diagnostic_signature)}
     catch{return false}
@@ -56,8 +57,10 @@ function classify(dns,http,ev,old,now){
   if((result.dns_partial>=2&&result.http_up>=1)||(result.dns_down>=2&&result.http_up>=2))
     return {status:"possible",confidence:"medium",reason:"repeated_network_disagreement",tech:result};
   // Only a previously confirmed restriction can become 'normalized'.
-  if(clean&&old?.status==="confirmed"&&blocked.length===0)
+  if(clean&&old?.status==="confirmed"&&blocked.length===0&&recoveredNetworks.size>=2)
     return {status:"normalized",confidence:"medium",reason:"previous_restriction_cleared",tech:result};
+  if(old?.status==="confirmed")
+    return {status:"unknown",confidence:"low",reason:"recovery_not_yet_verified",tech:result};
   if(clean&&old?.status==="normalized")
     return {status:"normalized",confidence:"medium",reason:"recovery_monitoring",tech:result};
   if(clean)return {status:"normal",confidence:"medium",reason:"reachable_on_tested_networks",tech:result};
