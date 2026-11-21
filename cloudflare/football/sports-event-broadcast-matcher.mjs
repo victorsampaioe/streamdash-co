@@ -43,7 +43,8 @@ const aliases = new Map(Object.entries({
 const canonical = (name) => aliases.get(normalize(name)) || normalize(name);
 const invalidYouth = (value) => /(?:^|\s)(?:sub\s?(?:17|18|19|20|21|23)|u\s?(?:17|18|19|20|21|23)|junior(?:es)?|under\s?(?:17|18|19|20|21|23))(?:\s|$)/.test(normalize(value));
 const providers = [
-  ["Premiere", /^premiere(?:\s*(?:[1-9]|hd))?$/],
+  ["Premiere", /^premiere(?:\s*(?:clubes|hd|1))?$/], ["Premiere 2", /^premiere\s*2$/],
+  ["Premiere 3", /^premiere\s*3$/],
   ["SporTV", /^sportv(?:\s*(?:hd|1))?$/], ["SporTV 2", /^sportv\s*2(?:\s*hd)?$/],
   ["SporTV 3", /^sportv\s*3(?:\s*hd)?$/],
   ["Globo", /^(?:globo(?:\s*(?:tv|sp|rj|mg))?|rede globo)$/],
@@ -60,7 +61,7 @@ const providers = [
   ["Paramount+", /^paramount(?:\s*plus)?$/]
 ];
 function channelName(value) {
- const label = normalize(value);
+ const label = normalize(value).replace(/\s+(?:alternativo|alternativa|backup|reserva)(?:\s+\d+)?$/, "");
  if (!label || label.length > 70 ||
   /servidor|server|player|embed|stream|alternativ|link|fonte|op[cç][aã]o|espelho|backup|canal \d/.test(label))
   return null;
@@ -110,7 +111,11 @@ export function matchBroadcastsFromSports(matches,events){
   const candidates=[];
   for(const item of events.slice(0,2500)){
    if(!item||typeof item!=="object"||invalidYouth(String(item.title||"")+" "+String(item.competition||"")))continue;
-   const sourceH=canonical(item?.teams?.home?.name),sourceA=canonical(item?.teams?.away?.name);
+   // Live feed sometimes omits 'teams' even though the public docs show it.
+   // An anchored 'A x B' title is acceptable only if BOTH canonical team names match.
+   const titleMatch=/^\s*(.{2,90}?)\s+(?:x|×|vs\.?)\s+(.{2,90}?)\s*$/i.exec(String(item.title||""));
+   const sourceH=canonical(item?.teams?.home?.name||titleMatch?.[1]);
+   const sourceA=canonical(item?.teams?.away?.name||titleMatch?.[2]);
    if(!sourceH||!sourceA||!((sourceH===h&&sourceA===a)||(sourceH===a&&sourceA===h)))continue;
    const when=sourceDayAndMinutes(item);
    if(!when||when.day!==fixture.date)continue;
