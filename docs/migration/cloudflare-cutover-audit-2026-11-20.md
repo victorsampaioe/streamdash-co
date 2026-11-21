@@ -21,7 +21,7 @@ STATUS: SHADOW MIGRATION UPDATED. PRODUCTION CUTOVER BLOCKED.
 - The production cutover flag and old-message dispatch flag remain OFF.
 
 ## Storage backup
-R2 backup ledger initially had 36 verified-size objects, 1,096,909,007 bytes; two 1,979,290-byte PNGs were missing from Storage. The existing private backup runner was temporarily enabled to reconcile those assets; its final file count, cryptographic verification and auto-disable must be checked. R2 includes PostgreSQL archives from 15 Nov and 19 Nov, but a complete isolated PostgreSQL restore is NOT verified.
+R2 backup ledger now contains **38 / 38 copied objects, 1,100,867,587 bytes**. The two missing promotional PNGs (1,979,290 bytes each) were copied and verified by SHA-256 by the existing private backup Worker on 20 Nov. After verifying that all 38 ledger entries were complete and the Worker lease was released, the transfer flag was explicitly set back to disabled. R2 contains PostgreSQL archives dated 15 Nov and 19 Nov. **A full isolated PostgreSQL restore remains UNVERIFIED**, so a copy is not proof of database recoverability.
 
 ## REQUIRED before retiring Lovable Cloud database
 1. Independent, complete PostgreSQL restore and rollback rehearsal, not merely archive-size verification.
