@@ -160,6 +160,7 @@ function useNavItems() {
 
   const items = [
     ...(navIsAdmin ? [{ to: "/app/admin", label: "Admin · Central de controle", icon: Users }, { to: "/app/admin/telegram-guard", label: "Admin · Entregas Telegram", icon: Bell }] : []),
+    ...(navIsAdmin ? [{ to: "/app/admin/radar-bloqueios", label: "Admin · Radar de Bloqueios", icon: ShieldAlert }] : []),
     ...(navIsAdmin ? [{ to: "/app/auditoria", label: "Auditoria Visual", icon: ShieldAlert }] : []),
     ...(navIsAdmin ? [{ to: "/app/admin/observabilidade", label: "Admin · Central de Inteligência", icon: Gauge }] : []),
     ...(navIsAdmin ? [{ to: "/app/admin/aplicativos-parceiros", label: "Admin · Parceiros de Apps", icon: Smartphone }] : []),
