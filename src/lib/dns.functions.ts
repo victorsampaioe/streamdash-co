@@ -10,6 +10,7 @@ export const runDnsCheckNow = createServerFn({ method: "POST" })
       .from("servers")
       .select("id")
       .eq("id", data.serverId)
+      .is("auto_excluded_at", null)
       .maybeSingle();
     if (!srv) throw new Error("Servidor não encontrado ou sem permissão");
 
