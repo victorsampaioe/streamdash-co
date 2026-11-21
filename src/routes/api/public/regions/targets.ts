@@ -1,5 +1,4 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { isLongOfflineDns } from "@/lib/dns-long-offline";
 
 export const Route = createFileRoute("/api/public/regions/targets")({
   server: {
@@ -29,7 +28,7 @@ export const Route = createFileRoute("/api/public/regions/targets")({
         const { getActiveOwnerIds } = await import("@/lib/service-status.server");
         const activeOwners = await getActiveOwnerIds((servers ?? []).map((s) => s.owner_id));
         const targets = (servers ?? [])
-          .filter((s) => activeOwners.has(s.owner_id) && !isLongOfflineDns(s))
+          .filter((s) => activeOwners.has(s.owner_id))
           .map((s) => (agent && agent.region_code !== "cf-edge"
             ? {
                 server_id: s.id,
