@@ -43,6 +43,7 @@ function Dashboard() {
         .select(
           "id, name, description, category, current_status, last_latency_ms, last_checked_at, ssl_days_remaining, health_score, dns_health_score, dns_status, dns_enabled, last_dns_check_at, is_public, public_slug, created_at, monitoring_paused",
         )
+        .is("auto_excluded_at", null)
         .order("created_at", { ascending: false });
       if (error) throw error;
       return data;
