@@ -1,3 +1,5 @@
+import { pullAuthorizedFeed } from "./private-source-adapter.mjs";
+
 /**
  * Stream Monitor - Radar de Bloqueios, Cloudflare-only backend (private pilot).
  * NO public/reseller endpoints, NO notification dispatch, NO credential transfers.
@@ -116,6 +118,12 @@ async function scan(env){
  }
 }
 export default {
- async scheduled(_event,env,ctx){ctx.waitUntil(scan(env))},
+ async scheduled(event,env,ctx){
+  if(event?.cron==="0 */6 * * *"){
+    ctx.waitUntil(pullAuthorizedFeed(env).catch(()=>{}));
+    return;
+  }
+  ctx.waitUntil(scan(env));
+ },
  async fetch(){return new Response("Not Found",{status:404,headers:{"cache-control":"no-store"}})}
 };
