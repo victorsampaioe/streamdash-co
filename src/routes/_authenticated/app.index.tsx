@@ -376,11 +376,48 @@ function ServerCard({ server }: { server: any }) {
     refetchOnWindowFocus: false,
     retry: false,
   });
+  // Real HTTP measurements now come from Cloudflare D1, subject to Supabase
+  // authentication and per-server RLS until the independent auth cutover.
+  const { data: edgeHttpRecent = [] } = useQuery<HistoryPoint[]>({
+    queryKey: ["cloudflare-http-history", server.id],
+    enabled: !server.monitoring_paused,
+    queryFn: async () => {
+      const { data: auth } = await supabase.auth.getSession();
+      const accessToken = auth.session?.access_token;
+      const publicKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+      if (!accessToken || !publicKey) return [];
+      const response = await fetch(
+        "https://streammonitor-dns-history.victorsampaio133.workers.dev/v1/history/http?serverId="
+          + encodeURIComponent(String(server.id)),
+        {
+          headers: { Authorization: `Bearer ${accessToken}`, "x-sm-public-key": publicKey },
+          cache: "no-store",
+          signal: AbortSignal.timeout(10000),
+        },
+      );
+      if (!response.ok) return [];
+      const json: unknown = await response.json();
+      const items = (json as {items?: unknown})?.items;
+      if (!Array.isArray(items)) return [];
+      return items.filter((item: any): item is HistoryPoint =>
+        item && ["up", "down", "degraded", "unknown"].includes(item.status)
+        && typeof item.checked_at === "string"
+        && Number.isFinite(Date.parse(item.checked_at))
+        && (item.latency_ms === null || (typeof item.latency_ms === "number" && Number.isFinite(item.latency_ms)))
+      ).slice(-40);
+    },
+    staleTime: 120000,
+    refetchInterval: 180000,
+    refetchOnWindowFocus: false,
+    retry: false,
+  });
   const httpLastChecked = recent.length ? Date.parse(recent[recent.length - 1].checked_at) : NaN;
   const httpFresh = Number.isFinite(httpLastChecked) && Date.now() - httpLastChecked < 60 * 60 * 1000;
+  const edgeLastChecked = edgeHttpRecent.length ? Date.parse(edgeHttpRecent[edgeHttpRecent.length - 1].checked_at) : NaN;
+  const edgeHttpFresh = Number.isFinite(edgeLastChecked) && Date.now() - edgeLastChecked < 60 * 60 * 1000;
   const hasDnsHistory = dnsRecent.length > 0;
-  const displayedChecks = httpFresh ? recent : hasDnsHistory ? dnsRecent : recent;
-  const sparkSource = httpFresh ? "HTTP" : hasDnsHistory ? "DNS" : recent.length ? "HTTP antigo" : null;
+  const displayedChecks = edgeHttpFresh ? edgeHttpRecent : httpFresh ? recent : hasDnsHistory ? dnsRecent : recent;
+  const sparkSource = edgeHttpFresh ? "HTTP Cloudflare" : httpFresh ? "HTTP" : hasDnsHistory ? "DNS" : recent.length ? "HTTP antigo" : null;
   const delayed = isHttpCheckStale(server);
   const status = effectiveAccessStatus(server);
   const score = scoreOf([server]);
@@ -462,7 +499,7 @@ function ServerCard({ server }: { server: any }) {
           <UptimeSparkline checks={displayedChecks} source={sparkSource === "DNS" ? "DNS" : "HTTP"}/>
           <div className="mt-1.5 flex items-center justify-between text-[10px] text-slate-500">
             <span>{sparkSource === "DNS" ? "Histórico DNS real · não confirma IPTV"
-              : sparkSource === "HTTP" ? "Histórico HTTP real"
+              : sparkSource === "HTTP Cloudflare" ? "Histórico HTTP real · Cloudflare"\n              : sparkSource === "HTTP" ? "Histórico HTTP real"
               : sparkSource === "HTTP antigo" ? "Histórico HTTP antigo"
               : "Aguardando medições DNS/HTTP"}</span>
             <span>Últimas {Math.min(displayedChecks.length,40)}</span>
