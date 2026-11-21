@@ -48,7 +48,42 @@ async function stageCounts(db){
  if(!q)throw Error("staging_unavailable");
  return q;
 }
+/**
+ * Periodic, internal-only safety report. Never claims full cutover readiness.
+ * Real source-count reconciliation requires separately configured private auth.
+ */
+async function internalGateScan(env){
+ if(!env.MIGRATION_DB)return;
+ const stage=await stageCounts(env.MIGRATION_DB);
+ const flags=await env.MIGRATION_DB.prepare(
+  "SELECT "+
+  "(SELECT enabled FROM migration_cutover_control WHERE id=1) AS cutover_enabled,"+
+  "(SELECT enabled FROM migration_alert_dispatch_control WHERE id=1) AS historical_alerts_enabled,"+
+  "(SELECT COUNT(*) FROM migration_shadow_tombstones WHERE source_table='servers') AS old_server_ids"
+ ).first();
+ if(flags?.cutover_enabled!==0||flags?.historical_alerts_enabled!==0)
+  throw Error("safety_gate_unexpected_enabled");
+ const report={
+  source_counts_fresh:false,auth_accounts:stage.auth_users,
+  auth_encrypted_hashes:stage.auth_secrets,encrypted_server_credentials:stage.encrypted_server_credentials,
+  profiles:stage.profiles,roles:stage.roles,servers:stage.servers,
+  subscriptions:stage.subscriptions,payments:stage.payments,
+  telegram_channels:stage.alert_channels,telegram_outbox:stage.telegram_outbox,
+  server_tombstones:flags.old_server_ids,
+  production_cutover_enabled:false,can_release:false
+ };
+ await env.MIGRATION_DB.prepare(
+  "INSERT INTO migration_internal_gate_snapshots(checked_at_ms,metrics_json,ready,mode) "+
+  "VALUES(?,?,0,'READ_ONLY')"
+ ).bind(Date.now(),JSON.stringify(report)).run();
+ await env.MIGRATION_DB.prepare(
+  "DELETE FROM migration_internal_gate_snapshots WHERE checked_at_ms<?"
+ ).bind(Date.now()-30*86400_000).run();
+}
 export default {
+ async scheduled(_event,env,ctx){
+  ctx.waitUntil(internalGateScan(env).catch(()=>{}));
+ },
  async fetch(request,env){
   const url=new URL(request.url);
   if(url.pathname==="/health"&&request.method==="GET")return json({ok:true,mode:"READ_ONLY"});
