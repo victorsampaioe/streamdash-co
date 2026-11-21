@@ -10,6 +10,7 @@
  */
 import { recordSample } from "./monitor-store.mjs";
 import { targetLanes } from "./monitor-state.mjs";
+import { readMirrorTargets } from "./mirror-fallback.mjs";
 
 const MAX_TARGETS = 30;
 const CONCURRENCY = 5;
@@ -46,11 +47,27 @@ async function jsonOrFail(res) {
 }
 
 async function getTargets(env) {
-  const message = "targets";
-  return (await jsonOrFail(await fetch(`${env.ENDPOINT_BASE}/api/public/regions/targets`, {
-    headers: await signatureHeaders(env, message),
-    signal: AbortSignal.timeout(TIMEOUT),
-  }))).targets ?? [];
+  try {
+    const message = "targets";
+    const response = await jsonOrFail(await fetch(`${env.ENDPOINT_BASE}/api/public/regions/targets`, {
+      headers: await signatureHeaders(env, message),
+      signal: AbortSignal.timeout(TIMEOUT),
+    }));
+    if (!Array.isArray(response.targets) || response.targets.length > 3000)
+      throw new Error("invalid_http_inventory");
+    return response.targets;
+  } catch (error) {
+    // A recent, signed origin inventory was already mirrored to D1.
+    // During a temporary origin outage keep probing, never issue customer alerts.
+    const stored = await readMirrorTargets(env.DNS_DB);
+    const fallback = stored.map(t => ({
+      server_id: t.server_id, host: t.host,
+      last_checked_at: t.checked_at_ms ? new Date(Number(t.checked_at_ms)).toISOString() : null,
+    }));
+    Object.defineProperty(fallback, "isCloudflareMirror", {value:true});
+    console.warn("edge_http_local_fallback", String(error?.message ?? error).slice(0,100));
+    return fallback;
+  }
 }
 
 function safeUrl(host) {
@@ -149,6 +166,10 @@ async function tick(env) {
   if (all.length === 0) {
     return { ok: true, targets: 0, checked: 0, reported: 0 };
   }
+  if (all.isCloudflareMirror) {
+    // No Telegram priority jobs or source status transitions during origin outages.
+    return reportHttpTargets(env, selectHttpTargets(all, Date.now(), MAX_TARGETS), true);
+  }
   // D1 guard is opt-in until schema and public-state handoff are verified.
   if (env.MONITOR_GUARD_MODE === "shadow" && env.DNS_DB) {
     const rows = await env.DNS_DB.prepare("SELECT server_id,state_json FROM monitor_state WHERE json_extract(state_json,'$.incident.id') IS NOT NULL").all();
@@ -167,9 +188,21 @@ async function tick(env) {
   const targets = selectHttpTargets(all, Date.now(), MAX_TARGETS);
   return reportHttpTargets(env, targets);
 }
-async function reportHttpTargets(env, targets) {
+async function reportHttpTargets(env, targets, localOnly=false) {
   if (!targets.length) return { ok: true, checked: 0 };
   const reports = await pool(targets, env.REGION_CODE);
+  if (localOnly) {
+    // Store raw observations in D1; do not send notifications or update
+    // customer-visible status until the authoritative backend is available.
+    if (!env.DNS_DB) throw new Error("dns_db_missing");
+    const observedAt = Date.now();
+    const valid = reports.filter(r => ["up","down","degraded","unknown","pending"].includes(r.status));
+    const statements = valid.map(r => env.DNS_DB.prepare(
+      "INSERT OR IGNORE INTO edge_http_samples(server_id,region_code,checked_at_ms,status,http_status,latency_ms,source) VALUES(?,?,?,?,?,?,'regional_cloudflare')"
+    ).bind(r.server_id, r.region_code, observedAt, r.status, r.http_status, r.latency_ms));
+    for (let i=0; i<statements.length; i+=30) await env.DNS_DB.batch(statements.slice(i,i+30));
+    return {ok:true,checked:valid.length,reported:0,mode:"CLOUDFLARE_LOCAL_ONLY"};
+  }
   if (env.MONITOR_GUARD_MODE === "shadow" && env.DNS_DB) {
     for (const report of reports) await recordSample(env.DNS_DB, report.server_id, {
       kind: "http", at: Date.now(), proofs: [{ source: env.REGION_CODE,
@@ -283,13 +316,21 @@ async function inventory(env){
     await putMeta(env,"last_inventory_success",Date.now());
     refreshed=true;
   }catch(e){fetchError=String(e?.message??e).slice(0,100);}
+  if(fetchError) {
+    try {
+      const mirror = await readMirrorTargets(env.DNS_DB);
+      return {targets:mirror,refreshed:false,fetchError,inventorySource:"cloudflare_mirror"};
+    } catch(error) {
+      console.warn("edge_dns_mirror_fallback_unavailable",String(error?.message??error).slice(0,100));
+    }
+  }
   const freshAt=Number(await readMeta(env,"last_inventory_success")||0);
   if(!freshAt||Date.now()-freshAt>6*3600000)
     throw new Error("Inventory unavailable; stale targets refused: "+(fetchError??"unknown"));
   const rows=await env.DNS_DB.prepare(
     "SELECT t.server_id,t.host,t.source_status,c.checked_at_ms,c.status AS last_status FROM dns_targets t LEFT JOIN dns_current c ON c.server_id=t.server_id WHERE t.active=1"
   ).all();
-  return {targets:rows.results??[],refreshed,fetchError};
+  return {targets:rows.results??[],refreshed,fetchError,inventorySource:refreshed?"signed_origin":"cached_origin"};
 }
 async function resolveA(domain,resolver){
   const started=Date.now();
@@ -365,7 +406,7 @@ async function gather(targets){
   }));
   return checked;
 }
-async function keepResults(env,checks){
+async function keepResults(env,checks,sendReports=true){
   if (env.MONITOR_GUARD_MODE === "shadow") {
     for (const check of checks) await recordSample(env.DNS_DB, check.server_id, {
       kind: "dns", at: Date.parse(check.checked_at), proofs: check.resolvers.map(r => ({
@@ -390,7 +431,7 @@ async function keepResults(env,checks){
   // The authenticated report endpoint accepts at most 25 probes and applies
   // at most 20 in a pass. Split into 20-row durable chunks to avoid 400/429.
   // Never discard the batch if the app is briefly unavailable.
-  for(let i=0;i<checks.length;i+=20){
+  if(sendReports) for(let i=0;i<checks.length;i+=20){
     const batch={checks:checks.slice(i,i+20)};
     stmts.push(env.DNS_DB.prepare(
       "INSERT INTO dns_pending_reports(id,payload,created_at_ms,attempts) VALUES(?,?,?,0)"
@@ -425,19 +466,24 @@ async function flushReports(env){
 async function runCycle(env){
   if(!env.DNS_DB||!(env.REGION_WORKER_SECRET||env.SIGNING_KEY_JWK))
     throw new Error("Missing D1 or DNS bridge secret");
-  const {targets,refreshed,fetchError}=await inventory(env);
+  const {targets,refreshed,fetchError,inventorySource}=await inventory(env);
   if(!targets.length)throw new Error("No active DNS targets");
+  const localOnly=inventorySource==="cloudflare_mirror";
   const selected=chooseTargets(targets);
   const results=await gather(selected);
-  await keepResults(env,results);
-  const delivered=await flushReports(env);
+  await keepResults(env,results,!localOnly);
+  // Do not enqueue old results for delivery while the source is unavailable.
+  if(localOnly) await env.DNS_DB.prepare(
+    "DELETE FROM dns_pending_reports WHERE created_at_ms<?"
+  ).bind(Date.now()-10*60_000).run();
+  const delivered=localOnly?{sent:0,failed:0}:await flushReports(env);
   await putMeta(env,"last_cycle",JSON.stringify({timestamp:new Date().toISOString(),
     selected:results.length,healthy:results.filter(x=>x.status==="ok").length,
     degraded:results.filter(x=>x.status==="degraded").length,
     down:results.filter(x=>x.status==="down").length,
     unknown:results.filter(x=>x.status==="unknown").length,
-    inventory:targets.length,inventory_refreshed:refreshed,
-    origin_error:fetchError,reported:delivered.sent,delivery_errors:delivered.failed}));
+    inventory:targets.length,inventory_refreshed:refreshed,inventory_source:inventorySource,
+    local_only:localOnly,origin_error:fetchError,reported:delivered.sent,delivery_errors:delivered.failed}));
   if(Date.now()%1440000<60000)
     await env.DNS_DB.prepare("DELETE FROM dns_samples WHERE checked_at_ms < ?")
       .bind(Date.now()-5*86400000).run();
@@ -510,7 +556,7 @@ const telegramQueueWorker={
           // Re-read authorized inventory: a queued host is never trusted.
           const allowed = await getTargets(env);
           const ids = new Set(task.targets.map(t => t.server_id));
-          await reportHttpTargets(env, allowed.filter(t => ids.has(t.server_id)));
+          await reportHttpTargets(env, allowed.filter(t => ids.has(t.server_id)), !!allowed.isCloudflareMirror);
           msg.ack();
           continue;
         }
