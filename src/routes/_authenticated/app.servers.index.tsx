@@ -50,6 +50,7 @@ function ServersList() {
           .select(
             "id, name, description, category, current_status, last_latency_ms, last_checked_at, ssl_days_remaining, health_score, dns_health_score, dns_status, dns_enabled, last_dns_check_at, is_public, public_slug, created_at, monitoring_paused, paused_reason",
           )
+          .is("auto_excluded_at", null)
           .order("created_at", { ascending: false })
       ).data ?? [],
     refetchInterval: 15_000,
