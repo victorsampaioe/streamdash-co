@@ -743,14 +743,14 @@ async function backupArchiveVerifyControl(env){
   console.log("backup_archive_verification_completed",JSON.stringify({sha256Matched:result.matched===true,bytes:result.bytes||null,reason:result.reason||null}));
 }
 async function backupRecentArchiveVerifyControl(env){
-  if(!env.BACKUP_VERIFY||!env.DNS_DB)return;
+  if(!env.BACKUP_VERIFY_RPC||!env.DNS_DB)return;
   const requested=await env.DNS_DB.prepare(
     "SELECT value FROM dns_worker_meta WHERE key='backup_recent_archive_verify_requested'"
   ).first();
   if(requested?.value!=="true")return;
   let result;
   try {
-    result=await env.BACKUP_VERIFY.verifyRecentArchive();
+    result=await env.BACKUP_VERIFY_RPC.verifyRecentArchive();
   } catch (error) {
     // Store only an error class. Never log archive metadata, keys or bytes.
     await env.DNS_DB.prepare(
@@ -786,7 +786,7 @@ export default {
     if(env.BACKUP_ENROLLMENT)ctx.waitUntil(enrollmentControl(env).catch(e=>console.warn("backup_enroll_control_failed",String(e?.message||e).slice(0,130))));
     if(env.BACKUP_ENROLLMENT)ctx.waitUntil(backupBulkControl(env).catch(e=>console.error("backup_bulk_service_failed",String(e?.message||e).slice(0,130))));
     if(env.BACKUP_VERIFY)ctx.waitUntil(backupArchiveVerifyControl(env).catch(e=>console.error("backup_sha256_check_failed",String(e?.name||"error"))));
-    if(env.BACKUP_VERIFY)ctx.waitUntil(backupRecentArchiveVerifyControl(env).catch(e=>console.error("backup_recent_sha256_check_failed",String(e?.name||"error"))));
+    if(env.BACKUP_VERIFY_RPC)ctx.waitUntil(backupRecentArchiveVerifyControl(env).catch(e=>console.error("backup_recent_sha256_check_failed",String(e?.name||"error"))));
   },
   queue(batch,env,ctx){
     return telegramQueueWorker.queue(batch,env,ctx);
