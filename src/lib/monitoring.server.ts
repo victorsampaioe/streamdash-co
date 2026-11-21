@@ -1,6 +1,7 @@
 // Server-only monitoring engine. Uses admin client to write checks/incidents.
 import { promises as dns } from "node:dns";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
+import { isLongOfflineDns } from "@/lib/dns-long-offline";
 
 const FETCH_TIMEOUT_MS = 8000;
 const SSL_TIMEOUT_MS = 6000;
@@ -57,6 +58,9 @@ export async function runDueChecks(limit = 20) {
 
   const due = (servers ?? []).filter((s: any) => {
     if (!activeOwners.has(s.owner_id)) return false;
+    // Long DNS outages are handled by Cloudflare daily recovery probes.
+    // The server and its history stay registered for the owner.
+    if (isLongOfflineDns(s,now)) return false;
     if (!s.last_checked_at) return true;
     // next_check_at implementa o backoff/recheck de servidores com problema.
     if (s.next_check_at) return now >= new Date(s.next_check_at).getTime();
