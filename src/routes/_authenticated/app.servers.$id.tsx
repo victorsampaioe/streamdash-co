@@ -66,6 +66,7 @@ function ServerDetail() {
           )
 
           .eq("id", id)
+          .is("auto_excluded_at", null)
           .maybeSingle(),
         supabase.from("servers").select("id").eq("id", id).not("iptv_username", "is", null).maybeSingle(),
       ]);
