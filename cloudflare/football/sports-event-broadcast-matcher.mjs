@@ -159,3 +159,81 @@ export async function readSportsBroadcasts(matches){
   return json?.success===true?matchBroadcastsFromSports(matches,json.data):new Map();
  }catch{return new Map()}
 }
+
+
+/**
+ * Optional second source: live EPG program titles from /channels.
+ * Do not mistake generic sports programs or reruns ("VT") for a live game.
+ * Fetch once for all fixtures. Ignore stream URLs / embed objects entirely.
+ */
+export function matchBroadcastsFromEpg(matches,channels) {
+ const result=new Map();
+ if(!Array.isArray(matches)||!Array.isArray(channels))return result;
+ const dayLocal=timestamp=>{
+  if(!Number.isFinite(Number(timestamp)))return "";
+  try{return new Intl.DateTimeFormat("en-CA",{
+   timeZone:"America/Fortaleza",year:"numeric",month:"2-digit",day:"2-digit"
+  }).format(new Date(Number(timestamp)*1000));}
+  catch{return "";}
+ };
+ const byFixture=new Map();
+ for(const channel of channels.slice(0,350)){
+  const provider=channelName(channel?.name);
+  if(!provider)continue;
+  for(const program of [channel?.epg?.current,channel?.epg?.next]){
+   if(!program||typeof program.title!=="string")continue;
+   const raw=program.title.trim();
+   if(!raw||/^(?:vt\b|reprise\b|replay\b|melhores momentos\b|compacto\b)/i.test(normalize(raw)))continue;
+   // EPG may use "Hoje a partir das 17:30 - Clube A x Clube B".
+   // Keep only the exact team-pair clause; strip the known EPG prefix.
+   const title=raw.replace(/^(?:hoje\b[^-]{0,75}|dia\s+\d{1,2}\/\d{1,2}(?:\/\d{4})?)\s*-\s*/i,"").trim();
+   const split=/^(.{2,90}?)\s+(?:x|×|vs\.?)\s+(.{2,90}?)(?:\s+-\s+(?:ao vivo|futebol|jogo))?$/i.exec(title);
+   if(!split)continue;
+   const home=canonical(split[1]),away=canonical(split[2]);
+   if(!home||!away||home===away)continue;
+   const dt=String(program.start_time||"");
+   const epoch=Number(dt);
+   const progDay=dayLocal(epoch);
+   if(!progDay)continue;
+   const explicit=/\bdia\s+(\d{1,2})\/(\d{1,2})(?:\/(\d{4}))?/i.exec(raw);
+   const explicitDay=explicit
+     ?(explicit[3]||progDay.slice(0,4))+"-"+explicit[2].padStart(2,"0")+"-"+explicit[1].padStart(2,"0")
+     :null;
+   const hhmm=/\b(?:a partir das?|às?)\s*(\d{1,2}):(\d{2})\b/i.exec(raw);
+   const explicitMinutes=hhmm?Number(hhmm[1])*60+Number(hhmm[2]):null;
+   for(const m of matches){
+    if(!m||!m.id||!m.date||!m.home||!m.away||invalidYouth(m.home+" "+m.away+" "+(m.league||"")))continue;
+    if(!((canonical(m.home)===home&&canonical(m.away)===away)||
+      (canonical(m.home)===away&&canonical(m.away)===home)))continue;
+    if(explicitDay?explicitDay!==m.date:progDay!==m.date)continue;
+    const mt=/^(\d{1,2}):(\d{2})$/.exec(String(m.time||""));
+    if(!mt)continue;
+    const minute=Number(mt[1])*60+Number(mt[2]);
+    const kickoffTime=explicitMinutes===null
+      ?Number(new Intl.DateTimeFormat("en-GB",{hour:"2-digit",minute:"2-digit",hourCycle:"h23",timeZone:"America/Fortaleza"}).format(new Date(epoch*1000)).split(":")[0])*60
+        +Number(new Intl.DateTimeFormat("en-GB",{hour:"2-digit",minute:"2-digit",hourCycle:"h23",timeZone:"America/Fortaleza"}).format(new Date(epoch*1000)).split(":")[1])
+      :explicitMinutes;
+    if(Math.abs(kickoffTime-minute)>75)continue;
+    if(!byFixture.has(m.id))byFixture.set(m.id,new Set());
+    byFixture.get(m.id).add(provider);
+   }
+  }
+ }
+ for(const [id,names] of byFixture)if(names.size)result.set(id,[...names].slice(0,3));
+ return result;
+}
+export async function readEpgBroadcasts(matches) {
+ if(!Array.isArray(matches)||!matches.length)return new Map();
+ try{
+  const r=await fetch(ROOT+"/channels",{
+   redirect:"error",headers:{accept:"application/json"},
+   signal:AbortSignal.timeout(8000),cf:{cacheTtl:180,cacheEverything:true}
+  });
+  if(!r.ok||!(r.headers.get("content-type")||"").includes("json")||
+     Number(r.headers.get("content-length")||0)>2200000)return new Map();
+  const text=await r.text();
+  if(text.length>2200000)return new Map();
+  const obj=JSON.parse(text);
+  return obj?.success===true?matchBroadcastsFromEpg(matches,obj.data):new Map();
+ }catch{return new Map()}
+}
