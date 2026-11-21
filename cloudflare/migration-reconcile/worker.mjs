@@ -59,7 +59,7 @@ async function refreshSignedSourceCounts(env) {
    {name:"ECDSA",hash:"SHA-256"},key,new TextEncoder().encode(message)
  );
  const res=await fetch(SNAPSHOT_V2_ORIGIN+SNAPSHOT_V2_PATH,{
-   method:"GET",redirect:"error",cache:"no-store",
+   method:"GET",redirect:"manual",cache:"no-store",
    headers:{
      "accept":"application/json",
      "x-sm-migration-time":timestamp,
@@ -67,6 +67,7 @@ async function refreshSignedSourceCounts(env) {
    },
    signal:AbortSignal.timeout(15000),
  });
+ if(res.status>=300 && res.status<400)throw Error("source_redirect_refused_"+res.status);
  if(!res.ok)throw Error("source_unavailable_"+res.status);
  if(!(res.headers.get("content-type")||"").toLowerCase().startsWith("application/json"))
    throw Error("source_content_type_invalid");
