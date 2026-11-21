@@ -22,7 +22,7 @@ async function readCurrent(env,now){
   ]);
   return {targets,owners:new Map(owners.map(x=>[x.server_id,x])),dns:mapRows(dns,"server_id"),http:mapRows(http,"server_id"),evidence:mapRows(evidence,"host"),prior:new Map(prior.map(x=>[x.server_id,x]))};
 }
-function classify(dns,http,ev,old,now){
+export function classify(dns,http,ev,old,now){
   const result={dns_ok:0,dns_partial:0,dns_down:0,http_up:0,http_down:0,regions:[]};
   const regions=new Set();
   for(const x of dns){
